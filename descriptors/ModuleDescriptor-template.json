@@ -1,0 +1,113 @@
+{
+  "id": "${artifactId}-${version}",
+  "name": "Orders Business Logic Module",
+  "provides": [
+    {
+      "id": "orders",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": ["GET"],
+          "pathPattern": "/orders",
+          "permissionsRequired": ["orders.collection.get"],
+          "modulePermissions": [
+            "purchase_order.collection.get",
+            "po_line.collection.get"
+          ]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/orders",
+          "permissionsRequired": ["orders.item.post"],
+          "modulePermissions": [
+            "purchase_order.item.post",
+            "po_line.item.post"
+          ]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/orders/{id}",
+          "permissionsRequired": ["orders.item.get"],
+          "modulePermissions": [
+            "purchase_order.item.get",
+            "po_line.item.get"
+          ]
+        },
+        {
+          "methods": ["PUT"],
+          "pathPattern": "/orders/{id}",
+          "permissionsRequired": ["orders.item.put"],
+          "modulePermissions": [
+            "purchase_order.item.put",
+            "po_line.item.put"
+          ]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/orders/{id}",
+          "permissionsRequired": ["orders.item.delete"],
+          "modulePermissions": [
+            "purchase_order.item.delete",
+            "po_line.item.delete"
+          ]
+        }
+      ]
+    }
+  ],
+  "requires": [
+    {
+      "id": "purchase_order",
+      "version": "1.0"
+    },
+    {
+      "id": "po_line",
+      "version": "1.0"
+    }
+  ],
+    "permissionSets": [
+    {
+      "permissionName": "orders.collection.get",
+      "displayName": "orders - get order collection",
+      "description": "Get order collection"
+    },
+    {
+      "permissionName": "orders.item.post",
+      "displayName": "orders - create a new order",
+      "description": "Create a new order"
+    },
+    {
+      "permissionName": "orders.item.get",
+      "displayName": "orders - get an existing order",
+      "description": "Get an existing order"
+    },
+    {
+      "permissionName": "orders.item.put",
+      "displayName": "orders - modify an existing order",
+      "description": "Modify an existing order"
+    },
+    {
+      "permissionName": "orders.item.delete",
+      "displayName": "orders - delete an existing order",
+      "description": "Delete an existing order"
+    },
+    {
+      "permissionName": "orders.all",
+      "displayName": "orders - all permissions",
+      "description": "Entire set of permissions needed to use orders",
+      "subPermissions": [
+        "orders.collection.get",
+        "orders.item.post",
+        "orders.item.get",
+        "orders.item.put",
+        "orders.item.delete"
+      ]
+    }
+  ],
+  "launchDescriptor": {
+    "dockerImage": "${artifactId}:${version}",
+    "dockerArgs": {
+      "HostConfig": { "PortBindings": { "8081/tcp":  [{ "HostPort": "%p" }] } }
+    },
+    "dockerPull" : false
+  }
+}

@@ -1,0 +1,58 @@
+#%RAML 0.8
+title: Orders
+baseUri: https://github.com/folio-org/mod-orders
+version: v1
+protocols: [ HTTP, HTTPS ]
+
+documentation:
+  - title: Orders Business Logic API
+    content: <b>API for managing purchase orders</b>
+
+schemas:
+  - composite_purchase_orders: !include acq-models/mod-orders/schemas/composite_purchase_orders.json
+  - composite_purchase_order.json: !include acq-models/mod-orders/schemas/composite_purchase_order.json
+  - ../../mod-orders-storage/schemas/purchase_order.json: !include acq-models/mod-orders-storage/schemas/purchase_order.json
+  - ../../mod-orders-storage/schemas/po_line.json: !include acq-models/mod-orders-storage/schemas/po_line.json
+  - errors: !include raml-util/schemas/errors.schema
+  - error.schema: !include raml-util/schemas/error.schema
+  - parameters.schema: !include raml-util/schemas/parameters.schema
+
+traits:
+  - secured: !include raml-util/traits/auth.raml
+  - orderable: !include raml-util/traits/orderable.raml
+  - pageable: !include raml-util/traits/pageable.raml
+  - searchable: !include raml-util/traits/searchable.raml
+  - language: !include raml-util/traits/language.raml
+  - validate: !include raml-util/traits/validation.raml
+
+resourceTypes:
+  - collection: !include raml-util/rtypes/collection.raml
+  - collection-item: !include raml-util/rtypes/item-collection.raml
+
+/orders:
+  displayName: Orders
+  type:
+    collection:
+      exampleCollection: !include acq-models/mod-orders/examples/composite_purchase_orders.sample
+      exampleItem: !include acq-models/mod-orders/examples/composite_purchase_order.sample
+      schemaCollection: composite_purchase_orders
+      schemaItem: composite_purchase_order.json
+  get:
+    description: Return a list of purchase orders
+    is: [
+      searchable: {description: "Query (CQL) to find purchase orders", example: "TBD"},
+      pageable
+    ]
+  post:
+    description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order
+    is: [validate]
+  /{id}:
+    uriParameters:
+      id:
+        description: The UUID of a purchase order
+        type: string
+        pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+    type:
+      collection-item:
+        exampleItem: !include acq-models/mod-orders/examples/composite_purchase_order.sample
+        schema: composite_purchase_order.json
