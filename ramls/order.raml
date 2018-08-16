@@ -9,10 +9,10 @@ documentation:
     content: <b>API for managing purchase orders</b>
 
 schemas:
-  - composite_purchase_orders: !include acq-models/mod-orders/schemas/composite_purchase_orders.json
-  - composite_purchase_order.json: !include acq-models/mod-orders/schemas/composite_purchase_order.json
-  - ../../mod-orders-storage/schemas/purchase_order.json: !include acq-models/mod-orders-storage/schemas/purchase_order.json
-  - ../../mod-orders-storage/schemas/po_line.json: !include acq-models/mod-orders-storage/schemas/po_line.json
+  - composite_purchase_orders: !include acq-models/composite_purchase_orders.json
+  - composite_purchase_order.json: !include acq-models/composite_purchase_order.json
+  - mod-orders-storage/schemas/purchase_order.json: !include acq-models/mod-orders-storage/schemas/purchase_order.json
+  - mod-orders-storage/schemas/po_line.json: !include acq-models/mod-orders-storage/schemas/po_line.json
   - errors: !include raml-util/schemas/errors.schema
   - error.schema: !include raml-util/schemas/error.schema
   - parameters.schema: !include raml-util/schemas/parameters.schema
