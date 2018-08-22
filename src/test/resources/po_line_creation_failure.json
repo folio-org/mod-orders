@@ -1,0 +1,19 @@
+{
+  "purchase_order": {
+    "po_number": "TEST DATA 0123"
+  },
+  "po_lines": [
+    {
+      "barcode": "0008675309"
+    },
+    {
+      "barcode": "0123456789"
+    },
+    {
+      "barcode": "invalid"
+    },
+    {
+      "barcode": "2222222222"
+    }
+  ]
+}

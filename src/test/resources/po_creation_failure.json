@@ -1,0 +1,19 @@
+{
+  "purchase_order": {
+    "po_number": "invalid"
+  },
+  "po_lines": [
+    {
+      "barcode": "0008675309"
+    },
+    {
+      "barcode": "0123456789"
+    },
+    {
+      "barcode": "1111111111"
+    },
+    {
+      "barcode": "2222222222"
+    }
+  ]
+}
