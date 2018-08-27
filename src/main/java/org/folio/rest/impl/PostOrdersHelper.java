@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
@@ -29,10 +30,12 @@ public class PostOrdersHelper {
   private final HttpClientInterface httpClient;
   private final Context ctx;
   private final Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler;
+  private final Map<String, String> okapiHeaders;
 
-  public PostOrdersHelper(HttpClientInterface httpClient,
+  public PostOrdersHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx) {
     this.httpClient = httpClient;
+    this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
     this.asyncResultHandler = asyncResultHandler;
   }
@@ -42,7 +45,7 @@ public class PostOrdersHelper {
 
     try {
       Buffer poBuf = JsonObject.mapFrom(compPO.getPurchaseOrder()).toBuffer();
-      httpClient.request(HttpMethod.POST, poBuf, "/purchase_order", null)
+      httpClient.request(HttpMethod.POST, poBuf, "/purchase_order", okapiHeaders)
         .thenApply(OrdersResourceImpl::verifyAndExtractBody)
         .thenAccept(poBody -> {
           PurchaseOrder po = poBody.mapTo(PurchaseOrder.class);
@@ -55,7 +58,7 @@ public class PostOrdersHelper {
             line.setPurchaseOrderId(poId);
             try {
               Buffer polBuf = JsonObject.mapFrom(line).toBuffer();
-              CompletableFuture<Void> polFut = httpClient.request(HttpMethod.POST, polBuf, "/po_line", null)
+              CompletableFuture<Void> polFut = httpClient.request(HttpMethod.POST, polBuf, "/po_line", okapiHeaders)
                 .thenApply(OrdersResourceImpl::verifyAndExtractBody)
                 .thenAccept(body -> lines.add((PoLine) body.mapTo(PoLine.class)));
               futures.add(polFut);

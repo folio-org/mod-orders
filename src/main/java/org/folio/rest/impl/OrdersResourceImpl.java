@@ -52,7 +52,7 @@ public class OrdersResourceImpl implements OrdersResource {
       throws Exception {
 
     final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
-    PostOrdersHelper helper = new PostOrdersHelper(httpClient, asyncResultHandler, vertxContext);
+    PostOrdersHelper helper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
 
     logger.info("Creating PO and POLines...");
     helper.createPOandPOLines(compPO)
