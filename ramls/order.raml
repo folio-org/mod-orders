@@ -46,6 +46,11 @@ resourceTypes:
   post:
     description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order
     is: [validate]
+    responses:
+      201:
+        body:
+          application/json:
+            schema: composite_purchase_order.json
   /{id}:
     uriParameters:
       id:
