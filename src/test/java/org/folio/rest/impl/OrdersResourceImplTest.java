@@ -11,6 +11,7 @@ import java.util.UUID;
 
 import org.apache.log4j.Logger;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -125,23 +126,35 @@ public class OrdersResourceImplTest {
 
     String body = getMockData(poCreationFailurePath);
 
-    final Response resp = RestAssured
-      .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
-      .post(rootPath)
+    final Async asyncLocal = ctx.async();
+
+    final Errors errors = RestAssured
+      .given()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .when()
+        .post(rootPath)
       .then()
-      .contentType(TEXT_PLAIN)
-      .statusCode(400)
-      .extract()
-      .response();
+        .log()
+          .all()
+        .contentType(APPLICATION_JSON)
+        .statusCode(422)
+        .extract()
+          .response()
+            .body()
+              .as(Errors.class);
 
-    String respBody = resp.getBody().asString();
-    logger.info(respBody);
+    ctx.assertFalse(errors.getErrors().isEmpty());
+    ctx.assertNotNull(errors.getErrors().get(0));
+    ctx.assertEquals("must match \"^[a-zA-Z0-9]{5,16}$\"", errors.getErrors().get(0).getMessage());
+    ctx.assertFalse(errors.getErrors().get(0).getParameters().isEmpty());
+    ctx.assertNotNull(errors.getErrors().get(0).getParameters().get(0));
+    ctx.assertEquals("purchaseOrder.poNumber", errors.getErrors().get(0).getParameters().get(0).getKey());
+    ctx.assertEquals("123", errors.getErrors().get(0).getParameters().get(0).getValue());
 
-    assertEquals("Invalid po_number", respBody);
+    asyncLocal.complete();
   }
 
   @Test
