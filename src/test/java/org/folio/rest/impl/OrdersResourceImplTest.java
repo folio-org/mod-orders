@@ -126,8 +126,6 @@ public class OrdersResourceImplTest {
 
     String body = getMockData(poCreationFailurePath);
 
-    final Async asyncLocal = ctx.async();
-
     final Errors errors = RestAssured
       .given()
         .header(X_OKAPI_URL)
@@ -153,8 +151,6 @@ public class OrdersResourceImplTest {
     ctx.assertNotNull(errors.getErrors().get(0).getParameters().get(0));
     ctx.assertEquals("purchaseOrder.poNumber", errors.getErrors().get(0).getParameters().get(0).getKey());
     ctx.assertEquals("123", errors.getErrors().get(0).getParameters().get(0).getValue());
-
-    asyncLocal.complete();
   }
 
   @Test
