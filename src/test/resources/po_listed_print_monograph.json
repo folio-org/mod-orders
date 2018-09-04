@@ -1,6 +1,6 @@
 {
   "purchase_order": {
-    "po_number": "TEST DATA 0123"
+    "po_number": "TESTDATA0123"
   },
   "po_lines": [
     {

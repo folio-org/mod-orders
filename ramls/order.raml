@@ -11,8 +11,24 @@ documentation:
 schemas:
   - composite_purchase_orders: !include acq-models/composite_purchase_orders.json
   - composite_purchase_order.json: !include acq-models/composite_purchase_order.json
+  - composite_po_line.json: !include acq-models/composite_po_line.json
   - mod-orders-storage/schemas/purchase_order.json: !include acq-models/mod-orders-storage/schemas/purchase_order.json
-  - mod-orders-storage/schemas/po_line.json: !include acq-models/mod-orders-storage/schemas/po_line.json
+  - mod-orders-storage/schemas/adjustment.json: !include acq-models/mod-orders-storage/schemas/adjustment.json
+  - mod-orders-storage/schemas/alert.json: !include acq-models/mod-orders-storage/schemas/alert.json
+  - mod-orders-storage/schemas/claim.json: !include acq-models/mod-orders-storage/schemas/claim.json
+  - mod-orders-storage/schemas/cost.json: !include acq-models/mod-orders-storage/schemas/cost.json
+  - mod-orders-storage/schemas/details.json: !include acq-models/mod-orders-storage/schemas/details.json
+  - mod-orders-storage/schemas/eresource.json: !include acq-models/mod-orders-storage/schemas/eresource.json
+  - mod-orders-storage/schemas/license.json: !include acq-models/mod-orders-storage/schemas/license.json
+  - mod-orders-storage/schemas/location.json: !include acq-models/mod-orders-storage/schemas/location.json
+  - mod-orders-storage/schemas/order_format.json: !include acq-models/mod-orders-storage/schemas/order_format.json
+  - mod-orders-storage/schemas/order_type.json: !include acq-models/mod-orders-storage/schemas/order_type.json
+  - mod-orders-storage/schemas/physical.json: !include acq-models/mod-orders-storage/schemas/physical.json
+  - mod-orders-storage/schemas/receipt_status.json: !include acq-models/mod-orders-storage/schemas/receipt_status.json
+  - mod-orders-storage/schemas/renewal.json: !include acq-models/mod-orders-storage/schemas/renewal.json
+  - mod-orders-storage/schemas/source.json: !include acq-models/mod-orders-storage/schemas/source.json
+  - mod-orders-storage/schemas/vendor_detail.json: !include acq-models/mod-orders-storage/schemas/vendor_detail.json
+  - mod-orders-storage/schemas/workflow_status.json: !include acq-models/mod-orders-storage/schemas/workflow_status.json
   - errors: !include raml-util/schemas/errors.schema
   - error.schema: !include raml-util/schemas/error.schema
   - parameters.schema: !include raml-util/schemas/parameters.schema
@@ -33,8 +49,8 @@ resourceTypes:
   displayName: Orders
   type:
     collection:
-      exampleCollection: !include acq-models/mod-orders/examples/composite_purchase_orders.sample
-      exampleItem: !include acq-models/mod-orders/examples/composite_purchase_order.sample
+      exampleCollection: !include acq-models/examples/composite_purchase_orders.sample
+      exampleItem: !include acq-models/examples/composite_purchase_order.sample
       schemaCollection: composite_purchase_orders
       schemaItem: composite_purchase_order.json
   get:
@@ -59,5 +75,5 @@ resourceTypes:
         pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
     type:
       collection-item:
-        exampleItem: !include acq-models/mod-orders/examples/composite_purchase_order.sample
+        exampleItem: !include acq-models/examples/composite_purchase_order.sample
         schema: composite_purchase_order.json

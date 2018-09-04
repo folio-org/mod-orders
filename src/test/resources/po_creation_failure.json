@@ -1,6 +1,6 @@
 {
   "purchase_order": {
-    "po_number": "invalid"
+    "po_number": "123"
   },
   "po_lines": [
     {
