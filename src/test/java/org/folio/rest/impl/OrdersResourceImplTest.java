@@ -232,7 +232,7 @@ public class OrdersResourceImplTest {
       JsonObject body = ctx.getBodyAsJson();
       body.put("id", UUID.randomUUID().toString());
 
-      if (body.getString("po_number").equals("invalid")) {
+      if ("invalid".equals(body.getString("po_number"))) {
         ctx.response()
           .setStatusCode(400)
           .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
@@ -251,7 +251,7 @@ public class OrdersResourceImplTest {
       JsonObject body = ctx.getBodyAsJson();
       body.put("id", UUID.randomUUID().toString());
 
-      if (body.getString("barcode").equals("invalid")) {
+      if ("invalid".equals(body.getString("barcode"))) {
         ctx.response()
           .setStatusCode(400)
           .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
