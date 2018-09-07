@@ -27,6 +27,10 @@ public class PostOrdersHelper {
 
   private static final Logger logger = Logger.getLogger(PostOrdersHelper.class);
 
+  // epoch time @ 9/1/2018.
+  // if you change this, you run the risk of duplicate poNumbers
+  private static final long PO_NUMBER_EPOCH = 1535774400000L;
+
   private final HttpClientInterface httpClient;
   private final Context ctx;
   private final Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler;
@@ -49,13 +53,17 @@ public class PostOrdersHelper {
         .thenApply(OrdersResourceImpl::verifyAndExtractBody)
         .thenAccept(poBody -> {
           PurchaseOrder po = poBody.mapTo(PurchaseOrder.class);
+          String poNumber = generatePoNumber();
+          po.setPoNumber(poNumber);
           String poId = po.getId();
           compPO.setPurchaseOrder(po);
 
           List<PoLine> lines = new ArrayList<>(compPO.getPoLines().size());
           List<CompletableFuture<Void>> futures = new ArrayList<>();
-          compPO.getPoLines().forEach(line -> {
+          for (int i = 0; i < compPO.getPoLines().size(); i++) {
+            PoLine line = compPO.getPoLines().get(i);
             line.setPurchaseOrderId(poId);
+            line.setPoLineNumber(poNumber + "-" + (i + 1));
             try {
               Buffer polBuf = JsonObject.mapFrom(line).toBuffer();
               CompletableFuture<Void> polFut = httpClient.request(HttpMethod.POST, polBuf, "/po_line", okapiHeaders)
@@ -66,7 +74,7 @@ public class PostOrdersHelper {
               logger.error("Exception calling POST /po_line", e);
               throw new CompletionException(e);
             }
-          });
+          }
 
           VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
             .thenAccept(v -> {
@@ -133,4 +141,11 @@ public class PostOrdersHelper {
 
     return null;
   }
+
+  public static String generatePoNumber() {
+    return (Long.toHexString(System.currentTimeMillis() - PO_NUMBER_EPOCH) +
+        Long.toHexString(System.nanoTime() % 100))
+          .toUpperCase();
+  }
+
 }
