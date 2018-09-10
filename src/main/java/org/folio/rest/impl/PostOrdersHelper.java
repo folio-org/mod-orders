@@ -47,14 +47,15 @@ public class PostOrdersHelper {
   public CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
 
+    compPO.getPurchaseOrder().setPoNumber(generatePoNumber());
+
     try {
       Buffer poBuf = JsonObject.mapFrom(compPO.getPurchaseOrder()).toBuffer();
       httpClient.request(HttpMethod.POST, poBuf, "/purchase_order", okapiHeaders)
         .thenApply(OrdersResourceImpl::verifyAndExtractBody)
         .thenAccept(poBody -> {
           PurchaseOrder po = poBody.mapTo(PurchaseOrder.class);
-          String poNumber = generatePoNumber();
-          po.setPoNumber(poNumber);
+          String poNumber = po.getPoNumber();
           String poId = po.getId();
           compPO.setPurchaseOrder(po);
 
