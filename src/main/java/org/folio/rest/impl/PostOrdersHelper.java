@@ -73,7 +73,7 @@ public class PostOrdersHelper {
             compPOL.setPoLineNumber(poNumber + "-" + (i + 1));
 
             futures.add(createPoLine(compPOL)
-              .thenAccept(line -> lines.add(line))
+              .thenAccept(lines::add)
               .exceptionally(t -> {
                 future.completeExceptionally(t);
                 return null;
