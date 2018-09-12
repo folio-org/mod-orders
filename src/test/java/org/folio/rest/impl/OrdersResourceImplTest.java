@@ -107,6 +107,7 @@ public class OrdersResourceImplTest {
     // logger.info(respBody);
 
     JsonObject json = new JsonObject(respBody);
+    logger.info(json.encodePrettily());
 
     String poId = json.getJsonObject("purchase_order").getString("id");
     assertNotNull(poId);
@@ -128,21 +129,21 @@ public class OrdersResourceImplTest {
 
     final Errors errors = RestAssured
       .given()
-        .header(X_OKAPI_URL)
-        .header(X_OKAPI_TENANT)
-        .contentType(APPLICATION_JSON)
-        .body(body)
+      .header(X_OKAPI_URL)
+      .header(X_OKAPI_TENANT)
+      .contentType(APPLICATION_JSON)
+      .body(body)
       .when()
-        .post(rootPath)
+      .post(rootPath)
       .then()
-        .log()
-          .all()
-        .contentType(APPLICATION_JSON)
-        .statusCode(422)
-        .extract()
-          .response()
-            .body()
-              .as(Errors.class);
+      .log()
+      .all()
+      .contentType(APPLICATION_JSON)
+      .statusCode(422)
+      .extract()
+      .response()
+      .body()
+      .as(Errors.class);
 
     ctx.assertFalse(errors.getErrors().isEmpty());
     ctx.assertNotNull(errors.getErrors().get(0));
@@ -207,6 +208,11 @@ public class OrdersResourceImplTest {
       router.route().handler(BodyHandler.create());
       router.route(HttpMethod.POST, "/purchase_order").handler(this::handlePostPurchaseOrder);
       router.route(HttpMethod.POST, "/po_line").handler(this::handlePostPOLine);
+      router.route(HttpMethod.POST, "/details").handler(this::handlePostAssignId);
+      router.route(HttpMethod.POST, "/cost").handler(this::handlePostAssignId);
+      router.route(HttpMethod.POST, "/vendor_detail").handler(this::handlePostAssignId);
+      router.route(HttpMethod.POST, "/eresource").handler(this::handlePostAssignId);
+      router.route(HttpMethod.POST, "/location").handler(this::handlePostAssignId);
 
       return router;
     }
@@ -243,6 +249,18 @@ public class OrdersResourceImplTest {
           .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
           .end(body.encodePrettily());
       }
+    }
+
+    private void handlePostAssignId(RoutingContext ctx) {
+      logger.info("got: " + ctx.getBodyAsString());
+
+      JsonObject body = ctx.getBodyAsJson();
+      body.put("id", UUID.randomUUID().toString());
+
+      ctx.response()
+        .setStatusCode(201)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .end(body.encodePrettily());
     }
 
     private void handlePostPOLine(RoutingContext ctx) {

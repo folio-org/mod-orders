@@ -12,6 +12,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.resource.OrdersResource.PostOrdersResponse;
+import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
@@ -52,7 +53,7 @@ public class PostOrdersHelper {
     try {
       Buffer poBuf = JsonObject.mapFrom(compPO.getPurchaseOrder()).toBuffer();
       httpClient.request(HttpMethod.POST, poBuf, "/purchase_order", okapiHeaders)
-        .thenApply(OrdersResourceImpl::verifyAndExtractBody)
+        .thenApply(PostOrdersHelper::verifyAndExtractBody)
         .thenAccept(poBody -> {
           PurchaseOrder po = poBody.mapTo(PurchaseOrder.class);
           String poNumber = po.getPoNumber();
@@ -62,19 +63,17 @@ public class PostOrdersHelper {
           List<PoLine> lines = new ArrayList<>(compPO.getPoLines().size());
           List<CompletableFuture<Void>> futures = new ArrayList<>();
           for (int i = 0; i < compPO.getPoLines().size(); i++) {
-            PoLine line = compPO.getPoLines().get(i);
-            line.setPurchaseOrderId(poId);
-            line.setPoLineNumber(poNumber + "-" + (i + 1));
-            try {
-              Buffer polBuf = JsonObject.mapFrom(line).toBuffer();
-              CompletableFuture<Void> polFut = httpClient.request(HttpMethod.POST, polBuf, "/po_line", okapiHeaders)
-                .thenApply(OrdersResourceImpl::verifyAndExtractBody)
-                .thenAccept(body -> lines.add((PoLine) body.mapTo(PoLine.class)));
-              futures.add(polFut);
-            } catch (Exception e) {
-              logger.error("Exception calling POST /po_line", e);
-              throw new CompletionException(e);
-            }
+            PoLine compPOL = compPO.getPoLines().get(i);
+            compPOL.setPurchaseOrderId(poId);
+            compPOL.setPoLineNumber(poNumber + "-" + (i + 1));
+
+            futures.add(createPoLine(compPOL)
+              .thenAccept(line -> {
+                lines.add(line);
+              }).exceptionally(t -> {
+                future.completeExceptionally(t);
+                return null;
+              }));
           }
 
           VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
@@ -95,6 +94,85 @@ public class PostOrdersHelper {
       logger.error("Exception calling POST /purchase_order", e);
       future.completeExceptionally(e);
     }
+    return future;
+  }
+
+  public CompletableFuture<PoLine> createPoLine(PoLine compPOL) {
+    CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
+
+    JsonObject cost = JsonObject.mapFrom(compPOL.getCost());
+    JsonObject details = JsonObject.mapFrom(compPOL.getDetails());
+    JsonObject eresource = JsonObject.mapFrom(compPOL.getEresource());
+    JsonObject location = JsonObject.mapFrom(compPOL.getLocation());
+    JsonObject vendor = JsonObject.mapFrom(compPOL.getVendor());
+
+    JsonObject line = JsonObject.mapFrom(compPOL);
+    List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
+    if (!cost.isEmpty()) {
+      subObjFuts.add(createSubObj(line, cost, "cost", "/cost")
+        .thenAccept(id -> compPOL.getCost().setId(id)));
+    }
+    if (!details.isEmpty()) {
+      subObjFuts.add(createSubObj(line, details, "details", "/details")
+        .thenAccept(id -> compPOL.getDetails().setId(id)));
+    }
+    if (!eresource.isEmpty()) {
+      subObjFuts.add(createSubObj(line, eresource, "eresource", "/eresource")
+        .thenAccept(id -> compPOL.getEresource().setId(id)));
+    }
+    if (!location.isEmpty()) {
+      subObjFuts.add(createSubObj(line, location, "location", "/location")
+        .thenAccept(id -> compPOL.getLocation().setId(id)));
+    }
+    if (!vendor.isEmpty()) {
+      subObjFuts.add(createSubObj(line, vendor, "vendor", "/vendor_detail")
+        .thenAccept(id -> compPOL.getVendor().setId(id)));
+    }
+
+    CompletableFuture.allOf(subObjFuts.toArray(new CompletableFuture[subObjFuts.size()]))
+      .thenAccept(v -> {
+        try {
+          Buffer polBuf = JsonObject.mapFrom(line).toBuffer();
+          httpClient.request(HttpMethod.POST, polBuf, "/po_line", okapiHeaders)
+            .thenApply(PostOrdersHelper::verifyAndExtractBody)
+            .thenAccept(body -> {
+              logger.info("response from /po_line: " + body.encodePrettily());
+
+              compPOL.setId(body.getString("id"));
+              future.complete(compPOL);
+            })
+            .exceptionally(t -> {
+              future.completeExceptionally(t);
+              return null;
+            });
+        } catch (Exception e) {
+          logger.error("Exception calling POST /po_line", e);
+          future.completeExceptionally(e);
+        }
+      });
+    return future;
+  }
+
+  public CompletableFuture<String> createSubObj(JsonObject pol, JsonObject obj, String field, String url) {
+    CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
+
+    try {
+      httpClient.request(HttpMethod.POST, obj.toBuffer(), url, okapiHeaders)
+        .thenApply(PostOrdersHelper::verifyAndExtractBody)
+        .thenAccept(body -> {
+          String id = JsonObject.mapFrom(body).getString("id");
+          pol.put(field, id);
+          logger.info("POL after " + field + ": " + pol.encodePrettily());
+          future.complete(id);
+        })
+        .exceptionally(t -> {
+          future.completeExceptionally(t);
+          return null;
+        });
+    } catch (Exception e) {
+      future.completeExceptionally(e);
+    }
+
     return future;
   }
 
@@ -147,6 +225,15 @@ public class PostOrdersHelper {
     return (Long.toHexString(System.currentTimeMillis() - PO_NUMBER_EPOCH) +
         Long.toHexString(System.nanoTime() % 100))
           .toUpperCase();
+  }
+
+  public static JsonObject verifyAndExtractBody(Response response) {
+    if (!Response.isSuccess(response.getCode())) {
+      throw new CompletionException(
+          new HttpException(response.getCode(), response.getError().getString("errorMessage")));
+    }
+
+    return response.getBody();
   }
 
 }

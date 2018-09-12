@@ -86,15 +86,6 @@ public class OrdersResourceImpl implements OrdersResource {
 
   }
 
-  public static JsonObject verifyAndExtractBody(Response response) {
-    if (!Response.isSuccess(response.getCode())) {
-      throw new CompletionException(
-          new HttpException(response.getCode(), response.getError().getString("errorMessage")));
-    }
-
-    return response.getBody();
-  }
-
   public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {
     final String okapiURL = okapiHeaders.getOrDefault(OKAPI_HEADER_URL, "");
     final String tenantId = TenantTool.calculateTenantId(okapiHeaders.get(RestVerticle.OKAPI_HEADER_TENANT));
