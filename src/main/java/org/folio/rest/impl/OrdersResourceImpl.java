@@ -1,15 +1,12 @@
 package org.folio.rest.impl;
 
 import java.util.Map;
-import java.util.concurrent.CompletionException;
 
 import org.apache.log4j.Logger;
-import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.resource.OrdersResource;
 import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
 
