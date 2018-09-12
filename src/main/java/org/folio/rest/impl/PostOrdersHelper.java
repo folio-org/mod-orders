@@ -9,8 +9,13 @@ import java.util.concurrent.CompletionException;
 import org.apache.log4j.Logger;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Details;
+import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.Vendor;
 import org.folio.rest.jaxrs.resource.OrdersResource.PostOrdersResponse;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -100,33 +105,49 @@ public class PostOrdersHelper {
   public CompletableFuture<PoLine> createPoLine(PoLine compPOL) {
     CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
 
-    JsonObject cost = JsonObject.mapFrom(compPOL.getCost());
-    JsonObject details = JsonObject.mapFrom(compPOL.getDetails());
-    JsonObject eresource = JsonObject.mapFrom(compPOL.getEresource());
-    JsonObject location = JsonObject.mapFrom(compPOL.getLocation());
-    JsonObject vendor = JsonObject.mapFrom(compPOL.getVendor());
+    Cost cost = compPOL.getCost();
+    Details details = compPOL.getDetails();
+    Eresource eresource = compPOL.getEresource();
+    Location location = compPOL.getLocation();
+    Vendor vendor = compPOL.getVendor();
 
     JsonObject line = JsonObject.mapFrom(compPOL);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
-    if (!cost.isEmpty()) {
-      subObjFuts.add(createSubObj(line, cost, "cost", "/cost")
-        .thenAccept(id -> compPOL.getCost().setId(id)));
+
+    if (cost != null) {
+      JsonObject obj = JsonObject.mapFrom(cost);
+      if (!obj.isEmpty()) {
+        subObjFuts.add(createSubObj(line, obj, "cost", "/cost")
+          .thenAccept(id -> compPOL.getCost().setId(id)));
+      }
     }
-    if (!details.isEmpty()) {
-      subObjFuts.add(createSubObj(line, details, "details", "/details")
-        .thenAccept(id -> compPOL.getDetails().setId(id)));
+    if (details != null) {
+      JsonObject obj = JsonObject.mapFrom(details);
+      if (!obj.isEmpty()) {
+        subObjFuts.add(createSubObj(line, obj, "details", "/details")
+          .thenAccept(id -> compPOL.getDetails().setId(id)));
+      }
     }
-    if (!eresource.isEmpty()) {
-      subObjFuts.add(createSubObj(line, eresource, "eresource", "/eresource")
-        .thenAccept(id -> compPOL.getEresource().setId(id)));
+    if (eresource != null) {
+      JsonObject obj = JsonObject.mapFrom(eresource);
+      if (!obj.isEmpty()) {
+        subObjFuts.add(createSubObj(line, obj, "eresource", "/eresource")
+          .thenAccept(id -> compPOL.getEresource().setId(id)));
+      }
     }
-    if (!location.isEmpty()) {
-      subObjFuts.add(createSubObj(line, location, "location", "/location")
-        .thenAccept(id -> compPOL.getLocation().setId(id)));
+    if (location != null) {
+      JsonObject obj = JsonObject.mapFrom(location);
+      if (!obj.isEmpty()) {
+        subObjFuts.add(createSubObj(line, obj, "location", "/location")
+          .thenAccept(id -> compPOL.getLocation().setId(id)));
+      }
     }
-    if (!vendor.isEmpty()) {
-      subObjFuts.add(createSubObj(line, vendor, "vendor", "/vendor_detail")
-        .thenAccept(id -> compPOL.getVendor().setId(id)));
+    if (vendor != null) {
+      JsonObject obj = JsonObject.mapFrom(vendor);
+      if (!obj.isEmpty()) {
+        subObjFuts.add(createSubObj(line, obj, "vendor", "/vendor_detail")
+          .thenAccept(id -> compPOL.getVendor().setId(id)));
+      }
     }
 
     CompletableFuture.allOf(subObjFuts.toArray(new CompletableFuture[subObjFuts.size()]))
