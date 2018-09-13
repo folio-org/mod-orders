@@ -21,7 +21,11 @@
           "permissionsRequired": ["orders.item.post"],
           "modulePermissions": [
             "purchase_order.item.post",
-            "po_line.item.post"
+            "po_line.item.post",
+            "cost.item.post",
+            "details.item.post",
+            "eresource.item.post",
+            "location.item.post"
           ]
         },
         {
