@@ -138,9 +138,10 @@ public class PostOrdersHelper {
   }
 
   private CompletableFuture<Void> createCost(PoLine compPOL, JsonObject line, Cost cost) {
-    return create(line, cost, "cost", "/cost")
+    return createSubObjIfPresent(line, cost, "cost", "/cost")
       .thenAccept(id -> {
         if (id == null) {
+          line.remove("cost");
           compPOL.setCost(null);
         } else {
           compPOL.getCost().setId(id);
@@ -149,9 +150,10 @@ public class PostOrdersHelper {
   }
 
   private CompletableFuture<Void> createDetails(PoLine compPOL, JsonObject line, Details details) {
-    return create(line, details, "details", "/details")
+    return createSubObjIfPresent(line, details, "details", "/details")
       .thenAccept(id -> {
         if (id == null) {
+          line.remove("details");
           compPOL.setDetails(null);
         } else {
           compPOL.getDetails().setId(id);
@@ -160,9 +162,10 @@ public class PostOrdersHelper {
   }
 
   private CompletableFuture<Void> createEresource(PoLine compPOL, JsonObject line, Eresource eresource) {
-    return create(line, eresource, "eresource", "/eresource")
+    return createSubObjIfPresent(line, eresource, "eresource", "/eresource")
       .thenAccept(id -> {
         if (id == null) {
+          line.remove("eresource");
           compPOL.setEresource(null);
         } else {
           compPOL.getEresource().setId(id);
@@ -171,9 +174,10 @@ public class PostOrdersHelper {
   }
 
   private CompletableFuture<Void> createLocation(PoLine compPOL, JsonObject line, Location location) {
-    return create(line, location, "location", "/location")
+    return createSubObjIfPresent(line, location, "location", "/location")
       .thenAccept(id -> {
         if (id == null) {
+          line.remove("location");
           compPOL.setLocation(null);
         } else {
           compPOL.getLocation().setId(id);
@@ -182,9 +186,10 @@ public class PostOrdersHelper {
   }
 
   private CompletableFuture<Void> createVendor(PoLine compPOL, JsonObject line, Vendor vendor) {
-    return create(line, vendor, "vendor", "/vendor_detail")
+    return createSubObjIfPresent(line, vendor, "vendor", "/vendor_detail")
       .thenAccept(id -> {
         if (id == null) {
+          line.remove("vendor");
           compPOL.setVendor(null);
         } else {
           compPOL.getVendor().setId(id);
@@ -192,7 +197,7 @@ public class PostOrdersHelper {
       });
   }
 
-  private CompletableFuture<String> create(JsonObject line, Object obj, String field, String url) {
+  private CompletableFuture<String> createSubObjIfPresent(JsonObject line, Object obj, String field, String url) {
     if (obj != null) {
       JsonObject json = JsonObject.mapFrom(obj);
       if (!json.isEmpty()) {
@@ -211,7 +216,6 @@ public class PostOrdersHelper {
         .thenAccept(body -> {
           String id = JsonObject.mapFrom(body).getString("id");
           pol.put(field, id);
-          logger.info("POL after " + field + ": " + pol.encodePrettily());
           future.complete(id);
         })
         .exceptionally(t -> {

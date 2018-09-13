@@ -92,19 +92,18 @@ public class OrdersResourceImplTest {
 
     final Response resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .contentType(APPLICATION_JSON)
-      .statusCode(201)
-      .extract()
-      .response();
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+            .response();
 
     String respBody = resp.getBody().asString();
-    // logger.info(respBody);
 
     JsonObject json = new JsonObject(respBody);
     logger.info(json.encodePrettily());
@@ -129,21 +128,20 @@ public class OrdersResourceImplTest {
 
     final Errors errors = RestAssured
       .given()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
-      .when()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .log()
-      .all()
-      .contentType(APPLICATION_JSON)
-      .statusCode(422)
-      .extract()
-      .response()
-      .body()
-      .as(Errors.class);
+        .then()
+          .log()
+            .all()
+          .contentType(APPLICATION_JSON)
+          .statusCode(422)
+          .extract()
+            .response()
+              .body()
+                .as(Errors.class);
 
     ctx.assertFalse(errors.getErrors().isEmpty());
     ctx.assertNotNull(errors.getErrors().get(0));
@@ -162,16 +160,16 @@ public class OrdersResourceImplTest {
 
     final Response resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .contentType(TEXT_PLAIN)
-      .statusCode(400)
-      .extract()
-      .response();
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(400)
+          .extract()
+            .response();
 
     String respBody = resp.getBody().asString();
     logger.info(respBody);
