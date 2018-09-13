@@ -48,6 +48,8 @@ public class OrdersResourceImplTest {
   private final Header X_OKAPI_URL = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
   private final Header X_OKAPI_TENANT = new Header("X-Okapi-Tenant", "ordersresourceimpltest");
 
+  public final static String X_ECHO_STATUS = "X-Okapi-Echo-Status";
+
   // API paths
   private final String rootPath = "/orders";
 
@@ -177,6 +179,32 @@ public class OrdersResourceImplTest {
     assertEquals("Invalid barcode", respBody);
   }
 
+  @Test
+  public void testDetailsCreationFailure(TestContext ctx) throws Exception {
+    logger.info("=== Test Details creation failure ===");
+
+    String body = getMockData(listedPrintMonographPath);
+
+    final Response resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .header(X_ECHO_STATUS, 401)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .post(rootPath)
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(401)
+          .extract()
+            .response();
+
+    String respBody = resp.getBody().asString();
+    logger.info(respBody);
+
+    assertEquals("Access requires permission: foo.bar.baz", respBody);
+  }
+
   public static class MockServer {
 
     private static final Logger logger = Logger.getLogger(MockServer.class);
@@ -252,13 +280,40 @@ public class OrdersResourceImplTest {
     private void handlePostAssignId(RoutingContext ctx) {
       logger.info("got: " + ctx.getBodyAsString());
 
-      JsonObject body = ctx.getBodyAsJson();
-      body.put("id", UUID.randomUUID().toString());
+      String echoStatus = ctx.request().getHeader(X_ECHO_STATUS);
+
+      int status = 201;
+      String respBody = "";
+      String contentType = TEXT_PLAIN;
+
+      if (echoStatus != null) {
+        try {
+          status = Integer.parseInt(echoStatus);
+        } catch (NumberFormatException e) {
+          logger.error("Exception parsing " + X_ECHO_STATUS, e);
+        }
+      }
+      ctx.response().setStatusCode(status);
+
+      switch (status) {
+      case 201:
+        contentType = APPLICATION_JSON;
+        JsonObject body = ctx.getBodyAsJson();
+        body.put("id", UUID.randomUUID().toString());
+        respBody = body.encodePrettily();
+        break;
+      case 401:
+        respBody = "Access requires permission: foo.bar.baz";
+        break;
+      case 500:
+        respBody = "Internal Server Error";
+        break;
+      }
 
       ctx.response()
-        .setStatusCode(201)
-        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .end(body.encodePrettily());
+        .setStatusCode(status)
+        .putHeader(HttpHeaders.CONTENT_TYPE, contentType)
+        .end(respBody);
     }
 
     private void handlePostPOLine(RoutingContext ctx) {
