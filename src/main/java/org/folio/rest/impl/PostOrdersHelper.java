@@ -104,50 +104,14 @@ public class PostOrdersHelper {
   public CompletableFuture<PoLine> createPoLine(PoLine compPOL) {
     CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
 
-    Cost cost = compPOL.getCost();
-    Details details = compPOL.getDetails();
-    Eresource eresource = compPOL.getEresource();
-    Location location = compPOL.getLocation();
-    Vendor vendor = compPOL.getVendor();
-
     JsonObject line = JsonObject.mapFrom(compPOL);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
 
-    if (cost != null) {
-      JsonObject obj = JsonObject.mapFrom(cost);
-      if (!obj.isEmpty()) {
-        subObjFuts.add(createSubObj(line, obj, "cost", "/cost")
-          .thenAccept(id -> compPOL.getCost().setId(id)));
-      }
-    }
-    if (details != null) {
-      JsonObject obj = JsonObject.mapFrom(details);
-      if (!obj.isEmpty()) {
-        subObjFuts.add(createSubObj(line, obj, "details", "/details")
-          .thenAccept(id -> compPOL.getDetails().setId(id)));
-      }
-    }
-    if (eresource != null) {
-      JsonObject obj = JsonObject.mapFrom(eresource);
-      if (!obj.isEmpty()) {
-        subObjFuts.add(createSubObj(line, obj, "eresource", "/eresource")
-          .thenAccept(id -> compPOL.getEresource().setId(id)));
-      }
-    }
-    if (location != null) {
-      JsonObject obj = JsonObject.mapFrom(location);
-      if (!obj.isEmpty()) {
-        subObjFuts.add(createSubObj(line, obj, "location", "/location")
-          .thenAccept(id -> compPOL.getLocation().setId(id)));
-      }
-    }
-    if (vendor != null) {
-      JsonObject obj = JsonObject.mapFrom(vendor);
-      if (!obj.isEmpty()) {
-        subObjFuts.add(createSubObj(line, obj, "vendor", "/vendor_detail")
-          .thenAccept(id -> compPOL.getVendor().setId(id)));
-      }
-    }
+    subObjFuts.add(createCost(compPOL, line, compPOL.getCost()));
+    subObjFuts.add(createDetails(compPOL, line, compPOL.getDetails()));
+    subObjFuts.add(createEresource(compPOL, line, compPOL.getEresource()));
+    subObjFuts.add(createLocation(compPOL, line, compPOL.getLocation()));
+    subObjFuts.add(createVendor(compPOL, line, compPOL.getVendor()));
 
     CompletableFuture.allOf(subObjFuts.toArray(new CompletableFuture[subObjFuts.size()]))
       .thenAccept(v -> {
@@ -173,7 +137,72 @@ public class PostOrdersHelper {
     return future;
   }
 
-  public CompletableFuture<String> createSubObj(JsonObject pol, JsonObject obj, String field, String url) {
+  private CompletableFuture<Void> createCost(PoLine compPOL, JsonObject line, Cost cost) {
+    return create(line, cost, "cost", "/cost")
+      .thenAccept(id -> {
+        if (id == null) {
+          compPOL.setCost(null);
+        } else {
+          compPOL.getCost().setId(id);
+        }
+      });
+  }
+
+  private CompletableFuture<Void> createDetails(PoLine compPOL, JsonObject line, Details details) {
+    return create(line, details, "details", "/details")
+      .thenAccept(id -> {
+        if (id == null) {
+          compPOL.setDetails(null);
+        } else {
+          compPOL.getDetails().setId(id);
+        }
+      });
+  }
+
+  private CompletableFuture<Void> createEresource(PoLine compPOL, JsonObject line, Eresource eresource) {
+    return create(line, eresource, "eresource", "/eresource")
+      .thenAccept(id -> {
+        if (id == null) {
+          compPOL.setEresource(null);
+        } else {
+          compPOL.getEresource().setId(id);
+        }
+      });
+  }
+
+  private CompletableFuture<Void> createLocation(PoLine compPOL, JsonObject line, Location location) {
+    return create(line, location, "location", "/location")
+      .thenAccept(id -> {
+        if (id == null) {
+          compPOL.setLocation(null);
+        } else {
+          compPOL.getLocation().setId(id);
+        }
+      });
+  }
+
+  private CompletableFuture<Void> createVendor(PoLine compPOL, JsonObject line, Vendor vendor) {
+    return create(line, vendor, "vendor", "/vendor_detail")
+      .thenAccept(id -> {
+        if (id == null) {
+          compPOL.setVendor(null);
+        } else {
+          compPOL.getVendor().setId(id);
+        }
+      });
+  }
+
+  private CompletableFuture<String> create(JsonObject line, Object obj, String field, String url) {
+    if (obj != null) {
+      JsonObject json = JsonObject.mapFrom(obj);
+      if (!json.isEmpty()) {
+        return createSubObj(line, json, field, url);
+      }
+    }
+    return CompletableFuture.completedFuture(null);
+  }
+
+  private CompletableFuture<String> createSubObj(JsonObject pol, JsonObject obj, String field, String url) {
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
 
     try {
