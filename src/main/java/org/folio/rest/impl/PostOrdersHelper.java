@@ -9,9 +9,15 @@ import java.util.concurrent.CompletionException;
 import org.apache.log4j.Logger;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Details;
+import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.Vendor;
 import org.folio.rest.jaxrs.resource.OrdersResource.PostOrdersResponse;
+import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
@@ -52,7 +58,7 @@ public class PostOrdersHelper {
     try {
       Buffer poBuf = JsonObject.mapFrom(compPO.getPurchaseOrder()).toBuffer();
       httpClient.request(HttpMethod.POST, poBuf, "/purchase_order", okapiHeaders)
-        .thenApply(OrdersResourceImpl::verifyAndExtractBody)
+        .thenApply(PostOrdersHelper::verifyAndExtractBody)
         .thenAccept(poBody -> {
           PurchaseOrder po = poBody.mapTo(PurchaseOrder.class);
           String poNumber = po.getPoNumber();
@@ -62,19 +68,16 @@ public class PostOrdersHelper {
           List<PoLine> lines = new ArrayList<>(compPO.getPoLines().size());
           List<CompletableFuture<Void>> futures = new ArrayList<>();
           for (int i = 0; i < compPO.getPoLines().size(); i++) {
-            PoLine line = compPO.getPoLines().get(i);
-            line.setPurchaseOrderId(poId);
-            line.setPoLineNumber(poNumber + "-" + (i + 1));
-            try {
-              Buffer polBuf = JsonObject.mapFrom(line).toBuffer();
-              CompletableFuture<Void> polFut = httpClient.request(HttpMethod.POST, polBuf, "/po_line", okapiHeaders)
-                .thenApply(OrdersResourceImpl::verifyAndExtractBody)
-                .thenAccept(body -> lines.add((PoLine) body.mapTo(PoLine.class)));
-              futures.add(polFut);
-            } catch (Exception e) {
-              logger.error("Exception calling POST /po_line", e);
-              throw new CompletionException(e);
-            }
+            PoLine compPOL = compPO.getPoLines().get(i);
+            compPOL.setPurchaseOrderId(poId);
+            compPOL.setPoLineNumber(poNumber + "-" + (i + 1));
+
+            futures.add(createPoLine(compPOL)
+              .thenAccept(lines::add)
+              .exceptionally(t -> {
+                future.completeExceptionally(t);
+                return null;
+              }));
           }
 
           VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
@@ -95,6 +98,134 @@ public class PostOrdersHelper {
       logger.error("Exception calling POST /purchase_order", e);
       future.completeExceptionally(e);
     }
+    return future;
+  }
+
+  public CompletableFuture<PoLine> createPoLine(PoLine compPOL) {
+    CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
+
+    JsonObject line = JsonObject.mapFrom(compPOL);
+    List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
+
+    subObjFuts.add(createCost(compPOL, line, compPOL.getCost()));
+    subObjFuts.add(createDetails(compPOL, line, compPOL.getDetails()));
+    subObjFuts.add(createEresource(compPOL, line, compPOL.getEresource()));
+    subObjFuts.add(createLocation(compPOL, line, compPOL.getLocation()));
+    subObjFuts.add(createVendor(compPOL, line, compPOL.getVendor()));
+
+    CompletableFuture.allOf(subObjFuts.toArray(new CompletableFuture[subObjFuts.size()]))
+      .thenAccept(v -> {
+        try {
+          Buffer polBuf = JsonObject.mapFrom(line).toBuffer();
+          httpClient.request(HttpMethod.POST, polBuf, "/po_line", okapiHeaders)
+            .thenApply(PostOrdersHelper::verifyAndExtractBody)
+            .thenAccept(body -> {
+              logger.info("response from /po_line: " + body.encodePrettily());
+
+              compPOL.setId(body.getString("id"));
+              future.complete(compPOL);
+            })
+            .exceptionally(t -> {
+              future.completeExceptionally(t);
+              return null;
+            });
+        } catch (Exception e) {
+          logger.error("Exception calling POST /po_line", e);
+          future.completeExceptionally(e);
+        }
+      });
+    return future;
+  }
+
+  private CompletableFuture<Void> createCost(PoLine compPOL, JsonObject line, Cost cost) {
+    return createSubObjIfPresent(line, cost, "cost", "/cost")
+      .thenAccept(id -> {
+        if (id == null) {
+          line.remove("cost");
+          compPOL.setCost(null);
+        } else {
+          compPOL.getCost().setId(id);
+        }
+      });
+  }
+
+  private CompletableFuture<Void> createDetails(PoLine compPOL, JsonObject line, Details details) {
+    return createSubObjIfPresent(line, details, "details", "/details")
+      .thenAccept(id -> {
+        if (id == null) {
+          line.remove("details");
+          compPOL.setDetails(null);
+        } else {
+          compPOL.getDetails().setId(id);
+        }
+      });
+  }
+
+  private CompletableFuture<Void> createEresource(PoLine compPOL, JsonObject line, Eresource eresource) {
+    return createSubObjIfPresent(line, eresource, "eresource", "/eresource")
+      .thenAccept(id -> {
+        if (id == null) {
+          line.remove("eresource");
+          compPOL.setEresource(null);
+        } else {
+          compPOL.getEresource().setId(id);
+        }
+      });
+  }
+
+  private CompletableFuture<Void> createLocation(PoLine compPOL, JsonObject line, Location location) {
+    return createSubObjIfPresent(line, location, "location", "/location")
+      .thenAccept(id -> {
+        if (id == null) {
+          line.remove("location");
+          compPOL.setLocation(null);
+        } else {
+          compPOL.getLocation().setId(id);
+        }
+      });
+  }
+
+  private CompletableFuture<Void> createVendor(PoLine compPOL, JsonObject line, Vendor vendor) {
+    return createSubObjIfPresent(line, vendor, "vendor", "/vendor_detail")
+      .thenAccept(id -> {
+        if (id == null) {
+          line.remove("vendor");
+          compPOL.setVendor(null);
+        } else {
+          compPOL.getVendor().setId(id);
+        }
+      });
+  }
+
+  private CompletableFuture<String> createSubObjIfPresent(JsonObject line, Object obj, String field, String url) {
+    if (obj != null) {
+      JsonObject json = JsonObject.mapFrom(obj);
+      if (!json.isEmpty()) {
+        return createSubObj(line, json, field, url);
+      }
+    }
+    return CompletableFuture.completedFuture(null);
+  }
+
+  private CompletableFuture<String> createSubObj(JsonObject pol, JsonObject obj, String field, String url) {
+    CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
+
+    try {
+      httpClient.request(HttpMethod.POST, obj.toBuffer(), url, okapiHeaders)
+        .thenApply(PostOrdersHelper::verifyAndExtractBody)
+        .thenAccept(body -> {
+          String id = JsonObject.mapFrom(body).getString("id");
+          pol.put(field, id);
+          future.complete(id);
+        })
+        .exceptionally(t -> {
+          future.completeExceptionally(t);
+          return null;
+        });
+    } catch (Exception e) {
+      future.completeExceptionally(e);
+    }
+
     return future;
   }
 
@@ -147,6 +278,15 @@ public class PostOrdersHelper {
     return (Long.toHexString(System.currentTimeMillis() - PO_NUMBER_EPOCH) +
         Long.toHexString(System.nanoTime() % 100))
           .toUpperCase();
+  }
+
+  public static JsonObject verifyAndExtractBody(Response response) {
+    if (!Response.isSuccess(response.getCode())) {
+      throw new CompletionException(
+          new HttpException(response.getCode(), response.getError().getString("errorMessage")));
+    }
+
+    return response.getBody();
   }
 
 }

@@ -1,10 +1,33 @@
 {
-  "purchase_order": {
-
-  },
-  "po_lines": [
-    { },
-    { },
-    { }
-  ]
+	"purchase_order": {
+		"created_by": "ef676db9-d231-479a-aa91-f65eb4b17872"
+	},
+	"po_lines": [{
+		"acquisition_method": "mod-gobi",
+		"alerts": [],
+		"claims": [],
+		"cost": {
+			"list_price": 13.16,
+			"currency": "USD",
+			"quantity": 1,
+			"estimated_price": 13.16
+		},
+		"details": {
+			"title": "MAN IN THE HIGH CASTLE.",
+			"receiving_note": "Notify requester upon receipt",
+			"product_id": "9780547572482",
+			"material_type": "197e8073-02ea-48fc-a8ba-95d916d7fb1d"
+		},
+		"eresource": {},
+		"location": {
+			"location_id": "bc58093e-c7de-4b2a-8e72-64b83e51fcae",
+			"quantity": 1
+		},
+		"vendor": {
+			"id": "a5ff41e2-5048-481f-afe5-f16716c5ee79",
+			"instructions": ""
+		},
+		"requester": "Anne Esterhazy",
+		"account_number": "891010"
+	}]
 }
