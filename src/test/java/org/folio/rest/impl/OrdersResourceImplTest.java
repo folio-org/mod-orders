@@ -189,13 +189,13 @@ public class OrdersResourceImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
-        .header(X_ECHO_STATUS, 401)
+        .header(X_ECHO_STATUS, 403)
         .contentType(APPLICATION_JSON)
         .body(body)
       .post(rootPath)
         .then()
           .contentType(TEXT_PLAIN)
-          .statusCode(401)
+          .statusCode(500)
           .extract()
             .response();
 
@@ -302,7 +302,7 @@ public class OrdersResourceImplTest {
         body.put("id", UUID.randomUUID().toString());
         respBody = body.encodePrettily();
         break;
-      case 401:
+      case 403:
         respBody = "Access requires permission: foo.bar.baz";
         break;
       case 500:

@@ -73,11 +73,7 @@ public class PostOrdersHelper {
             compPOL.setPoLineNumber(poNumber + "-" + (i + 1));
 
             futures.add(createPoLine(compPOL)
-              .thenAccept(lines::add)
-              .exceptionally(t -> {
-                future.completeExceptionally(t);
-                return null;
-              }));
+              .thenAccept(lines::add));
           }
 
           VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
