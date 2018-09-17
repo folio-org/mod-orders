@@ -1,6 +1,6 @@
 package org.folio.rest.impl;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
@@ -110,15 +110,27 @@ public class OrdersResourceImplTest {
     JsonObject json = new JsonObject(respBody);
     logger.info(json.encodePrettily());
 
-    String poId = json.getJsonObject("purchase_order").getString("id");
+    JsonObject po = json.getJsonObject("purchase_order");
+    String poId = po.getString("id");
+    String poNumber = po.getString("po_number");
+
     assertNotNull(poId);
+    assertNotNull(poNumber);
 
     assertEquals(reqData.getJsonArray("po_lines").size(), json.getJsonArray("po_lines").size());
 
     for (int i = 0; i < json.getJsonArray("po_lines").size(); i++) {
       JsonObject line = json.getJsonArray("po_lines").getJsonObject(i);
+      String polNumber = line.getString("po_line_number");
+
       assertEquals(poId, line.getString("purchase_order_id"));
       assertNotNull(line.getString("id"));
+      assertNotNull(polNumber);
+      assertTrue(polNumber.startsWith(poNumber));
+      assertNotNull(line.getJsonObject("cost").getString("id"));
+      assertNotNull(line.getJsonObject("details").getString("id"));
+      assertNotNull(line.getJsonObject("location").getString("id"));
+      assertNotNull(line.getJsonObject("vendor").getString("id"));
     }
   }
 
