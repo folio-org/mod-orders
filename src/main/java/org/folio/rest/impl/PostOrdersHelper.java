@@ -73,11 +73,7 @@ public class PostOrdersHelper {
             compPOL.setPoLineNumber(poNumber + "-" + (i + 1));
 
             futures.add(createPoLine(compPOL)
-              .thenAccept(lines::add)
-              .exceptionally(t -> {
-                future.completeExceptionally(t);
-                return null;
-              }));
+              .thenAccept(lines::add));
           }
 
           VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
@@ -126,6 +122,7 @@ public class PostOrdersHelper {
               future.complete(compPOL);
             })
             .exceptionally(t -> {
+              logger.error("failed to update CompositePoLine", t);
               future.completeExceptionally(t);
               return null;
             });
@@ -133,6 +130,11 @@ public class PostOrdersHelper {
           logger.error("Exception calling POST /po_line", e);
           future.completeExceptionally(e);
         }
+      })
+      .exceptionally(t -> {
+        logger.error("failed to create POLine sub-object", t);
+        future.completeExceptionally(t);
+        return null;
       });
     return future;
   }
@@ -146,6 +148,10 @@ public class PostOrdersHelper {
         } else {
           compPOL.getCost().setId(id);
         }
+      })
+      .exceptionally(t -> {
+        logger.error("failed to create Cost", t);
+        throw new CompletionException(t.getCause());
       });
   }
 
@@ -158,6 +164,10 @@ public class PostOrdersHelper {
         } else {
           compPOL.getDetails().setId(id);
         }
+      })
+      .exceptionally(t -> {
+        logger.error("failed to create Details", t);
+        throw new CompletionException(t.getCause());
       });
   }
 
@@ -170,6 +180,10 @@ public class PostOrdersHelper {
         } else {
           compPOL.getEresource().setId(id);
         }
+      })
+      .exceptionally(t -> {
+        logger.error("failed to create EResource", t);
+        throw new CompletionException(t.getCause());
       });
   }
 
@@ -182,6 +196,10 @@ public class PostOrdersHelper {
         } else {
           compPOL.getLocation().setId(id);
         }
+      })
+      .exceptionally(t -> {
+        logger.error("failed to create Location", t);
+        throw new CompletionException(t.getCause());
       });
   }
 
@@ -194,6 +212,10 @@ public class PostOrdersHelper {
         } else {
           compPOL.getVendor().setId(id);
         }
+      })
+      .exceptionally(t -> {
+        logger.error("failed to create Vendor", t);
+        throw new CompletionException(t.getCause());
       });
   }
 

@@ -1,6 +1,6 @@
 package org.folio.rest.impl;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
@@ -47,6 +47,8 @@ public class OrdersResourceImplTest {
 
   private final Header X_OKAPI_URL = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
   private final Header X_OKAPI_TENANT = new Header("X-Okapi-Tenant", "ordersresourceimpltest");
+
+  public final static String X_ECHO_STATUS = "X-Okapi-Echo-Status";
 
   // API paths
   private final String rootPath = "/orders";
@@ -108,15 +110,27 @@ public class OrdersResourceImplTest {
     JsonObject json = new JsonObject(respBody);
     logger.info(json.encodePrettily());
 
-    String poId = json.getJsonObject("purchase_order").getString("id");
+    JsonObject po = json.getJsonObject("purchase_order");
+    String poId = po.getString("id");
+    String poNumber = po.getString("po_number");
+
     assertNotNull(poId);
+    assertNotNull(poNumber);
 
     assertEquals(reqData.getJsonArray("po_lines").size(), json.getJsonArray("po_lines").size());
 
     for (int i = 0; i < json.getJsonArray("po_lines").size(); i++) {
       JsonObject line = json.getJsonArray("po_lines").getJsonObject(i);
+      String polNumber = line.getString("po_line_number");
+
       assertEquals(poId, line.getString("purchase_order_id"));
       assertNotNull(line.getString("id"));
+      assertNotNull(polNumber);
+      assertTrue(polNumber.startsWith(poNumber));
+      assertNotNull(line.getJsonObject("cost").getString("id"));
+      assertNotNull(line.getJsonObject("details").getString("id"));
+      assertNotNull(line.getJsonObject("location").getString("id"));
+      assertNotNull(line.getJsonObject("vendor").getString("id"));
     }
   }
 
@@ -175,6 +189,32 @@ public class OrdersResourceImplTest {
     logger.info(respBody);
 
     assertEquals("Invalid barcode", respBody);
+  }
+
+  @Test
+  public void testDetailsCreationFailure(TestContext ctx) throws Exception {
+    logger.info("=== Test Details creation failure ===");
+
+    String body = getMockData(listedPrintMonographPath);
+
+    final Response resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .header(X_ECHO_STATUS, 403)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .post(rootPath)
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(500)
+          .extract()
+            .response();
+
+    String respBody = resp.getBody().asString();
+    logger.info(respBody);
+
+    assertEquals("Access requires permission: foo.bar.baz", respBody);
   }
 
   public static class MockServer {
@@ -252,13 +292,40 @@ public class OrdersResourceImplTest {
     private void handlePostAssignId(RoutingContext ctx) {
       logger.info("got: " + ctx.getBodyAsString());
 
-      JsonObject body = ctx.getBodyAsJson();
-      body.put("id", UUID.randomUUID().toString());
+      String echoStatus = ctx.request().getHeader(X_ECHO_STATUS);
+
+      int status = 201;
+      String respBody = "";
+      String contentType = TEXT_PLAIN;
+
+      if (echoStatus != null) {
+        try {
+          status = Integer.parseInt(echoStatus);
+        } catch (NumberFormatException e) {
+          logger.error("Exception parsing " + X_ECHO_STATUS, e);
+        }
+      }
+      ctx.response().setStatusCode(status);
+
+      switch (status) {
+      case 201:
+        contentType = APPLICATION_JSON;
+        JsonObject body = ctx.getBodyAsJson();
+        body.put("id", UUID.randomUUID().toString());
+        respBody = body.encodePrettily();
+        break;
+      case 403:
+        respBody = "Access requires permission: foo.bar.baz";
+        break;
+      case 500:
+        respBody = "Internal Server Error";
+        break;
+      }
 
       ctx.response()
-        .setStatusCode(201)
-        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .end(body.encodePrettily());
+        .setStatusCode(status)
+        .putHeader(HttpHeaders.CONTENT_TYPE, contentType)
+        .end(respBody);
     }
 
     private void handlePostPOLine(RoutingContext ctx) {
