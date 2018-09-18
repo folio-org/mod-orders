@@ -25,7 +25,8 @@
             "cost.item.post",
             "details.item.post",
             "eresource.item.post",
-            "location.item.post"
+            "location.item.post",
+            "vendor_detail.item.post"
           ]
         },
         {
