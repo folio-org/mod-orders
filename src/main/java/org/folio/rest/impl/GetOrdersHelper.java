@@ -25,7 +25,7 @@ public class GetOrdersHelper {
 
   private static final Logger logger = Logger.getLogger(GetOrdersHelper.class);
 
-  public static final String MOCK_DATA_PATH = "src/test/resources/mockdata/getOrders.json";
+  public static final String MOCK_DATA_PATH = "mockdata/getOrders.json";
 
   private final HttpClientInterface httpClient;
   private final Context ctx;
@@ -63,7 +63,7 @@ public class GetOrdersHelper {
       try {
         JsonObject json = new JsonObject(HelperUtils.getMockData(MOCK_DATA_PATH));
         return json.mapTo(CompositePurchaseOrders.class);
-      } catch (IOException e) {
+      } catch (Exception e) {
         logger.error("Failed to read mock data", e);
         throw new CompletionException(e);
       }

@@ -26,7 +26,7 @@ public class GetOrderHelper {
 
   private static final Logger logger = Logger.getLogger(GetOrderHelper.class);
 
-  public static final String BASE_MOCK_DATA_PATH = "src/test/resources/mockdata/";
+  public static final String BASE_MOCK_DATA_PATH = "mockdata/";
 
   private final HttpClientInterface httpClient;
   private final Context ctx;
@@ -67,7 +67,7 @@ public class GetOrderHelper {
       } catch (NoSuchFileException e) {
         logger.error("No such file", e);
         throw new CompletionException(new HttpException(404, id));
-      } catch (IOException e) {
+      } catch (Exception e) {
         logger.error("Failed to read mock data", e);
         throw new CompletionException(e);
       }
