@@ -9,6 +9,7 @@ import static org.junit.Assert.fail;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.tools.utils.NetworkUtils;
@@ -230,6 +231,32 @@ public class OrdersResourceImplTest {
         .queryParam("query", "approval_status%3D%22Pending%22")
         .queryParam("limit", "30")
       .get(rootPath)
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(200)
+          .extract()
+            .response();
+
+    String actual = new JsonObject(resp.getBody().asString()).encodePrettily();
+    logger.info(actual);
+
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testGetOrderById(TestContext ctx) throws Exception {
+    logger.info("=== Test Get Order By Id ===");
+
+    JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getJsonObject("purchase_order").getString("id");
+    logger.info("using mock datafile: " + GetOrderHelper.BASE_MOCK_DATA_PATH + id + ".json");
+    String expected = new JsonObject(getMockData(GetOrderHelper.BASE_MOCK_DATA_PATH + id + ".json")).encodePrettily();
+
+    final Response resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+      .get(rootPath + "/" + id)
         .then()
           .contentType(APPLICATION_JSON)
           .statusCode(200)

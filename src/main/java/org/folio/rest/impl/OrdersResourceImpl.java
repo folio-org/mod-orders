@@ -26,7 +26,6 @@ public class OrdersResourceImpl implements OrdersResource {
   public void deleteOrdersById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) throws Exception {
     // TODO Auto-generated method stub
-
   }
 
   @Override
@@ -50,8 +49,19 @@ public class OrdersResourceImpl implements OrdersResource {
   @Override
   public void getOrdersById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) throws Exception {
-    // TODO Auto-generated method stub
 
+    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
+    GetOrderHelper helper = new GetOrderHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+
+    helper.getOrder(id, lang)
+      .thenAccept(order -> {
+        logger.info("Successfully retrieved order: " + JsonObject.mapFrom(order).encodePrettily());
+        httpClient.closeClient();
+        javax.ws.rs.core.Response response = GetOrdersByIdResponse.withJsonOK(order);
+        AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
+        asyncResultHandler.handle(result);
+      })
+      .exceptionally(helper::handleError);
   }
 
   @Override
