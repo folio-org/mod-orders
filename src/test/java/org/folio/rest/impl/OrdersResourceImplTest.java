@@ -269,6 +269,30 @@ public class OrdersResourceImplTest {
     assertEquals(expected, actual);
   }
 
+  @Test
+  public void testGetOrderByIdNotFound(TestContext ctx) throws Exception {
+    logger.info("=== Test Get Order By Id - Not Found ===");
+
+    String id = "non-existent-po-id";
+    String expected = id;
+
+    final Response resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+      .get(rootPath + "/" + id)
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(404)
+          .extract()
+            .response();
+
+    String actual = resp.getBody().asString();
+    logger.info(actual);
+
+    assertEquals(expected, actual);
+  }
+
   public static class MockServer {
 
     private static final Logger logger = Logger.getLogger(MockServer.class);

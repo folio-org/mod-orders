@@ -1,6 +1,7 @@
 package org.folio.rest.impl;
 
 import java.io.IOException;
+import java.nio.file.NoSuchFileException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -63,6 +64,9 @@ public class GetOrderHelper {
       try {
         JsonObject json = new JsonObject(HelperUtils.getMockData(String.format("%s%s.json", BASE_MOCK_DATA_PATH, id)));
         return json.mapTo(CompositePurchaseOrder.class);
+      } catch (NoSuchFileException e) {
+        logger.error("No such file", e);
+        throw new CompletionException(new HttpException(404, id));
       } catch (IOException e) {
         logger.error("Failed to read mock data", e);
         throw new CompletionException(e);
