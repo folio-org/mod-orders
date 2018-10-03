@@ -44,7 +44,7 @@ public class GetOrdersHelper {
     CompletableFuture<CompositePurchaseOrders> future = new VertxCompletableFuture<>(ctx);
 
     //TODO replace this with a call to mod-orders-storage
-    getMockOrders(query, offset, limit, lang)
+    getMockOrders()
       .thenAccept(orders -> {
         logger.info("Returning mock data: " + JsonObject.mapFrom(orders).encodePrettily());
         future.complete(orders);
@@ -58,7 +58,7 @@ public class GetOrdersHelper {
     return future;
   }
 
-  private CompletableFuture<CompositePurchaseOrders> getMockOrders(String query, int offset, int limit, String lang) {
+  private CompletableFuture<CompositePurchaseOrders> getMockOrders() {
     return VertxCompletableFuture.supplyAsync(ctx, () -> {
       try {
         JsonObject json = new JsonObject(HelperUtils.getMockData(MOCK_DATA_PATH));
