@@ -1,6 +1,5 @@
 package org.folio.rest.impl;
 
-import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
