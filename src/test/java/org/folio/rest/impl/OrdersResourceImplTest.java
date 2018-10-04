@@ -1,15 +1,15 @@
 package org.folio.rest.impl;
 
-import static org.junit.Assert.*;
+import static org.folio.orders.utils.HelperUtils.getMockData;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.tools.utils.NetworkUtils;
@@ -83,6 +83,7 @@ public class OrdersResourceImplTest {
   @AfterClass
   public static void tearDownOnce(TestContext context) {
     vertx.close(context.asyncAssertSuccess());
+    mockServer.close();
   }
 
   @Test
@@ -217,6 +218,81 @@ public class OrdersResourceImplTest {
     assertEquals("Access requires permission: foo.bar.baz", respBody);
   }
 
+  @Test
+  public void testGetOrders(TestContext ctx) throws Exception {
+    logger.info("=== Test Get Orders ===");
+
+    String expected = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH)).encodePrettily();
+
+    final Response resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .queryParam("query", "approval_status%3D%22Pending%22")
+        .queryParam("limit", "30")
+      .get(rootPath)
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(200)
+          .extract()
+            .response();
+
+    String actual = new JsonObject(resp.getBody().asString()).encodePrettily();
+    logger.info(actual);
+
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testGetOrderById(TestContext ctx) throws Exception {
+    logger.info("=== Test Get Order By Id ===");
+
+    JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getJsonObject("purchase_order").getString("id");
+    logger.info("using mock datafile: " + GetOrderHelper.BASE_MOCK_DATA_PATH + id + ".json");
+    String expected = new JsonObject(getMockData(GetOrderHelper.BASE_MOCK_DATA_PATH + id + ".json")).encodePrettily();
+
+    final Response resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+      .get(rootPath + "/" + id)
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(200)
+          .extract()
+            .response();
+
+    String actual = new JsonObject(resp.getBody().asString()).encodePrettily();
+    logger.info(actual);
+
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testGetOrderByIdNotFound(TestContext ctx) throws Exception {
+    logger.info("=== Test Get Order By Id - Not Found ===");
+
+    String id = "non-existent-po-id";
+    String expected = id;
+
+    final Response resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+      .get(rootPath + "/" + id)
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(404)
+          .extract()
+            .response();
+
+    String actual = resp.getBody().asString();
+    logger.info(actual);
+
+    assertEquals(expected, actual);
+  }
+
   public static class MockServer {
 
     private static final Logger logger = Logger.getLogger(MockServer.class);
@@ -348,9 +424,4 @@ public class OrdersResourceImplTest {
     }
   }
 
-  public static String getMockData(String path) throws IOException {
-    StringBuilder sb = new StringBuilder();
-    Files.lines(Paths.get(path)).forEach(sb::append);
-    return sb.toString();
-  }
 }

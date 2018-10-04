@@ -1,2 +1,16 @@
 ## 1.0.0 Unreleased
+ * [MODORDERS-40](https://issues.folio.org/browse/MODORDERS-40)
+ * [MODORDERS-37](https://issues.folio.org/browse/MODORDERS-37)
+ * [MODORDERS-34](https://issues.folio.org/browse/MODORDERS-34)
+ * [MODORDERS-29](https://issues.folio.org/browse/MODORDERS-29)
+ * [MODORDERS-28](https://issues.folio.org/browse/MODORDERS-28)
+ * [MODORDERS-27](https://issues.folio.org/browse/MODORDERS-27)
+ * [MODORDERS-25](https://issues.folio.org/browse/MODORDERS-25)
+ * [MODORDERS-24](https://issues.folio.org/browse/MODORDERS-24)
+ * [MODORDERS-23](https://issues.folio.org/browse/MODORDERS-23)
+ * [MODORDERS-18](https://issues.folio.org/browse/MODORDERS-18)
+ * [MODORDERS-17](https://issues.folio.org/browse/MODORDERS-17)
+ * [MODORDERS-16](https://issues.folio.org/browse/MODORDERS-16)
+ * [MODORDERS-15](https://issues.folio.org/browse/MODORDERS-15)
+ * [MODORDERS-14](https://issues.folio.org/browse/MODORDERS-14)
  * Initial commit
