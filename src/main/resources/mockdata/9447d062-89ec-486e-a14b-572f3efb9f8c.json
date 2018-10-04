@@ -1,0 +1,121 @@
+{
+  "purchase_order": {
+    "id": "9447d062-89ec-486e-a14b-572f3efb9f8c",
+    "po_number": "101125",
+    "created": "2018-07-19T10:00:00Z",
+    "comments": "",
+    "total_items": 2,
+    "total_estimated_price": 200.00,
+    "adjustments": "",
+    "assigned_to": "",
+    "created_by": "steves",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Pending",
+    "po_receipt_status": "",
+    "po_payment_status": ""
+  },
+  "po_lines": [
+    {
+      "id": "",
+      "acquisition_method": "online",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": false,
+      "owner": "Acquisitions - Monos",
+      "po_line_number": "1",
+      "po_line_description": "",
+      "adjustment": "",
+      "alerts": [
+        {
+          "id": null,
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": null,
+          "claim": true,
+          "sent": "",
+          "grace": 0
+        }
+      ],
+      "cost": {
+        "id": null,
+        "list_price": 100.00,
+        "currency": "USD",
+        "quantity": 2,
+        "estimated_price": 200.00
+      },
+      "details": {
+        "id": null,
+        "title": "Business and professional communication",
+        "receiving_note": "2 copies",
+        "product_id": "9780133973488",
+        "subscription_from": null,
+        "material_type": "print book",
+        "subscription_interval": 0,
+        "subscription_to": null,
+        "description": ""
+      },
+      "eresource": {
+        "id": null,
+        "activation_status": "",
+        "activation_due": 0,
+        "create_inventory": false,
+        "trial": false,
+        "expected_activation": null,
+        "user_limit": 0,
+        "material_id": "",
+        "access_provider": ""
+      },
+      "license": "",
+      "location": {
+        "id": null,
+        "quantity": 2,
+        "location_id": "BUS"
+      },
+      "order_format": "Physical",
+      "order_type": "one-time",
+      "physical": {
+        "id": null,
+        "expected_receipt_date": null,
+        "receipt_due": "2018-07-31T10:00:00Z",
+        "expected_receipt_interval": 0,
+        "volumes": 0,
+        "material_id": "",
+        "material_supplier": "Amazon.com"
+      },
+      "purchase_order_id": "",
+      "receipt_status": "Received",
+      "renewal": {
+        "id": null,
+        "cycle": "",
+        "review_period": 0,
+        "renewal_date": null,
+        "interval": 0,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": null,
+        "code": "",
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "Amazon.com",
+        "ref_number": "",
+        "ref_no_type": "",
+        "instructions": "",
+        "vendor_account": "",
+        "note_from_vendor": ""
+      },
+      "workflow_status": "order sent",
+      "selector": "",
+      "requester": "",
+      "account_number": "",
+      "donor": ""
+    }
+  ]
+}

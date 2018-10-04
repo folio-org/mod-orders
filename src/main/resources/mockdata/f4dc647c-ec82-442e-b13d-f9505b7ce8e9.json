@@ -1,0 +1,121 @@
+{
+  "purchase_order": {
+    "id": "f4dc647c-ec82-442e-b13d-f9505b7ce8e9",
+    "po_number": "312325",
+    "created": "2018-07-13T10:00:00Z",
+    "comments": "REF<DXiao>, REF<DHalling> Notify<Mary Ann Barker, barker@tamu.edu> Licensing <1-year streaming license>",
+    "total_items": 1,
+    "total_estimated_price": 150.00,
+    "adjustments": "",
+    "assigned_to": "msmith",
+    "created_by": "mphillips",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Open",
+    "po_receipt_status": "fully received",
+    "po_payment_status": "awaiting payment"
+  },
+  "po_lines": [
+    {
+      "id": "",
+      "acquisition_method": "Purchase at Vendor System",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": false,
+      "owner": "Evans",
+      "po_line_number": "1",
+      "po_line_description": "",
+      "adjustment": "",
+      "alerts": [
+        {
+          "id": null,
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": null,
+          "claim": false,
+          "sent": "",
+          "grace": 0
+        }
+      ],
+      "cost": {
+        "id": null,
+        "list_price": 150.00,
+        "currency": "USD",
+        "quantity": 1,
+        "estimated_price": 150.00
+      },
+      "details": {
+        "id": null,
+        "title": "At Berkeley",
+        "receiving_note": "Access begins 7/16/18",
+        "product_id": "3257204",
+        "subscription_from": null,
+        "material_type": "streaming",
+        "subscription_interval": 0,
+        "subscription_to": null,
+        "description": ""
+      },
+      "eresource": {
+        "id": null,
+        "activation_status": "y",
+        "activation_due": 4,
+        "create_inventory": false,
+        "trial": false,
+        "expected_activation": "2018-07-17T10:00:00Z",
+        "user_limit": 0,
+        "material_id": "",
+        "access_provider": "Kanopy"
+      },
+      "license": "60264",
+      "location": {
+        "id": null,
+        "quantity": 1,
+        "location_id": "www"
+      },
+      "order_format": "Electronic",
+      "order_type": "One-time",
+      "physical": {
+        "id": null,
+        "expected_receipt_date": null,
+        "receipt_due": null,
+        "expected_receipt_interval": 0,
+        "volumes": 0,
+        "material_id": "",
+        "material_supplier": ""
+      },
+      "purchase_order_id": "",
+      "receipt_status": "Received",
+      "renewal": {
+        "id": null,
+        "cycle": "manual",
+        "review_period": 30,
+        "renewal_date": "2019-07-19T10:00:00Z",
+        "interval": 12,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": null,
+        "code": "",
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "Ro*Co films",
+        "ref_number": "",
+        "ref_no_type": "",
+        "instructions": "",
+        "vendor_account": "",
+        "note_from_vendor": ""
+      },
+      "workflow_status": "Received Complete",
+      "selector": "dhalling",
+      "requester": "msmith",
+      "account_number": "",
+      "donor": ""
+    }
+  ]
+}

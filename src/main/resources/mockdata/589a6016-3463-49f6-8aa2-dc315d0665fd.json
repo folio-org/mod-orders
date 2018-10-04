@@ -1,0 +1,121 @@
+{
+  "purchase_order": {
+    "id": "589a6016-3463-49f6-8aa2-dc315d0665fd",
+    "po_number": "101101",
+    "created": "2018-07-19T10:00:00Z",
+    "comments": "",
+    "total_items": 1,
+    "total_estimated_price": 900.00,
+    "adjustments": "",
+    "assigned_to": "",
+    "created_by": "steves",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Pending",
+    "po_receipt_status": "",
+    "po_payment_status": ""
+  },
+  "po_lines": [
+    {
+      "id": "",
+      "acquisition_method": "email vendor",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": false,
+      "owner": "Acquisitions - Serials",
+      "po_line_number": "1",
+      "po_line_description": "",
+      "adjustment": "",
+      "alerts": [
+        {
+          "id": null,
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": null,
+          "claim": true,
+          "sent": "",
+          "grace": 0
+        }
+      ],
+      "cost": {
+        "id": null,
+        "list_price": 900.00,
+        "currency": "USD",
+        "quantity": 1,
+        "estimated_price": 900.00
+      },
+      "details": {
+        "id": null,
+        "title": "Advances in astronautical science",
+        "receiving_note": "start with v. 162",
+        "product_id": "0065-3438",
+        "subscription_from": "2018-07-01T10:00:00Z",
+        "material_type": "print serial",
+        "subscription_interval": 1095,
+        "subscription_to": "2021-06-30T10:00:00Z",
+        "description": ""
+      },
+      "eresource": {
+        "id": null,
+        "activation_status": "",
+        "activation_due": 0,
+        "create_inventory": false,
+        "trial": false,
+        "expected_activation": null,
+        "user_limit": 0,
+        "material_id": "",
+        "access_provider": ""
+      },
+      "license": "",
+      "location": {
+        "id": null,
+        "quantity": 1,
+        "location_id": "ENG"
+      },
+      "order_format": "Physical",
+      "order_type": "on-going",
+      "physical": {
+        "id": null,
+        "expected_receipt_date": null,
+        "receipt_due": "2018-07-31T10:00:00Z",
+        "expected_receipt_interval": 0,
+        "volumes": 0,
+        "material_id": "",
+        "material_supplier": "EBSCO SUBSCRIPTION SERVICES"
+      },
+      "purchase_order_id": "",
+      "receipt_status": "Received",
+      "renewal": {
+        "id": null,
+        "cycle": "3 Years",
+        "review_period": 90,
+        "renewal_date": "2021-07-19T10:00:00Z",
+        "interval": 12,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": null,
+        "code": "",
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "EBSCO SUBSCRIPTION SERVICES",
+        "ref_number": "",
+        "ref_no_type": "",
+        "instructions": "",
+        "vendor_account": "",
+        "note_from_vendor": ""
+      },
+      "workflow_status": "order sent",
+      "selector": "",
+      "requester": "",
+      "account_number": "",
+      "donor": ""
+    }
+  ]
+}

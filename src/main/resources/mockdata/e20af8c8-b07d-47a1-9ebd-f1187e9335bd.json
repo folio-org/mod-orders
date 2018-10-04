@@ -1,0 +1,121 @@
+{
+  "purchase_order": {
+    "id": "e20af8c8-b07d-47a1-9ebd-f1187e9335bd",
+    "po_number": "306251",
+    "created": "2018-06-19T10:00:00Z",
+    "comments": "CAC one time funding proposal by Bob Barker",
+    "total_items": 1,
+    "total_estimated_price": 3000.00,
+    "adjustments": "",
+    "assigned_to": "John",
+    "created_by": "mp42",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Closed",
+    "po_receipt_status": "",
+    "po_payment_status": ""
+  },
+  "po_lines": [
+    {
+      "id": "",
+      "acquisition_method": "Email to agent",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": true,
+      "owner": "Evans",
+      "po_line_number": "1",
+      "po_line_description": "",
+      "adjustment": "",
+      "alerts": [
+        {
+          "id": null,
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": null,
+          "claim": true,
+          "sent": "",
+          "grace": 30
+        }
+      ],
+      "cost": {
+        "id": null,
+        "list_price": 3000.00,
+        "currency": "USD",
+        "quantity": 1,
+        "estimated_price": 3000.00
+      },
+      "details": {
+        "id": null,
+        "title": "PDCnet Backfiles",
+        "receiving_note": "two backfiles",
+        "product_id": "5456",
+        "subscription_from": null,
+        "material_type": "package",
+        "subscription_interval": 0,
+        "subscription_to": null,
+        "description": ""
+      },
+      "eresource": {
+        "id": null,
+        "activation_status": "y",
+        "activation_due": 0,
+        "create_inventory": false,
+        "trial": false,
+        "expected_activation": "2019-06-30T10:00:00Z",
+        "user_limit": 0,
+        "material_id": "",
+        "access_provider": "PDCnet"
+      },
+      "license": "",
+      "location": {
+        "id": null,
+        "quantity": 1,
+        "location_id": "www"
+      },
+      "order_format": "Electronic",
+      "order_type": "One-time",
+      "physical": {
+        "id": null,
+        "expected_receipt_date": null,
+        "receipt_due": "",
+        "expected_receipt_interval": 0,
+        "volumes": 0,
+        "material_id": "",
+        "material_supplier": null
+      },
+      "purchase_order_id": "",
+      "receipt_status": "Received",
+      "renewal": {
+        "id": null,
+        "cycle": "",
+        "review_period": 0,
+        "renewal_date": null,
+        "interval": 0,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": null,
+        "code": "",
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "EBSCO SUBSCRIPTION SERVICES",
+        "ref_number": "",
+        "ref_no_type": "",
+        "instructions": "",
+        "vendor_account": "",
+        "note_from_vendor": ""
+      },
+      "workflow_status": "Received Complete",
+      "selector": "Lincoln",
+      "requester": "",
+      "account_number": "",
+      "donor": ""
+    }
+  ]
+}

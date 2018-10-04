@@ -1,0 +1,121 @@
+{
+  "purchase_order": {
+    "id": "e41e0161-2bc6-41f3-a6e7-34fc13250bf1",
+    "po_number": "306251",
+    "created": "2018-07-23T10:00:00Z",
+    "comments": "Published twice a year",
+    "total_items": 1,
+    "total_estimated_price": 800.00,
+    "adjustments": "",
+    "assigned_to": "John",
+    "created_by": "jw76",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Open",
+    "po_receipt_status": "",
+    "po_payment_status": ""
+  },
+  "po_lines": [
+    {
+      "id": "",
+      "acquisition_method": "Email to agent",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": false,
+      "owner": "Cushing",
+      "po_line_number": "1",
+      "po_line_description": "",
+      "adjustment": "",
+      "alerts": [
+        {
+          "id": null,
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": null,
+          "claim": true,
+          "sent": "",
+          "grace": 60
+        }
+      ],
+      "cost": {
+        "id": null,
+        "list_price": 800.00,
+        "currency": "USD",
+        "quantity": 1,
+        "estimated_price": 800.00
+      },
+      "details": {
+        "id": null,
+        "title": "Joss Whedon Papers",
+        "receiving_note": "Cushing materials, do not mark",
+        "product_id": "43",
+        "subscription_from": "2018-07-23T10:00:00Z",
+        "material_type": "package",
+        "subscription_interval": 365,
+        "subscription_to": "2018-07-22T10:00:00Z",
+        "description": ""
+      },
+      "eresource": {
+        "id": null,
+        "activation_status": "",
+        "activation_due": 0,
+        "create_inventory": false,
+        "trial": false,
+        "expected_activation": null,
+        "user_limit": 0,
+        "material_id": "",
+        "access_provider": ""
+      },
+      "license": "",
+      "location": {
+        "id": null,
+        "quantity": 1,
+        "location_id": "cush"
+      },
+      "order_format": "Physical",
+      "order_type": "On-going",
+      "physical": {
+        "id": null,
+        "expected_receipt_date": null,
+        "receipt_due": "",
+        "expected_receipt_interval": 0,
+        "volumes": 0,
+        "material_id": "",
+        "material_supplier": "EBSCO SUBSCRIPTION SERVICES"
+      },
+      "purchase_order_id": "",
+      "receipt_status": "Received",
+      "renewal": {
+        "id": null,
+        "cycle": "",
+        "review_period": 0,
+        "renewal_date": null,
+        "interval": 0,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": null,
+        "code": "",
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "EBSCO SUBSCRIPTION SERVICES",
+        "ref_number": "",
+        "ref_no_type": "",
+        "instructions": "",
+        "vendor_account": "",
+        "note_from_vendor": ""
+      },
+      "workflow_status": "approved",
+      "selector": "",
+      "requester": "",
+      "account_number": "",
+      "donor": ""
+    }
+  ]
+}

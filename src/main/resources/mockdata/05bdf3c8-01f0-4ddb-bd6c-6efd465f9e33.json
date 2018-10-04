@@ -1,0 +1,121 @@
+{
+  "purchase_order": {
+    "id": "05bdf3c8-01f0-4ddb-bd6c-6efd465f9e33",
+    "po_number": "313000",
+    "created": "2018-07-19T10:00:00Z",
+    "comments": "DVD plus 3 years streaming",
+    "total_items": 2,
+    "total_estimated_price": 500.00,
+    "adjustments": "",
+    "assigned_to": "John",
+    "created_by": "trek",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Open",
+    "po_receipt_status": "not received",
+    "po_payment_status": ""
+  },
+  "po_lines": [
+    {
+      "id": "",
+      "acquisition_method": "Email to vendor",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": false,
+      "owner": "Cushing",
+      "po_line_number": "1",
+      "po_line_description": "",
+      "adjustment": "",
+      "alerts": [
+        {
+          "id": null,
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": null,
+          "claim": true,
+          "sent": "",
+          "grace": 60
+        }
+      ],
+      "cost": {
+        "id": null,
+        "list_price": 500.00,
+        "currency": "USD",
+        "quantity": 2,
+        "estimated_price": 500.00
+      },
+      "details": {
+        "id": null,
+        "title": "Acquisitions Rules the Library",
+        "receiving_note": "",
+        "product_id": "12357",
+        "subscription_from": "2018-07-20T10:00:00Z",
+        "material_type": "DVD+streaming",
+        "subscription_interval": 1095,
+        "subscription_to": "2021-07-19T10:00:00Z",
+        "description": ""
+      },
+      "eresource": {
+        "id": null,
+        "activation_status": "y",
+        "activation_due": 1,
+        "create_inventory": true,
+        "trial": false,
+        "expected_activation": "2018-07-20T10:00:00Z",
+        "user_limit": 0,
+        "material_id": "",
+        "access_provider": "Ro*Co films"
+      },
+      "license": "8b23",
+      "location": {
+        "id": null,
+        "quantity": 2,
+        "location_id": "stks,www"
+      },
+      "order_format": "P/E Mix",
+      "order_type": "One-time",
+      "physical": {
+        "id": null,
+        "expected_receipt_date": null,
+        "receipt_due": "2018-08-19T10:00:00Z",
+        "expected_receipt_interval": 0,
+        "volumes": 1,
+        "material_id": "",
+        "material_supplier": "Ro*Co films"
+      },
+      "purchase_order_id": "",
+      "receipt_status": "Received",
+      "renewal": {
+        "id": null,
+        "cycle": "manual",
+        "review_period": 90,
+        "renewal_date": "2021-07-19T10:00:00Z",
+        "interval": 0,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": null,
+        "code": "",
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "Ro*Co films",
+        "ref_number": "",
+        "ref_no_type": "",
+        "instructions": "",
+        "vendor_account": "",
+        "note_from_vendor": ""
+      },
+      "workflow_status": "approved",
+      "selector": "mreynolds",
+      "requester": "jcobb",
+      "account_number": "",
+      "donor": ""
+    }
+  ]
+}

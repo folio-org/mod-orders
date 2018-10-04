@@ -1,0 +1,121 @@
+{
+  "purchase_order": {
+    "id": "0610be6d-0ddd-494b-b867-19f63d8b5d6d",
+    "po_number": "52590",
+    "created": "2015-07-08T10:00:00Z",
+    "comments": "2 titles received: Publication and London topographical record",
+    "total_items": 1,
+    "total_estimated_price": 0.00,
+    "adjustments": "",
+    "assigned_to": "stp0",
+    "created_by": "stp0",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Pending",
+    "po_receipt_status": "",
+    "po_payment_status": ""
+  },
+  "po_lines": [
+    {
+      "id": "",
+      "acquisition_method": "Purchase",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": true,
+      "owner": "Serials",
+      "po_line_number": "1",
+      "po_line_description": "",
+      "adjustment": "",
+      "alerts": [
+        {
+          "id": null,
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": null,
+          "claim": true,
+          "sent": "",
+          "grace": 0
+        }
+      ],
+      "cost": {
+        "id": null,
+        "list_price": 0.00,
+        "currency": "USD",
+        "quantity": 1,
+        "estimated_price": 0.00
+      },
+      "details": {
+        "id": null,
+        "title": "Membership",
+        "receiving_note": "",
+        "product_id": "7659CH",
+        "subscription_from": null,
+        "material_type": "print serial",
+        "subscription_interval": 0,
+        "subscription_to": null,
+        "description": ""
+      },
+      "eresource": {
+        "id": null,
+        "activation_status": "",
+        "activation_due": 0,
+        "create_inventory": false,
+        "trial": false,
+        "expected_activation": null,
+        "user_limit": 0,
+        "material_id": "",
+        "access_provider": ""
+      },
+      "license": "",
+      "location": {
+        "id": null,
+        "quantity": 1,
+        "location_id": "gen"
+      },
+      "order_format": "Physical",
+      "order_type": "Physical resource",
+      "physical": {
+        "id": null,
+        "expected_receipt_date": null,
+        "receipt_due": null,
+        "expected_receipt_interval": 0,
+        "volumes": 0,
+        "material_id": "",
+        "material_supplier": ""
+      },
+      "purchase_order_id": "",
+      "receipt_status": "Received",
+      "renewal": {
+        "id": null,
+        "cycle": "manual",
+        "review_period": 0,
+        "renewal_date": null,
+        "interval": 12,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": null,
+        "code": "",
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "Otto Harrassowitz GmbH & Co. KG",
+        "ref_number": "96459125",
+        "ref_no_type": "SNA",
+        "instructions": "1901 and continuation",
+        "vendor_account": "B-Ser",
+        "note_from_vendor": ""
+      },
+      "workflow_status": "Approved",
+      "selector": "sgw",
+      "requester": "",
+      "account_number": "",
+      "donor": ""
+    }
+  ]
+}

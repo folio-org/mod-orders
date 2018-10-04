@@ -1,0 +1,121 @@
+{
+  "purchase_order": {
+    "id": "8c328a18-5761-4329-95f6-599412c32310",
+    "po_number": "14383007",
+    "created": "2018-07-18T10:00:00Z",
+    "comments": "",
+    "total_items": 1,
+    "total_estimated_price": 0.00,
+    "adjustments": "",
+    "assigned_to": "Scott",
+    "created_by": "stp0",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Open",
+    "po_receipt_status": "",
+    "po_payment_status": "payment not required"
+  },
+  "po_lines": [
+    {
+      "id": "",
+      "acquisition_method": "Gift",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": false,
+      "owner": "Serials",
+      "po_line_number": "1",
+      "po_line_description": "",
+      "adjustment": "",
+      "alerts": [
+        {
+          "id": null,
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": null,
+          "claim": true,
+          "sent": "",
+          "grace": 0
+        }
+      ],
+      "cost": {
+        "id": null,
+        "list_price": 0.00,
+        "currency": "USD",
+        "quantity": 1,
+        "estimated_price": 0.00
+      },
+      "details": {
+        "id": null,
+        "title": "The Tsuda Review",
+        "receiving_note": "",
+        "product_id": "1234-8675",
+        "subscription_from": null,
+        "material_type": "print serial",
+        "subscription_interval": 0,
+        "subscription_to": null,
+        "description": ""
+      },
+      "eresource": {
+        "id": null,
+        "activation_status": "",
+        "activation_due": 0,
+        "create_inventory": false,
+        "trial": false,
+        "expected_activation": null,
+        "user_limit": 0,
+        "material_id": "",
+        "access_provider": ""
+      },
+      "license": "",
+      "location": {
+        "id": null,
+        "quantity": 1,
+        "location_id": "jrlgen"
+      },
+      "order_format": "Physical",
+      "order_type": "On-going",
+      "physical": {
+        "id": null,
+        "expected_receipt_date": null,
+        "receipt_due": "",
+        "expected_receipt_interval": 0,
+        "volumes": 0,
+        "material_id": "",
+        "material_supplier": "Otto Harrassowitz GmbH & Co. KG"
+      },
+      "purchase_order_id": "",
+      "receipt_status": "Received",
+      "renewal": {
+        "id": null,
+        "cycle": "manual",
+        "review_period": 0,
+        "renewal_date": null,
+        "interval": 0,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": null,
+        "code": "",
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "Otto Harrassowitz GmbH & Co. KG",
+        "ref_number": "",
+        "ref_no_type": "",
+        "instructions": "no. 42 and continuation",
+        "vendor_account": "",
+        "note_from_vendor": ""
+      },
+      "workflow_status": "approved",
+      "selector": "ay",
+      "requester": "stp0",
+      "account_number": "",
+      "donor": "Tsuda College"
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "purchase_order": {
+    "id": "c27e60f9-6361-44c1-976e-0c4821a33a7d",
+    "po_number": "38434",
+    "created": "2014-09-22T10:00:00Z",
+    "comments": "Cataloging record service",
+    "total_items": 1,
+    "total_estimated_price": 0.00,
+    "adjustments": "",
+    "assigned_to": "",
+    "created_by": "stp0",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Pending",
+    "po_receipt_status": "",
+    "po_payment_status": ""
+  },
+  "po_lines": [
+    {
+      "id": "",
+      "acquisition_method": "Purchase",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": false,
+      "owner": "Monographs",
+      "po_line_number": "1",
+      "po_line_description": "",
+      "adjustment": "",
+      "alerts": [
+        {
+          "id": null,
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": null,
+          "claim": false,
+          "sent": "",
+          "grace": 0
+        }
+      ],
+      "cost": {
+        "id": null,
+        "list_price": 0.00,
+        "currency": "USD",
+        "quantity": 1,
+        "estimated_price": 0.00
+      },
+      "details": {
+        "id": null,
+        "title": "GOBI record service",
+        "receiving_note": "",
+        "product_id": "",
+        "subscription_from": null,
+        "material_type": "records",
+        "subscription_interval": 0,
+        "subscription_to": null,
+        "description": ""
+      },
+      "eresource": {
+        "id": null,
+        "activation_status": "",
+        "activation_due": 0,
+        "create_inventory": false,
+        "trial": false,
+        "expected_activation": null,
+        "user_limit": 0,
+        "material_id": "",
+        "access_provider": ""
+      },
+      "license": "",
+      "location": {
+        "id": null,
+        "quantity": 1,
+        "location_id": ""
+      },
+      "order_format": "Services",
+      "order_type": "On-going",
+      "physical": {
+        "id": null,
+        "expected_receipt_date": null,
+        "receipt_due": null,
+        "expected_receipt_interval": 0,
+        "volumes": 0,
+        "material_id": "",
+        "material_supplier": "GOBI Library Solutions"
+      },
+      "purchase_order_id": "",
+      "receipt_status": "Received",
+      "renewal": {
+        "id": null,
+        "cycle": "manual",
+        "review_period": 0,
+        "renewal_date": null,
+        "interval": 0,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": null,
+        "code": "",
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "GOBI Library Solutions",
+        "ref_number": "",
+        "ref_no_type": "",
+        "instructions": "",
+        "vendor_account": "",
+        "note_from_vendor": ""
+      },
+      "workflow_status": "Approved",
+      "selector": "",
+      "requester": "",
+      "account_number": "",
+      "donor": ""
+    }
+  ]
+}

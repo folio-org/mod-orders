@@ -1,0 +1,121 @@
+{
+  "purchase_order": {
+    "id": "00ed10af-fac2-46ad-9f94-a298358646a2",
+    "po_number": "S58227",
+    "created": "2018-07-12T06:00:00Z",
+    "comments": "",
+    "total_items": 1,
+    "total_estimated_price": 342.00,
+    "adjustments": "",
+    "assigned_to": "George",
+    "created_by": "ap478",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Closed",
+    "po_receipt_status": "Fully Received",
+    "po_payment_status": "Fully Paid"
+  },
+  "po_lines": [
+    {
+      "id": "",
+      "acquisition_method": "Email to vendor",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": false,
+      "owner": "Technical Services Department",
+      "po_line_number": "1",
+      "po_line_description": "",
+      "adjustment": "",
+      "alerts": [
+        {
+          "id": null,
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": null,
+          "claim": false,
+          "sent": "",
+          "grace": null
+        }
+      ],
+      "cost": {
+        "id": null,
+        "list_price": 342.00,
+        "currency": "USD",
+        "quantity": 1,
+        "estimated_price": 342.00
+      },
+      "details": {
+        "id": null,
+        "title": "The American Statistician",
+        "receiving_note": "Renewal, access continuous",
+        "product_id": "0003-1305",
+        "subscription_from": "2018-08-01T05:00:00Z",
+        "material_type": "eJournal",
+        "subscription_interval": 365,
+        "subscription_to": "2019-07-31T05:00:00Z",
+        "description": ""
+      },
+      "eresource": {
+        "id": null,
+        "activation_status": "y",
+        "activation_due": 0,
+        "create_inventory": false,
+        "trial": false,
+        "expected_activation": "2018-08-01T05:00:00Z",
+        "user_limit": 0,
+        "material_id": "",
+        "access_provider": "Taylor & Francis Group, LLC"
+      },
+      "license": "8022",
+      "location": {
+        "id": null,
+        "quantity": 1,
+        "location_id": "www"
+      },
+      "order_format": "Electronic",
+      "order_type": "On-going",
+      "physical": {
+        "id": null,
+        "expected_receipt_date": null,
+        "receipt_due": "",
+        "expected_receipt_interval": 0,
+        "volumes": 0,
+        "material_id": "",
+        "material_supplier": null
+      },
+      "purchase_order_id": "",
+      "receipt_status": "Received",
+      "renewal": {
+        "id": null,
+        "cycle": "1 Year",
+        "review_period": 60,
+        "renewal_date": "2018-07-07T05:00:00Z",
+        "interval": 12,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": null,
+        "code": "",
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "Taylor & Francis Group, LLC",
+        "ref_number": "",
+        "ref_no_type": "",
+        "instructions": "",
+        "vendor_account": "EBAUB12345",
+        "note_from_vendor": ""
+      },
+      "workflow_status": "Approved",
+      "selector": "Hartman",
+      "requester": "",
+      "account_number": "",
+      "donor": ""
+    }
+  ]
+}

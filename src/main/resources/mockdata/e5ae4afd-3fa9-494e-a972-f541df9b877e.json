@@ -1,0 +1,121 @@
+{
+  "purchase_order": {
+    "id": "e5ae4afd-3fa9-494e-a972-f541df9b877e",
+    "po_number": "268879",
+    "created": "2018-07-06T01:00:00Z",
+    "comments": "",
+    "total_items": 1,
+    "total_estimated_price": 75.22,
+    "adjustments": "",
+    "assigned_to": "Ann",
+    "created_by": "yc935",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Closed",
+    "po_receipt_status": "Received",
+    "po_payment_status": "awaiting payment"
+  },
+  "po_lines": [
+    {
+      "id": "",
+      "acquisition_method": "Email to vendor",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": false,
+      "owner": "LTS E-Resources & Serials",
+      "po_line_number": "1",
+      "po_line_description": "",
+      "adjustment": "",
+      "alerts": [
+        {
+          "id": null,
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": null,
+          "claim": false,
+          "sent": "",
+          "grace": null
+        }
+      ],
+      "cost": {
+        "id": null,
+        "list_price": 75.22,
+        "currency": "USD",
+        "quantity": 1,
+        "estimated_price": 75.22
+      },
+      "details": {
+        "id": null,
+        "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
+        "receiving_note": "",
+        "product_id": "9781118416068",
+        "subscription_from": null,
+        "material_type": "ebook",
+        "subscription_interval": 0,
+        "subscription_to": null,
+        "description": ""
+      },
+      "eresource": {
+        "id": null,
+        "activation_status": "y",
+        "activation_due": 1,
+        "create_inventory": false,
+        "trial": false,
+        "expected_activation": "2018-07-06T01:00:00Z",
+        "user_limit": 1,
+        "material_id": "",
+        "access_provider": "Proquest"
+      },
+      "license": "",
+      "location": {
+        "id": null,
+        "quantity": 1,
+        "location_id": "serv.remote"
+      },
+      "order_format": "Electronic",
+      "order_type": "One-time",
+      "physical": {
+        "id": null,
+        "expected_receipt_date": null,
+        "receipt_due": "",
+        "expected_receipt_interval": 0,
+        "volumes": 0,
+        "material_id": "",
+        "material_supplier": null
+      },
+      "purchase_order_id": "",
+      "receipt_status": "Received",
+      "renewal": {
+        "id": null,
+        "cycle": "",
+        "review_period": 0,
+        "renewal_date": null,
+        "interval": 0,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": null,
+        "code": "",
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "GOBI Library Solutions",
+        "ref_number": "999632785",
+        "ref_no_type": "",
+        "instructions": "",
+        "vendor_account": "12345-50",
+        "note_from_vendor": ""
+      },
+      "workflow_status": "Received Complete",
+      "selector": "Woods",
+      "requester": "",
+      "account_number": "",
+      "donor": ""
+    }
+  ]
+}

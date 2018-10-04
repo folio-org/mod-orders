@@ -1,0 +1,121 @@
+{
+  "purchase_order": {
+    "id": "07f65192-44a4-483d-97aa-b137bbd96390",
+    "po_number": "S60402",
+    "created": "2018-07-18T10:00:00Z",
+    "comments": "",
+    "total_items": 80,
+    "total_estimated_price": 200000.00,
+    "adjustments": "",
+    "assigned_to": "George",
+    "created_by": "nd56",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Closed",
+    "po_receipt_status": "Fully Received",
+    "po_payment_status": "Awaiting Payment"
+  },
+  "po_lines": [
+    {
+      "id": "",
+      "acquisition_method": "Email to vendor",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": true,
+      "owner": "Technical Services Department",
+      "po_line_number": "80",
+      "po_line_description": "",
+      "adjustment": "",
+      "alerts": [
+        {
+          "id": null,
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": null,
+          "claim": false,
+          "sent": "",
+          "grace": null
+        }
+      ],
+      "cost": {
+        "id": null,
+        "list_price": 200000.00,
+        "currency": "USD",
+        "quantity": 1,
+        "estimated_price": 200000.00
+      },
+      "details": {
+        "id": null,
+        "title": "American Chemical Society Web Editions",
+        "receiving_note": "Renewal, access continuous",
+        "product_id": "807922",
+        "subscription_from": "2019-01-01T10:00:00Z",
+        "material_type": "eJournal",
+        "subscription_interval": 365,
+        "subscription_to": "2019-12-31T10:00:00Z",
+        "description": ""
+      },
+      "eresource": {
+        "id": null,
+        "activation_status": "y",
+        "activation_due": 0,
+        "create_inventory": false,
+        "trial": false,
+        "expected_activation": "2019-01-01T10:00:00Z",
+        "user_limit": 0,
+        "material_id": "",
+        "access_provider": "American Chemical Society"
+      },
+      "license": "640",
+      "location": {
+        "id": null,
+        "quantity": 1,
+        "location_id": "www"
+      },
+      "order_format": "Electronic",
+      "order_type": "On-going",
+      "physical": {
+        "id": null,
+        "expected_receipt_date": null,
+        "receipt_due": "",
+        "expected_receipt_interval": 0,
+        "volumes": 0,
+        "material_id": "",
+        "material_supplier": null
+      },
+      "purchase_order_id": "",
+      "receipt_status": "Received",
+      "renewal": {
+        "id": null,
+        "cycle": "1 Year",
+        "review_period": 60,
+        "renewal_date": "2018-07-18T10:00:00Z",
+        "interval": 12,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": null,
+        "code": "",
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "American Chemical Society",
+        "ref_number": "",
+        "ref_no_type": "",
+        "instructions": "",
+        "vendor_account": "",
+        "note_from_vendor": ""
+      },
+      "workflow_status": "Waiting for Invoice",
+      "selector": "Buchanan",
+      "requester": "",
+      "account_number": "",
+      "donor": ""
+    }
+  ]
+}

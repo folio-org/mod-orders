@@ -1,0 +1,121 @@
+{
+  "purchase_order": {
+    "id": "55b97a4a-6601-4488-84e1-8b0d47a3f523",
+    "po_number": "101113",
+    "created": "2018-07-19T10:00:00Z",
+    "comments": "",
+    "total_items": 1,
+    "total_estimated_price": 240.00,
+    "adjustments": "",
+    "assigned_to": "",
+    "created_by": "steves",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Pending",
+    "po_receipt_status": "",
+    "po_payment_status": ""
+  },
+  "po_lines": [
+    {
+      "id": "",
+      "acquisition_method": "EDI",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": false,
+      "owner": "Acquisitions - Serials",
+      "po_line_number": "1",
+      "po_line_description": "",
+      "adjustment": "",
+      "alerts": [
+        {
+          "id": null,
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": null,
+          "claim": true,
+          "sent": "",
+          "grace": 0
+        }
+      ],
+      "cost": {
+        "id": null,
+        "list_price": 240.00,
+        "currency": "USD",
+        "quantity": 1,
+        "estimated_price": 240.00
+      },
+      "details": {
+        "id": null,
+        "title": "The road to democracy in South Africa",
+        "receiving_note": "v. 1-6 in 10 parts",
+        "product_id": "9781868885015",
+        "subscription_from": null,
+        "material_type": "print standing order",
+        "subscription_interval": 0,
+        "subscription_to": null,
+        "description": ""
+      },
+      "eresource": {
+        "id": null,
+        "activation_status": "",
+        "activation_due": 0,
+        "create_inventory": false,
+        "trial": false,
+        "expected_activation": null,
+        "user_limit": 0,
+        "material_id": "",
+        "access_provider": ""
+      },
+      "license": "",
+      "location": {
+        "id": null,
+        "quantity": 1,
+        "location_id": "stks"
+      },
+      "order_format": "Physical",
+      "order_type": "on-going",
+      "physical": {
+        "id": null,
+        "expected_receipt_date": null,
+        "receipt_due": "2018-08-31T10:00:00Z",
+        "expected_receipt_interval": 0,
+        "volumes": 6,
+        "material_id": "",
+        "material_supplier": "Otto Harrassowitz GmbH & Co. KG"
+      },
+      "purchase_order_id": "",
+      "receipt_status": "Received",
+      "renewal": {
+        "id": null,
+        "cycle": "manual",
+        "review_period": 0,
+        "renewal_date": null,
+        "interval": 0,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": null,
+        "code": "",
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "Jean Simmons",
+        "ref_number": "",
+        "ref_no_type": "",
+        "instructions": "",
+        "vendor_account": "",
+        "note_from_vendor": ""
+      },
+      "workflow_status": "order sent",
+      "selector": "",
+      "requester": "",
+      "account_number": "",
+      "donor": ""
+    }
+  ]
+}
