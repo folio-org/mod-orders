@@ -26,21 +26,42 @@ public class OrdersResourceImpl implements OrdersResource {
   public void deleteOrdersById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) throws Exception {
     // TODO Auto-generated method stub
-
   }
 
   @Override
   public void getOrders(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) throws Exception {
-    // TODO Auto-generated method stub
 
+    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
+    GetOrdersHelper helper = new GetOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+
+    helper.getOrders(query, offset, limit, lang)
+      .thenAccept(orders -> {
+        logger.info("Successfully queried orders: " + JsonObject.mapFrom(orders).encodePrettily());
+        httpClient.closeClient();
+        javax.ws.rs.core.Response response = GetOrdersResponse.withJsonOK(orders);
+        AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
+        asyncResultHandler.handle(result);
+      })
+      .exceptionally(helper::handleError);
   }
 
   @Override
   public void getOrdersById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) throws Exception {
-    // TODO Auto-generated method stub
 
+    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
+    GetOrderHelper helper = new GetOrderHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+
+    helper.getOrder(id, lang)
+      .thenAccept(order -> {
+        logger.info("Successfully retrieved order: " + JsonObject.mapFrom(order).encodePrettily());
+        httpClient.closeClient();
+        javax.ws.rs.core.Response response = GetOrdersByIdResponse.withJsonOK(order);
+        AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
+        asyncResultHandler.handle(result);
+      })
+      .exceptionally(helper::handleError);
   }
 
   @Override
