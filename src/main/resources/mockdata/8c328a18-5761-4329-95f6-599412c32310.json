@@ -27,7 +27,18 @@
       "owner": "Serials",
       "po_line_number": "1",
       "po_line_description": "",
-      "adjustment": "",
+      "adjustment": {
+        "id": null,
+        "shipment": 0,
+        "insurance": 0,
+        "discount": 0,
+        "overhead": 0,
+        "credit": 0,
+        "tax_1": 0,
+        "tax_2": 0,
+        "invoice_id": null,
+        "use_pro_rate": false
+      },
       "alerts": [
         {
           "id": null,
