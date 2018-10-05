@@ -49,8 +49,8 @@
         {
           "id": null,
           "claim": true,
-          "sent": "2018-09-29T03:00:00Z",
-          "grace": 90,
+          "sent": "",
+          "grace": null,
           "po_line_id": null
         }
       ],
@@ -75,7 +75,7 @@
       "eresource": {
         "id": null,
         "activation_status": "",
-        "activation_due": 8,
+        "activation_due": 0,
         "create_inventory": false,
         "trial": false,
         "expected_activation": null,
@@ -107,7 +107,7 @@
       "physical": {
         "id": null,
         "expected_receipt_date": null,
-        "receipt_due": "2018-09-29T03:00:00Z",
+        "receipt_due": null,
         "expected_receipt_interval": 0,
         "volumes": 1,
         "material_id": "",
