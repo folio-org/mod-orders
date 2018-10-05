@@ -2,7 +2,7 @@
   "purchase_order": {
     "id": "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
     "po_number": "268758",
-    "created": "2018-01-10T03:55:00Z",
+    "created": "2018-06-29T03:00:00Z",
     "comments": "",
     "total_items": 3,
     "total_estimated_price": 68.00,
@@ -75,7 +75,7 @@
       "eresource": {
         "id": null,
         "activation_status": "",
-        "activation_due": 1,
+        "activation_due": 8,
         "create_inventory": false,
         "trial": false,
         "expected_activation": null,
@@ -107,7 +107,7 @@
       "physical": {
         "id": null,
         "expected_receipt_date": null,
-        "receipt_due": "2018-09-29T03:55:00Z",
+        "receipt_due": "2018-09-29T03:00:00Z",
         "expected_receipt_interval": 0,
         "volumes": 1,
         "material_id": "",
