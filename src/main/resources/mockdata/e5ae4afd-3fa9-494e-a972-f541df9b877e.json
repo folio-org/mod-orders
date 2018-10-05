@@ -20,7 +20,7 @@
       "id": "",
       "acquisition_method": {
         "id": null,
-        "code": "",
+        "code": null,
         "description": "Email to vendor"
       },
       "barcode": "",
@@ -54,7 +54,8 @@
           "id": null,
           "claim": false,
           "sent": "",
-          "grace": null
+          "grace": null,
+          "po_line_id": null
         }
       ],
       "cost": {
@@ -83,7 +84,7 @@
         "trial": false,
         "expected_activation": "2018-07-06T01:00:00Z",
         "user_limit": 1,
-        "material_id": "",
+        "material_id": null,
         "access_provider": "Proquest"
       },
       "license": {
@@ -99,12 +100,12 @@
       },
       "order_format": {
         "id": null,
-        "code": "",
+        "code": null,
         "description": "Electronic"
       },
       "order_type": {
         "id": null,
-        "code": "",
+        "code": null,
         "description": "On-time"
       },
       "physical": {
@@ -119,7 +120,7 @@
       "purchase_order_id": "",
       "receipt_status": {
         "id": null,
-        "code": "",
+        "code": null,
         "description": "Received"
       },
       "renewal": {
@@ -132,20 +133,20 @@
       },
       "source": {
         "id": null,
-        "code": "",
+        "code": null,
         "description": "manual"
       },
       "vendor": {
         "id": "GOBI Library Solutions",
         "ref_number": "999632785",
         "ref_no_type": "",
-        "instructions": "",
+        "instructions": null,
         "vendor_account": "12345-50",
         "note_from_vendor": ""
       },
       "workflow_status": {
         "id": null,
-        "code": "",
+        "code": null,
         "description": "Received Complete"
       },
       "selector": "Woods",

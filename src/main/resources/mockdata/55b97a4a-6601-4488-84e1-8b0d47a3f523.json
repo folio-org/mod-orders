@@ -20,7 +20,7 @@
       "id": "",
       "acquisition_method": {
         "id": null,
-        "code": "",
+        "code": null,
         "description": "EDI"
       },
       "barcode": "",
@@ -54,7 +54,8 @@
           "id": null,
           "claim": true,
           "sent": "",
-          "grace": 0
+          "grace": 0,
+          "po_line_id": null
         }
       ],
       "cost": {
@@ -83,7 +84,7 @@
         "trial": false,
         "expected_activation": null,
         "user_limit": 0,
-        "material_id": "",
+        "material_id": null,
         "access_provider": ""
       },
       "license": {
@@ -99,12 +100,12 @@
       },
       "order_format": {
         "id": null,
-        "code": "",
+        "code": null,
         "description": "Physical"
       },
       "order_type": {
         "id": null,
-        "code": "",
+        "code": null,
         "description": "On-going"
       },
       "physical": {
@@ -119,7 +120,7 @@
       "purchase_order_id": "",
       "receipt_status": {
         "id": null,
-        "code": "",
+        "code": null,
         "description": "Received"
       },
       "renewal": {
@@ -132,20 +133,20 @@
       },
       "source": {
         "id": null,
-        "code": "",
+        "code": null,
         "description": "manual"
       },
       "vendor": {
         "id": "Jean Simmons",
         "ref_number": "",
         "ref_no_type": "",
-        "instructions": "",
+        "instructions": null,
         "vendor_account": "",
         "note_from_vendor": ""
       },
       "workflow_status": {
         "id": null,
-        "code": "",
+        "code": null,
         "description": "order sent"
       },
       "selector": "",
