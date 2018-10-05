@@ -18,7 +18,11 @@
   "po_lines": [
     {
       "id": "",
-      "acquisition_method": "Purchase at Vendor System",
+      "acquisition_method": {
+        "id": null,
+        "code": "",
+        "description": "Purchase at Vendor System"
+      },
       "barcode": "",
       "cancellation_restriction": false,
       "cancellation_restriction_comment": "",
@@ -82,14 +86,27 @@
         "material_id": "",
         "access_provider": "Kanopy"
       },
-      "license": "60264",
+      "license": {
+        "id": null,
+        "code": "60264",
+        "description": "",
+        "reference": ""
+      },
       "location": {
         "id": null,
         "quantity": 1,
         "location_id": "www"
       },
-      "order_format": "Electronic",
-      "order_type": "One-time",
+      "order_format": {
+        "id": null,
+        "code": "",
+        "description": "Electronic"
+      },
+      "order_type": {
+        "id": null,
+        "code": "",
+        "description": "On-time"
+      },
       "physical": {
         "id": null,
         "expected_receipt_date": null,
@@ -100,7 +117,11 @@
         "material_supplier": ""
       },
       "purchase_order_id": "",
-      "receipt_status": "Received",
+      "receipt_status": {
+        "id": null,
+        "code": "",
+        "description": "Received"
+      },
       "renewal": {
         "id": null,
         "cycle": "manual",
@@ -122,7 +143,11 @@
         "vendor_account": "",
         "note_from_vendor": ""
       },
-      "workflow_status": "Received Complete",
+      "workflow_status": {
+        "id": null,
+        "code": "",
+        "description": "Received Complete"
+      },
       "selector": "dhalling",
       "requester": "msmith",
       "account_number": "",

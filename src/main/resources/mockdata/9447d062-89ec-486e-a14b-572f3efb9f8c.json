@@ -18,7 +18,11 @@
   "po_lines": [
     {
       "id": "",
-      "acquisition_method": "online",
+      "acquisition_method": {
+        "id": null,
+        "code": "",
+        "description": "online"
+      },
       "barcode": "",
       "cancellation_restriction": false,
       "cancellation_restriction_comment": "",
@@ -82,14 +86,27 @@
         "material_id": "",
         "access_provider": ""
       },
-      "license": "",
+      "license": {
+        "id": null,
+        "code": "",
+        "description": "",
+        "reference": ""
+      },
       "location": {
         "id": null,
         "quantity": 2,
         "location_id": "BUS"
       },
-      "order_format": "Physical",
-      "order_type": "one-time",
+      "order_format": {
+        "id": null,
+        "code": "",
+        "description": "Physical"
+      },
+      "order_type": {
+        "id": null,
+        "code": "",
+        "description": "On-time"
+      },
       "physical": {
         "id": null,
         "expected_receipt_date": null,
@@ -100,7 +117,11 @@
         "material_supplier": "Amazon.com"
       },
       "purchase_order_id": "",
-      "receipt_status": "Received",
+      "receipt_status": {
+        "id": null,
+        "code": "",
+        "description": "Received"
+      },
       "renewal": {
         "id": null,
         "cycle": "",
@@ -122,7 +143,11 @@
         "vendor_account": "",
         "note_from_vendor": ""
       },
-      "workflow_status": "order sent",
+      "workflow_status": {
+        "id": null,
+        "code": "",
+        "description": "order sent"
+      },
       "selector": "",
       "requester": "",
       "account_number": "",
