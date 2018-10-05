@@ -18,11 +18,7 @@
   "po_lines": [
     {
       "id": "",
-      "acquisition_method": {
-        "id": null,
-        "code": null,
-        "description": "EDI"
-      },
+      "acquisition_method": "EDI",
       "barcode": "",
       "cancellation_restriction": false,
       "cancellation_restriction_comment": "",

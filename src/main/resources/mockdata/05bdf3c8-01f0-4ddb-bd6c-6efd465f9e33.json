@@ -18,11 +18,7 @@
   "po_lines": [
     {
       "id": "",
-      "acquisition_method": {
-        "id": null,
-        "code": null,
-        "description": "Email to vendor"
-      },
+      "acquisition_method": "Email to vendor",
       "barcode": "",
       "cancellation_restriction": false,
       "cancellation_restriction_comment": "",

@@ -18,11 +18,7 @@
   "po_lines": [
     {
       "id": "",
-      "acquisition_method": {
-        "id": null,
-        "code": null,
-        "description": "Purchase at Vendor System"
-      },
+      "acquisition_method": "Purchase at Vendor System",
       "barcode": "",
       "cancellation_restriction": false,
       "cancellation_restriction_comment": "",

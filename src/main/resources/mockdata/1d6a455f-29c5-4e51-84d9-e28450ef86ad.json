@@ -18,11 +18,7 @@
   "po_lines": [
     {
       "id": "",
-      "acquisition_method": {
-        "id": null,
-        "code": null,
-        "description": "Order on vendor platform"
-      },
+      "acquisition_method": "Order on vendor platform",
       "barcode": "",
       "cancellation_restriction": false,
       "cancellation_restriction_comment": "",
