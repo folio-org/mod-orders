@@ -2,7 +2,7 @@
   "purchase_order": {
     "id": "9447d062-89ec-486e-a14b-572f3efb9f8c",
     "po_number": "101125",
-    "created": "2018-07-19T10:00:00Z",
+    "created": "2018-07-19T10:00:00.000+0000",
     "comments": "",
     "total_items": 2,
     "total_estimated_price": 200.00,
@@ -17,7 +17,7 @@
   },
   "po_lines": [
     {
-      "id": "",
+      "id": "07c6a2d0-cabe-11e8-a8d5-f2801f1b9fd1",
       "acquisition_method": "Online",
       "barcode": "",
       "cancellation_restriction": false,
@@ -28,7 +28,7 @@
       "po_line_number": "1",
       "po_line_description": "",
       "adjustment": {
-        "id": null,
+        "id": "07c6a406-cabe-11e8-a8d5-f2801f1b9fd1",
         "shipment": 0,
         "insurance": 0,
         "discount": 0,
@@ -41,13 +41,13 @@
       },
       "alerts": [
         {
-          "id": null,
+          "id": "07c6a528-cabe-11e8-a8d5-f2801f1b9fd1",
           "alert": ""
         }
       ],
       "claims": [
         {
-          "id": null,
+          "id": "07c6a654-cabe-11e8-a8d5-f2801f1b9fd1",
           "claim": true,
           "sent": "",
           "grace": 0,
@@ -55,14 +55,14 @@
         }
       ],
       "cost": {
-        "id": null,
+        "id": "07c6a780-cabe-11e8-a8d5-f2801f1b9fd1",
         "list_price": 100.00,
         "currency": "USD",
         "quantity": 2,
         "estimated_price": 200.00
       },
       "details": {
-        "id": null,
+        "id": "07c6a8ac-cabe-11e8-a8d5-f2801f1b9fd1",
         "title": "Business and professional communication",
         "receiving_note": "2 copies",
         "product_id": "9780133973488",
@@ -73,7 +73,7 @@
         "description": ""
       },
       "eresource": {
-        "id": null,
+        "id": "07c6ab72-cabe-11e8-a8d5-f2801f1b9fd1",
         "activation_status": "",
         "activation_due": 0,
         "create_inventory": false,
@@ -84,30 +84,30 @@
         "access_provider": ""
       },
       "license": {
-        "id": null,
+        "id": "07c6acbc-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": "",
         "description": "",
         "reference": ""
       },
       "location": {
-        "id": null,
+        "id": "07c6ade8-cabe-11e8-a8d5-f2801f1b9fd1",
         "quantity": 2,
         "location_id": "BUS"
       },
       "order_format": {
-        "id": null,
+        "id": "07c6af8c-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Physical"
       },
       "order_type": {
-        "id": null,
+        "id": "07c6b0c2-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "On-time"
       },
       "physical": {
-        "id": null,
+        "id": "07c6b3ba-cabe-11e8-a8d5-f2801f1b9fd1",
         "expected_receipt_date": null,
-        "receipt_due": "2018-07-31T10:00:00Z",
+        "receipt_due": "2018-07-31T10:00:00.000+0000",
         "expected_receipt_interval": 0,
         "volumes": 0,
         "material_id": "",
@@ -115,12 +115,12 @@
       },
       "purchase_order_id": "",
       "receipt_status": {
-        "id": null,
+        "id": "07c6b504-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Received"
       },
       "renewal": {
-        "id": null,
+        "id": "07c6b63a-cabe-11e8-a8d5-f2801f1b9fd1",
         "cycle": "",
         "review_period": 0,
         "renewal_date": null,
@@ -128,7 +128,7 @@
         "manual_renewal": true
       },
       "source": {
-        "id": null,
+        "id": "07c6b766-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "manual"
       },
@@ -141,7 +141,7 @@
         "note_from_vendor": ""
       },
       "workflow_status": {
-        "id": null,
+        "id": "07c6b892-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "order sent"
       },

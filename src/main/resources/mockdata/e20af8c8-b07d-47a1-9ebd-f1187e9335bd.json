@@ -2,7 +2,7 @@
   "purchase_order": {
     "id": "e20af8c8-b07d-47a1-9ebd-f1187e9335bd",
     "po_number": "306251",
-    "created": "2018-06-19T10:00:00Z",
+    "created": "2018-06-19T10:00:00.000+0000",
     "comments": "CAC one time funding proposal by Bob Barker",
     "total_items": 1,
     "total_estimated_price": 3000.00,
@@ -17,7 +17,7 @@
   },
   "po_lines": [
     {
-      "id": "",
+      "id": "07c6ec54-cabe-11e8-a8d5-f2801f1b9fd1",
       "acquisition_method": "Email to agent",
       "barcode": "",
       "cancellation_restriction": false,
@@ -28,7 +28,7 @@
       "po_line_number": "1",
       "po_line_description": "",
       "adjustment": {
-        "id": null,
+        "id": "07c6ef9c-cabe-11e8-a8d5-f2801f1b9fd1",
         "shipment": 0,
         "insurance": 0,
         "discount": 0,
@@ -41,13 +41,13 @@
       },
       "alerts": [
         {
-          "id": null,
+          "id": "07c6f4e2-cabe-11e8-a8d5-f2801f1b9fd1",
           "alert": ""
         }
       ],
       "claims": [
         {
-          "id": null,
+          "id": "07c6f65e-cabe-11e8-a8d5-f2801f1b9fd1",
           "claim": true,
           "sent": "",
           "grace": 30,
@@ -55,14 +55,14 @@
         }
       ],
       "cost": {
-        "id": null,
+        "id": "07c6f794-cabe-11e8-a8d5-f2801f1b9fd1",
         "list_price": 3000.00,
         "currency": "USD",
         "quantity": 1,
         "estimated_price": 3000.00
       },
       "details": {
-        "id": null,
+        "id": "07c6f8b6-cabe-11e8-a8d5-f2801f1b9fd1",
         "title": "PDCnet Backfiles",
         "receiving_note": "two backfiles",
         "product_id": "5456",
@@ -73,39 +73,39 @@
         "description": ""
       },
       "eresource": {
-        "id": null,
+        "id": "07c6f9e2-cabe-11e8-a8d5-f2801f1b9fd1",
         "activation_status": "y",
         "activation_due": 0,
         "create_inventory": false,
         "trial": false,
-        "expected_activation": "2019-06-30T10:00:00Z",
+        "expected_activation": "2019-06-30T10:00:00.000+0000",
         "user_limit": 0,
         "material_id": null,
         "access_provider": "PDCnet"
       },
       "license": {
-        "id": null,
+        "id": "07c6fdac-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": "",
         "description": "",
         "reference": ""
       },
       "location": {
-        "id": null,
+        "id": "07c6ff00-cabe-11e8-a8d5-f2801f1b9fd1",
         "quantity": 1,
         "location_id": "www"
       },
       "order_format": {
-        "id": null,
+        "id": "07c70022-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Electronic"
       },
       "order_type": {
-        "id": null,
+        "id": "07c7016c-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "On-time"
       },
       "physical": {
-        "id": null,
+        "id": "07c70298-cabe-11e8-a8d5-f2801f1b9fd1",
         "expected_receipt_date": null,
         "receipt_due": "",
         "expected_receipt_interval": 0,
@@ -115,12 +115,12 @@
       },
       "purchase_order_id": "",
       "receipt_status": {
-        "id": null,
+        "id": "07c703ba-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Received"
       },
       "renewal": {
-        "id": null,
+        "id": "07c704e6-cabe-11e8-a8d5-f2801f1b9fd1",
         "cycle": "",
         "review_period": 0,
         "renewal_date": null,
@@ -128,7 +128,7 @@
         "manual_renewal": true
       },
       "source": {
-        "id": null,
+        "id": "07c70888-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "manual"
       },
@@ -141,7 +141,7 @@
         "note_from_vendor": ""
       },
       "workflow_status": {
-        "id": null,
+        "id": "07c70af4-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Received Complete"
       },

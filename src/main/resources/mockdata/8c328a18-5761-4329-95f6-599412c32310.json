@@ -2,7 +2,7 @@
   "purchase_order": {
     "id": "8c328a18-5761-4329-95f6-599412c32310",
     "po_number": "14383007",
-    "created": "2018-07-18T10:00:00Z",
+    "created": "2018-07-18T10:00:00.000+0000",
     "comments": "",
     "total_items": 1,
     "total_estimated_price": 0.00,
@@ -17,7 +17,7 @@
   },
   "po_lines": [
     {
-      "id": "",
+      "id": "07c63408-cabe-11e8-a8d5-f2801f1b9fd1",
       "acquisition_method": "Gift",
       "barcode": "",
       "cancellation_restriction": false,
@@ -28,7 +28,7 @@
       "po_line_number": "1",
       "po_line_description": "",
       "adjustment": {
-        "id": null,
+        "id": "07c63534-cabe-11e8-a8d5-f2801f1b9fd1",
         "shipment": 0,
         "insurance": 0,
         "discount": 0,
@@ -41,13 +41,13 @@
       },
       "alerts": [
         {
-          "id": null,
+          "id": "07c63660-cabe-11e8-a8d5-f2801f1b9fd1",
           "alert": ""
         }
       ],
       "claims": [
         {
-          "id": null,
+          "id": "07c63796-cabe-11e8-a8d5-f2801f1b9fd1",
           "claim": true,
           "sent": "",
           "grace": 0,
@@ -55,14 +55,14 @@
         }
       ],
       "cost": {
-        "id": null,
+        "id": "07c638c2-cabe-11e8-a8d5-f2801f1b9fd1",
         "list_price": 0.00,
         "currency": "USD",
         "quantity": 1,
         "estimated_price": 0.00
       },
       "details": {
-        "id": null,
+        "id": "07c63cf0-cabe-11e8-a8d5-f2801f1b9fd1",
         "title": "The Tsuda Review",
         "receiving_note": "",
         "product_id": "1234-8675",
@@ -73,7 +73,7 @@
         "description": ""
       },
       "eresource": {
-        "id": null,
+        "id": "07c63e4e-cabe-11e8-a8d5-f2801f1b9fd1",
         "activation_status": "",
         "activation_due": 0,
         "create_inventory": false,
@@ -84,28 +84,28 @@
         "access_provider": ""
       },
       "license": {
-        "id": null,
+        "id": "07c643a8-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": "",
         "description": "",
         "reference": ""
       },
       "location": {
-        "id": null,
+        "id": "07c6452e-cabe-11e8-a8d5-f2801f1b9fd1",
         "quantity": 1,
         "location_id": "jrlgen"
       },
       "order_format": {
-        "id": null,
+        "id": "07c6465a-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Physical"
       },
       "order_type": {
-        "id": null,
+        "id": "07c6495c-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "On-going"
       },
       "physical": {
-        "id": null,
+        "id": "07c64aa6-cabe-11e8-a8d5-f2801f1b9fd1",
         "expected_receipt_date": null,
         "receipt_due": "",
         "expected_receipt_interval": 0,
@@ -115,12 +115,12 @@
       },
       "purchase_order_id": "",
       "receipt_status": {
-        "id": null,
+        "id": "07c64bc8-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Received"
       },
       "renewal": {
-        "id": null,
+        "id": "07c64cea-cabe-11e8-a8d5-f2801f1b9fd1",
         "cycle": "manual",
         "review_period": 0,
         "renewal_date": null,
@@ -128,7 +128,7 @@
         "manual_renewal": true
       },
       "source": {
-        "id": null,
+        "id": "07c64e16-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "manual"
       },
@@ -141,7 +141,7 @@
         "note_from_vendor": ""
       },
       "workflow_status": {
-        "id": null,
+        "id": "07c64f38-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Approved"
       },

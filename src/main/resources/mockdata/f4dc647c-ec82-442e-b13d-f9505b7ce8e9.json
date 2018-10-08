@@ -2,7 +2,7 @@
   "purchase_order": {
     "id": "f4dc647c-ec82-442e-b13d-f9505b7ce8e9",
     "po_number": "312325",
-    "created": "2018-07-13T10:00:00Z",
+    "created": "2018-07-13T10:00:00.000+0000",
     "comments": "REF<DXiao>, REF<DHalling> Notify<Mary Ann Barker, barker@tamu.edu> Licensing <1-year streaming license>",
     "total_items": 1,
     "total_estimated_price": 150.00,
@@ -17,7 +17,7 @@
   },
   "po_lines": [
     {
-      "id": "",
+      "id": "07c723fe-cabe-11e8-a8d5-f2801f1b9fd1",
       "acquisition_method": "Purchase at Vendor System",
       "barcode": "",
       "cancellation_restriction": false,
@@ -28,7 +28,7 @@
       "po_line_number": "1",
       "po_line_description": "",
       "adjustment": {
-        "id": null,
+        "id": "07c7253e-cabe-11e8-a8d5-f2801f1b9fd1",
         "shipment": 0,
         "insurance": 0,
         "discount": 0,
@@ -41,13 +41,13 @@
       },
       "alerts": [
         {
-          "id": null,
+          "id": "07c7282c-cabe-11e8-a8d5-f2801f1b9fd1",
           "alert": ""
         }
       ],
       "claims": [
         {
-          "id": null,
+          "id": "07c72aa2-cabe-11e8-a8d5-f2801f1b9fd1",
           "claim": false,
           "sent": "",
           "grace": 0,
@@ -55,14 +55,14 @@
         }
       ],
       "cost": {
-        "id": null,
+        "id": "07c72c50-cabe-11e8-a8d5-f2801f1b9fd1",
         "list_price": 150.00,
         "currency": "USD",
         "quantity": 1,
         "estimated_price": 150.00
       },
       "details": {
-        "id": null,
+        "id": "07c72d86-cabe-11e8-a8d5-f2801f1b9fd1",
         "title": "At Berkeley",
         "receiving_note": "Access begins 7/16/18",
         "product_id": "3257204",
@@ -73,39 +73,39 @@
         "description": ""
       },
       "eresource": {
-        "id": null,
+        "id": "07c730e2-cabe-11e8-a8d5-f2801f1b9fd1",
         "activation_status": "y",
         "activation_due": 4,
         "create_inventory": false,
         "trial": false,
-        "expected_activation": "2018-07-17T10:00:00Z",
+        "expected_activation": "2018-07-17T10:00:00.000+0000",
         "user_limit": 0,
         "material_id": null,
         "access_provider": "Kanopy"
       },
       "license": {
-        "id": null,
+        "id": "07c73240-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": "60264",
         "description": "",
         "reference": ""
       },
       "location": {
-        "id": null,
+        "id": "07c73376-cabe-11e8-a8d5-f2801f1b9fd1",
         "quantity": 1,
         "location_id": "www"
       },
       "order_format": {
-        "id": null,
+        "id": "07c73498-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Electronic"
       },
       "order_type": {
-        "id": null,
+        "id": "07c735c4-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "On-time"
       },
       "physical": {
-        "id": null,
+        "id": "07c736f0-cabe-11e8-a8d5-f2801f1b9fd1",
         "expected_receipt_date": null,
         "receipt_due": null,
         "expected_receipt_interval": 0,
@@ -115,20 +115,20 @@
       },
       "purchase_order_id": "",
       "receipt_status": {
-        "id": null,
+        "id": "07c73812-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Received"
       },
       "renewal": {
-        "id": null,
+        "id": "07c73aba-cabe-11e8-a8d5-f2801f1b9fd1",
         "cycle": "manual",
         "review_period": 30,
-        "renewal_date": "2019-07-19T10:00:00Z",
+        "renewal_date": "2019-07-19T10:00:00.000+0000",
         "interval": 12,
         "manual_renewal": true
       },
       "source": {
-        "id": null,
+        "id": "07c73bfa-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "manual"
       },
@@ -141,7 +141,7 @@
         "note_from_vendor": ""
       },
       "workflow_status": {
-        "id": null,
+        "id": "07c73d26-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Received Complete"
       },

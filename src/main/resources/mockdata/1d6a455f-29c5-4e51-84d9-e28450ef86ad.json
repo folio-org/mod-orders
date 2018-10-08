@@ -2,7 +2,7 @@
   "purchase_order": {
     "id": "1d6a455f-29c5-4e51-84d9-e28450ef86ad",
     "po_number": "36547",
-    "created": "2019-05-15T10:00:00Z",
+    "created": "2019-05-15T10:00:00.000+0000",
     "comments": "Charged $3.99 in shipping; refunded on 6/10/18 ",
     "total_items": 1,
     "total_estimated_price": 25.00,
@@ -17,7 +17,7 @@
   },
   "po_lines": [
     {
-      "id": "",
+      "id": "07c5e6e2-cabe-11e8-a8d5-f2801f1b9fd1",
       "acquisition_method": "Order on vendor platform",
       "barcode": "",
       "cancellation_restriction": false,
@@ -28,7 +28,7 @@
       "po_line_number": "1",
       "po_line_description": "",
       "adjustment": {
-        "id": null,
+        "id": "07c5e854-cabe-11e8-a8d5-f2801f1b9fd1",
         "shipment": 0,
         "insurance": 0,
         "discount": 0,
@@ -41,13 +41,13 @@
       },
       "alerts": [
         {
-          "id": null,
+          "id": "07c5e980-cabe-11e8-a8d5-f2801f1b9fd1",
           "alert": ""
         }
       ],
       "claims": [
         {
-          "id": null,
+          "id": "07c5eaa2-cabe-11e8-a8d5-f2801f1b9fd1",
           "claim": true,
           "sent": "",
           "grace": 60,
@@ -55,14 +55,14 @@
         }
       ],
       "cost": {
-        "id": null,
+        "id": "07c5ec32-cabe-11e8-a8d5-f2801f1b9fd1",
         "list_price": 25.00,
         "currency": "USD",
         "quantity": 1,
         "estimated_price": 25.00
       },
       "details": {
-        "id": null,
+        "id": "07c5ed5e-cabe-11e8-a8d5-f2801f1b9fd1",
         "title": "Firefly: the complete series",
         "receiving_note": "comes with digital code",
         "product_id": "B003d54rf",
@@ -73,7 +73,7 @@
         "description": ""
       },
       "eresource": {
-        "id": null,
+        "id": "07c5ee8a-cabe-11e8-a8d5-f2801f1b9fd1",
         "activation_status": "",
         "activation_due": 0,
         "create_inventory": false,
@@ -84,30 +84,30 @@
         "access_provider": ""
       },
       "license": {
-        "id": null,
+        "id": "07c5f1dc-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": "8022",
         "description": "",
         "reference": ""
       },
       "location": {
-        "id": null,
+        "id": "07c5f344-cabe-11e8-a8d5-f2801f1b9fd1",
         "quantity": 1,
         "location_id": "stks"
       },
       "order_format": {
-        "id": null,
+        "id": "07c5f47a-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Physical"
       },
       "order_type": {
-        "id": null,
+        "id": "07c5f59c-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "one-time"
       },
       "physical": {
-        "id": null,
+        "id": "07c5f6c8-cabe-11e8-a8d5-f2801f1b9fd1",
         "expected_receipt_date": null,
-        "receipt_due": "2018-06-01T10:00:00Z",
+        "receipt_due": "2018-06-01T10:00:00.000+0000",
         "expected_receipt_interval": 0,
         "volumes": 4,
         "material_id": "",
@@ -115,12 +115,12 @@
       },
       "purchase_order_id": "",
       "receipt_status": {
-        "id": null,
+        "id": "07c5f7f4-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Received"
       },
       "renewal": {
-        "id": null,
+        "id": "07c5face-cabe-11e8-a8d5-f2801f1b9fd1",
         "cycle": "",
         "review_period": 0,
         "renewal_date": null,
@@ -128,7 +128,7 @@
         "manual_renewal": true
       },
       "source": {
-        "id": null,
+        "id": "07c5fbfa-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "manual"
       },
@@ -141,7 +141,7 @@
         "note_from_vendor": ""
       },
       "workflow_status": {
-        "id": null,
+        "id": "07c5fd26-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Received complete"
       },

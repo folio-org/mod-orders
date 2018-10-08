@@ -2,7 +2,7 @@
   "purchase_order": {
     "id": "c27e60f9-6361-44c1-976e-0c4821a33a7d",
     "po_number": "38434",
-    "created": "2014-09-22T10:00:00Z",
+    "created": "2014-09-22T10:00:00.000+0000",
     "comments": "Cataloging record service",
     "total_items": 1,
     "total_estimated_price": 0.00,
@@ -17,7 +17,7 @@
   },
   "po_lines": [
     {
-      "id": "",
+      "id": "07c6b9be-cabe-11e8-a8d5-f2801f1b9fd1",
       "acquisition_method": "Purchase",
       "barcode": "",
       "cancellation_restriction": false,
@@ -28,7 +28,7 @@
       "po_line_number": "1",
       "po_line_description": "",
       "adjustment": {
-        "id": null,
+        "id": "07c6bcd4-cabe-11e8-a8d5-f2801f1b9fd1",
         "shipment": 0,
         "insurance": 0,
         "discount": 0,
@@ -41,13 +41,13 @@
       },
       "alerts": [
         {
-          "id": null,
+          "id": "07c6c04e-cabe-11e8-a8d5-f2801f1b9fd1",
           "alert": ""
         }
       ],
       "claims": [
         {
-          "id": null,
+          "id": "07c6c1ac-cabe-11e8-a8d5-f2801f1b9fd1",
           "claim": false,
           "sent": "",
           "grace": 0,
@@ -55,14 +55,14 @@
         }
       ],
       "cost": {
-        "id": null,
+        "id": "07c6c2d8-cabe-11e8-a8d5-f2801f1b9fd1",
         "list_price": 0.00,
         "currency": "USD",
         "quantity": 1,
         "estimated_price": 0.00
       },
       "details": {
-        "id": null,
+        "id": "07c6c404-cabe-11e8-a8d5-f2801f1b9fd1",
         "title": "GOBI record service",
         "receiving_note": "",
         "product_id": "",
@@ -73,7 +73,7 @@
         "description": ""
       },
       "eresource": {
-        "id": null,
+        "id": "07c6c526-cabe-11e8-a8d5-f2801f1b9fd1",
         "activation_status": "",
         "activation_due": 0,
         "create_inventory": false,
@@ -84,28 +84,28 @@
         "access_provider": ""
       },
       "license": {
-        "id": null,
+        "id": "07c6c652-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": "",
         "description": "",
         "reference": ""
       },
       "location": {
-        "id": null,
+        "id": "07c6c95e-cabe-11e8-a8d5-f2801f1b9fd1",
         "quantity": 1,
         "location_id": ""
       },
       "order_format": {
-        "id": null,
+        "id": "07c6caa8-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Services"
       },
       "order_type": {
-        "id": null,
+        "id": "07c6cbd4-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "On-going"
       },
       "physical": {
-        "id": null,
+        "id": "07c6ccf6-cabe-11e8-a8d5-f2801f1b9fd1",
         "expected_receipt_date": null,
         "receipt_due": null,
         "expected_receipt_interval": 0,
@@ -115,12 +115,12 @@
       },
       "purchase_order_id": "",
       "receipt_status": {
-        "id": null,
+        "id": "07c6ce22-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Received"
       },
       "renewal": {
-        "id": null,
+        "id": "07c6cf44-cabe-11e8-a8d5-f2801f1b9fd1",
         "cycle": "manual",
         "review_period": 0,
         "renewal_date": null,
@@ -128,7 +128,7 @@
         "manual_renewal": true
       },
       "source": {
-        "id": null,
+        "id": "07c6d25a-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "manual"
       },
@@ -141,7 +141,7 @@
         "note_from_vendor": ""
       },
       "workflow_status": {
-        "id": null,
+        "id": "07c6d3a4-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Approved"
       },

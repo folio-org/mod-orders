@@ -2,7 +2,7 @@
   "purchase_order": {
     "id": "e5ae4afd-3fa9-494e-a972-f541df9b877e",
     "po_number": "268879",
-    "created": "2018-07-06T01:00:00Z",
+    "created": "2018-07-06T01:00:00.000+0000",
     "comments": "",
     "total_items": 1,
     "total_estimated_price": 75.22,
@@ -17,7 +17,7 @@
   },
   "po_lines": [
     {
-      "id": "",
+      "id": "07c6d4d0-cabe-11e8-a8d5-f2801f1b9fd1",
       "acquisition_method": "Email to vendor",
       "barcode": "",
       "cancellation_restriction": false,
@@ -28,7 +28,7 @@
       "po_line_number": "1",
       "po_line_description": "",
       "adjustment": {
-        "id": null,
+        "id": "07c6d66a-cabe-11e8-a8d5-f2801f1b9fd1",
         "shipment": 0,
         "insurance": 0,
         "discount": 0,
@@ -41,13 +41,13 @@
       },
       "alerts": [
         {
-          "id": null,
+          "id": "07c6d7a0-cabe-11e8-a8d5-f2801f1b9fd1",
           "alert": ""
         }
       ],
       "claims": [
         {
-          "id": null,
+          "id": "07c6d8cc-cabe-11e8-a8d5-f2801f1b9fd1",
           "claim": false,
           "sent": "",
           "grace": null,
@@ -55,14 +55,14 @@
         }
       ],
       "cost": {
-        "id": null,
+        "id": "07c6d9ee-cabe-11e8-a8d5-f2801f1b9fd1",
         "list_price": 75.22,
         "currency": "USD",
         "quantity": 1,
         "estimated_price": 75.22
       },
       "details": {
-        "id": null,
+        "id": "07c6dd18-cabe-11e8-a8d5-f2801f1b9fd1",
         "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
         "receiving_note": "",
         "product_id": "9781118416068",
@@ -73,39 +73,39 @@
         "description": ""
       },
       "eresource": {
-        "id": null,
+        "id": "07c6de6c-cabe-11e8-a8d5-f2801f1b9fd1",
         "activation_status": "y",
         "activation_due": 1,
         "create_inventory": false,
         "trial": false,
-        "expected_activation": "2018-07-06T01:00:00Z",
+        "expected_activation": "2018-07-06T01:00:00.000+0000",
         "user_limit": 1,
         "material_id": null,
         "access_provider": "Proquest"
       },
       "license": {
-        "id": null,
+        "id": "07c6df98-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": "",
         "description": "",
         "reference": ""
       },
       "location": {
-        "id": null,
+        "id": "07c6e0c4-cabe-11e8-a8d5-f2801f1b9fd1",
         "quantity": 1,
         "location_id": "serv.remote"
       },
       "order_format": {
-        "id": null,
+        "id": "07c6e1f0-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Electronic"
       },
       "order_type": {
-        "id": null,
+        "id": "07c6e31c-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "On-time"
       },
       "physical": {
-        "id": null,
+        "id": "07c6e664-cabe-11e8-a8d5-f2801f1b9fd1",
         "expected_receipt_date": null,
         "receipt_due": "",
         "expected_receipt_interval": 0,
@@ -115,12 +115,12 @@
       },
       "purchase_order_id": "",
       "receipt_status": {
-        "id": null,
+        "id": "07c6e7c2-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Received"
       },
       "renewal": {
-        "id": null,
+        "id": "07c6e8ee-cabe-11e8-a8d5-f2801f1b9fd1",
         "cycle": "",
         "review_period": 0,
         "renewal_date": null,
@@ -128,7 +128,7 @@
         "manual_renewal": true
       },
       "source": {
-        "id": null,
+        "id": "07c6ea10-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "manual"
       },
@@ -141,7 +141,7 @@
         "note_from_vendor": ""
       },
       "workflow_status": {
-        "id": null,
+        "id": "07c6eb32-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Received Complete"
       },

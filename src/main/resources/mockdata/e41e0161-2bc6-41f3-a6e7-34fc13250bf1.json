@@ -1,8 +1,8 @@
 {
   "purchase_order": {
     "id": "e41e0161-2bc6-41f3-a6e7-34fc13250bf1",
-    "po_number": "306251",
-    "created": "2018-07-23T10:00:00Z",
+    "po_number": "306857",
+    "created": "2018-07-23T10:00:00.000+0000",
     "comments": "Published twice a year",
     "total_items": 1,
     "total_estimated_price": 800.00,
@@ -17,7 +17,7 @@
   },
   "po_lines": [
     {
-      "id": "",
+      "id": "07c70c48-cabe-11e8-a8d5-f2801f1b9fd1",
       "acquisition_method": "Email to agent",
       "barcode": "",
       "cancellation_restriction": false,
@@ -28,7 +28,7 @@
       "po_line_number": "1",
       "po_line_description": "",
       "adjustment": {
-        "id": null,
+        "id": "07c70d6a-cabe-11e8-a8d5-f2801f1b9fd1",
         "shipment": 0,
         "insurance": 0,
         "discount": 0,
@@ -41,13 +41,13 @@
       },
       "alerts": [
         {
-          "id": null,
+          "id": "07c70e8c-cabe-11e8-a8d5-f2801f1b9fd1",
           "alert": ""
         }
       ],
       "claims": [
         {
-          "id": null,
+          "id": "07c70fb8-cabe-11e8-a8d5-f2801f1b9fd1",
           "claim": true,
           "sent": "",
           "grace": 60,
@@ -55,25 +55,25 @@
         }
       ],
       "cost": {
-        "id": null,
+        "id": "07c710e4-cabe-11e8-a8d5-f2801f1b9fd1",
         "list_price": 800.00,
         "currency": "USD",
         "quantity": 1,
         "estimated_price": 800.00
       },
       "details": {
-        "id": null,
+        "id": "07c71440-cabe-11e8-a8d5-f2801f1b9fd1",
         "title": "Joss Whedon Papers",
         "receiving_note": "Cushing materials, do not mark",
         "product_id": "43",
-        "subscription_from": "2018-07-23T10:00:00Z",
+        "subscription_from": "2018-07-23T10:00:00.000+0000",
         "material_type": "package",
         "subscription_interval": 365,
-        "subscription_to": "2018-07-22T10:00:00Z",
+        "subscription_to": "2018-07-22T10:00:00.000+0000",
         "description": ""
       },
       "eresource": {
-        "id": null,
+        "id": "07c7158a-cabe-11e8-a8d5-f2801f1b9fd1",
         "activation_status": "",
         "activation_due": 0,
         "create_inventory": false,
@@ -84,28 +84,28 @@
         "access_provider": ""
       },
       "license": {
-        "id": null,
+        "id": "07c716c0-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": "",
         "description": "",
         "reference": ""
       },
       "location": {
-        "id": null,
+        "id": "07c717ec-cabe-11e8-a8d5-f2801f1b9fd1",
         "quantity": 1,
         "location_id": "cush"
       },
       "order_format": {
-        "id": null,
+        "id": "07c71918-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Physical"
       },
       "order_type": {
-        "id": null,
+        "id": "07c71a44-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "On-going"
       },
       "physical": {
-        "id": null,
+        "id": "07c71da0-cabe-11e8-a8d5-f2801f1b9fd1",
         "expected_receipt_date": null,
         "receipt_due": "",
         "expected_receipt_interval": 0,
@@ -115,12 +115,12 @@
       },
       "purchase_order_id": "",
       "receipt_status": {
-        "id": null,
+        "id": "07c71efe-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Received"
       },
       "renewal": {
-        "id": null,
+        "id": "07c7202a-cabe-11e8-a8d5-f2801f1b9fd1",
         "cycle": "",
         "review_period": 0,
         "renewal_date": null,
@@ -128,7 +128,7 @@
         "manual_renewal": true
       },
       "source": {
-        "id": null,
+        "id": "07c72156-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "manual"
       },
@@ -141,7 +141,7 @@
         "note_from_vendor": ""
       },
       "workflow_status": {
-        "id": null,
+        "id": "07c72278-cabe-11e8-a8d5-f2801f1b9fd1",
         "code": null,
         "description": "Approved"
       },
