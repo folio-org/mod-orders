@@ -1,0 +1,154 @@
+{
+  "purchase_order": {
+    "id": "05bdf3c8-01f0-4ddb-bd6c-6efd465f9e33",
+    "po_number": "313000",
+    "created": "2018-07-19T10:00:00.000+0000",
+    "comments": "DVD plus 3 years streaming",
+    "total_items": 2,
+    "total_estimated_price": 500.00,
+    "adjustments": "",
+    "assigned_to": "John",
+    "created_by": "trek",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Open",
+    "po_receipt_status": "not received",
+    "po_payment_status": ""
+  },
+  "po_lines": [
+    {
+      "id": "07c5fe52-cabe-11e8-a8d5-f2801f1b9fd1",
+      "acquisition_method": "Email to vendor",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": false,
+      "owner": "Cushing",
+      "po_line_number": "1",
+      "po_line_description": "",
+      "adjustment": {
+        "id": "07c5ff7e-cabe-11e8-a8d5-f2801f1b9fd1",
+        "shipment": 0,
+        "insurance": 0,
+        "discount": 0,
+        "overhead": 0,
+        "credit": 0,
+        "tax_1": 0,
+        "tax_2": 0,
+        "invoice_id": null,
+        "use_pro_rate": false
+      },
+      "alerts": [
+        {
+          "id": "07c600a0-cabe-11e8-a8d5-f2801f1b9fd1",
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": "07c603de-cabe-11e8-a8d5-f2801f1b9fd1",
+          "claim": true,
+          "sent": "",
+          "grace": 60,
+          "po_line_id": null
+        }
+      ],
+      "cost": {
+        "id": "07c60802-cabe-11e8-a8d5-f2801f1b9fd1",
+        "list_price": 500.00,
+        "currency": "USD",
+        "quantity": 2,
+        "estimated_price": 500.00
+      },
+      "details": {
+        "id": "07c60942-cabe-11e8-a8d5-f2801f1b9fd1",
+        "title": "Acquisitions Rules the Library",
+        "receiving_note": "",
+        "product_id": "12357",
+        "subscription_from": "2018-07-20T10:00:00.000+0000",
+        "material_type": "DVD+streaming",
+        "subscription_interval": 1095,
+        "subscription_to": "2021-07-19T10:00:00.000+0000",
+        "description": ""
+      },
+      "eresource": {
+        "id": "07c60a6e-cabe-11e8-a8d5-f2801f1b9fd1",
+        "activation_status": "y",
+        "activation_due": 1,
+        "create_inventory": true,
+        "trial": false,
+        "expected_activation": "2018-07-20T10:00:00.000+0000",
+        "user_limit": 0,
+        "material_id": null,
+        "access_provider": "Ro*Co films"
+      },
+      "license": {
+        "id": "07c60d70-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": "8b23",
+        "description": "",
+        "reference": ""
+      },
+      "location": {
+        "id": "07c60ea6-cabe-11e8-a8d5-f2801f1b9fd1",
+        "quantity": 2,
+        "location_id": "stks,www"
+      },
+      "order_format": {
+        "id": "07c60fd2-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "P/E Mix"
+      },
+      "order_type": {
+        "id": "07c610fe-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "On-time"
+      },
+      "physical": {
+        "id": "07c61284-cabe-11e8-a8d5-f2801f1b9fd1",
+        "expected_receipt_date": null,
+        "receipt_due": "2018-08-19T10:00:00.000+0000",
+        "expected_receipt_interval": 0,
+        "volumes": 1,
+        "material_id": "",
+        "material_supplier": "Ro*Co films"
+      },
+      "purchase_order_id": "",
+      "receipt_status": {
+        "id": "07c613c4-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "Received"
+      },
+      "renewal": {
+        "id": "07c6170c-cabe-11e8-a8d5-f2801f1b9fd1",
+        "cycle": "manual",
+        "review_period": 90,
+        "renewal_date": "2021-07-19T10:00:00.000+0000",
+        "interval": 0,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": "07c6186a-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "Ro*Co films",
+        "ref_number": "",
+        "ref_no_type": "",
+        "instructions": null,
+        "vendor_account": "",
+        "note_from_vendor": ""
+      },
+      "workflow_status": {
+        "id": "07c61996-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "Approved"
+      },
+      "selector": "mreynolds",
+      "requester": "jcobb",
+      "account_number": "",
+      "donor": ""
+    }
+  ]
+}

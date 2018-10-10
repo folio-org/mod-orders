@@ -1,0 +1,154 @@
+{
+  "purchase_order": {
+    "id": "55b97a4a-6601-4488-84e1-8b0d47a3f523",
+    "po_number": "101113",
+    "created": "2018-07-19T10:00:00.000+0000",
+    "comments": "",
+    "total_items": 1,
+    "total_estimated_price": 240.00,
+    "adjustments": "",
+    "assigned_to": "",
+    "created_by": "steves",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Pending",
+    "po_receipt_status": "",
+    "po_payment_status": ""
+  },
+  "po_lines": [
+    {
+      "id": "07c6529e-cabe-11e8-a8d5-f2801f1b9fd1",
+      "acquisition_method": "EDI",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": false,
+      "owner": "Acquisitions - Serials",
+      "po_line_number": "1",
+      "po_line_description": "",
+      "adjustment": {
+        "id": "07c653e8-cabe-11e8-a8d5-f2801f1b9fd1",
+        "shipment": 0,
+        "insurance": 0,
+        "discount": 0,
+        "overhead": 0,
+        "credit": 0,
+        "tax_1": 0,
+        "tax_2": 0,
+        "invoice_id": null,
+        "use_pro_rate": false
+      },
+      "alerts": [
+        {
+          "id": "07c6550a-cabe-11e8-a8d5-f2801f1b9fd1",
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": "07c65636-cabe-11e8-a8d5-f2801f1b9fd1",
+          "claim": true,
+          "sent": "",
+          "grace": 0,
+          "po_line_id": null
+        }
+      ],
+      "cost": {
+        "id": "07c65758-cabe-11e8-a8d5-f2801f1b9fd1",
+        "list_price": 240.00,
+        "currency": "USD",
+        "quantity": 1,
+        "estimated_price": 240.00
+      },
+      "details": {
+        "id": "07c65884-cabe-11e8-a8d5-f2801f1b9fd1",
+        "title": "The road to democracy in South Africa",
+        "receiving_note": "v. 1-6 in 10 parts",
+        "product_id": "9781868885015",
+        "subscription_from": null,
+        "material_type": "print standing order",
+        "subscription_interval": 0,
+        "subscription_to": null,
+        "description": ""
+      },
+      "eresource": {
+        "id": "07c65bf4-cabe-11e8-a8d5-f2801f1b9fd1",
+        "activation_status": "",
+        "activation_due": 0,
+        "create_inventory": false,
+        "trial": false,
+        "expected_activation": null,
+        "user_limit": 0,
+        "material_id": null,
+        "access_provider": ""
+      },
+      "license": {
+        "id": "07c65d34-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": "",
+        "description": "",
+        "reference": ""
+      },
+      "location": {
+        "id": "07c65e60-cabe-11e8-a8d5-f2801f1b9fd1",
+        "quantity": 1,
+        "location_id": "stks"
+      },
+      "order_format": {
+        "id": "07c65f82-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "Physical"
+      },
+      "order_type": {
+        "id": "07c66112-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "On-going"
+      },
+      "physical": {
+        "id": "07c66252-cabe-11e8-a8d5-f2801f1b9fd1",
+        "expected_receipt_date": null,
+        "receipt_due": "2018-08-31T10:00:00.000+0000",
+        "expected_receipt_interval": 0,
+        "volumes": 6,
+        "material_id": "",
+        "material_supplier": "Otto Harrassowitz GmbH & Co. KG"
+      },
+      "purchase_order_id": "",
+      "receipt_status": {
+        "id": "07c665d6-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "Received"
+      },
+      "renewal": {
+        "id": "07c668b0-cabe-11e8-a8d5-f2801f1b9fd1",
+        "cycle": "manual",
+        "review_period": 0,
+        "renewal_date": null,
+        "interval": 0,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": "07c669fa-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "Jean Simmons",
+        "ref_number": "",
+        "ref_no_type": "",
+        "instructions": null,
+        "vendor_account": "",
+        "note_from_vendor": ""
+      },
+      "workflow_status": {
+        "id": "07c66b26-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "order sent"
+      },
+      "selector": "",
+      "requester": "",
+      "account_number": "",
+      "donor": ""
+    }
+  ]
+}

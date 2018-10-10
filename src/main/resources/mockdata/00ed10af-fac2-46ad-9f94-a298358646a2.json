@@ -1,0 +1,288 @@
+{
+  "purchase_order": {
+    "id": "00ed10af-fac2-46ad-9f94-a298358646a2",
+    "po_number": "S58227",
+    "created": "2018-07-12T06:00:00.000+0000",
+    "comments": "",
+    "total_items": 2,
+    "total_estimated_price": 842.00,
+    "adjustments": "",
+    "assigned_to": "George",
+    "created_by": "ap478",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Closed",
+    "po_receipt_status": "Fully Received",
+    "po_payment_status": "Fully Paid"
+  },
+  "po_lines": [
+    {
+      "id": "07c5b2c6-cabe-11e8-a8d5-f2801f1b9fd1",
+      "acquisition_method": "Email to vendor",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": false,
+      "owner": "Technical Services Department",
+      "po_line_number": "S58227/01",
+      "po_line_description": "",
+      "adjustment": {
+        "id": "07c5b58c-cabe-11e8-a8d5-f2801f1b9fd1",
+        "shipment": 0,
+        "insurance": 0,
+        "discount": 0,
+        "overhead": 0,
+        "credit": 0,
+        "tax_1": 0,
+        "tax_2": 0,
+        "invoice_id": null,
+        "use_pro_rate": false
+      },
+      "alerts": [
+        {
+          "id": "07c5b8ca-cabe-11e8-a8d5-f2801f1b9fd1",
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": "07c5b73a-cabe-11e8-a8d5-f2801f1b9fd1",
+          "claim": false,
+          "sent": "",
+          "grace": null,
+          "po_line_id": null
+        }
+      ],
+      "cost": {
+        "id": "07c5ba3c-cabe-11e8-a8d5-f2801f1b9fd1",
+        "list_price": 342.00,
+        "currency": "USD",
+        "quantity": 1,
+        "estimated_price": 342.00
+      },
+      "details": {
+        "id": "07c5bb86-cabe-11e8-a8d5-f2801f1b9fd1",
+        "title": "The American Statistician",
+        "receiving_note": "Renewal, access continuous",
+        "product_id": "4005000",
+        "subscription_from": "2018-08-01T05:00:00.000+0000",
+        "material_type": "eJournal",
+        "subscription_interval": 365,
+        "subscription_to": "2019-07-31T05:00:00.000+0000",
+        "description": ""
+      },
+      "eresource": {
+        "id": "07c5bf3c-cabe-11e8-a8d5-f2801f1b9fd1",
+        "activation_status": "y",
+        "activation_due": 0,
+        "create_inventory": false,
+        "trial": false,
+        "expected_activation": "2018-08-01T05:00:00.000+0000",
+        "user_limit": 0,
+        "material_id": null,
+        "access_provider": "Taylor & Francis Group, LLC"
+      },
+      "license": {
+        "id": "07c5c090-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": "8022",
+        "description": "",
+        "reference": ""
+      },
+      "location": {
+        "id": "07c5c1d0-cabe-11e8-a8d5-f2801f1b9fd1",
+        "quantity": 1,
+        "location_id": "www"
+      },
+      "order_format": {
+        "id": "07c5c518-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "Electronic"
+      },
+      "order_type": {
+        "id": "07c5c66c-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "On-going"
+      },
+      "physical": {
+        "id": "07c5ca4a-cabe-11e8-a8d5-f2801f1b9fd1",
+        "expected_receipt_date": null,
+        "receipt_due": "",
+        "expected_receipt_interval": 0,
+        "volumes": 0,
+        "material_id": "",
+        "material_supplier": null
+      },
+      "purchase_order_id": "",
+      "receipt_status": {
+        "id": "07c5cb8a-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "Received"
+      },
+      "renewal": {
+        "id": "07c5ccb6-cabe-11e8-a8d5-f2801f1b9fd1",
+        "cycle": "1 Year",
+        "review_period": 60,
+        "renewal_date": "2018-07-07T05:00:00.000+0000",
+        "interval": 12,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": "07c5cdd8-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "Taylor & Francis Group, LLC",
+        "ref_number": "",
+        "ref_no_type": "",
+        "instructions": null,
+        "vendor_account": "EBAUB12345",
+        "note_from_vendor": ""
+      },
+      "workflow_status": {
+        "id": "07c5cf0e-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "Approved"
+      },
+      "selector": "Hartman",
+      "requester": "",
+      "account_number": "",
+      "donor": ""
+    },
+    {
+      "id": "1564e94c-cacd-11e8-a8d5-f2801f1b9fd1",
+      "acquisition_method": "Email to vendor",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": false,
+      "owner": "Technical Services Department",
+      "po_line_number": "S58227/02",
+      "po_line_description": "",
+      "adjustment": {
+        "id": "1564ed16-cacd-11e8-a8d5-f2801f1b9fd1",
+        "shipment": 0,
+        "insurance": 0,
+        "discount": 0,
+        "overhead": 0,
+        "credit": 0,
+        "tax_1": 0,
+        "tax_2": 0,
+        "invoice_id": null,
+        "use_pro_rate": false
+      },
+      "alerts": [
+        {
+          "id": "1564eea6-cacd-11e8-a8d5-f2801f1b9fd1",
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": "1564effa-cacd-11e8-a8d5-f2801f1b9fd1",
+          "claim": false,
+          "sent": "",
+          "grace": null,
+          "po_line_id": null
+        }
+      ],
+      "cost": {
+        "id": "1564f13a-cacd-11e8-a8d5-f2801f1b9fd1",
+        "list_price": 500.00,
+        "currency": "USD",
+        "quantity": 1,
+        "estimated_price": 500.00
+      },
+      "details": {
+        "id": "1564f266-cacd-11e8-a8d5-f2801f1b9fd1",
+        "title": "The European Statistician",
+        "receiving_note": "Renewal, access continuous",
+        "product_id": "4008000",
+        "subscription_from": "2018-08-01T05:00:00.000+0000",
+        "material_type": "eJournal",
+        "subscription_interval": 365,
+        "subscription_to": "2019-07-31T05:00:00.000+0000",
+        "description": ""
+      },
+      "eresource": {
+        "id": "1564f5ae-cacd-11e8-a8d5-f2801f1b9fd1",
+        "activation_status": "y",
+        "activation_due": 0,
+        "create_inventory": false,
+        "trial": false,
+        "expected_activation": "2018-08-01T05:00:00.000+0000",
+        "user_limit": 0,
+        "material_id": null,
+        "access_provider": "Taylor & Francis Group, LLC"
+      },
+      "license": {
+        "id": "1564f702-cacd-11e8-a8d5-f2801f1b9fd1",
+        "code": "8022",
+        "description": "",
+        "reference": ""
+      },
+      "location": {
+        "id": "1564f82e-cacd-11e8-a8d5-f2801f1b9fd1",
+        "quantity": 1,
+        "location_id": "www"
+      },
+      "order_format": {
+        "id": "1564f95a-cacd-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "Electronic"
+      },
+      "order_type": {
+        "id": "1564fa86-cacd-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "On-going"
+      },
+      "physical": {
+        "id": "1564fbbc-cacd-11e8-a8d5-f2801f1b9fd1",
+        "expected_receipt_date": null,
+        "receipt_due": "",
+        "expected_receipt_interval": 0,
+        "volumes": 0,
+        "material_id": "",
+        "material_supplier": null
+      },
+      "purchase_order_id": "",
+      "receipt_status": {
+        "id": "1564fcde-cacd-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "Received"
+      },
+      "renewal": {
+        "id": "15650044-cacd-11e8-a8d5-f2801f1b9fd1",
+        "cycle": "1 Year",
+        "review_period": 60,
+        "renewal_date": "2018-07-07T05:00:00.000+0000",
+        "interval": 12,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": "15650184-cacd-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "Taylor & Francis Group, LLC",
+        "ref_number": "",
+        "ref_no_type": "",
+        "instructions": null,
+        "vendor_account": "EBAUB12345",
+        "note_from_vendor": ""
+      },
+      "workflow_status": {
+        "id": "156502b0-cacd-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "Approved"
+      },
+      "selector": "Cartman",
+      "requester": "",
+      "account_number": "",
+      "donor": ""
+    }
+  ]
+}

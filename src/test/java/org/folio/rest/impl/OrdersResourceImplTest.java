@@ -9,7 +9,6 @@ import static org.junit.Assert.fail;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.tools.utils.NetworkUtils;
@@ -26,6 +25,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -250,7 +250,7 @@ public class OrdersResourceImplTest {
     JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getJsonObject("purchase_order").getString("id");
     logger.info("using mock datafile: " + GetOrderHelper.BASE_MOCK_DATA_PATH + id + ".json");
-    String expected = new JsonObject(getMockData(GetOrderHelper.BASE_MOCK_DATA_PATH + id + ".json")).encodePrettily();
+    JsonObject expected = new JsonObject(getMockData(GetOrderHelper.BASE_MOCK_DATA_PATH + id + ".json"));
 
     final Response resp = RestAssured
       .with()
@@ -263,10 +263,37 @@ public class OrdersResourceImplTest {
           .extract()
             .response();
 
-    String actual = new JsonObject(resp.getBody().asString()).encodePrettily();
+    JsonObject actual = new JsonObject(resp.getBody().asString());
     logger.info(actual);
 
-    assertEquals(expected, actual);
+    JsonObject expPo = expected.getJsonObject("purchase_order");
+    JsonObject actPo = actual.getJsonObject("purchase_order");
+
+    actPo.fieldNames().forEach(field -> {
+      Object actValue = actPo.getValue(field);
+      if (!(actValue instanceof JsonObject || actValue instanceof JsonArray)) {
+        logger.info("checking purchase_order field: " + field);
+        assertEquals(expPo.getValue(field), actValue);
+      }
+    });
+
+    JsonArray expPoLines = expected.getJsonArray("po_lines");
+    JsonArray actPoLines = actual.getJsonArray("po_lines");
+
+    assertEquals(expPoLines.size(), actPoLines.size());
+    for (int i = 0; i < expPoLines.size(); i++) {
+      JsonObject expPoLine = expPoLines.getJsonObject(i);
+      JsonObject actPoLine = actPoLines.getJsonObject(i);
+
+      assertEquals(expPoLine.getString("id"), actPoLine.getString("id"));
+      actPoLine.fieldNames().forEach(field -> {
+        Object actValue = actPoLine.getValue(field);
+        if (!(actValue instanceof JsonObject || actValue instanceof JsonArray)) {
+          logger.info("checking po_line field: " + field);
+          assertEquals(expPoLine.getValue(field), actValue);
+        }
+      });
+    }
   }
 
   @Test

@@ -1,0 +1,154 @@
+{
+  "purchase_order": {
+    "id": "589a6016-3463-49f6-8aa2-dc315d0665fd",
+    "po_number": "101101",
+    "created": "2018-07-19T10:00:00.000+0000",
+    "comments": "",
+    "total_items": 1,
+    "total_estimated_price": 900.00,
+    "adjustments": "",
+    "assigned_to": "",
+    "created_by": "steves",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Pending",
+    "po_receipt_status": "",
+    "po_payment_status": ""
+  },
+  "po_lines": [
+    {
+      "id": "07c66c48-cabe-11e8-a8d5-f2801f1b9fd1",
+      "acquisition_method": "Email to vendor",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": false,
+      "owner": "Acquisitions - Serials",
+      "po_line_number": "1",
+      "po_line_description": "",
+      "adjustment": {
+        "id": "07c66d74-cabe-11e8-a8d5-f2801f1b9fd1",
+        "shipment": 0,
+        "insurance": 0,
+        "discount": 0,
+        "overhead": 0,
+        "credit": 0,
+        "tax_1": 0,
+        "tax_2": 0,
+        "invoice_id": null,
+        "use_pro_rate": false
+      },
+      "alerts": [
+        {
+          "id": "07c6708a-cabe-11e8-a8d5-f2801f1b9fd1",
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": "07c671c0-cabe-11e8-a8d5-f2801f1b9fd1",
+          "claim": true,
+          "sent": "",
+          "grace": 0,
+          "po_line_id": null
+        }
+      ],
+      "cost": {
+        "id": "07c672e2-cabe-11e8-a8d5-f2801f1b9fd1",
+        "list_price": 900.00,
+        "currency": "USD",
+        "quantity": 1,
+        "estimated_price": 900.00
+      },
+      "details": {
+        "id": "07c6740e-cabe-11e8-a8d5-f2801f1b9fd1",
+        "title": "Advances in astronautical science",
+        "receiving_note": "start with v. 162",
+        "product_id": "0065-3438",
+        "subscription_from": "2018-07-01T10:00:00.000+0000",
+        "material_type": "print serial",
+        "subscription_interval": 1095,
+        "subscription_to": "2021-06-30T10:00:00.000+0000",
+        "description": ""
+      },
+      "eresource": {
+        "id": "07c6753a-cabe-11e8-a8d5-f2801f1b9fd1",
+        "activation_status": "",
+        "activation_due": 0,
+        "create_inventory": false,
+        "trial": false,
+        "expected_activation": null,
+        "user_limit": 0,
+        "material_id": null,
+        "access_provider": ""
+      },
+      "license": {
+        "id": "07c678be-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": "",
+        "description": "",
+        "reference": ""
+      },
+      "location": {
+        "id": "07c679f4-cabe-11e8-a8d5-f2801f1b9fd1",
+        "quantity": 1,
+        "location_id": "ENG"
+      },
+      "order_format": {
+        "id": "07c67b20-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "Physical"
+      },
+      "order_type": {
+        "id": "07c67d6e-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "On-going"
+      },
+      "physical": {
+        "id": "07c67c4c-cabe-11e8-a8d5-f2801f1b9fd1",
+        "expected_receipt_date": null,
+        "receipt_due": "2018-07-31T10:00:00.000+0000",
+        "expected_receipt_interval": 0,
+        "volumes": 0,
+        "material_id": "",
+        "material_supplier": "EBSCO SUBSCRIPTION SERVICES"
+      },
+      "purchase_order_id": "",
+      "receipt_status": {
+        "id": "07c67e9a-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "Received"
+      },
+      "renewal": {
+        "id": "07c68192-cabe-11e8-a8d5-f2801f1b9fd1",
+        "cycle": "3 Years",
+        "review_period": 90,
+        "renewal_date": "2021-07-19T10:00:00.000+0000",
+        "interval": 12,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": "07c682d2-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "EBSCO SUBSCRIPTION SERVICES",
+        "ref_number": "",
+        "ref_no_type": "",
+        "instructions": null,
+        "vendor_account": "",
+        "note_from_vendor": ""
+      },
+      "workflow_status": {
+        "id": "07c683fe-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "order sent"
+      },
+      "selector": "",
+      "requester": "",
+      "account_number": "",
+      "donor": ""
+    }
+  ]
+}

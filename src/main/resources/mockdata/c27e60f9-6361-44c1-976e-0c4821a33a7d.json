@@ -1,0 +1,154 @@
+{
+  "purchase_order": {
+    "id": "c27e60f9-6361-44c1-976e-0c4821a33a7d",
+    "po_number": "38434",
+    "created": "2014-09-22T10:00:00.000+0000",
+    "comments": "Cataloging record service",
+    "total_items": 1,
+    "total_estimated_price": 0.00,
+    "adjustments": "",
+    "assigned_to": "",
+    "created_by": "stp0",
+    "transmission_date": "",
+    "transmission_method": "",
+    "po_workflow_status_id": "Pending",
+    "po_receipt_status": "",
+    "po_payment_status": ""
+  },
+  "po_lines": [
+    {
+      "id": "07c6b9be-cabe-11e8-a8d5-f2801f1b9fd1",
+      "acquisition_method": "Purchase",
+      "barcode": "",
+      "cancellation_restriction": false,
+      "cancellation_restriction_comment": "",
+      "receipt_date": null,
+      "collection": false,
+      "owner": "Monographs",
+      "po_line_number": "1",
+      "po_line_description": "",
+      "adjustment": {
+        "id": "07c6bcd4-cabe-11e8-a8d5-f2801f1b9fd1",
+        "shipment": 0,
+        "insurance": 0,
+        "discount": 0,
+        "overhead": 0,
+        "credit": 0,
+        "tax_1": 0,
+        "tax_2": 0,
+        "invoice_id": null,
+        "use_pro_rate": false
+      },
+      "alerts": [
+        {
+          "id": "07c6c04e-cabe-11e8-a8d5-f2801f1b9fd1",
+          "alert": ""
+        }
+      ],
+      "claims": [
+        {
+          "id": "07c6c1ac-cabe-11e8-a8d5-f2801f1b9fd1",
+          "claim": false,
+          "sent": "",
+          "grace": 0,
+          "po_line_id": null
+        }
+      ],
+      "cost": {
+        "id": "07c6c2d8-cabe-11e8-a8d5-f2801f1b9fd1",
+        "list_price": 0.00,
+        "currency": "USD",
+        "quantity": 1,
+        "estimated_price": 0.00
+      },
+      "details": {
+        "id": "07c6c404-cabe-11e8-a8d5-f2801f1b9fd1",
+        "title": "GOBI record service",
+        "receiving_note": "",
+        "product_id": "",
+        "subscription_from": null,
+        "material_type": "records",
+        "subscription_interval": 0,
+        "subscription_to": null,
+        "description": ""
+      },
+      "eresource": {
+        "id": "07c6c526-cabe-11e8-a8d5-f2801f1b9fd1",
+        "activation_status": "",
+        "activation_due": 0,
+        "create_inventory": false,
+        "trial": false,
+        "expected_activation": null,
+        "user_limit": 0,
+        "material_id": null,
+        "access_provider": ""
+      },
+      "license": {
+        "id": "07c6c652-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": "",
+        "description": "",
+        "reference": ""
+      },
+      "location": {
+        "id": "07c6c95e-cabe-11e8-a8d5-f2801f1b9fd1",
+        "quantity": 1,
+        "location_id": ""
+      },
+      "order_format": {
+        "id": "07c6caa8-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "Services"
+      },
+      "order_type": {
+        "id": "07c6cbd4-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "On-going"
+      },
+      "physical": {
+        "id": "07c6ccf6-cabe-11e8-a8d5-f2801f1b9fd1",
+        "expected_receipt_date": null,
+        "receipt_due": null,
+        "expected_receipt_interval": 0,
+        "volumes": 0,
+        "material_id": "",
+        "material_supplier": "GOBI Library Solutions"
+      },
+      "purchase_order_id": "",
+      "receipt_status": {
+        "id": "07c6ce22-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "Received"
+      },
+      "renewal": {
+        "id": "07c6cf44-cabe-11e8-a8d5-f2801f1b9fd1",
+        "cycle": "manual",
+        "review_period": 0,
+        "renewal_date": null,
+        "interval": 0,
+        "manual_renewal": true
+      },
+      "source": {
+        "id": "07c6d25a-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "manual"
+      },
+      "vendor": {
+        "id": "GOBI Library Solutions",
+        "ref_number": "",
+        "ref_no_type": "",
+        "instructions": null,
+        "vendor_account": "",
+        "note_from_vendor": ""
+      },
+      "workflow_status": {
+        "id": "07c6d3a4-cabe-11e8-a8d5-f2801f1b9fd1",
+        "code": null,
+        "description": "Approved"
+      },
+      "selector": "",
+      "requester": "",
+      "account_number": "",
+      "donor": ""
+    }
+  ]
+}
