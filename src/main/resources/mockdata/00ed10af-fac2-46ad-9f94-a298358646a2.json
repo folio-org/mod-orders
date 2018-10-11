@@ -29,6 +29,19 @@
       "id": "07c5d04e-c123-1132-a8d5-f2801f1b9fd1",
       "account_number": "",
       "acquisition_method": "Purchase At Vendor System",
+      "adjustment": {
+        "id": "1963h6cf-eb47-4e09-9e28-e25aa464adb7",
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoice_id": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax_1": 0.0,
+        "tax_2": 0.0,
+        "use_pro_rate": false,
+        "po_line_id": "07c5d04e-c123-1132-a8d5-f2801f1b9fd1"
+      },
       "alerts": [
         {
           "id": "07c5d3e6-cvbe-11e8-a8d5-f2801f1b9fd1",
@@ -117,7 +130,7 @@
       },
       "po_line_description": "",
       "po_line_number": "S58227/01",
-      "po_line_workflow_status": "Open",
+      "po_line_workflow_status": "Closed",
       "publication_date": "2019",
       "publisher": "Taylor & Francis",
       "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
@@ -159,6 +172,19 @@
       "id": "v7c5d04e-cabe-11e8-a8d5-f2801f1b9fd1",
       "account_number": "",
       "acquisition_method": "Purchase At Vendor System",
+      "adjustment": {
+        "id": "1963h6cf-eb47-4e09-9e28-e25aa464abb7",
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoice_id": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax_1": 0.0,
+        "tax_2": 0.0,
+        "use_pro_rate": false,
+        "po_line_id": "v7c5d04e-cabe-11e8-a8d5-f2801f1b9fd1"
+      },
       "alerts": [
         {
           "id": "07c5d3e6-cgabe-11e8-a8d5-f2801f1b9fd1",
@@ -247,7 +273,7 @@
       },
       "po_line_description": "",
       "po_line_number": "S58227/02",
-      "po_line_workflow_status": "Open",
+      "po_line_workflow_status": "Closed",
       "publication_date": "2019",
       "publisher": "Taylor & Francis",
       "purchase_order_id": "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",

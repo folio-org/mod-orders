@@ -1,154 +1,172 @@
 {
   "purchase_order": {
     "id": "1d6a455f-29c5-4e51-84d9-e28450ef86ad",
-    "po_number": "36547",
-    "created": "2019-05-15T10:00:00.000+0000",
-    "comments": "Charged $3.99 in shipping; refunded on 6/10/18 ",
-    "total_items": 1,
-    "total_estimated_price": 25.00,
-    "adjustments": "",
+    "adjustment": {
+      "credit": -3.99,
+      "discount": 0,
+      "insurance": 0,
+      "overhead": 0,
+      "shipment": 0,
+      "tax_1": 0,
+      "tax_2": 0,
+      "use_pro_rate": false
+    },
+    "approved": true,
     "assigned_to": "zwashburne",
+    "created": "2019-05-15T00:00:00.000Z",
     "created_by": "rtam",
-    "transmission_date": "",
-    "transmission_method": "",
-    "po_workflow_status_id": "Closed",
-    "po_receipt_status": "",
-    "po_payment_status": ""
+    "notes": [],
+    "po_number": "36547",
+    "order_type": "On-Time",
+    "re_encumber": false,
+    "total_estimated_price": 25.00,
+    "total_items": 1,
+    "vendor": "168f8a86-d26c-406e-813f-c9927f241vc3",
+    "workflow_status": "Closed"
   },
   "po_lines": [
     {
-      "id": "07c5e6e2-cabe-11e8-a8d5-f2801f1b9fd1",
-      "acquisition_method": "Order on vendor platform",
-      "barcode": "",
-      "cancellation_restriction": false,
-      "cancellation_restriction_comment": "",
-      "receipt_date": null,
-      "collection": false,
-      "owner": "Evans",
-      "po_line_number": "1",
-      "po_line_description": "",
+      "id": "07c5d04e-c123-1132-a8d5-f2801f1b9fgt",
+      "account_number": "",
+      "acquisition_method": "Purchase At Vendor System",
       "adjustment": {
-        "id": "07c5e854-cabe-11e8-a8d5-f2801f1b9fd1",
-        "shipment": 0,
-        "insurance": 0,
-        "discount": 0,
-        "overhead": 0,
-        "credit": -3.99,
-        "tax_1": 0,
-        "tax_2": 0,
-        "invoice_id": null,
-        "use_pro_rate": false
+        "id": "1963h6cf-eb47-4e09-9e28-e25aa464adb7",
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoice_id": "2d6dg95c-c237-476f-aa48-57f7cbf74ca4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax_1": 0.0,
+        "tax_2": 0.0,
+        "use_pro_rate": false,
+        "po_line_id": "07c5d04e-c123-1132-a8d5-f2801f1b9fd1"
       },
       "alerts": [
         {
-          "id": "07c5e980-cabe-11e8-a8d5-f2801f1b9fd1",
-          "alert": ""
+          "id": "07v5d3e6-cvbe-11e8-a8d5-f2801f1b9fd1",
+          "alert": "",
+          "po_line_id": "07c5d04e-c123-1132-a8d5-f2801f1b9fd1"
         }
       ],
+      "cancellation_restriction": false,
+      "cancellation_restriction_note": "",
       "claims": [
         {
-          "id": "07c5eaa2-cabe-11e8-a8d5-f2801f1b9fd1",
-          "claim": true,
-          "sent": "",
-          "grace": 60,
-          "po_line_id": null
+          "id": "07c5d666-caxe-11e8-a8d5-f2801f1b9fd1",
+          "claimed": true,
+          "sent": null,
+          "grace": 0,
+          "po_line_id": "07c5d04e-c123-1132-a8d5-f2801f1b9fd1"
+        }
+      ],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "",
+          "contributor_type": ""
         }
       ],
       "cost": {
-        "id": "07c5ec32-cabe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07c5d79v-cabe-11e8-a8d5-f2801f1b9fd1",
         "list_price": 25.00,
         "currency": "USD",
-        "quantity": 1,
-        "estimated_price": 25.00
+        "quantity_physical": 1,
+        "quantity_electronic": 0,
+        "po_line_estimated_price": 25.00,
+        "po_line_id": "07c5d04e-c123-1132-a8d5-f2801f1b9fd1"
       },
+      "description": "",
       "details": {
-        "id": "07c5ed5e-cabe-11e8-a8d5-f2801f1b9fd1",
-        "title": "Firefly: the complete series",
+        "id": "b7c5d792-cabe-11e9-a8d5-f2801f1b9fd1",
         "receiving_note": "comes with digital code",
-        "product_id": "B003d54rf",
+        "product_ids": [
+          {
+            "product_id": "B003d54rf",
+            "product_id_type": "Publisher Number"
+          }
+        ],
+        "material_types": [
+          "physical media"
+        ],
         "subscription_from": null,
-        "material_type": "physical media",
         "subscription_interval": 0,
         "subscription_to": null,
-        "description": ""
+        "po_line_id": "07c5d04e-c123-1132-a8d5-f2801f1b9fd1"
       },
+      "donor": "",
       "eresource": {
-        "id": "07c5ee8a-cabe-11e8-a8d5-f2801f1b9fd1",
-        "activation_status": "",
+        "id": "07c5g8be-cnbe-11e8-a8d5-f2801f1b9fd1",
+        "activated": false,
         "activation_due": 0,
         "create_inventory": false,
         "trial": false,
         "expected_activation": null,
         "user_limit": 0,
-        "material_id": null,
-        "access_provider": ""
+        "access_provider": "",
+        "po_line_id": "07c5d04e-c123-1132-a8d5-f2801f1b9fd1",
+        "license": "09c5d8be-cabe-11e8-a8d5-f2801f1b9fd1"
       },
-      "license": {
-        "id": "07c5f1dc-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": "8022",
-        "description": "",
-        "reference": ""
-      },
+      "fund_distribution": [
+        "CANHIST-FY19"
+      ],
       "location": {
-        "id": "07c5f344-cabe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9fd1",
+        "location_id": "n7c5d9ea-cabe-11e8-a8d5-f2901f1b9fd1",
+        "po_line_id": "07c5d04e-c123-1132-a8d5-f2801f1b9fd1",
         "quantity": 1,
-        "location_id": "stks"
+        "quantity_electronic": 0,
+        "quantity_physical": 1
       },
-      "order_format": {
-        "id": "07c5f47a-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Physical"
-      },
-      "order_type": {
-        "id": "07c5f59c-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "one-time"
-      },
+      "order_format": "Physical Resource",
+      "owner": "Evans",
+      "payment_status": "Fully Paid",
       "physical": {
-        "id": "07c5f6c8-cabe-11e8-a8d5-f2801f1b9fd1",
-        "expected_receipt_date": null,
-        "receipt_due": "2018-06-01T10:00:00.000+0000",
-        "expected_receipt_interval": 0,
+        "id": null,
+        "material_supplier": "Amazon.com",
+        "receipt_due": "2018-06-01T00:00:00.000Z",
         "volumes": 4,
-        "material_id": "",
-        "material_supplier": "Amazon.com"
+        "po_line_id": null
       },
-      "purchase_order_id": "",
-      "receipt_status": {
-        "id": "07c5f7f4-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Received"
-      },
+      "po_line_description": "",
+      "po_line_number": "1",
+      "po_line_workflow_status": "Closed",
+      "publication_date": "2019",
+      "publisher": "",
+      "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
+      "receipt_date": null,
+      "receipt_status": "",
       "renewal": {
-        "id": "07c5face-cabe-11e8-a8d5-f2801f1b9fd1",
+        "id": "9e414baa-8cf2-4916-a90f-d1da4009e06e",
         "cycle": "",
+        "interval": 0,
+        "manual_renewal": true,
         "review_period": 0,
         "renewal_date": null,
-        "interval": 0,
-        "manual_renewal": true
+        "po_line_id": "07c5d04e-c123-1132-a8d5-f2801f1b9fd1"
       },
+      "reporting_codes": [
+        {
+          "id": "5926dcd7-85f5-450b-8283-712595ebc38b",
+          "code": "CODE1",
+          "description": ""
+        },
+        {
+          "id": "fa316c04-8101-4b72-8aaf-01281bac718f",
+          "code": "CODE2",
+          "description": ""
+        }
+      ],
+      "requester": "",
+      "rush": false,
+      "selector": "",
       "source": {
-        "id": "07c5fbfa-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
+        "id": "0b4b6f41-c5c6-4280-858e-33fba452a334",
+        "code": "",
         "description": "manual"
       },
-      "vendor": {
-        "id": "Amazon.com",
-        "ref_number": "",
-        "ref_no_type": "",
-        "instructions": null,
-        "vendor_account": "",
-        "note_from_vendor": ""
-      },
-      "workflow_status": {
-        "id": "07c5fd26-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Received complete"
-      },
-      "selector": "",
-      "requester": "",
-      "account_number": "",
-      "donor": ""
+      "tags": [],
+      "title": "Firefly: the complete series"
     }
   ]
 }

@@ -1,154 +1,172 @@
 {
   "purchase_order": {
     "id": "f4dc647c-ec82-442e-b13d-f9505b7ce8e9",
-    "po_number": "312325",
-    "created": "2018-07-13T10:00:00.000+0000",
-    "comments": "REF<DXiao>, REF<DHalling> Notify<Mary Ann Barker, barker@tamu.edu> Licensing <1-year streaming license>",
-    "total_items": 1,
-    "total_estimated_price": 150.00,
-    "adjustments": "",
+    "adjustment": {
+      "credit": 0,
+      "discount": 0,
+      "insurance": 0,
+      "overhead": 0,
+      "shipment": 0,
+      "tax_1": 0,
+      "tax_2": 0,
+      "use_pro_rate": false
+    },
+    "approved": true,
     "assigned_to": "msmith",
+    "created": "2018-07-13T00:00:00.000Z",
     "created_by": "mphillips",
-    "transmission_date": "",
-    "transmission_method": "",
-    "po_workflow_status_id": "Open",
-    "po_receipt_status": "fully received",
-    "po_payment_status": "awaiting payment"
+    "notes": ["REF<DXiao>", "REF<DHalling>", "Notify<Mary Ann Barker barker@tamu.edu>", "Licensing <1-year streaming license>"],
+    "po_number": "312325",
+    "order_type": "One-Time",
+    "re_encumber": false,
+    "total_estimated_price": 150.00,
+    "total_items": 1,
+    "vendor": "Ro*Co films",
+    "workflow_status": "Open"
   },
   "po_lines": [
     {
-      "id": "07c723fe-cabe-11e8-a8d5-f2801f1b9fd1",
-      "acquisition_method": "Purchase at Vendor System",
-      "barcode": "",
-      "cancellation_restriction": false,
-      "cancellation_restriction_comment": "",
-      "receipt_date": null,
-      "collection": false,
-      "owner": "Evans",
-      "po_line_number": "1",
-      "po_line_description": "",
+      "id": "07c5d04e-c123-1132-a8d5-f2811f1b9fgt",
+      "account_number": "",
+      "acquisition_method": "Purchase At Vendor System",
       "adjustment": {
-        "id": "07c7253e-cabe-11e8-a8d5-f2801f1b9fd1",
-        "shipment": 0,
-        "insurance": 0,
-        "discount": 0,
-        "overhead": 0,
-        "credit": 0,
-        "tax_1": 0,
-        "tax_2": 0,
-        "invoice_id": null,
-        "use_pro_rate": false
+        "id": "1963h6cf-em47-4e09-9e28-e25aa464adb7",
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoice_id": "2dmg95c-c237-476f-aa48-57f7cbf74ca4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax_1": 0.0,
+        "tax_2": 0.0,
+        "use_pro_rate": false,
+        "po_line_id": "07c5dve-c123-1132-a8d5-f2801f1b9fd1"
       },
       "alerts": [
         {
-          "id": "07c7282c-cabe-11e8-a8d5-f2801f1b9fd1",
-          "alert": ""
+          "id": "07v5d3e6-cvbe-l1e8-a8d5-f2801f1b9fd12",
+          "alert": "",
+          "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
         }
       ],
+      "cancellation_restriction": false,
+      "cancellation_restriction_note": "",
       "claims": [
         {
-          "id": "07c72aa2-cabe-11e8-a8d5-f2801f1b9fd1",
-          "claim": false,
-          "sent": "",
+          "id": "07cld666-caxe-11e8-a8d5-f2801f1b9fd12",
+          "claimed": true,
+          "sent": null,
           "grace": 0,
-          "po_line_id": null
+          "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
+        }
+      ],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "",
+          "contributor_type": ""
         }
       ],
       "cost": {
-        "id": "07c72c50-cabe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07c5d79v-cabe-11e8-a8d5-f22801f1b9fd1",
         "list_price": 150.00,
         "currency": "USD",
-        "quantity": 1,
-        "estimated_price": 150.00
+        "quantity_physical": 0,
+        "quantity_electronic": 1,
+        "po_line_estimated_price": 150.00,
+        "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
       },
+      "description": "",
       "details": {
-        "id": "07c72d86-cabe-11e8-a8d5-f2801f1b9fd1",
-        "title": "At Berkeley",
+        "id": "b7c5d792-cabe-1le29-a8d5-f2801f1b9fd1",
         "receiving_note": "Access begins 7/16/18",
-        "product_id": "3257204",
+        "product_ids": [
+          {
+            "product_id": "3257204",
+            "product_id_type": "Publisher Number"
+          }
+        ],
+        "material_types": [
+          "streaming"
+        ],
         "subscription_from": null,
-        "material_type": "streaming",
         "subscription_interval": 0,
         "subscription_to": null,
-        "description": ""
+        "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
       },
+      "donor": "",
       "eresource": {
-        "id": "07c730e2-cabe-11e8-a8d5-f2801f1b9fd1",
-        "activation_status": "y",
-        "activation_due": 4,
+        "id": "07c5g8be-cnbe-11e8-a8d5-f2801f1b9fd1",
+        "activated": true,
+        "activation_due": 1,
         "create_inventory": false,
         "trial": false,
-        "expected_activation": "2018-07-17T10:00:00.000+0000",
+        "expected_activation": "2018-07-17T00:00:00.000Z",
         "user_limit": 0,
-        "material_id": null,
-        "access_provider": "Kanopy"
+        "access_provider": "Kanopy",
+        "po_line_id": "07c5d04e-c123-1132-87d5-f801f1b9fd1",
+        "license": "09cld8be-cabe-11e8-a8d5-f28201f1b9fd1"
       },
-      "license": {
-        "id": "07c73240-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": "60264",
-        "description": "",
-        "reference": ""
-      },
+      "fund_distribution": [
+        "UNIV-SUBN-FY19"
+      ],
       "location": {
-        "id": "07c73376-cabe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9fd1",
+        "location_id": "ncc5d9ea-cabe-11e8-a8d5-f2901f1b9fd2",
+        "po_line_id": "c7c5d04e-c123-1132-87d5-f2801f1b9fd1",
         "quantity": 1,
-        "location_id": "www"
+        "quantity_electronic": 1,
+        "quantity_physical": 0
       },
-      "order_format": {
-        "id": "07c73498-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Electronic"
-      },
-      "order_type": {
-        "id": "07c735c4-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "On-time"
-      },
+      "order_format": "Electronic Resource",
+      "owner": "Evans",
+      "payment_status": "Awaiting payment",
       "physical": {
-        "id": "07c736f0-cabe-11e8-a8d5-f2801f1b9fd1",
-        "expected_receipt_date": null,
+        "id": null,
+        "material_supplier": "",
         "receipt_due": null,
-        "expected_receipt_interval": 0,
         "volumes": 0,
-        "material_id": "",
-        "material_supplier": ""
+        "po_line_id": null
       },
-      "purchase_order_id": "",
-      "receipt_status": {
-        "id": "07c73812-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Received"
-      },
+      "po_line_description": "",
+      "po_line_number": "1",
+      "po_line_workflow_status": "Open",
+      "publication_date": "2013",
+      "publisher": "Berkeley Films",
+      "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
+      "receipt_date": null,
+      "receipt_status": "Fully Received",
       "renewal": {
-        "id": "07c73aba-cabe-11e8-a8d5-f2801f1b9fd1",
-        "cycle": "manual",
-        "review_period": 30,
-        "renewal_date": "2019-07-19T10:00:00.000+0000",
+        "id": "9e414baa-8cf2-4916-a90f-d1da4009e09e",
+        "cycle": "Manual",
         "interval": 12,
-        "manual_renewal": true
+        "manual_renewal": true,
+        "review_period": 30,
+        "renewal_date": "2018-07-19T00:00:00.000Z",
+        "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
       },
+      "reporting_codes": [
+        {
+          "id": "59262cd7-85f5-450b-8283-712595ebb38b",
+          "code": "CODE1",
+          "description": ""
+        },
+        {
+          "id": "fa326c04-81n1-4b72-8aaf-01281bac718f",
+          "code": "CODE2",
+          "description": ""
+        }
+      ],
+      "requester": "msmith",
+      "rush": false,
+      "selector": "dhalling",
       "source": {
-        "id": "07c73bfa-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
+        "id": "0b4b2f41-v5c6-4280-858e-33fba452a334",
+        "code": "",
         "description": "manual"
       },
-      "vendor": {
-        "id": "Ro*Co films",
-        "ref_number": "",
-        "ref_no_type": "",
-        "instructions": null,
-        "vendor_account": "",
-        "note_from_vendor": ""
-      },
-      "workflow_status": {
-        "id": "07c73d26-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Received Complete"
-      },
-      "selector": "dhalling",
-      "requester": "msmith",
-      "account_number": "",
-      "donor": ""
+      "tags": ["streaming_video"],
+      "title": "At Berkeley"
     }
   ]
 }

@@ -1,154 +1,174 @@
 {
   "purchase_order": {
     "id": "e41e0161-2bc6-41f3-a6e7-34fc13250bf1",
-    "po_number": "306857",
-    "created": "2018-07-23T10:00:00.000+0000",
-    "comments": "Published twice a year",
-    "total_items": 1,
-    "total_estimated_price": 800.00,
-    "adjustments": "",
-    "assigned_to": "John",
+    "adjustment": {
+      "credit": 0,
+      "discount": 0,
+      "insurance": 0,
+      "overhead": 0,
+      "shipment": 0,
+      "tax_1": 0,
+      "tax_2": 0,
+      "use_pro_rate": false
+    },
+    "approved": true,
+    "assigned_to": "",
+    "created": "2018-07-23T00:00:00.000Z",
     "created_by": "jw76",
-    "transmission_date": "",
-    "transmission_method": "",
-    "po_workflow_status_id": "Open",
-    "po_receipt_status": "",
-    "po_payment_status": ""
+    "notes": [
+      "Published twice a year"
+    ],
+    "po_number": "306857",
+    "order_type": "Ongoing",
+    "re_encumber": false,
+    "total_estimated_price": 800.00,
+    "total_items": 1,
+    "vendor": "EBSCO SUBSCRIPTION SERVICES",
+    "workflow_status": "Open"
   },
   "po_lines": [
     {
-      "id": "07c70c48-cabe-11e8-a8d5-f2801f1b9fd1",
-      "acquisition_method": "Email to agent",
-      "barcode": "",
-      "cancellation_restriction": false,
-      "cancellation_restriction_comment": "",
-      "receipt_date": null,
-      "collection": false,
-      "owner": "Cushing",
-      "po_line_number": "1",
-      "po_line_description": "",
+      "id": "07c5d04e-c123-1132-a8d5-f2811f1b9fgt",
+      "account_number": "",
+      "acquisition_method": "Purchase At Vendor System",
       "adjustment": {
-        "id": "07c70d6a-cabe-11e8-a8d5-f2801f1b9fd1",
-        "shipment": 0,
-        "insurance": 0,
-        "discount": 0,
-        "overhead": 0,
-        "credit": 0,
-        "tax_1": 0,
-        "tax_2": 0,
-        "invoice_id": null,
-        "use_pro_rate": false
+        "id": "1963h6cf-eb47-4w09-9e28-e25aa464adb7",
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoice_id": "2d6wg95c-c237-476f-aa48-57f7cbf74ca4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax_1": 0.0,
+        "tax_2": 0.0,
+        "use_pro_rate": false,
+        "po_line_id": "07c5dw4e-c123-1132-a8d5-f2801f1b9fd1"
       },
       "alerts": [
         {
-          "id": "07c70e8c-cabe-11e8-a8d5-f2801f1b9fd1",
-          "alert": ""
+          "id": "07v5d3e6-cvbe-l1e8-a8d5-f2801f1b9fd12",
+          "alert": "",
+          "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
         }
       ],
+      "cancellation_restriction": false,
+      "cancellation_restriction_note": "",
       "claims": [
         {
-          "id": "07c70fb8-cabe-11e8-a8d5-f2801f1b9fd1",
-          "claim": true,
-          "sent": "",
-          "grace": 60,
-          "po_line_id": null
+          "id": "07cld666-caxe-11e8-a8d5-f2801f1b9fd12",
+          "claimed": true,
+          "sent": null,
+          "grace": 0,
+          "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
+        }
+      ],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "",
+          "contributor_type": ""
         }
       ],
       "cost": {
-        "id": "07c710e4-cabe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07c5d79v-cabe-11e8-a8d5-f22801f1b9fd1",
         "list_price": 800.00,
         "currency": "USD",
-        "quantity": 1,
-        "estimated_price": 800.00
+        "quantity_physical": 1,
+        "quantity_electronic": 0,
+        "po_line_estimated_price": 800.00,
+        "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
       },
+      "description": "",
       "details": {
-        "id": "07c71440-cabe-11e8-a8d5-f2801f1b9fd1",
-        "title": "Joss Whedon Papers",
+        "id": "b7c5d792-cabe-1le29-a8d5-f2801f1b9fd1",
         "receiving_note": "Cushing materials, do not mark",
-        "product_id": "43",
-        "subscription_from": "2018-07-23T10:00:00.000+0000",
-        "material_type": "package",
+        "product_ids": [
+          {
+            "product_id": "43",
+            "product_id_type": "Vendor Item Number"
+          }
+        ],
+        "material_types": [
+          "package"
+        ],
+        "subscription_from": "2018-07-23T00:00:00.000Z",
         "subscription_interval": 365,
-        "subscription_to": "2018-07-22T10:00:00.000+0000",
-        "description": ""
+        "subscription_to": "2019-07-22T00:00:00.000Z",
+        "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
       },
+      "donor": "",
       "eresource": {
-        "id": "07c7158a-cabe-11e8-a8d5-f2801f1b9fd1",
-        "activation_status": "",
+        "id": "07c5g8be-cnbe-11e8-a8d5-f2801f1b9fd1",
+        "activated": false,
         "activation_due": 0,
         "create_inventory": false,
         "trial": false,
         "expected_activation": null,
         "user_limit": 0,
-        "material_id": null,
-        "access_provider": ""
+        "access_provider": "",
+        "po_line_id": "07c5d04e-c123-1132-87d5-f801f1b9fd1",
+        "license": "09cld8be-cabe-11e8-a8d5-f28201f1b9fd1"
       },
-      "license": {
-        "id": "07c716c0-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": "",
-        "description": "",
-        "reference": ""
-      },
+      "fund_distribution": [
+        "GIFTS-ONE-TIME-FY19"
+      ],
       "location": {
-        "id": "07c717ec-cabe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9fd1",
+        "location_id": "ncc5d9ea-cabe-11e8-a8d5-f2901f1b9fd2",
+        "po_line_id": "c7c5d04e-c123-1132-87d5-f2801f1b9fd1",
         "quantity": 1,
-        "location_id": "cush"
+        "quantity_electronic": 0,
+        "quantity_physical": 1
       },
-      "order_format": {
-        "id": "07c71918-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Physical"
-      },
-      "order_type": {
-        "id": "07c71a44-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "On-going"
-      },
+      "order_format": "Physical Resource",
+      "owner": "Cushing",
+      "payment_status": "Pending",
       "physical": {
-        "id": "07c71da0-cabe-11e8-a8d5-f2801f1b9fd1",
-        "expected_receipt_date": null,
-        "receipt_due": "",
-        "expected_receipt_interval": 0,
+        "id": null,
+        "material_supplier": "EBSCO SUBSCRIPTION SERVICES",
+        "receipt_due": null,
         "volumes": 0,
-        "material_id": "",
-        "material_supplier": "EBSCO SUBSCRIPTION SERVICES"
+        "po_line_id": null
       },
-      "purchase_order_id": "",
-      "receipt_status": {
-        "id": "07c71efe-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Received"
-      },
+      "po_line_description": "",
+      "po_line_number": "1",
+      "po_line_workflow_status": "Open",
+      "publication_date": "2017",
+      "publisher": "",
+      "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
+      "receipt_date": null,
+      "receipt_status": "Pending",
       "renewal": {
-        "id": "07c7202a-cabe-11e8-a8d5-f2801f1b9fd1",
-        "cycle": "",
-        "review_period": 0,
-        "renewal_date": null,
+        "id": "9e414baa-8cf2-4916-a90f-d1da4009e09e",
+        "cycle": null,
         "interval": 0,
-        "manual_renewal": true
+        "manual_renewal": true,
+        "review_period": 0,
+        "renewal_date": "2018-07-18T00:00:00.000Z",
+        "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
       },
+      "reporting_codes": [
+        {
+          "id": "59262cd7-85f5-450b-8283-712595ebb38b",
+          "code": "CODE1",
+          "description": ""
+        },
+        {
+          "id": "fa326c04-81n1-4b72-8aaf-01281bac718f",
+          "code": "CODE2",
+          "description": ""
+        }
+      ],
+      "requester": "",
+      "rush": false,
+      "selector": "",
       "source": {
-        "id": "07c72156-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
+        "id": "0b4b2f41-v5c6-4280-858e-33fba452a334",
+        "code": "",
         "description": "manual"
       },
-      "vendor": {
-        "id": "EBSCO SUBSCRIPTION SERVICES",
-        "ref_number": "",
-        "ref_no_type": "",
-        "instructions": null,
-        "vendor_account": "",
-        "note_from_vendor": ""
-      },
-      "workflow_status": {
-        "id": "07c72278-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Approved"
-      },
-      "selector": "",
-      "requester": "",
-      "account_number": "",
-      "donor": ""
+      "tags": [],
+      "title": "Joss Whedon Papers"
     }
   ]
 }
