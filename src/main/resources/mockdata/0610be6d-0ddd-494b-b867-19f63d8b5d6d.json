@@ -21,16 +21,16 @@
     "re_encumber": false,
     "total_estimated_price": 0.00,
     "total_items": 1,
-    "vendor": "Otto Harrassowitz GmbH & Co. KG",
+    "vendor": "50fb8c82-cdf1-11e8-a8d5-f2801f1b9fd1",
     "workflow_status": "Pending"
   },
   "po_lines": [
     {
-      "id": "07c5d04e-c123-1132-a8d5-f2811f1b9fgt",
+      "id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
       "account_number": "",
       "acquisition_method": "Purchase",
       "adjustment": {
-        "id": "1963h6cf-eb47-4e09-9e28-e25aa464adb7",
+        "id": "1963h6cf-eb47-4e09-9e28-e23aa464adb7",
         "credit": 0.0,
         "discount": 0.0,
         "insurance": 0.0,
@@ -40,24 +40,17 @@
         "tax_1": 0.0,
         "tax_2": 0.0,
         "use_pro_rate": false,
-        "po_line_id": "07c5d04e-c123-1132-a8d5-fd2801f1b9fd1"
+        "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "alerts": [
-        {
-          "id": "07v5d3e6-cvbe-l1e8-a8d5-f2801f1b9fd12",
-          "alert": "",
-          "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
-        }
-      ],
+      "alerts": [],
       "cancellation_restriction": false,
       "cancellation_restriction_note": "",
       "claims": [
         {
-          "id": "07cld666-caxe-11e8-a8d5-f2801f1b9fd12",
+          "id": "07cld666-waxe-11e8-a8d5-f2801f1b9fd12",
           "claimed": true,
-          "sent": null,
           "grace": 0,
-          "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
+          "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
         }
       ],
       "collection": true,
@@ -68,17 +61,17 @@
         }
       ],
       "cost": {
-        "id": "07c5d79v-cabe-11e8-a8d5-f22801f1b9fd1",
+        "id": "07c5d79v-cabe-11xx-a8d5-f22801f1b9fd1",
         "list_price": 0.00,
         "currency": "USD",
         "quantity_physical": 1,
         "quantity_electronic": 0,
         "po_line_estimated_price": 0.00,
-        "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
+        "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
       "description": "",
       "details": {
-        "id": "b7c5d792-cabe-1le29-a8d5-f2801f1b9fd1",
+        "id": "b7c5d792-02be-1le29-a8d5-f2801f1b9fd1",
         "receiving_note": "",
         "product_ids": [
           {
@@ -87,16 +80,16 @@
           }
         ],
         "material_types": [
-          "print serial"
+          "fde2e5ca-cde3-11e8-a8d5-f2801f1b9fd1"
         ],
         "subscription_from": null,
         "subscription_interval": 0,
         "subscription_to": null,
-        "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
+        "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
       "donor": "",
       "eresource": {
-        "id": "07c5g8be-cnbe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07c5g802-cnbe-11e8-a8d5-f2801f1b9fd1",
         "activated": false,
         "activation_due": 0,
         "create_inventory": false,
@@ -104,16 +97,16 @@
         "expected_activation": null,
         "user_limit": 0,
         "access_provider": "",
-        "po_line_id": "07c5d04e-c123-1132-87d5-f801f1b9fd1",
-        "license": "09cld8be-cabe-11e8-a8d5-f28201f1b9fd1"
+        "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "license": "09cld8be-cabe-11e8-a8d5-028201f1b9fd1"
       },
       "fund_distribution": [
-        "STATE-SUBN-FY19"
+        "fde2d17a-cde3-11e8-a8d5-f2801f1b9fd1"
       ],
       "location": {
-        "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9f03",
         "location_id": "ncc5d9ea-cabe-11e8-a8d5-f2901f1b9fd2",
-        "po_line_id": "c7c5d04e-c123-1132-87d5-f2801f1b9fd1",
+        "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
         "quantity": 1,
         "quantity_electronic": 0,
         "quantity_physical": 1
@@ -122,48 +115,37 @@
       "owner": "Serials",
       "payment_status": "Pending",
       "physical": {
-        "id": null,
+        "id": "50fb7be8-cdf1-11e8-a8d5-f2801f1b9fd1",
         "material_supplier": "",
         "receipt_due": null,
         "volumes": 1,
-        "po_line_id": null
+        "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
       "po_line_description": "",
       "po_line_number": "1",
       "po_line_workflow_status": "Pending",
       "publication_date": "1901",
       "publisher": "London Topographical Society",
-      "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
+      "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3hb",
       "receipt_date": null,
       "receipt_status": "Pending",
       "renewal": {
-        "id": "9e414baa-8cf2-4916-a90f-d1da4009e09e",
+        "id": "9e414baa-8cf2-4916-a90f-d1da4009e07e",
         "cycle": "Manual",
         "interval": 12,
         "manual_renewal": true,
         "review_period": 0,
         "renewal_date": null,
-        "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
+        "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "reporting_codes": [
-        {
-          "id": "59262cd7-85f5-450b-8283-712595ebb38b",
-          "code": "CODE1",
-          "description": ""
-        },
-        {
-          "id": "fa326c04-81n1-4b72-8aaf-01281bac718f",
-          "code": "CODE2",
-          "description": ""
-        }
-      ],
+      "reporting_codes": [],
       "requester": "",
       "rush": false,
       "selector": "sgw",
       "source": {
-        "id": "0b4b2f41-v5c6-4280-858e-33fba452a334",
+        "id": "0b4b2f41-v5c6-4280-858e-33fba452a234",
         "code": "",
-        "description": "manual"
+        "description": "Manually entered"
       },
       "tags": ["membership"],
       "title": "Membership"

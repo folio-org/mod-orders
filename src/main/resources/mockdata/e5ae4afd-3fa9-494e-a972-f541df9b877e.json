@@ -21,14 +21,14 @@
     "re_encumber": false,
     "total_estimated_price": 75.22,
     "total_items": 1,
-    "vendor": "GOBI Library Solutions",
+    "vendor": "50fb922c-cdf1-11e8-a8d5-f2801f1b9fd1",
     "workflow_status": "Closed"
   },
   "po_lines": [
     {
-      "id": "07c5d04e-c123-1132-a8d5-f2811f1b9fgt",
+      "id": "50fb63b0-cdf1-11e8-a8d5-f2801f1b9fd1",
       "account_number": "",
-      "acquisition_method": "Purchase At Vendor System",
+      "acquisition_method": "Purchase",
       "adjustment": {
         "id": "1963h6cf-eb47-4b09-9e28-e25aa464adb7",
         "credit": 0.0,
@@ -40,24 +40,17 @@
         "tax_1": 0.0,
         "tax_2": 0.0,
         "use_pro_rate": false,
-        "po_line_id": "07c5b04e-c123-1132-a8d5-f2801f1b9fd1"
+        "po_line_id": "50fb63b0-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "alerts": [
-        {
-          "id": "07v5d3e6-cvbe-l1e8-a8d5-f2801f1b9fd12",
-          "alert": "",
-          "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
-        }
-      ],
+      "alerts": [],
       "cancellation_restriction": false,
       "cancellation_restriction_note": "",
       "claims": [
         {
-          "id": "07cld666-caxe-11e8-a8d5-f2801f1b9fd12",
-          "claimed": true,
-          "sent": null,
+          "id": "07cld666-paxe-11e8-a8d5-f2801f1b9fd12",
+          "claimed": false,
           "grace": 0,
-          "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
+          "po_line_id": "50fb63b0-cdf1-11e8-a8d5-f2801f1b9fd1"
         }
       ],
       "collection": false,
@@ -68,17 +61,17 @@
         }
       ],
       "cost": {
-        "id": "07c5d79v-cabe-11e8-a8d5-f22801f1b9fd1",
+        "id": "07c5d79v-cabe-11dd-a8d5-f22801f1b9fd1",
         "list_price": 75.22,
         "currency": "USD",
         "quantity_physical": 0,
         "quantity_electronic": 1,
         "po_line_estimated_price": 75.22,
-        "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
+        "po_line_id": "50fb63b0-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
       "description": "",
       "details": {
-        "id": "b7c5d792-cabe-1le29-a8d5-f2801f1b9fd1",
+        "id": "b7c5d792-10be-1le29-a8d5-f2801f1b9fd1",
         "receiving_note": "",
         "product_ids": [
           {
@@ -87,16 +80,16 @@
           }
         ],
         "material_types": [
-          "ebook"
+          "fde2e958-cde3-11e8-a8d5-f2801f1b9fd1"
         ],
         "subscription_from": null,
         "subscription_interval": 0,
         "subscription_to": null,
-        "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
+        "po_line_id": "50fb63b0-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
       "donor": "",
       "eresource": {
-        "id": "07c5g8be-cnbe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07c5g812-cnbe-11e8-a8d5-f2801f1b9fd1",
         "activated": true,
         "activation_due": 0,
         "create_inventory": false,
@@ -104,16 +97,16 @@
         "expected_activation": "2014-07-06T00:00:00.000Z",
         "user_limit": 1,
         "access_provider": "Proquest",
-        "po_line_id": "07c5d04e-c123-1132-87d5-f801f1b9fd1",
-        "license": "09cld8be-cabe-11e8-a8d5-f28201f1b9fd1"
+        "po_line_id": "50fb63b0-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "license": "09cld8be-cabe-11e8-a8d5-108201f1b9fd1"
       },
       "fund_distribution": [
-        "MISCHIST"
+        "fde2d472-cde3-11e8-a8d5-f2801f1b9fd1"
       ],
       "location": {
-        "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9fd1",
-        "location_id": "ncc5d9ea-cabe-11e8-a8d5-f2901f1b9fd2",
-        "po_line_id": "c7c5d04e-c123-1132-87d5-f2801f1b9fd1",
+        "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9f13",
+        "location_id": "ncc5d9ea-cabe-11e8-a8d5-f2901f1b9f10",
+        "po_line_id": "50fb63b0-cdf1-11e8-a8d5-f2801f1b9fd1",
         "quantity": 1,
         "quantity_electronic": 1,
         "quantity_physical": 0
@@ -122,48 +115,37 @@
       "owner": "LTS E-Resources & Serials",
       "payment_status": "Awaiting Payment",
       "physical": {
-        "id": "07v5f9ea-cabe-11e8-a8d5-f2801f1b9fd1",
+        "id": "50fb81ec-cdf1-11e8-a8d5-f2801f1b9fd1",
         "material_supplier": "GOBI Library Solutions",
         "receipt_due": null,
         "volumes": 0,
-        "po_line_id": null
+        "po_line_id": "50fb63b0-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
       "po_line_description": "",
       "po_line_number": "1",
       "po_line_workflow_status": "Closed",
       "publication_date": "2017",
       "publisher": "John Wiley & Sons, Inc.",
-      "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
+      "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BM3bb",
       "receipt_date": null,
       "receipt_status": "Fully Received",
       "renewal": {
-        "id": "9e414baa-8cf2-4916-a90f-d1da4009e09e",
+        "id": "9e414baa-8cf2-4916-a90f-d1da4009e29e",
         "cycle": "Manual",
         "interval": 0,
         "manual_renewal": true,
         "review_period": 0,
         "renewal_date": null,
-        "po_line_id": "07c5d04e-c123-1132-87d5-f2801f1b9fc1"
+        "po_line_id": "50fb63b0-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "reporting_codes": [
-        {
-          "id": "59262cd7-85f5-450b-8283-712595ebb38b",
-          "code": "CODE1",
-          "description": ""
-        },
-        {
-          "id": "fa326c04-81n1-4b72-8aaf-01281bac718f",
-          "code": "CODE2",
-          "description": ""
-        }
-      ],
+      "reporting_codes": [],
       "requester": "",
       "rush": false,
       "selector": "Woods",
       "source": {
-        "id": "0b4b2f41-v5c6-4280-858e-33fba452a334",
+        "id": "0b4b2f41-v5c6-4280-858e-33fba452a114",
         "code": "",
-        "description": "manual"
+        "description": "Manually entered"
       },
       "tags": [""],
       "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt."
