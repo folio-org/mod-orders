@@ -15,6 +15,7 @@ import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.VendorDetail;
 import org.folio.rest.jaxrs.resource.OrdersResource.PostOrdersResponse;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -106,9 +107,7 @@ public class PostOrdersHelper {
     subObjFuts.add(createDetails(compPOL, line, compPOL.getDetails()));
     subObjFuts.add(createEresource(compPOL, line, compPOL.getEresource()));
     subObjFuts.add(createLocation(compPOL, line, compPOL.getLocation()));
-    
-    // Re-add this after MODORDERS_51 is merged and acq-models is updated.
-    //subObjFuts.add(createVendor(compPOL, line, compPOL.getVendor()));
+    subObjFuts.add(createVendorDetail(compPOL, line, compPOL.getVendorDetail()));
 
     CompletableFuture.allOf(subObjFuts.toArray(new CompletableFuture[subObjFuts.size()]))
       .thenAccept(v -> {
@@ -204,23 +203,22 @@ public class PostOrdersHelper {
       });
   }
 
-  /* Uncomment after MODORDERS-51 is merged and acq-models is updated.
-  private CompletableFuture<Void> createVendor(PoLine compPOL, JsonObject line, Vendor vendor) {
+  private CompletableFuture<Void> createVendorDetail(PoLine compPOL, JsonObject line, VendorDetail vendor) {
     return createSubObjIfPresent(line, vendor, "vendor", "/vendor_detail")
       .thenAccept(id -> {
         if (id == null) {
           line.remove("vendor");
-          compPOL.setVendor(null);
+          compPOL.setVendorDetail(null);
         } else {
-          compPOL.getVendor().setId(id);
+          compPOL.getVendorDetail().setId(id);
         }
       })
       .exceptionally(t -> {
-        logger.error("failed to create Vendor", t);
+        logger.error("failed to create VendorDetail", t);
         throw new CompletionException(t.getCause());
       });
   }
-  */
+
   private CompletableFuture<String> createSubObjIfPresent(JsonObject line, Object obj, String field, String url) {
     if (obj != null) {
       JsonObject json = JsonObject.mapFrom(obj);
