@@ -1,5 +1,11 @@
 ## 1.0.0 Unreleased
+ * [MODORDERS-51](https://issues.folio.org/browse/MODORDERS-51)
+ * [MODORDERS-50](https://issues.folio.org/browse/MODORDERS-50)
+ * [MODORDERS-49](https://issues.folio.org/browse/MODORDERS-49)
+ * [MODORDERS-48](https://issues.folio.org/browse/MODORDERS-48)
+ * [MODORDERS-47](https://issues.folio.org/browse/MODORDERS-47)
  * [MODORDERS-40](https://issues.folio.org/browse/MODORDERS-40)
+ * [MODORDERS-45](https://issues.folio.org/browse/MODORDERS-45) 
  * [MODORDERS-37](https://issues.folio.org/browse/MODORDERS-37)
  * [MODORDERS-34](https://issues.folio.org/browse/MODORDERS-34)
  * [MODORDERS-29](https://issues.folio.org/browse/MODORDERS-29)
