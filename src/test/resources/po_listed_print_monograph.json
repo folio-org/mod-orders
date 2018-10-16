@@ -19,7 +19,7 @@
       "ABCDEFGHIJKLMNOPQRST",
       "ABCDEFGHIJKLMNOPQRSTUV"
     ],
-    "order_type": "Ongoing",
+    "order_type": "One-Time",
     "po_number": "268758",
     "re_encumber": false,
     "total_estimated_price": 49.98,
@@ -29,7 +29,6 @@
   },
   "po_lines": [
     {
-      "account_number": "8910-10",
       "acquisition_method": "Purchase At Vendor System",
       "adjustment": {
         "credit": 0.0,
@@ -88,7 +87,16 @@
       },
       "donor": "ABCDEFGHIJKLM",
       "fund_distribution": [
-        "d10879e8-8c2d-4850-bcb9-0ec8e2e10021"
+        {
+          "code": "HIST",
+          "percentage": 80.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3"
+        },
+        {
+          "code": "GENRL",
+          "percentage": 20.0,
+          "encumbrance": "0466cb77-0344-43c6-85eb-0a64aa2934e5"
+        }
       ],
       "location": {
         "location_id": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
@@ -142,7 +150,14 @@
         "ABCDEFGHIJKLMNOPQRSTU",
         "ABCDEFGHIJKLMNO"
       ],
-      "title": "Kayak Fishing in the Northern Gulf Coast"
+      "title": "Kayak Fishing in the Northern Gulf Coast",
+      "vendor_detail": {
+        "instructions": "ABCDEFG",
+        "note_from_vendor": "ABCDEFGHIKJKLMNOP",
+        "ref_number": "123456-78",
+        "ref_number_type": "Supplier's unique order line reference number",
+        "vendor_account": "8910-10"
+      }
     }
   ]
 }

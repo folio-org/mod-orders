@@ -1,6 +1,5 @@
 {
   "purchase_order": {
-    "id": "0804ddec-6545-404a-b54d-a693f505681d",
     "adjustment": {
       "credit": 0.0,
       "discount": 0.0,
@@ -15,6 +14,7 @@
     "assigned_to": "ab18897b-0e40-4f31-896b-9c9adc979a88",
     "created": "2010-10-08T03:53:00.000Z",
     "created_by": "ab18897b-0e40-4f31-896b-9c9adc979a88",
+    "manual_po": false,
     "notes": [
       "ABCDEFGHIJKLMNO",
       "ABCDEFGHIJKLMNOPQRST",
@@ -30,8 +30,6 @@
   },
   "po_lines": [
     {
-      "id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
-      "account_number": "8910-10",
       "acquisition_method": "Purchase At Vendor System",
       "adjustment": {
         "id": "1363467f-eb47-4e09-9e28-e25aa464adb7",
@@ -43,14 +41,12 @@
         "shipment": 0.0,
         "tax_1": 0.0,
         "tax_2": 0.0,
-        "use_pro_rate": false,
-        "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+        "use_pro_rate": false
       },
       "alerts": [
         {
           "alert": "Receipt overdue",
-          "id": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",
-          "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+          "id": "9a665b22-9fe5-4c95-b4ee-837a5433c95d"
         }
       ],
       "cancellation_restriction": false,
@@ -60,8 +56,7 @@
           "id": "f7d7d4e4-255e-46dc-9f08-b953fb1e872d",
           "claimed": false,
           "sent": "2018-10-09T00:00:00.000Z",
-          "grace": 30,
-          "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+          "grace": 30
         }
       ],
       "collection": false,
@@ -77,8 +72,7 @@
         "currency": "USD",
         "quantity_physical": 1,
         "quantity_electronic": 1,
-        "po_line_estimated_price": 49.98,
-        "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+        "po_line_estimated_price": 49.98
       },
       "description": "ABCDEFGH",
       "details": {
@@ -95,8 +89,7 @@
         ],
         "subscription_from": "2018-10-09T00:00:00.000Z",
         "subscription_interval": 824,
-        "subscription_to": "2020-10-09T00:00:00.000Z",
-        "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+        "subscription_to": "2020-10-09T00:00:00.000Z"
       },
       "donor": "ABCDEFGHIJKLM",
       "fund_distribution": [
@@ -107,8 +100,7 @@
         "location_id": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
         "quantity": 2,
         "quantity_electronic": 1,
-        "quantity_physical": 1,
-        "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+        "quantity_physical": 1
       },
       "order_format": "Physical Resource",
       "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
@@ -117,15 +109,13 @@
         "volumes": 1,
         "id": "5ee243f9-72e5-4464-bdbc-43a21873d648",
         "material_supplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
-        "receipt_due": "2018-10-10T00:00:00.000Z",
-        "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+        "receipt_due": "2018-10-10T00:00:00.000Z"
       },
       "po_line_description": "ABCDEFGHIJKLMNOPQRSTUVWXY",
       "po_line_number": "268758-03",
       "po_line_workflow_status": "Open",
       "publication_date": "2017",
       "publisher": "Schiffer Publishing",
-      "purchase_order_id": "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
       "receipt_date": "2018-10-09T00:00:00.000Z",
       "receipt_status": "Awaiting Receipt",
       "renewal": {
@@ -134,8 +124,7 @@
         "cycle": "6 Months",
         "manual_renewal": true,
         "review_period": 30,
-        "renewal_date": "2019-04-09T00:00:00.000Z",
-        "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+        "renewal_date": "2019-04-09T00:00:00.000Z"
       },      
       "reporting_codes": [
         {
@@ -168,7 +157,15 @@
         "ABCDEFGHIJKLMNOPQRSTU",
         "ABCDEFGHIJKLMNO"
       ],
-      "title": "Kayak Fishing in the Northern Gulf Coast"
+      "title": "Kayak Fishing in the Northern Gulf Coast",
+      "vendor_detail": {
+        "id": "d5065f0d-fb88-4d23-b0c1-57e754fba40e",
+        "instructions": "ABCDEFG",
+        "note_from_vendor": "ABCDEFGHIKJKLMNOP",
+        "ref_number": "123456-78",
+        "ref_number_type": "Supplier's unique order line reference number",
+        "vendor_account": "8910-10"
+      }
     }
   ]
 }

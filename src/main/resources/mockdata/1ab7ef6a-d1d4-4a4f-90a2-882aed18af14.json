@@ -18,7 +18,7 @@
     "manual_po": false,
     "notes": [],
     "po_number": "268758",
-    "order_type": "One-time",
+    "order_type": "One-Time",
     "re_encumber": false,
     "total_estimated_price": 127.94,
     "total_items": 3,
@@ -28,7 +28,6 @@
   "po_lines": [
     {
       "id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1",
-      "account_number": "",
       "acquisition_method": "Purchase",
       "adjustment": {
         "id": "1963h6cf-eb47-4e09-9e28-e25aa484abb7",
@@ -136,15 +135,6 @@
       "purchase_order_id": "d79b2bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
       "receipt_date": null,
       "receipt_status": "Awaiting Receipt",
-      "renewal": {
-        "id": "8e414baa-8cf2-4016-a90f-d1da4009e06e",
-        "cycle": "",
-        "interval": 0,
-        "manual_renewal": true,
-        "review_period": 0,
-        "renewal_date": null,
-        "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
-      },
       "reporting_codes": [],
       "requester": "",
       "rush": false,
@@ -160,15 +150,12 @@
         "id": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
         "instructions": "",
         "note_from_vendor": "",
-        "ref_number": "",
-        "ref_number_type": "",
         "vendor_account": "",
         "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
       }
     },
     {
       "id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1",
-      "account_number": "",
       "acquisition_method": "Purchase",
       "adjustment": {
         "id": "2063h6cf-eb47-4e09-9e28-e25aa484abb7",
@@ -276,15 +263,6 @@
       "purchase_order_id": "d75b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
       "receipt_date": null,
       "receipt_status": "Awaiting Receipt",
-      "renewal": {
-        "id": "8e414baa-8cf2-4916-a90f-f1da4009e06e",
-        "cycle": "",
-        "interval": 0,
-        "manual_renewal": true,
-        "review_period": 0,
-        "renewal_date": null,
-        "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1"
-      },
       "reporting_codes": [],
       "requester": "",
       "rush": false,
@@ -300,15 +278,12 @@
         "id": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
         "instructions": "",
         "note_from_vendor": "",
-        "ref_number": "",
-        "ref_number_type": "",
         "vendor_account": "",
         "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1"
       }
     },
     {
       "id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1",
-      "account_number": "",
       "acquisition_method": "Purchase",
       "adjustment": {
         "id": "2163h6cf-eb47-4e09-9e28-e25aa484abb7",
@@ -416,15 +391,6 @@
       "purchase_order_id": "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
       "receipt_date": null,
       "receipt_status": "Awaiting Receipt",
-      "renewal": {
-        "id": "8e4f4baa-8cf2-4916-a90f-d1da4009e06e",
-        "cycle": "",
-        "interval": 0,
-        "manual_renewal": true,
-        "review_period": 0,
-        "renewal_date": null,
-        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1"
-      },
       "reporting_codes": [],
       "requester": "",
       "rush": false,
@@ -440,8 +406,6 @@
         "id": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
         "instructions": "",
         "note_from_vendor": "",
-        "ref_number": "",
-        "ref_number_type": "",
         "vendor_account": "",
         "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1"
       }
