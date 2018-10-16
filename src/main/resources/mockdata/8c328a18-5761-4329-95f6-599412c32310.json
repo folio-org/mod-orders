@@ -28,7 +28,6 @@
   "po_lines": [
     {
       "id": "50fb580c-cdf1-11e8-a8d5-f2801f1b9fd1",
-      "account_number": "",
       "acquisition_method": "Gift",
       "adjustment": {
         "id": "1v63h6cf-eb47-4e09-9e28-e25aa464adb7",
@@ -160,8 +159,6 @@
         "id": "50fb8c82-cdf1-11e8-a8d5-f2801f1b9fd1",
         "instructions": "no. 42 and continuations",
         "note_from_vendor": "",
-        "ref_number": "",
-        "ref_number_type": "",
         "vendor_account": "",
         "po_line_id": "50fb580c-cdf1-11e8-a8d5-f2801f1b9fd1"
       }

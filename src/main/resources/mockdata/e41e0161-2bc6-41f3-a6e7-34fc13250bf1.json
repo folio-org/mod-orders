@@ -30,7 +30,6 @@
   "po_lines": [
     {
       "id": "50fb6608-cdf1-11e8-a8d5-f2801f1b9fd1",
-      "account_number": "",
       "acquisition_method": "Purchase",
       "adjustment": {
         "id": "1963h6cf-eb47-4w09-9e28-e25aa464adb7",
@@ -162,8 +161,6 @@
         "id": "50fb90ec-cdf1-11e8-a8d5-f2801f1b9fd1",
         "instructions": "",
         "note_from_vendor": "",
-        "ref_number": "",
-        "ref_number_type": "",
         "vendor_account": "",
         "po_line_id": "50fb6608-cdf1-11e8-a8d5-f2801f1b9fd1"
       }
