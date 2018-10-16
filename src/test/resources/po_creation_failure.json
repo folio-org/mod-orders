@@ -4,16 +4,16 @@
   },
   "po_lines": [
     {
-      "barcode": "0008675309"
+      "po_line_number": "12345-1"
     },
     {
-      "barcode": "0123456789"
+      "po_line_number": "12345-2"
     },
     {
-      "barcode": "1111111111"
+      "po_line_number": "12345-3"
     },
     {
-      "barcode": "2222222222"
+      "po_line_number": "12345-4"
     }
   ]
 }

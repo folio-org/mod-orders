@@ -10,7 +10,10 @@ import java.util.UUID;
 
 import org.apache.log4j.Logger;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrders;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -25,7 +28,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -93,7 +95,7 @@ public class OrdersResourceImplTest {
     String body = getMockData(listedPrintMonographPath);
     JsonObject reqData = new JsonObject(body);
 
-    final Response resp = RestAssured
+    final CompositePurchaseOrder resp = RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
@@ -104,34 +106,30 @@ public class OrdersResourceImplTest {
           .contentType(APPLICATION_JSON)
           .statusCode(201)
           .extract()
-            .response();
+            .response()
+              .as(CompositePurchaseOrder.class);
 
-    String respBody = resp.getBody().asString();
+    logger.info(JsonObject.mapFrom(resp));
 
-    JsonObject json = new JsonObject(respBody);
-    logger.info(json.encodePrettily());
-
-    JsonObject po = json.getJsonObject("purchase_order");
-    String poId = po.getString("id");
-    String poNumber = po.getString("po_number");
-
+    String poId = resp.getPurchaseOrder().getId();
+    String poNumber = resp.getPurchaseOrder().getPoNumber();
+    
     assertNotNull(poId);
     assertNotNull(poNumber);
+    assertEquals(reqData.getJsonArray("po_lines").size(), resp.getPoLines().size());
 
-    assertEquals(reqData.getJsonArray("po_lines").size(), json.getJsonArray("po_lines").size());
-
-    for (int i = 0; i < json.getJsonArray("po_lines").size(); i++) {
-      JsonObject line = json.getJsonArray("po_lines").getJsonObject(i);
-      String polNumber = line.getString("po_line_number");
-
-      assertEquals(poId, line.getString("purchase_order_id"));
-      assertNotNull(line.getString("id"));
+    for (int i = 0; i < resp.getPoLines().size(); i++) {
+      PoLine line = resp.getPoLines().get(i);
+      String polNumber = line.getPoLineNumber();
+      String polId = line.getId();
+      
+      assertEquals(poId, line.getPurchaseOrderId());
+      assertNotNull(polId);
       assertNotNull(polNumber);
       assertTrue(polNumber.startsWith(poNumber));
-      assertNotNull(line.getJsonObject("cost").getString("id"));
-      assertNotNull(line.getJsonObject("details").getString("id"));
-      assertNotNull(line.getJsonObject("location").getString("id"));
-      assertNotNull(line.getJsonObject("vendor").getString("id"));
+      assertNotNull(line.getCost().getId());
+      assertNotNull(line.getDetails().getId());
+      assertNotNull(line.getLocation().getId());
     }
   }
 
@@ -158,6 +156,8 @@ public class OrdersResourceImplTest {
               .body()
                 .as(Errors.class);
 
+    logger.info(JsonObject.mapFrom(errors).encodePrettily());
+    
     ctx.assertFalse(errors.getErrors().isEmpty());
     ctx.assertNotNull(errors.getErrors().get(0));
     ctx.assertEquals("must match \"^[a-zA-Z0-9]{5,16}$\"", errors.getErrors().get(0).getMessage());
@@ -173,7 +173,7 @@ public class OrdersResourceImplTest {
 
     String body = getMockData(poLineCreationFailurePath);
 
-    final Response resp = RestAssured
+    final Errors errors = RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
@@ -181,15 +181,21 @@ public class OrdersResourceImplTest {
         .body(body)
       .post(rootPath)
         .then()
-          .contentType(TEXT_PLAIN)
-          .statusCode(400)
+          .contentType(APPLICATION_JSON)
+          .statusCode(422)
           .extract()
-            .response();
-
-    String respBody = resp.getBody().asString();
-    logger.info(respBody);
-
-    assertEquals("Invalid barcode", respBody);
+            .response()
+              .as(Errors.class);
+      
+    logger.info(JsonObject.mapFrom(errors).encodePrettily());
+  
+    ctx.assertFalse(errors.getErrors().isEmpty());
+    ctx.assertNotNull(errors.getErrors().get(0));
+    ctx.assertEquals("must match \"^[a-zA-Z0-9]{5,16}-[0-9]{1,3}$\"", errors.getErrors().get(0).getMessage());
+    ctx.assertFalse(errors.getErrors().get(0).getParameters().isEmpty());
+    ctx.assertNotNull(errors.getErrors().get(0).getParameters().get(0));
+    ctx.assertEquals("poLines[1].poLineNumber", errors.getErrors().get(0).getParameters().get(0).getKey());
+    ctx.assertEquals("invalid", errors.getErrors().get(0).getParameters().get(0).getValue());
   }
 
   @Test
@@ -222,9 +228,9 @@ public class OrdersResourceImplTest {
   public void testGetOrders(TestContext ctx) throws Exception {
     logger.info("=== Test Get Orders ===");
 
-    String expected = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH)).encodePrettily();
+    JsonObject expected = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
 
-    final Response resp = RestAssured
+    final CompositePurchaseOrders resp = RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
@@ -235,12 +241,13 @@ public class OrdersResourceImplTest {
           .contentType(APPLICATION_JSON)
           .statusCode(200)
           .extract()
-            .response();
+            .response()
+              .as(CompositePurchaseOrders.class);
 
-    String actual = new JsonObject(resp.getBody().asString()).encodePrettily();
-    logger.info(actual);
+    logger.info(JsonObject.mapFrom(resp));
 
-    assertEquals(expected, actual);
+    int pos = expected.getJsonArray("composite_purchase_orders").size();
+    assertEquals(pos, resp.getCompositePurchaseOrders().size());
   }
 
   @Test
@@ -250,9 +257,8 @@ public class OrdersResourceImplTest {
     JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getJsonObject("purchase_order").getString("id");
     logger.info("using mock datafile: " + GetOrderHelper.BASE_MOCK_DATA_PATH + id + ".json");
-    JsonObject expected = new JsonObject(getMockData(GetOrderHelper.BASE_MOCK_DATA_PATH + id + ".json"));
 
-    final Response resp = RestAssured
+    final CompositePurchaseOrder resp = RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
@@ -261,39 +267,12 @@ public class OrdersResourceImplTest {
           .contentType(APPLICATION_JSON)
           .statusCode(200)
           .extract()
-            .response();
+            .response()
+              .as(CompositePurchaseOrder.class);
 
-    JsonObject actual = new JsonObject(resp.getBody().asString());
-    logger.info(actual);
+    logger.info(JsonObject.mapFrom(resp));
 
-    JsonObject expPo = expected.getJsonObject("purchase_order");
-    JsonObject actPo = actual.getJsonObject("purchase_order");
-
-    actPo.fieldNames().forEach(field -> {
-      Object actValue = actPo.getValue(field);
-      if (!(actValue instanceof JsonObject || actValue instanceof JsonArray)) {
-        logger.info("checking purchase_order field: " + field);
-        assertEquals(expPo.getValue(field), actValue);
-      }
-    });
-
-    JsonArray expPoLines = expected.getJsonArray("po_lines");
-    JsonArray actPoLines = actual.getJsonArray("po_lines");
-
-    assertEquals(expPoLines.size(), actPoLines.size());
-    for (int i = 0; i < expPoLines.size(); i++) {
-      JsonObject expPoLine = expPoLines.getJsonObject(i);
-      JsonObject actPoLine = actPoLines.getJsonObject(i);
-
-      assertEquals(expPoLine.getString("id"), actPoLine.getString("id"));
-      actPoLine.fieldNames().forEach(field -> {
-        Object actValue = actPoLine.getValue(field);
-        if (!(actValue instanceof JsonObject || actValue instanceof JsonArray)) {
-          logger.info("checking po_line field: " + field);
-          assertEquals(expPoLine.getValue(field), actValue);
-        }
-      });
-    }
+    assertEquals(id, resp.getPurchaseOrder().getId());
   }
 
   @Test
@@ -379,17 +358,10 @@ public class OrdersResourceImplTest {
       JsonObject body = ctx.getBodyAsJson();
       body.put("id", UUID.randomUUID().toString());
 
-      if ("invalid".equals(body.getString("po_number"))) {
-        ctx.response()
-          .setStatusCode(400)
-          .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
-          .end("Invalid po_number");
-      } else {
-        ctx.response()
-          .setStatusCode(201)
-          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-          .end(body.encodePrettily());
-      }
+      ctx.response()
+        .setStatusCode(201)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .end(body.encodePrettily());      
     }
 
     private void handlePostAssignId(RoutingContext ctx) {
@@ -437,17 +409,10 @@ public class OrdersResourceImplTest {
       JsonObject body = ctx.getBodyAsJson();
       body.put("id", UUID.randomUUID().toString());
 
-      if ("invalid".equals(body.getString("barcode"))) {
-        ctx.response()
-          .setStatusCode(400)
-          .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
-          .end("Invalid barcode");
-      } else {
-        ctx.response()
-          .setStatusCode(201)
-          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-          .end(body.encodePrettily());
-      }
+      ctx.response()
+        .setStatusCode(201)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .end(body.encodePrettily());
     }
   }
 

@@ -15,7 +15,6 @@ import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.Vendor;
 import org.folio.rest.jaxrs.resource.OrdersResource.PostOrdersResponse;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -107,7 +106,9 @@ public class PostOrdersHelper {
     subObjFuts.add(createDetails(compPOL, line, compPOL.getDetails()));
     subObjFuts.add(createEresource(compPOL, line, compPOL.getEresource()));
     subObjFuts.add(createLocation(compPOL, line, compPOL.getLocation()));
-    subObjFuts.add(createVendor(compPOL, line, compPOL.getVendor()));
+    
+    // Re-add this after MODORDERS_51 is merged and acq-models is updated.
+    //subObjFuts.add(createVendor(compPOL, line, compPOL.getVendor()));
 
     CompletableFuture.allOf(subObjFuts.toArray(new CompletableFuture[subObjFuts.size()]))
       .thenAccept(v -> {
@@ -203,6 +204,7 @@ public class PostOrdersHelper {
       });
   }
 
+  /* Uncomment after MODORDERS-51 is merged and acq-models is updated.
   private CompletableFuture<Void> createVendor(PoLine compPOL, JsonObject line, Vendor vendor) {
     return createSubObjIfPresent(line, vendor, "vendor", "/vendor_detail")
       .thenAccept(id -> {
@@ -218,7 +220,7 @@ public class PostOrdersHelper {
         throw new CompletionException(t.getCause());
       });
   }
-
+  */
   private CompletableFuture<String> createSubObjIfPresent(JsonObject line, Object obj, String field, String url) {
     if (obj != null) {
       JsonObject json = JsonObject.mapFrom(obj);
