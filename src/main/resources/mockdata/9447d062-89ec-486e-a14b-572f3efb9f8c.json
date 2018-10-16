@@ -137,7 +137,6 @@
       "receipt_status": "Pending",
       "renewal": {
         "id": "9e414baa-8cf2-4916-a90f-d1da4009e02e",
-        "cycle": "",
         "interval": 0,
         "manual_renewal": true,
         "review_period": 0,
