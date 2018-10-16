@@ -1,154 +1,167 @@
 {
   "purchase_order": {
     "id": "55b97a4a-6601-4488-84e1-8b0d47a3f523",
-    "po_number": "101113",
-    "created": "2018-07-19T10:00:00.000+0000",
-    "comments": "",
-    "total_items": 1,
-    "total_estimated_price": 240.00,
-    "adjustments": "",
+    "adjustment": {
+      "credit": 0,
+      "discount": 0,
+      "insurance": 0,
+      "overhead": 0,
+      "shipment": 0,
+      "tax_1": 0,
+      "tax_2": 0,
+      "use_pro_rate": false
+    },
+    "approved": true,
     "assigned_to": "",
-    "created_by": "steves",
-    "transmission_date": "",
-    "transmission_method": "",
-    "po_workflow_status_id": "Pending",
-    "po_receipt_status": "",
-    "po_payment_status": ""
+    "created": "2018-07-19T00:00:00.000Z",
+    "created_by": "28d1057c-d137-11e8-a8d5-f2801f1b9fd1",
+    "notes": [],
+    "manual_po": false,
+    "po_number": "101113",
+    "order_type": "Ongoing",
+    "re_encumber": false,
+    "total_estimated_price": 240.00,
+    "total_items": 1,
+    "vendor": "50fb8da4-cdf1-11e8-a8d5-f2801f1b9fd1",
+    "workflow_status": "Pending"
   },
   "po_lines": [
     {
-      "id": "07c6529e-cabe-11e8-a8d5-f2801f1b9fd1",
-      "acquisition_method": "EDI",
-      "barcode": "",
-      "cancellation_restriction": false,
-      "cancellation_restriction_comment": "",
-      "receipt_date": null,
-      "collection": false,
-      "owner": "Acquisitions - Serials",
-      "po_line_number": "1",
-      "po_line_description": "",
+      "id": "50fb5956-cdf1-11e8-a8d5-f2801f1b9fd1",
+      "acquisition_method": "Purchase",
       "adjustment": {
-        "id": "07c653e8-cabe-11e8-a8d5-f2801f1b9fd1",
-        "shipment": 0,
-        "insurance": 0,
-        "discount": 0,
-        "overhead": 0,
-        "credit": 0,
-        "tax_1": 0,
-        "tax_2": 0,
-        "invoice_id": null,
-        "use_pro_rate": false
+        "id": "1963h6cf-eb47-4e09-9e28-e25aa464fadb7",
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoice_id": "2d6dg95c-c237-47f6f-aa48-57f7cbf74ca4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax_1": 0.0,
+        "tax_2": 0.0,
+        "use_pro_rate": false,
+        "po_line_id": "50fb5956-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "alerts": [
-        {
-          "id": "07c6550a-cabe-11e8-a8d5-f2801f1b9fd1",
-          "alert": ""
-        }
-      ],
+      "alerts": [],
+      "cancellation_restriction": false,
+      "cancellation_restriction_note": "",
       "claims": [
         {
-          "id": "07c65636-cabe-11e8-a8d5-f2801f1b9fd1",
-          "claim": true,
-          "sent": "",
+          "id": "07cld666-eaxe-11e8-a8d5-f2801f1b9fd12",
+          "claimed": false,
           "grace": 0,
-          "po_line_id": null
+          "po_line_id": "50fb5956-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
+      ],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "",
+          "contributor_type": ""
         }
       ],
       "cost": {
-        "id": "07c65758-cabe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07c5d79v-cabe-11cc-a8d5-f22801f1b9fd1",
         "list_price": 240.00,
         "currency": "USD",
-        "quantity": 1,
-        "estimated_price": 240.00
+        "quantity_physical": 1,
+        "quantity_electronic": 0,
+        "po_line_estimated_price": 240.00,
+        "po_line_id": "50fb5956-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
+      "description": "",
       "details": {
-        "id": "07c65884-cabe-11e8-a8d5-f2801f1b9fd1",
-        "title": "The road to democracy in South Africa",
+        "id": "b7c5d792-03be-1le29-a8d5-f2801f1b9fd1",
         "receiving_note": "v. 1-6 in 10 parts",
-        "product_id": "9781868885015",
+        "product_ids": [
+          {
+            "product_id": "9781868885015",
+            "product_id_type": "ISBN"
+          }
+        ],
+        "material_types": [
+          "fde2e21e-cde3-11e8-a8d5-f2801f1b9fd1"
+        ],
         "subscription_from": null,
-        "material_type": "print standing order",
         "subscription_interval": 0,
         "subscription_to": null,
-        "description": ""
+        "po_line_id": "50fb5956-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
+      "donor": "",
       "eresource": {
-        "id": "07c65bf4-cabe-11e8-a8d5-f2801f1b9fd1",
-        "activation_status": "",
+        "id": "07c5g805-cnbe-11e8-a8d5-f2801f1b9fd1",
+        "activated": false,
         "activation_due": 0,
         "create_inventory": false,
         "trial": false,
         "expected_activation": null,
         "user_limit": 0,
-        "material_id": null,
-        "access_provider": ""
+        "access_provider": "",
+        "po_line_id": "50fb5956-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "license": "09cld8be-cabe-11e8-a8d5-038201f1b9fd1"
       },
-      "license": {
-        "id": "07c65d34-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": "",
-        "description": "",
-        "reference": ""
-      },
+      "fund_distribution": [
+        {
+          "id": "fde2cd9c-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "STATE-MONOSER-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08010",
+          "po_line_id": "50fb5956-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
+      ],
       "location": {
-        "id": "07c65e60-cabe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9f06",
+        "location_id": "ncc5d9ea-cabe-11e8-a8d5-f2901f1b9fd3",
+        "po_line_id": "50fb5956-cdf1-11e8-a8d5-f2801f1b9fd1",
         "quantity": 1,
-        "location_id": "stks"
+        "quantity_electronic": 0,
+        "quantity_physical": 1
       },
-      "order_format": {
-        "id": "07c65f82-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Physical"
-      },
-      "order_type": {
-        "id": "07c66112-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "On-going"
-      },
+      "order_format": "Physical Resource",
+      "owner": "Acquisitions - Serials",
+      "payment_status": "Pending",
       "physical": {
-        "id": "07c66252-cabe-11e8-a8d5-f2801f1b9fd1",
-        "expected_receipt_date": null,
-        "receipt_due": "2018-08-31T10:00:00.000+0000",
-        "expected_receipt_interval": 0,
+        "id": "50fb765c-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "material_supplier": "Otto Harrassowitz GmbH & Co. KG",
+        "receipt_due": "2018-08-31T00:00:00.000Z",
         "volumes": 6,
-        "material_id": "",
-        "material_supplier": "Otto Harrassowitz GmbH & Co. KG"
+        "po_line_id": "50fb5956-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "purchase_order_id": "",
-      "receipt_status": {
-        "id": "07c665d6-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Received"
-      },
+      "po_line_description": "",
+      "po_line_number": "1",
+      "po_line_workflow_status": "Pending",
+      "publication_date": "2010",
+      "publisher": "Unisa Press",
+      "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abv7-DbFcaD5BB3bb",
+      "receipt_date": null,
+      "receipt_status": "Pending",
       "renewal": {
-        "id": "07c668b0-cabe-11e8-a8d5-f2801f1b9fd1",
-        "cycle": "manual",
+        "id": "9e414baa-8cf2-4916-a90f-d1da4009e05e",
+        "cycle": "Manual",
+        "interval": 0,
+        "manual_renewal": true,
         "review_period": 0,
         "renewal_date": null,
-        "interval": 0,
-        "manual_renewal": true
+        "po_line_id": "50fb5956-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "source": {
-        "id": "07c669fa-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "manual"
-      },
-      "vendor": {
-        "id": "Jean Simmons",
-        "ref_number": "",
-        "ref_no_type": "",
-        "instructions": null,
-        "vendor_account": "",
-        "note_from_vendor": ""
-      },
-      "workflow_status": {
-        "id": "07c66b26-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "order sent"
-      },
-      "selector": "",
+      "reporting_codes": [],
       "requester": "",
-      "account_number": "",
-      "donor": ""
+      "rush": false,
+      "selector": "",
+      "source": {
+        "id": "0b4b2f41-v5c6-4280-858e-33fba452a434",
+        "code": "",
+        "description": "Manually entered"
+      },
+      "tags": [],
+      "title": "The road to democracy in South Africa",
+      "vendor_detail": {
+        "id": "50fb8da4-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "vendor_account": "",
+        "po_line_id": "50fb5956-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
     }
   ]
 }

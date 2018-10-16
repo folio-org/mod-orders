@@ -1,422 +1,414 @@
 {
   "purchase_order": {
     "id": "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
+    "adjustment": {
+      "credit": 0.0,
+      "discount": 0.0,
+      "insurance": 0.0,
+      "overhead": 0.0,
+      "shipment": 0.0,
+      "tax_1": 0.0,
+      "tax_2": 0.0,
+      "use_pro_rate": false
+    },
+    "approved": true,
+    "assigned_to": "",
+    "created": "2018-06-29T00:00:00.000Z",
+    "created_by": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1",
+    "manual_po": false,
+    "notes": [],
     "po_number": "268758",
-    "created": "2018-06-29T03:00:00.000+0000",
-    "comments": "",
-    "total_items": 3,
+    "order_type": "One-Time",
+    "re_encumber": false,
     "total_estimated_price": 127.94,
-    "adjustments": "",
-    "assigned_to": "Ann",
-    "created_by": "mu44",
-    "transmission_date": "",
-    "transmission_method": "",
-    "po_workflow_status_id": "Open",
-    "po_receipt_status": "not received",
-    "po_payment_status": ""
+    "total_items": 3,
+    "vendor": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
+    "workflow_status": "Open"
   },
   "po_lines": [
     {
-      "id": "07c5d04e-cabe-11e8-a8d5-f2801f1b9fd1",
-      "acquisition_method": "Email to vendor",
-      "barcode": "",
-      "cancellation_restriction": false,
-      "cancellation_restriction_comment": "",
-      "receipt_date": null,
-      "collection": false,
-      "owner": "LTS Acquisitions",
-      "po_line_number": "268758-01",
-      "po_line_description": "",
+      "id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1",
+      "acquisition_method": "Purchase",
       "adjustment": {
-        "id": "07c5d530-cabe-11e8-a8d5-f2801f1b9fd1",
-        "shipment": 0,
-        "insurance": 0,
-        "discount": 0,
-        "overhead": 0,
-        "credit": 0,
-        "tax_1": 0,
-        "tax_2": 0,
-        "invoice_id": null,
-        "use_pro_rate": false
+        "id": "1963h6cf-eb47-4e09-9e28-e25aa484abb7",
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoice_id": "2d6d495c-c237-476f-aa48-50f7cbf74ca4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax_1": 0.0,
+        "tax_2": 0.0,
+        "use_pro_rate": false,
+        "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "alerts": [
-        {
-          "id": "07c5d3e6-cabe-11e8-a8d5-f2801f1b9fd1",
-          "alert": ""
-        }
-      ],
+      "alerts": [],
+      "cancellation_restriction": false,
+      "cancellation_restriction_note": "",
       "claims": [
         {
-          "id": "07c5d666-cabe-11e8-a8d5-f2801f1b9fd1",
-          "claim": true,
-          "sent": "",
-          "grace": null,
-          "po_line_id": null
+          "id": "07c5d666-cabe-11e8-a8d5-f2811f1b9fd1",
+          "claimed": false,
+          "grace": 90,
+          "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
+      ],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "Steinar Imsen (ed.)",
+          "contributor_type": ""
         }
       ],
       "cost": {
-        "id": "07c5d792-cabe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07c5d792-cabe-11e8-a8d5-f2801j1b9fd1",
         "list_price": 68.00,
         "currency": "USD",
-        "quantity": 1,
-        "estimated_price": 68.00
+        "quantity_physical": 1,
+        "quantity_electronic": 0,
+        "po_line_estimated_price": 68.00,
+        "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
+      "description": "",
       "details": {
-        "id": "07c5d792-cabe-11e9-a8d5-f2801f1b9fd1",
-        "title": "Taxes, tributes and tributary lands in the making of Scandinavian kingdoms in the Middle Ages / Steinar Imsen (ed.).",
+        "id": "07c5d792-cabe-11e9-a8d5-i2801f1b9fd1",
         "receiving_note": "",
-        "product_id": "10407849",
+        "product_ids": [
+          {
+            "product_id": "10407849",
+            "product_id_type": "Vendor Item Number"
+          }
+        ],
+        "material_types": [
+          "fde2dc42-cde3-11e8-a8d5-f2801f1b9fd1"
+        ],
         "subscription_from": null,
-        "material_type": "book",
         "subscription_interval": 0,
         "subscription_to": null,
-        "description": ""
+        "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
+      "donor": "",
       "eresource": {
-        "id": "07c5d8be-cabe-11e8-a8d5-f2801f1b9fd1",
-        "activation_status": "",
+        "id": "07c5d8be-cabe-11e8-a9d5-f2801f1b9fd1",
+        "activated": false,
         "activation_due": 0,
         "create_inventory": false,
         "trial": false,
         "expected_activation": null,
         "user_limit": 0,
-        "material_id": null,
-        "access_provider": null
+        "access_provider": null,
+        "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "license": "07c5d8be-cabe-11e8-a8d5-f2801f1b9fd1"
       },
-      "license": {
-        "id": "07c5d8be-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": "",
-        "description": "",
-        "reference": ""
-      },
-      "location": {
-        "id": "07c5d9ea-cabe-11e8-a8d5-f2801f1b9fd1",
-        "quantity": 1,
-        "location_id": "Icelandic"
-      },
-      "order_format": {
-        "id": "07c5dd6e-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Physical"
-      },
-      "order_type": {
-        "id": "07c5dec2-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "One-time"
-      },
-      "physical": {
-        "id": "07c5dff8-cabe-11e8-a8d5-f2801f1b9fd1",
-        "expected_receipt_date": null,
-        "receipt_due": null,
-        "expected_receipt_interval": 0,
-        "volumes": 1,
-        "material_id": "",
-        "material_supplier": null
-      },
-      "purchase_order_id": "",
-      "receipt_status": {
-        "id": "07c5e124-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Not Received"
-      },
-      "renewal": {
-        "id": null,
-        "cycle": "",
-        "review_period": 0,
-        "renewal_date": null,
-        "interval": 0,
-        "manual_renewal": true
-      },
-      "source": {
-        "id": "07c5e250-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "manual"
-      },
-      "vendor": {
-        "id": "Amazon.com",
-        "ref_number": "",
-        "ref_no_type": "",
-        "instructions": null,
-        "vendor_account": "",
-        "note_from_vendor": ""
-      },
-      "workflow_status": {
-        "id": "07c5e372-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Approved"
-      },
-      "selector": "Stevens",
-      "requester": "",
-      "account_number": "",
-      "donor": ""
-    },
-    {
-      "id": "156503d2-cacd-11e8-a8d5-f2801f1b9fd1",
-      "acquisition_method": "Email to vendor",
-      "barcode": "",
-      "cancellation_restriction": false,
-      "cancellation_restriction_comment": "",
-      "receipt_date": null,
-      "collection": false,
-      "owner": "LTS Acquisitions",
-      "po_line_number": "268758-02",
-      "po_line_description": "",
-      "adjustment": {
-        "id": "07c5d530-cabe-11e8-a8d5-f2801f1b9fd1",
-        "shipment": 0,
-        "insurance": 0,
-        "discount": 0,
-        "overhead": 0,
-        "credit": 0,
-        "tax_1": 0,
-        "tax_2": 0,
-        "invoice_id": null,
-        "use_pro_rate": false
-      },
-      "alerts": [
+      "fund_distribution": [
         {
-          "id": "15650508-cacd-11e8-a8d5-f2801f1b9fd1",
-          "alert": ""
+          "id": "fde2c22a-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "EUROHIST-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08003",
+          "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
         }
       ],
+      "location": {
+        "id": "07c5d9ea-ckbe-11e8-a8d5-f2801f1b9fd1",
+        "location_id": "07c5d9ea-cabe-11e8-a8d5-f2901f1b9fd1",
+        "quantity": 1,
+        "quantity_electronic": 0,
+        "quantity_physical": 1,
+        "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "order_format": "Physical Resource",
+      "owner": "LTS Acquisitions",
+      "payment_status": "Awaiting Payment",
+      "physical": {
+        "id": "5ee243f9-72e5-4464-bdbc-43a21873d648",
+        "material_supplier": "",
+        "receipt_due": "2018-09-29T00:00:00.000Z",
+        "volumes": 1,
+        "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "po_line_description": "",
+      "po_line_number": "268758-01",
+      "po_line_workflow_status": "Open",
+      "publication_date": "2011",
+      "publisher": "Tapir Academic Press",
+      "purchase_order_id": "d79b2bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
+      "receipt_date": null,
+      "receipt_status": "Awaiting Receipt",
+      "reporting_codes": [],
+      "requester": "",
+      "rush": false,
+      "selector": "Stevens",
+      "source": {
+        "id": "024b6f40-c5c6-4280-858e-33fba452a334",
+        "code": "",
+        "description": "Manually entered"
+      },
+      "tags": [],
+      "title": "Taxes, tributes and tributary lands in the making of Scandinavian kingdoms in the Middle Ages",
+      "vendor_detail": {
+        "id": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "vendor_account": "",
+        "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
+    },
+    {
+      "id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1",
+      "acquisition_method": "Purchase",
+      "adjustment": {
+        "id": "2063h6cf-eb47-4e09-9e28-e25aa484abb7",
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoice_id": "3d6d495c-c237-476f-aa48-50f7cbf74ca4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax_1": 0.0,
+        "tax_2": 0.0,
+        "use_pro_rate": false,
+        "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "alerts": [],
+      "cancellation_restriction": false,
+      "cancellation_restriction_note": "",
       "claims": [
         {
-          "id": "15650634-cacd-11e8-a8d5-f2801f1b9fd1",
-          "claim": true,
-          "sent": "",
-          "grace": null,
-          "po_line_id": null
+          "id": "07c5d666-cabe-18e8-a8d5-f2801f1b9fd1",
+          "claimed": false,
+          "grace": 90,
+          "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
+      ],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "Steinar Imsen (ed.)",
+          "contributor_type": ""
         }
       ],
       "cost": {
-        "id": "15650a08-cacd-11e8-a8d5-f2801f1b9fd1",
+        "id": "07c5d792-cnbe-11e8-a8d5-f2801f1b9fd1",
         "list_price": 34.95,
         "currency": "USD",
-        "quantity": 1,
-        "estimated_price": 34.95
+        "quantity_physical": 1,
+        "quantity_electronic": 0,
+        "po_line_estimated_price": 34.95,
+        "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
+      "description": "",
       "details": {
-        "id": "15650b70-cacd-11e8-a8d5-f2801f1b9fd1",
-        "title": "Alabama Women: Their Lives and Times",
+        "id": "07c5d792-cabe-11e9-a8d5-f2801f199fd1",
         "receiving_note": "",
-        "product_id": "9780820350790",
+        "product_ids": [
+          {
+            "product_id": "9780820350790",
+            "product_id_type": "ISBN"
+          }
+        ],
+        "material_types": [
+          "fde2dc42-cde3-11e8-a8d5-f2801f1b9fd1"
+        ],
         "subscription_from": null,
-        "material_type": "book",
         "subscription_interval": 0,
         "subscription_to": null,
-        "description": ""
+        "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
+      "donor": "",
       "eresource": {
-        "id": "15650f62-cacd-11e8-a8d5-f2801f1b9fd1",
-        "activation_status": "",
+        "id": "07c5d8be-cabw-11e8-a8d5-f2801f1b9fd1",
+        "activated": false,
         "activation_due": 0,
         "create_inventory": false,
         "trial": false,
         "expected_activation": null,
         "user_limit": 0,
-        "material_id": null,
-        "access_provider": null
+        "access_provider": null,
+        "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "license": "07cvd8be-cabe-11e8-a8d5-f2801f1b9fd1"
       },
-      "license": {
-        "id": "156510b6-cacd-11e8-a8d5-f2801f1b9fd1",
-        "code": "",
-        "description": "",
-        "reference": ""
-      },
-      "location": {
-        "id": "156511d8-cacd-11e8-a8d5-f2801f1b9fd1",
-        "quantity": 1,
-        "location_id": "Icelandic"
-      },
-      "order_format": {
-        "id": "15651304-cacd-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Physical"
-      },
-      "order_type": {
-        "id": "1565169c-cacd-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "One-time"
-      },
-      "physical": {
-        "id": "07c5dff8-cabe-11e8-a8d5-f2901f1b9fd1",
-        "expected_receipt_date": null,
-        "receipt_due": null,
-        "expected_receipt_interval": 0,
-        "volumes": 1,
-        "material_id": "",
-        "material_supplier": null
-      },
-      "purchase_order_id": "",
-      "receipt_status": {
-        "id": "156517f0-cacd-11e8-a8d5-f2801f1b9fd4",
-        "code": null,
-        "description": "Not Received"
-      },
-      "renewal": {
-        "id": null,
-        "cycle": "",
-        "review_period": 0,
-        "renewal_date": null,
-        "interval": 0,
-        "manual_renewal": true
-      },
-      "source": {
-        "id": "1565191c-cacd-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "manual"
-      },
-      "vendor": {
-        "id": "Amazon.com",
-        "ref_number": "",
-        "ref_no_type": "",
-        "instructions": null,
-        "vendor_account": "",
-        "note_from_vendor": ""
-      },
-      "workflow_status": {
-        "id": "15651a3e-cacd-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Approved"
-      },
-      "selector": "Brown",
-      "requester": "",
-      "account_number": "",
-      "donor": ""
-    },
-    {
-      "id": "156503d2-cacd-11e8-a8d5-f2801d1b9fd1",
-      "acquisition_method": "Email to vendor",
-      "barcode": "",
-      "cancellation_restriction": false,
-      "cancellation_restriction_comment": "",
-      "receipt_date": null,
-      "collection": false,
-      "owner": "LTS Acquisitions",
-      "po_line_number": "268758-03",
-      "po_line_description": "",
-      "adjustment": {
-        "id": "07c5d530-cabe-11e8-a8d5-f2801f1b9fdd",
-        "shipment": 0,
-        "insurance": 0,
-        "discount": 0,
-        "overhead": 0,
-        "credit": 0,
-        "tax_1": 0,
-        "tax_2": 0,
-        "invoice_id": null,
-        "use_pro_rate": false
-      },
-      "alerts": [
+      "fund_distribution": [
         {
-          "id": "15650508-cacd-11e8-d8d5-f2801f1b9fd1",
-          "alert": ""
+          "id": "fde2c39c-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "USHIST-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08004",
+          "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1"
         }
       ],
+      "location": {
+        "id": "07c5d9ea-cabe-11c8-a8d5-f2801f1b9fd1",
+        "location_id": "07c5d9ea-cabe-11e8-a8d5-f5901f1b9fd1",
+        "quantity": 1,
+        "quantity_electronic": 0,
+        "quantity_physical": 1,
+        "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "order_format": "Physical Resource",
+      "owner": "LTS Acquisitions",
+      "payment_status": "Awaiting Payment",
+      "physical": {
+        "id": "5ee243f9-72e5-4464-bd6c-43a21873d648",
+        "material_supplier": "",
+        "receipt_due": "2018-09-29T00:00:00.000Z",
+        "volumes": 1,
+        "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "po_line_description": "",
+      "po_line_number": "268758-02",
+      "po_line_workflow_status": "Open",
+      "publication_date": "2011",
+      "publisher": "Tapir Academic Press",
+      "purchase_order_id": "d75b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
+      "receipt_date": null,
+      "receipt_status": "Awaiting Receipt",
+      "reporting_codes": [],
+      "requester": "",
+      "rush": false,
+      "selector": "Brown",
+      "source": {
+        "id": "02dbff41-c5c6-4280-858e-33fba452a334",
+        "code": "",
+        "description": "Manually entered"
+      },
+      "tags": [],
+      "title": "Alabama Women: Their Lives and Times",
+      "vendor_detail": {
+        "id": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "vendor_account": "",
+        "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
+    },
+    {
+      "id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1",
+      "acquisition_method": "Purchase",
+      "adjustment": {
+        "id": "2163h6cf-eb47-4e09-9e28-e25aa484abb7",
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoice_id": "366d495c-c237-476f-aa48-50f7cbf74ca4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax_1": 0.0,
+        "tax_2": 0.0,
+        "use_pro_rate": false,
+        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "alerts": [],
+      "cancellation_restriction": false,
+      "cancellation_restriction_note": "",
       "claims": [
         {
-          "id": "15650634-cacd-11e8-d8d5-f2801f1b9fd1",
-          "claim": true,
-          "sent": "",
-          "grace": null,
-          "po_line_id": null
+          "id": "07c5d666-cabe-h1e8-a8d5-f2801f1b9fd1",
+          "claimed": false,
+          "grace": 90,
+          "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
+      ],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "Steinar Imsen (ed.)",
+          "contributor_type": ""
         }
       ],
       "cost": {
-        "id": "15650a08-cacd-11e8-d8d5-f2801f1b9fd1",
+        "id": "07c5d792-cabe-11e8-a8v5-f2801f1b9fd1",
         "list_price": 24.99,
         "currency": "USD",
-        "quantity": 1,
-        "estimated_price": 24.99
+        "quantity_physical": 1,
+        "quantity_electronic": 0,
+        "po_line_estimated_price": 24.99,
+        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
+      "description": "",
       "details": {
-        "id": "15650b70-cacd-11e8-d8d5-f2801f1b9fd1",
-        "title": "Kayak Fishing in the Northern Gulf Coast",
+        "id": "07c5d792-cvbe-11e9-a8d5-f2801f1b9fd1",
         "receiving_note": "",
-        "product_id": "9780764354113",
+        "product_ids": [
+          {
+            "product_id": "9780764354113",
+            "product_id_type": "ISBN"
+          }
+        ],
+        "material_types": [
+          "fde2dc42-cde3-11e8-a8d5-f2801f1b9fd1"
+        ],
         "subscription_from": null,
-        "material_type": "book",
         "subscription_interval": 0,
         "subscription_to": null,
-        "description": ""
+        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
+      "donor": "",
       "eresource": {
-        "id": "15650f62-cacd-11e8-d8d5-f2801f1b9fd1",
-        "activation_status": "",
+        "id": "07c5d8bc-cabe-11e8-a8d5-f2801f1b9fd1",
+        "activated": false,
         "activation_due": 0,
         "create_inventory": false,
         "trial": false,
         "expected_activation": null,
         "user_limit": 0,
-        "material_id": null,
-        "access_provider": null
+        "access_provider": null,
+        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "license": "07c5d8bv-cabe-11e8-a8d5-f2801f1b9fd1"
       },
-      "license": {
-        "id": "156510b6-cacd-11e8-d8d5-f2801f1b9fd1",
-        "code": "",
-        "description": "",
-        "reference": ""
-      },
+      "fund_distribution": [
+        {
+          "id": "fde2c626-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "USHIST-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08005",
+          "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
+      ],
       "location": {
-        "id": "156511d8-cacd-11e8-d8d5-f2801f1b9fd1",
+        "id": "07c5d97a-cabe-11e8-a8d5-f2801f1b9fd1",
+        "location_id": "07cvd9ea-cabe-11e8-a8d5-f2901f1b9fd1",
         "quantity": 1,
-        "location_id": "Icelandic"
+        "quantity_electronic": 0,
+        "quantity_physical": 1,
+        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "order_format": {
-        "id": "15651304-cacd-11e8-d8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Physical"
-      },
-      "order_type": {
-        "id": "1565169c-cacd-11e8-d8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "One-time"
-      },
+      "order_format": "Physical Resource",
+      "owner": "LTS Acquisitions",
+      "payment_status": "Awaiting Payment",
       "physical": {
-        "id": "07c5dff8-cabe-11e8-d8d5-f2901f1b9fd1",
-        "expected_receipt_date": null,
-        "receipt_due": null,
-        "expected_receipt_interval": 0,
+        "id": "5ee243f9-72e5-b464-bdbc-43a21873d648",
+        "material_supplier": "",
+        "receipt_due": "2018-09-29T00:00:00.000Z",
         "volumes": 1,
-        "material_id": "",
-        "material_supplier": null
+        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "purchase_order_id": "",
-      "receipt_status": {
-        "id": "156517f0-cacd-11e8-d8d5-f2801f1b9fd4",
-        "code": null,
-        "description": "Not Received"
-      },
-      "renewal": {
-        "id": null,
-        "cycle": "",
-        "review_period": 0,
-        "renewal_date": null,
-        "interval": 0,
-        "manual_renewal": true
-      },
-      "source": {
-        "id": "1565191c-cacd-11e8-d8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "manual"
-      },
-      "vendor": {
-        "id": "Amazon.com",
-        "ref_number": "",
-        "ref_no_type": "",
-        "instructions": null,
-        "vendor_account": "",
-        "note_from_vendor": ""
-      },
-      "workflow_status": {
-        "id": "15651a3e-cacd-11e8-d8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Approved"
-      },
-      "selector": "Brown",
+      "po_line_description": "",
+      "po_line_number": "268758-03",
+      "po_line_workflow_status": "Open",
+      "publication_date": "2011",
+      "publisher": "Tapir Academic Press",
+      "purchase_order_id": "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
+      "receipt_date": null,
+      "receipt_status": "Awaiting Receipt",
+      "reporting_codes": [],
       "requester": "",
-      "account_number": "",
-      "donor": ""
+      "rush": false,
+      "selector": "Brown",
+      "source": {
+        "id": "0b4b6f41-c5c6-4280-858e-33fba452a334",
+        "code": "",
+        "description": "Manually entered"
+      },
+      "tags": [],
+      "title": "Kayak Fishing in the Northern Gulf Coast",
+      "vendor_detail": {
+        "id": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "vendor_account": "",
+        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
     }
   ]
 }

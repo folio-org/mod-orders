@@ -1,154 +1,167 @@
 {
   "purchase_order": {
     "id": "c27e60f9-6361-44c1-976e-0c4821a33a7d",
-    "po_number": "38434",
-    "created": "2014-09-22T10:00:00.000+0000",
-    "comments": "Cataloging record service",
-    "total_items": 1,
-    "total_estimated_price": 0.00,
-    "adjustments": "",
+    "adjustment": {
+      "credit": 0,
+      "discount": 0,
+      "insurance": 0,
+      "overhead": 0,
+      "shipment": 0,
+      "tax_1": 0,
+      "tax_2": 0,
+      "use_pro_rate": false
+    },
+    "approved": true,
     "assigned_to": "",
-    "created_by": "stp0",
-    "transmission_date": "",
-    "transmission_method": "",
-    "po_workflow_status_id": "Pending",
-    "po_receipt_status": "",
-    "po_payment_status": ""
+    "created": "2014-09-22T00:00:00.000Z",
+    "created_by": "28d10afe-d137-11e8-a8d5-f2801f1b9fd1",
+    "notes": ["Cataloging record service"],
+    "manual_po": true,
+    "po_number": "38434",
+    "order_type": "Ongoing",
+    "re_encumber": false,
+    "total_estimated_price": 0.00,
+    "total_items": 1,
+    "vendor": "50fb922c-cdf1-11e8-a8d5-f2801f1b9fd1",
+    "workflow_status": "Pending"
   },
   "po_lines": [
     {
-      "id": "07c6b9be-cabe-11e8-a8d5-f2801f1b9fd1",
+      "id": "50fb627a-cdf1-11e8-a8d5-f2801f1b9fd1",
       "acquisition_method": "Purchase",
-      "barcode": "",
-      "cancellation_restriction": false,
-      "cancellation_restriction_comment": "",
-      "receipt_date": null,
-      "collection": false,
-      "owner": "Monographs",
-      "po_line_number": "1",
-      "po_line_description": "",
       "adjustment": {
-        "id": "07c6bcd4-cabe-11e8-a8d5-f2801f1b9fd1",
-        "shipment": 0,
-        "insurance": 0,
-        "discount": 0,
-        "overhead": 0,
-        "credit": 0,
-        "tax_1": 0,
-        "tax_2": 0,
-        "invoice_id": null,
-        "use_pro_rate": false
+        "id": "1963h6cf-eb47-4e09-9e28-e2jaa464adb7",
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoice_id": "2d6dg95c-c237-47f6f-aa48-57f7cbf74ca4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax_1": 0.0,
+        "tax_2": 0.0,
+        "use_pro_rate": false,
+        "po_line_id": "50fb627a-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "alerts": [
-        {
-          "id": "07c6c04e-cabe-11e8-a8d5-f2801f1b9fd1",
-          "alert": ""
-        }
-      ],
+      "alerts": [],
+      "cancellation_restriction": false,
+      "cancellation_restriction_note": "",
       "claims": [
         {
-          "id": "07c6c1ac-cabe-11e8-a8d5-f2801f1b9fd1",
-          "claim": false,
-          "sent": "",
+          "id": "07cld666-uaxe-11e8-a8d5-f2801f1b9fd12",
+          "claimed": false,
           "grace": 0,
-          "po_line_id": null
+          "po_line_id": "50fb627a-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
+      ],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "",
+          "contributor_type": ""
         }
       ],
       "cost": {
-        "id": "07c6c2d8-cabe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07c5d79v-cabe-11mm-a8d5-f22801f1b9fd1",
         "list_price": 0.00,
         "currency": "USD",
-        "quantity": 1,
-        "estimated_price": 0.00
+        "quantity_physical": 1,
+        "quantity_electronic": 0,
+        "po_line_estimated_price": 0.00,
+        "po_line_id": "50fb627a-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
+      "description": "",
       "details": {
-        "id": "07c6c404-cabe-11e8-a8d5-f2801f1b9fd1",
-        "title": "GOBI record service",
+        "id": "b7c5d792-07be-1le29-a8d5-f2801f1b9fd1",
         "receiving_note": "",
-        "product_id": "",
+        "product_ids": [
+          {
+            "product_id": "",
+            "product_id_type": "Other Standard Identifier"
+          }
+        ],
+        "material_types": [
+          "fde2e82c-cde3-11e8-a8d5-f2801f1b9fd1"
+        ],
         "subscription_from": null,
-        "material_type": "records",
         "subscription_interval": 0,
         "subscription_to": null,
-        "description": ""
+        "po_line_id": "50fb627a-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
+      "donor": "",
       "eresource": {
-        "id": "07c6c526-cabe-11e8-a8d5-f2801f1b9fd1",
-        "activation_status": "",
+        "id": "07c5g809-cnbe-11e8-a8d5-f2801f1b9fd1",
+        "activated": false,
         "activation_due": 0,
         "create_inventory": false,
         "trial": false,
         "expected_activation": null,
         "user_limit": 0,
-        "material_id": null,
-        "access_provider": ""
+        "access_provider": "",
+        "po_line_id": "50fb627a-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "license": "09cld8be-cabe-11e8-a8d5-078201f1b9fd1"
       },
-      "license": {
-        "id": "07c6c652-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": "",
-        "description": "",
-        "reference": ""
-      },
+      "fund_distribution": [
+        {
+          "id": "fde2d2c4-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "UNIV-SUBN-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08014",
+          "po_line_id": "50fb627a-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
+      ],
       "location": {
-        "id": "07c6c95e-cabe-11e8-a8d5-f2801f1b9fd1",
-        "quantity": 1,
-        "location_id": ""
+        "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9f10",
+        "location_id": "ncc5d9ea-cabe-11e8-a8d5-f2901f1b9fd7",
+        "po_line_id": "50fb627a-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "quantity": 2,
+        "quantity_electronic": 0,
+        "quantity_physical": 2
       },
-      "order_format": {
-        "id": "07c6caa8-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Services"
-      },
-      "order_type": {
-        "id": "07c6cbd4-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "On-going"
-      },
+      "order_format": "Services",
+      "owner": "Monographs",
+      "payment_status": "Pending",
       "physical": {
-        "id": "07c6ccf6-cabe-11e8-a8d5-f2801f1b9fd1",
-        "expected_receipt_date": null,
+        "id": "50fb7f80-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "material_supplier": "GOBI Library Solutions",
         "receipt_due": null,
-        "expected_receipt_interval": 0,
         "volumes": 0,
-        "material_id": "",
-        "material_supplier": "GOBI Library Solutions"
+        "po_line_id": "50fb627a-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "purchase_order_id": "",
-      "receipt_status": {
-        "id": "07c6ce22-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Received"
-      },
+      "po_line_description": "",
+      "po_line_number": "1",
+      "po_line_workflow_status": "Pending",
+      "publication_date": "",
+      "publisher": "",
+      "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5NB3bb",
+      "receipt_date": null,
+      "receipt_status": "Pending",
       "renewal": {
-        "id": "07c6cf44-cabe-11e8-a8d5-f2801f1b9fd1",
-        "cycle": "manual",
+        "id": "9e414baa-8cf2-4916-a90f-d1da4009e01e",
+        "cycle": "Manual",
+        "interval": 0,
+        "manual_renewal": true,
         "review_period": 0,
         "renewal_date": null,
-        "interval": 0,
-        "manual_renewal": true
+        "po_line_id": "50fb627a-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "source": {
-        "id": "07c6d25a-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "manual"
-      },
-      "vendor": {
-        "id": "GOBI Library Solutions",
-        "ref_number": "",
-        "ref_no_type": "",
-        "instructions": null,
-        "vendor_account": "",
-        "note_from_vendor": ""
-      },
-      "workflow_status": {
-        "id": "07c6d3a4-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Approved"
-      },
-      "selector": "",
+      "reporting_codes": [],
       "requester": "",
-      "account_number": "",
-      "donor": ""
+      "rush": false,
+      "selector": "",
+      "source": {
+        "id": "0b4b2f41-v5c6-4280-858e-33fba452a834",
+        "code": "",
+        "description": "Manually entered"
+      },
+      "tags": ["CatalogingRecords"],
+      "title": "GOBI record service",
+      "vendor_detail": {
+        "id": "50fb922c-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "vendor_account": "",
+        "po_line_id": "50fb627a-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
     }
   ]
 }

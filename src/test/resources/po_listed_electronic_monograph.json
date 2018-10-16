@@ -14,6 +14,7 @@
     "assigned_to": "ab18897b-0e40-4f31-896b-9c9adc979a88",
     "created": "2010-10-08T03:53:00.000Z",
     "created_by": "ab18897b-0e40-4f31-896b-9c9adc979a88",
+    "manual_po": false,
     "notes": [
       "ABCDEFGHIJKLMNO",
       "ABCDEFGHIJKLMNOPQRST",
@@ -31,6 +32,7 @@
     {
       "acquisition_method": "Purchase At Vendor System",
       "adjustment": {
+        "id": "1363467f-eb47-4e09-9e28-e25aa464adb7",
         "credit": 0.0,
         "discount": 0.0,
         "insurance": 0.0,
@@ -43,13 +45,15 @@
       },
       "alerts": [
         {
-          "alert": "Receipt overdue"
+          "alert": "Receipt overdue",
+          "id": "9a665b22-9fe5-4c95-b4ee-837a5433c95d"
         }
       ],
       "cancellation_restriction": false,
       "cancellation_restriction_note": "ABCDEFGHIJKLMNOPQRSTUVW",
       "claims": [
         {
+          "id": "f7d7d4e4-255e-46dc-9f08-b953fb1e872d",
           "claimed": false,
           "sent": "2018-10-09T00:00:00.000Z",
           "grace": 30
@@ -64,6 +68,7 @@
       ],
       "cost": {
         "list_price": 24.99,
+        "id": "e047212b-c94f-4cb1-84b0-367848381494",
         "currency": "USD",
         "quantity_physical": 1,
         "quantity_electronic": 1,
@@ -71,6 +76,7 @@
       },
       "description": "ABCDEFGH",
       "details": {
+        "id": "349d9438-12bd-4e2e-9eb6-dfa830ab99a4",
         "receiving_note": "ABCDEFGHIJKL",
         "product_ids": [
           {
@@ -86,19 +92,22 @@
         "subscription_to": "2020-10-09T00:00:00.000Z"
       },
       "donor": "ABCDEFGHIJKLM",
+      "eresource": {
+        "id": "468b679c-378b-4009-9a17-a6711cefc85f",
+        "activated": false,
+        "activation_due": 10,
+        "create_inventory": true,
+        "trial": false,
+        "expected_activation": "2018-10-09T00:00:00.000Z",
+        "user_limit": 10,
+        "access_provider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
+        "license": "7c063655-b384-4a6f-b367-3c2f95f7a49c"
+      },
       "fund_distribution": [
-        {
-          "code": "HIST",
-          "percentage": 80.0,
-          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3"
-        },
-        {
-          "code": "GENRL",
-          "percentage": 20.0,
-          "encumbrance": "0466cb77-0344-43c6-85eb-0a64aa2934e5"
-        }
+        "d10879e8-8c2d-4850-bcb9-0ec8e2e10021"
       ],
       "location": {
+        "id": "a4e65e03-99a4-4b39-8e6a-ae666ac52bea",
         "location_id": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
         "quantity": 2,
         "quantity_electronic": 1,
@@ -107,18 +116,13 @@
       "order_format": "Physical Resource",
       "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
       "payment_status": "Awaiting Payment",
-      "physical": {
-        "volumes": 1,
-        "material_supplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
-        "receipt_due": "2018-10-10T00:00:00.000Z"
-      },
       "po_line_description": "ABCDEFGHIJKLMNOPQRSTUVWXY",
       "po_line_number": "268758-03",
       "po_line_workflow_status": "Open",
       "publication_date": "2017",
       "publisher": "Schiffer Publishing",
       "receipt_date": "2018-10-09T00:00:00.000Z",
-      "receipt_status": "Awaiting Receipt", 
+      "receipt_status": "Awaiting Receipt",
       "reporting_codes": [
         {
           "code": "CODE1",
@@ -152,6 +156,7 @@
       ],
       "title": "Kayak Fishing in the Northern Gulf Coast",
       "vendor_detail": {
+        "id": "d5065f0d-fb88-4d23-b0c1-57e754fba40e",
         "instructions": "ABCDEFG",
         "note_from_vendor": "ABCDEFGHIKJKLMNOP",
         "ref_number": "123456-78",

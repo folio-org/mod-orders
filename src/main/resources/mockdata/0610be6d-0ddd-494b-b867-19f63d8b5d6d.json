@@ -1,154 +1,169 @@
 {
   "purchase_order": {
     "id": "0610be6d-0ddd-494b-b867-19f63d8b5d6d",
+    "adjustment": {
+      "credit": 0,
+      "discount": 0,
+      "insurance": 0,
+      "overhead": 0,
+      "shipment": 0,
+      "tax_1": 0,
+      "tax_2": 0,
+      "use_pro_rate": false
+    },
+    "approved": true,
+    "assigned_to": "28d10afe-d137-11e8-a8d5-f2801f1b9fd1",
+    "created": "2015-07-08T00:00:00.000Z",
+    "created_by": "28d10afe-d137-11e8-a8d5-f2801f1b9fd1",
+    "notes": ["2 titles received: Publication and London topographical record"],
+    "manual_po": false,
     "po_number": "52590",
-    "created": "2015-07-08T10:00:00.000+0000",
-    "comments": "2 titles received: Publication and London topographical record",
-    "total_items": 1,
+    "order_type": "One-Time",
+    "re_encumber": false,
     "total_estimated_price": 0.00,
-    "adjustments": "",
-    "assigned_to": "stp0",
-    "created_by": "stp0",
-    "transmission_date": "",
-    "transmission_method": "",
-    "po_workflow_status_id": "Pending",
-    "po_receipt_status": "",
-    "po_payment_status": ""
+    "total_items": 1,
+    "vendor": "50fb8c82-cdf1-11e8-a8d5-f2801f1b9fd1",
+    "workflow_status": "Pending"
   },
   "po_lines": [
     {
-      "id": "07c68520-cabe-11e8-a8d5-f2801f1b9fd1",
+      "id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
       "acquisition_method": "Purchase",
-      "barcode": "",
-      "cancellation_restriction": false,
-      "cancellation_restriction_comment": "",
-      "receipt_date": null,
-      "collection": true,
-      "owner": "Serials",
-      "po_line_number": "1",
-      "po_line_description": "",
       "adjustment": {
-        "id": "07c6864c-cabe-11e8-a8d5-f2801f1b9fd1",
-        "shipment": 0,
-        "insurance": 0,
-        "discount": 0,
-        "overhead": 0,
-        "credit": 0,
-        "tax_1": 0,
-        "tax_2": 0,
-        "invoice_id": null,
-        "use_pro_rate": false
+        "id": "1963h6cf-eb47-4e09-9e28-e23aa464adb7",
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoice_id": "2d6dg9d5c-c237-476f-aa48-57fd7cbf74ca4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax_1": 0.0,
+        "tax_2": 0.0,
+        "use_pro_rate": false,
+        "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "alerts": [
-        {
-          "id": "07c68aac-cabe-11e8-a8d5-f2801f1b9fd1",
-          "alert": ""
-        }
-      ],
+      "alerts": [],
+      "cancellation_restriction": false,
+      "cancellation_restriction_note": "",
       "claims": [
         {
-          "id": "07c68c28-cabe-11e8-a8d5-f2801f1b9fd1",
-          "claim": true,
-          "sent": "",
+          "id": "07cld666-waxe-11e8-a8d5-f2801f1b9fd12",
+          "claimed": true,
           "grace": 0,
-          "po_line_id": null
+          "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
+      ],
+      "collection": true,
+      "contributors": [
+        {
+          "contributor": "London Topographical Society",
+          "contributor_type": ""
         }
       ],
       "cost": {
-        "id": "07c68f70-cabe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07c5d79v-cabe-11xx-a8d5-f22801f1b9fd1",
         "list_price": 0.00,
         "currency": "USD",
-        "quantity": 1,
-        "estimated_price": 0.00
+        "quantity_physical": 1,
+        "quantity_electronic": 0,
+        "po_line_estimated_price": 0.00,
+        "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
+      "description": "",
       "details": {
-        "id": "07c690a6-cabe-11e8-a8d5-f2801f1b9fd1",
-        "title": "Membership",
+        "id": "b7c5d792-02be-1le29-a8d5-f2801f1b9fd1",
         "receiving_note": "",
-        "product_id": "7659CH",
+        "product_ids": [
+          {
+            "product_id": "7659CH",
+            "product_id_type": "Vendor Title Number"
+          }
+        ],
+        "material_types": [
+          "fde2e5ca-cde3-11e8-a8d5-f2801f1b9fd1"
+        ],
         "subscription_from": null,
-        "material_type": "print serial",
         "subscription_interval": 0,
         "subscription_to": null,
-        "description": ""
+        "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
+      "donor": "",
       "eresource": {
-        "id": "07c691c8-cabe-11e8-a8d5-f2801f1b9fd1",
-        "activation_status": "",
+        "id": "07c5g802-cnbe-11e8-a8d5-f2801f1b9fd1",
+        "activated": false,
         "activation_due": 0,
         "create_inventory": false,
         "trial": false,
         "expected_activation": null,
         "user_limit": 0,
-        "material_id": null,
-        "access_provider": ""
+        "access_provider": "",
+        "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "license": "09cld8be-cabe-11e8-a8d5-028201f1b9fd1"
       },
-      "license": {
-        "id": "07c692f4-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": "",
-        "description": "",
-        "reference": ""
-      },
+      "fund_distribution": [
+        {
+          "id": "fde2d17a-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "STATE-SUBN-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08012",
+          "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
+      ],
       "location": {
-        "id": "07c69434-cabe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9f03",
+        "location_id": "ncc5d9ea-cabe-11e8-a8d5-f2901f1b9fd2",
+        "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
         "quantity": 1,
-        "location_id": "gen"
+        "quantity_electronic": 0,
+        "quantity_physical": 1
       },
-      "order_format": {
-        "id": "07c69844-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Physical"
-      },
-      "order_type": {
-        "id": "07c6997a-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Physical resource"
-      },
+      "order_format": "Physical Resource",
+      "owner": "Serials",
+      "payment_status": "Pending",
       "physical": {
-        "id": "07c69aa6-cabe-11e8-a8d5-f2801f1b9fd1",
-        "expected_receipt_date": null,
+        "id": "50fb7be8-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "material_supplier": "",
         "receipt_due": null,
-        "expected_receipt_interval": 0,
-        "volumes": 0,
-        "material_id": "",
-        "material_supplier": ""
+        "volumes": 1,
+        "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "purchase_order_id": "",
-      "receipt_status": {
-        "id": "07c69bd2-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Received"
-      },
+      "po_line_description": "",
+      "po_line_number": "1",
+      "po_line_workflow_status": "Pending",
+      "publication_date": "1901",
+      "publisher": "London Topographical Society",
+      "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3hb",
+      "receipt_date": null,
+      "receipt_status": "Pending",
       "renewal": {
-        "id": "07c69cf4-cabe-11e8-a8d5-f2801f1b9fd1",
-        "cycle": "manual",
+        "id": "9e414baa-8cf2-4916-a90f-d1da4009e07e",
+        "cycle": "Manual",
+        "interval": 12,
+        "manual_renewal": true,
         "review_period": 0,
         "renewal_date": null,
-        "interval": 12,
-        "manual_renewal": true
+        "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "source": {
-        "id": "07c69e20-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "manual"
-      },
-      "vendor": {
-        "id": "Otto Harrassowitz GmbH & Co. KG",
-        "ref_number": "96459125",
-        "ref_no_type": "SNA",
-        "instructions": "1901 and continuation",
-        "vendor_account": "B-Ser",
-        "note_from_vendor": ""
-      },
-      "workflow_status": {
-        "id": "07c6a17c-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Approved"
-      },
-      "selector": "sgw",
+      "reporting_codes": [],
       "requester": "",
-      "account_number": "",
-      "donor": ""
+      "rush": false,
+      "selector": "sgw",
+      "source": {
+        "id": "0b4b2f41-v5c6-4280-858e-33fba452a234",
+        "code": "",
+        "description": "Manually entered"
+      },
+      "tags": ["membership"],
+      "title": "Membership",
+      "vendor_detail": {
+        "id": "50fb8c82-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "1901 and continuation",
+        "note_from_vendor": "",
+        "ref_number": "96459125",
+        "ref_number_type": "Supplier's unique order line reference number",
+        "vendor_account": "B-Ser",
+        "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
     }
   ]
 }

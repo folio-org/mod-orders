@@ -1,288 +1,304 @@
 {
   "purchase_order": {
     "id": "00ed10af-fac2-46ad-9f94-a298358646a2",
+    "adjustment": {
+      "credit": 0,
+      "discount": 0,
+      "insurance": 0,
+      "overhead": 0,
+      "shipment": 0,
+      "tax_1": 0,
+      "tax_2": 0,
+      "use_pro_rate": false
+    },
+    "approved": true,
+    "assigned_to": "",
+    "created": "2018-07-12T00:00:00.000Z",
+    "created_by": "28d0f6e0-d137-11e8-a8d5-f2801f1b9fd1",
+    "manual_po": false,
+    "notes": [],
     "po_number": "S58227",
-    "created": "2018-07-12T06:00:00.000+0000",
-    "comments": "",
-    "total_items": 2,
+    "order_type": "Ongoing",
+    "re_encumber": false,
     "total_estimated_price": 842.00,
-    "adjustments": "",
-    "assigned_to": "George",
-    "created_by": "ap478",
-    "transmission_date": "",
-    "transmission_method": "",
-    "po_workflow_status_id": "Closed",
-    "po_receipt_status": "Fully Received",
-    "po_payment_status": "Fully Paid"
+    "total_items": 2,
+    "vendor": "50fb86a6-cdf1-11e8-a8d5-f2801f1b9fd1",
+    "workflow_status": "Closed"
   },
   "po_lines": [
     {
-      "id": "07c5b2c6-cabe-11e8-a8d5-f2801f1b9fd1",
-      "acquisition_method": "Email to vendor",
-      "barcode": "",
-      "cancellation_restriction": false,
-      "cancellation_restriction_comment": "",
-      "receipt_date": null,
-      "collection": false,
-      "owner": "Technical Services Department",
-      "po_line_number": "S58227/01",
-      "po_line_description": "",
+      "id": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1",
+      "acquisition_method": "Purchase",
       "adjustment": {
-        "id": "07c5b58c-cabe-11e8-a8d5-f2801f1b9fd1",
-        "shipment": 0,
-        "insurance": 0,
-        "discount": 0,
-        "overhead": 0,
-        "credit": 0,
-        "tax_1": 0,
-        "tax_2": 0,
-        "invoice_id": null,
-        "use_pro_rate": false
+        "id": "1963h6cf-eb47-4e09-9e28-e05aa464adb7",
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoice_id": "2d6d495c-c237-476f-aa48-57f7cbf744a4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax_1": 0.0,
+        "tax_2": 0.0,
+        "use_pro_rate": false,
+        "po_line_id": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "alerts": [
-        {
-          "id": "07c5b8ca-cabe-11e8-a8d5-f2801f1b9fd1",
-          "alert": ""
-        }
-      ],
+      "alerts": [],
+      "cancellation_restriction": false,
+      "cancellation_restriction_note": "",
       "claims": [
         {
-          "id": "07c5b73a-cabe-11e8-a8d5-f2801f1b9fd1",
-          "claim": false,
-          "sent": "",
-          "grace": null,
-          "po_line_id": null
+          "id": "07c5d666-caxe-11e8-a8d5-f2801f1b9fd1",
+          "claimed": false,
+          "grace": 0,
+          "po_line_id": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
+      ],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "",
+          "contributor_type": ""
         }
       ],
       "cost": {
-        "id": "07c5ba3c-cabe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07c5d70v-cabe-11e8-a8d5-f2801f1b9fd1",
         "list_price": 342.00,
         "currency": "USD",
-        "quantity": 1,
-        "estimated_price": 342.00
+        "quantity_physical": 0,
+        "quantity_electronic": 1,
+        "po_line_estimated_price": 342.00,
+        "po_line_id": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
+      "description": "",
       "details": {
-        "id": "07c5bb86-cabe-11e8-a8d5-f2801f1b9fd1",
-        "title": "The American Statistician",
+        "id": "b7c5d792-cabe-11e9-a8d5-f2801f1b9fd1",
         "receiving_note": "Renewal, access continuous",
-        "product_id": "4005000",
-        "subscription_from": "2018-08-01T05:00:00.000+0000",
-        "material_type": "eJournal",
+        "product_ids": [
+          {
+            "product_id": "4005000",
+            "product_id_type": "Vendor Title Number"
+          }
+        ],
+        "material_types": [
+          "fde2db02-cde3-11e8-a8d5-f2801f1b9fd1"
+        ],
+        "subscription_from": "2018-08-01T00:00:00.000Z",
         "subscription_interval": 365,
-        "subscription_to": "2019-07-31T05:00:00.000+0000",
-        "description": ""
+        "subscription_to": "2019-07-31T00:00:00.000Z",
+        "po_line_id": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
+      "donor": "",
       "eresource": {
-        "id": "07c5bf3c-cabe-11e8-a8d5-f2801f1b9fd1",
-        "activation_status": "y",
+        "id": "07c5d8be-cnbe-11e8-a8d5-f2801f1b9fd1",
+        "activated": true,
         "activation_due": 0,
         "create_inventory": false,
         "trial": false,
-        "expected_activation": "2018-08-01T05:00:00.000+0000",
+        "expected_activation": "2018-08-01T00:00:00.000Z",
         "user_limit": 0,
-        "material_id": null,
-        "access_provider": "Taylor & Francis Group, LLC"
+        "access_provider": "Taylor & Francis",
+        "po_line_id": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "license": "07c5d8be-cabe-11e8-a8d5-f2801f1b9fd1"
       },
-      "license": {
-        "id": "07c5c090-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": "8022",
-        "description": "",
-        "reference": ""
-      },
-      "location": {
-        "id": "07c5c1d0-cabe-11e8-a8d5-f2801f1b9fd1",
-        "quantity": 1,
-        "location_id": "www"
-      },
-      "order_format": {
-        "id": "07c5c518-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Electronic"
-      },
-      "order_type": {
-        "id": "07c5c66c-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "On-going"
-      },
-      "physical": {
-        "id": "07c5ca4a-cabe-11e8-a8d5-f2801f1b9fd1",
-        "expected_receipt_date": null,
-        "receipt_due": "",
-        "expected_receipt_interval": 0,
-        "volumes": 0,
-        "material_id": "",
-        "material_supplier": null
-      },
-      "purchase_order_id": "",
-      "receipt_status": {
-        "id": "07c5cb8a-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Received"
-      },
-      "renewal": {
-        "id": "07c5ccb6-cabe-11e8-a8d5-f2801f1b9fd1",
-        "cycle": "1 Year",
-        "review_period": 60,
-        "renewal_date": "2018-07-07T05:00:00.000+0000",
-        "interval": 12,
-        "manual_renewal": true
-      },
-      "source": {
-        "id": "07c5cdd8-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "manual"
-      },
-      "vendor": {
-        "id": "Taylor & Francis Group, LLC",
-        "ref_number": "",
-        "ref_no_type": "",
-        "instructions": null,
-        "vendor_account": "EBAUB12345",
-        "note_from_vendor": ""
-      },
-      "workflow_status": {
-        "id": "07c5cf0e-cabe-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Approved"
-      },
-      "selector": "Hartman",
-      "requester": "",
-      "account_number": "",
-      "donor": ""
-    },
-    {
-      "id": "1564e94c-cacd-11e8-a8d5-f2801f1b9fd1",
-      "acquisition_method": "Email to vendor",
-      "barcode": "",
-      "cancellation_restriction": false,
-      "cancellation_restriction_comment": "",
-      "receipt_date": null,
-      "collection": false,
-      "owner": "Technical Services Department",
-      "po_line_number": "S58227/02",
-      "po_line_description": "",
-      "adjustment": {
-        "id": "1564ed16-cacd-11e8-a8d5-f2801f1b9fd1",
-        "shipment": 0,
-        "insurance": 0,
-        "discount": 0,
-        "overhead": 0,
-        "credit": 0,
-        "tax_1": 0,
-        "tax_2": 0,
-        "invoice_id": null,
-        "use_pro_rate": false
-      },
-      "alerts": [
+      "fund_distribution": [
         {
-          "id": "1564eea6-cacd-11e8-a8d5-f2801f1b9fd1",
-          "alert": ""
+          "id": "fde2bf64-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "STATE-SUBN-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08001",
+          "po_line_id": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1"
         }
       ],
+      "location": {
+        "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9f01",
+        "location_id": "n7c5d9ea-cabe-11e8-a8d5-f2901f1b9fd1",
+        "po_line_id": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "quantity": 1,
+        "quantity_electronic": 1,
+        "quantity_physical": 0
+      },
+      "order_format": "Electronic Resource",
+      "owner": "Technical Services Department",
+      "payment_status": "Fully Paid",
+      "physical": {
+        "id": "50fb6de2-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "material_supplier": "",
+        "receipt_due": null,
+        "volumes": 0,
+        "po_line_id": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "po_line_description": "",
+      "po_line_number": "S58227/01",
+      "po_line_workflow_status": "Closed",
+      "publication_date": "2019",
+      "publisher": "Taylor & Francis",
+      "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bc",
+      "receipt_date": "2018-01-08T00:00:00.000Z",
+      "receipt_status": "Fully Received",
+      "renewal": {
+        "id": "9e414baa-8cf2-4916-a90f-d1da4009e06e",
+        "cycle": "One Year",
+        "interval": 12,
+        "manual_renewal": true,
+        "review_period": 60,
+        "renewal_date": "2018-07-07T00:00:00.000Z",
+        "po_line_id": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "reporting_codes": [],
+      "requester": "",
+      "rush": false,
+      "selector": "Hartman",
+      "source": {
+        "id": "0b4b6f41-c5c6-4280-858e-33fba452a334",
+        "code": "",
+        "description": "Manually entered"
+      },
+      "tags": [],
+      "title": "The American Statistician",
+      "vendor_detail": {
+        "id": "50fb86a6-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "vendor_account": "EBAUB12345",
+        "po_line_id": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
+    },
+    {
+      "id": "v7c5d04e-cabe-11e8-a8d5-f2801f1b9fd1",
+      "acquisition_method": "Purchase",
+      "adjustment": {
+        "id": "50fb4a7e-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoice_id": "2d6d495c-c237-476f-aa48-57f7cbf74ba4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax_1": 0.0,
+        "tax_2": 0.0,
+        "use_pro_rate": false,
+        "po_line_id": "50fb4a7e-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "alerts": [],
+      "cancellation_restriction": false,
+      "cancellation_restriction_note": "",
       "claims": [
         {
-          "id": "1564effa-cacd-11e8-a8d5-f2801f1b9fd1",
-          "claim": false,
-          "sent": "",
-          "grace": null,
-          "po_line_id": null
+          "id": "07c5gd666-cabe-11e8-a8d5-f2801f1b9fd1",
+          "claimed": false,
+          "grace": 0,
+          "po_line_id": "50fb4a7e-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
+      ],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "",
+          "contributor_type": ""
         }
       ],
       "cost": {
-        "id": "1564f13a-cacd-11e8-a8d5-f2801f1b9fd1",
+        "id": "07c5d792-cabe-11e8-ahd5-f2801f1b9fd1",
         "list_price": 500.00,
         "currency": "USD",
-        "quantity": 1,
-        "estimated_price": 500.00
+        "quantity_physical": 0,
+        "quantity_electronic": 1,
+        "po_line_estimated_price": 500.00,
+        "po_line_id": "50fb4a7e-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
+      "description": "",
       "details": {
-        "id": "1564f266-cacd-11e8-a8d5-f2801f1b9fd1",
-        "title": "The European Statistician",
+        "id": "07c5d792-cabe-11e9-a8dh5-f2801f1b9fd1",
         "receiving_note": "Renewal, access continuous",
-        "product_id": "4008000",
-        "subscription_from": "2018-08-01T05:00:00.000+0000",
-        "material_type": "eJournal",
+        "product_ids": [
+          {
+            "product_id": "4008000",
+            "product_id_type": "Vendor Title Number"
+          }
+        ],
+        "material_types": [
+          "fde2db02-cde3-11e8-a8d5-f2801f1b9fd1"
+        ],
+        "subscription_from": "2018-08-01T00:00:00.000Z",
         "subscription_interval": 365,
-        "subscription_to": "2019-07-31T05:00:00.000+0000",
-        "description": ""
+        "subscription_to": "2019-07-31T00:00:00.000Z",
+        "po_line_id": "50fb4a7e-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
+      "donor": "",
       "eresource": {
-        "id": "1564f5ae-cacd-11e8-a8d5-f2801f1b9fd1",
-        "activation_status": "y",
+        "id": "07cvd8be-cabe-11e8-a8d5-f2801f1b9fd1",
+        "activated": true,
         "activation_due": 0,
         "create_inventory": false,
         "trial": false,
-        "expected_activation": "2018-08-01T05:00:00.000+0000",
+        "expected_activation": "2018-08-01T00:00:00.000Z",
         "user_limit": 0,
-        "material_id": null,
-        "access_provider": "Taylor & Francis Group, LLC"
+        "access_provider": "Taylor & Francis",
+        "po_line_id": "50fb4a7e-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "license": "07c5d8ge-cabe-11e8-a8d5-f2801f1b9fd1"
       },
-      "license": {
-        "id": "1564f702-cacd-11e8-a8d5-f2801f1b9fd1",
-        "code": "8022",
-        "description": "",
-        "reference": ""
-      },
+      "fund_distribution": [
+        {
+          "id": "fde2c22a-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "STATE-SUBN-FY19",
+          "percentage": 50.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08002",
+          "po_line_id": "50fb4a7e-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
+      ],
       "location": {
-        "id": "1564f82e-cacd-11e8-a8d5-f2801f1b9fd1",
+        "id": "j7c5d9ea-cabe-11e8-a8d5-f2801f1b9fd1",
+        "location_id": "07c5d9ea-cabe-11e8-a8d5-f2901f1b9fd1",
+        "po_line_id": "v7c5d04e-cabe-11e8-a8d5-f2801f1b9fd1",
         "quantity": 1,
-        "location_id": "www"
+        "quantity_electronic": 1,
+        "quantity_physical": 0
       },
-      "order_format": {
-        "id": "1564f95a-cacd-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Electronic"
-      },
-      "order_type": {
-        "id": "1564fa86-cacd-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "On-going"
-      },
+      "order_format": "Electronic Resource",
+      "owner": "Technical Services Department",
+      "payment_status": "Fully Paid",
       "physical": {
-        "id": "1564fbbc-cacd-11e8-a8d5-f2801f1b9fd1",
-        "expected_receipt_date": null,
-        "receipt_due": "",
-        "expected_receipt_interval": 0,
+        "id": "50fb6ca2-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "material_supplier": "",
+        "receipt_due": null,
         "volumes": 0,
-        "material_id": "",
-        "material_supplier": null
+        "po_line_id": "50fb4a7e-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "purchase_order_id": "",
-      "receipt_status": {
-        "id": "1564fcde-cacd-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Received"
-      },
+      "po_line_description": "",
+      "po_line_number": "S58227/02",
+      "po_line_workflow_status": "Closed",
+      "publication_date": "2019",
+      "publisher": "Taylor & Francis",
+      "purchase_order_id": "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
+      "receipt_date": "2018-01-08T00:00:00.000Z",
+      "receipt_status": "Fully Received",
       "renewal": {
-        "id": "15650044-cacd-11e8-a8d5-f2801f1b9fd1",
-        "cycle": "1 Year",
-        "review_period": 60,
-        "renewal_date": "2018-07-07T05:00:00.000+0000",
+        "id": "8e414baa-8cf2-49g6-a90f-d1da4009e06e",
+        "cycle": "One Year",
         "interval": 12,
-        "manual_renewal": true
+        "manual_renewal": true,
+        "review_period": 60,
+        "renewal_date": "2018-07-07T00:00:00.000Z",
+        "po_line_id": "50fb4a7e-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
-      "source": {
-        "id": "15650184-cacd-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "manual"
-      },
-      "vendor": {
-        "id": "Taylor & Francis Group, LLC",
-        "ref_number": "",
-        "ref_no_type": "",
-        "instructions": null,
-        "vendor_account": "EBAUB12345",
-        "note_from_vendor": ""
-      },
-      "workflow_status": {
-        "id": "156502b0-cacd-11e8-a8d5-f2801f1b9fd1",
-        "code": null,
-        "description": "Approved"
-      },
-      "selector": "Cartman",
+      "reporting_codes": [],
       "requester": "",
-      "account_number": "",
-      "donor": ""
+      "rush": false,
+      "selector": "Cartman",
+      "source": {
+        "id": "024b6f41-c5c6-g280-858e-33fba452a334",
+        "code": "",
+        "description": "Manually entered"
+      },
+      "tags": [],
+      "title": "The European Statistician",
+      "vendor_detail": {
+        "id": "50fb86a6-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "vendor_account": "EBAUB12345",
+        "po_line_id": "50fb4a7e-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
     }
   ]
 }

@@ -4,16 +4,10 @@
   },
   "po_lines": [
     {
-      "barcode": "0008675309"
+      "po_line_number": "8675309-1"
     },
     {
-      "barcode": "0123456789"
-    },
-    {
-      "barcode": "invalid"
-    },
-    {
-      "barcode": "2222222222"
+      "po_line_number": "invalid"
     }
   ]
 }
