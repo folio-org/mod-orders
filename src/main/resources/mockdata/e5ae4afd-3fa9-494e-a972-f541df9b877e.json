@@ -14,8 +14,9 @@
     "approved": true,
     "assigned_to": "",
     "created": "2014-07-06T00:00:00.000Z",
-    "created_by": "yc935",
+    "created_by": "28d10cfc-d137-11e8-a8d5-f2801f1b9fd1",
     "notes": [],
+    "manual_po": false,
     "po_number": "268879",
     "order_type": "One-Time",
     "re_encumber": false,
@@ -101,7 +102,13 @@
         "license": "09cld8be-cabe-11e8-a8d5-108201f1b9fd1"
       },
       "fund_distribution": [
-        "fde2d472-cde3-11e8-a8d5-f2801f1b9fd1"
+        {
+          "id": "fde2d472-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "MISCHIST-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08015",
+          "po_line_id": "50fb63b0-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
       ],
       "location": {
         "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9f13",
@@ -148,7 +155,16 @@
         "description": "Manually entered"
       },
       "tags": [""],
-      "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt."
+      "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
+      "vendor_detail": {
+        "id": "50fb922c-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "ref_number": "999632785",
+        "ref_number_type": "Supplier’s unique order line reference number",
+        "vendor_account": "12345-50",
+        "po_line_id": "50fb63b0-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
     }
   ]
 }

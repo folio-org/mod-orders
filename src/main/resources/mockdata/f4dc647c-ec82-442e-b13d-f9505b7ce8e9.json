@@ -12,10 +12,11 @@
       "use_pro_rate": false
     },
     "approved": true,
-    "assigned_to": "msmith",
+    "assigned_to": "28d11a26-d137-11e8-a8d5-f2801f1b9fd1",
     "created": "2018-07-13T00:00:00.000Z",
-    "created_by": "mphillips",
+    "created_by": "28d11576-d137-11e8-a8d5-f2801f1b9fd1",
     "notes": ["REF<DXiao>", "REF<DHalling>", "Notify<Mary Ann Barker barker@tamu.edu>", "Licensing <1-year streaming license>"],
+    "manual_po": false,
     "po_number": "312325",
     "order_type": "One-Time",
     "re_encumber": false,
@@ -101,7 +102,13 @@
         "license": "09cld8be-cabe-11e8-a8d5-118201f1b9fd1"
       },
       "fund_distribution": [
-        "fde2d864-cde3-11e8-a8d5-f2801f1b9fd1"
+        {
+          "id": "fde2d864-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "UNIV-SUBN-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08018",
+          "po_line_id": "50fb695a-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
       ],
       "location": {
         "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9f14",
@@ -148,7 +155,16 @@
         "description": "Manually entered"
       },
       "tags": ["streaming_video"],
-      "title": "At Berkeley"
+      "title": "At Berkeley",
+      "vendor_detail": {
+        "id": "50fb8a2a-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "ref_number": "",
+        "ref_number_type": "",
+        "vendor_account": "",
+        "po_line_id": "50fb695a-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
     }
   ]
 }

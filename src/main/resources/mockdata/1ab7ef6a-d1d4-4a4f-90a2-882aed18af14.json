@@ -14,7 +14,8 @@
     "approved": true,
     "assigned_to": "",
     "created": "2018-06-29T00:00:00.000Z",
-    "created_by": "mu44",
+    "created_by": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1",
+    "manual_po": false,
     "notes": [],
     "po_number": "268758",
     "order_type": "One-time",
@@ -101,7 +102,13 @@
         "license": "07c5d8be-cabe-11e8-a8d5-f2801f1b9fd1"
       },
       "fund_distribution": [
-        "fde2c22a-cde3-11e8-a8d5-f2801f1b9fd1"
+        {
+          "id": "fde2c22a-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "EUROHIST-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08003",
+          "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
       ],
       "location": {
         "id": "07c5d9ea-ckbe-11e8-a8d5-f2801f1b9fd1",
@@ -148,7 +155,16 @@
         "description": "Manually entered"
       },
       "tags": [],
-      "title": "Taxes, tributes and tributary lands in the making of Scandinavian kingdoms in the Middle Ages"
+      "title": "Taxes, tributes and tributary lands in the making of Scandinavian kingdoms in the Middle Ages",
+      "vendor_detail": {
+        "id": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "ref_number": "",
+        "ref_number_type": "",
+        "vendor_account": "",
+        "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
     },
     {
       "id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1",
@@ -226,7 +242,13 @@
         "license": "07cvd8be-cabe-11e8-a8d5-f2801f1b9fd1"
       },
       "fund_distribution": [
-        "fde2c39c-cde3-11e8-a8d5-f2801f1b9fd1"
+        {
+          "id": "fde2c39c-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "USHIST-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08004",
+          "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
       ],
       "location": {
         "id": "07c5d9ea-cabe-11c8-a8d5-f2801f1b9fd1",
@@ -273,7 +295,16 @@
         "description": "Manually entered"
       },
       "tags": [],
-      "title": "Alabama Women: Their Lives and Times"
+      "title": "Alabama Women: Their Lives and Times",
+      "vendor_detail": {
+        "id": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "ref_number": "",
+        "ref_number_type": "",
+        "vendor_account": "",
+        "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
     },
     {
       "id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1",
@@ -351,7 +382,13 @@
         "license": "07c5d8bv-cabe-11e8-a8d5-f2801f1b9fd1"
       },
       "fund_distribution": [
-        "fde2c626-cde3-11e8-a8d5-f2801f1b9fd1"
+        {
+          "id": "fde2c626-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "USHIST-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08005",
+          "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
       ],
       "location": {
         "id": "07c5d97a-cabe-11e8-a8d5-f2801f1b9fd1",
@@ -398,7 +435,16 @@
         "description": "Manually entered"
       },
       "tags": [],
-      "title": "Kayak Fishing in the Northern Gulf Coast"
+      "title": "Kayak Fishing in the Northern Gulf Coast",
+      "vendor_detail": {
+        "id": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "ref_number": "",
+        "ref_number_type": "",
+        "vendor_account": "",
+        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
     }
   ]
 }

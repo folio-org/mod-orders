@@ -14,10 +14,11 @@
     "approved": true,
     "assigned_to": "",
     "created": "2018-06-19T00:00:00.000Z",
-    "created_by": "mp42",
+    "created_by": "28d10f5e-d137-11e8-a8d5-f2801f1b9fd1",
     "notes": [
       "CAC one time funding proposal by Bob Barker"
     ],
+    "manual_po": false,
     "po_number": "306251",
     "order_type": "One-Time",
     "re_encumber": false,
@@ -103,7 +104,13 @@
         "license": "09cld8be-cabe-11e8-a8d5-088201f1b9fd1"
       },
       "fund_distribution": [
-        "fde2d5d0-cde3-11e8-a8d5-f2801f1b9fd1"
+        {
+          "id": "fde2d5d0-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "GIFTS-ONE-TIME-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08016",
+          "po_line_id": "50fb64dc-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
       ],
       "location": {
         "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9f11",
@@ -152,7 +159,16 @@
       "tags": [
         "cac"
       ],
-      "title": "PDCnet Backfiles"
+      "title": "PDCnet Backfiles",
+      "vendor_detail": {
+        "id": "50fb90ec-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "ref_number": "",
+        "ref_number_type": "",
+        "vendor_account": "",
+        "po_line_id": "50fb64dc-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
     }
   ]
 }

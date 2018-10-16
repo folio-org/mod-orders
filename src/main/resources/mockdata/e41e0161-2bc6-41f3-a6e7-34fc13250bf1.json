@@ -14,10 +14,11 @@
     "approved": true,
     "assigned_to": "",
     "created": "2018-07-23T00:00:00.000Z",
-    "created_by": "jw76",
+    "created_by": "28d11102-d137-11e8-a8d5-f2801f1b9fd1",
     "notes": [
       "Published twice a year"
     ],
+    "manual_po": true,
     "po_number": "306857",
     "order_type": "Ongoing",
     "re_encumber": false,
@@ -103,7 +104,13 @@
         "license": "09cld8be-cabe-11e8-a8d5-098201f1b9fd1"
       },
       "fund_distribution": [
-        "fde2d710-cde3-11e8-a8d5-f2801f1b9fd1"
+        {
+          "id": "fde2d710-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "GIFTS-ONE-TIME-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08017",
+          "po_line_id": "50fb6608-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
       ],
       "location": {
         "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9f12",
@@ -150,7 +157,16 @@
         "description": "Manually entered"
       },
       "tags": [],
-      "title": "Joss Whedon Papers"
+      "title": "Joss Whedon Papers",
+      "vendor_detail": {
+        "id": "50fb90ec-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "ref_number": "",
+        "ref_number_type": "",
+        "vendor_account": "",
+        "po_line_id": "50fb6608-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
     }
   ]
 }

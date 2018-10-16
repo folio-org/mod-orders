@@ -14,8 +14,9 @@
     "approved": true,
     "assigned_to": "",
     "created": "2018-07-18T00:00:00.000Z",
-    "created_by": "nd56",
+    "created_by": "28d102a2-d137-11e8-a8d5-f2801f1b9fd1",
     "notes": [],
+    "manual_po": false,
     "po_number": "S60402",
     "order_type": "Onging",
     "re_encumber": false,
@@ -101,7 +102,13 @@
         "license": "09cld8be-cabe-11e8-a8d5-f2801f1b9fd1"
       },
       "fund_distribution": [
-        "fde2cad6-cde3-11e8-a8d5-f2801f1b9fd1"
+        {
+          "id": "fde2cad6-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "ENDOW-SUBN-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08008",
+          "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
       ],
       "location": {
         "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9f04",
@@ -148,7 +155,16 @@
         "description": "Manually entered"
       },
       "tags": [],
-      "title": "American Chemical Society Web Editions "
+      "title": "American Chemical Society Web Editions",
+      "vendor_detail": {
+        "id": "50fb8b56-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "ref_number": "",
+        "ref_number_type": "",
+        "vendor_account": "",
+        "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
     }
   ]
 }

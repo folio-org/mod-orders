@@ -14,7 +14,8 @@
     "approved": true,
     "assigned_to": "",
     "created": "2018-07-12T00:00:00.000Z",
-    "created_by": "ap478",
+    "created_by": "28d0f6e0-d137-11e8-a8d5-f2801f1b9fd1",
+    "manual_po": false,
     "notes": [],
     "po_number": "S58227",
     "order_type": "Ongoing",
@@ -101,7 +102,13 @@
         "license": "07c5d8be-cabe-11e8-a8d5-f2801f1b9fd1"
       },
       "fund_distribution": [
-        "fde2bf64-cde3-11e8-a8d5-f2801f1b9fd1"
+        {
+          "id": "fde2bf64-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "STATE-SUBN-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08001",
+          "po_line_id": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
       ],
       "location": {
         "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9f01",
@@ -148,7 +155,16 @@
         "description": "Manually entered"
       },
       "tags": [],
-      "title": "The American Statistician"
+      "title": "The American Statistician",
+      "vendor_detail": {
+        "id": "50fb86a6-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "ref_number": "",
+        "ref_number_type": "",
+        "vendor_account": "EBAUB12345",
+        "po_line_id": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
     },
     {
       "id": "v7c5d04e-cabe-11e8-a8d5-f2801f1b9fd1",
@@ -226,7 +242,13 @@
         "license": "07c5d8ge-cabe-11e8-a8d5-f2801f1b9fd1"
       },
       "fund_distribution": [
-        "fde2c22a-cde3-11e8-a8d5-f2801f1b9fd1"
+        {
+          "id": "fde2c22a-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "STATE-SUBN-FY19",
+          "percentage": 50.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08002",
+          "po_line_id": "50fb4a7e-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
       ],
       "location": {
         "id": "j7c5d9ea-cabe-11e8-a8d5-f2801f1b9fd1",
@@ -273,7 +295,16 @@
         "description": "Manually entered"
       },
       "tags": [],
-      "title": "The European Statistician"
+      "title": "The European Statistician",
+      "vendor_detail": {
+        "id": "50fb86a6-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "ref_number": "",
+        "ref_number_type": "",
+        "vendor_account": "EBAUB12345",
+        "po_line_id": "50fb4a7e-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
     }
   ]
 }

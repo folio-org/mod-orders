@@ -12,10 +12,11 @@
       "use_pro_rate": false
     },
     "approved": true,
-    "assigned_to": "stp0",
+    "assigned_to": "28d10afe-d137-11e8-a8d5-f2801f1b9fd1",
     "created": "2018-07-19T00:00:00.000Z",
-    "created_by": "steves",
+    "created_by": "28d1057c-d137-11e8-a8d5-f2801f1b9fd1",
     "notes": [],
+    "manual_po": true,
     "po_number": "101101",
     "order_type": "Ongoing",
     "re_encumber": false,
@@ -101,7 +102,13 @@
         "license": "09cld8be-cabe-11e8-a8d5-048201f1b9fd1"
       },
       "fund_distribution": [
-        "fde2cef0-cde3-11e8-a8d5-f2801f1b9fd1"
+        {
+          "id": "fde2cef0-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "STATE-SUBN-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08011",
+          "po_line_id": "50fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
       ],
       "location": {
         "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9f07",
@@ -148,7 +155,16 @@
         "description": "Manually entered"
       },
       "tags": [],
-      "title": "Advances in astronautical science"
+      "title": "Advances in astronautical science",
+      "vendor_detail": {
+        "id": "50fb90ec-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "instructions": "",
+        "note_from_vendor": "",
+        "ref_number": "",
+        "ref_number_type": "",
+        "vendor_account": "",
+        "po_line_id": "50fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
     }
   ]
 }

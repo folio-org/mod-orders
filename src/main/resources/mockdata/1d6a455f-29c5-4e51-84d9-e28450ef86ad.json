@@ -12,10 +12,11 @@
       "use_pro_rate": false
     },
     "approved": true,
-    "assigned_to": "zwashburne",
+    "assigned_to": "28d0ff6e-d137-11e8-a8d5-f2801f1b9fd1",
     "created": "2019-05-15T00:00:00.000Z",
-    "created_by": "rtam",
+    "created_by": "28d0fb04-d137-11e8-a8d5-f2801f1b9fd1",
     "notes": [],
+    "manual_po": false,
     "po_number": "36547",
     "order_type": "On-Time",
     "re_encumber": false,
@@ -101,7 +102,13 @@
         "license": "09c5d8be-cabe-11e8-a8d5-f2801f1b9fd1"
       },
       "fund_distribution": [
-        "fde2c766-cde3-11e8-a8d5-f2801f1b9fd1"
+        {
+          "id": "fde2c766-cde3-11e8-a8d5-f2801f1b9fd1",
+          "code": "CANHIST-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08006",
+          "po_line_id": "50fb52bc-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
       ],
       "location": {
         "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9f05",
@@ -148,7 +155,16 @@
         "description": "Manually entered"
       },
       "tags": [],
-      "title": "Firefly: the complete series"
+      "title": "Firefly: the complete series",
+      "vendor_detail": {
+        "id": "168f8a86-d26c-406e-813f-c9927f241vc3",
+        "instructions": "",
+        "note_from_vendor": "",
+        "ref_number": "",
+        "ref_number_type": "",
+        "vendor_account": "",
+        "po_line_id": "50fb52bc-cdf1-11e8-a8d5-f2801f1b9fd1"
+      }
     }
   ]
 }
