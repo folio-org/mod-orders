@@ -18,7 +18,7 @@
     "notes": [],
     "manual_po": false,
     "po_number": "S60402",
-    "order_type": "Onging",
+    "order_type": "Ongoing",
     "re_encumber": false,
     "total_estimated_price": 200000.00,
     "total_items": 80,
@@ -134,7 +134,6 @@
       "publisher": "American Chemical Society",
       "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB4bb",
       "receipt_date": null,
-      "receipt_status": "",
       "renewal": {
         "id": "9e414baa-8cf2-4916-a90f-d1da4009e06e",
         "cycle": "One Year",

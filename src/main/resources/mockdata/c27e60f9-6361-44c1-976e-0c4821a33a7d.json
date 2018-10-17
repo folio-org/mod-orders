@@ -117,7 +117,7 @@
         "quantity_electronic": 0,
         "quantity_physical": 2
       },
-      "order_format": "Services",
+      "order_format": "Service",
       "owner": "Monographs",
       "payment_status": "Pending",
       "physical": {
