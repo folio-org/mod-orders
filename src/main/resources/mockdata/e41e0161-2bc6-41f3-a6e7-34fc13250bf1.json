@@ -1,32 +1,30 @@
 {
-  "purchase_order": {
-    "id": "e41e0161-2bc6-41f3-a6e7-34fc13250bf1",
-    "adjustment": {
-      "credit": 0,
-      "discount": 0,
-      "insurance": 0,
-      "overhead": 0,
-      "shipment": 0,
-      "tax_1": 0,
-      "tax_2": 0,
-      "use_pro_rate": false
-    },
-    "approved": true,
-    "assigned_to": "",
-    "created": "2018-07-23T00:00:00.000Z",
-    "created_by": "28d11102-d137-11e8-a8d5-f2801f1b9fd1",
-    "notes": [
-      "Published twice a year"
-    ],
-    "manual_po": true,
-    "po_number": "306857",
-    "order_type": "Ongoing",
-    "re_encumber": false,
-    "total_estimated_price": 800.00,
-    "total_items": 1,
-    "vendor": "50fb90ec-cdf1-11e8-a8d5-f2801f1b9fd1",
-    "workflow_status": "Open"
+  "id": "e41e0161-2bc6-41f3-a6e7-34fc13250bf1",
+  "adjustment": {
+    "credit": 0,
+    "discount": 0,
+    "insurance": 0,
+    "overhead": 0,
+    "shipment": 0,
+    "tax_1": 0,
+    "tax_2": 0,
+    "use_pro_rate": false
   },
+  "approved": true,
+  "assigned_to": "",
+  "created": "2018-07-23T00:00:00.000Z",
+  "created_by": "28d11102-d137-11e8-a8d5-f2801f1b9fd1",
+  "notes": [
+    "Published twice a year"
+  ],
+  "manual_po": true,
+  "po_number": "306857",
+  "order_type": "Ongoing",
+  "re_encumber": false,
+  "total_estimated_price": 800.00,
+  "total_items": 1,
+  "vendor": "50fb90ec-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "workflow_status": "Open",
   "po_lines": [
     {
       "id": "50fb6608-cdf1-11e8-a8d5-f2801f1b9fd1",

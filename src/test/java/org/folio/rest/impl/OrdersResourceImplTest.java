@@ -111,8 +111,8 @@ public class OrdersResourceImplTest {
 
     logger.info(JsonObject.mapFrom(resp));
 
-    String poId = resp.getPurchaseOrder().getId();
-    String poNumber = resp.getPurchaseOrder().getPoNumber();
+    String poId = resp.getId();
+    String poNumber = resp.getPoNumber();
     
     assertNotNull(poId);
     assertNotNull(poNumber);
@@ -163,7 +163,7 @@ public class OrdersResourceImplTest {
     ctx.assertEquals("must match \"^[a-zA-Z0-9]{5,16}$\"", errors.getErrors().get(0).getMessage());
     ctx.assertFalse(errors.getErrors().get(0).getParameters().isEmpty());
     ctx.assertNotNull(errors.getErrors().get(0).getParameters().get(0));
-    ctx.assertEquals("purchaseOrder.poNumber", errors.getErrors().get(0).getParameters().get(0).getKey());
+    ctx.assertEquals("poNumber", errors.getErrors().get(0).getParameters().get(0).getKey());
     ctx.assertEquals("123", errors.getErrors().get(0).getParameters().get(0).getValue());
   }
 
@@ -255,7 +255,7 @@ public class OrdersResourceImplTest {
     logger.info("=== Test Get Order By Id ===");
 
     JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
-    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getJsonObject("purchase_order").getString("id");
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString("id");
     logger.info("using mock datafile: " + GetOrderHelper.BASE_MOCK_DATA_PATH + id + ".json");
 
     final CompositePurchaseOrder resp = RestAssured
@@ -272,7 +272,7 @@ public class OrdersResourceImplTest {
 
     logger.info(JsonObject.mapFrom(resp));
 
-    assertEquals(id, resp.getPurchaseOrder().getId());
+    assertEquals(id, resp.getId());
   }
 
   @Test
@@ -355,6 +355,8 @@ public class OrdersResourceImplTest {
     private void handlePostPurchaseOrder(RoutingContext ctx) {
       logger.info("got: " + ctx.getBodyAsString());
 
+      //TODO validate against purchase_order schema
+
       JsonObject body = ctx.getBodyAsJson();
       body.put("id", UUID.randomUUID().toString());
 
@@ -405,6 +407,8 @@ public class OrdersResourceImplTest {
 
     private void handlePostPOLine(RoutingContext ctx) {
       logger.info("got: " + ctx.getBodyAsString());
+
+      //TODO validate against po_line schema
 
       JsonObject body = ctx.getBodyAsJson();
       body.put("id", UUID.randomUUID().toString());

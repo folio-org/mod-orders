@@ -1,7 +1,5 @@
 {
-  "purchase_order": {
-    "po_number": "123"
-  },
+  "po_number": "123",
   "po_lines": [
     {
       "po_line_number": "12345-1"
