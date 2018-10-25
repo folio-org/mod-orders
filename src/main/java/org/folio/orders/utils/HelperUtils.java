@@ -3,9 +3,14 @@ package org.folio.orders.utils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.tools.client.Response;
+
+import io.vertx.core.json.JsonObject;
 
 public class HelperUtils {
 
@@ -23,7 +28,15 @@ public class HelperUtils {
       }
       return sb.toString();
     }
+  }
+  
+  public static JsonObject verifyAndExtractBody(Response response) {
+    if (!Response.isSuccess(response.getCode())) {
+      throw new CompletionException(
+          new HttpException(response.getCode(), response.getError().getString("errorMessage")));
+    }
 
+    return response.getBody();
   }
 
 }

@@ -8,6 +8,7 @@ import java.util.concurrent.CompletionException;
 
 import org.apache.log4j.Logger;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Details;
@@ -17,7 +18,6 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.VendorDetail;
 import org.folio.rest.jaxrs.resource.OrdersResource.PostOrdersResponse;
-import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
@@ -58,7 +58,7 @@ public class PostOrdersHelper {
     try {
       Buffer poBuf = JsonObject.mapFrom(compPO.getPurchaseOrder()).toBuffer();
       httpClient.request(HttpMethod.POST, poBuf, "/purchase_order", okapiHeaders)
-        .thenApply(PostOrdersHelper::verifyAndExtractBody)
+        .thenApply(HelperUtils::verifyAndExtractBody)
         .thenAccept(poBody -> {
           PurchaseOrder po = poBody.mapTo(PurchaseOrder.class);
           String poNumber = po.getPoNumber();
@@ -114,7 +114,7 @@ public class PostOrdersHelper {
         try {
           Buffer polBuf = JsonObject.mapFrom(line).toBuffer();
           httpClient.request(HttpMethod.POST, polBuf, "/po_line", okapiHeaders)
-            .thenApply(PostOrdersHelper::verifyAndExtractBody)
+            .thenApply(HelperUtils::verifyAndExtractBody)
             .thenAccept(body -> {
               logger.info("response from /po_line: " + body.encodePrettily());
 
@@ -234,7 +234,7 @@ public class PostOrdersHelper {
 
     try {
       httpClient.request(HttpMethod.POST, obj.toBuffer(), url, okapiHeaders)
-        .thenApply(PostOrdersHelper::verifyAndExtractBody)
+        .thenApply(HelperUtils::verifyAndExtractBody)
         .thenAccept(body -> {
           String id = JsonObject.mapFrom(body).getString("id");
           pol.put(field, id);
@@ -300,15 +300,6 @@ public class PostOrdersHelper {
     return (Long.toHexString(System.currentTimeMillis() - PO_NUMBER_EPOCH) +
         Long.toHexString(System.nanoTime() % 100))
           .toUpperCase();
-  }
-
-  public static JsonObject verifyAndExtractBody(Response response) {
-    if (!Response.isSuccess(response.getCode())) {
-      throw new CompletionException(
-          new HttpException(response.getCode(), response.getError().getString("errorMessage")));
-    }
-
-    return response.getBody();
   }
 
 }

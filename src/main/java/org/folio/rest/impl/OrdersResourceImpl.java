@@ -51,7 +51,7 @@ public class OrdersResourceImpl implements OrdersResource {
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) throws Exception {
 
     final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
-    GetOrderHelper helper = new GetOrderHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+    GetOrdersByIdHelper helper = new GetOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
 
     helper.getOrder(id, lang)
       .thenAccept(order -> {
