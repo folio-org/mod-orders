@@ -1,30 +1,28 @@
 {
-  "purchase_order": {
-    "id": "00ed10af-fac2-46ad-9f94-a298358646a2",
-    "adjustment": {
-      "credit": 0,
-      "discount": 0,
-      "insurance": 0,
-      "overhead": 0,
-      "shipment": 0,
-      "tax_1": 0,
-      "tax_2": 0,
-      "use_pro_rate": false
-    },
-    "approved": true,
-    "assigned_to": "",
-    "created": "2018-07-12T00:00:00.000Z",
-    "created_by": "28d0f6e0-d137-11e8-a8d5-f2801f1b9fd1",
-    "manual_po": false,
-    "notes": [],
-    "po_number": "S58227",
-    "order_type": "Ongoing",
-    "re_encumber": false,
-    "total_estimated_price": 842.00,
-    "total_items": 2,
-    "vendor": "50fb86a6-cdf1-11e8-a8d5-f2801f1b9fd1",
-    "workflow_status": "Closed"
+  "id": "00ed10af-fac2-46ad-9f94-a298358646a2",
+  "adjustment": {
+    "credit": 0,
+    "discount": 0,
+    "insurance": 0,
+    "overhead": 0,
+    "shipment": 0,
+    "tax_1": 0,
+    "tax_2": 0,
+    "use_pro_rate": false
   },
+  "approved": true,
+  "assigned_to": "",
+  "created": "2018-07-12T00:00:00.000Z",
+  "created_by": "28d0f6e0-d137-11e8-a8d5-f2801f1b9fd1",
+  "manual_po": false,
+  "notes": [],
+  "po_number": "S58227",
+  "order_type": "Ongoing",
+  "re_encumber": false,
+  "total_estimated_price": 842.00,
+  "total_items": 2,
+  "vendor": "50fb86a6-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "workflow_status": "Closed",
   "po_lines": [
     {
       "id": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1",

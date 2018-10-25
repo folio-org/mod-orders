@@ -1,30 +1,28 @@
 {
-  "purchase_order": {
-    "id": "f4dc647c-ec82-442e-b13d-f9505b7ce8e9",
-    "adjustment": {
-      "credit": 0,
-      "discount": 0,
-      "insurance": 0,
-      "overhead": 0,
-      "shipment": 0,
-      "tax_1": 0,
-      "tax_2": 0,
-      "use_pro_rate": false
-    },
-    "approved": true,
-    "assigned_to": "28d11a26-d137-11e8-a8d5-f2801f1b9fd1",
-    "created": "2018-07-13T00:00:00.000Z",
-    "created_by": "28d11576-d137-11e8-a8d5-f2801f1b9fd1",
-    "notes": ["REF<DXiao>", "REF<DHalling>", "Notify<Mary Ann Barker barker@tamu.edu>", "Licensing <1-year streaming license>"],
-    "manual_po": false,
-    "po_number": "312325",
-    "order_type": "One-Time",
-    "re_encumber": false,
-    "total_estimated_price": 150.00,
-    "total_items": 1,
-    "vendor": "50fb8a2a-cdf1-11e8-a8d5-f2801f1b9fd1",
-    "workflow_status": "Open"
+  "id": "f4dc647c-ec82-442e-b13d-f9505b7ce8e9",
+  "adjustment": {
+    "credit": 0,
+    "discount": 0,
+    "insurance": 0,
+    "overhead": 0,
+    "shipment": 0,
+    "tax_1": 0,
+    "tax_2": 0,
+    "use_pro_rate": false
   },
+  "approved": true,
+  "assigned_to": "28d11a26-d137-11e8-a8d5-f2801f1b9fd1",
+  "created": "2018-07-13T00:00:00.000Z",
+  "created_by": "28d11576-d137-11e8-a8d5-f2801f1b9fd1",
+  "notes": ["REF<DXiao>", "REF<DHalling>", "Notify<Mary Ann Barker barker@tamu.edu>", "Licensing <1-year streaming license>"],
+  "manual_po": false,
+  "po_number": "312325",
+  "order_type": "One-Time",
+  "re_encumber": false,
+  "total_estimated_price": 150.00,
+  "total_items": 1,
+  "vendor": "50fb8a2a-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "workflow_status": "Open",
   "po_lines": [
     {
       "id": "50fb695a-cdf1-11e8-a8d5-f2801f1b9fd1",
