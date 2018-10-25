@@ -8,13 +8,13 @@ import java.util.concurrent.CompletionException;
 
 import org.apache.log4j.Logger;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.VendorDetail;
 import org.folio.rest.jaxrs.resource.OrdersResource.PostOrdersResponse;
 import org.folio.rest.tools.client.Response;
@@ -53,17 +53,20 @@ public class PostOrdersHelper {
   public CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
 
-    compPO.getPurchaseOrder().setPoNumber(generatePoNumber());
+    compPO.setPoNumber(generatePoNumber());
 
     try {
-      Buffer poBuf = JsonObject.mapFrom(compPO.getPurchaseOrder()).toBuffer();
-      httpClient.request(HttpMethod.POST, poBuf, "/purchase_order", okapiHeaders)
+      JsonObject purchaseOrder = JsonObject.mapFrom(compPO);
+      if (purchaseOrder.containsKey("adjustment")) {
+        purchaseOrder.remove("adjustment");
+      }
+      httpClient.request(HttpMethod.POST, purchaseOrder, "/purchase_order", okapiHeaders)
         .thenApply(PostOrdersHelper::verifyAndExtractBody)
         .thenAccept(poBody -> {
-          PurchaseOrder po = poBody.mapTo(PurchaseOrder.class);
+          CompositePurchaseOrder po = poBody.mapTo(CompositePurchaseOrder.class);
           String poNumber = po.getPoNumber();
           String poId = po.getId();
-          compPO.setPurchaseOrder(po);
+          compPO.setId(poId);
 
           List<PoLine> lines = new ArrayList<>(compPO.getPoLines().size());
           List<CompletableFuture<Void>> futures = new ArrayList<>();
@@ -79,6 +82,7 @@ public class PostOrdersHelper {
           VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
             .thenAccept(v -> {
               compPO.setPoLines(lines);
+              compPO.setAdjustment(calculateAdjustment(lines));
               future.complete(compPO);
             })
             .exceptionally(e -> {
@@ -95,6 +99,29 @@ public class PostOrdersHelper {
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private Adjustment calculateAdjustment(List<PoLine> lines) {
+    Adjustment ret = new Adjustment();
+    ret.setCredit(0d);
+    ret.setDiscount(0d);
+    ret.setInsurance(0d);
+    ret.setOverhead(0d);
+    ret.setShipment(0d);
+    ret.setTax1(0d);
+    ret.setTax2(0d);
+
+    lines.forEach(line -> {
+      Adjustment a = line.getAdjustment();
+      ret.setCredit(ret.getCredit() + a.getCredit());
+      ret.setDiscount(ret.getDiscount() + a.getDiscount());
+      ret.setInsurance(ret.getInsurance() + a.getInsurance());
+      ret.setOverhead(ret.getOverhead() + a.getOverhead());
+      ret.setShipment(ret.getShipment() + a.getShipment());
+      ret.setTax1(ret.getTax1() + a.getTax1());
+      ret.setTax2(ret.getTax2() + a.getTax2());
+    });
+    return ret;
   }
 
   public CompletableFuture<PoLine> createPoLine(PoLine compPOL) {
