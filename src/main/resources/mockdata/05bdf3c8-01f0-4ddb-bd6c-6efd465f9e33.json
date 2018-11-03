@@ -1,30 +1,28 @@
 {
-  "purchase_order": {
-    "id": "05bdf3c8-01f0-4ddb-bd6c-6efd465f9e33",
-    "adjustment": {
-      "credit": 0,
-      "discount": 0,
-      "insurance": 0,
-      "overhead": 0,
-      "shipment": 0,
-      "tax_1": 0,
-      "tax_2": 0,
-      "use_pro_rate": false
-    },
-    "approved": true,
-    "assigned_to": "",
-    "created": "2018-07-19T00:00:00.000Z",
-    "created_by": "28d100f4-d137-11e8-a8d5-f2801f1b9fd1",
-    "notes": ["DVD plus 3 years streaming"],
-    "manual_po": false,
-    "po_number": "313000",
-    "order_type": "One-Time",
-    "re_encumber": false,
-    "total_estimated_price": 500.00,
-    "total_items": 2,
-    "vendor": "50fb8a2a-cdf1-11e8-a8d5-f2801f1b9fd1",
-    "workflow_status": "Open"
+  "id": "05bdf3c8-01f0-4ddb-bd6c-6efd465f9e33",
+  "adjustment": {
+    "credit": 0,
+    "discount": 0,
+    "insurance": 0,
+    "overhead": 0,
+    "shipment": 0,
+    "tax_1": 0,
+    "tax_2": 0,
+    "use_pro_rate": false
   },
+  "approved": true,
+  "assigned_to": "",
+  "created": "2018-07-19T00:00:00.000Z",
+  "created_by": "28d100f4-d137-11e8-a8d5-f2801f1b9fd1",
+  "notes": ["DVD plus 3 years streaming"],
+  "manual_po": false,
+  "po_number": "313000",
+  "order_type": "One-Time",
+  "re_encumber": false,
+  "total_estimated_price": 500.00,
+  "total_items": 2,
+  "vendor": "50fb8a2a-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "workflow_status": "Open",
   "po_lines": [
     {
       "id": "50fb53f2-cdf1-11e8-a8d5-f2801f1b9fd1",

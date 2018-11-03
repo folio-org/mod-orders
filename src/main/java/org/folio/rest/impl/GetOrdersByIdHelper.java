@@ -1,6 +1,5 @@
 package org.folio.rest.impl;
 
-import java.nio.file.NoSuchFileException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -12,10 +11,8 @@ import javax.ws.rs.core.Response;
 import org.apache.log4j.Logger;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.resource.OrdersResource.GetOrdersByIdResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -24,6 +21,7 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
@@ -49,8 +47,6 @@ public class GetOrdersByIdHelper {
   public CompletableFuture<CompositePurchaseOrder> getOrder(String id, String lang) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
 
-    // TODO replace this with a call to mod-orders-storage
-    // getMockOrder(id)
     getCompositePurchaseOrderById(id, lang)
       .thenAccept(orders -> {
         logger.info("Returning mock data: " + JsonObject.mapFrom(orders).encodePrettily());
@@ -68,34 +64,41 @@ public class GetOrdersByIdHelper {
   private CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrderById(String id, String lang) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
 
-    CompositePurchaseOrder compPO = new CompositePurchaseOrder();
+    getPurchaseOrder(id, lang)
+      .thenAccept(po -> {
+        logger.info("got: " + po.encodePrettily());
+        po.remove("adjustment");
+        CompositePurchaseOrder compPO = po.mapTo(CompositePurchaseOrder.class);
 
-    CompletableFuture<Void> poFuture = getPurchaseOrder(id, lang)
-      .thenAccept(compPO::setPurchaseOrder);
-
-    CompletableFuture<Void> polFuture = getPoLines(id, lang)
-      .thenAccept(compPO::setPoLines);
-
-    CompletableFuture.allOf(poFuture, polFuture).thenAccept(v -> {
-      future.complete(compPO);
-    }).exceptionally(t -> {
-      logger.error("Failed to build composite purchase order", t.getCause());
-      future.completeExceptionally(t.getCause());
-      return null;
-    });
+        getPoLines(id, lang)
+          .thenAccept(poLines -> {
+            compPO.setPoLines(poLines);
+            compPO.setAdjustment(HelperUtils.calculateAdjustment(poLines));
+            future.complete(compPO);
+          }).exceptionally(t -> {
+            logger.error("Failed to get POLines", t);
+            return null;
+          });
+      }).exceptionally(t -> {
+        logger.error("Failed to build composite purchase order", t.getCause());
+        future.completeExceptionally(t.getCause());
+        return null;
+      });
 
     return future;
   }
 
-  private CompletableFuture<PurchaseOrder> getPurchaseOrder(String id, String lang) {
-    CompletableFuture<PurchaseOrder> future = new VertxCompletableFuture<>(ctx);
+  private CompletableFuture<JsonObject> getPurchaseOrder(String id, String lang) {
+    CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
 
     try {
       httpClient.request(HttpMethod.GET, String.format("/purchase_order/%s?lang=%s", id, lang), okapiHeaders)
         .thenApply(HelperUtils::verifyAndExtractBody)
-        .thenAccept(poBody -> {
-          PurchaseOrder po = poBody.mapTo(PurchaseOrder.class);
-          future.complete(po);
+        .thenAccept(future::complete)
+        .exceptionally(t -> {
+          logger.error("Exception calling GET /purchase_order/" + id, t);
+          future.completeExceptionally(t);
+          return null;
         });
     } catch (Exception e) {
       logger.error("Exception calling GET /purchase_order/" + id, e);
@@ -108,49 +111,29 @@ public class GetOrdersByIdHelper {
   private CompletableFuture<List<PoLine>> getPoLines(String id, String lang) {
     CompletableFuture<List<PoLine>> future = new VertxCompletableFuture<>(ctx);
 
-    List<PoLine> lines = new ArrayList<>();
     try {
       httpClient.request(HttpMethod.GET,
           String.format("/po_line?limit=999&query=purchase_order_id==%s&lang=%s", id, lang), okapiHeaders)
         .thenApply(HelperUtils::verifyAndExtractBody)
         .thenAccept(body -> {
-          body.getJsonArray("po_lines").forEach(l -> {
-            JsonObject line = (JsonObject) l;
+          List<PoLine> lines = new ArrayList<>();
+          List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-            List<CompletableFuture<Void>> futures = new ArrayList<>();
-            futures.add(getAdjustmentById((String) line.remove("adjustment"))
-              .thenAccept(a -> line.put("adjustment", a)));
-            futures.add(getAdjustmentById((String) line.remove("cost"))
-              .thenAccept(a -> line.put("cost", a)));
-            futures.add(getAdjustmentById((String) line.remove("details"))
-              .thenAccept(a -> line.put("details", a)));
-            futures.add(getAdjustmentById((String) line.remove("eresource"))
-              .thenAccept(a -> line.put("eresource", a)));
-            futures.add(getAdjustmentById((String) line.remove("location"))
-              .thenAccept(a -> line.put("location", a)));
-            futures.add(getAdjustmentById((String) line.remove("physical"))
-              .thenAccept(a -> line.put("physical", a)));
-            futures.add(getAdjustmentById((String) line.remove("renewal"))
-              .thenAccept(a -> line.put("renewal", a)));
-            futures.add(getAdjustmentById((String) line.remove("source"))
-              .thenAccept(a -> line.put("source", a)));
-            futures.add(getAdjustmentById((String) line.remove("vendor_detail"))
-              .thenAccept(a -> line.put("vendor_detail", a)));
-            
-            //TODO handle claims, fund_distribution, alerts
-            
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
-              .thenAccept(v -> {
-                lines.add((line).mapTo(PoLine.class));
-              })
-              .exceptionally(t -> {
-                future.completeExceptionally(t.getCause());
-                return null;
-              });
-          });
-          future.complete(lines);
+          for (int i = 0; i < body.getJsonArray("po_lines").size(); i++) {
+            JsonObject line = body.getJsonArray("po_lines").getJsonObject(i);
+            futures.add(resolvePoLine(line)
+              .thenAccept(lines::add));
+          }
+
+          VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
+            .thenAccept(v -> future.complete(lines))
+            .exceptionally(t -> {
+              future.completeExceptionally(t.getCause());
+              return null;
+            });
         })
         .exceptionally(t -> {
+          logger.error("Exception gathering po_line data:", t);
           throw new CompletionException(t);
         });
     } catch (Exception e) {
@@ -161,27 +144,77 @@ public class GetOrdersByIdHelper {
     return future;
   }
 
-  private CompletableFuture<JsonObject> getAdjustmentById(String id) {
-    CompletableFuture<JsonObject> future = new VertxCompletableFuture<JsonObject>(ctx);
-    Adjustment ret = new Adjustment();
-    ret.setId(id);
-    future.complete(JsonObject.mapFrom(ret));
+  private CompletableFuture<PoLine> resolvePoLine(JsonObject line) {
+    CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
+
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    futures.add(resolveSubObjIfPresent(line, "adjustment", "/adjustment/"));
+    futures.add(resolveSubObjIfPresent(line, "cost", "/cost/"));
+    futures.add(resolveSubObjIfPresent(line, "details", "/details/"));
+    futures.add(resolveSubObjIfPresent(line, "eresource", "/eresource/"));
+    futures.add(resolveSubObjIfPresent(line, "location", "/location/"));
+    futures.add(resolveSubObjIfPresent(line, "physical", "/physical/"));
+    futures.add(resolveSubObjIfPresent(line, "renewal", "/renewal/"));
+    futures.add(resolveSubObjIfPresent(line, "source", "/source/"));
+    futures.add(resolveSubObjIfPresent(line, "vendor_detail", "/vendor_detail/"));
+
+    futures.addAll(resolveSubObjsIfPresent(line, "alerts", "/alerts/"));
+    futures.addAll(resolveSubObjsIfPresent(line, "claims", "/claims/"));
+    futures.addAll(resolveSubObjsIfPresent(line, "fund_distribution", "/fund_distribution/"));
+
+    logger.info(line.encodePrettily());
+
+    CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
+      .thenAccept(v -> future.complete(line.mapTo(PoLine.class)))
+      .exceptionally(t -> {
+        logger.error("Exception resolving one or more po_line sub-object(s):", t);
+        future.completeExceptionally(t.getCause());
+        return null;
+      });
     return future;
   }
 
-  private CompletableFuture<CompositePurchaseOrder> getMockOrder(String id) {
-    return VertxCompletableFuture.supplyAsync(ctx, () -> {
-      try {
-        JsonObject json = new JsonObject(HelperUtils.getMockData(String.format("%s%s.json", BASE_MOCK_DATA_PATH, id)));
-        return json.mapTo(CompositePurchaseOrder.class);
-      } catch (NoSuchFileException e) {
-        logger.error("No such file", e);
-        throw new CompletionException(new HttpException(404, id));
-      } catch (Exception e) {
-        logger.error("Failed to read mock data", e);
-        throw new CompletionException(e);
-      }
-    });
+  private List<CompletableFuture<Void>> resolveSubObjsIfPresent(JsonObject pol, String field,
+      String baseUrl) {
+    JsonArray array = new JsonArray();
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    ((List<?>) pol.remove(field))
+      .forEach(fundDistroId -> futures.add(resolveSubObj(baseUrl + fundDistroId)
+        .thenAccept(array::add)));
+    pol.put(field, array);
+    return futures;
+  }
+
+  private CompletableFuture<Void> resolveSubObjIfPresent(JsonObject pol, String field, String baseUrl) {
+    String id = (String) pol.remove(field);
+    if (id != null) {
+      return resolveSubObj(baseUrl + id).thenAccept(json -> {
+        if (json != null) {
+          pol.put(field, json);
+        }
+      });
+    }
+    return CompletableFuture.completedFuture(null);
+  }
+
+  private CompletableFuture<JsonObject> resolveSubObj(String url) {
+    CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
+
+    logger.info(String.format("calling GET %s", url));
+
+    try {
+      httpClient.request(HttpMethod.GET, url, okapiHeaders)
+        .thenApply(HelperUtils::verifyAndExtractBody)
+        .thenAccept(future::complete)
+        .exceptionally(t -> {
+          future.completeExceptionally(t);
+          return null;
+        });
+    } catch (Exception e) {
+      future.completeExceptionally(e);
+    }
+
+    return future;
   }
 
   public Void handleError(Throwable throwable) {

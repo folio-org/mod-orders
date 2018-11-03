@@ -13,6 +13,7 @@ import java.util.UUID;
 
 import org.apache.log4j.Logger;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrders;
 import org.folio.rest.jaxrs.model.Errors;
@@ -115,8 +116,8 @@ public class OrdersResourceImplTest {
 
     logger.info(JsonObject.mapFrom(resp));
 
-    String poId = resp.getPurchaseOrder().getId();
-    String poNumber = resp.getPurchaseOrder().getPoNumber();
+    String poId = resp.getId();
+    String poNumber = resp.getPoNumber();
 
     assertNotNull(poId);
     assertNotNull(poNumber);
@@ -167,7 +168,7 @@ public class OrdersResourceImplTest {
     ctx.assertEquals("must match \"^[a-zA-Z0-9]{5,16}$\"", errors.getErrors().get(0).getMessage());
     ctx.assertFalse(errors.getErrors().get(0).getParameters().isEmpty());
     ctx.assertNotNull(errors.getErrors().get(0).getParameters().get(0));
-    ctx.assertEquals("purchaseOrder.poNumber", errors.getErrors().get(0).getParameters().get(0).getKey());
+    ctx.assertEquals("poNumber", errors.getErrors().get(0).getParameters().get(0).getKey());
     ctx.assertEquals("123", errors.getErrors().get(0).getParameters().get(0).getValue());
   }
 
@@ -259,27 +260,24 @@ public class OrdersResourceImplTest {
     logger.info("=== Test Get Order By Id ===");
 
     JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
-    String id = ordersList.getJsonArray("composite_purchase_orders")
-      .getJsonObject(0)
-      .getJsonObject("purchase_order")
-      .getString("id");
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString("id");
     logger.info("using mock datafile: " + GetOrdersByIdHelper.BASE_MOCK_DATA_PATH + id + ".json");
 
     final CompositePurchaseOrder resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
       .get(rootPath + "/" + id)
-      .then()
-      .contentType(APPLICATION_JSON)
-      .statusCode(200)
-      .extract()
-      .response()
-      .as(CompositePurchaseOrder.class);
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(200)
+          .extract()
+            .response()
+              .as(CompositePurchaseOrder.class);
 
-    logger.info(JsonObject.mapFrom(resp));
+    logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
-    assertEquals(id, resp.getPurchaseOrder().getId());
+    assertEquals(id, resp.getId());
   }
 
   @Test
@@ -291,14 +289,14 @@ public class OrdersResourceImplTest {
 
     final Response resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
       .get(rootPath + "/" + id)
-      .then()
-      .contentType(TEXT_PLAIN)
-      .statusCode(404)
-      .extract()
-      .response();
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(404)
+          .extract()
+            .response();
 
     String actual = resp.getBody().asString();
     logger.info(actual);
@@ -344,6 +342,19 @@ public class OrdersResourceImplTest {
       router.route(HttpMethod.GET, "/purchase_order/:id").handler(this::handleGetPurchaseOrderById);
       router.route(HttpMethod.GET, "/po_line").handler(this::handleGetPoLine);
 
+      router.route(HttpMethod.GET, "/adjustment/:id").handler(this::handleGetAdjustment);
+      router.route(HttpMethod.GET, "/alerts/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/cost/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/claims/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/details/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/eresource/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/fund_distribution/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/location/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/physical/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/renewal/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/source/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/vendor_detail/:id").handler(this::handleGetGenericSubObj);
+
       return router;
     }
 
@@ -368,40 +379,40 @@ public class OrdersResourceImplTest {
       try {
         JsonObject compPO = new JsonObject(getMockData(GetOrdersByIdHelper.BASE_MOCK_DATA_PATH + id + ".json"));
         JsonArray lines = compPO.getJsonArray("po_lines");
-        
+
         lines.forEach(l -> {
-          JsonObject line = (JsonObject)l;
-          line.put("adjustment", ((Map<?,?>)line.remove("adjustment")).get("id"));
-          line.put("cost", ((Map<?,?>)line.remove("cost")).get("id"));
-          line.put("details", ((Map<?,?>)line.remove("details")).get("id"));
-          line.put("eresource", ((Map<?,?>)line.remove("eresource")).get("id"));
-          line.put("location", ((Map<?,?>)line.remove("location")).get("id"));
-          line.put("physical", ((Map<?,?>)line.remove("physical")).get("id"));
-          if(line.containsKey("renewal")) {
-            line.put("renewal", ((Map<?,?>)line.remove("renewal")).get("id"));
+          JsonObject line = (JsonObject) l;
+          line.put("adjustment", ((Map<?, ?>) line.remove("adjustment")).get("id"));
+          line.put("cost", ((Map<?, ?>) line.remove("cost")).get("id"));
+          line.put("details", ((Map<?, ?>) line.remove("details")).get("id"));
+          line.put("eresource", ((Map<?, ?>) line.remove("eresource")).get("id"));
+          line.put("location", ((Map<?, ?>) line.remove("location")).get("id"));
+          line.put("physical", ((Map<?, ?>) line.remove("physical")).get("id"));
+          if (line.containsKey("renewal")) {
+            line.put("renewal", ((Map<?, ?>) line.remove("renewal")).get("id"));
           }
-          line.put("source", ((Map<?,?>)line.remove("source")).get("id"));
-          line.put("vendor_detail", ((Map<?,?>)line.remove("vendor_detail")).get("id"));
-          
-          List<?> alerts = ((List<?>)line.remove("alerts"));
+          line.put("source", ((Map<?, ?>) line.remove("source")).get("id"));
+          line.put("vendor_detail", ((Map<?, ?>) line.remove("vendor_detail")).get("id"));
+
+          List<?> alerts = ((List<?>) line.remove("alerts"));
           line.put("alerts", new JsonArray());
           alerts.forEach(a -> {
-            line.getJsonArray("alerts").add(((Map<?,?>)a).get("id"));
+            line.getJsonArray("alerts").add(((Map<?, ?>) a).get("id"));
           });
-          
-          List<?> claims = ((List<?>)line.remove("claims"));
+
+          List<?> claims = ((List<?>) line.remove("claims"));
           line.put("claims", new JsonArray());
           claims.forEach(c -> {
-            line.getJsonArray("claims").add(((Map<?,?>)c).get("id"));
+            line.getJsonArray("claims").add(((Map<?, ?>) c).get("id"));
           });
-          
-          List<?> fund_distribution = ((List<?>)line.remove("fund_distribution"));
+
+          List<?> fund_distribution = ((List<?>) line.remove("fund_distribution"));
           line.put("fund_distribution", new JsonArray());
           fund_distribution.forEach(f -> {
-            line.getJsonArray("fund_distribution").add(((Map<?,?>)f).get("id"));
+            line.getJsonArray("fund_distribution").add(((Map<?, ?>) f).get("id"));
           });
         });
-        
+
         JsonObject po_lines = new JsonObject()
           .put("po_lines", lines)
           .put("total_records", lines.size())
@@ -409,7 +420,7 @@ public class OrdersResourceImplTest {
           .put("last", lines.size());
 
         logger.info(po_lines.encodePrettily());
-        
+
         ctx.response()
           .setStatusCode(200)
           .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
@@ -421,12 +432,48 @@ public class OrdersResourceImplTest {
       }
     }
 
+    private void handleGetGenericSubObj(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+      String id = ctx.request().getParam("id");
+      logger.info("id: " + id);
+
+      ctx.response()
+        .setStatusCode(200)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .end(new JsonObject().put("id", id).encodePrettily());
+    }
+
+    private void handleGetAdjustment(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+      String id = ctx.request().getParam("id");
+      logger.info("id: " + id);
+
+      Adjustment a = new Adjustment();
+      a.setId(id);
+      a.setCredit(1d);
+      a.setDiscount(2d);
+      a.setInsurance(3d);
+      a.setOverhead(4d);
+      a.setShipment(5d);
+      a.setTax1(6d);
+      a.setTax2(7d);
+      a.setInvoiceId(UUID.randomUUID().toString());
+
+      ctx.response()
+        .setStatusCode(200)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .end(JsonObject.mapFrom(a).encodePrettily());
+    }
+
     private void handleGetPurchaseOrderById(RoutingContext ctx) {
       logger.info("got: " + ctx.request().path());
       String id = ctx.request().getParam("id");
+      logger.info("id: " + id);
       try {
-        JsonObject compPO = new JsonObject(getMockData(GetOrdersByIdHelper.BASE_MOCK_DATA_PATH + id + ".json"));
-        JsonObject po = compPO.getJsonObject("purchase_order");
+        JsonObject po = new JsonObject(getMockData(GetOrdersByIdHelper.BASE_MOCK_DATA_PATH + id + ".json"));
+        po.remove("adjustment");
+        po.remove("po_lines");
+        po.put("adjustment", UUID.randomUUID().toString());
 
         ctx.response()
           .setStatusCode(200)
@@ -441,6 +488,8 @@ public class OrdersResourceImplTest {
 
     private void handlePostPurchaseOrder(RoutingContext ctx) {
       logger.info("got: " + ctx.getBodyAsString());
+
+      // TODO validate against purchase_order schema
 
       JsonObject body = ctx.getBodyAsJson();
       body.put("id", UUID.randomUUID().toString());
@@ -492,6 +541,8 @@ public class OrdersResourceImplTest {
 
     private void handlePostPOLine(RoutingContext ctx) {
       logger.info("got: " + ctx.getBodyAsString());
+
+      // TODO validate against po_line schema
 
       JsonObject body = ctx.getBodyAsJson();
       body.put("id", UUID.randomUUID().toString());

@@ -1,32 +1,30 @@
 {
-  "purchase_order": {
-    "id": "e20af8c8-b07d-47a1-9ebd-f1187e9335bd",
-    "adjustment": {
-      "credit": 0,
-      "discount": 0,
-      "insurance": 0,
-      "overhead": 0,
-      "shipment": 0,
-      "tax_1": 0,
-      "tax_2": 0,
-      "use_pro_rate": false
-    },
-    "approved": true,
-    "assigned_to": "",
-    "created": "2018-06-19T00:00:00.000Z",
-    "created_by": "28d10f5e-d137-11e8-a8d5-f2801f1b9fd1",
-    "notes": [
-      "CAC one time funding proposal by Bob Barker"
-    ],
-    "manual_po": false,
-    "po_number": "306251",
-    "order_type": "One-Time",
-    "re_encumber": false,
-    "total_estimated_price": 3000.00,
-    "total_items": 1,
-    "vendor": "50fb90ec-cdf1-11e8-a8d5-f2801f1b9fd1",
-    "workflow_status": "Closed"
+  "id": "e20af8c8-b07d-47a1-9ebd-f1187e9335bd",
+  "adjustment": {
+    "credit": 0,
+    "discount": 0,
+    "insurance": 0,
+    "overhead": 0,
+    "shipment": 0,
+    "tax_1": 0,
+    "tax_2": 0,
+    "use_pro_rate": false
   },
+  "approved": true,
+  "assigned_to": "",
+  "created": "2018-06-19T00:00:00.000Z",
+  "created_by": "28d10f5e-d137-11e8-a8d5-f2801f1b9fd1",
+  "notes": [
+    "CAC one time funding proposal by Bob Barker"
+  ],
+  "manual_po": false,
+  "po_number": "306251",
+  "order_type": "One-Time",
+  "re_encumber": false,
+  "total_estimated_price": 3000.00,
+  "total_items": 1,
+  "vendor": "50fb90ec-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "workflow_status": "Closed",
   "po_lines": [
     {
       "id": "50fb64dc-cdf1-11e8-a8d5-f2801f1b9fd1",

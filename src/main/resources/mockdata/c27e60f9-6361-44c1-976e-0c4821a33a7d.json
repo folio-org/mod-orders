@@ -1,30 +1,28 @@
 {
-  "purchase_order": {
-    "id": "c27e60f9-6361-44c1-976e-0c4821a33a7d",
-    "adjustment": {
-      "credit": 0,
-      "discount": 0,
-      "insurance": 0,
-      "overhead": 0,
-      "shipment": 0,
-      "tax_1": 0,
-      "tax_2": 0,
-      "use_pro_rate": false
-    },
-    "approved": true,
-    "assigned_to": "",
-    "created": "2014-09-22T00:00:00.000Z",
-    "created_by": "28d10afe-d137-11e8-a8d5-f2801f1b9fd1",
-    "notes": ["Cataloging record service"],
-    "manual_po": true,
-    "po_number": "38434",
-    "order_type": "Ongoing",
-    "re_encumber": false,
-    "total_estimated_price": 0.00,
-    "total_items": 1,
-    "vendor": "50fb922c-cdf1-11e8-a8d5-f2801f1b9fd1",
-    "workflow_status": "Pending"
+  "id": "c27e60f9-6361-44c1-976e-0c4821a33a7d",
+  "adjustment": {
+    "credit": 0,
+    "discount": 0,
+    "insurance": 0,
+    "overhead": 0,
+    "shipment": 0,
+    "tax_1": 0,
+    "tax_2": 0,
+    "use_pro_rate": false
   },
+  "approved": true,
+  "assigned_to": "",
+  "created": "2014-09-22T00:00:00.000Z",
+  "created_by": "28d10afe-d137-11e8-a8d5-f2801f1b9fd1",
+  "notes": ["Cataloging record service"],
+  "manual_po": true,
+  "po_number": "38434",
+  "order_type": "Ongoing",
+  "re_encumber": false,
+  "total_estimated_price": 0.00,
+  "total_items": 1,
+  "vendor": "50fb922c-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "workflow_status": "Pending",
   "po_lines": [
     {
       "id": "50fb627a-cdf1-11e8-a8d5-f2801f1b9fd1",

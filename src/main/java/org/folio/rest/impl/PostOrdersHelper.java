@@ -15,7 +15,6 @@ import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.VendorDetail;
 import org.folio.rest.jaxrs.resource.OrdersResource.PostOrdersResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -53,17 +52,20 @@ public class PostOrdersHelper {
   public CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
 
-    compPO.getPurchaseOrder().setPoNumber(generatePoNumber());
+    compPO.setPoNumber(generatePoNumber());
 
     try {
-      Buffer poBuf = JsonObject.mapFrom(compPO.getPurchaseOrder()).toBuffer();
-      httpClient.request(HttpMethod.POST, poBuf, "/purchase_order", okapiHeaders)
+      JsonObject purchaseOrder = JsonObject.mapFrom(compPO);
+      if (purchaseOrder.containsKey("adjustment")) {
+        purchaseOrder.remove("adjustment");
+      }
+      httpClient.request(HttpMethod.POST, purchaseOrder, "/purchase_order", okapiHeaders)
         .thenApply(HelperUtils::verifyAndExtractBody)
         .thenAccept(poBody -> {
-          PurchaseOrder po = poBody.mapTo(PurchaseOrder.class);
+          CompositePurchaseOrder po = poBody.mapTo(CompositePurchaseOrder.class);
           String poNumber = po.getPoNumber();
           String poId = po.getId();
-          compPO.setPurchaseOrder(po);
+          compPO.setId(poId);
 
           List<PoLine> lines = new ArrayList<>(compPO.getPoLines().size());
           List<CompletableFuture<Void>> futures = new ArrayList<>();
@@ -79,6 +81,7 @@ public class PostOrdersHelper {
           VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
             .thenAccept(v -> {
               compPO.setPoLines(lines);
+              compPO.setAdjustment(HelperUtils.calculateAdjustment(lines));
               future.complete(compPO);
             })
             .exceptionally(e -> {
