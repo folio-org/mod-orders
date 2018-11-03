@@ -63,6 +63,7 @@ public class OrdersResourceImplTest {
   // Mock data paths
   private final String mockDataRootPath = "src/test/resources/";
   private final String listedPrintMonographPath = mockDataRootPath + "/po_listed_print_monograph.json";
+  private final String minimalOrderPath = mockDataRootPath + "/minimal_order.json";
   private final String poCreationFailurePath = mockDataRootPath + "/po_creation_failure.json";
   private final String poLineCreationFailurePath = mockDataRootPath + "/po_line_creation_failure.json";
 
@@ -102,17 +103,17 @@ public class OrdersResourceImplTest {
 
     final CompositePurchaseOrder resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .contentType(APPLICATION_JSON)
-      .statusCode(201)
-      .extract()
-      .response()
-      .as(CompositePurchaseOrder.class);
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+            .response()
+              .as(CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp));
 
@@ -139,6 +140,48 @@ public class OrdersResourceImplTest {
   }
 
   @Test
+  public void testPlaceOrderMinimal(TestContext ctx) throws Exception {
+    logger.info("=== Test Placement of minimal order ===");
+
+    String body = getMockData(minimalOrderPath);
+    JsonObject reqData = new JsonObject(body);
+
+    final CompositePurchaseOrder resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .post(rootPath)
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+            .response()
+              .as(CompositePurchaseOrder.class);
+
+    logger.info(JsonObject.mapFrom(resp));
+
+    String poId = resp.getId();
+    String poNumber = resp.getPoNumber();
+
+    assertNotNull(poId);
+    assertNotNull(poNumber);
+    assertEquals(reqData.getJsonArray("po_lines").size(), resp.getPoLines().size());
+
+    for (int i = 0; i < resp.getPoLines().size(); i++) {
+      PoLine line = resp.getPoLines().get(i);
+      String polNumber = line.getPoLineNumber();
+      String polId = line.getId();
+
+      assertEquals(poId, line.getPurchaseOrderId());
+      assertNotNull(polId);
+      assertNotNull(polNumber);
+      assertTrue(polNumber.startsWith(poNumber));
+    }
+  }
+  
+  @Test
   public void testPoCreationFailure(TestContext ctx) throws Exception {
     logger.info("=== Test PO creation failure ===");
 
@@ -146,20 +189,19 @@ public class OrdersResourceImplTest {
 
     final Errors errors = RestAssured
       .given()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .log()
-      .all()
-      .contentType(APPLICATION_JSON)
-      .statusCode(422)
-      .extract()
-      .response()
-      .body()
-      .as(Errors.class);
+        .then()
+        .log().all()
+        .contentType(APPLICATION_JSON)
+        .statusCode(422)
+        .extract()
+          .response()
+            .body()
+              .as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
 
@@ -180,17 +222,17 @@ public class OrdersResourceImplTest {
 
     final Errors errors = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .contentType(APPLICATION_JSON)
-      .statusCode(422)
-      .extract()
-      .response()
-      .as(Errors.class);
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(422)
+          .extract()
+            .response()
+              .as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
 
@@ -211,17 +253,17 @@ public class OrdersResourceImplTest {
 
     final Response resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .header(X_ECHO_STATUS, 403)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .header(X_ECHO_STATUS, 403)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .contentType(TEXT_PLAIN)
-      .statusCode(500)
-      .extract()
-      .response();
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(500)
+          .extract()
+            .response();
 
     String respBody = resp.getBody().asString();
     logger.info(respBody);
@@ -237,17 +279,17 @@ public class OrdersResourceImplTest {
 
     final CompositePurchaseOrders resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .queryParam("query", "approval_status%3D%22Pending%22")
-      .queryParam("limit", "30")
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .queryParam("query", "approval_status%3D%22Pending%22")
+        .queryParam("limit", "30")
       .get(rootPath)
-      .then()
-      .contentType(APPLICATION_JSON)
-      .statusCode(200)
-      .extract()
-      .response()
-      .as(CompositePurchaseOrders.class);
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(200)
+          .extract()
+            .response()
+              .as(CompositePurchaseOrders.class);
 
     logger.info(JsonObject.mapFrom(resp));
 
