@@ -6,10 +6,14 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrders;
 import org.folio.rest.jaxrs.model.Errors;
@@ -28,6 +32,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -43,6 +48,7 @@ public class OrdersResourceImplTest {
 
   private static final String APPLICATION_JSON = "application/json";
   private static final String TEXT_PLAIN = "text/plain";
+  private static final String BASE_MOCK_DATA_PATH = "mockdata/";
 
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();
@@ -58,6 +64,7 @@ public class OrdersResourceImplTest {
   // Mock data paths
   private final String mockDataRootPath = "src/test/resources/";
   private final String listedPrintMonographPath = mockDataRootPath + "/po_listed_print_monograph.json";
+  private final String minimalOrderPath = mockDataRootPath + "/minimal_order.json";
   private final String poCreationFailurePath = mockDataRootPath + "/po_creation_failure.json";
   private final String poLineCreationFailurePath = mockDataRootPath + "/po_line_creation_failure.json";
 
@@ -113,7 +120,7 @@ public class OrdersResourceImplTest {
 
     String poId = resp.getId();
     String poNumber = resp.getPoNumber();
-    
+
     assertNotNull(poId);
     assertNotNull(poNumber);
     assertEquals(reqData.getJsonArray("po_lines").size(), resp.getPoLines().size());
@@ -122,7 +129,7 @@ public class OrdersResourceImplTest {
       PoLine line = resp.getPoLines().get(i);
       String polNumber = line.getPoLineNumber();
       String polId = line.getId();
-      
+
       assertEquals(poId, line.getPurchaseOrderId());
       assertNotNull(polId);
       assertNotNull(polNumber);
@@ -130,6 +137,48 @@ public class OrdersResourceImplTest {
       assertNotNull(line.getCost().getId());
       assertNotNull(line.getDetails().getId());
       assertNotNull(line.getLocation().getId());
+    }
+  }
+
+  @Test
+  public void testPlaceOrderMinimal(TestContext ctx) throws Exception {
+    logger.info("=== Test Placement of minimal order ===");
+
+    String body = getMockData(minimalOrderPath);
+    JsonObject reqData = new JsonObject(body);
+
+    final CompositePurchaseOrder resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .post(rootPath)
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+            .response()
+              .as(CompositePurchaseOrder.class);
+
+    logger.info(JsonObject.mapFrom(resp));
+
+    String poId = resp.getId();
+    String poNumber = resp.getPoNumber();
+
+    assertNotNull(poId);
+    assertNotNull(poNumber);
+    assertEquals(reqData.getJsonArray("po_lines").size(), resp.getPoLines().size());
+
+    for (int i = 0; i < resp.getPoLines().size(); i++) {
+      PoLine line = resp.getPoLines().get(i);
+      String polNumber = line.getPoLineNumber();
+      String polId = line.getId();
+
+      assertEquals(poId, line.getPurchaseOrderId());
+      assertNotNull(polId);
+      assertNotNull(polNumber);
+      assertTrue(polNumber.startsWith(poNumber));
     }
   }
 
@@ -152,12 +201,12 @@ public class OrdersResourceImplTest {
           .contentType(APPLICATION_JSON)
           .statusCode(422)
           .extract()
-            .response()
-              .body()
-                .as(Errors.class);
+          .response()
+            .body()
+              .as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
-    
+
     ctx.assertFalse(errors.getErrors().isEmpty());
     ctx.assertNotNull(errors.getErrors().get(0));
     ctx.assertEquals("must match \"^[a-zA-Z0-9]{5,16}$\"", errors.getErrors().get(0).getMessage());
@@ -186,9 +235,9 @@ public class OrdersResourceImplTest {
           .extract()
             .response()
               .as(Errors.class);
-      
+
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
-  
+
     ctx.assertFalse(errors.getErrors().isEmpty());
     ctx.assertNotNull(errors.getErrors().get(0));
     ctx.assertEquals("must match \"^[a-zA-Z0-9]{5,16}-[0-9]{1,3}$\"", errors.getErrors().get(0).getMessage());
@@ -215,8 +264,8 @@ public class OrdersResourceImplTest {
         .then()
           .contentType(TEXT_PLAIN)
           .statusCode(500)
-          .extract()
-            .response();
+            .extract()
+              .response();
 
     String respBody = resp.getBody().asString();
     logger.info(respBody);
@@ -256,7 +305,7 @@ public class OrdersResourceImplTest {
 
     JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString("id");
-    logger.info("using mock datafile: " + GetOrderHelper.BASE_MOCK_DATA_PATH + id + ".json");
+    logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, id));
 
     final CompositePurchaseOrder resp = RestAssured
       .with()
@@ -270,7 +319,7 @@ public class OrdersResourceImplTest {
             .response()
               .as(CompositePurchaseOrder.class);
 
-    logger.info(JsonObject.mapFrom(resp));
+    logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
     assertEquals(id, resp.getId());
   }
@@ -334,6 +383,22 @@ public class OrdersResourceImplTest {
       router.route(HttpMethod.POST, "/eresource").handler(this::handlePostAssignId);
       router.route(HttpMethod.POST, "/location").handler(this::handlePostAssignId);
 
+      router.route(HttpMethod.GET, "/purchase_order/:id").handler(this::handleGetPurchaseOrderById);
+      router.route(HttpMethod.GET, "/po_line").handler(this::handleGetPoLine);
+
+      router.route(HttpMethod.GET, "/adjustment/:id").handler(this::handleGetAdjustment);
+      router.route(HttpMethod.GET, "/alerts/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/cost/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/claims/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/details/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/eresource/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/fund_distribution/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/locations/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/physical/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/renewal/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/source/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/vendor_detail/:id").handler(this::handleGetGenericSubObj);
+
       return router;
     }
 
@@ -352,10 +417,123 @@ public class OrdersResourceImplTest {
       });
     }
 
+    private void handleGetPoLine(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+      String id = ctx.request().getParam("query").split("purchase_order_id==")[1];
+      try {
+        JsonObject compPO = new JsonObject(getMockData(String.format("%s%s.json", BASE_MOCK_DATA_PATH, id)));
+        JsonArray lines = compPO.getJsonArray("po_lines");
+
+        lines.forEach(l -> {
+          JsonObject line = (JsonObject) l;
+          line.put("adjustment", ((Map<?, ?>) line.remove("adjustment")).get("id"));
+          line.put("cost", ((Map<?, ?>) line.remove("cost")).get("id"));
+          line.put("details", ((Map<?, ?>) line.remove("details")).get("id"));
+          line.put("eresource", ((Map<?, ?>) line.remove("eresource")).get("id"));
+          line.put("location", ((Map<?, ?>) line.remove("location")).get("id"));
+          line.put("physical", ((Map<?, ?>) line.remove("physical")).get("id"));
+          if (line.containsKey("renewal")) {
+            line.put("renewal", ((Map<?, ?>) line.remove("renewal")).get("id"));
+          }
+          line.put("source", ((Map<?, ?>) line.remove("source")).get("id"));
+          line.put("vendor_detail", ((Map<?, ?>) line.remove("vendor_detail")).get("id"));
+
+          List<?> alerts = ((List<?>) line.remove("alerts"));
+          line.put("alerts", new JsonArray());
+          alerts.forEach(a -> {
+            line.getJsonArray("alerts").add(((Map<?, ?>) a).get("id"));
+          });
+
+          List<?> claims = ((List<?>) line.remove("claims"));
+          line.put("claims", new JsonArray());
+          claims.forEach(c -> {
+            line.getJsonArray("claims").add(((Map<?, ?>) c).get("id"));
+          });
+
+          List<?> fund_distribution = ((List<?>) line.remove("fund_distribution"));
+          line.put("fund_distribution", new JsonArray());
+          fund_distribution.forEach(f -> {
+            line.getJsonArray("fund_distribution").add(((Map<?, ?>) f).get("id"));
+          });
+        });
+
+        JsonObject po_lines = new JsonObject()
+          .put("po_lines", lines)
+          .put("total_records", lines.size())
+          .put("first", 0)
+          .put("last", lines.size());
+
+        logger.info(po_lines.encodePrettily());
+
+        ctx.response()
+          .setStatusCode(200)
+          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+          .end(po_lines.encodePrettily());
+      } catch (IOException e) {
+        ctx.response()
+          .setStatusCode(404)
+          .end(id);
+      }
+    }
+
+    private void handleGetGenericSubObj(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+      String id = ctx.request().getParam("id");
+      logger.info("id: " + id);
+
+      ctx.response()
+        .setStatusCode(200)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .end(new JsonObject().put("id", id).encodePrettily());
+    }
+
+    private void handleGetAdjustment(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+      String id = ctx.request().getParam("id");
+      logger.info("id: " + id);
+
+      Adjustment a = new Adjustment();
+      a.setId(id);
+      a.setCredit(1d);
+      a.setDiscount(2d);
+      a.setInsurance(3d);
+      a.setOverhead(4d);
+      a.setShipment(5d);
+      a.setTax1(6d);
+      a.setTax2(7d);
+      a.setInvoiceId(UUID.randomUUID().toString());
+
+      ctx.response()
+        .setStatusCode(200)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .end(JsonObject.mapFrom(a).encodePrettily());
+    }
+
+    private void handleGetPurchaseOrderById(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+      String id = ctx.request().getParam("id");
+      logger.info("id: " + id);
+      try {
+        JsonObject po = new JsonObject(getMockData(String.format("%s%s.json", BASE_MOCK_DATA_PATH, id)));
+        po.remove("adjustment");
+        po.remove("po_lines");
+        po.put("adjustment", UUID.randomUUID().toString());
+
+        ctx.response()
+          .setStatusCode(200)
+          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+          .end(po.encodePrettily());
+      } catch (IOException e) {
+        ctx.response()
+          .setStatusCode(404)
+          .end(id);
+      }
+    }
+
     private void handlePostPurchaseOrder(RoutingContext ctx) {
       logger.info("got: " + ctx.getBodyAsString());
 
-      //TODO validate against purchase_order schema
+      // TODO validate against purchase_order schema
 
       JsonObject body = ctx.getBodyAsJson();
       body.put("id", UUID.randomUUID().toString());
@@ -363,7 +541,7 @@ public class OrdersResourceImplTest {
       ctx.response()
         .setStatusCode(201)
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .end(body.encodePrettily());      
+        .end(body.encodePrettily());
     }
 
     private void handlePostAssignId(RoutingContext ctx) {
@@ -408,7 +586,7 @@ public class OrdersResourceImplTest {
     private void handlePostPOLine(RoutingContext ctx) {
       logger.info("got: " + ctx.getBodyAsString());
 
-      //TODO validate against po_line schema
+      // TODO validate against po_line schema
 
       JsonObject body = ctx.getBodyAsJson();
       body.put("id", UUID.randomUUID().toString());

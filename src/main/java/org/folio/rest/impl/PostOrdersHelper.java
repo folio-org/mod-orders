@@ -8,7 +8,7 @@ import java.util.concurrent.CompletionException;
 
 import org.apache.log4j.Logger;
 import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Details;
@@ -17,7 +17,6 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.VendorDetail;
 import org.folio.rest.jaxrs.resource.OrdersResource.PostOrdersResponse;
-import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
@@ -61,7 +60,7 @@ public class PostOrdersHelper {
         purchaseOrder.remove("adjustment");
       }
       httpClient.request(HttpMethod.POST, purchaseOrder, "/purchase_order", okapiHeaders)
-        .thenApply(PostOrdersHelper::verifyAndExtractBody)
+        .thenApply(HelperUtils::verifyAndExtractBody)
         .thenAccept(poBody -> {
           CompositePurchaseOrder po = poBody.mapTo(CompositePurchaseOrder.class);
           String poNumber = po.getPoNumber();
@@ -82,7 +81,7 @@ public class PostOrdersHelper {
           VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
             .thenAccept(v -> {
               compPO.setPoLines(lines);
-              compPO.setAdjustment(calculateAdjustment(lines));
+              compPO.setAdjustment(HelperUtils.calculateAdjustment(lines));
               future.complete(compPO);
             })
             .exceptionally(e -> {
@@ -99,29 +98,6 @@ public class PostOrdersHelper {
       future.completeExceptionally(e);
     }
     return future;
-  }
-
-  private Adjustment calculateAdjustment(List<PoLine> lines) {
-    Adjustment ret = new Adjustment();
-    ret.setCredit(0d);
-    ret.setDiscount(0d);
-    ret.setInsurance(0d);
-    ret.setOverhead(0d);
-    ret.setShipment(0d);
-    ret.setTax1(0d);
-    ret.setTax2(0d);
-
-    lines.forEach(line -> {
-      Adjustment a = line.getAdjustment();
-      ret.setCredit(ret.getCredit() + a.getCredit());
-      ret.setDiscount(ret.getDiscount() + a.getDiscount());
-      ret.setInsurance(ret.getInsurance() + a.getInsurance());
-      ret.setOverhead(ret.getOverhead() + a.getOverhead());
-      ret.setShipment(ret.getShipment() + a.getShipment());
-      ret.setTax1(ret.getTax1() + a.getTax1());
-      ret.setTax2(ret.getTax2() + a.getTax2());
-    });
-    return ret;
   }
 
   public CompletableFuture<PoLine> createPoLine(PoLine compPOL) {
@@ -141,7 +117,7 @@ public class PostOrdersHelper {
         try {
           Buffer polBuf = JsonObject.mapFrom(line).toBuffer();
           httpClient.request(HttpMethod.POST, polBuf, "/po_line", okapiHeaders)
-            .thenApply(PostOrdersHelper::verifyAndExtractBody)
+            .thenApply(HelperUtils::verifyAndExtractBody)
             .thenAccept(body -> {
               logger.info("response from /po_line: " + body.encodePrettily());
 
@@ -261,7 +237,7 @@ public class PostOrdersHelper {
 
     try {
       httpClient.request(HttpMethod.POST, obj.toBuffer(), url, okapiHeaders)
-        .thenApply(PostOrdersHelper::verifyAndExtractBody)
+        .thenApply(HelperUtils::verifyAndExtractBody)
         .thenAccept(body -> {
           String id = JsonObject.mapFrom(body).getString("id");
           pol.put(field, id);
@@ -327,15 +303,6 @@ public class PostOrdersHelper {
     return (Long.toHexString(System.currentTimeMillis() - PO_NUMBER_EPOCH) +
         Long.toHexString(System.nanoTime() % 100))
           .toUpperCase();
-  }
-
-  public static JsonObject verifyAndExtractBody(Response response) {
-    if (!Response.isSuccess(response.getCode())) {
-      throw new CompletionException(
-          new HttpException(response.getCode(), response.getError().getString("errorMessage")));
-    }
-
-    return response.getBody();
   }
 
 }
