@@ -29,8 +29,6 @@ public class GetOrdersByIdHelper {
 
   private static final Logger logger = Logger.getLogger(GetOrdersByIdHelper.class);
 
-  public static final String BASE_MOCK_DATA_PATH = "mockdata/";
-
   private final HttpClientInterface httpClient;
   private final Context ctx;
   private final Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler;
@@ -49,7 +47,7 @@ public class GetOrdersByIdHelper {
 
     getCompositePurchaseOrderById(id, lang)
       .thenAccept(orders -> {
-        logger.info("Returning mock data: " + JsonObject.mapFrom(orders).encodePrettily());
+        logger.info("Returning Composite Purchase Order: " + JsonObject.mapFrom(orders).encodePrettily());
         future.complete(orders);
       })
       .exceptionally(t -> {
@@ -152,7 +150,7 @@ public class GetOrdersByIdHelper {
     futures.add(resolveSubObjIfPresent(line, "cost", "/cost/"));
     futures.add(resolveSubObjIfPresent(line, "details", "/details/"));
     futures.add(resolveSubObjIfPresent(line, "eresource", "/eresource/"));
-    futures.add(resolveSubObjIfPresent(line, "location", "/location/"));
+    futures.add(resolveSubObjIfPresent(line, "location", "/locations/"));
     futures.add(resolveSubObjIfPresent(line, "physical", "/physical/"));
     futures.add(resolveSubObjIfPresent(line, "renewal", "/renewal/"));
     futures.add(resolveSubObjIfPresent(line, "source", "/source/"));

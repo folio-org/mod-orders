@@ -48,6 +48,7 @@ public class OrdersResourceImplTest {
 
   private static final String APPLICATION_JSON = "application/json";
   private static final String TEXT_PLAIN = "text/plain";
+  private static final String BASE_MOCK_DATA_PATH = "mockdata/";
 
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();
@@ -180,7 +181,7 @@ public class OrdersResourceImplTest {
       assertTrue(polNumber.startsWith(poNumber));
     }
   }
-  
+
   @Test
   public void testPoCreationFailure(TestContext ctx) throws Exception {
     logger.info("=== Test PO creation failure ===");
@@ -195,10 +196,11 @@ public class OrdersResourceImplTest {
         .body(body)
       .post(rootPath)
         .then()
-        .log().all()
-        .contentType(APPLICATION_JSON)
-        .statusCode(422)
-        .extract()
+          .log()
+            .all()
+          .contentType(APPLICATION_JSON)
+          .statusCode(422)
+          .extract()
           .response()
             .body()
               .as(Errors.class);
@@ -262,8 +264,8 @@ public class OrdersResourceImplTest {
         .then()
           .contentType(TEXT_PLAIN)
           .statusCode(500)
-          .extract()
-            .response();
+            .extract()
+              .response();
 
     String respBody = resp.getBody().asString();
     logger.info(respBody);
@@ -303,7 +305,7 @@ public class OrdersResourceImplTest {
 
     JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString("id");
-    logger.info("using mock datafile: " + GetOrdersByIdHelper.BASE_MOCK_DATA_PATH + id + ".json");
+    logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, id));
 
     final CompositePurchaseOrder resp = RestAssured
       .with()
@@ -391,7 +393,7 @@ public class OrdersResourceImplTest {
       router.route(HttpMethod.GET, "/details/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/eresource/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/fund_distribution/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/location/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/locations/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/physical/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/renewal/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/source/:id").handler(this::handleGetGenericSubObj);
@@ -419,7 +421,7 @@ public class OrdersResourceImplTest {
       logger.info("got: " + ctx.request().path());
       String id = ctx.request().getParam("query").split("purchase_order_id==")[1];
       try {
-        JsonObject compPO = new JsonObject(getMockData(GetOrdersByIdHelper.BASE_MOCK_DATA_PATH + id + ".json"));
+        JsonObject compPO = new JsonObject(getMockData(String.format("%s%s.json", BASE_MOCK_DATA_PATH, id)));
         JsonArray lines = compPO.getJsonArray("po_lines");
 
         lines.forEach(l -> {
@@ -512,7 +514,7 @@ public class OrdersResourceImplTest {
       String id = ctx.request().getParam("id");
       logger.info("id: " + id);
       try {
-        JsonObject po = new JsonObject(getMockData(GetOrdersByIdHelper.BASE_MOCK_DATA_PATH + id + ".json"));
+        JsonObject po = new JsonObject(getMockData(String.format("%s%s.json", BASE_MOCK_DATA_PATH, id)));
         po.remove("adjustment");
         po.remove("po_lines");
         po.put("adjustment", UUID.randomUUID().toString());

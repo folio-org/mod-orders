@@ -43,7 +43,7 @@ public class HelperUtils {
   }
 
   public static Adjustment calculateAdjustment(List<PoLine> lines) {
-    Adjustment ret = new Adjustment();
+    Adjustment ret = null;
     for (int i = 0; i < lines.size(); i++) {
       Adjustment a = lines.get(i).getAdjustment();
       if (a != null) {
