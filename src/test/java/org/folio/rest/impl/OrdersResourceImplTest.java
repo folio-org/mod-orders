@@ -377,11 +377,13 @@ public class OrdersResourceImplTest {
       router.route().handler(BodyHandler.create());
       router.route(HttpMethod.POST, "/purchase_order").handler(this::handlePostPurchaseOrder);
       router.route(HttpMethod.POST, "/po_line").handler(this::handlePostPOLine);
-      router.route(HttpMethod.POST, "/details").handler(this::handlePostAssignId);
-      router.route(HttpMethod.POST, "/cost").handler(this::handlePostAssignId);
-      router.route(HttpMethod.POST, "/vendor_detail").handler(this::handlePostAssignId);
-      router.route(HttpMethod.POST, "/eresource").handler(this::handlePostAssignId);
-      router.route(HttpMethod.POST, "/location").handler(this::handlePostAssignId);
+      router.route(HttpMethod.POST, "/adjustment").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Adjustment.class));
+      router.route(HttpMethod.POST, "/cost").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Cost.class));
+      router.route(HttpMethod.POST, "/details").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Details.class));
+      router.route(HttpMethod.POST, "/eresource").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Eresource.class));
+      router.route(HttpMethod.POST, "/location").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Location.class));
+      router.route(HttpMethod.POST, "/physical").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Physical.class));
+      router.route(HttpMethod.POST, "/vendor_detail").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.VendorDetail.class));
 
       router.route(HttpMethod.GET, "/purchase_order/:id").handler(this::handleGetPurchaseOrderById);
       router.route(HttpMethod.GET, "/po_line").handler(this::handleGetPoLine);
@@ -533,18 +535,16 @@ public class OrdersResourceImplTest {
     private void handlePostPurchaseOrder(RoutingContext ctx) {
       logger.info("got: " + ctx.getBodyAsString());
 
-      // TODO validate against purchase_order schema
-
-      JsonObject body = ctx.getBodyAsJson();
-      body.put("id", UUID.randomUUID().toString());
+      org.folio.rest.acq.model.PurchaseOrder po = ctx.getBodyAsJson().mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
+      po.setId(UUID.randomUUID().toString());
 
       ctx.response()
         .setStatusCode(201)
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .end(body.encodePrettily());
+        .end(JsonObject.mapFrom(po).encodePrettily());
     }
 
-    private void handlePostAssignId(RoutingContext ctx) {
+    private void handlePostGenericSubObj(RoutingContext ctx, Class<?> clazz) {
       logger.info("got: " + ctx.getBodyAsString());
 
       String echoStatus = ctx.request().getHeader(X_ECHO_STATUS);
@@ -565,8 +565,7 @@ public class OrdersResourceImplTest {
       switch (status) {
       case 201:
         contentType = APPLICATION_JSON;
-        JsonObject body = ctx.getBodyAsJson();
-        body.put("id", UUID.randomUUID().toString());
+        JsonObject body = JsonObject.mapFrom(ctx.getBodyAsJson().mapTo(clazz)).put("id", UUID.randomUUID().toString());
         respBody = body.encodePrettily();
         break;
       case 403:
@@ -584,18 +583,17 @@ public class OrdersResourceImplTest {
     }
 
     private void handlePostPOLine(RoutingContext ctx) {
-      logger.info("got: " + ctx.getBodyAsString());
+      logger.info("got po_line: " + ctx.getBodyAsString());
 
-      // TODO validate against po_line schema
-
-      JsonObject body = ctx.getBodyAsJson();
-      body.put("id", UUID.randomUUID().toString());
+      org.folio.rest.acq.model.PoLine pol = ctx.getBodyAsJson().mapTo(org.folio.rest.acq.model.PoLine.class);
+      pol.setId(UUID.randomUUID().toString());
 
       ctx.response()
         .setStatusCode(201)
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .end(body.encodePrettily());
-    }
+        .end(JsonObject.mapFrom(pol).encodePrettily());
+    }   
+
   }
 
 }

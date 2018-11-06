@@ -9,11 +9,13 @@ import java.util.concurrent.CompletionException;
 import org.apache.log4j.Logger;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.VendorDetail;
 import org.folio.rest.jaxrs.resource.OrdersResource.PostOrdersResponse;
@@ -58,6 +60,9 @@ public class PostOrdersHelper {
       JsonObject purchaseOrder = JsonObject.mapFrom(compPO);
       if (purchaseOrder.containsKey("adjustment")) {
         purchaseOrder.remove("adjustment");
+      }
+      if (purchaseOrder.containsKey("po_lines")) {
+        purchaseOrder.remove("po_lines");
       }
       httpClient.request(HttpMethod.POST, purchaseOrder, "/purchase_order", okapiHeaders)
         .thenApply(HelperUtils::verifyAndExtractBody)
@@ -106,10 +111,19 @@ public class PostOrdersHelper {
     JsonObject line = JsonObject.mapFrom(compPOL);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
 
+    //TODO handle alerts, claims, fund_distribution, reporting_codes, source
+    line.remove("alerts");
+    line.remove("claims");
+    line.remove("fund_distribution");
+    line.remove("reporting_codes");
+    line.remove("source");    
+    
+    subObjFuts.add(createAdjustment(compPOL, line, compPOL.getAdjustment()));
     subObjFuts.add(createCost(compPOL, line, compPOL.getCost()));
     subObjFuts.add(createDetails(compPOL, line, compPOL.getDetails()));
     subObjFuts.add(createEresource(compPOL, line, compPOL.getEresource()));
     subObjFuts.add(createLocation(compPOL, line, compPOL.getLocation()));
+    subObjFuts.add(createPhysical(compPOL, line, compPOL.getPhysical()));
     subObjFuts.add(createVendorDetail(compPOL, line, compPOL.getVendorDetail()));
 
     CompletableFuture.allOf(subObjFuts.toArray(new CompletableFuture[subObjFuts.size()]))
@@ -142,6 +156,23 @@ public class PostOrdersHelper {
     return future;
   }
 
+  private CompletableFuture<Void> createAdjustment(PoLine compPOL, JsonObject line, Adjustment adjustment) {
+    return createSubObjIfPresent(line, adjustment, "adjustment", "/adjustment")
+      .thenAccept(id -> {
+        if (id == null) {
+          line.remove("adjustment");
+          compPOL.setAdjustment(null);
+        } else {
+          compPOL.getAdjustment().setId(id);
+        }
+      })
+      .exceptionally(t -> {
+        logger.error("failed to create Adjustment", t);
+        throw new CompletionException(t.getCause());
+      });
+  }
+
+  
   private CompletableFuture<Void> createCost(PoLine compPOL, JsonObject line, Cost cost) {
     return createSubObjIfPresent(line, cost, "cost", "/cost")
       .thenAccept(id -> {
@@ -206,11 +237,27 @@ public class PostOrdersHelper {
       });
   }
 
-  private CompletableFuture<Void> createVendorDetail(PoLine compPOL, JsonObject line, VendorDetail vendor) {
-    return createSubObjIfPresent(line, vendor, "vendor", "/vendor_detail")
+  private CompletableFuture<Void> createPhysical(PoLine compPOL, JsonObject line, Physical physical) {
+    return createSubObjIfPresent(line, physical, "physical", "/physical")
       .thenAccept(id -> {
         if (id == null) {
-          line.remove("vendor");
+          line.remove("physical");
+          compPOL.setPhysical(null);
+        } else {
+          compPOL.getPhysical().setId(id);
+        }
+      })
+      .exceptionally(t -> {
+        logger.error("failed to create Physical", t);
+        throw new CompletionException(t.getCause());
+      });
+  }
+  
+  private CompletableFuture<Void> createVendorDetail(PoLine compPOL, JsonObject line, VendorDetail vendor) {
+    return createSubObjIfPresent(line, vendor, "vendor_detail", "/vendor_detail")
+      .thenAccept(id -> {
+        if (id == null) {
+          line.remove("vendor_detail");
           compPOL.setVendorDetail(null);
         } else {
           compPOL.getVendorDetail().setId(id);
