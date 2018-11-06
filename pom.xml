@@ -43,6 +43,8 @@
     <aspectj.version>1.8.9</aspectj.version>
     <module_name>mod-orders</module_name>
     <http.port>8081</http.port>
+    <generated_sources_dir>${project.build.directory}/generated-sources</generated_sources_dir>
+    <jsonschema2pojo_output_dir>${generated_sources_dir}/jsonschema2pojo</jsonschema2pojo_output_dir>
     <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
     <ramlfiles_util_path>${ramlfiles_path}/raml-util</ramlfiles_util_path>
     <ramlfiles_acq_models_path>${ramlfiles_path}/acq-models</ramlfiles_acq_models_path>
@@ -162,6 +164,28 @@
               </sources>
             </configuration>
           </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.jsonschema2pojo</groupId>
+        <artifactId>jsonschema2pojo-maven-plugin</artifactId>
+        <version>0.4.37</version>
+        <configuration>
+          <includes>*.json</includes>
+          <outputDirectory>${jsonschema2pojo_output_dir}</outputDirectory>
+        </configuration>
+        <executions>
+          <execution>
+            <id>acq-models</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <sourceDirectory>${basedir}/ramls/acq-models/mod-orders-storage/schemas</sourceDirectory>
+              <targetPackage>org.folio.rest.acq.model</targetPackage>
+            </configuration>
+          </execution>          
         </executions>
       </plugin>
 
