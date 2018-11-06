@@ -222,7 +222,7 @@ public class PostOrdersHelper {
   }
 
   private CompletableFuture<Void> createLocation(PoLine compPOL, JsonObject line, Location location) {
-    return createSubObjIfPresent(line, location, "location", "/location")
+    return createSubObjIfPresent(line, location, "location", "/locations")
       .thenAccept(id -> {
         if (id == null) {
           line.remove("location");
