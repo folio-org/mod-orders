@@ -150,7 +150,7 @@ public class GetOrdersByIdHelper {
     futures.add(resolveSubObjIfPresent(line, "cost", "/cost/"));
     futures.add(resolveSubObjIfPresent(line, "details", "/details/"));
     futures.add(resolveSubObjIfPresent(line, "eresource", "/eresource/"));
-    futures.add(resolveSubObjIfPresent(line, "location", "/locations/"));
+    futures.add(resolveSubObjIfPresent(line, "location", "/location/"));
     futures.add(resolveSubObjIfPresent(line, "physical", "/physical/"));
     futures.add(resolveSubObjIfPresent(line, "renewal", "/renewal/"));
     futures.add(resolveSubObjIfPresent(line, "source", "/source/"));
