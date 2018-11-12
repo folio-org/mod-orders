@@ -86,6 +86,135 @@ public class GetOrdersByIdHelper {
     return future;
   }
 
+  private CompletableFuture<JsonObject> getPurchaseOrder(String id, String lang) {
+    CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
+
+    try {
+      httpClient.request(HttpMethod.GET, String.format("/purchase_order/%s?lang=%s", id, lang), okapiHeaders)
+        .thenApply(HelperUtils::verifyAndExtractBody)
+        .thenAccept(future::complete)
+        .exceptionally(t -> {
+          logger.error("Exception calling GET /purchase_order/" + id, t);
+          future.completeExceptionally(t);
+          return null;
+        });
+    } catch (Exception e) {
+      logger.error("Exception calling GET /purchase_order/" + id, e);
+      future.completeExceptionally(e);
+    }
+
+    return future;
+  }
+
+  private CompletableFuture<List<PoLine>> getPoLines(String id, String lang) {
+    CompletableFuture<List<PoLine>> future = new VertxCompletableFuture<>(ctx);
+
+    try {
+      httpClient.request(HttpMethod.GET,
+          String.format("/po_line?limit=999&query=purchase_order_id==%s&lang=%s", id, lang), okapiHeaders)
+        .thenApply(HelperUtils::verifyAndExtractBody)
+        .thenAccept(body -> {
+          List<PoLine> lines = new ArrayList<>();
+          List<CompletableFuture<Void>> futures = new ArrayList<>();
+
+          for (int i = 0; i < body.getJsonArray("po_lines").size(); i++) {
+            JsonObject line = body.getJsonArray("po_lines").getJsonObject(i);
+            futures.add(resolvePoLine(line)
+              .thenAccept(lines::add));
+          }
+
+          VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
+            .thenAccept(v -> future.complete(lines))
+            .exceptionally(t -> {
+              future.completeExceptionally(t.getCause());
+              return null;
+            });
+        })
+        .exceptionally(t -> {
+          logger.error("Exception gathering po_line data:", t);
+          throw new CompletionException(t);
+        });
+    } catch (Exception e) {
+      logger.error("Exception calling GET /po_line/" + id, e);
+      future.completeExceptionally(e);
+    }
+
+    return future;
+  }
+
+  private CompletableFuture<PoLine> resolvePoLine(JsonObject line) {
+    CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
+
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    futures.add(resolveSubObjIfPresent(line, "adjustment", "/adjustment/"));
+    futures.add(resolveSubObjIfPresent(line, "cost", "/cost/"));
+    futures.add(resolveSubObjIfPresent(line, "details", "/details/"));
+    futures.add(resolveSubObjIfPresent(line, "eresource", "/eresource/"));
+    futures.add(resolveSubObjIfPresent(line, "location", "/location/"));
+    futures.add(resolveSubObjIfPresent(line, "physical", "/physical/"));
+    futures.add(resolveSubObjIfPresent(line, "renewal", "/renewal/"));
+    futures.add(resolveSubObjIfPresent(line, "source", "/source/"));
+    futures.add(resolveSubObjIfPresent(line, "vendor_detail", "/vendor_detail/"));
+
+    futures.addAll(resolveSubObjsIfPresent(line, "alerts", "/alerts/"));
+    futures.addAll(resolveSubObjsIfPresent(line, "claims", "/claims/"));
+    futures.addAll(resolveSubObjsIfPresent(line, "fund_distribution", "/fund_distribution/"));
+
+    logger.info(line.encodePrettily());
+
+    CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
+      .thenAccept(v -> future.complete(line.mapTo(PoLine.class)))
+      .exceptionally(t -> {
+        logger.error("Exception resolving one or more po_line sub-object(s):", t);
+        future.completeExceptionally(t.getCause());
+        return null;
+      });
+    return future;
+  }
+
+  private List<CompletableFuture<Void>> resolveSubObjsIfPresent(JsonObject pol, String field,
+      String baseUrl) {
+    JsonArray array = new JsonArray();
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    ((List<?>) pol.remove(field))
+      .forEach(fundDistroId -> futures.add(resolveSubObj(baseUrl + fundDistroId)
+        .thenAccept(array::add)));
+    pol.put(field, array);
+    return futures;
+  }
+
+  private CompletableFuture<Void> resolveSubObjIfPresent(JsonObject pol, String field, String baseUrl) {
+    String id = (String) pol.remove(field);
+    if (id != null) {
+      return resolveSubObj(baseUrl + id).thenAccept(json -> {
+        if (json != null) {
+          pol.put(field, json);
+        }
+      });
+    }
+    return CompletableFuture.completedFuture(null);
+  }
+
+  private CompletableFuture<JsonObject> resolveSubObj(String url) {
+    CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
+
+    logger.info(String.format("calling GET %s", url));
+
+    try {
+      httpClient.request(HttpMethod.GET, url, okapiHeaders)
+        .thenApply(HelperUtils::verifyAndExtractBody)
+        .thenAccept(future::complete)
+        .exceptionally(t -> {
+          future.completeExceptionally(t);
+          return null;
+        });
+    } catch (Exception e) {
+      future.completeExceptionally(e);
+    }
+
+    return future;
+  }
+
   public Void handleError(Throwable throwable) {
     final Future<javax.ws.rs.core.Response> result;
 

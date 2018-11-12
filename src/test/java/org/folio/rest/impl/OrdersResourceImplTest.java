@@ -381,7 +381,7 @@ public class OrdersResourceImplTest {
       router.route(HttpMethod.POST, "/cost").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Cost.class));
       router.route(HttpMethod.POST, "/details").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Details.class));
       router.route(HttpMethod.POST, "/eresource").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Eresource.class));
-      router.route(HttpMethod.POST, "/locations").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Location.class));
+      router.route(HttpMethod.POST, "/location").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Location.class));
       router.route(HttpMethod.POST, "/physical").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Physical.class));
       router.route(HttpMethod.POST, "/vendor_detail").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.VendorDetail.class));
 
@@ -395,7 +395,7 @@ public class OrdersResourceImplTest {
       router.route(HttpMethod.GET, "/details/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/eresource/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/fund_distribution/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/locations/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/location/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/physical/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/renewal/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/source/:id").handler(this::handleGetGenericSubObj);
