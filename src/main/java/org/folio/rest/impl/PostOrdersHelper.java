@@ -140,17 +140,17 @@ public class PostOrdersHelper {
             })
             .exceptionally(t -> {
               logger.error("failed to update CompositePoLine", t);
-              future.completeExceptionally(t);
+              future.completeExceptionally(t.getCause());
               return null;
             });
         } catch (Exception e) {
           logger.error("Exception calling POST /po_line", e);
-          future.completeExceptionally(e);
+          future.completeExceptionally(e.getCause());
         }
       })
       .exceptionally(t -> {
         logger.error("failed to create POLine sub-object", t);
-        future.completeExceptionally(t);
+        future.completeExceptionally(t.getCause());
         return null;
       });
     return future;
