@@ -149,7 +149,7 @@ public class HelperUtils {
     futures.add(resolveSubObjIfPresent(line, "cost", "/cost/", httpClient, ctx, okapiHeaders, logger));
     futures.add(resolveSubObjIfPresent(line, "details", "/details/", httpClient, ctx, okapiHeaders, logger));
     futures.add(resolveSubObjIfPresent(line, "eresource", "/eresource/", httpClient, ctx, okapiHeaders, logger));
-    futures.add(resolveSubObjIfPresent(line, "location", "/locations/", httpClient, ctx, okapiHeaders, logger));
+    futures.add(resolveSubObjIfPresent(line, "location", "/location/", httpClient, ctx, okapiHeaders, logger));
     futures.add(resolveSubObjIfPresent(line, "physical", "/physical/", httpClient, ctx, okapiHeaders, logger));
     futures.add(resolveSubObjIfPresent(line, "renewal", "/renewal/", httpClient, ctx, okapiHeaders, logger));
     futures.add(resolveSubObjIfPresent(line, "source", "/source/", httpClient, ctx, okapiHeaders, logger));
