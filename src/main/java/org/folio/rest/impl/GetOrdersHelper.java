@@ -50,7 +50,7 @@ public class GetOrdersHelper {
       })
       .exceptionally(t -> {
         logger.error("Error getting orders", t);
-        future.completeExceptionally(t);
+        future.completeExceptionally(t.getCause());
         return null;
       });
 
