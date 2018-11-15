@@ -118,6 +118,7 @@ public class PostOrdersHelper {
     line.remove("reporting_codes");
     line.remove("source");
     line.remove("renewal"); 
+    line.remove("license"); 
     
     subObjFuts.add(createAdjustment(compPOL, line, compPOL.getAdjustment()));
     subObjFuts.add(createCost(compPOL, line, compPOL.getCost()));
