@@ -116,7 +116,8 @@ public class PostOrdersHelper {
     line.remove("claims");
     line.remove("fund_distribution");
     line.remove("reporting_codes");
-    line.remove("source");    
+    line.remove("source");
+    line.remove("renewal"); 
     
     subObjFuts.add(createAdjustment(compPOL, line, compPOL.getAdjustment()));
     subObjFuts.add(createCost(compPOL, line, compPOL.getCost()));
