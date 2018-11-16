@@ -30,7 +30,7 @@ public class OrdersResourceImpl implements OrdersResource {
     
     //to handle delete API's content-type text/plain  
     Map<String,String> customHeader=new HashMap<>();
-    customHeader.put("ACCEPT", "application/json, text/plain");
+    customHeader.put("Accept", "application/json, text/plain");
     httpClient.setDefaultHeaders(customHeader);
     
     DeleteOrdersByIdHelper helper = new DeleteOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);

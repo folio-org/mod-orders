@@ -213,7 +213,7 @@ public class HelperUtils {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     ((List<?>) pol.remove(field))
       .forEach(fundDistroId -> futures.add(resolveSubObj(operation, baseUrl + fundDistroId, httpClient, ctx, okapiHeaders, logger)
-                .thenAccept(array::add).thenAccept(array::add)));
+                .thenAccept(array::add)));
     pol.put(field, array);
     return futures;
   }
