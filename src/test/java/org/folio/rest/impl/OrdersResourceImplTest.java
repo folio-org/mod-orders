@@ -348,6 +348,24 @@ public class OrdersResourceImplTest {
     assertEquals(expected, actual);
   }
 
+  @Test
+  public void testDeleteById(TestContext ctx) throws Exception {
+    logger.info("=== Test Delete Order By Id ===");
+
+    JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString("id");
+    logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, id));
+
+   RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+      .delete(rootPath + "/" + id)
+        .then()
+          .statusCode(204);
+     
+  }
+  
   public static class MockServer {
 
     private static final Logger logger = Logger.getLogger(MockServer.class);
@@ -401,7 +419,33 @@ public class OrdersResourceImplTest {
       router.route(HttpMethod.GET, "/source/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/vendor_detail/:id").handler(this::handleGetGenericSubObj);
 
+      
+      
+      router.route(HttpMethod.DELETE, "/purchase_order/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/po_line/:id ").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/adjustment/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/cost/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/details/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/eresource/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/location/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/physical/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/renewal/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/source/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/vendor_detail/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/alerts/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/claims/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/fund_distribution/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      
       return router;
+    }
+
+    private void handleDeleteGenericSubObj(RoutingContext ctx) {
+    
+      ctx.response()
+      .setStatusCode(204)
+      .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
+      .end();
+
     }
 
     public void start(TestContext context) {
