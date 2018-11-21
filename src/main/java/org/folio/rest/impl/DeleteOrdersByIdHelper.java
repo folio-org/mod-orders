@@ -39,7 +39,7 @@ public class DeleteOrdersByIdHelper {
 
       HelperUtils.deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
       .thenRun(()-> {
-        HelperUtils.resolveSubObj(HttpMethod.DELETE,"/purchase_order/"+id, httpClient, ctx, okapiHeaders, logger);       
+        HelperUtils.operateOnSubObj(HttpMethod.DELETE,"/purchase_order/"+id, httpClient, ctx, okapiHeaders, logger);       
         future.complete(null);      
       })
       .exceptionally(t -> {
