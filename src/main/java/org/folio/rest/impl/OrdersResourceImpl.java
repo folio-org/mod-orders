@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
@@ -14,6 +15,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 
 public class OrdersResourceImpl implements OrdersResource {
@@ -25,7 +27,23 @@ public class OrdersResourceImpl implements OrdersResource {
   @Override
   public void deleteOrdersById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) throws Exception {
-    // TODO Auto-generated method stub
+    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
+    
+    //to handle delete API's content-type text/plain  
+    Map<String,String> customHeader=new HashMap<>();
+    customHeader.put(HttpHeaders.ACCEPT.toString(), "application/json, text/plain");
+    httpClient.setDefaultHeaders(customHeader);
+    
+    DeleteOrdersByIdHelper helper = new DeleteOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+    helper.deleteOrder(id,lang)
+    .thenRun(()->{
+      logger.info("Successfully deleted order: ");
+      httpClient.closeClient();
+      javax.ws.rs.core.Response response = DeleteOrdersByIdResponse.withNoContent();
+      AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
+      asyncResultHandler.handle(result);    
+    })
+    .exceptionally(helper::handleError);
   }
 
   @Override
@@ -107,8 +125,9 @@ public class OrdersResourceImpl implements OrdersResource {
   public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {
     final String okapiURL = okapiHeaders.getOrDefault(OKAPI_HEADER_URL, "");
     final String tenantId = TenantTool.calculateTenantId(okapiHeaders.get(RestVerticle.OKAPI_HEADER_TENANT));
-
+    
     return HttpClientFactory.getHttpClient(okapiURL, tenantId);
   }
 
 }
+
