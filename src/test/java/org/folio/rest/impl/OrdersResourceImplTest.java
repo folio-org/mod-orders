@@ -366,6 +366,24 @@ public class OrdersResourceImplTest {
      
   }
   
+  @Test
+  public void putOrdersById(TestContext ctx) throws Exception {
+    logger.info("=== Test Put Order By Id ===");
+
+    JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString("id");
+    logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, id));
+
+   RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+      .put(rootPath + "/" + id)
+        .then()
+          .statusCode(204);
+     
+  }
+  
   public static class MockServer {
 
     private static final Logger logger = Logger.getLogger(MockServer.class);
