@@ -53,7 +53,6 @@ public class PutOrdersByIdHelper {
 
     delHelper.deleteOrder(id, lang)
     .thenRun(() -> {
-      try {
         compPO.setId(id);
         postHelper.createPOandPOLines(compPO)
         .thenAccept(withCompPO -> {
@@ -65,6 +64,7 @@ public class PutOrdersByIdHelper {
             logger.info("Updating Inventory...");
             postHelper.updateInventory(withFunds)
             .thenAccept(withInventory -> {
+              
               logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withCompPO).encodePrettily());
               httpClient.closeClient();
               javax.ws.rs.core.Response response = PutOrdersByIdResponse.withNoContent();
@@ -76,10 +76,8 @@ public class PutOrdersByIdHelper {
           .exceptionally(postHelper::handleError);
         })
         .exceptionally(postHelper::handleError);
-      } catch (Exception e) {
-        logger.error("Failed to create order compPO", e);
-      }
-    }).exceptionally(delHelper::handleError);
+    })
+    .exceptionally(delHelper::handleError);
     return future;
   }
   
