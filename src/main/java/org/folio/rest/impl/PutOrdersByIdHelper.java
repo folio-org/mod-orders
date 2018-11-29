@@ -40,6 +40,9 @@ public class PutOrdersByIdHelper {
     this.asyncResultHandler = asyncResultHandler;
   }
   
+  /*
+   * Handle update order by doing Delete and Post
+   */
   public CompletableFuture<Void> updateOrder(String id, String lang, CompositePurchaseOrder compPO,
       Context vertxContext) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
