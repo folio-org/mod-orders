@@ -257,6 +257,7 @@ public class HelperUtils {
   
   public static CompletableFuture<JsonObject> operateOnSubObj(HttpMethod operation, String url, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger){
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
+    
     logger.info(String.format("calling %s %s", operation.toString(), url));
 
     try {
