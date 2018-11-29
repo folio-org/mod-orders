@@ -28,11 +28,7 @@ public class OrdersResourceImpl implements OrdersResource {
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) throws Exception {
     final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
     
-    //to handle delete API's content-type text/plain  
-    Map<String,String> customHeader=new HashMap<>();
-    customHeader.put(HttpHeaders.ACCEPT.toString(), "application/json, text/plain");
-    httpClient.setDefaultHeaders(customHeader);
-    
+   
     DeleteOrdersByIdHelper helper = new DeleteOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
     helper.deleteOrder(id,lang)
     .thenRun(()->{
