@@ -1,6 +1,5 @@
 package org.folio.rest.impl;
 
-import java.util.HashMap;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import org.folio.rest.RestVerticle;
@@ -14,7 +13,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 
 public class OrdersResourceImpl implements OrdersResource {
