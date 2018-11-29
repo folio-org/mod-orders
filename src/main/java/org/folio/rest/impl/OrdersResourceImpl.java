@@ -2,8 +2,6 @@ package org.folio.rest.impl;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
 import org.apache.log4j.Logger;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -18,7 +16,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class OrdersResourceImpl implements OrdersResource {
 
@@ -121,33 +118,16 @@ public class OrdersResourceImpl implements OrdersResource {
   public void putOrdersById(String id, String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) throws Exception {
 
-
-    
     final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
    
-    PostOrdersHelper postHelper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
-    DeleteOrdersByIdHelper delHelper = new DeleteOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
-    delHelper.deleteOrder(id,lang)
-    .thenRun(() -> {
-      try {
-        compPO.setId(id);
-        logger.info("POST id is: -------------------------> "+ id);
-        postHelper.createPOandPOLines(compPO)
-        .thenAccept(withCompPO -> {
-          logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withCompPO).encodePrettily());
-          httpClient.closeClient();
-          //javax.ws.rs.core.Response response = PutOrdersByIdResponse.withJsonCreated(withCompPO);
-          javax.ws.rs.core.Response response = PutOrdersByIdResponse.withNoContent();
-          AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
-          asyncResultHandler.handle(result);
-        })
-        .exceptionally(postHelper::handleError);
-      } catch (Exception e) {
-        logger.error(e);
-      }
-    })
-    .exceptionally(delHelper::handleError);
-
+    PutOrdersByIdHelper putHelper = new PutOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+    putHelper.updateOrder(id, lang, compPO, vertxContext)
+//    .thenRun(() -> {
+//      javax.ws.rs.core.Response response = PutOrdersByIdResponse.withNoContent();
+//      AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
+//      asyncResultHandler.handle(result);
+//    })
+    .exceptionally(putHelper::handleError);
   }
 
   public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {
