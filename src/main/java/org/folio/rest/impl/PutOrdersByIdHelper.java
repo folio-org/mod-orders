@@ -30,27 +30,28 @@ public class PutOrdersByIdHelper {
 
   public PutOrdersByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
-    Map<String,String> customHeader=new HashMap<>();
+    Map<String, String> customHeader = new HashMap<>();
     customHeader.put(HttpHeaders.ACCEPT.toString(), "application/json, text/plain");
     httpClient.setDefaultHeaders(customHeader);
-    
+
     this.httpClient = httpClient;
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
     this.asyncResultHandler = asyncResultHandler;
   }
   
-  public CompletableFuture<Void> updateOrder(String id, String lang, CompositePurchaseOrder compPO, Context vertxContext) {
+  public CompletableFuture<Void> updateOrder(String id, String lang, CompositePurchaseOrder compPO,
+      Context vertxContext) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-    
+
     PostOrdersHelper postHelper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
-    DeleteOrdersByIdHelper delHelper = new DeleteOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
-    
-    delHelper.deleteOrder(id,lang)
+    DeleteOrdersByIdHelper delHelper = new DeleteOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler,
+        vertxContext);
+
+    delHelper.deleteOrder(id, lang)
     .thenRun(() -> {
       try {
         compPO.setId(id);
-        logger.info("POST id is: -------------------------> "+ id);
         postHelper.createPOandPOLines(compPO)
         .thenAccept(withCompPO -> {
           logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withCompPO).encodePrettily());
@@ -63,8 +64,7 @@ public class PutOrdersByIdHelper {
       } catch (Exception e) {
         logger.error(e);
       }
-    })
-    .exceptionally(delHelper::handleError);
+    }).exceptionally(delHelper::handleError);
     return future;
   }
   

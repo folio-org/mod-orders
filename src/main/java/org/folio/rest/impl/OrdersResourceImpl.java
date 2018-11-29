@@ -119,15 +119,10 @@ public class OrdersResourceImpl implements OrdersResource {
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) throws Exception {
 
     final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
-   
+
     PutOrdersByIdHelper putHelper = new PutOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
     putHelper.updateOrder(id, lang, compPO, vertxContext)
-//    .thenRun(() -> {
-//      javax.ws.rs.core.Response response = PutOrdersByIdResponse.withNoContent();
-//      AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
-//      asyncResultHandler.handle(result);
-//    })
-    .exceptionally(putHelper::handleError);
+      .exceptionally(putHelper::handleError);
   }
 
   public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {
