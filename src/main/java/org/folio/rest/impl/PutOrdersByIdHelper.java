@@ -65,7 +65,7 @@ public class PutOrdersByIdHelper {
         })
         .exceptionally(postHelper::handleError);
       } catch (Exception e) {
-        logger.error(e);
+        logger.error("Failed to create order compPO", e);
       }
     }).exceptionally(delHelper::handleError);
     return future;
