@@ -57,11 +57,23 @@ public class PutOrdersByIdHelper {
         compPO.setId(id);
         postHelper.createPOandPOLines(compPO)
         .thenAccept(withCompPO -> {
-          logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withCompPO).encodePrettily());
-          httpClient.closeClient();
-          javax.ws.rs.core.Response response = PutOrdersByIdResponse.withNoContent();
-          AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
-          asyncResultHandler.handle(result);
+          
+          logger.info("Applying Funds...");
+          postHelper.applyFunds(withCompPO)
+          .thenAccept(withFunds -> {
+              
+            logger.info("Updating Inventory...");
+            postHelper.updateInventory(withFunds)
+            .thenAccept(withInventory -> {
+              logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withCompPO).encodePrettily());
+              httpClient.closeClient();
+              javax.ws.rs.core.Response response = PutOrdersByIdResponse.withNoContent();
+              AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
+              asyncResultHandler.handle(result);
+            })
+            .exceptionally(postHelper::handleError);
+          })
+          .exceptionally(postHelper::handleError);
         })
         .exceptionally(postHelper::handleError);
       } catch (Exception e) {
@@ -74,7 +86,7 @@ public class PutOrdersByIdHelper {
   public Void handleError(Throwable throwable) {
     final Future<javax.ws.rs.core.Response> result;
 
-    logger.error("Exception querying for orders", throwable.getCause());
+    logger.error("Exception while updating orders", throwable.getCause());
 
     final Throwable t = throwable.getCause();
     if (t instanceof HttpException) {
