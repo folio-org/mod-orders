@@ -46,9 +46,9 @@ public class DeleteOrdersByIdHelper {
       HelperUtils.deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
       .thenRun(()-> {
         HelperUtils.operateOnSubObj(HttpMethod.DELETE,"/purchase_order/"+id, httpClient, ctx, okapiHeaders, logger)
-        .thenAccept(action -> {
-          future.complete(null);
-        });          
+        .thenAccept(action -> 
+          future.complete(null)
+        );          
       })
       .exceptionally(t -> {
         logger.error("Failed to delete PO", t);
