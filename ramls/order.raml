@@ -1,4 +1,4 @@
-#%RAML 0.8
+#%RAML 1.0
 title: Orders
 baseUri: https://github.com/folio-org/mod-orders
 version: v1
@@ -8,40 +8,25 @@ documentation:
   - title: Orders Business Logic API
     content: <b>API for managing purchase orders</b>
 
-schemas:
-  - composite_purchase_orders: !include acq-models/composite_purchase_orders.json
-  - composite_purchase_order.json: !include acq-models/composite_purchase_order.json
-  - composite_po_line.json: !include acq-models/composite_po_line.json
-  - mod-orders-storage/schemas/purchase_order.json: !include acq-models/mod-orders-storage/schemas/purchase_order.json
-  - mod-orders-storage/schemas/adjustment.json: !include acq-models/mod-orders-storage/schemas/adjustment.json
-  - mod-orders-storage/schemas/alert.json: !include acq-models/mod-orders-storage/schemas/alert.json
-  - mod-orders-storage/schemas/claim.json: !include acq-models/mod-orders-storage/schemas/claim.json
-  - mod-orders-storage/schemas/cost.json: !include acq-models/mod-orders-storage/schemas/cost.json
-  - mod-orders-storage/schemas/details.json: !include acq-models/mod-orders-storage/schemas/details.json
-  - mod-orders-storage/schemas/fund_distribution.json: !include acq-models/mod-orders-storage/schemas/fund_distribution.json
-  - mod-orders-storage/schemas/eresource.json: !include acq-models/mod-orders-storage/schemas/eresource.json
-  - mod-orders-storage/schemas/license.json: !include acq-models/mod-orders-storage/schemas/license.json
-  - mod-orders-storage/schemas/location.json: !include acq-models/mod-orders-storage/schemas/location.json
-  - mod-orders-storage/schemas/physical.json: !include acq-models/mod-orders-storage/schemas/physical.json
-  - mod-orders-storage/schemas/renewal.json: !include acq-models/mod-orders-storage/schemas/renewal.json
-  - mod-orders-storage/schemas/reporting_code.json: !include acq-models/mod-orders-storage/schemas/reporting_code.json
-  - mod-orders-storage/schemas/source.json: !include acq-models/mod-orders-storage/schemas/source.json
-  - mod-orders-storage/schemas/vendor_detail.json: !include acq-models/mod-orders-storage/schemas/vendor_detail.json
-  - errors: !include raml-util/schemas/errors.schema
-  - error.schema: !include raml-util/schemas/error.schema
-  - parameters.schema: !include raml-util/schemas/parameters.schema
+types:
+  composite_purchase_orders: !include acq-models/composite_purchase_orders.json
+  composite_purchase_order: !include acq-models/composite_purchase_order.json
+  composite_po_line: !include acq-models/composite_po_line.json
+  errors: !include raml-util/schemas/errors.schema
+  UUID:
+    type: string
+    pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
 
 traits:
-  - secured: !include raml-util/traits/auth.raml
-  - orderable: !include raml-util/traits/orderable.raml
-  - pageable: !include raml-util/traits/pageable.raml
-  - searchable: !include raml-util/traits/searchable.raml
-  - language: !include raml-util/traits/language.raml
-  - validate: !include raml-util/traits/validation.raml
+  orderable: !include raml-util/traits/orderable.raml
+  pageable: !include raml-util/traits/pageable.raml
+  searchable: !include raml-util/traits/searchable.raml
+  language: !include raml-util/traits/language.raml
+  validate: !include raml-util/traits/validation.raml
 
 resourceTypes:
-  - collection: !include raml-util/rtypes/collection.raml
-  - collection-item: !include raml-util/rtypes/item-collection.raml
+  collection: !include raml-util/rtypes/collection.raml
+  collection-item: !include raml-util/rtypes/item-collection.raml
 
 /orders:
   displayName: Orders
@@ -50,7 +35,7 @@ resourceTypes:
       exampleCollection: !include acq-models/examples/composite_purchase_orders.sample
       exampleItem: !include acq-models/examples/composite_purchase_order.sample
       schemaCollection: composite_purchase_orders
-      schemaItem: composite_purchase_order.json
+      schemaItem: composite_purchase_order
   get:
     description: Return a list of purchase orders
     is: [
@@ -64,14 +49,13 @@ resourceTypes:
       201:
         body:
           application/json:
-            schema: composite_purchase_order.json
+            type: composite_purchase_order
   /{id}:
     uriParameters:
       id:
         description: The UUID of a purchase order
-        type: string
-        pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+        type: UUID
     type:
       collection-item:
         exampleItem: !include acq-models/examples/composite_purchase_order.sample
-        schema: composite_purchase_order.json
+        schema: composite_purchase_order

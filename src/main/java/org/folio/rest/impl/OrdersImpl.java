@@ -3,10 +3,9 @@ package org.folio.rest.impl;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.resource.OrdersResource;
+import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
@@ -17,16 +16,19 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
-public class OrdersResourceImpl implements OrdersResource {
+public class OrdersImpl implements Orders {
 
-  private static final Logger logger = Logger.getLogger(OrdersResourceImpl.class);
+  private static final Logger logger = LoggerFactory.getLogger(OrdersImpl.class);
 
   public static final String OKAPI_HEADER_URL = "X-Okapi-Url";
+  private static final String ORDERS_LOCATION_PREFIX = "/orders/";
 
   @Override
   public void deleteOrdersById(String id, String lang, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) throws Exception {
+      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
     
     //to handle delete API's content-type text/plain  
@@ -39,7 +41,7 @@ public class OrdersResourceImpl implements OrdersResource {
     .thenRun(()->{
       logger.info("Successfully deleted order: ");
       httpClient.closeClient();
-      javax.ws.rs.core.Response response = DeleteOrdersByIdResponse.withNoContent();
+      javax.ws.rs.core.Response response = DeleteOrdersByIdResponse.respond204();
       AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
       asyncResultHandler.handle(result);    
     })
@@ -48,7 +50,7 @@ public class OrdersResourceImpl implements OrdersResource {
 
   @Override
   public void getOrders(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) throws Exception {
+      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
 
     final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
     GetOrdersHelper helper = new GetOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
@@ -57,7 +59,7 @@ public class OrdersResourceImpl implements OrdersResource {
       .thenAccept(orders -> {
         logger.info("Successfully queried orders: " + JsonObject.mapFrom(orders).encodePrettily());
         httpClient.closeClient();
-        javax.ws.rs.core.Response response = GetOrdersResponse.withJsonOK(orders);
+        javax.ws.rs.core.Response response = GetOrdersResponse.respond200WithApplicationJson(orders);
         AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
         asyncResultHandler.handle(result);
       })
@@ -66,7 +68,7 @@ public class OrdersResourceImpl implements OrdersResource {
 
   @Override
   public void getOrdersById(String id, String lang, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) throws Exception {
+      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
 
     final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
     GetOrdersByIdHelper helper = new GetOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
@@ -75,7 +77,7 @@ public class OrdersResourceImpl implements OrdersResource {
       .thenAccept(order -> {
         logger.info("Successfully retrieved order: " + JsonObject.mapFrom(order).encodePrettily());
         httpClient.closeClient();
-        javax.ws.rs.core.Response response = GetOrdersByIdResponse.withJsonOK(order);
+        javax.ws.rs.core.Response response = GetOrdersByIdResponse.respond200WithApplicationJson(order);
         AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
         asyncResultHandler.handle(result);
       })
@@ -84,8 +86,7 @@ public class OrdersResourceImpl implements OrdersResource {
 
   @Override
   public void postOrders(String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext)
-      throws Exception {
+      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
 
     final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
     PostOrdersHelper helper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
@@ -104,7 +105,8 @@ public class OrdersResourceImpl implements OrdersResource {
 
                 logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withInventory).encodePrettily());
                 httpClient.closeClient();
-                javax.ws.rs.core.Response response = PostOrdersResponse.withJsonCreated("", withInventory);
+                javax.ws.rs.core.Response response = PostOrdersResponse.respond201WithApplicationJson(withInventory,
+                  PostOrdersResponse.headersFor201().withLocation(ORDERS_LOCATION_PREFIX + withInventory.getId()));
                 AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
                 asyncResultHandler.handle(result);
               })
@@ -117,7 +119,7 @@ public class OrdersResourceImpl implements OrdersResource {
 
   @Override
   public void putOrdersById(String id, String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) throws Exception {
+      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     // TODO Auto-generated method stub
 
   }

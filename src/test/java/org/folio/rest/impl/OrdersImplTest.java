@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.apache.log4j.Logger;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -34,6 +33,8 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -42,9 +43,9 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
 @RunWith(VertxUnitRunner.class)
-public class OrdersResourceImplTest {
+public class OrdersImplTest {
 
-  private static final Logger logger = Logger.getLogger(OrdersResourceImplTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(OrdersImplTest.class);
 
   private static final String APPLICATION_JSON = "application/json";
   private static final String TEXT_PLAIN = "text/plain";
@@ -53,10 +54,10 @@ public class OrdersResourceImplTest {
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();
 
-  private final Header X_OKAPI_URL = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
-  private final Header X_OKAPI_TENANT = new Header("X-Okapi-Tenant", "ordersresourceimpltest");
+  private static final Header X_OKAPI_URL = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
+  private static final Header X_OKAPI_TENANT = new Header("X-Okapi-Tenant", "ordersimpltest");
 
-  public final static String X_ECHO_STATUS = "X-Okapi-Echo-Status";
+  private static final String X_ECHO_STATUS = "X-Okapi-Echo-Status";
 
   // API paths
   private final String rootPath = "/orders";
@@ -368,7 +369,7 @@ public class OrdersResourceImplTest {
   
   public static class MockServer {
 
-    private static final Logger logger = Logger.getLogger(MockServer.class);
+    private static final Logger logger = LoggerFactory.getLogger(MockServer.class);
 
     public final int port;
     public final Vertx vertx;

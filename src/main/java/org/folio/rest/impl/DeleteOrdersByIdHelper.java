@@ -5,10 +5,9 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.ws.rs.core.Response;
 
-import org.apache.log4j.Logger;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.resource.OrdersResource.GetOrdersByIdResponse;
+import org.folio.rest.jaxrs.resource.Orders.GetOrdersByIdResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
@@ -16,10 +15,12 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class DeleteOrdersByIdHelper {
-  private static final Logger logger = Logger.getLogger(DeleteOrdersByIdHelper.class);
+  private static final Logger logger = LoggerFactory.getLogger(DeleteOrdersByIdHelper.class);
 
   private final HttpClientInterface httpClient;
   private final Context ctx;
@@ -59,19 +60,19 @@ public class DeleteOrdersByIdHelper {
     final Throwable t = throwable.getCause();
     if (t instanceof HttpException) {
       final int code = ((HttpException) t).getCode();
-      final String message = ((HttpException) t).getMessage();
+      final String message = t.getMessage();
       switch (code) {
       case 404:
-        result = Future.succeededFuture(GetOrdersByIdResponse.withPlainNotFound(message));
+        result = Future.succeededFuture(GetOrdersByIdResponse.respond404WithTextPlain(message));
         break;
       case 500:
-        result = Future.succeededFuture(GetOrdersByIdResponse.withPlainInternalServerError(message));
+        result = Future.succeededFuture(GetOrdersByIdResponse.respond500WithTextPlain(message));
         break;
       default:
-        result = Future.succeededFuture(GetOrdersByIdResponse.withPlainInternalServerError(message));
+        result = Future.succeededFuture(GetOrdersByIdResponse.respond500WithTextPlain(message));
       }
     } else {
-      result = Future.succeededFuture(GetOrdersByIdResponse.withPlainInternalServerError(throwable.getMessage()));
+      result = Future.succeededFuture(GetOrdersByIdResponse.respond500WithTextPlain(throwable.getMessage()));
     }
 
     httpClient.closeClient();

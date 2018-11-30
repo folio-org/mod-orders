@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import org.apache.log4j.Logger;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.Adjustment;
@@ -18,7 +17,7 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.VendorDetail;
-import org.folio.rest.jaxrs.resource.OrdersResource.PostOrdersResponse;
+import org.folio.rest.jaxrs.resource.Orders.PostOrdersResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
@@ -28,11 +27,13 @@ import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PostOrdersHelper {
 
-  private static final Logger logger = Logger.getLogger(PostOrdersHelper.class);
+  private static final Logger logger = LoggerFactory.getLogger(PostOrdersHelper.class);
 
   // epoch time @ 9/1/2018.
   // if you change this, you run the risk of duplicate poNumbers
@@ -323,22 +324,22 @@ public class PostOrdersHelper {
     final Throwable t = throwable.getCause();
     if (t instanceof HttpException) {
       final int code = ((HttpException) t).getCode();
-      final String message = ((HttpException) t).getMessage();
+      final String message = t.getMessage();
       switch (code) {
       case 400:
-        result = Future.succeededFuture(PostOrdersResponse.withPlainBadRequest(message));
+        result = Future.succeededFuture(PostOrdersResponse.respond400WithTextPlain(message));
         break;
       case 500:
-        result = Future.succeededFuture(PostOrdersResponse.withPlainInternalServerError(message));
+        result = Future.succeededFuture(PostOrdersResponse.respond500WithTextPlain(message));
         break;
       case 401:
-        result = Future.succeededFuture(PostOrdersResponse.withPlainUnauthorized(message));
+        result = Future.succeededFuture(PostOrdersResponse.respond401WithTextPlain(message));
         break;
       default:
-        result = Future.succeededFuture(PostOrdersResponse.withPlainInternalServerError(message));
+        result = Future.succeededFuture(PostOrdersResponse.respond500WithTextPlain(message));
       }
     } else {
-      result = Future.succeededFuture(PostOrdersResponse.withPlainInternalServerError(throwable.getMessage()));
+      result = Future.succeededFuture(PostOrdersResponse.respond500WithTextPlain(throwable.getMessage()));
     }
 
     httpClient.closeClient();

@@ -6,11 +6,10 @@ import java.util.concurrent.CompletionException;
 
 import javax.ws.rs.core.Response;
 
-import org.apache.log4j.Logger;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrders;
-import org.folio.rest.jaxrs.resource.OrdersResource.GetOrdersResponse;
+import org.folio.rest.jaxrs.resource.Orders.GetOrdersResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
@@ -18,11 +17,13 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class GetOrdersHelper {
 
-  private static final Logger logger = Logger.getLogger(GetOrdersHelper.class);
+  private static final Logger logger = LoggerFactory.getLogger(GetOrdersHelper.class);
 
   public static final String MOCK_DATA_PATH = "mockdata/getOrders.json";
 
@@ -77,22 +78,22 @@ public class GetOrdersHelper {
     final Throwable t = throwable.getCause();
     if (t instanceof HttpException) {
       final int code = ((HttpException) t).getCode();
-      final String message = ((HttpException) t).getMessage();
+      final String message = t.getMessage();
       switch (code) {
       case 400:
-        result = Future.succeededFuture(GetOrdersResponse.withPlainBadRequest(message));
+        result = Future.succeededFuture(GetOrdersResponse.respond400WithTextPlain(message));
         break;
       case 500:
-        result = Future.succeededFuture(GetOrdersResponse.withPlainInternalServerError(message));
+        result = Future.succeededFuture(GetOrdersResponse.respond500WithTextPlain(message));
         break;
       case 401:
-        result = Future.succeededFuture(GetOrdersResponse.withPlainUnauthorized(message));
+        result = Future.succeededFuture(GetOrdersResponse.respond401WithTextPlain(message));
         break;
       default:
-        result = Future.succeededFuture(GetOrdersResponse.withPlainInternalServerError(message));
+        result = Future.succeededFuture(GetOrdersResponse.respond500WithTextPlain(message));
       }
     } else {
-      result = Future.succeededFuture(GetOrdersResponse.withPlainInternalServerError(throwable.getMessage()));
+      result = Future.succeededFuture(GetOrdersResponse.respond500WithTextPlain(throwable.getMessage()));
     }
 
     httpClient.closeClient();

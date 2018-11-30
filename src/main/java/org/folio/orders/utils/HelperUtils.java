@@ -12,7 +12,6 @@ import java.util.concurrent.CompletionException;
 import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.log4j.Logger;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -23,6 +22,7 @@ import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class HelperUtils {
