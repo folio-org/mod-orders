@@ -191,7 +191,7 @@
               <sourceDirectory>${basedir}/ramls/acq-models/mod-orders-storage/schemas</sourceDirectory>
               <targetPackage>org.folio.rest.acq.model</targetPackage>
             </configuration>
-          </execution>          
+          </execution>
         </executions>
       </plugin>
 

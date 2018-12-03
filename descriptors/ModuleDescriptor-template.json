@@ -7,15 +7,6 @@
       "version": "1.0",
       "handlers": [
         {
-          "methods": ["GET"],
-          "pathPattern": "/orders",
-          "permissionsRequired": ["orders.collection.get"],
-          "modulePermissions": [
-            "purchase_order.collection.get",
-            "po_line.collection.get"
-          ]
-        },
-        {
           "methods": ["POST"],
           "pathPattern": "/orders",
           "permissionsRequired": ["orders.item.post"],

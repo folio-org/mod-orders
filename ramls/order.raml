@@ -25,7 +25,7 @@ traits:
   validate: !include raml-util/traits/validation.raml
 
 resourceTypes:
-  collection: !include raml-util/rtypes/collection.raml
+  collection: !include rtypes/collection-post.raml
   collection-item: !include raml-util/rtypes/item-collection.raml
 
 /orders:
@@ -36,12 +36,7 @@ resourceTypes:
       exampleItem: !include acq-models/examples/composite_purchase_order.sample
       schemaCollection: composite_purchase_orders
       schemaItem: composite_purchase_order
-  get:
-    description: Return a list of purchase orders
-    is: [
-      searchable: {description: "Query (CQL) to find purchase orders", example: "TBD"},
-      pageable
-    ]
+
   post:
     description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order
     is: [validate]
