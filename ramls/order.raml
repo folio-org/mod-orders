@@ -26,6 +26,8 @@ traits:
 resourceTypes:
   collection: !include raml-util/rtypes/collection.raml
   collection-item: !include raml-util/rtypes/item-collection.raml
+  # The post-empty-body.raml does not declare request body but it can be defined when this resource type is used
+  post-item: !include raml-util/rtypes/post-empty-body.raml
 
 /orders:
   displayName: Orders
@@ -60,8 +62,15 @@ resourceTypes:
         schema: composite_purchase_order
     /lines:
       displayName: Purchace Order Lines
+      description: Manage purchase order (PO) lines
+      type:
+        # Using `post-item` resource type because at the moment only POST is required. In case GET becomes also required, the `collection` resource type should be used instead
+        post-item:
+          exampleItem: !include acq-models/examples/composite_po_line.sample
+          schema: composite_po_line
       post:
-        description: Post a purchase order line (PO line)
+        displayName: Create a new purchace order line
+        description: Post a purchase order (PO) line
         is: [validate]
         body:
           application/json:
@@ -69,29 +78,11 @@ resourceTypes:
             example:
               strict: false
               value: !include acq-models/examples/composite_po_line.sample
-        responses:
-          201:
-            body:
-              application/json:
-                type: composite_po_line
-                example:
-                  strict: false
-                  value: !include acq-models/examples/composite_po_line.sample
-          400:
-            description: "Bad request"
-            body:
-              text/plain:
-                example: "Bad request"
-          500:
-            description: "Internal server error"
-            body:
-              text/plain:
-                example: "Internal server error"
-      /{polineId}:
+      /{lineId}:
         displayName: Purchace Order Line
         description: Manage purchase order line (PO line) by id
         uriParameters:
-          polineId:
+          lineId:
             description: The UUID of a purchase order line
             type: UUID
         type:

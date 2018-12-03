@@ -127,25 +127,25 @@ public class OrdersImpl implements Orders {
   }
 
   @Override
-  public void postOrdersLinesById(String id, CompositePoLine entity, Map<String, String> okapiHeaders,
+  public void postOrdersLinesById(String id, String lang, CompositePoLine entity, Map<String, String> okapiHeaders,
                                   Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     asyncResultHandler.handle(Future.failedFuture(new NotImplementedException("POST PO line is not implemented yet")));
   }
 
   @Override
-  public void getOrdersLinesByIdAndPolineId(String id, String polineId, String lang, Map<String, String> okapiHeaders,
+  public void getOrdersLinesByIdAndLineId(String id, String lineId, String lang, Map<String, String> okapiHeaders,
                                             Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     asyncResultHandler.handle(Future.failedFuture(new NotImplementedException("GET PO line by id is not implemented yet")));
   }
 
   @Override
-  public void deleteOrdersLinesByIdAndPolineId(String id, String polineId, String lang, Map<String, String> okapiHeaders,
+  public void deleteOrdersLinesByIdAndLineId(String id, String lineId, String lang, Map<String, String> okapiHeaders,
                                                Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     asyncResultHandler.handle(Future.failedFuture(new NotImplementedException("DELETE PO line by id is not implemented yet")));
   }
 
   @Override
-  public void putOrdersLinesByIdAndPolineId(String id, String polineId, String lang, CompositePoLine entity, Map<String, String> okapiHeaders,
+  public void putOrdersLinesByIdAndLineId(String id, String lineId, String lang, CompositePoLine entity, Map<String, String> okapiHeaders,
                                             Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     asyncResultHandler.handle(Future.failedFuture(new NotImplementedException("PUT PO line by id is not implemented yet")));
   }
