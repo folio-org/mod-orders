@@ -375,6 +375,26 @@ public class OrdersImplTest {
   }
   
   @Test
+  public void putOrdersById(TestContext ctx) throws Exception {
+    logger.info("=== Test Put Order By Id ===");
+
+    JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString("id");
+    logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, id));
+    String body = getMockData(listedPrintMonographPath);
+   RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .put(rootPath + "/" + id)
+        .then()
+          .statusCode(204);
+     
+  }
+  
+  @Test
   public void testValidationOnPost() throws Exception {
     logger.info("=== Test validation Annotation on POST API ===");
 
