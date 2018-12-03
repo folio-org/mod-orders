@@ -142,6 +142,42 @@
       "version": "1.0"
     },
     {
+      "id": "adjustment",
+      "version": "1.0"
+    },
+    {
+      "id": "alert",
+      "version": "1.0"
+    },
+    {
+      "id": "claim",
+      "version": "1.0"
+    },
+    {
+      "id": "cost",
+      "version": "1.0"
+    },
+    {
+      "id": "details",
+      "version": "1.0"
+    },
+    {
+      "id": "eresource",
+      "version": "1.0"
+    },
+    {
+      "id": "physical",
+      "version": "1.0"
+    },
+    {
+      "id": "renewal",
+      "version": "1.0"
+    },
+    {
+      "id": "vendor_detail",
+      "version": "1.0"
+    },
+    {
       "id": "po_line",
       "version": "1.0"
     }
