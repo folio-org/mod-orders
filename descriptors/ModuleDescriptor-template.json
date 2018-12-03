@@ -55,6 +55,38 @@
             "purchase_order.item.delete",
             "po_line.item.delete"
           ]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/orders/{id}/lines",
+          "permissionsRequired": ["orders.po_line.item.post"],
+          "modulePermissions": [
+            "po_line.item.post"
+          ]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/orders/{id}/lines/{polineId}",
+          "permissionsRequired": ["orders.po_line.item.get"],
+          "modulePermissions": [
+            "po_line.item.get"
+          ]
+        },
+        {
+          "methods": ["PUT"],
+          "pathPattern": "/orders/{id}/lines/{polineId}",
+          "permissionsRequired": ["orders.po_line.item.put"],
+          "modulePermissions": [
+            "po_line.item.put"
+          ]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/orders/{id}/lines/{polineId}",
+          "permissionsRequired": ["orders.po_line.item.delete"],
+          "modulePermissions": [
+            "po_line.item.delete"
+          ]
         }
       ]
     }
@@ -96,6 +128,26 @@
       "description": "Delete an existing order"
     },
     {
+      "permissionName": "orders.po_line.item.post",
+      "displayName": "Orders - create a new PO line",
+      "description": "Create a new PO line"
+    },
+    {
+      "permissionName": "orders.po_line.item.get",
+      "displayName": "Orders - get an existing PO line",
+      "description": "Get an existing PO line"
+    },
+    {
+      "permissionName": "orders.po_line.item.put",
+      "displayName": "Orders - modify an existing PO line",
+      "description": "Modify an existing PO line"
+    },
+    {
+      "permissionName": "orders.po_line.item.delete",
+      "displayName": "Orders - delete an existing PO line",
+      "description": "Delete an existing PO line"
+    },
+    {
       "permissionName": "orders.all",
       "displayName": "orders - all permissions",
       "description": "Entire set of permissions needed to use orders",
@@ -104,7 +156,11 @@
         "orders.item.post",
         "orders.item.get",
         "orders.item.put",
-        "orders.item.delete"
+        "orders.item.delete",
+        "orders.po_line.item.post",
+        "orders.po_line.item.get",
+        "orders.po_line.item.put",
+        "orders.po_line.item.delete"
       ]
     }
   ],

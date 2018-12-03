@@ -18,7 +18,6 @@ types:
     pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
 
 traits:
-  orderable: !include raml-util/traits/orderable.raml
   pageable: !include raml-util/traits/pageable.raml
   searchable: !include raml-util/traits/searchable.raml
   language: !include raml-util/traits/language.raml
@@ -59,3 +58,43 @@ resourceTypes:
       collection-item:
         exampleItem: !include acq-models/examples/composite_purchase_order.sample
         schema: composite_purchase_order
+    /lines:
+      displayName: Purchace Order Lines
+      post:
+        description: Post a purchase order line (PO line)
+        is: [validate]
+        body:
+          application/json:
+            type: composite_po_line
+            example:
+              strict: false
+              value: !include acq-models/examples/composite_po_line.sample
+        responses:
+          201:
+            body:
+              application/json:
+                type: composite_po_line
+                example:
+                  strict: false
+                  value: !include acq-models/examples/composite_po_line.sample
+          400:
+            description: "Bad request"
+            body:
+              text/plain:
+                example: "Bad request"
+          500:
+            description: "Internal server error"
+            body:
+              text/plain:
+                example: "Internal server error"
+      /{polineId}:
+        displayName: Purchace Order Line
+        description: Manage purchase order line (PO line) by id
+        uriParameters:
+          polineId:
+            description: The UUID of a purchase order line
+            type: UUID
+        type:
+          collection-item:
+            exampleItem: !include acq-models/examples/composite_po_line.sample
+            schema: composite_po_line
