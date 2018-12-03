@@ -59,3 +59,6 @@ resourceTypes:
       collection-item:
         exampleItem: !include acq-models/examples/composite_purchase_order.sample
         schema: composite_purchase_order
+    put:
+      description: Update an order by id
+      is: [validate] 

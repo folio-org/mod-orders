@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -14,6 +15,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -29,6 +31,10 @@ public class DeleteOrdersByIdHelper {
 
   public DeleteOrdersByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
+    Map<String,String> customHeader=new HashMap<>();
+    customHeader.put(HttpHeaders.ACCEPT.toString(), "application/json, text/plain");
+    httpClient.setDefaultHeaders(customHeader);
+    
     this.httpClient = httpClient;
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
@@ -39,12 +45,17 @@ public class DeleteOrdersByIdHelper {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
       HelperUtils.deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenRun(()-> {
-        HelperUtils.operateOnSubObj(HttpMethod.DELETE,"/purchase_order/"+id, httpClient, ctx, okapiHeaders, logger);       
-        future.complete(null);      
-      })
+      .thenRun(()-> 
+        HelperUtils.operateOnSubObj(HttpMethod.DELETE,"/purchase_order/"+id, httpClient, ctx, okapiHeaders, logger)
+        .thenAccept(action -> future.complete(null))
+        .exceptionally(t -> {
+                logger.error("Failed to delete PO", t);
+                future.completeExceptionally(t.getCause());
+                 return null;
+           })
+      )
       .exceptionally(t -> {
-        logger.error("Failed to delete PO", t);
+        logger.error("Failed to delete PO Lines", t);
         future.completeExceptionally(t.getCause());
         return null;
       });

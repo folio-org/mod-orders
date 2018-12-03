@@ -393,7 +393,7 @@ public class OrdersImplTest {
           .statusCode(204);
      
   }
-  
+
   @Test
   public void testValidationOnPost() throws Exception {
     logger.info("=== Test validation Annotation on POST API ===");
@@ -541,7 +541,7 @@ public class OrdersImplTest {
   }
   
   
-  
+
   public static class MockServer {
 
     private static final Logger logger = LoggerFactory.getLogger(MockServer.class);
