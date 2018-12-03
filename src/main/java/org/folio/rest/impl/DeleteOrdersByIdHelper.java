@@ -7,7 +7,7 @@ import javax.ws.rs.core.Response;
 
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.resource.Orders.GetOrdersByIdResponse;
+import org.folio.rest.jaxrs.resource.Orders.DeleteOrdersByIdResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
@@ -55,7 +55,7 @@ public class DeleteOrdersByIdHelper {
   public Void handleError(Throwable throwable) {
     final Future<javax.ws.rs.core.Response> result;
 
-    logger.error("Exception querying for orders", throwable.getCause());
+    logger.error("Exception deleting an order", throwable.getCause());
 
     final Throwable t = throwable.getCause();
     if (t instanceof HttpException) {
@@ -63,16 +63,16 @@ public class DeleteOrdersByIdHelper {
       final String message = t.getMessage();
       switch (code) {
       case 404:
-        result = Future.succeededFuture(GetOrdersByIdResponse.respond404WithTextPlain(message));
+        result = Future.succeededFuture(DeleteOrdersByIdResponse.respond404WithTextPlain(message));
         break;
       case 500:
-        result = Future.succeededFuture(GetOrdersByIdResponse.respond500WithTextPlain(message));
+        result = Future.succeededFuture(DeleteOrdersByIdResponse.respond500WithTextPlain(message));
         break;
       default:
-        result = Future.succeededFuture(GetOrdersByIdResponse.respond500WithTextPlain(message));
+        result = Future.succeededFuture(DeleteOrdersByIdResponse.respond500WithTextPlain(message));
       }
     } else {
-      result = Future.succeededFuture(GetOrdersByIdResponse.respond500WithTextPlain(throwable.getMessage()));
+      result = Future.succeededFuture(DeleteOrdersByIdResponse.respond500WithTextPlain(throwable.getMessage()));
     }
 
     httpClient.closeClient();

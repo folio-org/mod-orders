@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.folio.rest.RestVerticle;
+import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.HttpClientFactory;
@@ -27,6 +28,7 @@ public class OrdersImpl implements Orders {
   private static final String ORDERS_LOCATION_PREFIX = "/orders/";
 
   @Override
+  @Validate
   public void deleteOrdersById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
@@ -49,6 +51,7 @@ public class OrdersImpl implements Orders {
   }
 
   @Override
+  @Validate
   public void getOrders(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
 
@@ -67,6 +70,7 @@ public class OrdersImpl implements Orders {
   }
 
   @Override
+  @Validate
   public void getOrdersById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
 
@@ -85,6 +89,7 @@ public class OrdersImpl implements Orders {
   }
 
   @Override
+  @Validate
   public void postOrders(String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
 
@@ -118,6 +123,7 @@ public class OrdersImpl implements Orders {
   }
 
   @Override
+  @Validate
   public void putOrdersById(String id, String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     // TODO Auto-generated method stub

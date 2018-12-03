@@ -5,6 +5,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.hamcrest.Matchers.containsString;
 
 import java.io.IOException;
 import java.util.List;
@@ -58,6 +59,12 @@ public class OrdersImplTest {
   private static final Header X_OKAPI_TENANT = new Header("X-Okapi-Tenant", "ordersimpltest");
 
   private static final String X_ECHO_STATUS = "X-Okapi-Echo-Status";
+
+  private static final String INVALID_LANG = "?lang=english";
+
+  private static final String INVALID_OFFSET = "?offset=-1";
+  private static final String INVALID_LIMIT = "?limit=-1";
+
 
   // API paths
   private final String rootPath = "/orders";
@@ -366,6 +373,154 @@ public class OrdersImplTest {
           .statusCode(204);
      
   }
+  
+  @Test
+  public void testValidationOnPost() throws Exception {
+    logger.info("=== Test validation Annotation on POST API ===");
+
+   logger.info("=== Test validation on empty body ===");
+   RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+      .post(rootPath)
+        .then()
+          .statusCode(400)
+          .body(containsString("Json content error HV000116: The object to be validated must not be null"));
+   
+   logger.info("=== Test validation on invalid lang query parameter ===");
+   RestAssured
+   .with()
+     .header(X_OKAPI_URL)
+     .header(X_OKAPI_TENANT)
+     .contentType(APPLICATION_JSON)
+    .body("{}")
+   .post(rootPath+INVALID_LANG)
+     .then()
+       .statusCode(400)
+       .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+     
+  }
+  
+  @Test
+  public void testValidationOnGet(TestContext ctx) throws Exception {
+    logger.info("=== Test validation Annotation on GET API ===");
+
+    logger.info("=== Test validation on invalid offset query parameter ===");
+   RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+      .get(rootPath+INVALID_OFFSET)
+        .then()
+          .statusCode(400)
+          .body(containsString("'offset' parameter is incorrect. parameter value {-1} is not valid: must be greater than or equal to 0"));
+   
+   logger.info("=== Test validation on invalid lang query parameter ===");
+   RestAssured
+   .with()
+     .header(X_OKAPI_URL)
+     .header(X_OKAPI_TENANT)
+     .contentType(APPLICATION_JSON)
+   .get(rootPath+INVALID_LANG)
+     .then()
+       .statusCode(400)
+       .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+   
+   logger.info("=== Test validation on invalid limit query parameter ===");
+   RestAssured
+   .with()
+     .header(X_OKAPI_URL)
+     .header(X_OKAPI_TENANT)
+   .get(rootPath+INVALID_LIMIT)
+     .then()
+       .statusCode(400)
+       .body(containsString("'limit' parameter is incorrect. parameter value {-1} is not valid: must be greater than or equal to 0"));
+     
+  }
+  
+  @Test
+  public void testValidationOnGetById(TestContext ctx) throws Exception {
+    logger.info("=== Test validation Annotation on GET ORDER BY ID API ===");
+
+   
+   
+   logger.info("=== Test validation on invalid lang query parameter ===");
+   RestAssured
+   .with()
+     .header(X_OKAPI_URL)
+     .header(X_OKAPI_TENANT)
+     .contentType(APPLICATION_JSON)
+   .get(rootPath+INVALID_LANG)
+     .then()
+       .statusCode(400)
+       .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+
+     
+  }
+  
+  @Test
+  public void testValidationDelete(TestContext ctx) throws Exception {
+    logger.info("=== Test validation Annotation on DELETE API ===");
+
+   
+   
+   logger.info("=== Test validation on invalid lang query parameter ===");
+   RestAssured
+   .with()
+     .header(X_OKAPI_URL)
+     .header(X_OKAPI_TENANT)
+     .contentType(APPLICATION_JSON)
+   .get(rootPath+INVALID_LANG)
+     .then()
+       .statusCode(400)
+       .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+
+     
+  }
+  
+  @Test
+  public void testValidationOnPut() throws Exception {
+    logger.info("=== Test validation Annotation on PUT API ===");
+
+   logger.info("=== Test validation on empty body ===");
+   RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+      .post(rootPath)
+        .then()
+          .statusCode(400)
+          .body(containsString("Json content error HV000116: The object to be validated must not be null"));
+   
+   logger.info("=== Test validation on invalid lang query parameter ===");
+   RestAssured
+   .with()
+     .header(X_OKAPI_URL)
+     .header(X_OKAPI_TENANT)
+     .contentType(APPLICATION_JSON)
+    .body("{}")
+   .post(rootPath+INVALID_LANG)
+     .then()
+       .statusCode(400)
+       .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+   
+   logger.info("=== Test validation on no Content-type parameter ===");
+   RestAssured
+   .with()
+     .header(X_OKAPI_URL)
+     .header(X_OKAPI_TENANT)
+    .body("{}")
+   .post(rootPath+INVALID_LANG)
+     .then()
+       .statusCode(400)
+       .body(containsString("Content-type"));
+     
+  }
+  
+  
   
   public static class MockServer {
 
