@@ -61,7 +61,16 @@
           "pathPattern": "/orders/{id}/lines",
           "permissionsRequired": ["orders.po_line.item.post"],
           "modulePermissions": [
-            "po_line.item.post"
+            "po_line.item.post",
+            "adjustment.item.post",
+            "alert.item.post",
+            "claim.item.post",
+            "cost.item.post",
+            "details.item.post",
+            "eresource.item.post",
+            "physical.item.post",
+            "renewal.item.post",
+            "vendor_detail.item.post"
           ]
         },
         {
@@ -69,7 +78,16 @@
           "pathPattern": "/orders/{id}/lines/{lineId}",
           "permissionsRequired": ["orders.po_line.item.get"],
           "modulePermissions": [
-            "po_line.item.get"
+            "po_line.item.get",
+            "adjustment.item.get",
+            "alert.item.get",
+            "claim.item.get",
+            "cost.item.get",
+            "details.item.get",
+            "eresource.item.get",
+            "physical.item.get",
+            "renewal.item.get",
+            "vendor_detail.item.get"
           ]
         },
         {
@@ -77,7 +95,25 @@
           "pathPattern": "/orders/{id}/lines/{lineId}",
           "permissionsRequired": ["orders.po_line.item.put"],
           "modulePermissions": [
-            "po_line.item.put"
+            "po_line.item.delete",
+            "po_line.item.post",
+            "adjustment.item.delete",
+            "adjustment.item.post",
+            "alert.item.delete",
+            "alert.item.delete",
+            "claim.item.post",
+            "cost.item.delete",
+            "cost.item.post",
+            "details.item.delete",
+            "details.item.post",
+            "eresource.item.delete",
+            "eresource.item.post",
+            "physical.item.delete",
+            "physical.item.post",
+            "renewal.item.delete",
+            "renewal.item.post",
+            "vendor_detail.item.delete",
+            "vendor_detail.item.post"
           ]
         },
         {
@@ -85,7 +121,16 @@
           "pathPattern": "/orders/{id}/lines/{lineId}",
           "permissionsRequired": ["orders.po_line.item.delete"],
           "modulePermissions": [
-            "po_line.item.delete"
+            "po_line.item.delete",
+            "adjustment.item.delete",
+            "alert.item.delete",
+            "claim.item.delete",
+            "cost.item.delete",
+            "details.item.delete",
+            "eresource.item.delete",
+            "physical.item.delete",
+            "renewal.item.delete",
+            "vendor_detail.item.delete"
           ]
         }
       ]
