@@ -24,7 +24,6 @@ traits:
   validate: !include raml-util/traits/validation.raml
 
 resourceTypes:
-  collection: !include raml-util/rtypes/collection.raml
   collection-item: !include raml-util/rtypes/item-collection.raml
   # The post-empty-body.raml does not declare request body but it can be defined when this resource type is used
   post-item: !include raml-util/rtypes/post-empty-body.raml
@@ -32,25 +31,25 @@ resourceTypes:
 /orders:
   displayName: Orders
   type:
-    collection:
-      exampleCollection: !include acq-models/examples/composite_purchase_orders.sample
+    post-item:
       exampleItem: !include acq-models/examples/composite_purchase_order.sample
-      schemaCollection: composite_purchase_orders
-      schemaItem: composite_purchase_order
-  get:
-    description: Return a list of purchase orders
-    is: [
-      searchable: {description: "Query (CQL) to find purchase orders", example: "TBD"},
-      pageable
-    ]
+      schema: composite_purchase_order
+
   post:
     description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order
     is: [validate]
+    body:
+      application/json:
+        type: composite_purchase_order
+        example:
+          strict: false
+          value: !include acq-models/examples/composite_purchase_order.sample
     responses:
-      201:
+      401:
+        description: "Not authorized to perform requested action"
         body:
-          application/json:
-            type: composite_purchase_order
+          text/plain:
+            example: "unable to create orders -- unauthorized"
   /{id}:
     uriParameters:
       id:

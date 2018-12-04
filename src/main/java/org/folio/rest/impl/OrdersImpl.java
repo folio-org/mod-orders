@@ -32,12 +32,12 @@ public class OrdersImpl implements Orders {
   public void deleteOrdersById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
-    
-    //to handle delete API's content-type text/plain  
+
+    //to handle delete API's content-type text/plain
     Map<String,String> customHeader=new HashMap<>();
     customHeader.put(HttpHeaders.ACCEPT.toString(), "application/json, text/plain");
     httpClient.setDefaultHeaders(customHeader);
-    
+
     DeleteOrdersByIdHelper helper = new DeleteOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
     helper.deleteOrder(id,lang)
     .thenRun(()->{
@@ -45,28 +45,11 @@ public class OrdersImpl implements Orders {
       httpClient.closeClient();
       javax.ws.rs.core.Response response = DeleteOrdersByIdResponse.respond204();
       AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
-      asyncResultHandler.handle(result);    
+      asyncResultHandler.handle(result);
     })
     .exceptionally(helper::handleError);
   }
 
-  @Override
-  public void getOrders(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
-
-    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
-    GetOrdersHelper helper = new GetOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
-
-    helper.getOrders(query, offset, limit, lang)
-      .thenAccept(orders -> {
-        logger.info("Successfully queried orders: " + JsonObject.mapFrom(orders).encodePrettily());
-        httpClient.closeClient();
-        javax.ws.rs.core.Response response = GetOrdersResponse.respond200WithApplicationJson(orders);
-        AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
-        asyncResultHandler.handle(result);
-      })
-      .exceptionally(helper::handleError);
-  }
 
   @Override
   public void getOrdersById(String id, String lang, Map<String, String> okapiHeaders,
@@ -155,7 +138,7 @@ public class OrdersImpl implements Orders {
   public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {
     final String okapiURL = okapiHeaders.getOrDefault(OKAPI_HEADER_URL, "");
     final String tenantId = TenantTool.calculateTenantId(okapiHeaders.get(RestVerticle.OKAPI_HEADER_TENANT));
-    
+
     return HttpClientFactory.getHttpClient(okapiURL, tenantId);
   }
 
