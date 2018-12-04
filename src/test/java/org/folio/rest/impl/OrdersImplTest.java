@@ -402,8 +402,7 @@ public class OrdersImplTest {
   @Test
   public void testValidationOnGetById() throws Exception {
     logger.info("=== Test validation Annotation on GET ORDER BY ID API ===");
-
-   
+   String id = "non-existent-po-id";
    
    logger.info("=== Test validation on invalid lang query parameter ===");
    RestAssured
