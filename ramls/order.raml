@@ -24,7 +24,6 @@ traits:
   validate: !include raml-util/traits/validation.raml
 
 resourceTypes:
-  post-item: !include raml-util/rtypes/post-empty-body.raml
   collection-item: !include raml-util/rtypes/item-collection.raml
   # The post-empty-body.raml does not declare request body but it can be defined when this resource type is used
   post-item: !include raml-util/rtypes/post-empty-body.raml
@@ -45,6 +44,12 @@ resourceTypes:
         example:
           strict: false
           value: !include acq-models/examples/composite_purchase_order.sample
+    responses:
+      401:
+        description: "Not authorized to perform requested action"
+        body:
+          text/plain:
+            example: "unable to create orders -- unauthorized"
   /{id}:
     uriParameters:
       id:
