@@ -122,8 +122,10 @@ public class OrdersImpl implements Orders {
   @Override
   public void putOrdersById(String id, String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
-    // TODO Auto-generated method stub
-
+        final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
+        PutOrdersByIdHelper putHelper = new PutOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+       putHelper.updateOrder(id, lang, compPO, vertxContext)
+         .exceptionally(putHelper::handleError);
   }
 
   @Override

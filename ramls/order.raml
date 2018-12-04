@@ -60,6 +60,9 @@ resourceTypes:
       collection-item:
         exampleItem: !include acq-models/examples/composite_purchase_order.sample
         schema: composite_purchase_order
+    put:
+      description: Update an order by id
+      is: [validate]
     /lines:
       displayName: Purchace Order Lines
       description: Manage purchase order (PO) lines
@@ -89,3 +92,4 @@ resourceTypes:
           collection-item:
             exampleItem: !include acq-models/examples/composite_po_line.sample
             schema: composite_po_line
+
