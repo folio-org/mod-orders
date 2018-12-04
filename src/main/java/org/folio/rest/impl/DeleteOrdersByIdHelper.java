@@ -66,7 +66,7 @@ public class DeleteOrdersByIdHelper {
   public Void handleError(Throwable throwable) {
     final Future<javax.ws.rs.core.Response> result;
 
-    logger.error("Exception querying for orders", throwable.getCause());
+    logger.error("Exception deleting an order", throwable.getCause());
 
     final Throwable t = throwable.getCause();
     if (t instanceof HttpException) {
