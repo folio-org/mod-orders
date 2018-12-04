@@ -411,7 +411,7 @@ public class OrdersImplTest {
      .header(X_OKAPI_URL)
      .header(X_OKAPI_TENANT)
      .contentType(APPLICATION_JSON)
-   .get(rootPath+INVALID_LANG)
+   .get(rootPath+"/"+id+INVALID_LANG)
      .then()
        .statusCode(400)
        .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
