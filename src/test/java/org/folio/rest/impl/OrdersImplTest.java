@@ -357,7 +357,7 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testDeleteById(TestContext ctx) throws Exception {
+  public void testDeleteById() throws Exception {
     logger.info("=== Test Delete Order By Id ===");
 
     JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
@@ -394,11 +394,11 @@ public class OrdersImplTest {
      
   }
 
-  @Test
+@Test
   public void testValidationOnPost() throws Exception {
     logger.info("=== Test validation Annotation on POST API ===");
 
-   logger.info("=== Test validation on empty body ===");
+   logger.info("=== Test validation with no body ===");
    RestAssured
       .with()
         .header(X_OKAPI_URL)
@@ -424,7 +424,7 @@ public class OrdersImplTest {
   }
   
   @Test
-  public void testValidationOnGet(TestContext ctx) throws Exception {
+  public void testValidationOnGet() throws Exception {
     logger.info("=== Test validation Annotation on GET API ===");
 
     logger.info("=== Test validation on invalid offset query parameter ===");
@@ -461,7 +461,7 @@ public class OrdersImplTest {
   }
   
   @Test
-  public void testValidationOnGetById(TestContext ctx) throws Exception {
+  public void testValidationOnGetById() throws Exception {
     logger.info("=== Test validation Annotation on GET ORDER BY ID API ===");
 
    
@@ -481,9 +481,9 @@ public class OrdersImplTest {
   }
   
   @Test
-  public void testValidationDelete(TestContext ctx) throws Exception {
+  public void testValidationDelete() throws Exception {
     logger.info("=== Test validation Annotation on DELETE API ===");
-
+    String id = "non-existent-po-id";
    
    
    logger.info("=== Test validation on invalid lang query parameter ===");
@@ -492,7 +492,7 @@ public class OrdersImplTest {
      .header(X_OKAPI_URL)
      .header(X_OKAPI_TENANT)
      .contentType(APPLICATION_JSON)
-   .get(rootPath+INVALID_LANG)
+   .delete(rootPath+"/"+id+INVALID_LANG)
      .then()
        .statusCode(400)
        .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
@@ -503,14 +503,14 @@ public class OrdersImplTest {
   @Test
   public void testValidationOnPut() throws Exception {
     logger.info("=== Test validation Annotation on PUT API ===");
-
-   logger.info("=== Test validation on empty body ===");
+    String id = "non-existent-po-id";
+   logger.info("=== Test validation with no body ===");
    RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
         .contentType(APPLICATION_JSON)
-      .post(rootPath)
+      .put(rootPath+"/"+id)
         .then()
           .statusCode(400)
           .body(containsString("Json content error HV000116: The object to be validated must not be null"));
@@ -522,7 +522,7 @@ public class OrdersImplTest {
      .header(X_OKAPI_TENANT)
      .contentType(APPLICATION_JSON)
     .body("{}")
-   .post(rootPath+INVALID_LANG)
+   .put(rootPath+"/"+id+INVALID_LANG)
      .then()
        .statusCode(400)
        .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
@@ -533,12 +533,13 @@ public class OrdersImplTest {
      .header(X_OKAPI_URL)
      .header(X_OKAPI_TENANT)
     .body("{}")
-   .post(rootPath+INVALID_LANG)
+   .put(rootPath+"/"+id+INVALID_LANG)
      .then()
        .statusCode(400)
        .body(containsString("Content-type"));
      
   }
+  
   
   
 
