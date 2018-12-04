@@ -18,33 +18,31 @@ types:
     pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
 
 traits:
-  orderable: !include raml-util/traits/orderable.raml
   pageable: !include raml-util/traits/pageable.raml
   searchable: !include raml-util/traits/searchable.raml
   language: !include raml-util/traits/language.raml
   validate: !include raml-util/traits/validation.raml
 
 resourceTypes:
-  collection: !include rtypes/collection-post.raml
+  post-item: !include raml-util/rtypes/post-empty-body.raml
   collection-item: !include raml-util/rtypes/item-collection.raml
 
 /orders:
   displayName: Orders
   type:
-    collection:
-      exampleCollection: !include acq-models/examples/composite_purchase_orders.sample
+    post-item:
       exampleItem: !include acq-models/examples/composite_purchase_order.sample
-      schemaCollection: composite_purchase_orders
-      schemaItem: composite_purchase_order
+      schema: composite_purchase_order
 
   post:
     description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order
     is: [validate]
-    responses:
-      201:
-        body:
-          application/json:
-            type: composite_purchase_order
+    body:
+      application/json:
+        type: composite_purchase_order
+        example:
+          strict: false
+          value: !include acq-models/examples/composite_purchase_order.sample
   /{id}:
     uriParameters:
       id:
