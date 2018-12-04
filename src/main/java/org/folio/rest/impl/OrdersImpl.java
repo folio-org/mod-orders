@@ -1,5 +1,17 @@
 package org.folio.rest.impl;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.commons.lang3.NotImplementedException;
+import org.folio.rest.RestVerticle;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.resource.Orders;
+import org.folio.rest.tools.client.HttpClientFactory;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.rest.tools.utils.TenantTool;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -8,15 +20,6 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import org.folio.rest.RestVerticle;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.resource.Orders;
-import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.rest.tools.utils.TenantTool;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class OrdersImpl implements Orders {
 
@@ -102,8 +105,34 @@ public class OrdersImpl implements Orders {
   @Override
   public void putOrdersById(String id, String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
-    // TODO Auto-generated method stub
+        final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
+        PutOrdersByIdHelper putHelper = new PutOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+       putHelper.updateOrder(id, lang, compPO, vertxContext)
+         .exceptionally(putHelper::handleError);
+  }
 
+  @Override
+  public void postOrdersLinesById(String id, String lang, CompositePoLine entity, Map<String, String> okapiHeaders,
+                                  Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
+    asyncResultHandler.handle(Future.failedFuture(new NotImplementedException("POST PO line is not implemented yet")));
+  }
+
+  @Override
+  public void getOrdersLinesByIdAndLineId(String id, String lineId, String lang, Map<String, String> okapiHeaders,
+                                            Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
+    asyncResultHandler.handle(Future.failedFuture(new NotImplementedException("GET PO line by id is not implemented yet")));
+  }
+
+  @Override
+  public void deleteOrdersLinesByIdAndLineId(String id, String lineId, String lang, Map<String, String> okapiHeaders,
+                                               Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
+    asyncResultHandler.handle(Future.failedFuture(new NotImplementedException("DELETE PO line by id is not implemented yet")));
+  }
+
+  @Override
+  public void putOrdersLinesByIdAndLineId(String id, String lineId, String lang, CompositePoLine entity, Map<String, String> okapiHeaders,
+                                            Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
+    asyncResultHandler.handle(Future.failedFuture(new NotImplementedException("PUT PO line by id is not implemented yet")));
   }
 
   public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {

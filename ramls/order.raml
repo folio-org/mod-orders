@@ -26,6 +26,8 @@ traits:
 resourceTypes:
   post-item: !include raml-util/rtypes/post-empty-body.raml
   collection-item: !include raml-util/rtypes/item-collection.raml
+  # The post-empty-body.raml does not declare request body but it can be defined when this resource type is used
+  post-item: !include raml-util/rtypes/post-empty-body.raml
 
 /orders:
   displayName: Orders
@@ -52,3 +54,36 @@ resourceTypes:
       collection-item:
         exampleItem: !include acq-models/examples/composite_purchase_order.sample
         schema: composite_purchase_order
+    put:
+      description: Update an order by id
+      is: [validate]
+    /lines:
+      displayName: Purchace Order Lines
+      description: Manage purchase order (PO) lines
+      type:
+        # Using `post-item` resource type because at the moment only POST is required. In case GET becomes also required, the `collection` resource type should be used instead
+        post-item:
+          exampleItem: !include acq-models/examples/composite_po_line.sample
+          schema: composite_po_line
+      post:
+        displayName: Create a new purchace order line
+        description: Post a purchase order (PO) line
+        is: [validate]
+        body:
+          application/json:
+            type: composite_po_line
+            example:
+              strict: false
+              value: !include acq-models/examples/composite_po_line.sample
+      /{lineId}:
+        displayName: Purchace Order Line
+        description: Manage purchase order line (PO line) by id
+        uriParameters:
+          lineId:
+            description: The UUID of a purchase order line
+            type: UUID
+        type:
+          collection-item:
+            exampleItem: !include acq-models/examples/composite_po_line.sample
+            schema: composite_po_line
+
