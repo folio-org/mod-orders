@@ -59,6 +59,7 @@ public class OrdersImplTest {
   private static final Header X_OKAPI_TENANT = new Header("X-Okapi-Tenant", "ordersimpltest");
 
   private static final String X_ECHO_STATUS = "X-Okapi-Echo-Status";
+  private static final String MOCK_DATA_PATH = "mockdata/getOrders.json" ;
 
   private static final String INVALID_LANG = "?lang=english";
 
@@ -282,36 +283,10 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testGetOrders(TestContext ctx) throws Exception {
-    logger.info("=== Test Get Orders ===");
-
-    JsonObject expected = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
-
-    final CompositePurchaseOrders resp = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(X_OKAPI_TENANT)
-        .queryParam("query", "approval_status%3D%22Pending%22")
-        .queryParam("limit", "30")
-      .get(rootPath)
-        .then()
-          .contentType(APPLICATION_JSON)
-          .statusCode(200)
-          .extract()
-            .response()
-              .as(CompositePurchaseOrders.class);
-
-    logger.info(JsonObject.mapFrom(resp));
-
-    int pos = expected.getJsonArray("composite_purchase_orders").size();
-    assertEquals(pos, resp.getCompositePurchaseOrders().size());
-  }
-
-  @Test
   public void testGetOrderById(TestContext ctx) throws Exception {
     logger.info("=== Test Get Order By Id ===");
 
-    JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
+    JsonObject ordersList = new JsonObject(getMockData(MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString("id");
     logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, id));
 
@@ -360,7 +335,7 @@ public class OrdersImplTest {
   public void testDeleteById() throws Exception {
     logger.info("=== Test Delete Order By Id ===");
 
-    JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
+    JsonObject ordersList = new JsonObject(getMockData(MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString("id");
     logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, id));
 
@@ -371,14 +346,14 @@ public class OrdersImplTest {
       .delete(rootPath + "/" + id)
         .then()
           .statusCode(204);
-     
+
   }
-  
+
   @Test
   public void putOrdersById(TestContext ctx) throws Exception {
     logger.info("=== Test Put Order By Id ===");
 
-    JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
+    JsonObject ordersList = new JsonObject(getMockData(MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString("id");
     logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, id));
     String body = getMockData(listedPrintMonographPath);
@@ -391,7 +366,7 @@ public class OrdersImplTest {
       .put(rootPath + "/" + id)
         .then()
           .statusCode(204);
-     
+
   }
 
 @Test
@@ -423,43 +398,7 @@ public class OrdersImplTest {
      
   }
   
-  @Test
-  public void testValidationOnGet() throws Exception {
-    logger.info("=== Test validation Annotation on GET API ===");
 
-    logger.info("=== Test validation on invalid offset query parameter ===");
-   RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(X_OKAPI_TENANT)
-      .get(rootPath+INVALID_OFFSET)
-        .then()
-          .statusCode(400)
-          .body(containsString("'offset' parameter is incorrect. parameter value {-1} is not valid: must be greater than or equal to 0"));
-   
-   logger.info("=== Test validation on invalid lang query parameter ===");
-   RestAssured
-   .with()
-     .header(X_OKAPI_URL)
-     .header(X_OKAPI_TENANT)
-     .contentType(APPLICATION_JSON)
-   .get(rootPath+INVALID_LANG)
-     .then()
-       .statusCode(400)
-       .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
-   
-   logger.info("=== Test validation on invalid limit query parameter ===");
-   RestAssured
-   .with()
-     .header(X_OKAPI_URL)
-     .header(X_OKAPI_TENANT)
-   .get(rootPath+INVALID_LIMIT)
-     .then()
-       .statusCode(400)
-       .body(containsString("'limit' parameter is incorrect. parameter value {-1} is not valid: must be greater than or equal to 0"));
-     
-  }
-  
   @Test
   public void testValidationOnGetById() throws Exception {
     logger.info("=== Test validation Annotation on GET ORDER BY ID API ===");
@@ -539,9 +478,6 @@ public class OrdersImplTest {
        .body(containsString("Content-type"));
      
   }
-  
-  
-  
 
   public static class MockServer {
 
@@ -596,8 +532,8 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, "/source/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/vendor_detail/:id").handler(this::handleGetGenericSubObj);
 
-      
-      
+
+
       router.route(HttpMethod.DELETE, "/purchase_order/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
       router.route(HttpMethod.DELETE, "/po_line/:id ").handler(ctx -> handleDeleteGenericSubObj(ctx));
       router.route(HttpMethod.DELETE, "/adjustment/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
@@ -612,12 +548,12 @@ public class OrdersImplTest {
       router.route(HttpMethod.DELETE, "/alerts/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
       router.route(HttpMethod.DELETE, "/claims/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
       router.route(HttpMethod.DELETE, "/fund_distribution/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      
+
       return router;
     }
 
     private void handleDeleteGenericSubObj(RoutingContext ctx) {
-    
+
       ctx.response()
       .setStatusCode(204)
       .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
@@ -813,7 +749,7 @@ public class OrdersImplTest {
         .setStatusCode(201)
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
         .end(JsonObject.mapFrom(pol).encodePrettily());
-    }   
+    }
 
   }
 
