@@ -286,7 +286,7 @@ public class HelperUtils {
           return null;
         });
     } catch (Exception e) {
-    	logger.error(String.format("Exception calling %s %s %s",operation.toString(), url, e));
+    	logger.error(String.format("Exception performing http request %s %s %s",operation.toString(), url, e));
       future.completeExceptionally(e);
     }
 
