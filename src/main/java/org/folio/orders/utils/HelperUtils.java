@@ -164,12 +164,12 @@ public class HelperUtils {
           }
           
           VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
-          .thenAccept(v -> {CompletableFuture.allOf(lineFuture.toArray(new CompletableFuture[lineFuture.size()]))
+          .thenAccept(v -> CompletableFuture.allOf(lineFuture.toArray(new CompletableFuture[lineFuture.size()]))
             	              .thenAccept(n->future.complete(null))
             	              .exceptionally(e -> {logger.error("Exception deleting po_lines:", e);
             	                                   future.completeExceptionally(e.getCause());
-            	                                   return null;});
-        	                })
+            	                                   return null;})
+        	                )
           .exceptionally(t -> {
         	logger.error("Exception deleting po_line data:", t);
             future.completeExceptionally(t.getCause());
