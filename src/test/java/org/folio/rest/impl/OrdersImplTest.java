@@ -534,7 +534,7 @@ public class OrdersImplTest {
 
 
       router.route(HttpMethod.DELETE, "/purchase_order/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      router.route(HttpMethod.DELETE, "/po_line/:id ").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/po_line/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
       router.route(HttpMethod.DELETE, "/adjustment/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
       router.route(HttpMethod.DELETE, "/cost/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
       router.route(HttpMethod.DELETE, "/details/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));

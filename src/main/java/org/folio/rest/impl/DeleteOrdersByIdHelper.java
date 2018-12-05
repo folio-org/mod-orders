@@ -31,10 +31,10 @@ public class DeleteOrdersByIdHelper {
 
   public DeleteOrdersByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
-    Map<String,String> customHeader=new HashMap<>();
+    Map<String, String> customHeader = new HashMap<>();
     customHeader.put(HttpHeaders.ACCEPT.toString(), "application/json, text/plain");
     httpClient.setDefaultHeaders(customHeader);
-    
+
     this.httpClient = httpClient;
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
@@ -44,25 +44,23 @@ public class DeleteOrdersByIdHelper {
   public CompletableFuture<Void> deleteOrder(String id, String lang) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
-      HelperUtils.deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenRun(()-> 
-        HelperUtils.operateOnSubObj(HttpMethod.DELETE,"/purchase_order/"+id, httpClient, ctx, okapiHeaders, logger)
-        .thenAccept(action -> future.complete(null))
-        .exceptionally(t -> {
-                logger.error("Failed to delete PO", t);
-                future.completeExceptionally(t.getCause());
-                 return null;
-           })
-      )
-      .exceptionally(t -> {
-        logger.error("Failed to delete PO Lines", t);
-        future.completeExceptionally(t.getCause());
-        return null;
-      });
-    
+    HelperUtils.deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger).thenRun(() -> {
+      logger.info("Successfully deleted po_lines, proceding with purchase order");
+      HelperUtils.operateOnSubObj(HttpMethod.DELETE, "/purchase_order/" + id, httpClient, ctx, okapiHeaders, logger)
+          .thenAccept(action -> future.complete(null)).exceptionally(t -> {
+            logger.error("Failed to delete PO", t);
+            future.completeExceptionally(t.getCause());
+            return null;
+          });
+    }).exceptionally(t -> {
+      logger.error("Failed to delete PO Lines", t);
+      future.completeExceptionally(t.getCause());
+      return null;
+    });
+
     return future;
   }
-  
+
   public Void handleError(Throwable throwable) {
     final Future<javax.ws.rs.core.Response> result;
 
