@@ -146,30 +146,38 @@ public class HelperUtils {
   }
 
   public static CompletableFuture<List<Void>> deletePoLines(String id, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-    CompletableFuture<List<Void>> future = new VertxCompletableFuture<>(ctx);
+	  CompletableFuture<List<Void>> future = new VertxCompletableFuture<>(ctx);
 
       getPoLine(id,lang, httpClient,ctx, okapiHeaders, logger)
         .thenAccept(body -> {
           List<CompletableFuture<Void>> futures = new ArrayList<>();
-
+          List<CompletableFuture<JsonObject>> lineFuture=new ArrayList<>();
 
           for (int i = 0; i < body.getJsonArray(PO_LINES).size(); i++) {
             JsonObject line = body.getJsonArray(PO_LINES).getJsonObject(i);
-            futures.add(resolvePoLine(HttpMethod.DELETE, line, httpClient, ctx, okapiHeaders, logger).thenAccept(poline->{
-              String polineId = poline.getId();
-              operateOnSubObj(HttpMethod.DELETE,subObjectApis.get(PO_LINES) + polineId, httpClient, ctx, okapiHeaders, logger);
-            }));
+            futures.add(resolvePoLine(HttpMethod.DELETE, line, httpClient, ctx, okapiHeaders, logger)
+            		.thenAccept(poline->{
+                            String polineId = poline.getId();
+                            lineFuture.add(operateOnSubObj(HttpMethod.DELETE,subObjectApis.get(PO_LINES) + polineId, httpClient, ctx, okapiHeaders, logger));
+                      })
+            		);
           }
           
           VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
-          .thenAccept(v -> future.complete(null))
+          .thenAccept(v -> {CompletableFuture.allOf(lineFuture.toArray(new CompletableFuture[lineFuture.size()]))
+            	              .thenAccept(n->future.complete(null))
+            	              .exceptionally(e -> {logger.error("Exception deleting po_lines:", e);
+            	                                   future.completeExceptionally(e.getCause());
+            	                                   return null;});
+        	                })
           .exceptionally(t -> {
+        	logger.error("Exception deleting po_line data:", t);
             future.completeExceptionally(t.getCause());
             return null;
           });
         })
         .exceptionally(t -> {
-          logger.error("Exception deleting po_line data:", t);
+          logger.error("Exception fetching po_line data:", t);
           throw new CompletionException(t);
         });
 
@@ -273,10 +281,12 @@ public class HelperUtils {
           }
         })
         .exceptionally(t -> {
+          logger.error(String.format("Exception calling %s %s %s",operation.toString(), url, t));
           future.completeExceptionally(t);
           return null;
         });
     } catch (Exception e) {
+    	logger.error(String.format("Exception calling %s %s %s",operation.toString(), url, e));
       future.completeExceptionally(e);
     }
 
