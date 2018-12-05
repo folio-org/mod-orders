@@ -145,8 +145,8 @@ public class HelperUtils {
     return future;
   }
 
-  public static CompletableFuture<List<Void>> deletePoLines(String id, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-	  CompletableFuture<List<Void>> future = new VertxCompletableFuture<>(ctx);
+  public static CompletableFuture<Void> deletePoLines(String id, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+	  CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
       getPoLine(id,lang, httpClient,ctx, okapiHeaders, logger)
         .thenAccept(body -> {

@@ -45,15 +45,16 @@ public class DeleteOrdersByIdHelper {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
       HelperUtils.deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenRun(()-> 
+      .thenRun(()-> {
+        logger.info("Successfully deleted po_lines, proceding with purchase order");
         HelperUtils.operateOnSubObj(HttpMethod.DELETE,"/purchase_order/"+id, httpClient, ctx, okapiHeaders, logger)
         .thenAccept(action -> future.complete(null))
         .exceptionally(t -> {
                 logger.error("Failed to delete PO", t);
                 future.completeExceptionally(t.getCause());
                  return null;
-           })
-      )
+           });
+        })
       .exceptionally(t -> {
         logger.error("Failed to delete PO Lines", t);
         future.completeExceptionally(t.getCause());
