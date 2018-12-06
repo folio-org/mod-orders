@@ -1,6 +1,7 @@
 package org.folio.rest.impl;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -38,6 +39,7 @@ public class PostOrdersHelper {
   // epoch time @ 9/1/2018.
   // if you change this, you run the risk of duplicate poNumbers
   private static final long PO_NUMBER_EPOCH = 1535774400000L;
+  private static final String ADJUSTMENT = "adjustment";
 
   private final HttpClientInterface httpClient;
   private final Context ctx;
@@ -53,14 +55,18 @@ public class PostOrdersHelper {
   }
 
   public CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO) {
+    return createPOandPOLines(compPO, new Date());
+  }
+
+  public CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO, Date creationDate) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
 
     compPO.setPoNumber(generatePoNumber());
-
+    compPO.setCreated(creationDate);
     try {
       JsonObject purchaseOrder = JsonObject.mapFrom(compPO);
-      if (purchaseOrder.containsKey("adjustment")) {
-        purchaseOrder.remove("adjustment");
+      if (purchaseOrder.containsKey(ADJUSTMENT)) {
+        purchaseOrder.remove(ADJUSTMENT);
       }
       if (purchaseOrder.containsKey("po_lines")) {
         purchaseOrder.remove("po_lines");
@@ -118,9 +124,9 @@ public class PostOrdersHelper {
     line.remove("fund_distribution");
     line.remove("reporting_codes");
     line.remove("source");
-    line.remove("renewal"); 
-    line.remove("license"); 
-    
+    line.remove("renewal");
+    line.remove("license");
+
     subObjFuts.add(createAdjustment(compPOL, line, compPOL.getAdjustment()));
     subObjFuts.add(createCost(compPOL, line, compPOL.getCost()));
     subObjFuts.add(createDetails(compPOL, line, compPOL.getDetails()));
@@ -160,10 +166,10 @@ public class PostOrdersHelper {
   }
 
   private CompletableFuture<Void> createAdjustment(PoLine compPOL, JsonObject line, Adjustment adjustment) {
-    return createSubObjIfPresent(line, adjustment, "adjustment", "/adjustment")
+    return createSubObjIfPresent(line, adjustment, ADJUSTMENT, "/adjustment")
       .thenAccept(id -> {
         if (id == null) {
-          line.remove("adjustment");
+          line.remove(ADJUSTMENT);
           compPOL.setAdjustment(null);
         } else {
           compPOL.getAdjustment().setId(id);
@@ -175,7 +181,7 @@ public class PostOrdersHelper {
       });
   }
 
-  
+
   private CompletableFuture<Void> createCost(PoLine compPOL, JsonObject line, Cost cost) {
     return createSubObjIfPresent(line, cost, "cost", "/cost")
       .thenAccept(id -> {
@@ -255,7 +261,7 @@ public class PostOrdersHelper {
         throw new CompletionException(t.getCause());
       });
   }
-  
+
   private CompletableFuture<Void> createVendorDetail(PoLine compPOL, JsonObject line, VendorDetail vendor) {
     return createSubObjIfPresent(line, vendor, "vendor_detail", "/vendor_detail")
       .thenAccept(id -> {
