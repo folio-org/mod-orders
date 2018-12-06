@@ -3,6 +3,7 @@ package org.folio.rest.impl;
 import static org.folio.orders.utils.HelperUtils.getMockData;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.hamcrest.Matchers.containsString;
@@ -318,6 +319,33 @@ public class OrdersImplTest {
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
     assertEquals(id, resp.getId());
+  }
+
+  @Test
+  public void testGetOrderByIdWithOnePoLine() {
+    logger.info("=== Test Get Order By Id - With one PO Line and empty source ===");
+
+    String id = "07f65192-44a4-483d-97aa-b137bbd96390";
+    logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, id));
+
+    final CompositePurchaseOrder resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+      .get(rootPath + "/" + id)
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(200)
+          .extract()
+            .response()
+              .as(CompositePurchaseOrder.class);
+
+    logger.info(JsonObject.mapFrom(resp).encodePrettily());
+
+    assertEquals(id, resp.getId());
+    assertEquals(1, resp.getPoLines().size());
+    // The source set in file to ID_DOES_NOT_EXIST constant value
+    assertNull(resp.getPoLines().get(0).getSource());
   }
 
   @Test
