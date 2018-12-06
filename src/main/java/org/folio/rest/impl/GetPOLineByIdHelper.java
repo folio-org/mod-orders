@@ -63,7 +63,7 @@ public class GetPOLineByIdHelper {
    * @param poline  PO line retrieved from storage
    * @return PO line json object if validation is passed
    */
-  private PoLine validateOrderIdReference(String orderId, PoLine poline) throws CompletionException {
+  private PoLine validateOrderIdReference(String orderId, PoLine poline) {
     if (!poline.getPurchaseOrderId().equals(orderId))
       throw new CompletionException(ORDER_REFERENCE_ERROR_MESSAGE, new HttpException(422, ORDER_REFERENCE_ERROR_MESSAGE));
     return poline;
