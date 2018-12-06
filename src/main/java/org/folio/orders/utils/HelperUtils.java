@@ -26,12 +26,17 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
+import static java.util.Objects.nonNull;
+
 public class HelperUtils {
+
   private static final String PO_LINES = "po_lines";
+
   static final Map<String,String> subObjectApis=new HashMap<>();
+
   static {
-    subObjectApis.put("adjustment", "/adjustment/"); 
-    subObjectApis.put("cost","/cost/");
+    subObjectApis.put("adjustment", "/adjustment/");
+    subObjectApis.put("cost", "/cost/");
     subObjectApis.put("details", "/details/");
     subObjectApis.put("eresource", "/eresource/");
     subObjectApis.put("location", "/location/");
@@ -39,8 +44,9 @@ public class HelperUtils {
     subObjectApis.put("renewal", "/renewal/");
     subObjectApis.put("source", "/source/");
     subObjectApis.put("vendor_detail", "/vendor_detail/");
-    subObjectApis.put("alerts", "/alerts/");
-    subObjectApis.put("claims", "/claims/");
+    subObjectApis.put("alerts", "/alert/");
+    subObjectApis.put("claims", "/claim/");
+    subObjectApis.put("reporting_codes", "/reporting_code/");
     subObjectApis.put("fund_distribution", "/fund_distribution/");
     subObjectApis.put(PO_LINES, "/po_line/");
   }
@@ -226,6 +232,7 @@ public class HelperUtils {
     futures.add(operateOnSubObjIfPresent(operation, line, "vendor_detail", httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, "alerts", httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, "claims", httpClient, ctx, okapiHeaders, logger));
+    futures.addAll(operateOnSubObjsIfPresent(operation, line, "reporting_codes", httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, "fund_distribution", httpClient, ctx, okapiHeaders, logger));
 
     logger.info(line.encodePrettily());
@@ -270,6 +277,17 @@ public class HelperUtils {
     logger.info(String.format("calling %s %s", operation.toString(), url));
 
     try {
+      ////////////////////////////////////////////////////////////////////////
+      //TODO: just remove this workaround after MODORDERS-19 will be completed
+      if (url.startsWith("/fund_distribution/")) {
+        JsonObject mockFundDistribution = new JsonObject()
+          .put("id", "mocki-dfix-modo-rders19first")
+          .put("code", "EUROHIST-FY19")
+          .put("percentage", "100.0")
+          .put("encumbrance", "eb506834-6c70-4239-8d1a-6414a5b08003");
+        future.complete(mockFundDistribution);
+      } else
+      ////////////////////////////////////////////////////////////////////////
       httpClient.request(operation, url, okapiHeaders).thenApply(HelperUtils::verifyAndExtractBody).thenAccept(json -> {
         if (json != null)
           future.complete(json);
@@ -284,6 +302,33 @@ public class HelperUtils {
       });
     } catch (Exception e) {
       logger.error(String.format("Exception performing http request %s %s %s", operation.toString(), url, e));
+      future.completeExceptionally(e);
+    }
+
+    return future;
+  }
+
+  public static CompletableFuture<PoLine> getCompositePoLineById(String polineId, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+    CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
+    try {
+      httpClient.request(HttpMethod.GET,
+        String.format("/po_line/%s?lang=%s", polineId, lang), okapiHeaders)
+        .thenApply(HelperUtils::verifyAndExtractBody)
+        .thenCompose(poLine -> operateOnPoLine(HttpMethod.GET, poLine, httpClient, ctx, okapiHeaders, logger))
+        .thenAccept(poline -> {
+          if (logger.isDebugEnabled()) {
+            logger.debug("The response is valid. The response body: {}",
+              nonNull(poline) ? JsonObject.mapFrom(poline).encodePrettily() : null);
+          }
+          future.complete(poline);
+        })
+        .exceptionally(t -> {
+          logger.error("Exception calling GET /po_line/" + polineId, t);
+          future.completeExceptionally(t);
+          return null;
+        });
+    } catch (Exception e) {
+      logger.error("Exception calling GET /po_line/" + polineId, e);
       future.completeExceptionally(e);
     }
 

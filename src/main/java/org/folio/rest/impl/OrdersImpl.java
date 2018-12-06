@@ -135,7 +135,11 @@ public class OrdersImpl implements Orders {
       .thenAccept(poline -> {
         logger.info("Received POLine Response: " + JsonObject.mapFrom(poline).encodePrettily());
         httpClient.closeClient();
-        javax.ws.rs.core.Response response = GetOrdersLinesByIdAndLineIdResponse.respond200WithApplicationJson(poline);
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        //TODO: remove this workaround after approving of https://github.com/folio-org/mod-orders/pull/30
+        CompositePoLine compPOLine = JsonObject.mapFrom(poline).mapTo(CompositePoLine.class);
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        javax.ws.rs.core.Response response = GetOrdersLinesByIdAndLineIdResponse.respond200WithApplicationJson(compPOLine);
         AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
         asyncResultHandler.handle(result);
       })

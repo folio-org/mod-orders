@@ -9,9 +9,9 @@ import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -41,11 +41,11 @@ public class GetPOLineByIdHelper {
     this.asyncResultHandler = asyncResultHandler;
   }
 
-  public CompletableFuture<CompositePoLine> getCompositePOLineByPOLineId(String orderId, String polineId, String lang) {
-    CompletableFuture<CompositePoLine> future = new VertxCompletableFuture<>(ctx);
+  public CompletableFuture<PoLine> getCompositePOLineByPOLineId(String orderId, String polineId, String lang) {
+    CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
 
     HelperUtils.getCompositePoLineById(polineId, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(poline -> checkPOLineForOrderIdReference(orderId, poline))
+      .thenApply(poline -> validateOrderIdReference(orderId, poline))
       .thenAccept(future::complete)
       .exceptionally(t -> {
         logger.error("Failed to get composite purchase order line", t.getCause());
@@ -56,7 +56,14 @@ public class GetPOLineByIdHelper {
     return future;
   }
 
-  private CompositePoLine checkPOLineForOrderIdReference(String orderId, CompositePoLine poline) throws CompletionException {
+  /**
+   * Validates if the retrieved PO line corresponds to PO (orderId). In case the PO line does not correspond to order id the exception is thrown
+   *
+   * @param orderId order identifier
+   * @param poline  PO line retrieved from storage
+   * @return PO line json object if validation is passed
+   */
+  private PoLine validateOrderIdReference(String orderId, PoLine poline) throws CompletionException {
     if (!poline.getPurchaseOrderId().equals(orderId))
       throw new CompletionException(ORDER_REFERENCE_ERROR_MESSAGE, new HttpException(422, ORDER_REFERENCE_ERROR_MESSAGE));
     return poline;
