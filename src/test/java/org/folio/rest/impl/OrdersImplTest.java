@@ -1,6 +1,9 @@
 package org.folio.rest.impl;
 
 import static org.folio.orders.utils.HelperUtils.getMockData;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -8,14 +11,17 @@ import static org.junit.Assert.fail;
 import static org.hamcrest.Matchers.containsString;
 
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.UUID;
 
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrders;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.utils.NetworkUtils;
@@ -48,6 +54,8 @@ public class OrdersImplTest {
 
   private static final Logger logger = LoggerFactory.getLogger(OrdersImplTest.class);
 
+  private static final SimpleDateFormat UTC_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:SS.SSS'Z'");
+
   private static final String APPLICATION_JSON = "application/json";
   private static final String TEXT_PLAIN = "text/plain";
   private static final String BASE_MOCK_DATA_PATH = "mockdata/";
@@ -59,7 +67,7 @@ public class OrdersImplTest {
   private static final Header X_OKAPI_TENANT = new Header("X-Okapi-Tenant", "ordersimpltest");
 
   private static final String X_ECHO_STATUS = "X-Okapi-Echo-Status";
-  private static final String MOCK_DATA_PATH = "mockdata/getOrders.json" ;
+  private static final String MOCK_DATA_PATH = "mockdata/getOrders.json";
 
   private static final String INVALID_LANG = "?lang=english";
 
@@ -96,6 +104,8 @@ public class OrdersImplTest {
 
     final DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
     vertx.deployVerticle(RestVerticle.class.getName(), opt, context.asyncAssertSuccess());
+
+    UTC_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
   }
 
   @AfterClass
@@ -339,7 +349,7 @@ public class OrdersImplTest {
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString("id");
     logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, id));
 
-   RestAssured
+    RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
@@ -357,7 +367,7 @@ public class OrdersImplTest {
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString("id");
     logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, id));
     String body = getMockData(listedPrintMonographPath);
-   RestAssured
+    RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
@@ -369,12 +379,39 @@ public class OrdersImplTest {
 
   }
 
-@Test
+  @Test
+  public void testIgnoringCreatedOnInResponseOnPost() throws IOException, ParseException {
+    logger.info("=== Test ignoring \"Created on\" from request on POST API ===");
+
+    String body = getMockData(minimalOrderPath);
+    JsonObject reqData = new JsonObject(body);
+    Date dateFromRequest = UTC_DATE_FORMAT.parse(reqData.getString("created"));
+    final CompositePurchaseOrder resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .post(rootPath)
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+            .response()
+              .as(CompositePurchaseOrder.class);
+
+    logger.info(JsonObject.mapFrom(resp));
+    Date dateFromResponse = resp.getCreated();
+    assertNotNull(dateFromResponse);
+    assertThat(dateFromResponse, not(equalTo(dateFromRequest)));
+  }
+
+  @Test
   public void testValidationOnPost() throws Exception {
     logger.info("=== Test validation Annotation on POST API ===");
 
-   logger.info("=== Test validation with no body ===");
-   RestAssured
+    logger.info("=== Test validation with no body ===");
+    RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
@@ -383,67 +420,63 @@ public class OrdersImplTest {
         .then()
           .statusCode(400)
           .body(containsString("Json content error HV000116: The object to be validated must not be null"));
-   
-   logger.info("=== Test validation on invalid lang query parameter ===");
-   RestAssured
-   .with()
-     .header(X_OKAPI_URL)
-     .header(X_OKAPI_TENANT)
-     .contentType(APPLICATION_JSON)
-    .body("{}")
-   .post(rootPath+INVALID_LANG)
-     .then()
-       .statusCode(400)
-       .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
-     
+
+    logger.info("=== Test validation on invalid lang query parameter ===");
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body("{}")
+      .post(rootPath+INVALID_LANG)
+        .then()
+          .statusCode(400)
+          .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+
   }
-  
 
   @Test
   public void testValidationOnGetById() throws Exception {
     logger.info("=== Test validation Annotation on GET ORDER BY ID API ===");
-   String id = "non-existent-po-id";
-   
-   logger.info("=== Test validation on invalid lang query parameter ===");
-   RestAssured
-   .with()
-     .header(X_OKAPI_URL)
-     .header(X_OKAPI_TENANT)
-     .contentType(APPLICATION_JSON)
-   .get(rootPath+"/"+id+INVALID_LANG)
-     .then()
-       .statusCode(400)
-       .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+    String id = "non-existent-po-id";
 
-     
+    logger.info("=== Test validation on invalid lang query parameter ===");
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+      .get(rootPath+"/"+id+INVALID_LANG)
+        .then()
+          .statusCode(400)
+          .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+
   }
-  
+
   @Test
   public void testValidationDelete() throws Exception {
     logger.info("=== Test validation Annotation on DELETE API ===");
     String id = "non-existent-po-id";
-   
-   
-   logger.info("=== Test validation on invalid lang query parameter ===");
-   RestAssured
-   .with()
-     .header(X_OKAPI_URL)
-     .header(X_OKAPI_TENANT)
-     .contentType(APPLICATION_JSON)
-   .delete(rootPath+"/"+id+INVALID_LANG)
-     .then()
-       .statusCode(400)
-       .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
 
-     
+    logger.info("=== Test validation on invalid lang query parameter ===");
+    RestAssured
+     .with()
+       .header(X_OKAPI_URL)
+       .header(X_OKAPI_TENANT)
+       .contentType(APPLICATION_JSON)
+     .delete(rootPath+"/"+id+INVALID_LANG)
+       .then()
+         .statusCode(400)
+         .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+
   }
-  
+
   @Test
   public void testValidationOnPut() throws Exception {
     logger.info("=== Test validation Annotation on PUT API ===");
     String id = "non-existent-po-id";
-   logger.info("=== Test validation with no body ===");
-   RestAssured
+    logger.info("=== Test validation with no body ===");
+    RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
@@ -452,30 +485,30 @@ public class OrdersImplTest {
         .then()
           .statusCode(400)
           .body(containsString("Json content error HV000116: The object to be validated must not be null"));
-   
-   logger.info("=== Test validation on invalid lang query parameter ===");
-   RestAssured
-   .with()
-     .header(X_OKAPI_URL)
-     .header(X_OKAPI_TENANT)
-     .contentType(APPLICATION_JSON)
-    .body("{}")
-   .put(rootPath+"/"+id+INVALID_LANG)
-     .then()
-       .statusCode(400)
-       .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
-   
-   logger.info("=== Test validation on no Content-type parameter ===");
-   RestAssured
-   .with()
-     .header(X_OKAPI_URL)
-     .header(X_OKAPI_TENANT)
-    .body("{}")
-   .put(rootPath+"/"+id+INVALID_LANG)
-     .then()
-       .statusCode(400)
-       .body(containsString("Content-type"));
-     
+
+     logger.info("=== Test validation on invalid lang query parameter ===");
+     RestAssured
+       .with()
+         .header(X_OKAPI_URL)
+         .header(X_OKAPI_TENANT)
+         .contentType(APPLICATION_JSON)
+         .body("{}")
+       .put(rootPath+"/"+id+INVALID_LANG)
+         .then()
+           .statusCode(400)
+           .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+
+     logger.info("=== Test validation on no Content-type parameter ===");
+     RestAssured
+       .with()
+         .header(X_OKAPI_URL)
+         .header(X_OKAPI_TENANT)
+         .body("{}")
+       .put(rootPath+"/"+id+INVALID_LANG)
+         .then()
+           .statusCode(400)
+           .body(containsString("Content-type"));
+
   }
 
   public static class MockServer {
@@ -532,7 +565,6 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, "/vendor_detail/:id").handler(this::handleGetGenericSubObj);
 
 
-
       router.route(HttpMethod.DELETE, "/purchase_order/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
       router.route(HttpMethod.DELETE, "/po_line/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
       router.route(HttpMethod.DELETE, "/adjustment/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
@@ -554,9 +586,9 @@ public class OrdersImplTest {
     private void handleDeleteGenericSubObj(RoutingContext ctx) {
 
       ctx.response()
-      .setStatusCode(204)
-      .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
-      .end();
+        .setStatusCode(204)
+        .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
+        .end();
 
     }
 
@@ -719,17 +751,17 @@ public class OrdersImplTest {
       ctx.response().setStatusCode(status);
 
       switch (status) {
-      case 201:
-        contentType = APPLICATION_JSON;
-        JsonObject body = JsonObject.mapFrom(ctx.getBodyAsJson().mapTo(clazz)).put("id", UUID.randomUUID().toString());
-        respBody = body.encodePrettily();
-        break;
-      case 403:
-        respBody = "Access requires permission: foo.bar.baz";
-        break;
-      case 500:
-        respBody = "Internal Server Error";
-        break;
+        case 201:
+          contentType = APPLICATION_JSON;
+          JsonObject body = JsonObject.mapFrom(ctx.getBodyAsJson().mapTo(clazz)).put("id", UUID.randomUUID().toString());
+          respBody = body.encodePrettily();
+          break;
+        case 403:
+          respBody = "Access requires permission: foo.bar.baz";
+          break;
+        case 500:
+          respBody = "Internal Server Error";
+          break;
       }
 
       ctx.response()
