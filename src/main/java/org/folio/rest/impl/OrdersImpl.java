@@ -142,7 +142,7 @@ public class OrdersImpl implements Orders {
     final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
     GetPOLineByIdHelper helper = new GetPOLineByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
 
-    helper.getCompositePoLine(lineId, lang)
+    helper.getCompositePOLineByPOLineId(id, lineId, lang)
       .thenAccept(poline -> {
         logger.info("Received POLine Response: " + JsonObject.mapFrom(poline).encodePrettily());
         httpClient.closeClient();

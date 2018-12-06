@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import io.vertx.ext.web.impl.RoutingContextImpl;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.tools.utils.NetworkUtils;
@@ -57,6 +56,8 @@ public class OrdersImplTest {
   private static final String X_ECHO_STATUS = "X-Okapi-Echo-Status";
 
   private static final String EXPECTED_POLINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
+
+  public static final String ERROR_CODE_422 = "422";
 
   // API paths
   private final String rootPath = "/orders";
@@ -390,7 +391,7 @@ public class OrdersImplTest {
   public void testGetOrderLineById(TestContext ctx) {
     logger.info("=== Test Get Orderline By Id ===");
 
-    String orderId = "NoMatterId";
+    String orderId = "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb";
     logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, EXPECTED_POLINE_ID));
 
     final CompositePoLine resp = RestAssured
@@ -409,8 +410,29 @@ public class OrdersImplTest {
     assertEquals(EXPECTED_POLINE_ID, resp.getId());
   }
 
-  @Test(expected = AssertionError.class)
-  public void testGetOrderLineByIdWithNotFoundError(TestContext ctx) throws IOException {
+  @Test
+  public void testGetOrderLineByIdError422(TestContext ctx) {
+    logger.info("=== Test Get Orderline By Id ===");
+
+    String orderId = "Error422OrderId";
+    logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, EXPECTED_POLINE_ID));
+
+    final Response resp = RestAssured
+      .with()
+      .header(X_OKAPI_URL)
+      .header(X_OKAPI_TENANT)
+      .get(rootPath + "/" + orderId + "/lines/" + EXPECTED_POLINE_ID)
+      .then()
+      .statusCode(422)
+      .extract()
+      .response();
+
+    logger.info(resp.prettyPrint());
+    assertEquals(ERROR_CODE_422, resp.as(Errors.class).getErrors().get(0).getCode());
+  }
+
+  @Test
+  public void testGetOrderLineByIdWith404(TestContext ctx) throws IOException {
     logger.info("=== Test Get Orderline By Id ===");
 
     JsonObject mockPOLine = new JsonObject(getMockData(GetPOLineByIdHelper.MOCK_DATA_PATH));
@@ -418,7 +440,7 @@ public class OrdersImplTest {
     String lineId = "NotExistingId";
     logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, lineId));
 
-    final CompositePoLine resp = RestAssured
+    final Response resp = RestAssured
       .with()
       .header(X_OKAPI_URL)
       .header(X_OKAPI_TENANT)
@@ -426,10 +448,31 @@ public class OrdersImplTest {
       .then()
       .statusCode(404)
       .extract()
-      .response()
-      .as(CompositePoLine.class);
-    assertEquals(EXPECTED_POLINE_ID, resp.getId());
+      .response();
 
+    assertEquals(lineId, resp.getBody().print());
+  }
+
+  @Test
+  public void testGetOrderLineByIdWith500(TestContext ctx) throws IOException {
+    logger.info("=== Test Get Orderline By Id ===");
+
+    JsonObject mockPOLine = new JsonObject(getMockData(GetPOLineByIdHelper.MOCK_DATA_PATH));
+    String orderId = "NoMatterId";
+    String lineId = "generateError500";
+    logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, lineId));
+
+    final Response resp = RestAssured
+      .with()
+      .header(X_OKAPI_URL)
+      .header(X_OKAPI_TENANT)
+      .get(rootPath + "/" + orderId + "/lines/" + lineId)
+      .then()
+      .statusCode(500)
+      .extract()
+      .response();
+
+    assertEquals("MockServer probably is in error state", resp.getBody().print());
   }
 
   public static class MockServer {
@@ -728,9 +771,15 @@ public class OrdersImplTest {
       try {
         if (ctx.pathParams().get("id").equals("NotExistingId")) {
           ctx.response()
-            .setStatusCode(200)
+            .setStatusCode(404)
             .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-            .end();
+            .end(ctx.pathParams().get("id"));
+        } else
+          if (ctx.pathParams().get("id").equals("generateError500")) {
+            ctx.response()
+              .setStatusCode(500)
+              .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+              .end("MockServer probably is in error state");
         } else {
           JsonObject mockPOLine = new JsonObject(getMockData(GetPOLineByIdHelper.MOCK_DATA_PATH));
           ctx.response()

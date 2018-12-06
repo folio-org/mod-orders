@@ -147,15 +147,15 @@ public class HelperUtils {
     return future;
   }
 
-  public static CompletableFuture<CompositePoLine> getPoLineById(String polineId, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+  public static CompletableFuture<CompositePoLine> getCompositePoLineById(String polineId, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<CompositePoLine> future = new VertxCompletableFuture<>(ctx);
 
     try {
       httpClient.request(HttpMethod.GET,
-        String.format("/po_line/%s", polineId), okapiHeaders)
+        String.format("/po_line/%s?lang=%s", polineId, lang), okapiHeaders)
         .thenApply(HelperUtils::verifyAndExtractBody)
         .thenCompose(poLine -> resolveCompositePoLine(HttpMethod.GET, poLine, httpClient, ctx, okapiHeaders, logger))
-        .thenAccept( compositePoLine -> {
+        .thenAccept(compositePoLine -> {
           logger.info("Recieved compositePoLine : " + compositePoLine.toString());
           future.complete(compositePoLine);
         })
@@ -259,7 +259,9 @@ public class HelperUtils {
       });
     return future;
   }
-  // TODO: needs fixing "resolvePoLine" method code duplication
+
+  // TODO: needs fixing "resolvePoLine" method code duplication.
+  // Should make it after approving https://github.com/folio-org/mod-orders/pull/30
   public static CompletableFuture<CompositePoLine> resolveCompositePoLine(HttpMethod operation, JsonObject line, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture future = new VertxCompletableFuture<>(ctx);
 
@@ -322,29 +324,29 @@ public class HelperUtils {
     try {
       ////////////////////////////////////////////////////////////////////////
       //TODO: just remove this workaround after MODORDERS-19 will be completed
-      if (url.startsWith("/fund_distribution/")){
+      if (url.startsWith("/fund_distribution/")) {
         JsonObject mockFundDistribution = new JsonObject()
-          .put("id", 123)
+          .put("id", "mocki-dfix-modo-rders19first")
           .put("code", "EUROHIST-FY19")
           .put("percentage", "100.0")
-          .put("encumbrance","eb506834-6c70-4239-8d1a-6414a5b08003");
+          .put("encumbrance", "eb506834-6c70-4239-8d1a-6414a5b08003");
         future.complete(mockFundDistribution);
       } else
-      ////////////////////////////////////////////////////////////////////////
-      httpClient.request(operation, url, okapiHeaders)
-        .thenApply(HelperUtils::verifyAndExtractBody)
-        .thenAccept(json -> {
-          if (json != null)
-            future.complete(json);
-          else {
-            //Handling the delete API where it sends no response body
-            future.complete(new JsonObject());
-          }
-        })
-        .exceptionally(t -> {
-          future.completeExceptionally(t);
-          return null;
-        });
+        ////////////////////////////////////////////////////////////////////////
+        httpClient.request(operation, url, okapiHeaders)
+          .thenApply(HelperUtils::verifyAndExtractBody)
+          .thenAccept(json -> {
+            if (json != null)
+              future.complete(json);
+            else {
+              //Handling the delete API where it sends no response body
+              future.complete(new JsonObject());
+            }
+          })
+          .exceptionally(t -> {
+            future.completeExceptionally(t);
+            return null;
+          });
     } catch (Exception e) {
       future.completeExceptionally(e);
     }
