@@ -123,17 +123,17 @@ public class OrdersImplTest {
 
     final CompositePurchaseOrder resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .contentType(APPLICATION_JSON)
-      .statusCode(201)
-      .extract()
-      .response()
-      .as(CompositePurchaseOrder.class);
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+            .response()
+              .as(CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp));
 
@@ -168,17 +168,17 @@ public class OrdersImplTest {
 
     final CompositePurchaseOrder resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .contentType(APPLICATION_JSON)
-      .statusCode(201)
-      .extract()
-      .response()
-      .as(CompositePurchaseOrder.class);
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+            .response()
+              .as(CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp));
 
@@ -209,20 +209,20 @@ public class OrdersImplTest {
 
     final Errors errors = RestAssured
       .given()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .log()
-      .all()
-      .contentType(APPLICATION_JSON)
-      .statusCode(422)
-      .extract()
-      .response()
-      .body()
-      .as(Errors.class);
+        .then()
+          .log()
+            .all()
+          .contentType(APPLICATION_JSON)
+          .statusCode(422)
+          .extract()
+          .response()
+            .body()
+              .as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
 
@@ -243,17 +243,17 @@ public class OrdersImplTest {
 
     final Errors errors = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .contentType(APPLICATION_JSON)
-      .statusCode(422)
-      .extract()
-      .response()
-      .as(Errors.class);
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(422)
+          .extract()
+            .response()
+              .as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
 
@@ -274,17 +274,17 @@ public class OrdersImplTest {
 
     final Response resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .header(X_ECHO_STATUS, 403)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .header(X_ECHO_STATUS, 403)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .contentType(TEXT_PLAIN)
-      .statusCode(500)
-      .extract()
-      .response();
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(500)
+            .extract()
+              .response();
 
     String respBody = resp.getBody().asString();
     logger.info(respBody);
@@ -302,15 +302,15 @@ public class OrdersImplTest {
 
     final CompositePurchaseOrder resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
       .get(rootPath + "/" + id)
-      .then()
-      .contentType(APPLICATION_JSON)
-      .statusCode(200)
-      .extract()
-      .response()
-      .as(CompositePurchaseOrder.class);
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(200)
+          .extract()
+            .response()
+              .as(CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
@@ -326,14 +326,14 @@ public class OrdersImplTest {
 
     final Response resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
       .get(rootPath + "/" + id)
-      .then()
-      .contentType(TEXT_PLAIN)
-      .statusCode(404)
-      .extract()
-      .response();
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(404)
+          .extract()
+            .response();
 
     String actual = resp.getBody().asString();
     logger.info(actual);
@@ -351,11 +351,11 @@ public class OrdersImplTest {
 
     RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
       .delete(rootPath + "/" + id)
-      .then()
-      .statusCode(204);
+        .then()
+          .statusCode(204);
 
   }
 
@@ -369,13 +369,13 @@ public class OrdersImplTest {
     String body = getMockData(listedPrintMonographPath);
     RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .put(rootPath + "/" + id)
-      .then()
-      .statusCode(204);
+        .then()
+          .statusCode(204);
 
   }
 
@@ -388,17 +388,17 @@ public class OrdersImplTest {
     Date dateFromRequest = UTC_DATE_FORMAT.parse(reqData.getString("created"));
     final CompositePurchaseOrder resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .contentType(APPLICATION_JSON)
-      .statusCode(201)
-      .extract()
-      .response()
-      .as(CompositePurchaseOrder.class);
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+            .response()
+              .as(CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp));
     Date dateFromResponse = resp.getCreated();
@@ -413,25 +413,25 @@ public class OrdersImplTest {
     logger.info("=== Test validation with no body ===");
     RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
       .post(rootPath)
-      .then()
-      .statusCode(400)
-      .body(containsString("Json content error HV000116: The object to be validated must not be null"));
+        .then()
+          .statusCode(400)
+          .body(containsString("Json content error HV000116: The object to be validated must not be null"));
 
     logger.info("=== Test validation on invalid lang query parameter ===");
     RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body("{}")
-      .post(rootPath + INVALID_LANG)
-      .then()
-      .statusCode(400)
-      .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body("{}")
+      .post(rootPath+INVALID_LANG)
+        .then()
+          .statusCode(400)
+          .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
 
   }
 
@@ -443,14 +443,13 @@ public class OrdersImplTest {
     logger.info("=== Test validation on invalid lang query parameter ===");
     RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .get(rootPath + "/" + id + INVALID_LANG)
-      .then()
-      .statusCode(400)
-      .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
-
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+      .get(rootPath+"/"+id+INVALID_LANG)
+        .then()
+          .statusCode(400)
+          .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
 
   }
 
@@ -461,14 +460,14 @@ public class OrdersImplTest {
 
     logger.info("=== Test validation on invalid lang query parameter ===");
     RestAssured
-      .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .delete(rootPath + "/" + id + INVALID_LANG)
-      .then()
-      .statusCode(400)
-      .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+     .with()
+       .header(X_OKAPI_URL)
+       .header(X_OKAPI_TENANT)
+       .contentType(APPLICATION_JSON)
+     .delete(rootPath+"/"+id+INVALID_LANG)
+       .then()
+         .statusCode(400)
+         .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
 
   }
 
@@ -479,36 +478,36 @@ public class OrdersImplTest {
     logger.info("=== Test validation with no body ===");
     RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .put(rootPath + "/" + id)
-      .then()
-      .statusCode(400)
-      .body(containsString("Json content error HV000116: The object to be validated must not be null"));
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+      .put(rootPath+"/"+id)
+        .then()
+          .statusCode(400)
+          .body(containsString("Json content error HV000116: The object to be validated must not be null"));
 
-    logger.info("=== Test validation on invalid lang query parameter ===");
-    RestAssured
-      .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body("{}")
-      .put(rootPath + "/" + id + INVALID_LANG)
-      .then()
-      .statusCode(400)
-      .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+     logger.info("=== Test validation on invalid lang query parameter ===");
+     RestAssured
+       .with()
+         .header(X_OKAPI_URL)
+         .header(X_OKAPI_TENANT)
+         .contentType(APPLICATION_JSON)
+         .body("{}")
+       .put(rootPath+"/"+id+INVALID_LANG)
+         .then()
+           .statusCode(400)
+           .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
 
-    logger.info("=== Test validation on no Content-type parameter ===");
-    RestAssured
-      .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .body("{}")
-      .put(rootPath + "/" + id + INVALID_LANG)
-      .then()
-      .statusCode(400)
-      .body(containsString("Content-type"));
+     logger.info("=== Test validation on no Content-type parameter ===");
+     RestAssured
+       .with()
+         .header(X_OKAPI_URL)
+         .header(X_OKAPI_TENANT)
+         .body("{}")
+       .put(rootPath+"/"+id+INVALID_LANG)
+         .then()
+           .statusCode(400)
+           .body(containsString("Content-type"));
 
   }
 
