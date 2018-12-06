@@ -66,6 +66,9 @@ public class OrdersImplTest {
   private static final String INVALID_OFFSET = "?offset=-1";
   private static final String INVALID_LIMIT = "?limit=-1";
 
+  private static final String PO_LINE_STORAGE_ERROR_ID = "orders_storage_error_id";
+  private static final String PO_LINE_ID = "1ddfgb5c-c237-479f-aa48-57f7cbf74ca3";
+
 
   // API paths
   private final String rootPath = "/orders";
@@ -76,6 +79,7 @@ public class OrdersImplTest {
   private final String minimalOrderPath = mockDataRootPath + "/minimal_order.json";
   private final String poCreationFailurePath = mockDataRootPath + "/po_creation_failure.json";
   private final String poLineCreationFailurePath = mockDataRootPath + "/po_line_creation_failure.json";
+  private final String compositePoLinePath = mockDataRootPath + "/composite_po_line.json";
 
   private static Vertx vertx;
   private static MockServer mockServer;
@@ -478,6 +482,86 @@ public class OrdersImplTest {
      
   }
 
+  @Test
+  public void testPostOrdersLinesById(TestContext ctx) throws IOException {
+    logger.info("=== Test Post Order Lines By Id (expected flow) ===");
+
+    String body = getMockData(compositePoLinePath);
+    JsonObject compPoLineJson = new JsonObject(body);
+    String id = compPoLineJson.getString("id");
+    final PoLine response = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .post(rootPath + "/" + id + "/lines")
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+          .response().as(PoLine.class);
+
+    ctx.assertEquals(id, response.getId());
+  }
+
+  @Test
+  public void testPostOrdersLinesByIdWithIdMismatch(TestContext ctx) throws IOException {
+    logger.info("=== Test Post Order Lines By Id (path and request body ids mismatching) ===");
+
+    String body = getMockData(compositePoLinePath);
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .post(rootPath + "/" + PO_LINE_ID + "/lines")
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(400)
+          .extract()
+          .response();
+  }
+
+  @Test
+  public void testPostOrdersLinesByIdPoLineWithoutId(TestContext ctx) throws IOException {
+    logger.info("=== Test Post Order Lines By Id (empty id in body) ===");
+
+    PoLine response = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body("{}")
+      .post(rootPath + "/" + PO_LINE_ID + "/lines")
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+          .response().as(PoLine.class);
+
+    ctx.assertEquals(PO_LINE_ID, response.getId());
+  }
+
+  @Test
+  public void testPostOrdersLinesByIdStorageError(TestContext ctx) throws IOException {
+    logger.info("=== Test Post Order Lines By Id (mod-orders-storage error) ===");
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body("{}")
+      .post(rootPath + "/" + PO_LINE_STORAGE_ERROR_ID + "/lines")
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(500)
+          .extract()
+          .response();
+  }
+
   public static class MockServer {
 
     private static final Logger logger = LoggerFactory.getLogger(MockServer.class);
@@ -742,12 +826,22 @@ public class OrdersImplTest {
       logger.info("got po_line: " + ctx.getBodyAsString());
 
       org.folio.rest.acq.model.PoLine pol = ctx.getBodyAsJson().mapTo(org.folio.rest.acq.model.PoLine.class);
-      pol.setId(UUID.randomUUID().toString());
 
-      ctx.response()
-        .setStatusCode(201)
-        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .end(JsonObject.mapFrom(pol).encodePrettily());
+      if (pol.getId() == null) {
+        pol.setId(UUID.randomUUID().toString());
+      }
+
+      if (PO_LINE_STORAGE_ERROR_ID.equals(pol.getId())) {
+        ctx.response()
+          .setStatusCode(500)
+          .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
+          .end();
+      } else {
+        ctx.response()
+          .setStatusCode(201)
+          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+          .end(JsonObject.mapFrom(pol).encodePrettily());
+      }
     }
 
   }

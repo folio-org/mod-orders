@@ -11,7 +11,7 @@ documentation:
 types:
   composite_purchase_orders: !include acq-models/composite_purchase_orders.json
   composite_purchase_order: !include acq-models/composite_purchase_order.json
-  composite_po_line: !include acq-models/composite_po_line.json
+  po_line: !include acq-models/composite_po_line.json
   errors: !include raml-util/schemas/errors.schema
   UUID:
     type: string
@@ -69,14 +69,14 @@ resourceTypes:
         # Using `post-item` resource type because at the moment only POST is required. In case GET becomes also required, the `collection` resource type should be used instead
         post-item:
           exampleItem: !include acq-models/examples/composite_po_line.sample
-          schema: composite_po_line
+          schema: po_line
       post:
         displayName: Create a new purchace order line
         description: Post a purchase order (PO) line
         is: [validate]
         body:
           application/json:
-            type: composite_po_line
+            type: po_line
             example:
               strict: false
               value: !include acq-models/examples/composite_po_line.sample
@@ -90,5 +90,5 @@ resourceTypes:
         type:
           collection-item:
             exampleItem: !include acq-models/examples/composite_po_line.sample
-            schema: composite_po_line
+            schema: po_line
 

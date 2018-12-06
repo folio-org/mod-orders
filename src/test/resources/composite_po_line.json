@@ -1,0 +1,174 @@
+{
+  "id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
+  "acquisition_method": "Purchase At Vendor System",
+  "adjustment": {
+    "id": "1363467f-eb47-4e09-9e28-e25aa464adb7",
+    "credit": 0.0,
+    "discount": 0.0,
+    "insurance": 0.0,
+    "invoice_id": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
+    "overhead": 0.0,
+    "shipment": 0.0,
+    "tax_1": 0.0,
+    "tax_2": 0.0,
+    "use_pro_rate": false,
+    "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+  },
+  "alerts": [
+    {
+      "alert": "Receipt overdue",
+      "id": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",
+      "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+    }
+  ],
+  "cancellation_restriction": false,
+  "cancellation_restriction_note": "ABCDEFGHIJKLMNOPQRSTUVW",
+  "claims": [
+    {
+      "id": "f7d7d4e4-255e-46dc-9f08-b953fb1e872d",
+      "claimed": false,
+      "sent": "2018-10-09T00:00:00.000Z",
+      "grace": 30,
+      "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+    }
+  ],
+  "collection": false,
+  "contributors": [
+    {
+      "contributor": "Ed Mashburn",
+      "contributor_type": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+    }
+  ],
+  "cost": {
+    "list_price": 24.99,
+    "id": "e047212b-c94f-4cb1-84b0-367848381494",
+    "currency": "USD",
+    "quantity_physical": 1,
+    "quantity_electronic": 1,
+    "po_line_estimated_price": 49.98,
+    "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+  },
+  "description": "ABCDEFGH",
+  "details": {
+    "id": "349d9438-12bd-4e2e-9eb6-dfa830ab99a4",
+    "receiving_note": "ABCDEFGHIJKL",
+    "product_ids": [
+      {
+        "product_id": "9780764354113",
+        "product_id_type": "ISBN"
+      }
+    ],
+    "material_types": [
+      "f7e72403-2a13-43a4-a069-aaabe6c9dea8"
+    ],
+    "subscription_from": "2018-10-09T00:00:00.000Z",
+    "subscription_interval": 824,
+    "subscription_to": "2020-10-09T00:00:00.000Z",
+    "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+  },
+  "donor": "ABCDEFGHIJKLM",
+  "eresource": {
+    "id": "468b679c-378b-4009-9a17-a6711cefc85f",
+    "activated": false,
+    "activation_due": 10,
+    "create_inventory": true,
+    "trial": false,
+    "expected_activation": "2018-10-09T00:00:00.000Z",
+    "user_limit": 10,
+    "access_provider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
+    "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2",
+    "license": "7c063655-b384-4a6f-b367-3c2f95f7a49c"
+  },
+  "fund_distribution": [
+    {
+      "id": "64774a83-fd1d-469e-a4d9-ed4033082799",
+      "code": "HIST",
+      "percentage": 80.0,
+      "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3",
+      "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
+    },
+    {
+      "id": "0d1b2d39-512f-4e0f-a497-b89eba6ecae9",
+      "code": "GENRL",
+      "percentage": 20.0,
+      "encumbrance": "0466cb77-0344-43c6-85eb-0a64aa2934e5",
+      "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
+    }
+  ],
+  "location": {
+    "id": "a4e65e03-99a4-4b39-8e6a-ae666ac52bea",
+    "location_id": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+    "quantity": 2,
+    "quantity_electronic": 1,
+    "quantity_physical": 1,
+    "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+  },
+  "order_format": "Physical Resource",
+  "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
+  "payment_status": "Awaiting Payment",
+  "physical": {
+    "volumes": 1,
+    "id": "5ee243f9-72e5-4464-bdbc-43a21873d648",
+    "material_supplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+    "receipt_due": "2018-10-10T00:00:00.000Z",
+    "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+  },
+  "po_line_description": "ABCDEFGHIJKLMNOPQRSTUVWXY",
+  "po_line_number": "268758-03",
+  "po_line_workflow_status": "Open",
+  "publication_date": "2017",
+  "publisher": "Schiffer Publishing",
+  "purchase_order_id": "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
+  "receipt_date": "2018-10-09T00:00:00.000Z",
+  "receipt_status": "Awaiting Receipt",
+  "renewal": {
+    "interval": 182,
+    "id": "8e414baa-8cf2-4916-a90f-d1da4009e06e",
+    "cycle": "6 Months",
+    "manual_renewal": true,
+    "review_period": 30,
+    "renewal_date": "2019-04-09T00:00:00.000Z",
+    "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+  },
+  "reporting_codes": [
+    {
+      "code": "CODE1",
+      "id": "5926dcd7-85f5-4504-8283-712595ebc38b",
+      "description": "ABCDEF"
+    },
+    {
+      "code": "CODE2",
+      "id": "fa316c04-8101-4e72-8aaf-01281bac718f",
+      "description": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    },
+    {
+      "code": "CODE3",
+      "id": "ea68b696-3125-4940-bf91-1d128323473e",
+      "description": "ABCDE"
+    }
+  ],
+  "requester": "Leo Bulero",
+  "rush": true,
+  "selector": "ABCD",
+  "source": {
+    "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
+    "id": "024b6f41-c5c6-4280-858e-33fba452a334",
+    "description": "ABCDEFGHIJKLMNO"
+  },
+  "tags": [
+    "ABCDEFGHIJKLMNOPQRSTU",
+    "ABCDEFG",
+    "ABCDEFGHIJKLMNOPQRSTU",
+    "ABCDEFGHIJKLMNO"
+  ],
+  "title": "Kayak Fishing in the Northern Gulf Coast",
+  "vendor_detail": {
+    "id": "d5065f0d-fb88-4d23-b0c1-57e754fba40e",
+    "instructions": "ABCDEFG",
+    "note_from_vendor": "ABCDEFGHIKJKLMNOP",
+    "ref_number": "123456-78",
+    "ref_number_type": "Supplier's unique order line reference number",
+    "vendor_account": "8910-10",
+    "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+  }
+}
