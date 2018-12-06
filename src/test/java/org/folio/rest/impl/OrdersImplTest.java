@@ -1,18 +1,29 @@
 package org.folio.rest.impl;
 
 import static org.folio.orders.utils.HelperUtils.getMockData;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.hamcrest.Matchers.containsString;
 
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.UUID;
 
 import org.folio.rest.RestVerticle;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -43,6 +54,8 @@ public class OrdersImplTest {
 
   private static final Logger logger = LoggerFactory.getLogger(OrdersImplTest.class);
 
+  private static final SimpleDateFormat UTC_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:SS.SSS'Z'");
+
   private static final String APPLICATION_JSON = "application/json";
   private static final String TEXT_PLAIN = "text/plain";
   private static final String BASE_MOCK_DATA_PATH = "mockdata/";
@@ -54,10 +67,13 @@ public class OrdersImplTest {
   private static final Header X_OKAPI_TENANT = new Header("X-Okapi-Tenant", "ordersimpltest");
 
   private static final String X_ECHO_STATUS = "X-Okapi-Echo-Status";
+  private static final String MOCK_DATA_PATH = "mockdata/getOrders.json";
 
-  private static final String EXPECTED_POLINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
+  private static final String INVALID_LANG = "?lang=english";
 
-  public static final String ERROR_CODE_422 = "422";
+  private static final String INVALID_OFFSET = "?offset=-1";
+  private static final String INVALID_LIMIT = "?limit=-1";
+
 
   // API paths
   private final String rootPath = "/orders";
@@ -88,6 +104,8 @@ public class OrdersImplTest {
 
     final DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
     vertx.deployVerticle(RestVerticle.class.getName(), opt, context.asyncAssertSuccess());
+
+    UTC_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
   }
 
   @AfterClass
@@ -105,17 +123,17 @@ public class OrdersImplTest {
 
     final CompositePurchaseOrder resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .contentType(APPLICATION_JSON)
-      .statusCode(201)
-      .extract()
-      .response()
-      .as(CompositePurchaseOrder.class);
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+            .response()
+              .as(CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp));
 
@@ -150,17 +168,17 @@ public class OrdersImplTest {
 
     final CompositePurchaseOrder resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .contentType(APPLICATION_JSON)
-      .statusCode(201)
-      .extract()
-      .response()
-      .as(CompositePurchaseOrder.class);
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+            .response()
+              .as(CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp));
 
@@ -191,20 +209,20 @@ public class OrdersImplTest {
 
     final Errors errors = RestAssured
       .given()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .log()
-      .all()
-      .contentType(APPLICATION_JSON)
-      .statusCode(422)
-      .extract()
-      .response()
-      .body()
-      .as(Errors.class);
+        .then()
+          .log()
+            .all()
+          .contentType(APPLICATION_JSON)
+          .statusCode(422)
+          .extract()
+          .response()
+            .body()
+              .as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
 
@@ -225,17 +243,17 @@ public class OrdersImplTest {
 
     final Errors errors = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .contentType(APPLICATION_JSON)
-      .statusCode(422)
-      .extract()
-      .response()
-      .as(Errors.class);
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(422)
+          .extract()
+            .response()
+              .as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
 
@@ -256,17 +274,17 @@ public class OrdersImplTest {
 
     final Response resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .header(X_ECHO_STATUS, 403)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .header(X_ECHO_STATUS, 403)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .post(rootPath)
-      .then()
-      .contentType(TEXT_PLAIN)
-      .statusCode(500)
-      .extract()
-      .response();
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(500)
+            .extract()
+              .response();
 
     String respBody = resp.getBody().asString();
     logger.info(respBody);
@@ -275,50 +293,24 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testGetOrders(TestContext ctx) throws Exception {
-    logger.info("=== Test Get Orders ===");
-
-    JsonObject expected = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
-
-    final CompositePurchaseOrders resp = RestAssured
-      .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .queryParam("query", "approval_status%3D%22Pending%22")
-      .queryParam("limit", "30")
-      .get(rootPath)
-      .then()
-      .contentType(APPLICATION_JSON)
-      .statusCode(200)
-      .extract()
-      .response()
-      .as(CompositePurchaseOrders.class);
-
-    logger.info(JsonObject.mapFrom(resp));
-
-    int pos = expected.getJsonArray("composite_purchase_orders").size();
-    assertEquals(pos, resp.getCompositePurchaseOrders().size());
-  }
-
-  @Test
   public void testGetOrderById(TestContext ctx) throws Exception {
     logger.info("=== Test Get Order By Id ===");
 
-    JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
+    JsonObject ordersList = new JsonObject(getMockData(MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString("id");
     logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, id));
 
     final CompositePurchaseOrder resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
       .get(rootPath + "/" + id)
-      .then()
-      .contentType(APPLICATION_JSON)
-      .statusCode(200)
-      .extract()
-      .response()
-      .as(CompositePurchaseOrder.class);
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(200)
+          .extract()
+            .response()
+              .as(CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
@@ -334,14 +326,14 @@ public class OrdersImplTest {
 
     final Response resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
       .get(rootPath + "/" + id)
-      .then()
-      .contentType(TEXT_PLAIN)
-      .statusCode(404)
-      .extract()
-      .response();
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(404)
+          .extract()
+            .response();
 
     String actual = resp.getBody().asString();
     logger.info(actual);
@@ -350,20 +342,20 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testDeleteById(TestContext ctx) throws Exception {
+  public void testDeleteById() throws Exception {
     logger.info("=== Test Delete Order By Id ===");
 
-    JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
+    JsonObject ordersList = new JsonObject(getMockData(MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString("id");
     logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, id));
 
     RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
       .delete(rootPath + "/" + id)
-      .then()
-      .statusCode(204);
+        .then()
+          .statusCode(204);
 
   }
 
@@ -371,108 +363,152 @@ public class OrdersImplTest {
   public void putOrdersById(TestContext ctx) throws Exception {
     logger.info("=== Test Put Order By Id ===");
 
-    JsonObject ordersList = new JsonObject(getMockData(GetOrdersHelper.MOCK_DATA_PATH));
+    JsonObject ordersList = new JsonObject(getMockData(MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString("id");
     logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, id));
     String body = getMockData(listedPrintMonographPath);
     RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .put(rootPath + "/" + id)
-      .then()
-      .statusCode(204);
+        .then()
+          .statusCode(204);
 
   }
 
   @Test
-  public void testGetOrderLineById(TestContext ctx) {
-    logger.info("=== Test Get Orderline By Id ===");
+  public void testIgnoringCreatedOnInResponseOnPost() throws IOException, ParseException {
+    logger.info("=== Test ignoring \"Created on\" from request on POST API ===");
 
-    String orderId = "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb";
-    logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, EXPECTED_POLINE_ID));
-
-    final CompositePoLine resp = RestAssured
+    String body = getMockData(minimalOrderPath);
+    JsonObject reqData = new JsonObject(body);
+    Date dateFromRequest = UTC_DATE_FORMAT.parse(reqData.getString("created"));
+    final CompositePurchaseOrder resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .get(rootPath + "/" + orderId + "/lines/" + EXPECTED_POLINE_ID)
-      .then()
-      .statusCode(200)
-      .extract()
-      .response()
-      .as(CompositePoLine.class);
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .post(rootPath)
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+            .response()
+              .as(CompositePurchaseOrder.class);
 
-    logger.info(JsonObject.mapFrom(resp).encodePrettily());
-
-    assertEquals(EXPECTED_POLINE_ID, resp.getId());
+    logger.info(JsonObject.mapFrom(resp));
+    Date dateFromResponse = resp.getCreated();
+    assertNotNull(dateFromResponse);
+    assertThat(dateFromResponse, not(equalTo(dateFromRequest)));
   }
 
   @Test
-  public void testGetOrderLineByIdError422(TestContext ctx) {
-    logger.info("=== Test Get Orderline By Id ===");
+  public void testValidationOnPost() throws Exception {
+    logger.info("=== Test validation Annotation on POST API ===");
 
-    String orderId = "Error422OrderId";
-    logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, EXPECTED_POLINE_ID));
-
-    final Response resp = RestAssured
+    logger.info("=== Test validation with no body ===");
+    RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .get(rootPath + "/" + orderId + "/lines/" + EXPECTED_POLINE_ID)
-      .then()
-      .statusCode(422)
-      .extract()
-      .response();
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+      .post(rootPath)
+        .then()
+          .statusCode(400)
+          .body(containsString("Json content error HV000116: The object to be validated must not be null"));
 
-    logger.info(resp.prettyPrint());
-    assertEquals(ERROR_CODE_422, resp.as(Errors.class).getErrors().get(0).getCode());
+    logger.info("=== Test validation on invalid lang query parameter ===");
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body("{}")
+      .post(rootPath+INVALID_LANG)
+        .then()
+          .statusCode(400)
+          .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+
   }
 
   @Test
-  public void testGetOrderLineByIdWith404(TestContext ctx) throws IOException {
-    logger.info("=== Test Get Orderline By Id ===");
+  public void testValidationOnGetById() throws Exception {
+    logger.info("=== Test validation Annotation on GET ORDER BY ID API ===");
+    String id = "non-existent-po-id";
 
-    JsonObject mockPOLine = new JsonObject(getMockData(GetPOLineByIdHelper.MOCK_DATA_PATH));
-    String orderId = "NoMatterId";
-    String lineId = "NotExistingId";
-    logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, lineId));
-
-    final Response resp = RestAssured
+    logger.info("=== Test validation on invalid lang query parameter ===");
+    RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .get(rootPath + "/" + orderId + "/lines/" + lineId)
-      .then()
-      .statusCode(404)
-      .extract()
-      .response();
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+      .get(rootPath+"/"+id+INVALID_LANG)
+        .then()
+          .statusCode(400)
+          .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
 
-    assertEquals(lineId, resp.getBody().print());
   }
 
   @Test
-  public void testGetOrderLineByIdWith500(TestContext ctx) throws IOException {
-    logger.info("=== Test Get Orderline By Id ===");
+  public void testValidationDelete() throws Exception {
+    logger.info("=== Test validation Annotation on DELETE API ===");
+    String id = "non-existent-po-id";
 
-    JsonObject mockPOLine = new JsonObject(getMockData(GetPOLineByIdHelper.MOCK_DATA_PATH));
-    String orderId = "NoMatterId";
-    String lineId = "generateError500";
-    logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, lineId));
+    logger.info("=== Test validation on invalid lang query parameter ===");
+    RestAssured
+     .with()
+       .header(X_OKAPI_URL)
+       .header(X_OKAPI_TENANT)
+       .contentType(APPLICATION_JSON)
+     .delete(rootPath+"/"+id+INVALID_LANG)
+       .then()
+         .statusCode(400)
+         .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
 
-    final Response resp = RestAssured
+  }
+
+  @Test
+  public void testValidationOnPut() throws Exception {
+    logger.info("=== Test validation Annotation on PUT API ===");
+    String id = "non-existent-po-id";
+    logger.info("=== Test validation with no body ===");
+    RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .get(rootPath + "/" + orderId + "/lines/" + lineId)
-      .then()
-      .statusCode(500)
-      .extract()
-      .response();
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+      .put(rootPath+"/"+id)
+        .then()
+          .statusCode(400)
+          .body(containsString("Json content error HV000116: The object to be validated must not be null"));
 
-    assertEquals("MockServer probably is in error state", resp.getBody().print());
+     logger.info("=== Test validation on invalid lang query parameter ===");
+     RestAssured
+       .with()
+         .header(X_OKAPI_URL)
+         .header(X_OKAPI_TENANT)
+         .contentType(APPLICATION_JSON)
+         .body("{}")
+       .put(rootPath+"/"+id+INVALID_LANG)
+         .then()
+           .statusCode(400)
+           .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+
+     logger.info("=== Test validation on no Content-type parameter ===");
+     RestAssured
+       .with()
+         .header(X_OKAPI_URL)
+         .header(X_OKAPI_TENANT)
+         .body("{}")
+       .put(rootPath+"/"+id+INVALID_LANG)
+         .then()
+           .statusCode(400)
+           .body(containsString("Content-type"));
+
   }
 
   public static class MockServer {
@@ -514,25 +550,23 @@ public class OrdersImplTest {
 
       router.route(HttpMethod.GET, "/purchase_order/:id").handler(this::handleGetPurchaseOrderById);
       router.route(HttpMethod.GET, "/po_line").handler(this::handleGetPoLine);
-      router.route(HttpMethod.GET, "/po_line/:id").handler(this::handleGetPoLineById);
 
       router.route(HttpMethod.GET, "/adjustment/:id").handler(this::handleGetAdjustment);
-      router.route(HttpMethod.GET, "/alert/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/alerts/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/cost/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/claim/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/claims/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/details/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/eresource/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/fund_distribution/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/location/:id").handler(this::handleGetLocation);
+      router.route(HttpMethod.GET, "/location/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/physical/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/renewal/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/source/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/reporting_code/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/vendor_detail/:id").handler(this::handleGetGenericSubObj);
 
 
       router.route(HttpMethod.DELETE, "/purchase_order/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      router.route(HttpMethod.DELETE, "/po_line/:id ").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/po_line/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
       router.route(HttpMethod.DELETE, "/adjustment/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
       router.route(HttpMethod.DELETE, "/cost/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
       router.route(HttpMethod.DELETE, "/details/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
@@ -542,8 +576,8 @@ public class OrdersImplTest {
       router.route(HttpMethod.DELETE, "/renewal/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
       router.route(HttpMethod.DELETE, "/source/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
       router.route(HttpMethod.DELETE, "/vendor_detail/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      router.route(HttpMethod.DELETE, "/alert/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      router.route(HttpMethod.DELETE, "/claim/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/alerts/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/claims/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
       router.route(HttpMethod.DELETE, "/fund_distribution/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
 
       return router;
@@ -665,25 +699,6 @@ public class OrdersImplTest {
         .end(JsonObject.mapFrom(a).encodePrettily());
     }
 
-    private void handleGetLocation(RoutingContext ctx) {
-      logger.info("got: " + ctx.request().path());
-      String id = ctx.request().getParam("id");
-      logger.info("id: " + id);
-
-      Location location = new Location();
-      location.setId(id);
-      location.setLocationId("123");
-      location.setPoLineId("123");
-      location.setQuantity(3);
-      location.setQuantityElectronic(1);
-      location.setQuantityPhysical(2);
-
-      ctx.response()
-        .setStatusCode(200)
-        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .end(JsonObject.mapFrom(location).encodePrettily());
-    }
-
     private void handleGetPurchaseOrderById(RoutingContext ctx) {
       logger.info("got: " + ctx.request().path());
       String id = ctx.request().getParam("id");
@@ -765,31 +780,6 @@ public class OrdersImplTest {
         .setStatusCode(201)
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
         .end(JsonObject.mapFrom(pol).encodePrettily());
-    }
-
-    private void handleGetPoLineById(RoutingContext ctx) {
-      try {
-        if (ctx.pathParams().get("id").equals("NotExistingId")) {
-          ctx.response()
-            .setStatusCode(404)
-            .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-            .end(ctx.pathParams().get("id"));
-        } else
-          if (ctx.pathParams().get("id").equals("generateError500")) {
-            ctx.response()
-              .setStatusCode(500)
-              .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-              .end("MockServer probably is in error state");
-        } else {
-          JsonObject mockPOLine = new JsonObject(getMockData(GetPOLineByIdHelper.MOCK_DATA_PATH));
-          ctx.response()
-            .setStatusCode(200)
-            .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-            .end(mockPOLine.toString());
-        }
-      } catch (IOException e) {
-        logger.error("Error defining mock data");
-      }
     }
 
   }

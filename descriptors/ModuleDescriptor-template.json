@@ -7,15 +7,6 @@
       "version": "1.0",
       "handlers": [
         {
-          "methods": ["GET"],
-          "pathPattern": "/orders",
-          "permissionsRequired": ["orders.collection.get"],
-          "modulePermissions": [
-            "purchase_order.collection.get",
-            "po_line.collection.get"
-          ]
-        },
-        {
           "methods": ["POST"],
           "pathPattern": "/orders",
           "permissionsRequired": ["orders.item.post"],
@@ -184,11 +175,6 @@
   ],
     "permissionSets": [
     {
-      "permissionName": "orders.collection.get",
-      "displayName": "orders - get order collection",
-      "description": "Get order collection"
-    },
-    {
       "permissionName": "orders.item.post",
       "displayName": "orders - create a new order",
       "description": "Create a new order"
@@ -233,7 +219,6 @@
       "displayName": "orders - all permissions",
       "description": "Entire set of permissions needed to use orders",
       "subPermissions": [
-        "orders.collection.get",
         "orders.item.post",
         "orders.item.get",
         "orders.item.put",

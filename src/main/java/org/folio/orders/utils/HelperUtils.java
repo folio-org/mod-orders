@@ -15,7 +15,6 @@ import java.util.stream.Stream;
 import org.apache.commons.io.IOUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.Adjustment;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -29,11 +28,10 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class HelperUtils {
   private static final String PO_LINES = "po_lines";
-  static final Map<String, String> subObjectApis = new HashMap<>();
-
+  static final Map<String,String> subObjectApis=new HashMap<>();
   static {
-    subObjectApis.put("adjustment", "/adjustment/");
-    subObjectApis.put("cost", "/cost/");
+    subObjectApis.put("adjustment", "/adjustment/"); 
+    subObjectApis.put("cost","/cost/");
     subObjectApis.put("details", "/details/");
     subObjectApis.put("eresource", "/eresource/");
     subObjectApis.put("location", "/location/");
@@ -41,9 +39,8 @@ public class HelperUtils {
     subObjectApis.put("renewal", "/renewal/");
     subObjectApis.put("source", "/source/");
     subObjectApis.put("vendor_detail", "/vendor_detail/");
-    subObjectApis.put("alerts", "/alert/");
-    subObjectApis.put("claims", "/claim/");
-    subObjectApis.put("reporting_codes", "/reporting_code/");
+    subObjectApis.put("alerts", "/alerts/");
+    subObjectApis.put("claims", "/claims/");
     subObjectApis.put("fund_distribution", "/fund_distribution/");
     subObjectApis.put(PO_LINES, "/po_line/");
   }
@@ -67,7 +64,7 @@ public class HelperUtils {
   public static JsonObject verifyAndExtractBody(Response response) {
     if (!Response.isSuccess(response.getCode())) {
       throw new CompletionException(
-        new HttpException(response.getCode(), response.getError().getString("errorMessage")));
+          new HttpException(response.getCode(), response.getError().getString("errorMessage")));
     }
 
     return response.getBody();
@@ -106,6 +103,7 @@ public class HelperUtils {
   }
 
 
+
   public static CompletableFuture<JsonObject> getPurchaseOrder(String id, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
 
@@ -125,15 +123,15 @@ public class HelperUtils {
 
     return future;
   }
-
+  
   public static CompletableFuture<JsonObject> getPoLine(String id, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
 
     try {
       httpClient.request(HttpMethod.GET,
-        String.format("/po_line?limit=999&query=purchase_order_id==%s&lang=%s", id, lang), okapiHeaders)
-        .thenApply(HelperUtils::verifyAndExtractBody)
-        .thenAccept(future::complete)
+          String.format("/po_line?limit=999&query=purchase_order_id==%s&lang=%s", id, lang), okapiHeaders)
+          .thenApply(HelperUtils::verifyAndExtractBody)
+          .thenAccept(future::complete)
         .exceptionally(t -> {
           logger.error("Exception calling GET /po_line/" + id, t);
           future.completeExceptionally(t);
@@ -147,91 +145,73 @@ public class HelperUtils {
     return future;
   }
 
-  public static CompletableFuture<CompositePoLine> getCompositePoLineById(String polineId, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-    CompletableFuture<CompositePoLine> future = new VertxCompletableFuture<>(ctx);
+	public static CompletableFuture<Void> deletePoLines(String id, String lang, HttpClientInterface httpClient,
+      Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
-    try {
-      httpClient.request(HttpMethod.GET,
-        String.format("/po_line/%s?lang=%s", polineId, lang), okapiHeaders)
-        .thenApply(HelperUtils::verifyAndExtractBody)
-        .thenCompose(poLine -> resolveCompositePoLine(HttpMethod.GET, poLine, httpClient, ctx, okapiHeaders, logger))
-        .thenAccept(compositePoLine -> {
-          logger.info("Recieved compositePoLine : " + compositePoLine.toString());
-          future.complete(compositePoLine);
-        })
-        .exceptionally(t -> {
-          logger.error("Exception calling GET /po_line/" + polineId, t);
-          future.completeExceptionally(t);
-          return null;
-        });
-    } catch (Exception e) {
-      logger.error("Exception calling GET /po_line/" + polineId, e);
-      future.completeExceptionally(e);
-    }
+    getPoLine(id, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(body -> {
+      List<CompletableFuture<Void>> futures = new ArrayList<>();
+      List<CompletableFuture<JsonObject>> lineFuture = new ArrayList<>();
 
-    return future;
-  }
+      for (int i = 0; i < body.getJsonArray(PO_LINES).size(); i++) {
+        JsonObject line = body.getJsonArray(PO_LINES).getJsonObject(i);
+        futures
+            .add(operateOnPoLine(HttpMethod.DELETE, line, httpClient, ctx, okapiHeaders, logger).thenAccept(poline -> {
+              String polineId = poline.getId();
+              lineFuture.add(operateOnSubObj(HttpMethod.DELETE, subObjectApis.get(PO_LINES) + polineId, httpClient, ctx,
+                  okapiHeaders, logger));
+            }));
+      }
 
-  public static CompletableFuture<List<Void>> deletePoLines(String id, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-    CompletableFuture<List<Void>> future = new VertxCompletableFuture<>(ctx);
-
-    getPoLine(id, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenAccept(body -> {
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-
-
-        for (int i = 0; i < body.getJsonArray(PO_LINES).size(); i++) {
-          JsonObject line = body.getJsonArray(PO_LINES).getJsonObject(i);
-          futures.add(resolvePoLine(HttpMethod.DELETE, line, httpClient, ctx, okapiHeaders, logger).thenAccept(poline -> {
-            String polineId = poline.getId();
-            operateOnSubObj(HttpMethod.DELETE, subObjectApis.get(PO_LINES) + polineId, httpClient, ctx, okapiHeaders, logger);
-          }));
-        }
-
-        VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
-          .thenAccept(v -> future.complete(null))
+      VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
+          .thenAccept(v -> CompletableFuture.allOf(lineFuture.toArray(new CompletableFuture[lineFuture.size()]))
+              .thenAccept(n -> future.complete(null)).exceptionally(e -> {
+                logger.error("Exception deleting po_lines:", e);
+                future.completeExceptionally(e.getCause());
+                return null;
+              }))
           .exceptionally(t -> {
+            logger.error("Exception deleting po_line data:", t);
             future.completeExceptionally(t.getCause());
             return null;
           });
-      })
-      .exceptionally(t -> {
-        logger.error("Exception deleting po_line data:", t);
-        throw new CompletionException(t);
-      });
+    }).exceptionally(t -> {
+      logger.error("Exception fetching po_line data:", t);
+      throw new CompletionException(t);
+    });
 
     return future;
   }
 
   public static CompletableFuture<List<PoLine>> getPoLines(String id, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<List<PoLine>> future = new VertxCompletableFuture<>(ctx);
+  
+      getPoLine(id,lang, httpClient,ctx, okapiHeaders, logger)
+        .thenAccept(body -> {
+          List<PoLine> lines = new ArrayList<>();
+          List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-    getPoLine(id, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenAccept(body -> {
-        List<PoLine> lines = new ArrayList<>();
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
+          for (int i = 0; i < body.getJsonArray(PO_LINES).size(); i++) {
+            JsonObject line = body.getJsonArray(PO_LINES).getJsonObject(i);
+            futures.add(operateOnPoLine(HttpMethod.GET, line, httpClient, ctx, okapiHeaders, logger)
+              .thenAccept(lines::add));
+          }
 
-        for (int i = 0; i < body.getJsonArray(PO_LINES).size(); i++) {
-          JsonObject line = body.getJsonArray(PO_LINES).getJsonObject(i);
-          futures.add(resolvePoLine(HttpMethod.GET, line, httpClient, ctx, okapiHeaders, logger)
-            .thenAccept(lines::add));
-        }
-
-        VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
-          .thenAccept(v -> future.complete(lines))
-          .exceptionally(t -> {
-            future.completeExceptionally(t.getCause());
-            return null;
-          });
-      })
-      .exceptionally(t -> {
-        logger.error("Exception gathering po_line data:", t);
-        throw new CompletionException(t);
-      });
+          VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
+            .thenAccept(v -> future.complete(lines))
+            .exceptionally(t -> {
+              future.completeExceptionally(t.getCause());
+              return null;
+            });
+        })
+        .exceptionally(t -> {
+          logger.error("Exception gathering po_line data:", t);
+          throw new CompletionException(t);
+        });
     return future;
   }
 
-  public static CompletableFuture<PoLine> resolvePoLine(HttpMethod operation, JsonObject line, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+  public static CompletableFuture<PoLine> operateOnPoLine(HttpMethod operation,JsonObject line, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
 
     List<CompletableFuture<Void>> futures = new ArrayList<>();
@@ -260,46 +240,13 @@ public class HelperUtils {
     return future;
   }
 
-  // TODO: needs fixing "resolvePoLine" method code duplication.
-  // Should make it after approving https://github.com/folio-org/mod-orders/pull/30
-  public static CompletableFuture<CompositePoLine> resolveCompositePoLine(HttpMethod operation, JsonObject line, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-    CompletableFuture future = new VertxCompletableFuture<>(ctx);
-
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
-    futures.add(operateOnSubObjIfPresent(operation, line, "adjustment", httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, "cost", httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, "details", httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, "eresource", httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, "location", httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, "physical", httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, "renewal", httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, "source", httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, "vendor_detail", httpClient, ctx, okapiHeaders, logger));
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, "alerts", httpClient, ctx, okapiHeaders, logger));
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, "claims", httpClient, ctx, okapiHeaders, logger));
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, "reporting_codes", httpClient, ctx, okapiHeaders, logger));
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, "fund_distribution", httpClient, ctx, okapiHeaders, logger));
-
-    logger.info(line.encodePrettily());
-
-    CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
-      .thenAccept(v -> future.complete(
-        line.mapTo(CompositePoLine.class)))
-      .exceptionally(t -> {
-        logger.error("Exception resolving one or more po_line sub-object(s):", t);
-        future.completeExceptionally(t.getCause());
-        return null;
-      });
-    return future;
-  }
-
   private static List<CompletableFuture<Void>> operateOnSubObjsIfPresent(HttpMethod operation, JsonObject pol, String field,
-                                                                         HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+                                                                HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     JsonArray array = new JsonArray();
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     ((List<?>) pol.remove(field))
       .forEach(fundDistroId -> futures.add(operateOnSubObj(operation, subObjectApis.get(field) + fundDistroId, httpClient, ctx, okapiHeaders, logger)
-        .thenAccept(array::add)));
+                .thenAccept(array::add)));
     pol.put(field, array);
     return futures;
   }
@@ -315,39 +262,28 @@ public class HelperUtils {
     }
     return CompletableFuture.completedFuture(null);
   }
-
-  public static CompletableFuture<JsonObject> operateOnSubObj(HttpMethod operation, String url, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+  
+  public static CompletableFuture<JsonObject> operateOnSubObj(HttpMethod operation, String url,
+      HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
 
     logger.info(String.format("calling %s %s", operation.toString(), url));
 
     try {
-      ////////////////////////////////////////////////////////////////////////
-      //TODO: just remove this workaround after MODORDERS-19 will be completed
-      if (url.startsWith("/fund_distribution/")) {
-        JsonObject mockFundDistribution = new JsonObject()
-          .put("id", "mocki-dfix-modo-rders19first")
-          .put("code", "EUROHIST-FY19")
-          .put("percentage", "100.0")
-          .put("encumbrance", "eb506834-6c70-4239-8d1a-6414a5b08003");
-        future.complete(mockFundDistribution);
-      } else
-        ////////////////////////////////////////////////////////////////////////
-        httpClient.request(operation, url, okapiHeaders)
-          .thenApply(HelperUtils::verifyAndExtractBody)
-          .thenAccept(json -> {
-            if (json != null)
-              future.complete(json);
-            else {
-              //Handling the delete API where it sends no response body
-              future.complete(new JsonObject());
-            }
-          })
-          .exceptionally(t -> {
-            future.completeExceptionally(t);
-            return null;
-          });
+      httpClient.request(operation, url, okapiHeaders).thenApply(HelperUtils::verifyAndExtractBody).thenAccept(json -> {
+        if (json != null)
+          future.complete(json);
+        else {
+          // Handling the delete API where it sends no response body
+          future.complete(new JsonObject());
+        }
+      }).exceptionally(t -> {
+        logger.error(String.format("Exception calling %s %s %s", operation.toString(), url, t));
+        future.completeExceptionally(t);
+        return null;
+      });
     } catch (Exception e) {
+      logger.error(String.format("Exception performing http request %s %s %s", operation.toString(), url, e));
       future.completeExceptionally(e);
     }
 

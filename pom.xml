@@ -40,7 +40,7 @@
   </licenses>
 
   <properties>
-    <aspectj.version>1.8.9</aspectj.version>
+    <aspectj.version>1.8.13</aspectj.version>
     <module_name>mod-orders</module_name>
     <http.port>8081</http.port>
     <generated_sources_dir>${project.build.directory}/generated-sources</generated_sources_dir>
@@ -133,7 +133,6 @@
         <filtering>true</filtering>
       </resource>
     </resources>
-
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -191,7 +190,7 @@
               <sourceDirectory>${basedir}/ramls/acq-models/mod-orders-storage/schemas</sourceDirectory>
               <targetPackage>org.folio.rest.acq.model</targetPackage>
             </configuration>
-          </execution>          
+          </execution>
         </executions>
       </plugin>
 
