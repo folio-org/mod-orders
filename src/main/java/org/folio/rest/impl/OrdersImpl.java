@@ -131,9 +131,12 @@ public class OrdersImpl implements Orders {
 
   @Override
   @Validate
-  public void deleteOrdersLinesByIdAndLineId(String id, String lineId, String lang, Map<String, String> okapiHeaders,
-                                               Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
-    asyncResultHandler.handle(Future.failedFuture(new NotImplementedException("DELETE PO line by id is not implemented yet")));
+  public void deleteOrdersLinesByIdAndLineId(String orderId, String lineId, String lang, Map<String, String> okapiHeaders,
+                                             Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
+    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
+    DeleteOrderLineByIdHelper helper = new DeleteOrderLineByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+
+    helper.deleteLine(orderId, lineId, lang);
   }
 
   @Override
