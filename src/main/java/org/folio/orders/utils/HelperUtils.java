@@ -30,7 +30,7 @@ public class HelperUtils {
   private static final String PO_LINES = "po_lines";
   static final Map<String,String> subObjectApis=new HashMap<>();
   static {
-    subObjectApis.put("adjustment", "/adjustment/"); 
+    subObjectApis.put("adjustment", "/adjustment/");
     subObjectApis.put("cost","/cost/");
     subObjectApis.put("details", "/details/");
     subObjectApis.put("eresource", "/eresource/");
@@ -72,8 +72,8 @@ public class HelperUtils {
 
   public static Adjustment calculateAdjustment(List<PoLine> lines) {
     Adjustment ret = null;
-    for (int i = 0; i < lines.size(); i++) {
-      Adjustment a = lines.get(i).getAdjustment();
+    for (PoLine line : lines) {
+      Adjustment a = line.getAdjustment();
       if (a != null) {
         if (ret == null) {
           ret = a;
@@ -99,7 +99,7 @@ public class HelperUtils {
     if (b == null)
       return a;
 
-    return (a.doubleValue() + b.doubleValue());
+    return (a + b);
   }
 
 
@@ -123,7 +123,7 @@ public class HelperUtils {
 
     return future;
   }
-  
+
   public static CompletableFuture<JsonObject> getPoLine(String id, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
 
@@ -160,7 +160,7 @@ public class HelperUtils {
               operateOnSubObj(HttpMethod.DELETE,subObjectApis.get(PO_LINES) + polineId, httpClient, ctx, okapiHeaders, logger);
             }));
           }
-          
+
           VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
           .thenAccept(v -> future.complete(null))
           .exceptionally(t -> {
@@ -178,7 +178,7 @@ public class HelperUtils {
 
   public static CompletableFuture<List<PoLine>> getPoLines(String id, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<List<PoLine>> future = new VertxCompletableFuture<>(ctx);
-  
+
       getPoLine(id,lang, httpClient,ctx, okapiHeaders, logger)
         .thenAccept(body -> {
           List<PoLine> lines = new ArrayList<>();
@@ -255,7 +255,7 @@ public class HelperUtils {
     }
     return CompletableFuture.completedFuture(null);
   }
-  
+
   public static CompletableFuture<JsonObject> operateOnSubObj(HttpMethod operation, String url, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger){
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
 
