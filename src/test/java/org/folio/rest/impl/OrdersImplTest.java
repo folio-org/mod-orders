@@ -733,7 +733,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
-      .get(rootPath + "/" + orderId + "/lines/" + ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
+      .get(String.format(LINE_BY_ID_PATH, orderId, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE))
         .then()
           .statusCode(200)
           .extract()
@@ -769,7 +769,6 @@ public class OrdersImplTest {
   public void testGetOrderLineByIdWith404(TestContext ctx) throws IOException {
     logger.info("=== Test Get Orderline By Id ===");
 
-    JsonObject mockPOLine = new JsonObject(getMockData(GetPOLineByIdHelper.MOCK_DATA_PATH));
     String orderId = "NoMatterId";
     String lineId = "NotExistingId";
     logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, lineId));
@@ -778,7 +777,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
-      .get(rootPath + "/" + orderId + "/lines/" + lineId)
+      .get(String.format(LINE_BY_ID_PATH, orderId, lineId))
         .then()
           .statusCode(404)
           .extract()
@@ -791,7 +790,6 @@ public class OrdersImplTest {
   public void testGetOrderLineByIdWith500(TestContext ctx) throws IOException {
     logger.info("=== Test Get Orderline By Id ===");
 
-    JsonObject mockPOLine = new JsonObject(getMockData(GetPOLineByIdHelper.MOCK_DATA_PATH));
     String orderId = "NoMatterId";
     String lineId = "generateError500";
     logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, lineId));
@@ -800,7 +798,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
-      .get(rootPath + "/" + orderId + "/lines/" + ID_FOR_INTERNAL_SERVER_ERROR)
+      .get(String.format(LINE_BY_ID_PATH, orderId, ID_FOR_INTERNAL_SERVER_ERROR))
         .then()
           .statusCode(500)
           .extract()
