@@ -157,11 +157,27 @@
       "version": "1.0"
     },
     {
+      "id": "fund_distribution",
+      "version": "1.0"
+    },
+    {
+      "id": "location",
+      "version": "1.0"
+    },
+    {
       "id": "physical",
       "version": "1.0"
     },
     {
       "id": "renewal",
+      "version": "1.0"
+    },
+    {
+      "id": "reporting_code",
+      "version": "1.0"
+    },
+    {
+      "id": "source",
       "version": "1.0"
     },
     {
