@@ -133,10 +133,8 @@ public class OrdersImpl implements Orders {
   @Validate
   public void deleteOrdersLinesByIdAndLineId(String orderId, String lineId, String lang, Map<String, String> okapiHeaders,
                                              Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
-    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
-    DeleteOrderLineByIdHelper helper = new DeleteOrderLineByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
-
-    helper.deleteLine(orderId, lineId, lang);
+    new DeleteOrderLineByIdHelper(okapiHeaders, asyncResultHandler, vertxContext)
+      .deleteLine(orderId, lineId, lang);
   }
 
   @Override
