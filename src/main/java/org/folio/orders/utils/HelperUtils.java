@@ -33,8 +33,6 @@ public class HelperUtils {
 
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
 
-  private static final String FUND_DISTRIBUTION_MOCK = "mockdata/fund_distr.json";
-
   private static final Map<String,String> subObjectApis = new HashMap<>();
 
   static {
@@ -53,8 +51,6 @@ public class HelperUtils {
     subObjectApis.put("fund_distribution", "/fund_distribution/");
     subObjectApis.put(PO_LINES, "/po_line/");
   }
-
-  private static final String GET_POLINE_EXCEPTION = "Exception calling GET /po_line/";
 
   private HelperUtils() {
 
@@ -278,11 +274,6 @@ public class HelperUtils {
     logger.info("Calling {} {}", operation, url);
 
     try {
-      // TODO: remove this mock after implementing [MODORDERS-79](https://issues.folio.org/browse/MODORDERS-79)
-      if (url.startsWith("/fund_distribution/")) {
-        future.complete(new JsonObject(getMockData(FUND_DISTRIBUTION_MOCK)));
-        return future;
-      }
       httpClient.request(operation, url, okapiHeaders)
         // In case there was failed attempt to delete order or particular PO line, the sub-objects might be already partially deleted.
         .thenApply(HelperUtils::verifyAndExtractBodyIfFound)
@@ -344,23 +335,4 @@ public class HelperUtils {
     return future;
   }
 
-  public static CompletableFuture<PoLine> getCompositePoLineById(String lineId, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-    CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
-    String endpoint = String.format("%s%s?lang=%s", subObjectApis.get(PO_LINES), lineId, lang);
-    handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenCompose(poLine -> operateOnPoLine(HttpMethod.GET, poLine, httpClient, ctx, okapiHeaders, logger))
-      .thenAccept(poline -> {
-        if (logger.isDebugEnabled()) {
-          logger.debug("The response is valid. The response body: {}",
-            nonNull(poline) ? JsonObject.mapFrom(poline).encodePrettily() : null);
-        }
-        future.complete(poline);
-      })
-      .exceptionally(t -> {
-        logger.error(GET_POLINE_EXCEPTION + lineId, t);
-        future.completeExceptionally(t);
-        return null;
-      });
-    return future;
-  }
 }

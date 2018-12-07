@@ -731,14 +731,14 @@ public class OrdersImplTest {
 
     final CompositePoLine resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
       .get(rootPath + "/" + orderId + "/lines/" + ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
-      .then()
-      .statusCode(200)
-      .extract()
-      .response()
-      .as(CompositePoLine.class);
+        .then()
+          .statusCode(200)
+          .extract()
+          .response()
+          .as(CompositePoLine.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
@@ -753,13 +753,13 @@ public class OrdersImplTest {
 
     final Response resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
-      .get(rootPath + "/" + orderId + "/lines/" + ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
-      .then()
-      .statusCode(422)
-      .extract()
-      .response();
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+      .get(String.format(LINE_BY_ID_PATH, orderId, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE))
+        .then()
+          .statusCode(422)
+          .extract()
+          .response();
 
     logger.info(resp.prettyPrint());
     assertEquals(ERROR_CODE_422, resp.as(Errors.class).getErrors().get(0).getCode());
@@ -776,15 +776,15 @@ public class OrdersImplTest {
 
     final Response resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
       .get(rootPath + "/" + orderId + "/lines/" + lineId)
-      .then()
-      .statusCode(404)
-      .extract()
-      .response();
+        .then()
+          .statusCode(404)
+          .extract()
+          .response();
 
-    assertEquals(lineId, resp.getBody().print());
+    assertEquals(lineId, resp.getBody().asString());
   }
 
   @Test
@@ -798,13 +798,13 @@ public class OrdersImplTest {
 
     final Response resp = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
       .get(rootPath + "/" + orderId + "/lines/" + ID_FOR_INTERNAL_SERVER_ERROR)
-      .then()
-      .statusCode(500)
-      .extract()
-      .response();
+        .then()
+          .statusCode(500)
+          .extract()
+          .response();
 
     assertEquals("Internal Server Error", resp.getBody().print());
   }

@@ -4,6 +4,8 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
@@ -44,8 +46,9 @@ public class GetPOLineByIdHelper {
   public CompletableFuture<PoLine> getCompositePOLineByPOLineId(String orderId, String polineId, String lang) {
     CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
 
-    HelperUtils.getCompositePoLineById(polineId, lang, httpClient, ctx, okapiHeaders, logger)
+    HelperUtils.getPoLineById(polineId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(poline -> validateOrderIdReference(orderId, poline))
+      .thenCompose(poline -> HelperUtils.operateOnPoLine(HttpMethod.GET, poline, httpClient, ctx, okapiHeaders, logger))
       .thenAccept(future::complete)
       .exceptionally(t -> {
         logger.error("Failed to get composite purchase order line", t.getCause());
@@ -63,8 +66,8 @@ public class GetPOLineByIdHelper {
    * @param poline  PO line retrieved from storage
    * @return PO line json object if validation is passed
    */
-  private PoLine validateOrderIdReference(String orderId, PoLine poline) {
-    if (!poline.getPurchaseOrderId().equals(orderId))
+  private JsonObject validateOrderIdReference(String orderId, JsonObject poline) {
+    if (!orderId.equals(poline.getValue("purchase_order_id")))
       throw new CompletionException(ORDER_REFERENCE_ERROR_MESSAGE, new HttpException(422, ORDER_REFERENCE_ERROR_MESSAGE));
     return poline;
   }
