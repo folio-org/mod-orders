@@ -61,7 +61,7 @@ public class OrdersImplTest {
 
   private static final Header X_OKAPI_URL = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
   private static final Header X_OKAPI_TENANT = new Header("X-Okapi-Tenant", "ordersimpltest");
-  private static final Header X_OKAPI_TOKEN = new Header("X-Okapi-Token", "authorized_user");
+  private static final Header X_OKAPI_USER_ID = new Header("X-Okapi-User-Id", "440c89e3-7f6c-578a-9ea8-310dad23605e");
   private static final Header TMP_ORDER_HEADER = new Header("X-Okapi_Tmp", "tmp_order");
   private static JsonObject tmpOrder;
 
@@ -126,7 +126,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
-        .header(X_OKAPI_TOKEN)
+        .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
         .body(body)
       .post(rootPath)
@@ -172,7 +172,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
-        .header(X_OKAPI_TOKEN)
+        .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
         .body(body)
       .post(rootPath)
@@ -214,6 +214,7 @@ public class OrdersImplTest {
       .given()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
         .body(body)
       .post(rootPath)
@@ -236,33 +237,6 @@ public class OrdersImplTest {
     ctx.assertNotNull(errors.getErrors().get(0).getParameters().get(0));
     ctx.assertEquals("poNumber", errors.getErrors().get(0).getParameters().get(0).getKey());
     ctx.assertEquals("123", errors.getErrors().get(0).getParameters().get(0).getValue());
-  }
-
-  @Test
-  public void testPostIfModUsersBlNotAvailable(TestContext ctx) throws Exception {
-    logger.info("=== Test PO creation if mod-users-bl not available ===");
-
-    String body = getMockData(minimalOrderPath);
-
-    final Response resp = RestAssured
-      .given()
-        .header(X_OKAPI_URL)
-        .header(X_OKAPI_TENANT)
-        .contentType(APPLICATION_JSON)
-        .body(body)
-      .post(rootPath)
-        .then()
-          .log()
-            .all()
-        .contentType(TEXT_PLAIN)
-        .statusCode(500)
-        .extract()
-          .response();
-    String respBody = resp.getBody().asString();
-    logger.info(respBody);
-
-    assertEquals("Internal server error", respBody);
-
   }
 
   @Test
@@ -306,7 +280,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
-        .header(X_OKAPI_TOKEN)
+        .header(X_OKAPI_USER_ID)
         .header(X_ECHO_STATUS, 403)
         .contentType(APPLICATION_JSON)
         .body(body)
@@ -402,6 +376,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
         .body(body)
       .put(rootPath + "/" + id)
@@ -425,6 +400,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
         .header(TMP_ORDER_HEADER)
         .contentType(APPLICATION_JSON)
       .body(body)
@@ -456,7 +432,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
-        .header(X_OKAPI_TOKEN)
+        .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
         .body(body)
       .post(rootPath)
@@ -488,6 +464,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
       .post(rootPath)
         .then()
@@ -499,6 +476,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
         .body("{}")
       .post(rootPath+INVALID_LANG)
@@ -654,8 +632,6 @@ public class OrdersImplTest {
       router.route(HttpMethod.DELETE, "/claims/:id").handler(this::handleDeleteGenericSubObj);
       router.route(HttpMethod.DELETE, "/fund_distribution/:id").handler(this::handleDeleteGenericSubObj);
 
-      router.route(HttpMethod.GET, "/bl-users/_self").handler(this::handleGetUserId);
-
       return router;
     }
 
@@ -672,25 +648,6 @@ public class OrdersImplTest {
 
     }
 
-    private void handleGetUserId(RoutingContext ctx) {
-      String token = ctx.request().getHeader(X_OKAPI_TOKEN.getName());
-      try {
-        if (token != null) {
-          JsonObject userInfo = new JsonObject(getMockData(String.format("%s.json", token)));
-          ctx.response()
-            .setStatusCode(200)
-            .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-            .end(userInfo.encodePrettily());
-        } else {
-          ctx.response()
-            .setStatusCode(500)
-            .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
-            .end("Internal server error");
-        }
-      } catch (IOException e) {
-        throw new UncheckedIOException(e);
-      }
-    }
 
     public void start(TestContext context) {
 
