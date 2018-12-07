@@ -24,7 +24,7 @@ public class GetPOLineByIdHelper {
 
   private static final Logger logger = LoggerFactory.getLogger(GetOrdersByIdHelper.class);
 
-  public static final String MOCK_DATA_PATH = "mockdata/poline-c0d08448-347b-418a-8c2f-5fb50248d67e.json";
+  public static final String MOCK_DATA_PATH = "mockdata/lines/c0d08448-347b-418a-8c2f-5fb50248d67e.json";
   public static final String ORDER_REFERENCE_ERROR_MESSAGE = "Current order do not referenced to requested PO line";
   public static final String ERROR_CODE_422 = "422";
 

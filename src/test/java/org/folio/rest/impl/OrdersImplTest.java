@@ -82,6 +82,7 @@ public class OrdersImplTest {
   private static final String ID_DOES_NOT_EXIST = "d25498e7-3ae6-45fe-9612-ec99e2700d2f";
   private static final String ID_FOR_INTERNAL_SERVER_ERROR = "168f8a86-d26c-406e-813f-c7527f241ac3";
   private static final String PO_LINE_ID_FOR_SUCCESS_CASE = "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47";
+  private static final String ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   private static final String PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED = "0009662b-8b80-4001-b704-ca10971f175d";
   private static final String PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE = "c2755a78-2f8d-47d0-a218-059a9b7391b4";
 
@@ -727,13 +728,12 @@ public class OrdersImplTest {
     logger.info("=== Test Get Orderline By Id ===");
 
     String orderId = "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb";
-    logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, EXPECTED_POLINE_ID));
 
     final CompositePoLine resp = RestAssured
       .with()
       .header(X_OKAPI_URL)
       .header(X_OKAPI_TENANT)
-      .get(rootPath + "/" + orderId + "/lines/" + EXPECTED_POLINE_ID)
+      .get(rootPath + "/" + orderId + "/lines/" + ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
       .then()
       .statusCode(200)
       .extract()
@@ -750,13 +750,12 @@ public class OrdersImplTest {
     logger.info("=== Test Get Orderline By Id ===");
 
     String orderId = "Error422OrderId";
-    logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, EXPECTED_POLINE_ID));
 
     final Response resp = RestAssured
       .with()
       .header(X_OKAPI_URL)
       .header(X_OKAPI_TENANT)
-      .get(rootPath + "/" + orderId + "/lines/" + EXPECTED_POLINE_ID)
+      .get(rootPath + "/" + orderId + "/lines/" + ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
       .then()
       .statusCode(422)
       .extract()
@@ -801,13 +800,13 @@ public class OrdersImplTest {
       .with()
       .header(X_OKAPI_URL)
       .header(X_OKAPI_TENANT)
-      .get(rootPath + "/" + orderId + "/lines/" + lineId)
+      .get(rootPath + "/" + orderId + "/lines/" + ID_FOR_INTERNAL_SERVER_ERROR)
       .then()
       .statusCode(500)
       .extract()
       .response();
 
-    assertEquals("MockServer probably is in error state", resp.getBody().print());
+    assertEquals("Internal Server Error", resp.getBody().print());
   }
 
   public static class MockServer {
@@ -1122,31 +1121,6 @@ public class OrdersImplTest {
         .setStatusCode(200)
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
         .end(JsonObject.mapFrom(location).encodePrettily());
-    }
-
-    private void handleGetPoLineById(RoutingContext ctx) {
-      try {
-        if (ctx.pathParams().get("id").equals("NotExistingId")) {
-          ctx.response()
-            .setStatusCode(404)
-            .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-            .end(ctx.pathParams().get("id"));
-        } else
-        if (ctx.pathParams().get("id").equals("generateError500")) {
-          ctx.response()
-            .setStatusCode(500)
-            .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-            .end("MockServer probably is in error state");
-        } else {
-          JsonObject mockPOLine = new JsonObject(getMockData(GetPOLineByIdHelper.MOCK_DATA_PATH));
-          ctx.response()
-            .setStatusCode(200)
-            .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-            .end(mockPOLine.toString());
-        }
-      } catch (IOException e) {
-        logger.error("Error defining mock data");
-      }
     }
 
   }

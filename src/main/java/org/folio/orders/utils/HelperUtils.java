@@ -223,6 +223,7 @@ public class HelperUtils {
     futures.add(operateOnSubObjIfPresent(operation, line, "vendor_detail", httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, "alerts", httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, "claims", httpClient, ctx, okapiHeaders, logger));
+    futures.addAll(operateOnSubObjsIfPresent(operation, line, "reporting_codes", httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, "fund_distribution", httpClient, ctx, okapiHeaders, logger));
 
     CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
@@ -275,6 +276,7 @@ public class HelperUtils {
     logger.info("Calling {} {}", operation, url);
 
     try {
+      // TODO: remove this mock after implementing [MODORDERS-79](https://issues.folio.org/browse/MODORDERS-79)
       if (url.startsWith("/fund_distribution/")) {
         JsonObject mockFundDistribution = new JsonObject()
           .put("id", "mocki-dfix-modo-rders19first")
@@ -345,30 +347,23 @@ public class HelperUtils {
     return future;
   }
 
-  public static CompletableFuture<PoLine> getCompositePoLineById(String polineId, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+  public static CompletableFuture<PoLine> getCompositePoLineById(String lineId, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
-    try {
-      httpClient.request(HttpMethod.GET,
-        String.format("/po_line/%s?lang=%s", polineId, lang), okapiHeaders)
-        .thenApply(HelperUtils::verifyAndExtractBody)
-        .thenCompose(poLine -> operateOnPoLine(HttpMethod.GET, poLine, httpClient, ctx, okapiHeaders, logger))
-        .thenAccept(poline -> {
-          if (logger.isDebugEnabled()) {
-            logger.debug("The response is valid. The response body: {}",
-              nonNull(poline) ? JsonObject.mapFrom(poline).encodePrettily() : null);
-          }
-          future.complete(poline);
-        })
-        .exceptionally(t -> {
-          logger.error(GET_POLINE_EXCEPTION + polineId, t);
-          future.completeExceptionally(t);
-          return null;
-        });
-    } catch (Exception e) {
-      logger.error(GET_POLINE_EXCEPTION + polineId, e);
-      future.completeExceptionally(e);
-    }
-
+    String endpoint = String.format("%s%s?lang=%s", subObjectApis.get(PO_LINES), lineId, lang);
+    handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(poLine -> operateOnPoLine(HttpMethod.GET, poLine, httpClient, ctx, okapiHeaders, logger))
+      .thenAccept(poline -> {
+        if (logger.isDebugEnabled()) {
+          logger.debug("The response is valid. The response body: {}",
+            nonNull(poline) ? JsonObject.mapFrom(poline).encodePrettily() : null);
+        }
+        future.complete(poline);
+      })
+      .exceptionally(t -> {
+        logger.error(GET_POLINE_EXCEPTION + lineId, t);
+        future.completeExceptionally(t);
+        return null;
+      });
     return future;
   }
 }
