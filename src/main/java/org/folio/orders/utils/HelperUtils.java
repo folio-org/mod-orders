@@ -79,10 +79,10 @@ public class HelperUtils {
   /**
    * If response http code is {@code 404}, empty {@link JsonObject} is returned. Otherwise verifies if response is successful and extracts body
    * In case there was failed attempt to delete PO or particular PO line, the sub-objects might be already partially deleted.
-   * This check allows user to retry DELETE operation
+   * This check allows user to retrieve order/line again and retry DELETE operation
    *
    * @param response response to verify
-   * @return empty {@link JsonObject} if response http code is {@code 404}, otherwise verifies if response is successful and extracts body
+   * @return empty {@link JsonObject} if response http code is {@code 404}, otherwise calls {@link #verifyAndExtractBody(Response)}
    */
   private static JsonObject verifyAndExtractBodyIfFound(Response response) {
     if (response.getCode() == 404) {
