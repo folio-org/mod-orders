@@ -63,7 +63,7 @@ public class GetOrdersByIdHelper {
         po.remove("adjustment");
         CompositePurchaseOrder compPO = po.mapTo(CompositePurchaseOrder.class);
 
-        HelperUtils.getPoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
+        HelperUtils.getCompositePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
           .thenAccept(poLines -> {
             compPO.setPoLines(poLines);
             compPO.setAdjustment(HelperUtils.calculateAdjustment(poLines));
