@@ -617,20 +617,21 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, "/vendor_detail/:id").handler(this::handleGetGenericSubObj);
 
 
-      router.route(HttpMethod.DELETE, "/purchase_order/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/po_line/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/adjustment/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/cost/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/details/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/eresource/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/location/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/physical/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/renewal/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/source/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/vendor_detail/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/alerts/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/claims/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/fund_distribution/:id").handler(this::handleDeleteGenericSubObj);
+
+      router.route(HttpMethod.DELETE, "/purchase_order/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/po_line/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/adjustment/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/cost/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/details/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/eresource/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/location/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/physical/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/renewal/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/source/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/vendor_detail/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/alerts/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/claims/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/fund_distribution/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
 
       return router;
     }
