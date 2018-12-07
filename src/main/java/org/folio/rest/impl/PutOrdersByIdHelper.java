@@ -53,7 +53,9 @@ public class PutOrdersByIdHelper {
       delHelper.deleteOrder(id, lang)
         .thenRun(() -> {
           compPO.setId(id);
-          postHelper.createPOandPOLines(compPO, existedCompPO.getCreated())
+          compPO.setCreated(existedCompPO.getCreated());
+          compPO.setCreatedBy(existedCompPO.getCreatedBy());
+          postHelper.createPOandPOLines(compPO)
             .thenAccept(withCompPO -> {
 
               logger.info("Applying Funds...");
