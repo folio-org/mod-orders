@@ -119,25 +119,25 @@ public class OrdersImpl implements Orders {
 
   @Override
   @Validate
-  public void postOrdersLinesById(String id, String lang, PoLine poLine, Map<String, String> okapiHeaders,
+  public void postOrdersLinesById(String orderId, String lang, PoLine poLine, Map<String, String> okapiHeaders,
                                   Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
     PostOrdersHelper helper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
 
     logger.info("Creating POLine to an existing order...");
 
-    if (poLine.getId() == null) {
-      logger.info("POLine without id. Set id from path url: " + id);
-      poLine.setId(id);
+    if (poLine.getPurchaseOrderId() == null) {
+      logger.info("POLine without id. Set id from path url: " + orderId);
+      poLine.setPurchaseOrderId(orderId);
     }
 
-    if (id.equals(poLine.getId())) {
+    if (orderId.equals(poLine.getPurchaseOrderId())) {
       helper.createPoLine(poLine)
         .thenAccept(pol -> {
           logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
           httpClient.closeClient();
           Response response
-            = PostOrdersLinesByIdResponse.respond201WithApplicationJson(poLine, PostOrdersLinesByIdResponse.headersFor201());
+            = PostOrdersLinesByIdResponse.respond201WithApplicationJson(poLine, PostOrdersLinesByIdResponse.headersFor201().withLocation(String.format("/orders/%s/lines/%s", orderId, pol.getId())));
           AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
           asyncResultHandler.handle(result);
         })

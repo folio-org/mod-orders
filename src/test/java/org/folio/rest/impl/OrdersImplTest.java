@@ -15,7 +15,6 @@ import java.util.UUID;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrders;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.utils.NetworkUtils;
@@ -66,8 +65,10 @@ public class OrdersImplTest {
   private static final String INVALID_OFFSET = "?offset=-1";
   private static final String INVALID_LIMIT = "?limit=-1";
 
-  private static final String PO_LINE_STORAGE_ERROR_ID = "orders_storage_error_id";
-  private static final String PO_LINE_ID = "1ddfgb5c-c237-479f-aa48-57f7cbf74ca3";
+  private static final String PO_ID = "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb";
+
+  private static final String ID_DOES_NOT_EXIST = "d25498e7-3ae6-45fe-9612-ec99e2700d2f";
+  private static final String ID_FOR_INTERNAL_SERVER_ERROR = "168f8a86-d26c-406e-813f-c7527f241ac3";
 
 
   // API paths
@@ -488,7 +489,7 @@ public class OrdersImplTest {
 
     String body = getMockData(compositePoLinePath);
     JsonObject compPoLineJson = new JsonObject(body);
-    String id = compPoLineJson.getString("id");
+    String id = compPoLineJson.getString("purchase_order_id");
     final PoLine response = RestAssured
       .with()
         .header(X_OKAPI_URL)
@@ -502,7 +503,7 @@ public class OrdersImplTest {
           .extract()
           .response().as(PoLine.class);
 
-    ctx.assertEquals(id, response.getId());
+    ctx.assertEquals(id, response.getPurchaseOrderId());
   }
 
   @Test
@@ -516,7 +517,7 @@ public class OrdersImplTest {
         .header(X_OKAPI_TENANT)
         .contentType(APPLICATION_JSON)
         .body(body)
-      .post(rootPath + "/" + PO_LINE_ID + "/lines")
+      .post(rootPath + "/" + ID_DOES_NOT_EXIST + "/lines")
         .then()
           .contentType(TEXT_PLAIN)
           .statusCode(400)
@@ -534,14 +535,14 @@ public class OrdersImplTest {
         .header(X_OKAPI_TENANT)
         .contentType(APPLICATION_JSON)
         .body("{}")
-      .post(rootPath + "/" + PO_LINE_ID + "/lines")
+      .post(rootPath + "/" + PO_ID + "/lines")
         .then()
           .contentType(APPLICATION_JSON)
           .statusCode(201)
           .extract()
           .response().as(PoLine.class);
 
-    ctx.assertEquals(PO_LINE_ID, response.getId());
+    ctx.assertEquals(PO_ID, response.getPurchaseOrderId());
   }
 
   @Test
@@ -554,7 +555,7 @@ public class OrdersImplTest {
         .header(X_OKAPI_TENANT)
         .contentType(APPLICATION_JSON)
         .body("{}")
-      .post(rootPath + "/" + PO_LINE_STORAGE_ERROR_ID + "/lines")
+      .post(rootPath + "/" + ID_FOR_INTERNAL_SERVER_ERROR + "/lines")
         .then()
           .contentType(TEXT_PLAIN)
           .statusCode(500)
@@ -831,7 +832,7 @@ public class OrdersImplTest {
         pol.setId(UUID.randomUUID().toString());
       }
 
-      if (PO_LINE_STORAGE_ERROR_ID.equals(pol.getId())) {
+      if (ID_FOR_INTERNAL_SERVER_ERROR.equals(pol.getPurchaseOrderId())) {
         ctx.response()
           .setStatusCode(500)
           .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)

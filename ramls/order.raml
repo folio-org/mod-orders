@@ -22,6 +22,7 @@ traits:
   searchable: !include raml-util/traits/searchable.raml
   language: !include raml-util/traits/language.raml
   validate: !include raml-util/traits/validation.raml
+  auth: !include raml-util/traits/auth.raml
 
 resourceTypes:
   collection-item: !include raml-util/rtypes/item-collection.raml
@@ -37,19 +38,13 @@ resourceTypes:
 
   post:
     description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order
-    is: [validate]
+    is: [validate, auth]
     body:
       application/json:
         type: composite_purchase_order
         example:
           strict: false
           value: !include acq-models/examples/composite_purchase_order.sample
-    responses:
-      401:
-        description: "Not authorized to perform requested action"
-        body:
-          text/plain:
-            example: "unable to create orders -- unauthorized"
   /{id}:
     uriParameters:
       id:
@@ -73,7 +68,7 @@ resourceTypes:
       post:
         displayName: Create a new purchace order line
         description: Post a purchase order (PO) line
-        is: [validate]
+        is: [validate, auth]
         body:
           application/json:
             type: po_line
