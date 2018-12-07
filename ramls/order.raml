@@ -28,7 +28,7 @@ traits:
         description: "Not authorized to perform requested action"
         body:
           text/plain:
-            example: "unable to create orders -- unauthorized"
+            example: "unable to create <<resourcePathName|!singularize>> -- unauthorized"
 
 resourceTypes:
   collection-item: !include raml-util/rtypes/item-collection.raml
