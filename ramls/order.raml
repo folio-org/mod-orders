@@ -22,7 +22,13 @@ traits:
   searchable: !include raml-util/traits/searchable.raml
   language: !include raml-util/traits/language.raml
   validate: !include raml-util/traits/validation.raml
-  auth: !include raml-util/traits/auth.raml
+  auth:
+    responses:
+      401:
+        description: "Not authorized to perform requested action"
+        body:
+          text/plain:
+            example: "unable to create orders -- unauthorized"
 
 resourceTypes:
   collection-item: !include raml-util/rtypes/item-collection.raml
