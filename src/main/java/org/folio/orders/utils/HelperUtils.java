@@ -33,6 +33,8 @@ public class HelperUtils {
 
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
 
+  private static final String FUND_DISTRIBUTION_MOCK = "mockdata/fund_distr.json";
+
   private static final Map<String,String> subObjectApis = new HashMap<>();
 
   static {
@@ -278,13 +280,8 @@ public class HelperUtils {
     try {
       // TODO: remove this mock after implementing [MODORDERS-79](https://issues.folio.org/browse/MODORDERS-79)
       if (url.startsWith("/fund_distribution/")) {
-        JsonObject mockFundDistribution = new JsonObject()
-          .put("id", "mocki-dfix-modo-rders19first")
-          .put("code", "EUROHIST-FY19")
-          .put("percentage", "100.0")
-          .put("encumbrance", "eb506834-6c70-4239-8d1a-6414a5b08003");
-        future.complete(mockFundDistribution);
-        future.complete(mockFundDistribution);
+        future.complete(new JsonObject(getMockData(FUND_DISTRIBUTION_MOCK)));
+        return future;
       }
       httpClient.request(operation, url, okapiHeaders)
         // In case there was failed attempt to delete order or particular PO line, the sub-objects might be already partially deleted.
