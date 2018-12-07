@@ -1,35 +1,5 @@
 package org.folio.rest.impl;
 
-import static org.folio.orders.utils.HelperUtils.getMockData;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.hamcrest.Matchers.containsString;
-
-import java.io.IOException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.TimeZone;
-import java.util.UUID;
-
-import org.folio.rest.RestVerticle;
-import org.folio.rest.jaxrs.model.Adjustment;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.tools.utils.NetworkUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import io.restassured.RestAssured;
 import io.restassured.http.Header;
 import io.restassured.response.Response;
@@ -48,13 +18,39 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import org.folio.rest.RestVerticle;
+import org.folio.rest.acq.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.tools.utils.NetworkUtils;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import static org.folio.orders.utils.HelperUtils.getMockData;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @RunWith(VertxUnitRunner.class)
 public class OrdersImplTest {
 
   private static final Logger logger = LoggerFactory.getLogger(OrdersImplTest.class);
-
-  private static final SimpleDateFormat UTC_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:SS.SSS'Z'");
 
   private static final String APPLICATION_JSON = "application/json";
   private static final String TEXT_PLAIN = "text/plain";
@@ -65,6 +61,11 @@ public class OrdersImplTest {
 
   private static final Header X_OKAPI_URL = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
   private static final Header X_OKAPI_TENANT = new Header("X-Okapi-Tenant", "ordersimpltest");
+  private static final Header X_OKAPI_TOKEN = new Header("X-Okapi-Token", "authorized_user");
+  private static final Header TMP_ORDER_HEADER = new Header("X-Okapi_Tmp", "tmp_order");
+  private static JsonObject tmpOrder;
+
+
 
   private static final String X_ECHO_STATUS = "X-Okapi-Echo-Status";
   private static final String MOCK_DATA_PATH = "mockdata/getOrders.json";
@@ -75,6 +76,7 @@ public class OrdersImplTest {
   private static final String INVALID_LIMIT = "?limit=-1";
 
 
+
   // API paths
   private final String rootPath = "/orders";
 
@@ -82,6 +84,7 @@ public class OrdersImplTest {
   private final String mockDataRootPath = "src/test/resources/";
   private final String listedPrintMonographPath = mockDataRootPath + "/po_listed_print_monograph.json";
   private final String minimalOrderPath = mockDataRootPath + "/minimal_order.json";
+  private final String existedOrder = mockDataRootPath + "/existed_order.json";
   private final String poCreationFailurePath = mockDataRootPath + "/po_creation_failure.json";
   private final String poLineCreationFailurePath = mockDataRootPath + "/po_line_creation_failure.json";
 
@@ -89,7 +92,7 @@ public class OrdersImplTest {
   private static MockServer mockServer;
 
   @BeforeClass
-  public static void setUpOnce(TestContext context) throws Exception {
+  public static void setUpOnce(TestContext context) {
     vertx = Vertx.vertx();
 
     mockServer = new MockServer(mockPort);
@@ -104,8 +107,6 @@ public class OrdersImplTest {
 
     final DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
     vertx.deployVerticle(RestVerticle.class.getName(), opt, context.asyncAssertSuccess());
-
-    UTC_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
   }
 
   @AfterClass
@@ -125,6 +126,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_TOKEN)
         .contentType(APPLICATION_JSON)
         .body(body)
       .post(rootPath)
@@ -170,6 +172,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_TOKEN)
         .contentType(APPLICATION_JSON)
         .body(body)
       .post(rootPath)
@@ -236,6 +239,33 @@ public class OrdersImplTest {
   }
 
   @Test
+  public void testPostIfModUsersBlNotAvailable(TestContext ctx) throws Exception {
+    logger.info("=== Test PO creation if mod-users-bl not available ===");
+
+    String body = getMockData(minimalOrderPath);
+
+    final Response resp = RestAssured
+      .given()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .post(rootPath)
+        .then()
+          .log()
+            .all()
+        .contentType(TEXT_PLAIN)
+        .statusCode(500)
+        .extract()
+          .response();
+    String respBody = resp.getBody().asString();
+    logger.info(respBody);
+
+    assertEquals("Internal server error", respBody);
+
+  }
+
+  @Test
   public void testPoLineCreationFailure(TestContext ctx) throws Exception {
     logger.info("=== Test POLine creation failure ===");
 
@@ -276,6 +306,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_TOKEN)
         .header(X_ECHO_STATUS, 403)
         .contentType(APPLICATION_JSON)
         .body(body)
@@ -376,20 +407,56 @@ public class OrdersImplTest {
       .put(rootPath + "/" + id)
         .then()
           .statusCode(204);
+  }
+
+  @Test
+  public void testPutOrdersByIdDoesNotAffectGeneratedData(TestContext ctx) throws Exception {
+    logger.info("=== Test Put Order By Id doesn't affect generated data ===");
+
+    tmpOrder = new JsonObject(getMockData(existedOrder));
+    PurchaseOrder initialOrder = tmpOrder.mapTo(PurchaseOrder.class);
+    CompositePurchaseOrder puttedOrder =  tmpOrder.mapTo(CompositePurchaseOrder.class);
+    puttedOrder.setApproved(false);
+    puttedOrder.setCreated(new Date());
+    puttedOrder.setCreatedBy("440c89e3-7f6c-578a-9ea8-310dad23605e");
+    String body = JsonObject.mapFrom(puttedOrder).toString();
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .header(TMP_ORDER_HEADER)
+        .contentType(APPLICATION_JSON)
+      .body(body)
+        .put(rootPath + "/1ab7ef6a-d1d4-4a4f-90a2-882aed18af14")
+          .then()
+            .statusCode(204);
+
+    PurchaseOrder changedOrder =  tmpOrder.mapTo(PurchaseOrder.class);
+
+    assertThat(initialOrder.getCreated(), equalTo(changedOrder.getCreated()));
+    assertThat(initialOrder.getCreatedBy(), equalTo(changedOrder.getCreatedBy()));
+    assertThat(initialOrder.getApproved(), not(equalTo(changedOrder.getApproved())));
+    assertThat(puttedOrder.getApproved(), equalTo(changedOrder.getApproved()));
+    assertThat(puttedOrder.getCreatedBy(), not(equalTo(changedOrder.getCreatedBy())));
 
   }
 
   @Test
-  public void testIgnoringCreatedOnInResponseOnPost() throws IOException, ParseException {
+  public void testIgnoringGeneratedDataInResponseOnPost() throws IOException {
     logger.info("=== Test ignoring \"Created on\" from request on POST API ===");
 
     String body = getMockData(minimalOrderPath);
     JsonObject reqData = new JsonObject(body);
-    Date dateFromRequest = UTC_DATE_FORMAT.parse(reqData.getString("created"));
+    CompositePurchaseOrder compPo = reqData.mapTo(CompositePurchaseOrder.class);
+    Date dateFromRequest = compPo.getCreated();
+    String createdByFromRequest = compPo.getCreatedBy();
+    String poNumberFromRequest = compPo.getPoNumber();
     final CompositePurchaseOrder resp = RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_TOKEN)
         .contentType(APPLICATION_JSON)
         .body(body)
       .post(rootPath)
@@ -402,8 +469,14 @@ public class OrdersImplTest {
 
     logger.info(JsonObject.mapFrom(resp));
     Date dateFromResponse = resp.getCreated();
+    String createdByFromResponse = resp.getCreatedBy();
+    String poNumberFromResponse = resp.getPoNumber();
     assertNotNull(dateFromResponse);
+    assertNotNull(createdByFromResponse);
+    assertNotNull(poNumberFromResponse);
+    assertThat(poNumberFromRequest, not(equalTo(poNumberFromResponse)));
     assertThat(dateFromResponse, not(equalTo(dateFromRequest)));
+    assertThat(createdByFromResponse, not(equalTo(createdByFromRequest)));
   }
 
   @Test
@@ -515,6 +588,7 @@ public class OrdersImplTest {
 
     private static final Logger logger = LoggerFactory.getLogger(MockServer.class);
 
+
     public final int port;
     public final Vertx vertx;
 
@@ -565,31 +639,57 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, "/vendor_detail/:id").handler(this::handleGetGenericSubObj);
 
 
-      router.route(HttpMethod.DELETE, "/purchase_order/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      router.route(HttpMethod.DELETE, "/po_line/:id ").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      router.route(HttpMethod.DELETE, "/adjustment/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      router.route(HttpMethod.DELETE, "/cost/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      router.route(HttpMethod.DELETE, "/details/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      router.route(HttpMethod.DELETE, "/eresource/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      router.route(HttpMethod.DELETE, "/location/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      router.route(HttpMethod.DELETE, "/physical/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      router.route(HttpMethod.DELETE, "/renewal/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      router.route(HttpMethod.DELETE, "/source/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      router.route(HttpMethod.DELETE, "/vendor_detail/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      router.route(HttpMethod.DELETE, "/alerts/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      router.route(HttpMethod.DELETE, "/claims/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
-      router.route(HttpMethod.DELETE, "/fund_distribution/:id").handler(ctx -> handleDeleteGenericSubObj(ctx));
+      router.route(HttpMethod.DELETE, "/purchase_order/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/po_line/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/adjustment/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/cost/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/details/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/eresource/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/location/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/physical/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/renewal/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/source/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/vendor_detail/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/alerts/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/claims/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/fund_distribution/:id").handler(this::handleDeleteGenericSubObj);
+
+      router.route(HttpMethod.GET, "/bl-users/_self").handler(this::handleGetUserId);
 
       return router;
     }
 
     private void handleDeleteGenericSubObj(RoutingContext ctx) {
 
+      if (shouldWorkWithTmpOrder(ctx)) {
+        tmpOrder = null;
+      }
+
       ctx.response()
         .setStatusCode(204)
         .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
         .end();
 
+    }
+
+    private void handleGetUserId(RoutingContext ctx) {
+      String token = ctx.request().getHeader(X_OKAPI_TOKEN.getName());
+      try {
+        if (token != null) {
+          JsonObject userInfo = new JsonObject(getMockData(String.format("%s.json", token)));
+          ctx.response()
+            .setStatusCode(200)
+            .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+            .end(userInfo.encodePrettily());
+        } else {
+          ctx.response()
+            .setStatusCode(500)
+            .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
+            .end("Internal server error");
+        }
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
     }
 
     public void start(TestContext context) {
@@ -630,21 +730,21 @@ public class OrdersImplTest {
 
           List<?> alerts = ((List<?>) line.remove("alerts"));
           line.put("alerts", new JsonArray());
-          alerts.forEach(a -> {
-            line.getJsonArray("alerts").add(((Map<?, ?>) a).get("id"));
-          });
+          alerts.forEach(a ->
+            line.getJsonArray("alerts").add(((Map<?, ?>) a).get("id"))
+          );
 
           List<?> claims = ((List<?>) line.remove("claims"));
           line.put("claims", new JsonArray());
-          claims.forEach(c -> {
-            line.getJsonArray("claims").add(((Map<?, ?>) c).get("id"));
-          });
+          claims.forEach(c ->
+            line.getJsonArray("claims").add(((Map<?, ?>) c).get("id"))
+          );
 
           List<?> fund_distribution = ((List<?>) line.remove("fund_distribution"));
           line.put("fund_distribution", new JsonArray());
-          fund_distribution.forEach(f -> {
-            line.getJsonArray("fund_distribution").add(((Map<?, ?>) f).get("id"));
-          });
+          fund_distribution.forEach(f ->
+            line.getJsonArray("fund_distribution").add(((Map<?, ?>) f).get("id"))
+          );
         });
 
         JsonObject po_lines = new JsonObject()
@@ -703,8 +803,14 @@ public class OrdersImplTest {
       logger.info("got: " + ctx.request().path());
       String id = ctx.request().getParam("id");
       logger.info("id: " + id);
+
       try {
-        JsonObject po = new JsonObject(getMockData(String.format("%s%s.json", BASE_MOCK_DATA_PATH, id)));
+        JsonObject po;
+        if (shouldWorkWithTmpOrder(ctx)) {
+          po = tmpOrder;
+        } else {
+          po = new JsonObject(getMockData(String.format("%s%s.json", BASE_MOCK_DATA_PATH, id)));
+        }
         po.remove("adjustment");
         po.remove("po_lines");
         po.put("adjustment", UUID.randomUUID().toString());
@@ -725,6 +831,9 @@ public class OrdersImplTest {
 
       org.folio.rest.acq.model.PurchaseOrder po = ctx.getBodyAsJson().mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
       po.setId(UUID.randomUUID().toString());
+      if (shouldWorkWithTmpOrder(ctx)) {
+        tmpOrder = ctx.getBodyAsJson();
+      }
 
       ctx.response()
         .setStatusCode(201)
@@ -780,6 +889,10 @@ public class OrdersImplTest {
         .setStatusCode(201)
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
         .end(JsonObject.mapFrom(pol).encodePrettily());
+    }
+
+    private boolean shouldWorkWithTmpOrder(RoutingContext ctx) {
+      return TMP_ORDER_HEADER.getValue().equals(ctx.request().getHeader(TMP_ORDER_HEADER.getName()));
     }
 
   }
