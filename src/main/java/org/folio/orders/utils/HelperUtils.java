@@ -36,7 +36,7 @@ public class HelperUtils {
   private static final Map<String,String> subObjectApis = new HashMap<>();
 
   static {
-    subObjectApis.put("adjustment", "/adjustment/"); 
+    subObjectApis.put("adjustment", "/adjustment/");
     subObjectApis.put("cost","/cost/");
     subObjectApis.put("details", "/details/");
     subObjectApis.put("eresource", "/eresource/");
@@ -46,7 +46,7 @@ public class HelperUtils {
     subObjectApis.put("source", "/source/");
     subObjectApis.put("vendor_detail", "/vendor_detail/");
     subObjectApis.put("alerts", "/alerts/");
-    subObjectApis.put("claims", "/claims/");
+    subObjectApis.put("claims", "/claim/");
     subObjectApis.put("fund_distribution", "/fund_distribution/");
     subObjectApis.put(PO_LINES, "/po_line/");
   }
@@ -176,28 +176,28 @@ public class HelperUtils {
   public static CompletableFuture<List<PoLine>> getCompositePoLines(String id, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<List<PoLine>> future = new VertxCompletableFuture<>(ctx);
   
-      getPoLines(id,lang, httpClient,ctx, okapiHeaders, logger)
-        .thenAccept(body -> {
-          List<PoLine> lines = new ArrayList<>();
-          List<CompletableFuture<Void>> futures = new ArrayList<>();
+    getPoLines(id,lang, httpClient,ctx, okapiHeaders, logger)
+      .thenAccept(body -> {
+        List<PoLine> lines = new ArrayList<>();
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-          for (int i = 0; i < body.getJsonArray(PO_LINES).size(); i++) {
-            JsonObject line = body.getJsonArray(PO_LINES).getJsonObject(i);
-            futures.add(operateOnPoLine(HttpMethod.GET, line, httpClient, ctx, okapiHeaders, logger)
-              .thenAccept(lines::add));
-          }
+        for (int i = 0; i < body.getJsonArray(PO_LINES).size(); i++) {
+          JsonObject line = body.getJsonArray(PO_LINES).getJsonObject(i);
+          futures.add(operateOnPoLine(HttpMethod.GET, line, httpClient, ctx, okapiHeaders, logger)
+            .thenAccept(lines::add));
+        }
 
-          VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]))
-            .thenAccept(v -> future.complete(lines))
-            .exceptionally(t -> {
-              future.completeExceptionally(t.getCause());
-              return null;
-            });
-        })
-        .exceptionally(t -> {
-          logger.error("Exception gathering po_line data:", t);
-          throw new CompletionException(t);
-        });
+        VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]))
+          .thenAccept(v -> future.complete(lines))
+          .exceptionally(t -> {
+            future.completeExceptionally(t.getCause());
+            return null;
+          });
+      })
+      .exceptionally(t -> {
+        logger.error("Exception gathering po_line data:", t);
+        throw new CompletionException(t);
+      });
     return future;
   }
 
