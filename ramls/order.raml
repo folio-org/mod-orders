@@ -82,7 +82,7 @@ resourceTypes:
               strict: false
               value: !include acq-models/examples/composite_po_line.sample
       /{lineId}:
-        displayName: Purchace Order Line
+        displayName: Purchase Order Line
         description: Manage purchase order line (PO line) by id
         uriParameters:
           lineId:
@@ -92,5 +92,8 @@ resourceTypes:
           collection-item:
             exampleItem: !include acq-models/examples/composite_po_line.sample
             schema: po_line
+        get:
+          description: Return a purchase order line
+          is: [validate]
         delete:
           is: [validate]

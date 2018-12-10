@@ -23,10 +23,7 @@ import java.util.UUID;
 import io.restassured.http.ContentType;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.RestVerticle;
-import org.folio.rest.jaxrs.model.Adjustment;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -89,6 +86,8 @@ public class OrdersImplTest {
 
   private static final Logger logger = LoggerFactory.getLogger(OrdersImplTest.class);
 
+  private static final SimpleDateFormat UTC_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:SS.SSS'Z'");
+
   private static final String APPLICATION_JSON = "application/json";
   private static final String TEXT_PLAIN = "text/plain";
   private static final String BASE_MOCK_DATA_PATH = "mockdata/";
@@ -117,8 +116,15 @@ public class OrdersImplTest {
   private static final String ID_DOES_NOT_EXIST = "d25498e7-3ae6-45fe-9612-ec99e2700d2f";
   private static final String ID_FOR_INTERNAL_SERVER_ERROR = "168f8a86-d26c-406e-813f-c7527f241ac3";
   private static final String PO_LINE_ID_FOR_SUCCESS_CASE = "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47";
+  private static final String ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   private static final String PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED = "0009662b-8b80-4001-b704-ca10971f175d";
   private static final String PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE = "c2755a78-2f8d-47d0-a218-059a9b7391b4";
+
+  private static final String EXPECTED_POLINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
+
+  public static final String ERROR_CODE_422 = "422";
+
+
 
   // API paths
   private final String rootPath = "/orders";
@@ -802,6 +808,91 @@ public class OrdersImplTest {
   }
 
   @Test
+  public void testGetOrderLineById(TestContext ctx) {
+    logger.info("=== Test Get Orderline By Id ===");
+
+    String orderId = "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb";
+
+    final PoLine resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+      .get(String.format(LINE_BY_ID_PATH, orderId, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE))
+        .then()
+          .statusCode(200)
+          .extract()
+          .response()
+          .as(PoLine.class);
+
+    logger.info(JsonObject.mapFrom(resp).encodePrettily());
+
+    assertEquals(EXPECTED_POLINE_ID, resp.getId());
+  }
+
+  @Test
+  public void testGetOrderLineByIdError422(TestContext ctx) {
+    logger.info("=== Test Get Orderline By Id ===");
+
+    String orderId = "Error422OrderId";
+
+    final Response resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+      .get(String.format(LINE_BY_ID_PATH, orderId, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE))
+        .then()
+          .statusCode(422)
+          .extract()
+          .response();
+
+    logger.info(resp.prettyPrint());
+    String msg = String.format("The PO line with id=%s does not belong to order with id=%s", ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE, orderId);
+    assertEquals(resp.as(Errors.class).getErrors().get(0).getMessage(), msg);
+  }
+
+  @Test
+  public void testGetOrderLineByIdWith404(TestContext ctx) throws IOException {
+    logger.info("=== Test Get Orderline By Id ===");
+
+    String orderId = "NoMatterId";
+    String lineId = "NotExistingId";
+    logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, lineId));
+
+    final Response resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+      .get(String.format(LINE_BY_ID_PATH, orderId, lineId))
+        .then()
+          .statusCode(404)
+          .extract()
+          .response();
+
+    assertEquals(lineId, resp.getBody().asString());
+  }
+
+  @Test
+  public void testGetOrderLineByIdWith500(TestContext ctx) throws IOException {
+    logger.info("=== Test Get Orderline By Id ===");
+
+    String orderId = "NoMatterId";
+    String lineId = "generateError500";
+    logger.info(String.format("using mock datafile: %s%s.json", BASE_MOCK_DATA_PATH, lineId));
+
+    final Response resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+      .get(String.format(LINE_BY_ID_PATH, orderId, ID_FOR_INTERNAL_SERVER_ERROR))
+        .then()
+          .statusCode(500)
+          .extract()
+          .response();
+
+    assertEquals("Internal Server Error", resp.getBody().print());
+  }
+
+  @Test
   public void testPostOrdersLinesById(TestContext ctx) throws IOException {
     logger.info("=== Test Post Order Lines By Id (expected flow) ===");
 
@@ -922,17 +1013,18 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, "/po_line").handler(this::handleGetPoLines);
       router.route(HttpMethod.GET, "/po_line/:id").handler(this::handleGetPoLineById);
       router.route(HttpMethod.GET, "/adjustment/:id").handler(this::handleGetAdjustment);
-      router.route(HttpMethod.GET, "/alerts/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/alert/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/cost/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/claims/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/claim/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/details/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/eresource/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/fund_distribution/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/location/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/location/:id").handler(this::handleGetLocation);
       router.route(HttpMethod.GET, "/physical/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/renewal/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/source/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/vendor_detail/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/reporting_code/:id").handler(this::handleGetGenericSubObj);
 
       router.route(HttpMethod.DELETE, "/purchase_order/:id").handler(this::handleDeleteGenericSubObj);
       router.route(HttpMethod.DELETE, "/po_line/:id").handler(this::handleDeleteGenericSubObj);
@@ -945,8 +1037,8 @@ public class OrdersImplTest {
       router.route(HttpMethod.DELETE, "/renewal/:id").handler(this::handleDeleteGenericSubObj);
       router.route(HttpMethod.DELETE, "/source/:id").handler(this::handleDeleteGenericSubObj);
       router.route(HttpMethod.DELETE, "/vendor_detail/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/alerts/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/claims/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/alert/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/claim/:id").handler(this::handleDeleteGenericSubObj);
       router.route(HttpMethod.DELETE, "/fund_distribution/:id").handler(this::handleDeleteGenericSubObj);
 
       return router;
@@ -1196,6 +1288,25 @@ public class OrdersImplTest {
 
     private boolean shouldWorkWithTmpOrder(RoutingContext ctx) {
       return TMP_ORDER_HEADER.getValue().equals(ctx.request().getHeader(TMP_ORDER_HEADER.getName()));
+    }
+
+    private void handleGetLocation(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+      String id = ctx.request().getParam("id");
+      logger.info("id: " + id);
+
+      Location location = new Location();
+      location.setId(id);
+      location.setLocationId("123");
+      location.setPoLineId("123");
+      location.setQuantity(3);
+      location.setQuantityElectronic(1);
+      location.setQuantityPhysical(2);
+
+      ctx.response()
+        .setStatusCode(200)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .end(JsonObject.mapFrom(location).encodePrettily());
     }
 
   }

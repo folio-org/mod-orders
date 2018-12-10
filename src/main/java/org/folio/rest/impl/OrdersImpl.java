@@ -151,8 +151,21 @@ public class OrdersImpl implements Orders {
   @Override
   @Validate
   public void getOrdersLinesByIdAndLineId(String id, String lineId, String lang, Map<String, String> okapiHeaders,
-                                            Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
-    asyncResultHandler.handle(Future.failedFuture(new NotImplementedException("GET PO line by id is not implemented yet")));
+                                          Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
+
+    logger.info("Started Invocation of POLine Request with id = " + lineId);
+    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
+    GetPOLineByIdHelper helper = new GetPOLineByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+
+    helper.getPOLineByPOLineId(id, lineId, lang)
+      .thenAccept(poline -> {
+        logger.info("Received POLine Response: " + JsonObject.mapFrom(poline).encodePrettily());
+        httpClient.closeClient();
+        javax.ws.rs.core.Response response = GetOrdersLinesByIdAndLineIdResponse.respond200WithApplicationJson(poline);
+        AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
+        asyncResultHandler.handle(result);
+      })
+      .exceptionally(helper::handleError);
   }
 
   @Override

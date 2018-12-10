@@ -45,8 +45,9 @@ public class HelperUtils {
     subObjectApis.put("renewal", "/renewal/");
     subObjectApis.put("source", "/source/");
     subObjectApis.put("vendor_detail", "/vendor_detail/");
-    subObjectApis.put("alerts", "/alerts/");
+    subObjectApis.put("alerts", "/alert/");
     subObjectApis.put("claims", "/claim/");
+    subObjectApis.put("reporting_codes", "/reporting_code/");
     subObjectApis.put("fund_distribution", "/fund_distribution/");
     subObjectApis.put(PO_LINES, "/po_line/");
   }
@@ -220,6 +221,7 @@ public class HelperUtils {
     futures.add(operateOnSubObjIfPresent(operation, line, "vendor_detail", httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, "alerts", httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, "claims", httpClient, ctx, okapiHeaders, logger));
+    futures.addAll(operateOnSubObjsIfPresent(operation, line, "reporting_codes", httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, "fund_distribution", httpClient, ctx, okapiHeaders, logger));
 
     CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
