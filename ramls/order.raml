@@ -11,7 +11,7 @@ documentation:
 types:
   composite_purchase_orders: !include acq-models/composite_purchase_orders.json
   composite_purchase_order: !include acq-models/composite_purchase_order.json
-  composite_po_line: !include acq-models/composite_po_line.json
+  po_line: !include acq-models/composite_po_line.json
   errors: !include raml-util/schemas/errors.schema
   UUID:
     type: string
@@ -22,6 +22,13 @@ traits:
   searchable: !include raml-util/traits/searchable.raml
   language: !include raml-util/traits/language.raml
   validate: !include raml-util/traits/validation.raml
+  auth:
+    responses:
+      401:
+        description: "Not authorized to perform requested action"
+        body:
+          text/plain:
+            example: "unable to create <<resourcePathName|!singularize>> -- unauthorized"
 
 resourceTypes:
   collection-item: !include raml-util/rtypes/item-collection.raml
@@ -37,19 +44,13 @@ resourceTypes:
 
   post:
     description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order
-    is: [validate]
+    is: [validate, auth]
     body:
       application/json:
         type: composite_purchase_order
         example:
           strict: false
           value: !include acq-models/examples/composite_purchase_order.sample
-    responses:
-      401:
-        description: "Not authorized to perform requested action"
-        body:
-          text/plain:
-            example: "unable to create orders -- unauthorized"
   /{id}:
     uriParameters:
       id:
@@ -69,14 +70,14 @@ resourceTypes:
         # Using `post-item` resource type because at the moment only POST is required. In case GET becomes also required, the `collection` resource type should be used instead
         post-item:
           exampleItem: !include acq-models/examples/composite_po_line.sample
-          schema: composite_po_line
+          schema: po_line
       post:
         displayName: Create a new purchace order line
         description: Post a purchase order (PO) line
-        is: [validate]
+        is: [validate, auth]
         body:
           application/json:
-            type: composite_po_line
+            type: po_line
             example:
               strict: false
               value: !include acq-models/examples/composite_po_line.sample
@@ -90,6 +91,7 @@ resourceTypes:
         type:
           collection-item:
             exampleItem: !include acq-models/examples/composite_po_line.sample
+            schema: po_line
             schema: composite_po_line
         get:
           description: Return a purchase order line

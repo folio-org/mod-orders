@@ -48,6 +48,34 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import org.folio.rest.RestVerticle;
+import org.folio.rest.acq.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.tools.utils.NetworkUtils;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import static org.folio.orders.utils.HelperUtils.getMockData;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @RunWith(VertxUnitRunner.class)
 public class OrdersImplTest {
@@ -70,6 +98,11 @@ public class OrdersImplTest {
 
   private static final Header X_OKAPI_URL = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
   private static final Header X_OKAPI_TENANT = new Header("X-Okapi-Tenant", "ordersimpltest");
+  private static final Header X_OKAPI_USER_ID = new Header("X-Okapi-User-Id", "440c89e3-7f6c-578a-9ea8-310dad23605e");
+  private static final Header TMP_ORDER_HEADER = new Header("X-Okapi_Tmp", "tmp_order");
+  private static JsonObject tmpOrder;
+
+
 
   private static final String X_ECHO_STATUS = "X-Okapi-Echo-Status";
   private static final String MOCK_DATA_PATH = "mockdata/getOrders.json";
@@ -79,6 +112,7 @@ public class OrdersImplTest {
   private static final String INVALID_OFFSET = "?offset=-1";
   private static final String INVALID_LIMIT = "?limit=-1";
 
+  private static final String PO_ID = "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb";
   private static final String ID_DOES_NOT_EXIST = "d25498e7-3ae6-45fe-9612-ec99e2700d2f";
   private static final String ID_FOR_INTERNAL_SERVER_ERROR = "168f8a86-d26c-406e-813f-c7527f241ac3";
   private static final String PO_LINE_ID_FOR_SUCCESS_CASE = "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47";
@@ -100,8 +134,10 @@ public class OrdersImplTest {
   private final String mockDataRootPath = "src/test/resources/";
   private final String listedPrintMonographPath = mockDataRootPath + "/po_listed_print_monograph.json";
   private final String minimalOrderPath = mockDataRootPath + "/minimal_order.json";
+  private final String existedOrder = mockDataRootPath + "/existed_order.json";
   private final String poCreationFailurePath = mockDataRootPath + "/po_creation_failure.json";
   private final String poLineCreationFailurePath = mockDataRootPath + "/po_line_creation_failure.json";
+  private final String compositePoLinePath = mockDataRootPath + "/composite_po_line.json";
 
   private static Vertx vertx;
   private static MockServer mockServer;
@@ -122,8 +158,6 @@ public class OrdersImplTest {
 
     final DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
     vertx.deployVerticle(RestVerticle.class.getName(), opt, context.asyncAssertSuccess());
-
-    UTC_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
   }
 
   @AfterClass
@@ -143,6 +177,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
         .body(body)
       .post(rootPath)
@@ -188,6 +223,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
         .body(body)
       .post(rootPath)
@@ -229,6 +265,7 @@ public class OrdersImplTest {
       .given()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
         .body(body)
       .post(rootPath)
@@ -294,6 +331,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
         .header(X_ECHO_STATUS, 403)
         .contentType(APPLICATION_JSON)
         .body(body)
@@ -462,25 +500,63 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
         .body(body)
       .put(rootPath + "/" + id)
         .then()
           .statusCode(204);
+  }
+
+  @Test
+  public void testPutOrdersByIdDoesNotAffectGeneratedData(TestContext ctx) throws Exception {
+    logger.info("=== Test Put Order By Id doesn't affect generated data ===");
+
+    tmpOrder = new JsonObject(getMockData(existedOrder));
+    PurchaseOrder initialOrder = tmpOrder.mapTo(PurchaseOrder.class);
+    CompositePurchaseOrder puttedOrder =  tmpOrder.mapTo(CompositePurchaseOrder.class);
+    puttedOrder.setApproved(false);
+    puttedOrder.setCreated(new Date());
+    puttedOrder.setCreatedBy("440c89e3-7f6c-578a-9ea8-310dad23605e");
+    String body = JsonObject.mapFrom(puttedOrder).toString();
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
+        .header(TMP_ORDER_HEADER)
+        .contentType(APPLICATION_JSON)
+      .body(body)
+        .put(rootPath + "/1ab7ef6a-d1d4-4a4f-90a2-882aed18af14")
+          .then()
+            .statusCode(204);
+
+    PurchaseOrder changedOrder =  tmpOrder.mapTo(PurchaseOrder.class);
+
+    assertThat(initialOrder.getCreated(), equalTo(changedOrder.getCreated()));
+    assertThat(initialOrder.getCreatedBy(), equalTo(changedOrder.getCreatedBy()));
+    assertThat(initialOrder.getApproved(), not(equalTo(changedOrder.getApproved())));
+    assertThat(puttedOrder.getApproved(), equalTo(changedOrder.getApproved()));
+    assertThat(puttedOrder.getCreatedBy(), not(equalTo(changedOrder.getCreatedBy())));
 
   }
 
   @Test
-  public void testIgnoringCreatedOnInResponseOnPost() throws IOException, ParseException {
+  public void testIgnoringGeneratedDataInResponseOnPost() throws IOException {
     logger.info("=== Test ignoring \"Created on\" from request on POST API ===");
 
     String body = getMockData(minimalOrderPath);
     JsonObject reqData = new JsonObject(body);
-    Date dateFromRequest = UTC_DATE_FORMAT.parse(reqData.getString("created"));
+    CompositePurchaseOrder compPo = reqData.mapTo(CompositePurchaseOrder.class);
+    Date dateFromRequest = compPo.getCreated();
+    String createdByFromRequest = compPo.getCreatedBy();
+    String poNumberFromRequest = compPo.getPoNumber();
     final CompositePurchaseOrder resp = RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
         .body(body)
       .post(rootPath)
@@ -493,8 +569,14 @@ public class OrdersImplTest {
 
     logger.info(JsonObject.mapFrom(resp));
     Date dateFromResponse = resp.getCreated();
+    String createdByFromResponse = resp.getCreatedBy();
+    String poNumberFromResponse = resp.getPoNumber();
     assertNotNull(dateFromResponse);
+    assertNotNull(createdByFromResponse);
+    assertNotNull(poNumberFromResponse);
+    assertThat(poNumberFromRequest, not(equalTo(poNumberFromResponse)));
     assertThat(dateFromResponse, not(equalTo(dateFromRequest)));
+    assertThat(createdByFromResponse, not(equalTo(createdByFromRequest)));
   }
 
   @Test
@@ -506,6 +588,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
       .post(rootPath)
         .then()
@@ -517,6 +600,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
         .body("{}")
       .post(rootPath+INVALID_LANG)
@@ -807,6 +891,86 @@ public class OrdersImplTest {
     assertEquals("Internal Server Error", resp.getBody().print());
   }
 
+  @Test
+  public void testPostOrdersLinesById(TestContext ctx) throws IOException {
+    logger.info("=== Test Post Order Lines By Id (expected flow) ===");
+
+    String body = getMockData(compositePoLinePath);
+    JsonObject compPoLineJson = new JsonObject(body);
+    String id = compPoLineJson.getString("purchase_order_id");
+    final PoLine response = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .post(rootPath + "/" + id + "/lines")
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+          .response().as(PoLine.class);
+
+    ctx.assertEquals(id, response.getPurchaseOrderId());
+  }
+
+  @Test
+  public void testPostOrdersLinesByIdWithIdMismatch(TestContext ctx) throws IOException {
+    logger.info("=== Test Post Order Lines By Id (path and request body ids mismatching) ===");
+
+    String body = getMockData(compositePoLinePath);
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .post(rootPath + "/" + ID_DOES_NOT_EXIST + "/lines")
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(400)
+          .extract()
+          .response();
+  }
+
+  @Test
+  public void testPostOrdersLinesByIdPoLineWithoutId(TestContext ctx) throws IOException {
+    logger.info("=== Test Post Order Lines By Id (empty id in body) ===");
+
+    PoLine response = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body("{}")
+      .post(rootPath + "/" + PO_ID + "/lines")
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+          .response().as(PoLine.class);
+
+    ctx.assertEquals(PO_ID, response.getPurchaseOrderId());
+  }
+
+  @Test
+  public void testPostOrdersLinesByIdStorageError(TestContext ctx) throws IOException {
+    logger.info("=== Test Post Order Lines By Id (mod-orders-storage error) ===");
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body("{}")
+      .post(rootPath + "/" + ID_FOR_INTERNAL_SERVER_ERROR + "/lines")
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(500)
+          .extract()
+          .response();
+  }
+
   public static class MockServer {
 
     private static final Logger logger = LoggerFactory.getLogger(MockServer.class);
@@ -894,7 +1058,6 @@ public class OrdersImplTest {
     }
 
     void start(TestContext context) {
-
       // Setup Mock Server...
       HttpServer server = vertx.createHttpServer();
 
@@ -911,6 +1074,7 @@ public class OrdersImplTest {
     private void handleGetPoLines(RoutingContext ctx) {
       logger.info("got: " + ctx.request().path());
       String id = ctx.request().getParam("query").split("purchase_order_id==")[1];
+
       if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
         serverResponse(ctx, 500, TEXT_PLAIN, "Internal Server Error");
       } else {
@@ -1029,8 +1193,14 @@ public class OrdersImplTest {
       logger.info("got: " + ctx.request().path());
       String id = ctx.request().getParam("id");
       logger.info("id: " + id);
+
       try {
-        JsonObject po = new JsonObject(getMockData(String.format("%s%s.json", BASE_MOCK_DATA_PATH, id)));
+        JsonObject po;
+        if (shouldWorkWithTmpOrder(ctx)) {
+          po = tmpOrder;
+        } else {
+          po = new JsonObject(getMockData(String.format("%s%s.json", BASE_MOCK_DATA_PATH, id)));
+        }
         po.remove("adjustment");
         po.remove("po_lines");
         po.put("adjustment", UUID.randomUUID().toString());
@@ -1048,6 +1218,9 @@ public class OrdersImplTest {
 
       org.folio.rest.acq.model.PurchaseOrder po = ctx.getBodyAsJson().mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
       po.setId(UUID.randomUUID().toString());
+      if (shouldWorkWithTmpOrder(ctx)) {
+        tmpOrder = ctx.getBodyAsJson();
+      }
 
       ctx.response()
         .setStatusCode(201)
@@ -1094,12 +1267,26 @@ public class OrdersImplTest {
       logger.info("got po_line: " + ctx.getBodyAsString());
 
       org.folio.rest.acq.model.PoLine pol = ctx.getBodyAsJson().mapTo(org.folio.rest.acq.model.PoLine.class);
-      pol.setId(UUID.randomUUID().toString());
 
-      ctx.response()
-        .setStatusCode(201)
-        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .end(JsonObject.mapFrom(pol).encodePrettily());
+      if (pol.getId() == null) {
+        pol.setId(UUID.randomUUID().toString());
+      }
+
+      if (ID_FOR_INTERNAL_SERVER_ERROR.equals(pol.getPurchaseOrderId())) {
+        ctx.response()
+          .setStatusCode(500)
+          .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
+          .end();
+      } else {
+        ctx.response()
+          .setStatusCode(201)
+          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+          .end(JsonObject.mapFrom(pol).encodePrettily());
+      }
+    }
+
+    private boolean shouldWorkWithTmpOrder(RoutingContext ctx) {
+      return TMP_ORDER_HEADER.getValue().equals(ctx.request().getHeader(TMP_ORDER_HEADER.getName()));
     }
 
     private void handleGetLocation(RoutingContext ctx) {

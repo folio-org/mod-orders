@@ -35,16 +35,16 @@ class DeleteOrderLineByIdHelper {
   private final Handler<AsyncResult<Response>> asyncResultHandler;
   private final Map<String, String> okapiHeaders;
 
-  DeleteOrderLineByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
-                            Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
-    Map<String,String> customHeader=new HashMap<>();
-    customHeader.put(HttpHeaders.ACCEPT.toString(), "application/json, text/plain");
-    httpClient.setDefaultHeaders(customHeader);
-
-    this.httpClient = httpClient;
+  DeleteOrderLineByIdHelper(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
+    this.httpClient = OrdersImpl.getHttpClient(okapiHeaders);
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
     this.asyncResultHandler = asyncResultHandler;
+
+    Map<String,String> customHeader = new HashMap<>();
+    // Delete requests do not have body and in happy flow do not produce response body. The Accept header is required for calls to storage
+    customHeader.put(HttpHeaders.ACCEPT.toString(), "application/json, text/plain");
+    httpClient.setDefaultHeaders(customHeader);
   }
 
   void deleteLine(String orderId, String lineId, String lang) {
@@ -57,7 +57,10 @@ class DeleteOrderLineByIdHelper {
         logger.debug("Validation checks passed. Deleting PO line.");
         return deletePoLine(line, httpClient, ctx, okapiHeaders, logger);
       })
-      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(respond204())))
+      .thenAccept(v -> {
+        httpClient.closeClient();
+        asyncResultHandler.handle(succeededFuture(respond204()));
+      })
       .exceptionally(this::handleError);
   }
 

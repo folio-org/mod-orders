@@ -1,0 +1,25 @@
+{
+  "user": {
+    "username": "user",
+    "id": "dd0e3f0b-1f55-4ccc-9ec5-a7e5054cb758",
+    "active": true,
+    "proxyFor": [],
+    "personal": {
+      "lastName": "LastName",
+      "firstName": "FirstName",
+      "addresses": []
+    },
+    "createdDate": "2018-12-06T07:06:02.195+0000",
+    "updatedDate": "2018-12-06T07:06:02.195+0000",
+    "metadata": {
+      "createdDate": "2018-12-06T07:06:01.930+0000",
+      "createdByUserId": "440c89e3-7f6c-578a-9ea8-310dad23605e",
+      "updatedDate": "2018-12-06T07:06:01.930+0000",
+      "updatedByUserId": "440c89e3-7f6c-578a-9ea8-310dad23605e"
+    }
+  },
+  "permissions": {
+    "permissions": []
+  },
+  "proxiesFor": []
+}
