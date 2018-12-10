@@ -846,7 +846,8 @@ public class OrdersImplTest {
           .response();
 
     logger.info(resp.prettyPrint());
-    assertEquals(ERROR_CODE_422, resp.as(Errors.class).getErrors().get(0).getCode());
+    String msg = String.format("The PO line with id=%s does not belong to order with id=%s", ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE, orderId);
+    assertEquals(resp.as(Errors.class).getErrors().get(0).getMessage(), msg);
   }
 
   @Test

@@ -24,11 +24,7 @@ import java.util.concurrent.CompletionException;
 
 public class GetPOLineByIdHelper {
 
-  private static final Logger logger = LoggerFactory.getLogger(GetOrdersByIdHelper.class);
-
-  public static final String MOCK_DATA_PATH = "mockdata/lines/c0d08448-347b-418a-8c2f-5fb50248d67e.json";
-  public static final String ORDER_REFERENCE_ERROR_MESSAGE = "Current order do not referenced to requested PO line";
-  public static final String ERROR_CODE_422 = "422";
+  private static final Logger logger = LoggerFactory.getLogger(GetPOLineByIdHelper.class);
 
   private final HttpClientInterface httpClient;
   private final Context ctx;
@@ -67,8 +63,10 @@ public class GetPOLineByIdHelper {
    * @return PO line json object if validation is passed
    */
   private JsonObject validateOrderIdReference(String orderId, JsonObject poline) {
-    if (!orderId.equals(poline.getValue("purchase_order_id")))
-      throw new CompletionException(ORDER_REFERENCE_ERROR_MESSAGE, new HttpException(422, ORDER_REFERENCE_ERROR_MESSAGE));
+    if (!orderId.equals(poline.getValue("purchase_order_id"))) {
+      String msg = String.format("The PO line with id=%s does not belong to order with id=%s", poline.getString("id"), orderId);
+      throw new CompletionException(msg, new HttpException(422, msg));
+    }
     return poline;
   }
 
@@ -86,7 +84,8 @@ public class GetPOLineByIdHelper {
           result = Future.succeededFuture(Orders.GetOrdersLinesByIdAndLineIdResponse.respond404WithTextPlain(message));
           break;
         case 422:
-          Errors errors = generate422ErrorList(throwable);
+          Errors errors = new Errors();
+          errors.getErrors().add(new Error().withMessage(message));
           result = Future.succeededFuture(Orders.GetOrdersLinesByIdAndLineIdResponse.respond422WithApplicationJson(errors));
           break;
         case 500:
@@ -104,14 +103,6 @@ public class GetPOLineByIdHelper {
     asyncResultHandler.handle(result);
 
     return null;
-  }
-
-  private Errors generate422ErrorList(Throwable throwable) {
-    Errors errors = new Errors();
-    String message = throwable.getMessage();
-    errors.getErrors()
-      .add(new Error().withMessage(message).withCode(ERROR_CODE_422));
-    return errors;
   }
 
 }
