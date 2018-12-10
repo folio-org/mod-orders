@@ -1,4 +1,4 @@
-## 1.0.0 Unreleased
+## 1.0.2
  * [MODORDERS-79](https://issues.folio.org/browse/MODORDERS-79) - Implemented delete order line logic
  * [MODORDERS-78](https://issues.folio.org/browse/MODORDERS-78) - Implemented get order line logic
  * [MODORDERS-75](https://issues.folio.org/browse/MODORDERS-75) - Define order line endpoints
