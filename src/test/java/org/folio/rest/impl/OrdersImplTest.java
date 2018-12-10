@@ -813,7 +813,7 @@ public class OrdersImplTest {
 
     String orderId = "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb";
 
-    final CompositePoLine resp = RestAssured
+    final PoLine resp = RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
@@ -822,7 +822,7 @@ public class OrdersImplTest {
           .statusCode(200)
           .extract()
           .response()
-          .as(CompositePoLine.class);
+          .as(PoLine.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 

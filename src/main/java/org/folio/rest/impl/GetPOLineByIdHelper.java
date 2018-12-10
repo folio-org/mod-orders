@@ -43,7 +43,7 @@ public class GetPOLineByIdHelper {
     this.asyncResultHandler = asyncResultHandler;
   }
 
-  public CompletableFuture<PoLine> getCompositePOLineByPOLineId(String orderId, String polineId, String lang) {
+  public CompletableFuture<PoLine> getPOLineByPOLineId(String orderId, String polineId, String lang) {
     CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
 
     HelperUtils.getPoLineById(polineId, lang, httpClient, ctx, okapiHeaders, logger)

@@ -157,15 +157,11 @@ public class OrdersImpl implements Orders {
     final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
     GetPOLineByIdHelper helper = new GetPOLineByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
 
-    helper.getCompositePOLineByPOLineId(id, lineId, lang)
+    helper.getPOLineByPOLineId(id, lineId, lang)
       .thenAccept(poline -> {
         logger.info("Received POLine Response: " + JsonObject.mapFrom(poline).encodePrettily());
         httpClient.closeClient();
-
-        // remove this double converting workaround after approving of https://github.com/folio-org/mod-orders/pull/30
-        CompositePoLine compPOLine = JsonObject.mapFrom(poline).mapTo(CompositePoLine.class);
-
-        javax.ws.rs.core.Response response = GetOrdersLinesByIdAndLineIdResponse.respond200WithApplicationJson(compPOLine);
+        javax.ws.rs.core.Response response = GetOrdersLinesByIdAndLineIdResponse.respond200WithApplicationJson(poline);
         AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
         asyncResultHandler.handle(result);
       })
