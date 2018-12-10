@@ -1,4 +1,4 @@
-## 1.0.1
+## 1.0.2
  * [MODORDERS-79](https://issues.folio.org/browse/MODORDERS-79) - Implemented delete order line logic
  * [MODORDERS-75](https://issues.folio.org/browse/MODORDERS-75) - Define order line endpoints
  * [MODORDERS-62](https://issues.folio.org/browse/MODORDERS-62) - Migrate to RAML1.0 and RMB 23
