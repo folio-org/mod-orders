@@ -113,13 +113,12 @@ public class OrdersImplTest {
   private static final String INVALID_OFFSET = "?offset=-1";
   private static final String INVALID_LIMIT = "?limit=-1";
 
+  private static final String PO_ID = "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb";
   private static final String ID_DOES_NOT_EXIST = "d25498e7-3ae6-45fe-9612-ec99e2700d2f";
   private static final String ID_FOR_INTERNAL_SERVER_ERROR = "168f8a86-d26c-406e-813f-c7527f241ac3";
   private static final String PO_LINE_ID_FOR_SUCCESS_CASE = "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47";
   private static final String PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED = "0009662b-8b80-4001-b704-ca10971f175d";
   private static final String PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE = "c2755a78-2f8d-47d0-a218-059a9b7391b4";
-
-
 
   // API paths
   private final String rootPath = "/orders";
@@ -132,6 +131,7 @@ public class OrdersImplTest {
   private final String existedOrder = mockDataRootPath + "/existed_order.json";
   private final String poCreationFailurePath = mockDataRootPath + "/po_creation_failure.json";
   private final String poLineCreationFailurePath = mockDataRootPath + "/po_line_creation_failure.json";
+  private final String compositePoLinePath = mockDataRootPath + "/composite_po_line.json";
 
   private static Vertx vertx;
   private static MockServer mockServer;
@@ -801,6 +801,86 @@ public class OrdersImplTest {
     assertTrue(message.contains(lineId));
   }
 
+  @Test
+  public void testPostOrdersLinesById(TestContext ctx) throws IOException {
+    logger.info("=== Test Post Order Lines By Id (expected flow) ===");
+
+    String body = getMockData(compositePoLinePath);
+    JsonObject compPoLineJson = new JsonObject(body);
+    String id = compPoLineJson.getString("purchase_order_id");
+    final PoLine response = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .post(rootPath + "/" + id + "/lines")
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+          .response().as(PoLine.class);
+
+    ctx.assertEquals(id, response.getPurchaseOrderId());
+  }
+
+  @Test
+  public void testPostOrdersLinesByIdWithIdMismatch(TestContext ctx) throws IOException {
+    logger.info("=== Test Post Order Lines By Id (path and request body ids mismatching) ===");
+
+    String body = getMockData(compositePoLinePath);
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .post(rootPath + "/" + ID_DOES_NOT_EXIST + "/lines")
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(400)
+          .extract()
+          .response();
+  }
+
+  @Test
+  public void testPostOrdersLinesByIdPoLineWithoutId(TestContext ctx) throws IOException {
+    logger.info("=== Test Post Order Lines By Id (empty id in body) ===");
+
+    PoLine response = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body("{}")
+      .post(rootPath + "/" + PO_ID + "/lines")
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+          .response().as(PoLine.class);
+
+    ctx.assertEquals(PO_ID, response.getPurchaseOrderId());
+  }
+
+  @Test
+  public void testPostOrdersLinesByIdStorageError(TestContext ctx) throws IOException {
+    logger.info("=== Test Post Order Lines By Id (mod-orders-storage error) ===");
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body("{}")
+      .post(rootPath + "/" + ID_FOR_INTERNAL_SERVER_ERROR + "/lines")
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(500)
+          .extract()
+          .response();
+  }
+
   public static class MockServer {
 
     private static final Logger logger = LoggerFactory.getLogger(MockServer.class);
@@ -1096,12 +1176,22 @@ public class OrdersImplTest {
       logger.info("got po_line: " + ctx.getBodyAsString());
 
       org.folio.rest.acq.model.PoLine pol = ctx.getBodyAsJson().mapTo(org.folio.rest.acq.model.PoLine.class);
-      pol.setId(UUID.randomUUID().toString());
 
-      ctx.response()
-        .setStatusCode(201)
-        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .end(JsonObject.mapFrom(pol).encodePrettily());
+      if (pol.getId() == null) {
+        pol.setId(UUID.randomUUID().toString());
+      }
+
+      if (ID_FOR_INTERNAL_SERVER_ERROR.equals(pol.getPurchaseOrderId())) {
+        ctx.response()
+          .setStatusCode(500)
+          .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
+          .end();
+      } else {
+        ctx.response()
+          .setStatusCode(201)
+          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+          .end(JsonObject.mapFrom(pol).encodePrettily());
+      }
     }
 
     private boolean shouldWorkWithTmpOrder(RoutingContext ctx) {
