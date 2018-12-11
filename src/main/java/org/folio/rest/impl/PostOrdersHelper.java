@@ -9,7 +9,9 @@ import java.util.concurrent.CompletionException;
 
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.Claim;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Details;
@@ -17,6 +19,9 @@ import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.Renewal;
+import org.folio.rest.jaxrs.model.ReportingCode;
+import org.folio.rest.jaxrs.model.Source;
 import org.folio.rest.jaxrs.model.VendorDetail;
 import org.folio.rest.jaxrs.resource.Orders.PostOrdersResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -122,12 +127,8 @@ public class PostOrdersHelper {
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
 
     //TODO handle alerts, claims, fund_distribution, reporting_codes, source
-    line.remove("alerts");
-    line.remove("claims");
     line.remove("fund_distribution");
     line.remove("reporting_codes");
-    line.remove("source");
-    line.remove("renewal");
     line.remove("license");
 
     subObjFuts.add(createAdjustment(compPOL, line, compPOL.getAdjustment()));
@@ -137,6 +138,11 @@ public class PostOrdersHelper {
     subObjFuts.add(createLocation(compPOL, line, compPOL.getLocation()));
     subObjFuts.add(createPhysical(compPOL, line, compPOL.getPhysical()));
     subObjFuts.add(createVendorDetail(compPOL, line, compPOL.getVendorDetail()));
+    subObjFuts.add(createAlerts(compPOL, line, compPOL.getAlerts()));
+    subObjFuts.add(createClaims(compPOL, line, compPOL.getClaims()));
+    subObjFuts.add(createSource(compPOL, line, compPOL.getSource()));
+    subObjFuts.add(createRenewal(compPOL, line, compPOL.getRenewal()));
+    subObjFuts.add(createReportingCodes(compPOL, line, compPOL.getReportingCodes()));
 
     CompletableFuture.allOf(subObjFuts.toArray(new CompletableFuture[subObjFuts.size()]))
       .thenAccept(v -> {
@@ -280,6 +286,114 @@ public class PostOrdersHelper {
         throw new CompletionException(t.getCause());
       });
   }
+  
+  private CompletableFuture<Void> createReportingCodes(PoLine compPOL, JsonObject line,
+      List<ReportingCode> reportingCodes) {
+
+    List<String> reportingIds = new ArrayList<>();
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    if(null!=reportingCodes)
+      reportingCodes
+      .forEach(reportingObject -> {
+        futures.add(createSubObjIfPresent(line, reportingObject, "reporting_codes", HelperUtils.subObjectApis.get("reporting_codes"))
+              .thenAccept(id -> {
+                if (id != null) {
+                  reportingObject.setId(id);
+                  reportingIds.add(id);
+                }
+              }));
+      });
+
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
+        .thenAccept(t -> {
+          line.put("reporting_codes", reportingIds);
+          compPOL.setReportingCodes(reportingCodes);
+        });
+
+  }
+
+  private CompletableFuture<Void> createRenewal(PoLine compPOL, JsonObject line, Renewal renewal) {
+    return createSubObjIfPresent(line, renewal, "renewal", HelperUtils.subObjectApis.get("renewal"))
+        .thenAccept(id -> {
+          if (id == null) {
+            line.remove("renewal");
+            compPOL.setRenewal(null);
+          } else {
+            compPOL.getRenewal().setId(id);
+          }
+        })
+        .exceptionally(t -> {
+          logger.error("failed to create Renewal", t);
+          throw new CompletionException(t.getCause());
+        });
+    }
+
+  private CompletableFuture<Void> createSource(PoLine compPOL, JsonObject line, Source source) {
+    return createSubObjIfPresent(line, source, "source", HelperUtils.subObjectApis.get("source"))
+        .thenAccept(id -> {
+          if (id == null) {
+            line.remove("source");
+            compPOL.setSource(null);
+          } else {
+            compPOL.getSource().setId(id);
+          }
+        })
+        .exceptionally(t -> {
+          logger.error("failed to create Source", t);
+          throw new CompletionException(t.getCause());
+        });
+    }
+
+  private CompletableFuture<Void> createClaims(PoLine compPOL, JsonObject line, List<Claim> claims) {
+
+    List<String> claimsIds = new ArrayList<>();
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    if(null!=claims)
+     claims
+      .forEach(claimObject -> {
+        futures.add(createSubObjIfPresent(line, claimObject, "claims", HelperUtils.subObjectApis.get("claims"))
+              .thenAccept(id -> {
+                if (id != null) {
+                  claimObject.setId(id);
+                  claimsIds.add(id);
+                }
+              }));
+      });
+
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
+        .thenAccept(t -> {
+          line.put("claims", claimsIds);
+          compPOL.setClaims(claims);
+        });
+
+  }
+  
+  
+
+  private CompletableFuture<Void> createAlerts(PoLine compPOL, JsonObject line, List<Alert> alerts) {
+
+    List<String> alertIds = new ArrayList<>();
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    if(null!=alerts)
+      alerts
+      .forEach(alertObject -> {
+        futures.add(createSubObjIfPresent(line, alertObject, "alerts", HelperUtils.subObjectApis.get("alerts"))
+              .thenAccept(id -> {
+                if (id != null) {
+                  alertObject.setId(id);
+                  alertIds.add(id);
+                }
+              }));
+      });
+
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
+        .thenAccept(t -> {
+          line.put("alerts", alertIds);
+          compPOL.setAlerts(alerts);
+        });
+
+  }
+
 
   private CompletableFuture<String> createSubObjIfPresent(JsonObject line, Object obj, String field, String url) {
     if (obj != null) {

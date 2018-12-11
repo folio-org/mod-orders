@@ -33,7 +33,7 @@ public class HelperUtils {
 
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
 
-  private static final Map<String,String> subObjectApis = new HashMap<>();
+  public static final Map<String,String> subObjectApis = new HashMap<>();
 
   static {
     subObjectApis.put("adjustment", "/adjustment/");

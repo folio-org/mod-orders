@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import static org.folio.orders.utils.HelperUtils.getMockData;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
@@ -9,21 +10,21 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.hamcrest.Matchers.containsString;
 
 import java.io.IOException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.TimeZone;
 import java.util.UUID;
 
-import io.restassured.http.ContentType;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.RestVerticle;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.acq.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -31,6 +32,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
 import io.restassured.http.Header;
 import io.restassured.response.Response;
 import io.vertx.core.DeploymentOptions;
@@ -48,34 +50,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import org.folio.rest.RestVerticle;
-import org.folio.rest.acq.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.Adjustment;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.tools.utils.NetworkUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-import static org.folio.orders.utils.HelperUtils.getMockData;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 @RunWith(VertxUnitRunner.class)
 public class OrdersImplTest {
@@ -86,7 +60,6 @@ public class OrdersImplTest {
 
   private static final Logger logger = LoggerFactory.getLogger(OrdersImplTest.class);
 
-  private static final SimpleDateFormat UTC_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:SS.SSS'Z'");
 
   private static final String APPLICATION_JSON = "application/json";
   private static final String TEXT_PLAIN = "text/plain";
@@ -108,9 +81,6 @@ public class OrdersImplTest {
   private static final String MOCK_DATA_PATH = "mockdata/getOrders.json";
 
   private static final String INVALID_LANG = "?lang=english";
-
-  private static final String INVALID_OFFSET = "?offset=-1";
-  private static final String INVALID_LIMIT = "?limit=-1";
 
   private static final String PO_ID = "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb";
   private static final String ID_DOES_NOT_EXIST = "d25498e7-3ae6-45fe-9612-ec99e2700d2f";
@@ -1008,6 +978,11 @@ public class OrdersImplTest {
       router.route(HttpMethod.POST, "/location").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Location.class));
       router.route(HttpMethod.POST, "/physical").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Physical.class));
       router.route(HttpMethod.POST, "/vendor_detail").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.VendorDetail.class));
+      router.route(HttpMethod.POST, "/claim").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Claim.class));
+      router.route(HttpMethod.POST, "/alert").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Alert.class));
+      router.route(HttpMethod.POST, "/source").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Source.class));
+      router.route(HttpMethod.POST, "/reporting_code").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.ReportingCode.class));
+      router.route(HttpMethod.POST, "/renewal").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Renewal.class));
 
       router.route(HttpMethod.GET, "/purchase_order/:id").handler(this::handleGetPurchaseOrderById);
       router.route(HttpMethod.GET, "/po_line").handler(this::handleGetPoLines);
@@ -1025,6 +1000,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, "/source/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/vendor_detail/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/reporting_code/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/renewal/:id").handler(this::handleGetGenericSubObj);
 
       router.route(HttpMethod.DELETE, "/purchase_order/:id").handler(this::handleDeleteGenericSubObj);
       router.route(HttpMethod.DELETE, "/po_line/:id").handler(this::handleDeleteGenericSubObj);
@@ -1040,6 +1016,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.DELETE, "/alert/:id").handler(this::handleDeleteGenericSubObj);
       router.route(HttpMethod.DELETE, "/claim/:id").handler(this::handleDeleteGenericSubObj);
       router.route(HttpMethod.DELETE, "/fund_distribution/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/reporting_code/:id").handler(this::handleDeleteGenericSubObj);
 
       return router;
     }
