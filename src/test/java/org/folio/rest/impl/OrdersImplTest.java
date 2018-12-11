@@ -1018,7 +1018,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, "/claim/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/details/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/eresource/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/fund_distribution/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/orders-storage/fund_distribution/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/location/:id").handler(this::handleGetLocation);
       router.route(HttpMethod.GET, "/physical/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/renewal/:id").handler(this::handleGetGenericSubObj);
@@ -1039,7 +1039,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.DELETE, "/vendor_detail/:id").handler(this::handleDeleteGenericSubObj);
       router.route(HttpMethod.DELETE, "/alert/:id").handler(this::handleDeleteGenericSubObj);
       router.route(HttpMethod.DELETE, "/claim/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/fund_distribution/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/orders-storage/fund_distribution/:id").handler(this::handleDeleteGenericSubObj);
 
       return router;
     }

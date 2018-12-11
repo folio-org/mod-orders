@@ -61,7 +61,8 @@
             "eresource.item.post",
             "physical.item.post",
             "renewal.item.post",
-            "vendor_detail.item.post"
+            "vendor_detail.item.post",
+            "fund_distribution.item.post"
           ]
         },
         {
@@ -78,7 +79,8 @@
             "eresource.item.get",
             "physical.item.get",
             "renewal.item.get",
-            "vendor_detail.item.get"
+            "vendor_detail.item.get",
+            "fund_distribution.item.get"
           ]
         },
         {
@@ -104,7 +106,9 @@
             "renewal.item.delete",
             "renewal.item.post",
             "vendor_detail.item.delete",
-            "vendor_detail.item.post"
+            "vendor_detail.item.post",
+            "fund_distribution.item.post",
+            "fund_distribution.item.delete"
           ]
         },
         {
@@ -121,7 +125,8 @@
             "eresource.item.delete",
             "physical.item.delete",
             "renewal.item.delete",
-            "vendor_detail.item.delete"
+            "vendor_detail.item.delete",
+            "fund_distribution.item.delete"
           ]
         }
       ]
@@ -157,7 +162,7 @@
       "version": "1.0"
     },
     {
-      "id": "fund_distribution",
+      "id": "orders_storage_fund_distribution",
       "version": "1.0"
     },
     {
