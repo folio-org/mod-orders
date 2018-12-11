@@ -62,7 +62,7 @@
             "physical.item.post",
             "renewal.item.post",
             "vendor_detail.item.post",
-            "fund_distribution.item.post"
+            "orders_storage_fund_distribution.item.post"
           ]
         },
         {
@@ -80,7 +80,7 @@
             "physical.item.get",
             "renewal.item.get",
             "vendor_detail.item.get",
-            "fund_distribution.item.get"
+            "orders_storage_fund_distribution.item.get"
           ]
         },
         {
@@ -107,8 +107,8 @@
             "renewal.item.post",
             "vendor_detail.item.delete",
             "vendor_detail.item.post",
-            "fund_distribution.item.post",
-            "fund_distribution.item.delete"
+            "orders_storage_fund_distribution.item.post",
+            "orders_storage_fund_distribution.item.delete"
           ]
         },
         {
@@ -126,7 +126,7 @@
             "physical.item.delete",
             "renewal.item.delete",
             "vendor_detail.item.delete",
-            "fund_distribution.item.delete"
+            "orders_storage_fund_distribution.item.delete"
           ]
         }
       ]
