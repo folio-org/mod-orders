@@ -39,6 +39,16 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PostOrdersHelper {
 
+  private static final String ALERTS = "alerts";
+
+  private static final String CLAIMS = "claims";
+
+  private static final String SOURCE = "source";
+
+  private static final String RENEWAL = "renewal";
+
+  private static final String REPORTING_CODES = "reporting_codes";
+
   private static final Logger logger = LoggerFactory.getLogger(PostOrdersHelper.class);
 
   // epoch time @ 9/1/2018.
@@ -126,9 +136,8 @@ public class PostOrdersHelper {
     JsonObject line = JsonObject.mapFrom(compPOL);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
 
-    //TODO handle alerts, claims, fund_distribution, reporting_codes, source
+    //TODO handle fund_distribution
     line.remove("fund_distribution");
-    line.remove("reporting_codes");
     line.remove("license");
 
     subObjFuts.add(createAdjustment(compPOL, line, compPOL.getAdjustment()));
@@ -294,29 +303,29 @@ public class PostOrdersHelper {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     if(null!=reportingCodes)
       reportingCodes
-      .forEach(reportingObject -> {
-        futures.add(createSubObjIfPresent(line, reportingObject, "reporting_codes", HelperUtils.subObjectApis.get("reporting_codes"))
+      .forEach(reportingObject -> 
+        futures.add(createSubObjIfPresent(line, reportingObject, REPORTING_CODES, HelperUtils.getSubobjectapis().get(REPORTING_CODES))
               .thenAccept(id -> {
                 if (id != null) {
                   reportingObject.setId(id);
                   reportingIds.add(id);
                 }
-              }));
-      });
+              }))
+      );
 
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
         .thenAccept(t -> {
-          line.put("reporting_codes", reportingIds);
+          line.put(REPORTING_CODES, reportingIds);
           compPOL.setReportingCodes(reportingCodes);
         });
 
   }
 
   private CompletableFuture<Void> createRenewal(PoLine compPOL, JsonObject line, Renewal renewal) {
-    return createSubObjIfPresent(line, renewal, "renewal", HelperUtils.subObjectApis.get("renewal"))
+    return createSubObjIfPresent(line, renewal, RENEWAL, HelperUtils.getSubobjectapis().get(RENEWAL))
         .thenAccept(id -> {
           if (id == null) {
-            line.remove("renewal");
+            line.remove(RENEWAL);
             compPOL.setRenewal(null);
           } else {
             compPOL.getRenewal().setId(id);
@@ -329,10 +338,10 @@ public class PostOrdersHelper {
     }
 
   private CompletableFuture<Void> createSource(PoLine compPOL, JsonObject line, Source source) {
-    return createSubObjIfPresent(line, source, "source", HelperUtils.subObjectApis.get("source"))
+    return createSubObjIfPresent(line, source, SOURCE, HelperUtils.getSubobjectapis().get(SOURCE))
         .thenAccept(id -> {
           if (id == null) {
-            line.remove("source");
+            line.remove(SOURCE);
             compPOL.setSource(null);
           } else {
             compPOL.getSource().setId(id);
@@ -350,19 +359,19 @@ public class PostOrdersHelper {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     if(null!=claims)
      claims
-      .forEach(claimObject -> {
-        futures.add(createSubObjIfPresent(line, claimObject, "claims", HelperUtils.subObjectApis.get("claims"))
+      .forEach(claimObject -> 
+        futures.add(createSubObjIfPresent(line, claimObject, CLAIMS, HelperUtils.getSubobjectapis().get(CLAIMS))
               .thenAccept(id -> {
                 if (id != null) {
                   claimObject.setId(id);
                   claimsIds.add(id);
                 }
-              }));
-      });
+              }))
+      );
 
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
         .thenAccept(t -> {
-          line.put("claims", claimsIds);
+          line.put(CLAIMS, claimsIds);
           compPOL.setClaims(claims);
         });
 
@@ -376,19 +385,19 @@ public class PostOrdersHelper {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     if(null!=alerts)
       alerts
-      .forEach(alertObject -> {
-        futures.add(createSubObjIfPresent(line, alertObject, "alerts", HelperUtils.subObjectApis.get("alerts"))
+      .forEach(alertObject -> 
+        futures.add(createSubObjIfPresent(line, alertObject, ALERTS, HelperUtils.getSubobjectapis().get(ALERTS))
               .thenAccept(id -> {
                 if (id != null) {
                   alertObject.setId(id);
                   alertIds.add(id);
                 }
-              }));
-      });
+              }))
+      );
 
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
         .thenAccept(t -> {
-          line.put("alerts", alertIds);
+          line.put(ALERTS, alertIds);
           compPOL.setAlerts(alerts);
         });
 

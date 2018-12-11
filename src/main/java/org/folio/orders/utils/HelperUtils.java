@@ -33,23 +33,23 @@ public class HelperUtils {
 
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
 
-  public static final Map<String,String> subObjectApis = new HashMap<>();
+  private static final Map<String,String> subObjectApis = new HashMap<>();
 
   static {
-    subObjectApis.put("adjustment", "/adjustment/");
-    subObjectApis.put("cost","/cost/");
-    subObjectApis.put("details", "/details/");
-    subObjectApis.put("eresource", "/eresource/");
-    subObjectApis.put("location", "/location/");
-    subObjectApis.put("physical", "/physical/");
-    subObjectApis.put("renewal", "/renewal/");
-    subObjectApis.put("source", "/source/");
-    subObjectApis.put("vendor_detail", "/vendor_detail/");
-    subObjectApis.put("alerts", "/alert/");
-    subObjectApis.put("claims", "/claim/");
-    subObjectApis.put("reporting_codes", "/reporting_code/");
-    subObjectApis.put("fund_distribution", "/fund_distribution/");
-    subObjectApis.put(PO_LINES, "/po_line/");
+    getSubobjectapis().put("adjustment", "/adjustment/");
+    getSubobjectapis().put("cost","/cost/");
+    getSubobjectapis().put("details", "/details/");
+    getSubobjectapis().put("eresource", "/eresource/");
+    getSubobjectapis().put("location", "/location/");
+    getSubobjectapis().put("physical", "/physical/");
+    getSubobjectapis().put("renewal", "/renewal/");
+    getSubobjectapis().put("source", "/source/");
+    getSubobjectapis().put("vendor_detail", "/vendor_detail/");
+    getSubobjectapis().put("alerts", "/alert/");
+    getSubobjectapis().put("claims", "/claim/");
+    getSubobjectapis().put("reporting_codes", "/reporting_code/");
+    getSubobjectapis().put("fund_distribution", "/fund_distribution/");
+    getSubobjectapis().put(PO_LINES, "/po_line/");
   }
 
   private HelperUtils() {
@@ -142,7 +142,7 @@ public class HelperUtils {
    */
   public static CompletableFuture<JsonObject> getPoLineById(String lineId, String lang, HttpClientInterface httpClient, Context ctx,
                                                             Map<String, String> okapiHeaders, Logger logger) {
-    String endpoint = String.format("%s%s?lang=%s", subObjectApis.get(PO_LINES), lineId, lang);
+    String endpoint = String.format("%s%s?lang=%s", getSubobjectapis().get(PO_LINES), lineId, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
   }
 
@@ -170,7 +170,7 @@ public class HelperUtils {
     return operateOnPoLine(HttpMethod.DELETE, line, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(poline -> {
         String polineId = poline.getId();
-        return operateOnSubObj(HttpMethod.DELETE, subObjectApis.get(PO_LINES) + polineId, httpClient, ctx, okapiHeaders, logger);
+        return operateOnSubObj(HttpMethod.DELETE, getSubobjectapis().get(PO_LINES) + polineId, httpClient, ctx, okapiHeaders, logger);
       });
   }
 
@@ -244,7 +244,7 @@ public class HelperUtils {
     JsonArray array = new JsonArray();
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     ((List<?>) pol.remove(field))
-      .forEach(fundDistroId -> futures.add(operateOnSubObj(operation, subObjectApis.get(field) + fundDistroId, httpClient, ctx, okapiHeaders, logger)
+      .forEach(fundDistroId -> futures.add(operateOnSubObj(operation, getSubobjectapis().get(field) + fundDistroId, httpClient, ctx, okapiHeaders, logger)
                 .thenAccept(array::add)));
     pol.put(field, array);
     return futures;
@@ -253,7 +253,7 @@ public class HelperUtils {
   private static CompletableFuture<Void> operateOnSubObjIfPresent(HttpMethod operation, JsonObject pol, String field, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     String id = (String) pol.remove(field);
     if (id != null) {
-      return operateOnSubObj(operation, subObjectApis.get(field) + id, httpClient, ctx, okapiHeaders, logger)
+      return operateOnSubObj(operation, getSubobjectapis().get(field) + id, httpClient, ctx, okapiHeaders, logger)
         .thenAccept(json -> {
           if (json != null) {
             if (!json.isEmpty()) {
@@ -332,5 +332,9 @@ public class HelperUtils {
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  public static Map<String,String> getSubobjectapis() {
+    return subObjectApis;
   }
 }
