@@ -295,12 +295,14 @@ public class PostOrdersHelper {
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
 
     try {
+      logger.debug("Calling POST {}", url);
       httpClient.request(HttpMethod.POST, obj.toBuffer(), url, okapiHeaders)
         .thenApply(HelperUtils::verifyAndExtractBody)
         .thenAccept(body -> {
           String id = JsonObject.mapFrom(body).getString("id");
           pol.put(field, id);
           future.complete(id);
+          logger.debug("The '{}' sub-object successfully created with id={}", field, id);
         })
         .exceptionally(t -> {
           future.completeExceptionally(t);

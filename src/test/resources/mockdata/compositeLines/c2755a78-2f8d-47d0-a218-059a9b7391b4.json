@@ -1,0 +1,139 @@
+{
+  "id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
+  "acquisition_method": "Purchase",
+  "adjustment": {
+    "id": "1963h6cf-eb47-4b09-9e28-e25aa464adb7",
+    "credit": 0.0,
+    "discount": 0.0,
+    "insurance": 0.0,
+    "invoice_id": "2ddfgb5c-c237-476f-aa48-57f7cbf74ca4",
+    "overhead": 0.0,
+    "shipment": 0.0,
+    "tax_1": 0.0,
+    "tax_2": 0.0,
+    "use_pro_rate": false,
+    "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+  },
+  "alerts": [],
+  "cancellation_restriction": false,
+  "cancellation_restriction_note": "",
+  "claims": [
+    {
+      "id": "07cld666-paxe-11e8-a8d5-f2801f1b9fd12",
+      "claimed": false,
+      "grace": 0,
+      "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+    }
+  ],
+  "collection": false,
+  "contributors": [
+    {
+      "contributor": "",
+      "contributor_type": ""
+    }
+  ],
+  "cost": {
+    "id": "d25498e7-3ae6-45fe-9612-ec99e2700d2f",
+    "list_price": 75.22,
+    "currency": "USD",
+    "quantity_physical": 0,
+    "quantity_electronic": 1,
+    "po_line_estimated_price": 75.22,
+    "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+  },
+  "description": "",
+  "details": {
+    "id": "168f8a86-d26c-406e-813f-c7527f241ac3",
+    "receiving_note": "",
+    "product_ids": [
+      {
+        "product_id": "9781118416068",
+        "product_id_type": "ISBN"
+      }
+    ],
+    "material_types": [
+      "fde2e958-cde3-11e8-a8d5-f2801f1b9fd1"
+    ],
+    "subscription_from": null,
+    "subscription_interval": 0,
+    "subscription_to": null,
+    "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+  },
+  "donor": "",
+  "eresource": {
+    "id": "07c5g812-cnbe-11e8-a8d5-f2801f1b9fd1",
+    "activated": true,
+    "activation_due": 0,
+    "create_inventory": false,
+    "trial": false,
+    "expected_activation": "2014-07-06T00:00:00.000Z",
+    "user_limit": 1,
+    "access_provider": "Proquest",
+    "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
+    "license": "09cld8be-cabe-11e8-a8d5-108201f1b9fd1"
+  },
+  "fund_distribution": [
+    {
+      "id": "fde2d472-cde3-11e8-a8d5-f2801f1b9fd1",
+      "code": "MISCHIST-FY19",
+      "percentage": 100.0,
+      "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08015",
+      "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+    }
+  ],
+  "location": {
+    "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9f13",
+    "location_id": "ncc5d9ea-cabe-11e8-a8d5-f2901f1b9f10",
+    "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
+    "quantity": 1,
+    "quantity_electronic": 1,
+    "quantity_physical": 0
+  },
+  "order_format": "Electronic Resource",
+  "owner": "LTS E-Resources & Serials",
+  "payment_status": "Awaiting Payment",
+  "physical": {
+    "id": "50fb81ec-cdf1-11e8-a8d5-f2801f1b9fd1",
+    "material_supplier": "GOBI Library Solutions",
+    "receipt_due": null,
+    "volumes": 0,
+    "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+  },
+  "po_line_description": "",
+  "po_line_number": "1",
+  "po_line_workflow_status": "Closed",
+  "publication_date": "2017",
+  "publisher": "John Wiley & Sons, Inc.",
+  "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BM3bb",
+  "receipt_date": null,
+  "receipt_status": "Fully Received",
+  "renewal": {
+    "id": "9e414baa-8cf2-4916-a90f-d1da4009e29e",
+    "cycle": "Manual",
+    "interval": 0,
+    "manual_renewal": true,
+    "review_period": 0,
+    "renewal_date": null,
+    "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+  },
+  "reporting_codes": [],
+  "requester": "",
+  "rush": false,
+  "selector": "Woods",
+  "source": {
+    "id": "0b4b2f41-v5c6-4280-858e-33fba452a114",
+    "code": "",
+    "description": "Manually entered"
+  },
+  "tags": [""],
+  "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
+  "vendor_detail": {
+    "id": "50fb922c-cdf1-11e8-a8d5-f2801f1b9fd1",
+    "instructions": "",
+    "note_from_vendor": "",
+    "ref_number": "999632785",
+    "ref_number_type": "Supplier's unique order line reference number",
+    "vendor_account": "12345-50",
+    "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+  }
+}

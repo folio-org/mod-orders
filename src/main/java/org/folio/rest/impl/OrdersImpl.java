@@ -3,7 +3,7 @@ package org.folio.rest.impl;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -30,6 +30,7 @@ public class OrdersImpl implements Orders {
 
   public static final String OKAPI_HEADER_URL = "X-Okapi-Url";
   private static final String ORDERS_LOCATION_PREFIX = "/orders/";
+  private static final String ORDER_LINE_LOCATION_PREFIX = "/orders/%s/lines/%s";
 
   @Override
   @Validate
@@ -136,8 +137,9 @@ public class OrdersImpl implements Orders {
         .thenAccept(pol -> {
           logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
           httpClient.closeClient();
-          Response response
-            = PostOrdersLinesByIdResponse.respond201WithApplicationJson(poLine, PostOrdersLinesByIdResponse.headersFor201().withLocation(String.format("/orders/%s/lines/%s", orderId, pol.getId())));
+          Response response = PostOrdersLinesByIdResponse.respond201WithApplicationJson(poLine,
+            PostOrdersLinesByIdResponse.headersFor201()
+                                       .withLocation(String.format(ORDER_LINE_LOCATION_PREFIX, orderId, pol.getId())));
           AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
           asyncResultHandler.handle(result);
         })
@@ -178,9 +180,24 @@ public class OrdersImpl implements Orders {
 
   @Override
   @Validate
-  public void putOrdersLinesByIdAndLineId(String id, String lineId, String lang, PoLine entity, Map<String, String> okapiHeaders,
+  public void putOrdersLinesByIdAndLineId(String orderId, String lineId, String lang, PoLine poLine, Map<String, String> okapiHeaders,
                                             Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
-    asyncResultHandler.handle(Future.failedFuture(new NotImplementedException("PUT PO line by id is not implemented yet")));
+    logger.info("Handling PUT Order Line operation...");
+
+    PutOrderLineByIdHelper helper = new PutOrderLineByIdHelper(okapiHeaders, asyncResultHandler, vertxContext);
+    if (StringUtils.isEmpty(poLine.getPurchaseOrderId())) {
+      poLine.setPurchaseOrderId(orderId);
+    }
+    if (StringUtils.isEmpty(poLine.getId())) {
+      poLine.setId(lineId);
+    }
+    if (orderId.equals(poLine.getPurchaseOrderId()) && lineId.equals(poLine.getId())) {
+      helper
+        .updateOrder(orderId, lang, poLine);
+    } else {
+      asyncResultHandler
+        .handle(Future.succeededFuture(helper.buildErrorResponse(422, "Mismatch between id in path and PoLine")));
+    }
   }
 
   public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {
