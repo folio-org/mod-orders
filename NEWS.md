@@ -1,6 +1,9 @@
+## 1.1.0 - unreleased
+ * [MODORDERS-78](https://issues.folio.org/browse/MODORDERS-78) - Implemented GET order line logic
+ * [MODORDERS-77](https://issues.folio.org/browse/MODORDERS-77) - Implemented PUT order line logic
+ * [MODORDERS-76](https://issues.folio.org/browse/MODORDERS-76) - Implemented POST order line logic
 ## 1.0.2
  * [MODORDERS-79](https://issues.folio.org/browse/MODORDERS-79) - Implemented delete order line logic
- * [MODORDERS-78](https://issues.folio.org/browse/MODORDERS-78) - Implemented get order line logic
  * [MODORDERS-75](https://issues.folio.org/browse/MODORDERS-75) - Define order line endpoints
  * [MODORDERS-62](https://issues.folio.org/browse/MODORDERS-62) - Migrate to RAML1.0 and RMB 23
  * [MODORDERS-51](https://issues.folio.org/browse/MODORDERS-51)
