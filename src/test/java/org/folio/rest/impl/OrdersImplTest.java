@@ -50,6 +50,12 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import org.folio.rest.acq.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.PoLine;
+
 
 @RunWith(VertxUnitRunner.class)
 public class OrdersImplTest {
@@ -60,11 +66,8 @@ public class OrdersImplTest {
 
   private static final Logger logger = LoggerFactory.getLogger(OrdersImplTest.class);
 
-
   private static final String APPLICATION_JSON = "application/json";
   private static final String TEXT_PLAIN = "text/plain";
-  private static final String BASE_MOCK_DATA_PATH = "mockdata/";
-  private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
 
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();
@@ -73,44 +76,43 @@ public class OrdersImplTest {
   private static final Header X_OKAPI_TENANT = new Header("X-Okapi-Tenant", "ordersimpltest");
   private static final Header X_OKAPI_USER_ID = new Header("X-Okapi-User-Id", "440c89e3-7f6c-578a-9ea8-310dad23605e");
   private static final Header TMP_ORDER_HEADER = new Header("X-Okapi_Tmp", "tmp_order");
-  private static JsonObject tmpOrder;
-
-
 
   private static final String X_ECHO_STATUS = "X-Okapi-Echo-Status";
-  private static final String MOCK_DATA_PATH = "mockdata/getOrders.json";
 
   private static final String INVALID_LANG = "?lang=english";
 
   private static final String PO_ID = "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb";
+  private static final String ID_BAD_FORMAT = "123-45-678-90-abc";
   private static final String ID_DOES_NOT_EXIST = "d25498e7-3ae6-45fe-9612-ec99e2700d2f";
   private static final String ID_FOR_INTERNAL_SERVER_ERROR = "168f8a86-d26c-406e-813f-c7527f241ac3";
+  private static final String PO_ID_FOR_SUCCESS_CASE = "95d29d04-34b1-4fe0-a15e-1cd129143692";
   private static final String PO_LINE_ID_FOR_SUCCESS_CASE = "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47";
   private static final String ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   private static final String PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED = "0009662b-8b80-4001-b704-ca10971f175d";
   private static final String PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE = "c2755a78-2f8d-47d0-a218-059a9b7391b4";
 
-  private static final String EXPECTED_POLINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
-
-  public static final String ERROR_CODE_422 = "422";
-
-
-
   // API paths
   private final String rootPath = "/orders";
+  private final static String LINES_PATH = "/orders/%s/lines";
   private final static String LINE_BY_ID_PATH = "/orders/%s/lines/%s";
 
   // Mock data paths
+  private static final String BASE_MOCK_DATA_PATH = "mockdata/";
+  private static final String MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "getOrders.json";
+  private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
+  private static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private final String mockDataRootPath = "src/test/resources/";
   private final String listedPrintMonographPath = mockDataRootPath + "/po_listed_print_monograph.json";
   private final String minimalOrderPath = mockDataRootPath + "/minimal_order.json";
   private final String existedOrder = mockDataRootPath + "/existed_order.json";
   private final String poCreationFailurePath = mockDataRootPath + "/po_creation_failure.json";
   private final String poLineCreationFailurePath = mockDataRootPath + "/po_line_creation_failure.json";
-  private final String compositePoLinePath = mockDataRootPath + "/composite_po_line.json";
+
+  private static final String EMPTY_PO_LINE_BUT_WITH_IDS = "{\"id\": \"%s\", \"purchase_order_id\": \"%s\"}";
 
   private static Vertx vertx;
   private static MockServer mockServer;
+  private static JsonObject tmpOrder;
 
   @BeforeClass
   public static void setUpOnce(TestContext context) {
@@ -437,13 +439,13 @@ public class OrdersImplTest {
   @Test
   public void testDeleteByIdNoOrderFound() {
     logger.info("=== Test Delete Order By Id - Not Found ===");
-    deleteResponseError(rootPath + "/" + ID_DOES_NOT_EXIST, 404);
+    verifyDeleteResponse(rootPath + "/" + ID_DOES_NOT_EXIST, TEXT_PLAIN, 404);
   }
 
   @Test
   public void testDeleteById500Error() {
     logger.info("=== Test Delete Order By Id - Storage Internal Server Error ===");
-    deleteResponseError(rootPath + "/" + ID_FOR_INTERNAL_SERVER_ERROR, 500);
+    verifyDeleteResponse(rootPath + "/" + ID_FOR_INTERNAL_SERVER_ERROR, TEXT_PLAIN, 500);
   }
 
   @Test
@@ -459,7 +461,7 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void putOrdersById() throws Exception {
+  public void testPutOrdersById() throws Exception {
     logger.info("=== Test Put Order By Id ===");
 
     JsonObject ordersList = new JsonObject(getMockData(MOCK_DATA_PATH));
@@ -479,7 +481,7 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPutOrdersByIdDoesNotAffectGeneratedData(TestContext ctx) throws Exception {
+  public void testPutOrdersByIdDoesNotAffectGeneratedData() throws Exception {
     logger.info("=== Test Put Order By Id doesn't affect generated data ===");
 
     tmpOrder = new JsonObject(getMockData(existedOrder));
@@ -672,23 +674,14 @@ public class OrdersImplTest {
   }
 
   private void deleteOrderLineByIdSuccess(String lineId) {
-    String orderId = "95d29d04-34b1-4fe0-a15e-1cd129143692";
+    String url = String.format(LINE_BY_ID_PATH, PO_ID_FOR_SUCCESS_CASE, lineId);
 
-    final Response resp = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(X_OKAPI_TENANT)
-      .delete(String.format(LINE_BY_ID_PATH, orderId, lineId))
-        .then()
-          .statusCode(204)
-          .extract()
-            .response();
-
+    final Response resp = verifyDeleteResponse(url, "", 204);
     assertTrue(StringUtils.isEmpty(resp.getBody().asString()));
   }
 
   @Test
-  public void deleteOrderLineByIdWithoutOkapiUrlHeader() {
+  public void testDeleteOrderLineByIdWithoutOkapiUrlHeader() {
     logger.info("=== Test Delete Order Line By Id - 500 due to missing Okapi URL header ===");
     RestAssured
       .with()
@@ -703,45 +696,46 @@ public class OrdersImplTest {
     logger.info("=== Test Delete Order Line By Id - Not Found ===");
 
     String id = ID_DOES_NOT_EXIST;
-    String actual = deleteResponseError(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST, id), 404);
+    String url = String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST, id);
+    Response actual = verifyDeleteResponse(url, TEXT_PLAIN, 404);
 
-    assertEquals(id, actual);
+    assertEquals(id, actual.asString());
   }
 
   @Test
   public void testDeleteOrderLineById500FromStorageOnGetPoLine() {
     logger.info("=== Test Delete Order Line By Id - 500 From Storage On Get PO Line ===");
 
-    String actual = deleteResponseError(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST, ID_FOR_INTERNAL_SERVER_ERROR), 500);
+    String url = String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST, ID_FOR_INTERNAL_SERVER_ERROR);
+    Response actual = verifyDeleteResponse(url, TEXT_PLAIN, 500);
 
-    assertNotNull(actual);
+    assertNotNull(actual.asString());
   }
 
   @Test
   public void testDeleteOrderLineById500FromStorageOnSubObjectDeletion() {
     logger.info("=== Test Delete Order Line By Id - 500 From Storage On Sub-Object deletion ===");
 
-    String actual = deleteResponseError(String.format(LINE_BY_ID_PATH, "3419ed01-a339-4448-9539-9815f231d405", PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE), 500);
+    String lineId = PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE;
+    String orderId = getMockLine(lineId).getPurchaseOrderId();
 
-    assertNotNull(actual);
+    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+    Response actual = verifyDeleteResponse(url, TEXT_PLAIN, 500);
+
+    assertNotNull(actual.asString());
   }
 
-  public String deleteResponseError(String url, int expectedCode) {
-    final Response resp = RestAssured
+  private Response verifyDeleteResponse(String url, String expectedContentType, int expectedCode) {
+    return RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
       .delete(url)
         .then()
-          .contentType(TEXT_PLAIN)
+          .contentType(expectedContentType)
           .statusCode(expectedCode)
           .extract()
             .response();
-
-    String actual = resp.getBody().asString();
-    logger.info(actual);
-
-    return actual;
   }
 
   @Test
@@ -778,7 +772,7 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testGetOrderLineById(TestContext ctx) {
+  public void testGetOrderLineById() {
     logger.info("=== Test Get Orderline By Id ===");
 
     String orderId = "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb";
@@ -796,12 +790,12 @@ public class OrdersImplTest {
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
-    assertEquals(EXPECTED_POLINE_ID, resp.getId());
+    assertEquals(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE, resp.getId());
   }
 
   @Test
-  public void testGetOrderLineByIdError422(TestContext ctx) {
-    logger.info("=== Test Get Orderline By Id ===");
+  public void testGetOrderLineByIdError422() {
+    logger.info("=== Test Get Orderline By Id - With 422 ===");
 
     String orderId = "Error422OrderId";
 
@@ -821,8 +815,8 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testGetOrderLineByIdWith404(TestContext ctx) throws IOException {
-    logger.info("=== Test Get Orderline By Id ===");
+  public void testGetOrderLineByIdWith404() {
+    logger.info("=== Test Get Orderline By Id - With 404 ===");
 
     String orderId = "NoMatterId";
     String lineId = "NotExistingId";
@@ -842,8 +836,8 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testGetOrderLineByIdWith500(TestContext ctx) throws IOException {
-    logger.info("=== Test Get Orderline By Id ===");
+  public void testGetOrderLineByIdWith500() {
+    logger.info("=== Test Get Orderline By Id - With 500 ===");
 
     String orderId = "NoMatterId";
     String lineId = "generateError500";
@@ -863,19 +857,18 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPostOrdersLinesById(TestContext ctx) throws IOException {
+  public void testPostOrdersLinesById(TestContext ctx) {
     logger.info("=== Test Post Order Lines By Id (expected flow) ===");
 
-    String body = getMockData(compositePoLinePath);
-    JsonObject compPoLineJson = new JsonObject(body);
+    JsonObject compPoLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
     String id = compPoLineJson.getString("purchase_order_id");
     final PoLine response = RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
         .contentType(APPLICATION_JSON)
-        .body(body)
-      .post(rootPath + "/" + id + "/lines")
+        .body(compPoLineJson.encodePrettily())
+      .post(String.format(LINES_PATH, id))
         .then()
           .contentType(APPLICATION_JSON)
           .statusCode(201)
@@ -886,17 +879,17 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPostOrdersLinesByIdWithIdMismatch(TestContext ctx) throws IOException {
+  public void testPostOrdersLinesByIdWithIdMismatch() throws IOException {
     logger.info("=== Test Post Order Lines By Id (path and request body ids mismatching) ===");
 
-    String body = getMockData(compositePoLinePath);
+    JsonObject body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
     RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(X_OKAPI_TENANT)
         .contentType(APPLICATION_JSON)
-        .body(body)
-      .post(rootPath + "/" + ID_DOES_NOT_EXIST + "/lines")
+        .body(body.encodePrettily())
+      .post(String.format(LINES_PATH, ID_DOES_NOT_EXIST))
         .then()
           .contentType(TEXT_PLAIN)
           .statusCode(400)
@@ -905,7 +898,7 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPostOrdersLinesByIdPoLineWithoutId(TestContext ctx) throws IOException {
+  public void testPostOrdersLinesByIdPoLineWithoutId(TestContext ctx) {
     logger.info("=== Test Post Order Lines By Id (empty id in body) ===");
 
     PoLine response = RestAssured
@@ -914,7 +907,7 @@ public class OrdersImplTest {
         .header(X_OKAPI_TENANT)
         .contentType(APPLICATION_JSON)
         .body("{}")
-      .post(rootPath + "/" + PO_ID + "/lines")
+      .post(String.format(LINES_PATH, PO_ID))
         .then()
           .contentType(APPLICATION_JSON)
           .statusCode(201)
@@ -925,7 +918,7 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPostOrdersLinesByIdStorageError(TestContext ctx) throws IOException {
+  public void testPostOrdersLinesByIdStorageError() {
     logger.info("=== Test Post Order Lines By Id (mod-orders-storage error) ===");
 
     RestAssured
@@ -934,12 +927,189 @@ public class OrdersImplTest {
         .header(X_OKAPI_TENANT)
         .contentType(APPLICATION_JSON)
         .body("{}")
-      .post(rootPath + "/" + ID_FOR_INTERNAL_SERVER_ERROR + "/lines")
+      .post(String.format(LINES_PATH, ID_FOR_INTERNAL_SERVER_ERROR))
         .then()
           .contentType(TEXT_PLAIN)
           .statusCode(500)
           .extract()
           .response();
+  }
+
+  @Test
+  public void testValidationOnPutLineWithoutBody() {
+    logger.info("=== Test validation on PUT line with no body ===");
+    RestAssured
+      .with()
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+      .put(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST, ID_DOES_NOT_EXIST))
+        .then()
+          .statusCode(400)
+          .body(containsString("Json content error HV000116: The object to be validated must not be null"));
+  }
+
+  @Test
+  public void testValidationOnPutWithIncorrectLang() {
+    logger.info("=== Test validation on PUT line with invalid lang query parameter ===");
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body("{}")
+      .put(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST, ID_DOES_NOT_EXIST) + INVALID_LANG)
+        .then()
+          .statusCode(400)
+          .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+  }
+
+  @Test
+  public void testPutOrderLineById() throws IOException {
+    logger.info("=== Test PUT Order Line By Id - Success case ===");
+
+    putOrderLineByIdSuccess(PO_LINE_ID_FOR_SUCCESS_CASE);
+  }
+
+  @Test
+  public void testPutOrderLineByIdWithPartiallyDeletedSubObjects() {
+    logger.info("=== Test PUT Order Line By Id - Line partially removed ===");
+
+    // This test should behave the same as regular test and only warning in log expected
+    putOrderLineByIdSuccess(PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED);
+  }
+
+  private void putOrderLineByIdSuccess(String lineId) {
+    String orderId = getMockLine(lineId).getPurchaseOrderId();
+
+    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+    JsonObject body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId);
+
+    final Response resp = verifyPut(url, body.encodePrettily(), "", 204);
+
+    assertTrue(StringUtils.isEmpty(resp.getBody().asString()));
+  }
+
+  @Test
+  public void testPutOrderLineByIdWithoutOkapiUrlHeader() {
+    logger.info("=== Test PUT Order Line By Id - 500 due to missing Okapi URL header ===");
+
+    String lineId = ID_DOES_NOT_EXIST;
+    String orderId = ID_DOES_NOT_EXIST;
+
+    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+    String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, lineId, orderId);
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .put(url)
+        .then()
+          .contentType(TEXT_PLAIN)
+          .statusCode(500);
+  }
+
+  @Test
+  public void testPutOrderLineByIdNotFound() {
+    logger.info("=== Test PUT Order Line By Id - Not Found ===");
+
+    String lineId = ID_DOES_NOT_EXIST;
+    String orderId = PO_ID;
+
+    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+    String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, lineId, orderId);
+
+    Response actual = verifyPut(url, body, TEXT_PLAIN, 404);
+
+    assertEquals(lineId, actual.asString());
+  }
+
+  @Test
+  public void testPutOrderLineByIdWithInvalidContentInBody() {
+    logger.info("=== Test PUT Order Line By Id - Body Validation Error ===");
+
+    String orderId = PO_ID;
+
+    String url = String.format(LINE_BY_ID_PATH, orderId, ID_DOES_NOT_EXIST);
+    String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, ID_BAD_FORMAT, orderId);
+
+    Response resp = verifyPut(url, body, APPLICATION_JSON, 422);
+
+    assertEquals(1, resp.as(Errors.class).getErrors().size());
+    assertNotNull(resp.as(Errors.class).getErrors().get(0).getMessage());
+  }
+
+  @Test
+  public void testPutOrderLineByIdWithIdMismatch() {
+    logger.info("=== Test PUT Order Line By Id - Ids mismatch ===");
+
+    String orderId = PO_ID;
+
+    String url = String.format(LINE_BY_ID_PATH, orderId, ID_DOES_NOT_EXIST);
+    String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, PO_ID_FOR_SUCCESS_CASE, orderId);
+
+    Response resp = verifyPut(url, body, APPLICATION_JSON, 422);
+
+    assertEquals(1, resp.as(Errors.class).getErrors().size());
+    assertNotNull(resp.as(Errors.class).getErrors().get(0).getMessage());
+  }
+
+  @Test
+  public void testPutOrderLineById500FromStorageOnGetPoLine() {
+    logger.info("=== Test PUT Order Line By Id - 500 From Storage On Get PO Line ===");
+
+    String lineId = ID_FOR_INTERNAL_SERVER_ERROR;
+    String orderId = PO_ID;
+
+    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+    String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, lineId, orderId);
+
+    Response actual = verifyPut(url, body, TEXT_PLAIN, 500);
+
+    assertNotNull(actual.asString());
+  }
+
+  @Test
+  public void testPutOrderLineById500FromStorageOnSubObjectDeletion() throws IOException {
+    logger.info("=== Test PUT Order Line By Id - 500 From Storage On Sub-Object deletion ===");
+
+    String lineId = PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE;
+    String orderId = getMockLine(lineId).getPurchaseOrderId();
+
+    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+    String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, lineId, orderId);
+    Response actual = verifyPut(url, body, TEXT_PLAIN, 500);
+
+    assertNotNull(actual.asString());
+  }
+
+  private org.folio.rest.acq.model.PoLine getMockLine(String id) {
+    return getMockAsJson(PO_LINES_MOCK_DATA_PATH, id).mapTo(org.folio.rest.acq.model.PoLine.class);
+  }
+
+  private JsonObject getMockAsJson(String path, String id) {
+    try {
+      return new JsonObject(getMockData(String.format("%s%s.json", path, id)));
+    } catch (IOException e) {
+      fail(e.getMessage());
+    }
+    return new JsonObject();
+  }
+
+  private Response verifyPut(String url, String body, String expectedContentType, int expectedCode) {
+    return RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .put(url)
+        .then()
+          .contentType(expectedContentType)
+          .statusCode(expectedCode)
+          .extract()
+            .response();
   }
 
   public static class MockServer {
