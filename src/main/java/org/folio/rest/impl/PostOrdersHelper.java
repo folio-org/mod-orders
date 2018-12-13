@@ -1,5 +1,20 @@
 package org.folio.rest.impl;
 
+import static org.folio.orders.utils.HelperUtils.ADJUSTMENT;
+import static org.folio.orders.utils.HelperUtils.PO_LINES;
+import static org.folio.orders.utils.HelperUtils.ALERTS;
+import static org.folio.orders.utils.HelperUtils.CLAIMS;
+import static org.folio.orders.utils.HelperUtils.SOURCE;
+import static org.folio.orders.utils.HelperUtils.RENEWAL;
+import static org.folio.orders.utils.HelperUtils.REPORTING_CODES;
+import static org.folio.orders.utils.HelperUtils.COST;
+import static org.folio.orders.utils.HelperUtils.DETAILS;
+import static org.folio.orders.utils.HelperUtils.ERESOURCE;
+import static org.folio.orders.utils.HelperUtils.LOCATION;
+import static org.folio.orders.utils.HelperUtils.PHYSICAL;
+import static org.folio.orders.utils.HelperUtils.VENDOR_DETAIL;
+import static org.folio.orders.utils.HelperUtils.FUND_DISTRIBUTION;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -9,8 +24,8 @@ import java.util.concurrent.CompletionException;
 
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.Claim;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
@@ -39,28 +54,20 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PostOrdersHelper {
 
-  private static final String ALERTS = "alerts";
-
-  private static final String CLAIMS = "claims";
-
-  private static final String SOURCE = "source";
-
-  private static final String RENEWAL = "renewal";
-
-  private static final String REPORTING_CODES = "reporting_codes";
 
   private static final Logger logger = LoggerFactory.getLogger(PostOrdersHelper.class);
 
   // epoch time @ 9/1/2018.
   // if you change this, you run the risk of duplicate poNumbers
   private static final long PO_NUMBER_EPOCH = 1535774400000L;
-  private static final String ADJUSTMENT = "adjustment";
   private static final String X_OKAPI_USER_ID = "X-Okapi-User-Id";
 
   private final HttpClientInterface httpClient;
   private final Context ctx;
   private final Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler;
   private final Map<String, String> okapiHeaders;
+
+  private static final Map<String,String> subObjectApisPost = HelperUtils.getSubObjectapisForPost();
 
   public PostOrdersHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx) {
@@ -86,8 +93,8 @@ public class PostOrdersHelper {
       if (purchaseOrder.containsKey(ADJUSTMENT)) {
         purchaseOrder.remove(ADJUSTMENT);
       }
-      if (purchaseOrder.containsKey("po_lines")) {
-        purchaseOrder.remove("po_lines");
+      if (purchaseOrder.containsKey(PO_LINES)) {
+        purchaseOrder.remove(PO_LINES);
       }
       httpClient.request(HttpMethod.POST, purchaseOrder, "/purchase_order", okapiHeaders)
         .thenApply(HelperUtils::verifyAndExtractBody)
@@ -157,7 +164,7 @@ public class PostOrdersHelper {
       .thenAccept(v -> {
         try {
           Buffer polBuf = JsonObject.mapFrom(line).toBuffer();
-          httpClient.request(HttpMethod.POST, polBuf, "/po_line", okapiHeaders)
+          httpClient.request(HttpMethod.POST, polBuf, subObjectApisPost.get(PO_LINES), okapiHeaders)
             .thenApply(HelperUtils::verifyAndExtractBody)
             .thenAccept(body -> {
               logger.info("response from /po_line: " + body.encodePrettily());
@@ -184,7 +191,8 @@ public class PostOrdersHelper {
   }
 
   private CompletableFuture<Void> createAdjustment(PoLine compPOL, JsonObject line, Adjustment adjustment) {
-    return createSubObjIfPresent(line, adjustment, ADJUSTMENT, "/adjustment")
+    return createSubObjIfPresent(line, adjustment,
+        ADJUSTMENT, subObjectApisPost.get(ADJUSTMENT))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(ADJUSTMENT);
@@ -201,10 +209,11 @@ public class PostOrdersHelper {
 
 
   private CompletableFuture<Void> createCost(PoLine compPOL, JsonObject line, Cost cost) {
-    return createSubObjIfPresent(line, cost, "cost", "/cost")
+    return createSubObjIfPresent(line, cost,
+        COST, subObjectApisPost.get(COST))
       .thenAccept(id -> {
         if (id == null) {
-          line.remove("cost");
+          line.remove(COST);
           compPOL.setCost(null);
         } else {
           compPOL.getCost().setId(id);
@@ -217,10 +226,10 @@ public class PostOrdersHelper {
   }
 
   private CompletableFuture<Void> createDetails(PoLine compPOL, JsonObject line, Details details) {
-    return createSubObjIfPresent(line, details, "details", "/details")
+    return createSubObjIfPresent(line, details, DETAILS, subObjectApisPost.get(DETAILS))
       .thenAccept(id -> {
         if (id == null) {
-          line.remove("details");
+          line.remove(DETAILS);
           compPOL.setDetails(null);
         } else {
           compPOL.getDetails().setId(id);
@@ -233,10 +242,10 @@ public class PostOrdersHelper {
   }
 
   private CompletableFuture<Void> createEresource(PoLine compPOL, JsonObject line, Eresource eresource) {
-    return createSubObjIfPresent(line, eresource, "eresource", "/eresource")
+    return createSubObjIfPresent(line, eresource, ERESOURCE, subObjectApisPost.get(ERESOURCE))
       .thenAccept(id -> {
         if (id == null) {
-          line.remove("eresource");
+          line.remove(ERESOURCE);
           compPOL.setEresource(null);
         } else {
           compPOL.getEresource().setId(id);
@@ -249,10 +258,10 @@ public class PostOrdersHelper {
   }
 
   private CompletableFuture<Void> createLocation(PoLine compPOL, JsonObject line, Location location) {
-    return createSubObjIfPresent(line, location, "location", "/location")
+    return createSubObjIfPresent(line, location, LOCATION, subObjectApisPost.get(LOCATION))
       .thenAccept(id -> {
         if (id == null) {
-          line.remove("location");
+          line.remove(LOCATION);
           compPOL.setLocation(null);
         } else {
           compPOL.getLocation().setId(id);
@@ -265,10 +274,10 @@ public class PostOrdersHelper {
   }
 
   private CompletableFuture<Void> createPhysical(PoLine compPOL, JsonObject line, Physical physical) {
-    return createSubObjIfPresent(line, physical, "physical", "/physical")
+    return createSubObjIfPresent(line, physical, PHYSICAL, subObjectApisPost.get(PHYSICAL))
       .thenAccept(id -> {
         if (id == null) {
-          line.remove("physical");
+          line.remove(PHYSICAL);
           compPOL.setPhysical(null);
         } else {
           compPOL.getPhysical().setId(id);
@@ -281,10 +290,10 @@ public class PostOrdersHelper {
   }
 
   private CompletableFuture<Void> createVendorDetail(PoLine compPOL, JsonObject line, VendorDetail vendor) {
-    return createSubObjIfPresent(line, vendor, "vendor_detail", "/vendor_detail")
+    return createSubObjIfPresent(line, vendor, VENDOR_DETAIL, subObjectApisPost.get(VENDOR_DETAIL))
       .thenAccept(id -> {
         if (id == null) {
-          line.remove("vendor_detail");
+          line.remove(VENDOR_DETAIL);
           compPOL.setVendorDetail(null);
         } else {
           compPOL.getVendorDetail().setId(id);
@@ -295,7 +304,7 @@ public class PostOrdersHelper {
         throw new CompletionException(t.getCause());
       });
   }
-  
+
   private CompletableFuture<Void> createReportingCodes(PoLine compPOL, JsonObject line,
       List<ReportingCode> reportingCodes) {
 
@@ -303,8 +312,9 @@ public class PostOrdersHelper {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     if(null!=reportingCodes)
       reportingCodes
-      .forEach(reportingObject -> 
-        futures.add(createSubObjIfPresent(line, reportingObject, REPORTING_CODES, HelperUtils.getSubobjectapis().get(REPORTING_CODES))
+      .forEach(reportingObject ->
+        futures.add(createSubObjIfPresent(line, reportingObject,
+            REPORTING_CODES, subObjectApisPost.get(REPORTING_CODES))
               .thenAccept(id -> {
                 if (id != null) {
                   reportingObject.setId(id);
@@ -317,12 +327,16 @@ public class PostOrdersHelper {
         .thenAccept(t -> {
           line.put(REPORTING_CODES, reportingIds);
           compPOL.setReportingCodes(reportingCodes);
+        })
+        .exceptionally(t -> {
+          logger.error("failed to create Reporting Codes", t);
+          throw new CompletionException(t.getCause());
         });
 
   }
 
   private CompletableFuture<Void> createRenewal(PoLine compPOL, JsonObject line, Renewal renewal) {
-    return createSubObjIfPresent(line, renewal, RENEWAL, HelperUtils.getSubobjectapis().get(RENEWAL))
+    return createSubObjIfPresent(line, renewal, RENEWAL, subObjectApisPost.get(RENEWAL))
         .thenAccept(id -> {
           if (id == null) {
             line.remove(RENEWAL);
@@ -338,7 +352,7 @@ public class PostOrdersHelper {
     }
 
   private CompletableFuture<Void> createSource(PoLine compPOL, JsonObject line, Source source) {
-    return createSubObjIfPresent(line, source, SOURCE, HelperUtils.getSubobjectapis().get(SOURCE))
+    return createSubObjIfPresent(line, source, SOURCE, subObjectApisPost.get(SOURCE))
         .thenAccept(id -> {
           if (id == null) {
             line.remove(SOURCE);
@@ -359,8 +373,9 @@ public class PostOrdersHelper {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     if(null!=claims)
      claims
-      .forEach(claimObject -> 
-        futures.add(createSubObjIfPresent(line, claimObject, CLAIMS, HelperUtils.getSubobjectapis().get(CLAIMS))
+      .forEach(claimObject ->
+        futures.add(createSubObjIfPresent(line, claimObject, CLAIMS,
+            subObjectApisPost.get(CLAIMS))
               .thenAccept(id -> {
                 if (id != null) {
                   claimObject.setId(id);
@@ -373,20 +388,24 @@ public class PostOrdersHelper {
         .thenAccept(t -> {
           line.put(CLAIMS, claimsIds);
           compPOL.setClaims(claims);
+        })
+        .exceptionally(t -> {
+          logger.error("failed to create Claims", t);
+          throw new CompletionException(t.getCause());
         });
 
   }
-  
-  
+
+
 
   private CompletableFuture<Void> createAlerts(PoLine compPOL, JsonObject line, List<Alert> alerts) {
 
     List<String> alertIds = new ArrayList<>();
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     if(null!=alerts)
-      alerts
-      .forEach(alertObject -> 
-        futures.add(createSubObjIfPresent(line, alertObject, ALERTS, HelperUtils.getSubobjectapis().get(ALERTS))
+      alerts.forEach(alertObject ->
+        futures.add(createSubObjIfPresent(line, alertObject, ALERTS,
+            subObjectApisPost.get(ALERTS))
               .thenAccept(id -> {
                 if (id != null) {
                   alertObject.setId(id);
@@ -399,6 +418,10 @@ public class PostOrdersHelper {
         .thenAccept(t -> {
           line.put(ALERTS, alertIds);
           compPOL.setAlerts(alerts);
+        })
+        .exceptionally(t -> {
+          logger.error("failed to create Alerts", t);
+          throw new CompletionException(t.getCause());
         });
 
   }
