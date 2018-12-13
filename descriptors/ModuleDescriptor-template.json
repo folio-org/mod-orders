@@ -17,7 +17,8 @@
             "details.item.post",
             "eresource.item.post",
             "location.item.post",
-            "vendor_detail.item.post"
+            "vendor_detail.item.post",
+            "configuration.entries.collection.get"
           ]
         },
         {
@@ -61,7 +62,8 @@
             "eresource.item.post",
             "physical.item.post",
             "renewal.item.post",
-            "vendor_detail.item.post"
+            "vendor_detail.item.post",
+            "configuration.entries.collection.get"
           ]
         },
         {
