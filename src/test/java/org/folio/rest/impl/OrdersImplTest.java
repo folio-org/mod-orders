@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import static org.folio.orders.utils.HelperUtils.getMockData;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
@@ -9,7 +10,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.hamcrest.Matchers.containsString;
 
 import java.io.IOException;
 import java.util.Date;
@@ -17,10 +17,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import io.restassured.http.ContentType;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.RestVerticle;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.acq.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -28,6 +32,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
 import io.restassured.http.Header;
 import io.restassured.response.Response;
 import io.vertx.core.DeploymentOptions;
@@ -50,6 +55,7 @@ import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.PoLine;
+
 
 @RunWith(VertxUnitRunner.class)
 public class OrdersImplTest {
@@ -1142,6 +1148,11 @@ public class OrdersImplTest {
       router.route(HttpMethod.POST, "/location").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Location.class));
       router.route(HttpMethod.POST, "/physical").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Physical.class));
       router.route(HttpMethod.POST, "/vendor_detail").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.VendorDetail.class));
+      router.route(HttpMethod.POST, "/claim").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Claim.class));
+      router.route(HttpMethod.POST, "/alert").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Alert.class));
+      router.route(HttpMethod.POST, "/source").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Source.class));
+      router.route(HttpMethod.POST, "/reporting_code").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.ReportingCode.class));
+      router.route(HttpMethod.POST, "/renewal").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Renewal.class));
 
       router.route(HttpMethod.GET, "/purchase_order/:id").handler(this::handleGetPurchaseOrderById);
       router.route(HttpMethod.GET, "/po_line").handler(this::handleGetPoLines);
@@ -1159,6 +1170,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, "/source/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/vendor_detail/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/reporting_code/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/renewal/:id").handler(this::handleGetGenericSubObj);
 
       router.route(HttpMethod.DELETE, "/purchase_order/:id").handler(this::handleDeleteGenericSubObj);
       router.route(HttpMethod.DELETE, "/po_line/:id").handler(this::handleDeleteGenericSubObj);
@@ -1174,6 +1186,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.DELETE, "/alert/:id").handler(this::handleDeleteGenericSubObj);
       router.route(HttpMethod.DELETE, "/claim/:id").handler(this::handleDeleteGenericSubObj);
       router.route(HttpMethod.DELETE, "/fund_distribution/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/reporting_code/:id").handler(this::handleDeleteGenericSubObj);
 
       return router;
     }

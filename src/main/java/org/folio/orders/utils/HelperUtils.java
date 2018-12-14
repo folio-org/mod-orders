@@ -1,5 +1,7 @@
 package org.folio.orders.utils;
 
+import static java.util.Objects.nonNull;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -10,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
@@ -26,29 +29,43 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
-import static java.util.Objects.nonNull;
-
 public class HelperUtils {
-  private static final String PO_LINES = "po_lines";
+
 
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
+
+  public static final String PO_LINES = "po_lines";
+  public static final String ALERTS = "alerts";
+  public static final String CLAIMS = "claims";
+  public static final String SOURCE = "source";
+  public static final String RENEWAL = "renewal";
+  public static final String REPORTING_CODES = "reporting_codes";
+  public static final String ADJUSTMENT = "adjustment";
+  public static final String COST = "cost";
+  public static final String DETAILS = "details";
+  public static final String ERESOURCE = "eresource";
+  public static final String LOCATION = "location";
+  public static final String PHYSICAL = "physical";
+  public static final String VENDOR_DETAIL = "vendor_detail";
+  public static final String FUND_DISTRIBUTION = "fund_distribution";
+
 
   private static final Map<String,String> subObjectApis = new HashMap<>();
 
   static {
-    subObjectApis.put("adjustment", "/adjustment/");
-    subObjectApis.put("cost","/cost/");
-    subObjectApis.put("details", "/details/");
-    subObjectApis.put("eresource", "/eresource/");
-    subObjectApis.put("location", "/location/");
-    subObjectApis.put("physical", "/physical/");
-    subObjectApis.put("renewal", "/renewal/");
-    subObjectApis.put("source", "/source/");
-    subObjectApis.put("vendor_detail", "/vendor_detail/");
-    subObjectApis.put("alerts", "/alert/");
-    subObjectApis.put("claims", "/claim/");
-    subObjectApis.put("reporting_codes", "/reporting_code/");
-    subObjectApis.put("fund_distribution", "/fund_distribution/");
+    subObjectApis.put(ADJUSTMENT, "/adjustment/");
+    subObjectApis.put(COST,"/cost/");
+    subObjectApis.put(DETAILS, "/details/");
+    subObjectApis.put(ERESOURCE, "/eresource/");
+    subObjectApis.put(LOCATION, "/location/");
+    subObjectApis.put(PHYSICAL, "/physical/");
+    subObjectApis.put(RENEWAL, "/renewal/");
+    subObjectApis.put(SOURCE, "/source/");
+    subObjectApis.put(VENDOR_DETAIL, "/vendor_detail/");
+    subObjectApis.put(ALERTS, "/alert/");
+    subObjectApis.put(CLAIMS, "/claim/");
+    subObjectApis.put(REPORTING_CODES, "/reporting_code/");
+    subObjectApis.put(FUND_DISTRIBUTION, "/fund_distribution/");
     subObjectApis.put(PO_LINES, "/po_line/");
   }
 
@@ -176,7 +193,7 @@ public class HelperUtils {
 
   public static CompletableFuture<List<PoLine>> getCompositePoLines(String id, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<List<PoLine>> future = new VertxCompletableFuture<>(ctx);
-  
+
     getPoLines(id,lang, httpClient,ctx, okapiHeaders, logger)
       .thenAccept(body -> {
         List<PoLine> lines = new ArrayList<>();
@@ -210,19 +227,19 @@ public class HelperUtils {
     }
 
     List<CompletableFuture<Void>> futures = new ArrayList<>();
-    futures.add(operateOnSubObjIfPresent(operation, line, "adjustment", httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, "cost", httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, "details", httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, "eresource", httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, "location", httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, "physical", httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, "renewal", httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, "source", httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, "vendor_detail", httpClient, ctx, okapiHeaders, logger));
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, "alerts", httpClient, ctx, okapiHeaders, logger));
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, "claims", httpClient, ctx, okapiHeaders, logger));
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, "reporting_codes", httpClient, ctx, okapiHeaders, logger));
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, "fund_distribution", httpClient, ctx, okapiHeaders, logger));
+    futures.add(operateOnSubObjIfPresent(operation, line, ADJUSTMENT, httpClient, ctx, okapiHeaders, logger));
+    futures.add(operateOnSubObjIfPresent(operation, line, COST, httpClient, ctx, okapiHeaders, logger));
+    futures.add(operateOnSubObjIfPresent(operation, line, DETAILS, httpClient, ctx, okapiHeaders, logger));
+    futures.add(operateOnSubObjIfPresent(operation, line, ERESOURCE, httpClient, ctx, okapiHeaders, logger));
+    futures.add(operateOnSubObjIfPresent(operation, line, LOCATION, httpClient, ctx, okapiHeaders, logger));
+    futures.add(operateOnSubObjIfPresent(operation, line, PHYSICAL, httpClient, ctx, okapiHeaders, logger));
+    futures.add(operateOnSubObjIfPresent(operation, line, RENEWAL, httpClient, ctx, okapiHeaders, logger));
+    futures.add(operateOnSubObjIfPresent(operation, line, SOURCE, httpClient, ctx, okapiHeaders, logger));
+    futures.add(operateOnSubObjIfPresent(operation, line, VENDOR_DETAIL, httpClient, ctx, okapiHeaders, logger));
+    futures.addAll(operateOnSubObjsIfPresent(operation, line, ALERTS, httpClient, ctx, okapiHeaders, logger));
+    futures.addAll(operateOnSubObjsIfPresent(operation, line, CLAIMS, httpClient, ctx, okapiHeaders, logger));
+    futures.addAll(operateOnSubObjsIfPresent(operation, line, REPORTING_CODES, httpClient, ctx, okapiHeaders, logger));
+    futures.addAll(operateOnSubObjsIfPresent(operation, line, FUND_DISTRIBUTION, httpClient, ctx, okapiHeaders, logger));
 
     CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
       .thenAccept(v -> {
@@ -266,7 +283,7 @@ public class HelperUtils {
     }
     return CompletableFuture.completedFuture(null);
   }
-  
+
   public static CompletableFuture<JsonObject> operateOnSubObj(HttpMethod operation, String url,
       HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
@@ -332,5 +349,10 @@ public class HelperUtils {
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  public static Map<String,String> getSubObjectapisForPost() {
+    return subObjectApis.entrySet().stream()
+        .collect(Collectors.toMap(Map.Entry::getKey, e-> e.getValue().replaceAll("/$", "")));
   }
 }
