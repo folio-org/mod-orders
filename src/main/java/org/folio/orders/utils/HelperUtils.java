@@ -1,9 +1,21 @@
 package org.folio.orders.utils;
 
-import static java.util.Objects.nonNull;
+import io.vertx.core.Context;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.client.ConfigurationsClient;
+import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.tools.client.Response;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -18,23 +30,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import io.vertx.core.Vertx;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.rest.client.ConfigurationsClient;
-import org.folio.rest.jaxrs.model.Adjustment;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.tools.client.Response;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-
-import io.vertx.core.Context;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-
 import static java.util.Objects.nonNull;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
@@ -46,8 +41,6 @@ public class HelperUtils {
   private static final Pattern HOST_PORT_PATTERN = Pattern.compile("https?://([^:/]+)(?::?(\\d+)?)");
   private static final int DEFAULT_PORT = 9130;
   private static final String QUERY = "module=ORDERS";
-
-  private static final String PO_LINES = "po_lines";
 
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
 
@@ -68,7 +61,7 @@ public class HelperUtils {
 
 
   private static final Map<String,String> subObjectApis = new HashMap<>();
-  public static final String DEFAULT_POLINE_LIMIT = "999";
+  public static final int DEFAULT_POLINE_LIMIT = 500;
   public static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
   public static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = "/po_line?limit=%s&query=purchase_order_id==%s&lang=%s";
 
@@ -373,24 +366,23 @@ public class HelperUtils {
   }
 
   /**
-   * Retrieve configuration for mod-orders from mod-configuration and puts these properties into
-   * context.
+   * Retrieve configuration for mod-orders from mod-configuration.
    * @param okapiHeaders
    * @param ctx the context
    * @param logger
-   * @return empty CompletableFuture
+   * @return CompletableFuture with JsonObject
    */
-  public static CompletableFuture<Void> loadConfiguration(Map<String, String> okapiHeaders,
+  public static CompletableFuture<JsonObject> loadConfiguration(Map<String, String> okapiHeaders,
                                                           Context ctx, Logger logger) {
 
     String okapiURL = StringUtils.trimToEmpty(okapiHeaders.get(OKAPI_URL));
     String tenant = okapiHeaders.get(OKAPI_HEADER_TENANT);
     String token = okapiHeaders.get(OKAPI_HEADER_TOKEN);
-    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-
+    CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
+    JsonObject config = new JsonObject();
     Matcher matcher = HOST_PORT_PATTERN.matcher(okapiURL);
     if (!matcher.find()) {
-      future.complete(null);
+      future.complete(config);
       return future;
     }
 
@@ -406,47 +398,23 @@ public class HelperUtils {
           if (response.statusCode() != 200) {
             logger.error(String.format("Expected status code 200, got '%s' :%s",
               response.statusCode(), body.toString()));
-            future.complete(null);
+            future.complete(config);
             return;
           }
 
           JsonObject entries = body.toJsonObject();
-          JsonObject config = new JsonObject();
           entries.getJsonArray("configs").stream()
             .forEach(o ->
               config.put(((JsonObject) o).getString("configName"),
-                ((JsonObject) o).getString("value")));
-          JsonObject tenantConfig = ctx.config().getJsonObject(tenant);
-          if (tenantConfig != null) {
-            tenantConfig.mergeIn(config);
-          } else {
-            ctx.config().put(tenant, config);
-          }
-          future.complete(null);
+                ((JsonObject) o).getValue("value")));
+          future.complete(config);
         })
       );
-    } catch (UnsupportedEncodingException e) {
+    } catch (Exception e) {
       logger.error(e.getMessage());
-      future.complete(null);
+      future.complete(config);
     }
     return future;
-  }
-
-  /**
-   * Gets value of the config either from shared config or defaultValue as a fallback.
-   * @param tenant tenant
-   * @param name config key
-   * @param defaultValue fallback value
-   * @return value of the config either from shared config if present. Or from System properties as fallback.
-   */
-  public static String getProperty(String tenant, String name, String defaultValue) {
-    JsonObject configs = Vertx.currentContext().config().getJsonObject(tenant);
-
-    if (configs != null) {
-      return configs.getString(name, defaultValue);
-    }
-
-    return defaultValue;
   }
 
 

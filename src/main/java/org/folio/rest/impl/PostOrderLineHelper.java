@@ -9,6 +9,8 @@ import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.Alert;
+import org.folio.rest.jaxrs.model.Claim;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Eresource;
@@ -17,6 +19,9 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.Renewal;
+import org.folio.rest.jaxrs.model.ReportingCode;
+import org.folio.rest.jaxrs.model.Source;
 import org.folio.rest.jaxrs.model.VendorDetail;
 import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -28,12 +33,28 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import static org.folio.orders.utils.HelperUtils.ADJUSTMENT;
+import static org.folio.orders.utils.HelperUtils.ALERTS;
+import static org.folio.orders.utils.HelperUtils.CLAIMS;
+import static org.folio.orders.utils.HelperUtils.COST;
+import static org.folio.orders.utils.HelperUtils.DETAILS;
+import static org.folio.orders.utils.HelperUtils.ERESOURCE;
+import static org.folio.orders.utils.HelperUtils.LOCATION;
+import static org.folio.orders.utils.HelperUtils.PHYSICAL;
+import static org.folio.orders.utils.HelperUtils.PO_LINES;
+import static org.folio.orders.utils.HelperUtils.RENEWAL;
+import static org.folio.orders.utils.HelperUtils.REPORTING_CODES;
+import static org.folio.orders.utils.HelperUtils.SOURCE;
+import static org.folio.orders.utils.HelperUtils.VENDOR_DETAIL;
+
 public class PostOrderLineHelper extends AbstractOrderLineHelper {
-  public static final String ADJUSTMENT = "adjustment";
+
+  private static final Map<String,String> subObjectApisPost = HelperUtils.getSubObjectapisForPost();
 
   PostOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx);
   }
+
 
   public CompletableFuture<PoLine> createPoLine(PoLine compPOL) {
     CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
@@ -41,13 +62,8 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper {
     JsonObject line = JsonObject.mapFrom(compPOL);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
 
-    //TODO handle alerts, claims, fund_distribution, reporting_codes, source
-    line.remove("alerts");
-    line.remove("claims");
+    //TODO handle fund_distribution
     line.remove("fund_distribution");
-    line.remove("reporting_codes");
-    line.remove("source");
-    line.remove("renewal");
     line.remove("license");
 
     subObjFuts.add(createAdjustment(compPOL, line, compPOL.getAdjustment()));
@@ -57,12 +73,17 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper {
     subObjFuts.add(createLocation(compPOL, line, compPOL.getLocation()));
     subObjFuts.add(createPhysical(compPOL, line, compPOL.getPhysical()));
     subObjFuts.add(createVendorDetail(compPOL, line, compPOL.getVendorDetail()));
+    subObjFuts.add(createAlerts(compPOL, line, compPOL.getAlerts()));
+    subObjFuts.add(createClaims(compPOL, line, compPOL.getClaims()));
+    subObjFuts.add(createSource(compPOL, line, compPOL.getSource()));
+    subObjFuts.add(createRenewal(compPOL, line, compPOL.getRenewal()));
+    subObjFuts.add(createReportingCodes(compPOL, line, compPOL.getReportingCodes()));
 
     CompletableFuture.allOf(subObjFuts.toArray(new CompletableFuture[subObjFuts.size()]))
       .thenAccept(v -> {
         try {
           Buffer polBuf = JsonObject.mapFrom(line).toBuffer();
-          httpClient.request(HttpMethod.POST, polBuf, "/po_line", okapiHeaders)
+          httpClient.request(HttpMethod.POST, polBuf, subObjectApisPost.get(PO_LINES), okapiHeaders)
             .thenApply(HelperUtils::verifyAndExtractBody)
             .thenAccept(body -> {
               logger.info("response from /po_line: " + body.encodePrettily());
@@ -89,7 +110,8 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper {
   }
 
   private CompletableFuture<Void> createAdjustment(PoLine compPOL, JsonObject line, Adjustment adjustment) {
-    return createSubObjIfPresent(line, adjustment, ADJUSTMENT, "/adjustment")
+    return createSubObjIfPresent(line, adjustment,
+      ADJUSTMENT, subObjectApisPost.get(ADJUSTMENT))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(ADJUSTMENT);
@@ -106,10 +128,11 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper {
 
 
   private CompletableFuture<Void> createCost(PoLine compPOL, JsonObject line, Cost cost) {
-    return createSubObjIfPresent(line, cost, "cost", "/cost")
+    return createSubObjIfPresent(line, cost,
+      COST, subObjectApisPost.get(COST))
       .thenAccept(id -> {
         if (id == null) {
-          line.remove("cost");
+          line.remove(COST);
           compPOL.setCost(null);
         } else {
           compPOL.getCost().setId(id);
@@ -122,10 +145,10 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper {
   }
 
   private CompletableFuture<Void> createDetails(PoLine compPOL, JsonObject line, Details details) {
-    return createSubObjIfPresent(line, details, "details", "/details")
+    return createSubObjIfPresent(line, details, DETAILS, subObjectApisPost.get(DETAILS))
       .thenAccept(id -> {
         if (id == null) {
-          line.remove("details");
+          line.remove(DETAILS);
           compPOL.setDetails(null);
         } else {
           compPOL.getDetails().setId(id);
@@ -138,10 +161,10 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper {
   }
 
   private CompletableFuture<Void> createEresource(PoLine compPOL, JsonObject line, Eresource eresource) {
-    return createSubObjIfPresent(line, eresource, "eresource", "/eresource")
+    return createSubObjIfPresent(line, eresource, ERESOURCE, subObjectApisPost.get(ERESOURCE))
       .thenAccept(id -> {
         if (id == null) {
-          line.remove("eresource");
+          line.remove(ERESOURCE);
           compPOL.setEresource(null);
         } else {
           compPOL.getEresource().setId(id);
@@ -154,10 +177,10 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper {
   }
 
   private CompletableFuture<Void> createLocation(PoLine compPOL, JsonObject line, Location location) {
-    return createSubObjIfPresent(line, location, "location", "/location")
+    return createSubObjIfPresent(line, location, LOCATION, subObjectApisPost.get(LOCATION))
       .thenAccept(id -> {
         if (id == null) {
-          line.remove("location");
+          line.remove(LOCATION);
           compPOL.setLocation(null);
         } else {
           compPOL.getLocation().setId(id);
@@ -170,10 +193,10 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper {
   }
 
   private CompletableFuture<Void> createPhysical(PoLine compPOL, JsonObject line, Physical physical) {
-    return createSubObjIfPresent(line, physical, "physical", "/physical")
+    return createSubObjIfPresent(line, physical, PHYSICAL, subObjectApisPost.get(PHYSICAL))
       .thenAccept(id -> {
         if (id == null) {
-          line.remove("physical");
+          line.remove(PHYSICAL);
           compPOL.setPhysical(null);
         } else {
           compPOL.getPhysical().setId(id);
@@ -186,10 +209,10 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper {
   }
 
   private CompletableFuture<Void> createVendorDetail(PoLine compPOL, JsonObject line, VendorDetail vendor) {
-    return createSubObjIfPresent(line, vendor, "vendor_detail", "/vendor_detail")
+    return createSubObjIfPresent(line, vendor, VENDOR_DETAIL, subObjectApisPost.get(VENDOR_DETAIL))
       .thenAccept(id -> {
         if (id == null) {
-          line.remove("vendor_detail");
+          line.remove(VENDOR_DETAIL);
           compPOL.setVendorDetail(null);
         } else {
           compPOL.getVendorDetail().setId(id);
@@ -201,7 +224,126 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper {
       });
   }
 
+  private CompletableFuture<Void> createReportingCodes(PoLine compPOL, JsonObject line,
+                                                       List<ReportingCode> reportingCodes) {
 
+    List<String> reportingIds = new ArrayList<>();
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    if(null!=reportingCodes)
+      reportingCodes
+        .forEach(reportingObject ->
+          futures.add(createSubObjIfPresent(line, reportingObject,
+            REPORTING_CODES, subObjectApisPost.get(REPORTING_CODES))
+            .thenAccept(id -> {
+              if (id != null) {
+                reportingObject.setId(id);
+                reportingIds.add(id);
+              }
+            }))
+        );
+
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
+      .thenAccept(t -> {
+        line.put(REPORTING_CODES, reportingIds);
+        compPOL.setReportingCodes(reportingCodes);
+      })
+      .exceptionally(t -> {
+        logger.error("failed to create Reporting Codes", t);
+        throw new CompletionException(t.getCause());
+      });
+
+  }
+
+  private CompletableFuture<Void> createRenewal(PoLine compPOL, JsonObject line, Renewal renewal) {
+    return createSubObjIfPresent(line, renewal, RENEWAL, subObjectApisPost.get(RENEWAL))
+      .thenAccept(id -> {
+        if (id == null) {
+          line.remove(RENEWAL);
+          compPOL.setRenewal(null);
+        } else {
+          compPOL.getRenewal().setId(id);
+        }
+      })
+      .exceptionally(t -> {
+        logger.error("failed to create Renewal", t);
+        throw new CompletionException(t.getCause());
+      });
+  }
+
+  private CompletableFuture<Void> createSource(PoLine compPOL, JsonObject line, Source source) {
+    return createSubObjIfPresent(line, source, SOURCE, subObjectApisPost.get(SOURCE))
+      .thenAccept(id -> {
+        if (id == null) {
+          line.remove(SOURCE);
+          compPOL.setSource(null);
+        } else {
+          compPOL.getSource().setId(id);
+        }
+      })
+      .exceptionally(t -> {
+        logger.error("failed to create Source", t);
+        throw new CompletionException(t.getCause());
+      });
+  }
+
+  private CompletableFuture<Void> createClaims(PoLine compPOL, JsonObject line, List<Claim> claims) {
+
+    List<String> claimsIds = new ArrayList<>();
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    if(null!=claims)
+      claims
+        .forEach(claimObject ->
+          futures.add(createSubObjIfPresent(line, claimObject, CLAIMS,
+            subObjectApisPost.get(CLAIMS))
+            .thenAccept(id -> {
+              if (id != null) {
+                claimObject.setId(id);
+                claimsIds.add(id);
+              }
+            }))
+        );
+
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
+      .thenAccept(t -> {
+        line.put(CLAIMS, claimsIds);
+        compPOL.setClaims(claims);
+      })
+      .exceptionally(t -> {
+        logger.error("failed to create Claims", t);
+        throw new CompletionException(t.getCause());
+      });
+
+  }
+
+
+
+  private CompletableFuture<Void> createAlerts(PoLine compPOL, JsonObject line, List<Alert> alerts) {
+
+    List<String> alertIds = new ArrayList<>();
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    if(null!=alerts)
+      alerts.forEach(alertObject ->
+        futures.add(createSubObjIfPresent(line, alertObject, ALERTS,
+          subObjectApisPost.get(ALERTS))
+          .thenAccept(id -> {
+            if (id != null) {
+              alertObject.setId(id);
+              alertIds.add(id);
+            }
+          }))
+      );
+
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
+      .thenAccept(t -> {
+        line.put(ALERTS, alertIds);
+        compPOL.setAlerts(alerts);
+      })
+      .exceptionally(t -> {
+        logger.error("failed to create Alerts", t);
+        throw new CompletionException(t.getCause());
+      });
+
+  }
 
   private CompletableFuture<String> createSubObjIfPresent(JsonObject line, Object obj, String field, String url) {
     if (obj != null) {
