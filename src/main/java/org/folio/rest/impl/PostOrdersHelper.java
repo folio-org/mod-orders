@@ -1,5 +1,46 @@
 package org.folio.rest.impl;
 
+import static org.folio.orders.utils.HelperUtils.ADJUSTMENT;
+import static org.folio.orders.utils.HelperUtils.PO_LINES;
+import static org.folio.orders.utils.HelperUtils.ALERTS;
+import static org.folio.orders.utils.HelperUtils.CLAIMS;
+import static org.folio.orders.utils.HelperUtils.SOURCE;
+import static org.folio.orders.utils.HelperUtils.RENEWAL;
+import static org.folio.orders.utils.HelperUtils.REPORTING_CODES;
+import static org.folio.orders.utils.HelperUtils.COST;
+import static org.folio.orders.utils.HelperUtils.DETAILS;
+import static org.folio.orders.utils.HelperUtils.ERESOURCE;
+import static org.folio.orders.utils.HelperUtils.LOCATION;
+import static org.folio.orders.utils.HelperUtils.PHYSICAL;
+import static org.folio.orders.utils.HelperUtils.VENDOR_DETAIL;
+import static org.folio.orders.utils.HelperUtils.FUND_DISTRIBUTION;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.Alert;
+import org.folio.rest.jaxrs.model.Claim;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Details;
+import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.Renewal;
+import org.folio.rest.jaxrs.model.ReportingCode;
+import org.folio.rest.jaxrs.model.Source;
+import org.folio.rest.jaxrs.model.VendorDetail;
+import org.folio.rest.jaxrs.resource.Orders.PostOrdersResponse;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -29,6 +70,7 @@ import static org.folio.rest.impl.PostOrderLineHelper.ADJUSTMENT;
 
 public class PostOrdersHelper {
 
+
   private static final Logger logger = LoggerFactory.getLogger(PostOrdersHelper.class);
 
   // epoch time @ 9/1/2018.
@@ -39,6 +81,8 @@ public class PostOrdersHelper {
   private final Context ctx;
   private final Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler;
   private final Map<String, String> okapiHeaders;
+
+  private static final Map<String,String> subObjectApisPost = HelperUtils.getSubObjectapisForPost();
 
   public PostOrdersHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx) {
@@ -64,8 +108,8 @@ public class PostOrdersHelper {
       if (purchaseOrder.containsKey(ADJUSTMENT)) {
         purchaseOrder.remove(ADJUSTMENT);
       }
-      if (purchaseOrder.containsKey("po_lines")) {
-        purchaseOrder.remove("po_lines");
+      if (purchaseOrder.containsKey(PO_LINES)) {
+        purchaseOrder.remove(PO_LINES);
       }
       httpClient.request(HttpMethod.POST, purchaseOrder, "/purchase_order", okapiHeaders)
         .thenApply(HelperUtils::verifyAndExtractBody)
