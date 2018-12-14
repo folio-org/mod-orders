@@ -33,7 +33,7 @@ public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
       })
       .thenCompose(emptyJson -> {
         logger.debug("Recreating PO line...");
-        return new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, ctx)
+        return new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, ctx)
           .createPoLine(compOrderLine);
       })
       .thenAccept(v -> {

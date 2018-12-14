@@ -53,6 +53,7 @@
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <mojo.java.target>1.8</mojo.java.target>
+    <mod-configuration-client.version>4.0.3</mod-configuration-client.version>
   </properties>
 
   <repositories>
@@ -113,6 +114,11 @@
       <artifactId>httpclient</artifactId>
       <version>4.5.6</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>mod-configuration-client</artifactId>
+      <version>${mod-configuration-client.version}</version>
     </dependency>
     <dependency>
       <groupId>org.aspectj</groupId>
