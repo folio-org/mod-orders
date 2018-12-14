@@ -140,7 +140,7 @@ public class PostOrdersHelper {
     subObjFuts.add(createLocation(compPOL, line, compPOL.getLocation()));
     subObjFuts.add(createPhysical(compPOL, line, compPOL.getPhysical()));
     subObjFuts.add(createVendorDetail(compPOL, line, compPOL.getVendorDetail()));
-    subObjFuts.add(createFundDistribution(compPOL, line));
+    subObjFuts.add(createFundDistribution(compPOL, line, compPOL.getFundDistribution()));
     subObjFuts.add(createAlerts(compPOL, line, compPOL.getAlerts()));
     subObjFuts.add(createClaims(compPOL, line, compPOL.getClaims()));
     subObjFuts.add(createSource(compPOL, line, compPOL.getSource()));
@@ -383,8 +383,6 @@ public class PostOrdersHelper {
 
   }
 
-
-
   private CompletableFuture<Void> createAlerts(PoLine compPOL, JsonObject line, List<Alert> alerts) {
 
     List<String> alertIds = new ArrayList<>();
@@ -499,57 +497,33 @@ public class PostOrdersHelper {
           .toUpperCase();
   }
 
-  private CompletableFuture<Void> createFundDistribution(PoLine compPOL, JsonObject line) {
-    CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
+  private CompletableFuture<Void> createFundDistribution(PoLine compPOL, JsonObject line, List<FundDistribution> fundDistribution) {
+
+    List<String> fundDistributionIds = new ArrayList<>();
     List<CompletableFuture<Void>> futures = new ArrayList<>();
-    JsonArray array = new JsonArray();
+    if (null != fundDistribution)
+      fundDistribution
+        .forEach(fundObject ->
+          futures.add(createSubObjIfPresent(line, fundObject, FUND_DISTRIBUTION,
+            subObjectApisPost.get(FUND_DISTRIBUTION))
+            .thenAccept(id -> {
+              if (id != null) {
+                fundObject.setId(id);
+                fundDistributionIds.add(id);
+              }
+            }))
+        );
 
-    List<FundDistribution> copyOfFundDistrList = new ArrayList<>(compPOL.getFundDistribution());
-
-    compPOL.getFundDistribution().clear();
-    line.remove("fund_distribution");
-
-    copyOfFundDistrList.forEach(fD -> {
-        futures.add(createSubListObjIfPresent(fD, "/orders-storage/fund_distributions")
-          .thenAccept(fdWithId -> {
-            array.add(fdWithId.getString("id"));
-            compPOL.getFundDistribution().add(fdWithId.mapTo(FundDistribution.class));
-          }));
-        line.put("fund_distribution", array);
-      }
-    );
-
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-      .thenAccept(voidResult -> future.complete(null))
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
+      .thenAccept(t -> {
+        line.put(FUND_DISTRIBUTION, fundDistributionIds);
+        compPOL.setFundDistribution(fundDistribution);
+      })
       .exceptionally(t -> {
-        logger.error("failed to create VendorDetail", t);
+        logger.error("failed to create FundDistribution", t);
         throw new CompletionException(t.getCause());
       });
-  }
 
-  private CompletableFuture<JsonObject> createSubListObjIfPresent(Object obj, String url) {
-    if (obj != null) {
-      JsonObject json = JsonObject.mapFrom(obj);
-      if (!json.isEmpty()) {
-        return createSubListObj(json, url);
-      }
-    }
-    return CompletableFuture.completedFuture(null);
-  }
-  private  CompletableFuture<JsonObject> createSubListObj(JsonObject obj, String url) {
-    CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
-    try {
-      httpClient.request(HttpMethod.POST, obj.toBuffer(), url, okapiHeaders)
-        .thenApply(HelperUtils::verifyAndExtractBody)
-        .thenAccept(future::complete)
-        .exceptionally(t -> {
-          future.completeExceptionally(t);
-          return null;
-        });
-    } catch (Exception e) {
-      future.completeExceptionally(e);
-    }
-    return future;
   }
 
 }

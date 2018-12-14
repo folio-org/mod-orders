@@ -876,7 +876,7 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPostOrdersLinesByIdWithIdMismatch() throws IOException {
+  public void testPostOrdersLinesByIdWithIdMismatch() {
     logger.info("=== Test Post Order Lines By Id (path and request body ids mismatching) ===");
 
     JsonObject body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
@@ -961,7 +961,7 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPutOrderLineById() throws IOException {
+  public void testPutOrderLineById() {
     logger.info("=== Test PUT Order Line By Id - Success case ===");
 
     putOrderLineByIdSuccess(PO_LINE_ID_FOR_SUCCESS_CASE);
@@ -1068,7 +1068,7 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPutOrderLineById500FromStorageOnSubObjectDeletion() throws IOException {
+  public void testPutOrderLineById500FromStorageOnSubObjectDeletion() {
     logger.info("=== Test PUT Order Line By Id - 500 From Storage On Sub-Object deletion ===");
 
     String lineId = PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE;
@@ -1148,8 +1148,8 @@ public class OrdersImplTest {
       router.route(HttpMethod.POST, "/license").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.License.class));
       router.route(HttpMethod.POST, "/physical").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Physical.class));
       router.route(HttpMethod.POST, "/renewal").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Renewal.class));
-      router.route(HttpMethod.POST, "/source").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Renewal.class));
-      router.route(HttpMethod.POST, "/reporting_codes").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.ReportingCode.class));
+      router.route(HttpMethod.POST, "/source").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Source.class));
+      router.route(HttpMethod.POST, "/reporting_code").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.ReportingCode.class));
       router.route(HttpMethod.POST, "/vendor_detail").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.VendorDetail.class));
       router.route(HttpMethod.POST, "/orders-storage/fund_distributions").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.FundDistribution.class));
 

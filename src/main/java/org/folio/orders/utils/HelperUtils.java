@@ -65,7 +65,7 @@ public class HelperUtils {
     subObjectApis.put(ALERTS, "/alert/");
     subObjectApis.put(CLAIMS, "/claim/");
     subObjectApis.put(REPORTING_CODES, "/reporting_code/");
-    subObjectApis.put(FUND_DISTRIBUTION, "/fund_distributions/");
+    subObjectApis.put(FUND_DISTRIBUTION, "/orders-storage/fund_distributions/");
     subObjectApis.put(PO_LINES, "/po_line/");
   }
 
