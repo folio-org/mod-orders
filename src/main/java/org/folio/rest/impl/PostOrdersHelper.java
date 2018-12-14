@@ -7,17 +7,10 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import io.vertx.core.json.JsonArray;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.Adjustment;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.Details;
-import org.folio.rest.jaxrs.model.Eresource;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Physical;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.VendorDetail;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.resource.Orders.PostOrdersResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -124,7 +117,6 @@ public class PostOrdersHelper {
     //TODO handle alerts, claims, fund_distribution, reporting_codes, source
     line.remove("alerts");
     line.remove("claims");
-    line.remove("fund_distribution");
     line.remove("reporting_codes");
     line.remove("source");
     line.remove("renewal");
@@ -137,6 +129,7 @@ public class PostOrdersHelper {
     subObjFuts.add(createLocation(compPOL, line, compPOL.getLocation()));
     subObjFuts.add(createPhysical(compPOL, line, compPOL.getPhysical()));
     subObjFuts.add(createVendorDetail(compPOL, line, compPOL.getVendorDetail()));
+    subObjFuts.add(createFundDistribution(compPOL, line));
 
     CompletableFuture.allOf(subObjFuts.toArray(new CompletableFuture[subObjFuts.size()]))
       .thenAccept(v -> {
@@ -362,6 +355,59 @@ public class PostOrdersHelper {
     return (Long.toHexString(System.currentTimeMillis() - PO_NUMBER_EPOCH) +
         Long.toHexString(System.nanoTime() % 100))
           .toUpperCase();
+  }
+
+  private CompletableFuture<Void> createFundDistribution(PoLine compPOL, JsonObject line) {
+    CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    JsonArray array = new JsonArray();
+
+    List<FundDistribution> copyOfFundDistrList = new ArrayList<>(compPOL.getFundDistribution());
+
+    compPOL.getFundDistribution().clear();
+    line.remove("fund_distribution");
+
+    copyOfFundDistrList.forEach(fD -> {
+        futures.add(createSubListObjIfPresent(fD, "/orders-storage/fund_distributions")
+          .thenAccept(fdWithId -> {
+            array.add(fdWithId.getString("id"));
+            compPOL.getFundDistribution().add(fdWithId.mapTo(FundDistribution.class));
+          }));
+        line.put("fund_distribution", array);
+      }
+    );
+
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+      .thenAccept(voidResult -> future.complete(null))
+      .exceptionally(t -> {
+        logger.error("failed to create VendorDetail", t);
+        throw new CompletionException(t.getCause());
+      });
+  }
+
+  private CompletableFuture<JsonObject> createSubListObjIfPresent(Object obj, String url) {
+    if (obj != null) {
+      JsonObject json = JsonObject.mapFrom(obj);
+      if (!json.isEmpty()) {
+        return createSubListObj(json, url);
+      }
+    }
+    return CompletableFuture.completedFuture(null);
+  }
+  private  CompletableFuture<JsonObject> createSubListObj(JsonObject obj, String url) {
+    CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
+    try {
+      httpClient.request(HttpMethod.POST, obj.toBuffer(), url, okapiHeaders)
+        .thenApply(HelperUtils::verifyAndExtractBody)
+        .thenAccept(future::complete)
+        .exceptionally(t -> {
+          future.completeExceptionally(t);
+          return null;
+        });
+    } catch (Exception e) {
+      future.completeExceptionally(e);
+    }
+    return future;
   }
 
 }
