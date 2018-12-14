@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import io.vertx.core.json.JsonArray;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.*;
@@ -129,9 +128,6 @@ public class PostOrdersHelper {
 
     JsonObject line = JsonObject.mapFrom(compPOL);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
-
-    //TODO handle license
-    line.remove("license");
 
     subObjFuts.add(createAdjustment(compPOL, line, compPOL.getAdjustment()));
     subObjFuts.add(createCost(compPOL, line, compPOL.getCost()));
