@@ -1,0 +1,137 @@
+{
+  "id": "0009662b-8b80-4001-b704-ca10971f175d",
+  "acquisition_method": "Purchase",
+  "adjustment": {
+    "id": "2978bf2a-a15f-41af-9bea-98cf996629b2",
+    "credit": 0.0,
+    "discount": 0.0,
+    "insurance": 0.0,
+    "invoice_id": "aa0fbc71-5bc0-4fa0-9e8d-f6a14d3c50fd",
+    "overhead": 0.0,
+    "shipment": 0.0,
+    "tax_1": 0.0,
+    "tax_2": 0.0,
+    "use_pro_rate": false,
+    "po_line_id": "0009662b-8b80-4001-b704-ca10971f175d"
+  },
+  "alerts": [],
+  "cancellation_restriction": false,
+  "cancellation_restriction_note": "",
+  "claims": [
+    {
+      "id": "ff778eb8-641e-468b-bce4-678e06974924",
+      "claimed": false,
+      "grace": 0,
+      "po_line_id": "0009662b-8b80-4001-b704-ca10971f175d"
+    }
+  ],
+  "collection": false,
+  "contributors": [
+    {
+      "contributor": "Ed Mashburn",
+      "contributor_type": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+    }
+  ],
+  "cost": {
+    "id": "d25498e7-3ae6-45fe-9612-ec99e2700d2f",
+    "list_price": 900.00,
+    "currency": "USD",
+    "quantity_physical": 1,
+    "quantity_electronic": 0,
+    "po_line_estimated_price": 900.00,
+    "po_line_id": "0009662b-8b80-4001-b704-ca10971f175d"
+  },
+  "description": "",
+  "details": {
+    "id": "d25498e7-3ae6-45fe-9612-ec99e2700d2f",
+    "receiving_note": "start with v. 162",
+    "product_ids": [
+      {
+        "product_id": "0065-3438",
+        "product_id_type": "ISSN"
+      }
+    ],
+    "material_types": [
+      "fde2e5ca-cde3-11e8-a8d5-f2801f1b9fd1"
+    ],
+    "subscription_from": "2018-07-01T00:00:00.000Z",
+    "subscription_interval": 1095,
+    "subscription_to": "2021-06-30T00:00:00.000Z",
+    "po_line_id": "0009662b-8b80-4001-b704-ca10971f175d"
+  },
+  "donor": "",
+  "eresource": {
+    "id": "87fde878-47c5-4683-91ab-ca904d8346a5",
+    "activated": false,
+    "activation_due": 0,
+    "create_inventory": false,
+    "trial": false,
+    "expected_activation": null,
+    "user_limit": 0,
+    "access_provider": "9bdc385e-6403-46aa-a3aa-db91d4527b19",
+    "po_line_id": "0009662b-8b80-4001-b704-ca10971f175d",
+    "license": "4841492b-54ab-458d-ba05-6108fbb1a155"
+  },
+  "fund_distribution": [
+    {
+      "id": "fde2cef0-cde3-11e8-a8d5-f2801f1b9fd1",
+      "code": "STATE-SUBN-FY19",
+      "percentage": 100.0,
+      "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08011",
+      "po_line_id": "0009662b-8b80-4001-b704-ca10971f175d"
+    }
+  ],
+  "location": {
+    "id": "3ae6dfc3-bf0e-4bd1-90e6-22429eba278a",
+    "location_id": "d47605c3-8f2c-41a3-b3d5-0d42076f4939",
+    "po_line_id": "0009662b-8b80-4001-b704-ca10971f175d",
+    "quantity": 1,
+    "quantity_electronic": 0,
+    "quantity_physical": 1
+  },
+  "order_format": "Physical Resource",
+  "owner": "Acquisitions - Serials",
+  "payment_status": "Pending",
+  "physical": {
+    "id": "617f33a4-40dd-48fc-86e0-648cd5b5c1bc",
+    "material_supplier": "6828d7cb-d84e-41e5-9db5-fc2e162f9ffb",
+    "receipt_due": "2018-07-31T00:00:00.000Z",
+    "volumes": 0,
+    "po_line_id": "0009662b-8b80-4001-b704-ca10971f175d"
+  },
+  "po_line_description": "",
+  "po_line_number": "1EFC97C6B7-1",
+  "po_line_workflow_status": "Pending",
+  "publication_date": "2018",
+  "publisher": "Plenum Press",
+  "purchase_order_id": "95d29d04-34b1-4fe0-a15e-1cd129143692",
+  "receipt_date": null,
+  "receipt_status": "Pending",
+  "renewal": {
+    "id": "9e414baa-8cf2-4916-a90f-d1da4009e04e",
+    "cycle": "Two Years",
+    "interval": 12,
+    "manual_renewal": true,
+    "review_period": 90,
+    "renewal_date": "2020-07-19T00:00:00.000Z",
+    "po_line_id": "0009662b-8b80-4001-b704-ca10971f175d"
+  },
+  "reporting_codes": [],
+  "requester": "",
+  "rush": false,
+  "selector": "",
+  "source": {
+    "id": "530853f3-29f1-4af2-8282-08cc835d103e",
+    "code": "",
+    "description": "Manually entered"
+  },
+  "tags": [],
+  "title": "Advances in astronautical science",
+  "vendor_detail": {
+    "id": "a53d30b7-0f3f-446b-aee7-8d4134cd54a3",
+    "instructions": "",
+    "note_from_vendor": "",
+    "vendor_account": "",
+    "po_line_id": "0009662b-8b80-4001-b704-ca10971f175d"
+  }
+}
