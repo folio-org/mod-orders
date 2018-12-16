@@ -17,7 +17,8 @@
             "details.item.post",
             "eresource.item.post",
             "location.item.post",
-            "vendor_detail.item.post"
+            "vendor_detail.item.post",
+            "configuration.entries.collection.get"
           ]
         },
         {
@@ -62,6 +63,7 @@
             "physical.item.post",
             "renewal.item.post",
             "vendor_detail.item.post",
+            "configuration.entries.collection.get",
             "orders-storage.fund-distribution.item.post"
           ]
         },
