@@ -823,7 +823,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .delete(String.format(LINE_BY_ID_PATH, orderId, lineId))
+      .delete(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST, PO_LINE_ID_FOR_SUCCESS_CASE))
         .then()
           .contentType(ContentType.JSON)
           .statusCode(422)
