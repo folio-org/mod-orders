@@ -122,7 +122,12 @@
         "id": "50fb6f0e-cdf1-11e8-a8d5-f2801f1b9fd1",
         "material_supplier": "Amazon.com",
         "receipt_due": "2018-06-01T00:00:00.000Z",
-        "volumes": 4,
+        "volumes": [
+          "vol.1",
+          "vol.2",
+          "vol.3",
+          "vol.4"
+        ],
         "po_line_id": "50fb52bc-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
       "po_line_description": "",

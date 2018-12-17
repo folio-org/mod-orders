@@ -104,7 +104,9 @@
       "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
       "payment_status": "Awaiting Payment",
       "physical": {
-        "volumes": 1,
+        "volumes": [
+          "vol.1"
+        ],
         "id": "5ee243f9-72e5-4464-bdbc-43a21873d648",
         "material_supplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
         "receipt_due": "2018-10-10T00:00:00.000Z"
@@ -123,7 +125,7 @@
         "manual_renewal": true,
         "review_period": 30,
         "renewal_date": "2019-04-09T00:00:00.000Z"
-      },      
+      },
       "reporting_codes": [
         {
           "code": "CODE1",

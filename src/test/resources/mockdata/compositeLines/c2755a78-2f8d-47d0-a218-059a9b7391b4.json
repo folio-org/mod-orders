@@ -96,7 +96,7 @@
     "id": "50fb81ec-cdf1-11e8-a8d5-f2801f1b9fd1",
     "material_supplier": "GOBI Library Solutions",
     "receipt_due": null,
-    "volumes": 0,
+    "volumes": [],
     "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
   },
   "po_line_description": "",

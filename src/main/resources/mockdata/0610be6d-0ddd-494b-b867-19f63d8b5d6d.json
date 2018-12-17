@@ -122,7 +122,9 @@
         "id": "50fb7be8-cdf1-11e8-a8d5-f2801f1b9fd1",
         "material_supplier": "",
         "receipt_due": null,
-        "volumes": 1,
+        "volumes": [
+          "vol.1"
+        ],
         "po_line_id": "50fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
       "po_line_description": "",
