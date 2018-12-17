@@ -72,6 +72,8 @@ import static org.junit.Assert.fail;
 @RunWith(VertxUnitRunner.class)
 public class OrdersImplTest {
 
+  public static final String INCORRECT_LANG_PARAMETER = "'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\"";
+
   public static final String ID = "id";
 
   static {
@@ -633,7 +635,7 @@ public class OrdersImplTest {
       .post(rootPath+INVALID_LANG)
         .then()
           .statusCode(400)
-          .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+          .body(containsString(INCORRECT_LANG_PARAMETER));
 
   }
 
@@ -652,7 +654,7 @@ public class OrdersImplTest {
       .get(rootPath+"/"+id+INVALID_LANG)
         .then()
           .statusCode(400)
-          .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+          .body(containsString(INCORRECT_LANG_PARAMETER));
 
   }
 
@@ -670,7 +672,7 @@ public class OrdersImplTest {
      .delete(rootPath+"/"+id+INVALID_LANG)
        .then()
          .statusCode(400)
-         .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+         .body(containsString(INCORRECT_LANG_PARAMETER));
 
   }
 
@@ -699,7 +701,7 @@ public class OrdersImplTest {
        .put(rootPath+"/"+id+INVALID_LANG)
          .then()
            .statusCode(400)
-           .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+           .body(containsString(INCORRECT_LANG_PARAMETER));
 
      logger.info("=== Test validation on no Content-type parameter ===");
      RestAssured
@@ -817,14 +819,11 @@ public class OrdersImplTest {
   public void testDeleteOrderLineByIdNotCorrespondingToOrderId() {
     logger.info("=== Test Delete Order Line By Id - Order line does not match PO id ===");
 
-    String orderId = ID_DOES_NOT_EXIST;
-    String lineId = "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47";
-
     final Response resp = RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .delete(String.format(LINE_BY_ID_PATH, orderId, lineId))
+      .delete(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST, PO_LINE_ID_FOR_SUCCESS_CASE))
         .then()
           .contentType(ContentType.JSON)
           .statusCode(422)
@@ -842,8 +841,8 @@ public class OrdersImplTest {
                            .get(0)
                            .getMessage();
     assertNotNull(message);
-    assertTrue(message.contains(orderId));
-    assertTrue(message.contains(lineId));
+    assertTrue(message.contains(ID_DOES_NOT_EXIST));
+    assertTrue(message.contains(PO_LINE_ID_FOR_SUCCESS_CASE));
   }
 
   @Test
@@ -1219,17 +1218,19 @@ public class OrdersImplTest {
       router.route(HttpMethod.POST, "/purchase_order").handler(this::handlePostPurchaseOrder);
       router.route(HttpMethod.POST, "/po_line").handler(this::handlePostPOLine);
       router.route(HttpMethod.POST, "/adjustment").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Adjustment.class));
+      router.route(HttpMethod.POST, "/alert").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Alert.class));
       router.route(HttpMethod.POST, "/cost").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Cost.class));
+      router.route(HttpMethod.POST, "/claim").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Claim.class));
       router.route(HttpMethod.POST, "/details").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Details.class));
       router.route(HttpMethod.POST, "/eresource").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Eresource.class));
       router.route(HttpMethod.POST, "/location").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Location.class));
+      router.route(HttpMethod.POST, "/license").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.License.class));
       router.route(HttpMethod.POST, "/physical").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Physical.class));
-      router.route(HttpMethod.POST, "/vendor_detail").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.VendorDetail.class));
-      router.route(HttpMethod.POST, "/claim").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Claim.class));
-      router.route(HttpMethod.POST, "/alert").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Alert.class));
+      router.route(HttpMethod.POST, "/renewal").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Renewal.class));
       router.route(HttpMethod.POST, "/source").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Source.class));
       router.route(HttpMethod.POST, "/reporting_code").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.ReportingCode.class));
-      router.route(HttpMethod.POST, "/renewal").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Renewal.class));
+      router.route(HttpMethod.POST, "/vendor_detail").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.VendorDetail.class));
+      router.route(HttpMethod.POST, "/orders-storage/fund_distributions").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.FundDistribution.class));
 
       router.route(HttpMethod.GET, "/purchase_order/:id").handler(this::handleGetPurchaseOrderById);
       router.route(HttpMethod.GET, "/po_line").handler(this::handleGetPoLines);
@@ -1240,7 +1241,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, "/claim/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/details/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/eresource/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/fund_distribution/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, "/orders-storage/fund_distributions/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/location/:id").handler(this::handleGetLocation);
       router.route(HttpMethod.GET, "/physical/:id").handler(this::handleGetGenericSubObj);
       router.route(HttpMethod.GET, "/renewal/:id").handler(this::handleGetGenericSubObj);
@@ -1262,7 +1263,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.DELETE, "/vendor_detail/:id").handler(this::handleDeleteGenericSubObj);
       router.route(HttpMethod.DELETE, "/alert/:id").handler(this::handleDeleteGenericSubObj);
       router.route(HttpMethod.DELETE, "/claim/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/fund_distribution/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.DELETE, "/orders-storage/fund_distributions/:id").handler(this::handleDeleteGenericSubObj);
       router.route(HttpMethod.DELETE, "/reporting_code/:id").handler(this::handleDeleteGenericSubObj);
 
       router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
