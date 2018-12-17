@@ -122,7 +122,9 @@
         "id": "5ee243f9-72e5-4464-bdbc-43a21873d648",
         "material_supplier": "",
         "receipt_due": "2018-09-29T00:00:00.000Z",
-        "volumes": 1,
+        "volumes": [
+          "vol. 1"
+        ],
         "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
       "po_line_description": "",
@@ -250,7 +252,9 @@
         "id": "5ee243f9-72e5-4464-bd6c-43a21873d648",
         "material_supplier": "",
         "receipt_due": "2018-09-29T00:00:00.000Z",
-        "volumes": 1,
+        "volumes": [
+          "vol. 1"
+        ],
         "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
       "po_line_description": "",
@@ -378,7 +382,9 @@
         "id": "5ee243f9-72e5-b464-bdbc-43a21873d648",
         "material_supplier": "",
         "receipt_due": "2018-09-29T00:00:00.000Z",
-        "volumes": 1,
+        "volumes": [
+          "vol. 1"
+        ],
         "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
       "po_line_description": "",

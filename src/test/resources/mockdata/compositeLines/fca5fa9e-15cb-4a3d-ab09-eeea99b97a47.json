@@ -96,7 +96,9 @@
     "id": "2f8ad479-1137-45d8-aee8-4b79e9a8e7ff",
     "material_supplier": "1c9a6406-dc14-46cc-8777-5199d791c21f",
     "receipt_due": "2018-09-29T00:00:00.000Z",
-    "volumes": 1,
+    "volumes": [
+      "vol. 1"
+    ],
     "po_line_id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47"
   },
   "po_line_description": "",
