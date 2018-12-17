@@ -32,7 +32,6 @@ import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 
 public class PostOrdersHelper {
 
-
   private static final Logger logger = LoggerFactory.getLogger(PostOrdersHelper.class);
 
   // epoch time @ 9/1/2018.

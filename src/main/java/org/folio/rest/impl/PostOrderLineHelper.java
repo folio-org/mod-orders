@@ -8,21 +8,8 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.Adjustment;
-import org.folio.rest.jaxrs.model.Alert;
-import org.folio.rest.jaxrs.model.Claim;
-import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.Details;
-import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Physical;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.Renewal;
-import org.folio.rest.jaxrs.model.ReportingCode;
-import org.folio.rest.jaxrs.model.Source;
-import org.folio.rest.jaxrs.model.VendorDetail;
 import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -33,21 +20,10 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import static org.folio.orders.utils.HelperUtils.ADJUSTMENT;
-import static org.folio.orders.utils.HelperUtils.ALERTS;
-import static org.folio.orders.utils.HelperUtils.CLAIMS;
-import static org.folio.orders.utils.HelperUtils.COST;
-import static org.folio.orders.utils.HelperUtils.DETAILS;
-import static org.folio.orders.utils.HelperUtils.ERESOURCE;
-import static org.folio.orders.utils.HelperUtils.LOCATION;
-import static org.folio.orders.utils.HelperUtils.PHYSICAL;
-import static org.folio.orders.utils.HelperUtils.PO_LINES;
-import static org.folio.orders.utils.HelperUtils.RENEWAL;
-import static org.folio.orders.utils.HelperUtils.REPORTING_CODES;
-import static org.folio.orders.utils.HelperUtils.SOURCE;
-import static org.folio.orders.utils.HelperUtils.VENDOR_DETAIL;
+import static org.folio.orders.utils.HelperUtils.*;
+import static org.folio.orders.utils.HelperUtils.FUND_DISTRIBUTION;
 
-public class PostOrderLineHelper extends AbstractOrderLineHelper {
+public class PostOrderLineHelper extends AbstractOrderLineHelper  {
 
   private static final Map<String,String> subObjectApisPost = HelperUtils.getSubObjectapisForPost();
 
@@ -62,10 +38,6 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper {
     JsonObject line = JsonObject.mapFrom(compPOL);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
 
-    //TODO handle fund_distribution
-    line.remove("fund_distribution");
-    line.remove("license");
-
     subObjFuts.add(createAdjustment(compPOL, line, compPOL.getAdjustment()));
     subObjFuts.add(createCost(compPOL, line, compPOL.getCost()));
     subObjFuts.add(createDetails(compPOL, line, compPOL.getDetails()));
@@ -78,6 +50,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper {
     subObjFuts.add(createSource(compPOL, line, compPOL.getSource()));
     subObjFuts.add(createRenewal(compPOL, line, compPOL.getRenewal()));
     subObjFuts.add(createReportingCodes(compPOL, line, compPOL.getReportingCodes()));
+    subObjFuts.add(createFundDistribution(compPOL, line, compPOL.getFundDistribution()));
 
     CompletableFuture.allOf(subObjFuts.toArray(new CompletableFuture[subObjFuts.size()]))
       .thenAccept(v -> {
@@ -379,6 +352,36 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper {
 
     return future;
   }
+
+  private CompletableFuture<Void> createFundDistribution(PoLine compPOL, JsonObject line, List<FundDistribution> fundDistribution) {
+
+    List<String> fundDistributionIds = new ArrayList<>();
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    if (null != fundDistribution)
+      fundDistribution
+        .forEach(fundObject ->
+          futures.add(createSubObjIfPresent(line, fundObject, FUND_DISTRIBUTION,
+            subObjectApisPost.get(FUND_DISTRIBUTION))
+            .thenAccept(id -> {
+              if (id != null) {
+                fundObject.setId(id);
+                fundDistributionIds.add(id);
+              }
+            }))
+        );
+
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+      .thenAccept(t -> {
+        line.put(FUND_DISTRIBUTION, fundDistributionIds);
+        compPOL.setFundDistribution(fundDistribution);
+      })
+      .exceptionally(t -> {
+        logger.error("failed to create FundDistribution", t);
+        throw new CompletionException(t.getCause());
+      });
+
+  }
+
 
   @Override
   Response buildErrorResponse(int code, String message) {

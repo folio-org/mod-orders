@@ -63,7 +63,8 @@
             "physical.item.post",
             "renewal.item.post",
             "vendor_detail.item.post",
-            "configuration.entries.collection.get"
+            "configuration.entries.collection.get",
+            "orders-storage.fund-distribution.item.post"
           ]
         },
         {
@@ -80,7 +81,8 @@
             "eresource.item.get",
             "physical.item.get",
             "renewal.item.get",
-            "vendor_detail.item.get"
+            "vendor_detail.item.get",
+            "orders-storage.fund-distribution.item.get"
           ]
         },
         {
@@ -106,7 +108,9 @@
             "renewal.item.delete",
             "renewal.item.post",
             "vendor_detail.item.delete",
-            "vendor_detail.item.post"
+            "vendor_detail.item.post",
+            "orders-storage.fund-distribution.item.post",
+            "orders-storage.fund-distribution.item.delete"
           ]
         },
         {
@@ -123,7 +127,8 @@
             "eresource.item.delete",
             "physical.item.delete",
             "renewal.item.delete",
-            "vendor_detail.item.delete"
+            "vendor_detail.item.delete",
+            "orders-storage.fund-distribution.item.delete"
           ]
         }
       ]
@@ -159,7 +164,7 @@
       "version": "1.0"
     },
     {
-      "id": "fund_distribution",
+      "id": "orders-storage.fund-distribution",
       "version": "1.0"
     },
     {
