@@ -28,6 +28,9 @@ public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
   public void updateOrder(String orderId, String lang, PoLine compOrderLine) {
     getPoLineByIdAndValidate(orderId, compOrderLine.getId(), lang)
       .thenCompose(lineFromStorage -> {
+        org.folio.rest.acq.model.PoLine existedPoLine = lineFromStorage.mapTo(org.folio.rest.acq.model.PoLine.class);
+        compOrderLine.setCreatedBy(existedPoLine.getCreatedBy());
+        compOrderLine.setCreated(existedPoLine.getCreated());
         logger.debug("Deleting PO line...");
         return deletePoLine(lineFromStorage, httpClient, ctx, okapiHeaders, logger);
       })
