@@ -226,7 +226,11 @@ public class HelperUtils {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     ((List<?>) pol.remove(field))
       .forEach(fieldId -> futures.add(operateOnSubObj(operation, itemPath(field) + fieldId, httpClient, ctx, okapiHeaders, logger)
-                .thenAccept(array::add)));
+                .thenAccept(value -> {
+                  if (value != null && !value.isEmpty()) {
+                    array.add(value);
+                  }
+                })));
     pol.put(field, array);
     return futures;
   }
