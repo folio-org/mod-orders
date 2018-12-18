@@ -20,12 +20,10 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import static org.folio.orders.utils.HelperUtils.*;
-import static org.folio.orders.utils.HelperUtils.FUND_DISTRIBUTION;
+import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
+import static org.folio.orders.utils.SubObjects.*;
 
 public class PostOrderLineHelper extends AbstractOrderLineHelper  {
-
-  private static final Map<String,String> subObjectApisPost = HelperUtils.getSubObjectapisForPost();
 
   PostOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx);
@@ -56,7 +54,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
       .thenAccept(v -> {
         try {
           Buffer polBuf = JsonObject.mapFrom(line).toBuffer();
-          httpClient.request(HttpMethod.POST, polBuf, subObjectApisPost.get(PO_LINES), okapiHeaders)
+          httpClient.request(HttpMethod.POST, polBuf, collectionPath(PO_LINES), okapiHeaders)
             .thenApply(HelperUtils::verifyAndExtractBody)
             .thenAccept(body -> {
               logger.info("response from /po_line: " + body.encodePrettily());
@@ -84,7 +82,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
 
   private CompletableFuture<Void> createAdjustment(PoLine compPOL, JsonObject line, Adjustment adjustment) {
     return createSubObjIfPresent(line, adjustment,
-      ADJUSTMENT, subObjectApisPost.get(ADJUSTMENT))
+      ADJUSTMENT, collectionPath(ADJUSTMENT))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(ADJUSTMENT);
@@ -102,7 +100,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
 
   private CompletableFuture<Void> createCost(PoLine compPOL, JsonObject line, Cost cost) {
     return createSubObjIfPresent(line, cost,
-      COST, subObjectApisPost.get(COST))
+      COST, collectionPath(COST))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(COST);
@@ -118,7 +116,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
   }
 
   private CompletableFuture<Void> createDetails(PoLine compPOL, JsonObject line, Details details) {
-    return createSubObjIfPresent(line, details, DETAILS, subObjectApisPost.get(DETAILS))
+    return createSubObjIfPresent(line, details, DETAILS, collectionPath(DETAILS))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(DETAILS);
@@ -134,7 +132,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
   }
 
   private CompletableFuture<Void> createEresource(PoLine compPOL, JsonObject line, Eresource eresource) {
-    return createSubObjIfPresent(line, eresource, ERESOURCE, subObjectApisPost.get(ERESOURCE))
+    return createSubObjIfPresent(line, eresource, ERESOURCE, collectionPath(ERESOURCE))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(ERESOURCE);
@@ -150,7 +148,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
   }
 
   private CompletableFuture<Void> createLocation(PoLine compPOL, JsonObject line, Location location) {
-    return createSubObjIfPresent(line, location, LOCATION, subObjectApisPost.get(LOCATION))
+    return createSubObjIfPresent(line, location, LOCATION, collectionPath(LOCATION))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(LOCATION);
@@ -166,7 +164,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
   }
 
   private CompletableFuture<Void> createPhysical(PoLine compPOL, JsonObject line, Physical physical) {
-    return createSubObjIfPresent(line, physical, PHYSICAL, subObjectApisPost.get(PHYSICAL))
+    return createSubObjIfPresent(line, physical, PHYSICAL, collectionPath(PHYSICAL))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(PHYSICAL);
@@ -182,7 +180,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
   }
 
   private CompletableFuture<Void> createVendorDetail(PoLine compPOL, JsonObject line, VendorDetail vendor) {
-    return createSubObjIfPresent(line, vendor, VENDOR_DETAIL, subObjectApisPost.get(VENDOR_DETAIL))
+    return createSubObjIfPresent(line, vendor, VENDOR_DETAIL, collectionPath(VENDOR_DETAIL))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(VENDOR_DETAIL);
@@ -206,7 +204,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
       reportingCodes
         .forEach(reportingObject ->
           futures.add(createSubObjIfPresent(line, reportingObject,
-            REPORTING_CODES, subObjectApisPost.get(REPORTING_CODES))
+            REPORTING_CODES, collectionPath(REPORTING_CODES))
             .thenAccept(id -> {
               if (id != null) {
                 reportingObject.setId(id);
@@ -228,7 +226,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
   }
 
   private CompletableFuture<Void> createRenewal(PoLine compPOL, JsonObject line, Renewal renewal) {
-    return createSubObjIfPresent(line, renewal, RENEWAL, subObjectApisPost.get(RENEWAL))
+    return createSubObjIfPresent(line, renewal, RENEWAL, collectionPath(RENEWAL))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(RENEWAL);
@@ -244,7 +242,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
   }
 
   private CompletableFuture<Void> createSource(PoLine compPOL, JsonObject line, Source source) {
-    return createSubObjIfPresent(line, source, SOURCE, subObjectApisPost.get(SOURCE))
+    return createSubObjIfPresent(line, source, SOURCE, collectionPath(SOURCE))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(SOURCE);
@@ -266,8 +264,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
     if(null!=claims)
       claims
         .forEach(claimObject ->
-          futures.add(createSubObjIfPresent(line, claimObject, CLAIMS,
-            subObjectApisPost.get(CLAIMS))
+          futures.add(createSubObjIfPresent(line, claimObject, CLAIMS, collectionPath(CLAIMS))
             .thenAccept(id -> {
               if (id != null) {
                 claimObject.setId(id);
@@ -296,8 +293,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     if(null!=alerts)
       alerts.forEach(alertObject ->
-        futures.add(createSubObjIfPresent(line, alertObject, ALERTS,
-          subObjectApisPost.get(ALERTS))
+        futures.add(createSubObjIfPresent(line, alertObject, ALERTS, collectionPath(ALERTS))
           .thenAccept(id -> {
             if (id != null) {
               alertObject.setId(id);
@@ -306,7 +302,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
           }))
       );
 
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
       .thenAccept(t -> {
         line.put(ALERTS, alertIds);
         compPOL.setAlerts(alerts);
@@ -333,9 +329,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
 
     try {
-      logger.debug("Calling POST {}", url);
-      httpClient.request(HttpMethod.POST, obj.toBuffer(), url, okapiHeaders)
-        .thenApply(HelperUtils::verifyAndExtractBody)
+      operateOnSubObj(HttpMethod.POST, url, obj, httpClient, ctx, okapiHeaders, logger)
         .thenAccept(body -> {
           String id = JsonObject.mapFrom(body).getString("id");
           pol.put(field, id);
@@ -360,8 +354,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
     if (null != fundDistribution)
       fundDistribution
         .forEach(fundObject ->
-          futures.add(createSubObjIfPresent(line, fundObject, FUND_DISTRIBUTION,
-            subObjectApisPost.get(FUND_DISTRIBUTION))
+          futures.add(createSubObjIfPresent(line, fundObject, FUND_DISTRIBUTION, collectionPath(FUND_DISTRIBUTION))
             .thenAccept(id -> {
               if (id != null) {
                 fundObject.setId(id);

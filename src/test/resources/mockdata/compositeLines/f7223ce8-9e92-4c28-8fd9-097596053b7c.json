@@ -1,0 +1,148 @@
+{
+  "id" : "f7223ce8-9e92-4c28-8fd9-097596053b7c",
+  "acquisition_method" : "Purchase At Vendor System",
+  "adjustment" : {
+    "id" : "74eabc72-024b-4477-9d43-edd8f7a4223b",
+    "credit" : 0.0,
+    "discount" : 0.0,
+    "insurance" : 0.0,
+    "invoice_id" : "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
+    "overhead" : 0.0,
+    "shipment" : 0.0,
+    "tax_1" : 0.0,
+    "tax_2" : 0.0,
+    "use_pro_rate" : false,
+    "po_line_id" : "f7223ce8-9e92-4c28-8fd9-097596053b7c"
+  },
+  "alerts" : [ {
+    "id" : "66552699-62eb-45e4-8dfa-4f048645156b",
+    "alert" : "Receipt overdue sed do eiusmod tempor",
+    "po_line_id" : "f7223ce8-9e92-4c28-8fd9-097596053b7c"
+  } ],
+  "cancellation_restriction" : false,
+  "cancellation_restriction_note" : "Incididunt ut labore et dolore magna aliqua",
+  "claims" : [ {
+    "id" : "87c5073d-8d89-4a10-9b9e-0b21fe3b7a88",
+    "claimed" : false,
+    "sent" : "2018-10-09T00:00:00.000+0000",
+    "grace" : 30,
+    "po_line_id" : "f7223ce8-9e92-4c28-8fd9-097596053b7c"
+  } ],
+  "collection" : false,
+  "contributors" : [ {
+    "contributor" : "Ut enim ad minim veniam",
+    "contributor_type" : "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+  } ],
+  "cost" : {
+    "id" : "2a2f5ad6-2ea6-48c2-9bc0-2c03af8ba86c",
+    "list_price" : 24.99,
+    "currency" : "USD",
+    "quantity_physical" : 1,
+    "quantity_electronic" : 1,
+    "po_line_estimated_price" : 49.98,
+    "po_line_id" : "f7223ce8-9e92-4c28-8fd9-097596053b7c"
+  },
+  "description" : "Quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat",
+  "details" : {
+    "id" : "a9a70372-c451-401f-a0f0-266a60381514",
+    "receiving_note" : "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur",
+    "product_ids" : [ {
+      "product_id" : "9780764354113",
+      "product_id_type" : "ISBN"
+    } ],
+    "material_types" : [ "f7e72403-2a13-43a4-a069-aaabe6c9dea8" ],
+    "subscription_from" : "2018-10-09T00:00:00.000+0000",
+    "subscription_interval" : 824,
+    "subscription_to" : "2020-10-09T00:00:00.000+0000",
+    "po_line_id" : "f7223ce8-9e92-4c28-8fd9-097596053b7c"
+  },
+  "donor" : "Some text goes here",
+  "eresource" : {
+    "id" : "9934f55c-0ecd-4134-a819-aa7d8ca7877d",
+    "activated" : false,
+    "activation_due" : 10,
+    "create_inventory" : true,
+    "trial" : false,
+    "expected_activation" : "2018-10-09T00:00:00.000+0000",
+    "user_limit" : 10,
+    "access_provider" : "ba3f3d45-247d-41f6-8dc9-6488adcad329",
+    "po_line_id" : "f7223ce8-9e92-4c28-8fd9-097596053b7c",
+    "license" : "7c063655-b384-4a6f-b367-3c2f95f7a49c"
+  },
+  "fund_distribution": [
+    {
+      "id": "8e5c3491-5d1b-4734-9a41-0ec441ff96fe",
+      "code": "HIST",
+      "percentage": 80.0,
+      "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3",
+      "po_line_id": "f7223ce8-9e92-4c28-8fd9-097596053b7c"
+    }
+  ],
+  "location" : {
+    "id" : "b9f0b58e-56bc-41d5-a3be-1bb349b85c68",
+    "location_id" : "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+    "po_line_id" : "f7223ce8-9e92-4c28-8fd9-097596053b7c",
+    "quantity" : 2,
+    "quantity_electronic" : 1,
+    "quantity_physical" : 1
+  },
+  "order_format" : "Physical Resource",
+  "owner" : "The owber is not difined",
+  "payment_status" : "Awaiting Payment",
+  "physical" : {
+    "id" : "604c4928-b06f-4dfa-888e-53f0487bb5e5",
+    "material_supplier" : "36dd6d62-c55e-4b19-a3a0-a870da57610a",
+    "receipt_due" : "2019-10-10T00:00:00.000+0000",
+    "volumes" : [ "vol.1", "vol.2", "vol.4" ],
+    "po_line_id" : "f7223ce8-9e92-4c28-8fd9-097596053b7c"
+  },
+  "po_line_description" : "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+  "po_line_number" : "22CE2F0035E-1",
+  "po_line_workflow_status" : "Open",
+  "publication_date" : "2017",
+  "publisher" : "Schiffer Publishing",
+  "purchase_order_id" : "82db020c-2b1a-4f89-b40f-76f7b3cd01a1",
+  "receipt_date" : "2018-10-09T00:00:00.000+0000",
+  "receipt_status" : "Awaiting Receipt",
+  "renewal" : {
+    "id" : "e5c457d4-37c7-4e42-854d-60b1098c23f4",
+    "cycle" : "6 Months",
+    "interval" : 182,
+    "manual_renewal" : true,
+    "review_period" : 30,
+    "renewal_date" : "2019-04-09T00:00:00.000+0000",
+    "po_line_id" : "f7223ce8-9e92-4c28-8fd9-097596053b7c"
+  },
+  "reporting_codes" : [ {
+    "id" : "c2a02856-b8ba-49f6-a9ff-84d1228e76e6",
+    "code" : "CODE2",
+    "description" : "We all love reporting"
+  }, {
+    "id" : "0378b8f1-a4d7-4a24-983a-084321d2ee25",
+    "code" : "CODE3",
+    "description" : "Reporting for publisher"
+  }, {
+    "id" : "340bb284-8141-48eb-8553-7e923faab55f",
+    "code" : "CODE1",
+    "description" : "Report"
+  } ],
+  "requester" : "Leo Bulero",
+  "rush" : true,
+  "selector" : "Leo Vit",
+  "source" : {
+    "id" : "9a2b8dc6-4fe9-463e-8ed8-165aa0dbc6ba",
+    "code" : "SOURCE325",
+    "description" : "Source is unknown"
+  },
+  "tags" : [ "First", "Second", "Alternative", "Unknown" ],
+  "title" : "Excepteur sint occaecat cupidatat non proident",
+  "vendor_detail" : {
+    "id" : "051f3de2-547c-415b-97a9-ed6b13af14e7",
+    "instructions" : "ABCDEFG",
+    "note_from_vendor" : "Sunt in culpa qui officia deserunt mollit anim id est laborum",
+    "ref_number" : "123456-78",
+    "ref_number_type" : "Supplier's unique order line reference number",
+    "vendor_account" : "8910-10",
+    "po_line_id" : "f7223ce8-9e92-4c28-8fd9-097596053b7c"
+  }
+}
