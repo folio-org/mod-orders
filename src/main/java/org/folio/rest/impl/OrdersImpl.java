@@ -231,8 +231,8 @@ public class OrdersImpl implements Orders {
 
   private static int getPoLineLimit(JsonObject config) {
     try {
-      return config.getInteger(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT);
-    } catch (ClassCastException e) {
+      return Integer.parseInt(config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));
+    } catch (NumberFormatException e) {
       throw new CompletionException("Invalid limit value in configuration.", e);
     }
   }

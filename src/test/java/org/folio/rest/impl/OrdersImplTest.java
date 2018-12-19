@@ -1575,7 +1575,7 @@ public class OrdersImplTest {
             .put("first", 0)
             .put("last", lines.size());
           if (EMPTY_CONFIG_TENANT.equals(tenant)) {
-            po_lines.put("total_records", DEFAULT_POLINE_LIMIT);
+            po_lines.put("total_records", Integer.parseInt(DEFAULT_POLINE_LIMIT));
           } else {
             po_lines.put("total_records", lines.size());
           }
