@@ -1,6 +1,5 @@
 package org.folio.rest.impl;
 
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -25,10 +24,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static org.folio.orders.utils.HelperUtils.ADJUSTMENT;
-import static org.folio.orders.utils.HelperUtils.PO_LINES;
+import static org.folio.orders.utils.SubObjects.ADJUSTMENT;
+import static org.folio.orders.utils.SubObjects.PO_LINES;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
-
 
 public class PostOrdersHelper {
 
@@ -42,7 +40,6 @@ public class PostOrdersHelper {
   private final Context ctx;
   private final Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler;
   private final Map<String, String> okapiHeaders;
-
 
   public PostOrdersHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx) {
@@ -90,7 +87,7 @@ public class PostOrdersHelper {
               .createPoLine(compPOL).thenAccept(lines::add));
           }
 
-          VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[futures.size()]))
+          VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]))
             .thenAccept(v -> {
               compPO.setPoLines(lines);
               compPO.setAdjustment(HelperUtils.calculateAdjustment(lines));
@@ -136,9 +133,6 @@ public class PostOrdersHelper {
       switch (code) {
       case 400:
         result = Future.succeededFuture(PostOrdersResponse.respond400WithTextPlain(message));
-        break;
-      case 500:
-        result = Future.succeededFuture(PostOrdersResponse.respond500WithTextPlain(message));
         break;
       case 401:
         result = Future.succeededFuture(PostOrdersResponse.respond401WithTextPlain(message));

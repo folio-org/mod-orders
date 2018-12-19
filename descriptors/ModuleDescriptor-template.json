@@ -13,10 +13,18 @@
           "modulePermissions": [
             "purchase_order.item.post",
             "po_line.item.post",
+            "adjustment.item.post",
+            "alert.item.post",
+            "claim.item.post",
             "cost.item.post",
             "details.item.post",
             "eresource.item.post",
+            "orders-storage.fund-distribution.item.post",
             "location.item.post",
+            "physical.item.post",
+            "renewal.item.post",
+            "reporting_code.item.post",
+            "source.item.post",
             "vendor_detail.item.post",
             "configuration.entries.collection.get"
           ]
@@ -27,7 +35,20 @@
           "permissionsRequired": ["orders.item.get"],
           "modulePermissions": [
             "purchase_order.item.get",
-            "po_line.item.get"
+            "po_line.item.get",
+            "adjustment.item.get",
+            "alert.item.get",
+            "claim.item.get",
+            "cost.item.get",
+            "details.item.get",
+            "eresource.item.get",
+            "orders-storage.fund-distribution.item.get",
+            "location.item.get",
+            "physical.item.get",
+            "renewal.item.get",
+            "reporting_code.item.get",
+            "source.item.get",
+            "vendor_detail.item.get"
           ]
         },
         {
@@ -36,7 +57,48 @@
           "permissionsRequired": ["orders.item.put"],
           "modulePermissions": [
             "purchase_order.item.put",
-            "po_line.item.put"
+            "po_line.item.put",
+            "po_line.item.post",
+            "po_line.item.delete",
+            "adjustment.item.put",
+            "adjustment.item.post",
+            "adjustment.item.delete",
+            "alert.item.put",
+            "alert.item.post",
+            "alert.item.delete",
+            "claim.item.put",
+            "claim.item.post",
+            "claim.item.delete",
+            "cost.item.put",
+            "cost.item.post",
+            "cost.item.delete",
+            "details.item.put",
+            "details.item.post",
+            "details.item.delete",
+            "eresource.item.put",
+            "eresource.item.post",
+            "eresource.item.delete",
+            "orders-storage.fund-distribution.item.put",
+            "orders-storage.fund-distribution.item.post",
+            "orders-storage.fund-distribution.item.delete",
+            "location.item.put",
+            "location.item.post",
+            "location.item.delete",
+            "physical.item.put",
+            "physical.item.post",
+            "physical.item.delete",
+            "renewal.item.put",
+            "renewal.item.post",
+            "renewal.item.delete",
+            "reporting_code.item.put",
+            "reporting_code.item.post",
+            "reporting_code.item.delete",
+            "source.item.put",
+            "source.item.post",
+            "source.item.delete",
+            "vendor_detail.item.put",
+            "vendor_detail.item.post",
+            "vendor_detail.item.delete"
           ]
         },
         {
@@ -45,7 +107,20 @@
           "permissionsRequired": ["orders.item.delete"],
           "modulePermissions": [
             "purchase_order.item.delete",
-            "po_line.item.delete"
+            "po_line.item.delete",
+            "adjustment.item.delete",
+            "alert.item.delete",
+            "claim.item.delete",
+            "cost.item.delete",
+            "details.item.delete",
+            "eresource.item.delete",
+            "orders-storage.fund-distribution.item.delete",
+            "location.item.delete",
+            "physical.item.delete",
+            "renewal.item.delete",
+            "reporting_code.item.delete",
+            "source.item.delete",
+            "vendor_detail.item.delete"
           ]
         },
         {
@@ -60,11 +135,14 @@
             "cost.item.post",
             "details.item.post",
             "eresource.item.post",
+            "orders-storage.fund-distribution.item.post",
+            "location.item.post",
             "physical.item.post",
             "renewal.item.post",
+            "reporting_code.item.post",
+            "source.item.post",
             "vendor_detail.item.post",
-            "configuration.entries.collection.get",
-            "orders-storage.fund-distribution.item.post"
+            "configuration.entries.collection.get"
           ]
         },
         {
@@ -79,10 +157,13 @@
             "cost.item.get",
             "details.item.get",
             "eresource.item.get",
+            "orders-storage.fund-distribution.item.get",
+            "location.item.get",
             "physical.item.get",
             "renewal.item.get",
-            "vendor_detail.item.get",
-            "orders-storage.fund-distribution.item.get"
+            "reporting_code.item.get",
+            "source.item.get",
+            "vendor_detail.item.get"
           ]
         },
         {
@@ -90,27 +171,46 @@
           "pathPattern": "/orders/{id}/lines/{lineId}",
           "permissionsRequired": ["orders.po_line.item.put"],
           "modulePermissions": [
-            "po_line.item.delete",
-            "po_line.item.post",
-            "adjustment.item.delete",
+            "po_line.item.put",
+            "adjustment.item.put",
             "adjustment.item.post",
+            "adjustment.item.delete",
+            "alert.item.put",
+            "alert.item.post",
             "alert.item.delete",
-            "alert.item.delete",
+            "claim.item.put",
             "claim.item.post",
-            "cost.item.delete",
+            "claim.item.delete",
+            "cost.item.put",
             "cost.item.post",
-            "details.item.delete",
+            "cost.item.delete",
+            "details.item.put",
             "details.item.post",
-            "eresource.item.delete",
+            "details.item.delete",
+            "eresource.item.put",
             "eresource.item.post",
-            "physical.item.delete",
-            "physical.item.post",
-            "renewal.item.delete",
-            "renewal.item.post",
-            "vendor_detail.item.delete",
-            "vendor_detail.item.post",
+            "eresource.item.delete",
+            "orders-storage.fund-distribution.item.put",
             "orders-storage.fund-distribution.item.post",
-            "orders-storage.fund-distribution.item.delete"
+            "orders-storage.fund-distribution.item.delete",
+            "location.item.put",
+            "location.item.post",
+            "location.item.delete",
+            "physical.item.put",
+            "physical.item.post",
+            "physical.item.delete",
+            "renewal.item.put",
+            "renewal.item.post",
+            "renewal.item.delete",
+            "reporting_code.item.put",
+            "reporting_code.item.post",
+            "reporting_code.item.delete",
+            "source.item.put",
+            "source.item.post",
+            "source.item.delete",
+            "vendor_detail.item.put",
+            "vendor_detail.item.post",
+            "vendor_detail.item.delete"
           ]
         },
         {
@@ -125,10 +225,13 @@
             "cost.item.delete",
             "details.item.delete",
             "eresource.item.delete",
+            "orders-storage.fund-distribution.item.delete",
+            "location.item.delete",
             "physical.item.delete",
             "renewal.item.delete",
-            "vendor_detail.item.delete",
-            "orders-storage.fund-distribution.item.delete"
+            "reporting_code.item.delete",
+            "source.item.delete",
+            "vendor_detail.item.delete"
           ]
         }
       ]

@@ -10,6 +10,8 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import javax.ws.rs.core.Response;
@@ -89,6 +91,13 @@ abstract class AbstractOrderLineHelper {
     asyncResultHandler.handle(result);
 
     return null;
+  }
+
+  protected Errors withErrors(String message) {
+    Errors errors = new Errors();
+    errors.getErrors()
+          .add(new Error().withMessage(message));
+    return errors;
   }
 
   abstract Response buildErrorResponse(int code, String message);
