@@ -54,15 +54,15 @@ public class SubObjects {
     );
   }
 
-  public static String collectionPath(String field) {
+  public static String resourcesPath(String field) {
     return SUB_OBJECT_COLLECTION_APIS.get(field);
   }
 
-  public static String itemPath(String field) {
+  public static String resourceByIdPath(String field) {
     return SUB_OBJECT_ITEM_APIS.get(field);
   }
 
-  public static String itemPath(String field, String id) {
+  public static String resourceByIdPath(String field, String id) {
     return SUB_OBJECT_ITEM_APIS.get(field) + id;
   }
 }

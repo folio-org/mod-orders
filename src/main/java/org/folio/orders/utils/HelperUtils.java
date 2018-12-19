@@ -53,21 +53,6 @@ public class HelperUtils {
     return response.getBody();
   }
 
-  /**
-   * If response http code is {@code 404}, empty {@link JsonObject} is returned. Otherwise verifies if response is successful and extracts body
-   * In case there was failed attempt to delete PO or particular PO line, the sub-objects might be already partially deleted.
-   * This check allows user to retrieve order/line again and retry DELETE operation if required
-   *
-   * @param response response to verify
-   * @return empty {@link JsonObject} if response http code is {@code 404}, otherwise calls {@link #verifyAndExtractBody(Response)}
-   */
-  private static JsonObject verifyAndExtractBody(HttpMethod operation, Response response) {
-    if (response.getCode() == 404 && operation == HttpMethod.GET) {
-      return new JsonObject();
-    }
-    return verifyAndExtractBody(response);
-  }
-
   public static Adjustment calculateAdjustment(List<PoLine> lines) {
     Adjustment ret = null;
     for (PoLine line : lines) {
@@ -120,7 +105,7 @@ public class HelperUtils {
    */
   public static CompletableFuture<JsonObject> getPoLineById(String lineId, String lang, HttpClientInterface httpClient, Context ctx,
                                                             Map<String, String> okapiHeaders, Logger logger) {
-    String endpoint = String.format(URL_WITH_LANG_PARAM, itemPath(PO_LINES, lineId), lang);
+    String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES, lineId), lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
   }
 
@@ -149,7 +134,7 @@ public class HelperUtils {
     return operateOnPoLine(HttpMethod.DELETE, line, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(poline -> {
         String polineId = poline.getId();
-        return operateOnSubObj(HttpMethod.DELETE, itemPath(PO_LINES, polineId), httpClient, ctx, okapiHeaders, logger);
+        return operateOnSubObj(HttpMethod.DELETE, resourceByIdPath(PO_LINES, polineId), httpClient, ctx, okapiHeaders, logger);
       });
   }
 
@@ -225,7 +210,7 @@ public class HelperUtils {
     JsonArray array = new JsonArray();
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     ((List<?>) pol.remove(field))
-      .forEach(fieldId -> futures.add(operateOnSubObj(operation, itemPath(field) + fieldId, httpClient, ctx, okapiHeaders, logger)
+      .forEach(fieldId -> futures.add(operateOnSubObj(operation, resourceByIdPath(field) + fieldId, httpClient, ctx, okapiHeaders, logger)
                 .thenAccept(value -> {
                   if (value != null && !value.isEmpty()) {
                     array.add(value);
@@ -239,7 +224,7 @@ public class HelperUtils {
                                                                   Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     String id = (String) pol.remove(field);
     if (id != null) {
-      return operateOnSubObj(operation, itemPath(field, id), httpClient, ctx, okapiHeaders, logger)
+      return operateOnSubObj(operation, resourceByIdPath(field, id), httpClient, ctx, okapiHeaders, logger)
         .thenAccept(json -> {
           if (json != null) {
             if (!json.isEmpty()) {
@@ -266,13 +251,24 @@ public class HelperUtils {
 
     try {
       httpClient.request(operation, (body != null ? body.toBuffer() : null), url, okapiHeaders)
-        // In case there was failed attempt to delete order or particular PO line, the sub-objects might be already partially deleted.
-        .thenApply(response -> verifyAndExtractBody(operation, response))
+        .thenApply(response -> {
+          /*
+           * In case there was failed attempt to delete order or particular PO line, the sub-objects might be already partially deleted.
+           * This check allows user to retrieve order/line again and retry DELETE operation if required
+           */
+          int code = response.getCode();
+          if (code == 404 && operation == HttpMethod.GET) {
+            String errorMessage = (response.getError() != null) ? response.getError().getString("errorMessage") : StringUtils.EMPTY;
+            logger.error("The {} {} operation completed with {} error: {}", operation, url, code, errorMessage);
+
+            return new JsonObject();
+          }
+
+          return verifyAndExtractBody(response);
+        })
         .thenAccept(json -> {
           if (json != null) {
-            if (json.isEmpty()) {
-              logger.warn("The {} {} operation completed with empty response body", operation, url);
-            } else if (logger.isInfoEnabled()) {
+            if (!json.isEmpty() && logger.isInfoEnabled()) {
               logger.info("The {} {} operation completed with following response body: {}", operation, url, json.encodePrettily());
             }
             future.complete(json);

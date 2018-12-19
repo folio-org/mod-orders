@@ -1417,76 +1417,76 @@ public class OrdersImplTest {
 
       router.route().handler(BodyHandler.create());
       router.route(HttpMethod.POST, "/purchase_order").handler(this::handlePostPurchaseOrder);
-      router.route(HttpMethod.POST, collectionPath(PO_LINES)).handler(this::handlePostPOLine);
-      router.route(HttpMethod.POST, collectionPath(ADJUSTMENT)).handler(ctx -> handlePostGenericSubObj(ctx, ADJUSTMENT));
-      router.route(HttpMethod.POST, collectionPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
-      router.route(HttpMethod.POST, collectionPath(CLAIMS)).handler(ctx -> handlePostGenericSubObj(ctx, CLAIMS));
-      router.route(HttpMethod.POST, collectionPath(COST)).handler(ctx -> handlePostGenericSubObj(ctx, COST));
-      router.route(HttpMethod.POST, collectionPath(DETAILS)).handler(ctx -> handlePostGenericSubObj(ctx, DETAILS));
-      router.route(HttpMethod.POST, collectionPath(ERESOURCE)).handler(ctx -> handlePostGenericSubObj(ctx, ERESOURCE));
-      router.route(HttpMethod.POST, collectionPath(FUND_DISTRIBUTION)).handler(ctx -> handlePostGenericSubObj(ctx, FUND_DISTRIBUTION));
-      router.route(HttpMethod.POST, collectionPath(LOCATION)).handler(ctx -> handlePostGenericSubObj(ctx, LOCATION));
-      router.route(HttpMethod.POST, collectionPath(PHYSICAL)).handler(ctx -> handlePostGenericSubObj(ctx, PHYSICAL));
-      router.route(HttpMethod.POST, collectionPath(RENEWAL)).handler(ctx -> handlePostGenericSubObj(ctx, RENEWAL));
-      router.route(HttpMethod.POST, collectionPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
-      router.route(HttpMethod.POST, collectionPath(SOURCE)).handler(ctx -> handlePostGenericSubObj(ctx, SOURCE));
-      router.route(HttpMethod.POST, collectionPath(VENDOR_DETAIL)).handler(ctx -> handlePostGenericSubObj(ctx, VENDOR_DETAIL));
+      router.route(HttpMethod.POST, resourcesPath(PO_LINES)).handler(this::handlePostPOLine);
+      router.route(HttpMethod.POST, resourcesPath(ADJUSTMENT)).handler(ctx -> handlePostGenericSubObj(ctx, ADJUSTMENT));
+      router.route(HttpMethod.POST, resourcesPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
+      router.route(HttpMethod.POST, resourcesPath(CLAIMS)).handler(ctx -> handlePostGenericSubObj(ctx, CLAIMS));
+      router.route(HttpMethod.POST, resourcesPath(COST)).handler(ctx -> handlePostGenericSubObj(ctx, COST));
+      router.route(HttpMethod.POST, resourcesPath(DETAILS)).handler(ctx -> handlePostGenericSubObj(ctx, DETAILS));
+      router.route(HttpMethod.POST, resourcesPath(ERESOURCE)).handler(ctx -> handlePostGenericSubObj(ctx, ERESOURCE));
+      router.route(HttpMethod.POST, resourcesPath(FUND_DISTRIBUTION)).handler(ctx -> handlePostGenericSubObj(ctx, FUND_DISTRIBUTION));
+      router.route(HttpMethod.POST, resourcesPath(LOCATION)).handler(ctx -> handlePostGenericSubObj(ctx, LOCATION));
+      router.route(HttpMethod.POST, resourcesPath(PHYSICAL)).handler(ctx -> handlePostGenericSubObj(ctx, PHYSICAL));
+      router.route(HttpMethod.POST, resourcesPath(RENEWAL)).handler(ctx -> handlePostGenericSubObj(ctx, RENEWAL));
+      router.route(HttpMethod.POST, resourcesPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
+      router.route(HttpMethod.POST, resourcesPath(SOURCE)).handler(ctx -> handlePostGenericSubObj(ctx, SOURCE));
+      router.route(HttpMethod.POST, resourcesPath(VENDOR_DETAIL)).handler(ctx -> handlePostGenericSubObj(ctx, VENDOR_DETAIL));
 
       router.route(HttpMethod.GET, "/purchase_order/:id").handler(this::handleGetPurchaseOrderById);
-      router.route(HttpMethod.GET, collectionPath(PO_LINES)).handler(this::handleGetPoLines);
-      router.route(HttpMethod.GET, itemRoute(PO_LINES)).handler(this::handleGetPoLineById);
-      router.route(HttpMethod.GET, itemRoute(ADJUSTMENT)).handler(this::handleGetAdjustment);
-      router.route(HttpMethod.GET, itemRoute(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
-      router.route(HttpMethod.GET, itemRoute(CLAIMS)).handler(ctx -> handleGetGenericSubObj(ctx, CLAIMS));
-      router.route(HttpMethod.GET, itemRoute(COST)).handler(ctx -> handleGetGenericSubObj(ctx, COST));
-      router.route(HttpMethod.GET, itemRoute(DETAILS)).handler(ctx -> handleGetGenericSubObj(ctx, DETAILS));
-      router.route(HttpMethod.GET, itemRoute(ERESOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, ERESOURCE));
-      router.route(HttpMethod.GET, itemRoute(FUND_DISTRIBUTION)).handler(ctx -> handleGetGenericSubObj(ctx, FUND_DISTRIBUTION));
-      router.route(HttpMethod.GET, itemRoute(LOCATION)).handler(this::handleGetLocation);
-      router.route(HttpMethod.GET, itemRoute(PHYSICAL)).handler(ctx -> handleGetGenericSubObj(ctx, PHYSICAL));
-      router.route(HttpMethod.GET, itemRoute(RENEWAL)).handler(ctx -> handleGetGenericSubObj(ctx, RENEWAL));
-      router.route(HttpMethod.GET, itemRoute(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
-      router.route(HttpMethod.GET, itemRoute(SOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, SOURCE));
-      router.route(HttpMethod.GET, itemRoute(VENDOR_DETAIL)).handler(ctx -> handleGetGenericSubObj(ctx, VENDOR_DETAIL));
+      router.route(HttpMethod.GET, resourcesPath(PO_LINES)).handler(this::handleGetPoLines);
+      router.route(HttpMethod.GET, resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
+      router.route(HttpMethod.GET, resourcePath(ADJUSTMENT)).handler(this::handleGetAdjustment);
+      router.route(HttpMethod.GET, resourcePath(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
+      router.route(HttpMethod.GET, resourcePath(CLAIMS)).handler(ctx -> handleGetGenericSubObj(ctx, CLAIMS));
+      router.route(HttpMethod.GET, resourcePath(COST)).handler(ctx -> handleGetGenericSubObj(ctx, COST));
+      router.route(HttpMethod.GET, resourcePath(DETAILS)).handler(ctx -> handleGetGenericSubObj(ctx, DETAILS));
+      router.route(HttpMethod.GET, resourcePath(ERESOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, ERESOURCE));
+      router.route(HttpMethod.GET, resourcePath(FUND_DISTRIBUTION)).handler(ctx -> handleGetGenericSubObj(ctx, FUND_DISTRIBUTION));
+      router.route(HttpMethod.GET, resourcePath(LOCATION)).handler(this::handleGetLocation);
+      router.route(HttpMethod.GET, resourcePath(PHYSICAL)).handler(ctx -> handleGetGenericSubObj(ctx, PHYSICAL));
+      router.route(HttpMethod.GET, resourcePath(RENEWAL)).handler(ctx -> handleGetGenericSubObj(ctx, RENEWAL));
+      router.route(HttpMethod.GET, resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
+      router.route(HttpMethod.GET, resourcePath(SOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, SOURCE));
+      router.route(HttpMethod.GET, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleGetGenericSubObj(ctx, VENDOR_DETAIL));
 
-      router.route(HttpMethod.PUT, itemRoute(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
-      router.route(HttpMethod.PUT, itemRoute(ADJUSTMENT)).handler(ctx -> handlePutGenericSubObj(ctx, ADJUSTMENT));
-      router.route(HttpMethod.PUT, itemRoute(ALERTS)).handler(ctx -> handlePutGenericSubObj(ctx, ALERTS));
-      router.route(HttpMethod.PUT, itemRoute(CLAIMS)).handler(ctx -> handlePutGenericSubObj(ctx, CLAIMS));
-      router.route(HttpMethod.PUT, itemRoute(COST)).handler(ctx -> handlePutGenericSubObj(ctx, COST));
-      router.route(HttpMethod.PUT, itemRoute(DETAILS)).handler(ctx -> handlePutGenericSubObj(ctx, DETAILS));
-      router.route(HttpMethod.PUT, itemRoute(ERESOURCE)).handler(ctx -> handlePutGenericSubObj(ctx, ERESOURCE));
-      router.route(HttpMethod.PUT, itemRoute(FUND_DISTRIBUTION)).handler(ctx -> handlePutGenericSubObj(ctx, FUND_DISTRIBUTION));
-      router.route(HttpMethod.PUT, itemRoute(LOCATION)).handler(ctx -> handlePutGenericSubObj(ctx, LOCATION));
-      router.route(HttpMethod.PUT, itemRoute(PHYSICAL)).handler(ctx -> handlePutGenericSubObj(ctx, PHYSICAL));
-      router.route(HttpMethod.PUT, itemRoute(RENEWAL)).handler(ctx -> handlePutGenericSubObj(ctx, RENEWAL));
-      router.route(HttpMethod.PUT, itemRoute(REPORTING_CODES)).handler(ctx -> handlePutGenericSubObj(ctx, REPORTING_CODES));
-      router.route(HttpMethod.PUT, itemRoute(SOURCE)).handler(ctx -> handlePutGenericSubObj(ctx, SOURCE));
-      router.route(HttpMethod.PUT, itemRoute(VENDOR_DETAIL)).handler(ctx -> handlePutGenericSubObj(ctx, VENDOR_DETAIL));
+      router.route(HttpMethod.PUT, resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
+      router.route(HttpMethod.PUT, resourcePath(ADJUSTMENT)).handler(ctx -> handlePutGenericSubObj(ctx, ADJUSTMENT));
+      router.route(HttpMethod.PUT, resourcePath(ALERTS)).handler(ctx -> handlePutGenericSubObj(ctx, ALERTS));
+      router.route(HttpMethod.PUT, resourcePath(CLAIMS)).handler(ctx -> handlePutGenericSubObj(ctx, CLAIMS));
+      router.route(HttpMethod.PUT, resourcePath(COST)).handler(ctx -> handlePutGenericSubObj(ctx, COST));
+      router.route(HttpMethod.PUT, resourcePath(DETAILS)).handler(ctx -> handlePutGenericSubObj(ctx, DETAILS));
+      router.route(HttpMethod.PUT, resourcePath(ERESOURCE)).handler(ctx -> handlePutGenericSubObj(ctx, ERESOURCE));
+      router.route(HttpMethod.PUT, resourcePath(FUND_DISTRIBUTION)).handler(ctx -> handlePutGenericSubObj(ctx, FUND_DISTRIBUTION));
+      router.route(HttpMethod.PUT, resourcePath(LOCATION)).handler(ctx -> handlePutGenericSubObj(ctx, LOCATION));
+      router.route(HttpMethod.PUT, resourcePath(PHYSICAL)).handler(ctx -> handlePutGenericSubObj(ctx, PHYSICAL));
+      router.route(HttpMethod.PUT, resourcePath(RENEWAL)).handler(ctx -> handlePutGenericSubObj(ctx, RENEWAL));
+      router.route(HttpMethod.PUT, resourcePath(REPORTING_CODES)).handler(ctx -> handlePutGenericSubObj(ctx, REPORTING_CODES));
+      router.route(HttpMethod.PUT, resourcePath(SOURCE)).handler(ctx -> handlePutGenericSubObj(ctx, SOURCE));
+      router.route(HttpMethod.PUT, resourcePath(VENDOR_DETAIL)).handler(ctx -> handlePutGenericSubObj(ctx, VENDOR_DETAIL));
 
       router.route(HttpMethod.DELETE, "/purchase_order/:id").handler(ctx -> handleDeleteGenericSubObj(ctx, "purchase_order"));
-      router.route(HttpMethod.DELETE, itemRoute(PO_LINES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES));
-      router.route(HttpMethod.DELETE, itemRoute(ADJUSTMENT)).handler(ctx -> handleDeleteGenericSubObj(ctx, ADJUSTMENT));
-      router.route(HttpMethod.DELETE, itemRoute(ALERTS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ALERTS));
-      router.route(HttpMethod.DELETE, itemRoute(CLAIMS)).handler(ctx -> handleDeleteGenericSubObj(ctx, CLAIMS));
-      router.route(HttpMethod.DELETE, itemRoute(COST)).handler(ctx -> handleDeleteGenericSubObj(ctx, COST));
-      router.route(HttpMethod.DELETE, itemRoute(DETAILS)).handler(ctx -> handleDeleteGenericSubObj(ctx, DETAILS));
-      router.route(HttpMethod.DELETE, itemRoute(ERESOURCE)).handler(ctx -> handleDeleteGenericSubObj(ctx, ERESOURCE));
-      router.route(HttpMethod.DELETE, itemRoute(LOCATION)).handler(ctx -> handleDeleteGenericSubObj(ctx, LOCATION));
-      router.route(HttpMethod.DELETE, itemRoute(PHYSICAL)).handler(ctx -> handleDeleteGenericSubObj(ctx, PHYSICAL));
-      router.route(HttpMethod.DELETE, itemRoute(RENEWAL)).handler(ctx -> handleDeleteGenericSubObj(ctx, RENEWAL));
-      router.route(HttpMethod.DELETE, itemRoute(REPORTING_CODES)).handler(ctx -> handleDeleteGenericSubObj(ctx, REPORTING_CODES));
-      router.route(HttpMethod.DELETE, itemRoute(SOURCE)).handler(ctx -> handleDeleteGenericSubObj(ctx, SOURCE));
-      router.route(HttpMethod.DELETE, itemRoute(VENDOR_DETAIL)).handler(ctx -> handleDeleteGenericSubObj(ctx, VENDOR_DETAIL));
-      router.route(HttpMethod.DELETE, itemRoute(FUND_DISTRIBUTION)).handler(ctx -> handleDeleteGenericSubObj(ctx, FUND_DISTRIBUTION));
+      router.route(HttpMethod.DELETE, resourcePath(PO_LINES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES));
+      router.route(HttpMethod.DELETE, resourcePath(ADJUSTMENT)).handler(ctx -> handleDeleteGenericSubObj(ctx, ADJUSTMENT));
+      router.route(HttpMethod.DELETE, resourcePath(ALERTS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ALERTS));
+      router.route(HttpMethod.DELETE, resourcePath(CLAIMS)).handler(ctx -> handleDeleteGenericSubObj(ctx, CLAIMS));
+      router.route(HttpMethod.DELETE, resourcePath(COST)).handler(ctx -> handleDeleteGenericSubObj(ctx, COST));
+      router.route(HttpMethod.DELETE, resourcePath(DETAILS)).handler(ctx -> handleDeleteGenericSubObj(ctx, DETAILS));
+      router.route(HttpMethod.DELETE, resourcePath(ERESOURCE)).handler(ctx -> handleDeleteGenericSubObj(ctx, ERESOURCE));
+      router.route(HttpMethod.DELETE, resourcePath(LOCATION)).handler(ctx -> handleDeleteGenericSubObj(ctx, LOCATION));
+      router.route(HttpMethod.DELETE, resourcePath(PHYSICAL)).handler(ctx -> handleDeleteGenericSubObj(ctx, PHYSICAL));
+      router.route(HttpMethod.DELETE, resourcePath(RENEWAL)).handler(ctx -> handleDeleteGenericSubObj(ctx, RENEWAL));
+      router.route(HttpMethod.DELETE, resourcePath(REPORTING_CODES)).handler(ctx -> handleDeleteGenericSubObj(ctx, REPORTING_CODES));
+      router.route(HttpMethod.DELETE, resourcePath(SOURCE)).handler(ctx -> handleDeleteGenericSubObj(ctx, SOURCE));
+      router.route(HttpMethod.DELETE, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleDeleteGenericSubObj(ctx, VENDOR_DETAIL));
+      router.route(HttpMethod.DELETE, resourcePath(FUND_DISTRIBUTION)).handler(ctx -> handleDeleteGenericSubObj(ctx, FUND_DISTRIBUTION));
 
       router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
 
       return router;
     }
 
-    private String itemRoute(String subObjName) {
-      return itemPath(subObjName) + ":id";
+    private String resourcePath(String subObjName) {
+      return resourceByIdPath(subObjName) + ":id";
     }
 
     private void handleConfigurationModuleResponse(RoutingContext ctx) {

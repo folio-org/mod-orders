@@ -83,7 +83,7 @@ public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
     updatePoLineSubObjects(compOrderLine, lineFromStorage)
       .thenCompose(poLine -> {
         logger.debug("Updating PO line...");
-        String endpoint = String.format(URL_WITH_LANG_PARAM, itemPath(PO_LINES, compOrderLine.getId()), lang);
+        String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES, compOrderLine.getId()), lang);
         return operateOnSubObj(HttpMethod.PUT, endpoint, poLine, httpClient, ctx, okapiHeaders, logger);
       })
       .thenAccept(entries -> future.complete(null))
@@ -147,11 +147,11 @@ public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
     final HttpMethod operation;
     // In case the id is available in the PO line from storage, depending on the request content the sub-object is going to be updated or removed
     if (StringUtils.isNotEmpty(storageId)) {
-      url = String.format(URL_WITH_LANG_PARAM, itemPath(prop, storageId), lang);
+      url = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(prop, storageId), lang);
       operation = (subObjContent != null) ? HttpMethod.PUT : HttpMethod.DELETE;
     } else if (subObjContent != null) {
       operation = HttpMethod.POST;
-      url = String.format(URL_WITH_LANG_PARAM, collectionPath(prop), lang);
+      url = String.format(URL_WITH_LANG_PARAM, resourcesPath(prop), lang);
     } else {
       // There is no object in storage nor in request - skipping operation
       return CompletableFuture.completedFuture(null);
@@ -230,10 +230,7 @@ public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
         result = respond404WithTextPlain(message);
         break;
       case 422:
-        Errors errors = new Errors();
-        errors.getErrors()
-              .add(new Error().withMessage(message));
-        result = respond422WithApplicationJson(errors);
+        result = respond422WithApplicationJson(withErrors(message));
         break;
       default:
         if (getProcessingErrors().isEmpty()) {

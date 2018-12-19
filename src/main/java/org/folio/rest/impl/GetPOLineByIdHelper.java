@@ -7,8 +7,6 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.resource.Orders.GetOrdersLinesByIdAndLineIdResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -51,10 +49,7 @@ public class GetPOLineByIdHelper extends AbstractOrderLineHelper {
         result = GetOrdersLinesByIdAndLineIdResponse.respond404WithTextPlain(message);
         break;
       case 422:
-        Errors errors = new Errors();
-        errors.getErrors()
-              .add(new Error().withMessage(message));
-        result = GetOrdersLinesByIdAndLineIdResponse.respond422WithApplicationJson(errors);
+        result = GetOrdersLinesByIdAndLineIdResponse.respond422WithApplicationJson(withErrors(message));
         break;
       default:
         result = GetOrdersLinesByIdAndLineIdResponse.respond500WithTextPlain(message);
