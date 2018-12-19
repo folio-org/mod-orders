@@ -32,7 +32,7 @@ public class HelperUtils {
   public static final String DEFAULT_POLINE_LIMIT = "500";
   public static final String OKAPI_URL = "X-Okapi-Url";
   public static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
-  public static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = "/po_line?limit=%s&query=purchase_order_id==%s&lang=%s";
+  public static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = resourcesPath(PO_LINES)+"?limit=%s&query=purchase_order_id==%s&lang=%s";
   public static final String URL_WITH_LANG_PARAM = "%s?lang=%s";
 
   private static final int DEFAULT_PORT = 9130;
@@ -87,7 +87,7 @@ public class HelperUtils {
 
   public static CompletableFuture<JsonObject> getPurchaseOrder(String id, String lang, HttpClientInterface httpClient, Context ctx,
                                                                Map<String, String> okapiHeaders, Logger logger) {
-    String endpoint = String.format("/purchase_order/%s?lang=%s", id, lang);
+    String endpoint = String.format("/orders-storage/purchase_orders/%s?lang=%s", id, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
   }
 

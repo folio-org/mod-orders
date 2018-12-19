@@ -25,6 +25,8 @@ public class SubObjects {
   public static final String REPORTING_CODES = "reporting_codes";
   public static final String SOURCE = "source";
   public static final String VENDOR_DETAIL = "vendor_detail";
+  public static final String PURCHASE_ORDER = "purchase_order";
+
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
   private static final Map<String, String> SUB_OBJECT_COLLECTION_APIS;
@@ -45,6 +47,7 @@ public class SubObjects {
     apis.put(SOURCE, "/orders-storage/sources");
     apis.put(VENDOR_DETAIL, "/orders-storage/vendor_details");
     apis.put(PO_LINES, "/orders-storage/po_lines");
+    apis.put(PURCHASE_ORDER, "/orders-storage/purchase_orders");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);
     SUB_OBJECT_ITEM_APIS = Collections.unmodifiableMap(
