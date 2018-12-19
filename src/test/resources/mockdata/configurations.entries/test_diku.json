@@ -5,7 +5,7 @@
       "module": "ORDERS",
       "configName": "poLines-limit",
       "enabled": true,
-      "value": 1,
+      "value": "1",
       "metadata": {
         "createdDate": "2018-12-12T08:14:32.743+0000",
         "createdByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c",

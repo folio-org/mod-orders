@@ -61,7 +61,7 @@ public class HelperUtils {
 
 
   private static final Map<String,String> subObjectApis = new HashMap<>();
-  public static final int DEFAULT_POLINE_LIMIT = 500;
+  public static final String DEFAULT_POLINE_LIMIT = "500";
   public static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
   public static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = "/po_line?limit=%s&query=purchase_order_id==%s&lang=%s";
 
