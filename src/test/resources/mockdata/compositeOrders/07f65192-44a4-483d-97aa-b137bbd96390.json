@@ -11,7 +11,7 @@
     "use_pro_rate": false
   },
   "approved": true,
-  "assigned_to": "",
+  "assigned_to": "28d102a2-d137-11e8-a8d5-f2801f1b9fd1",
   "created": "2018-07-18T00:00:00.000Z",
   "created_by": "28d102a2-d137-11e8-a8d5-f2801f1b9fd1",
   "notes": [],
@@ -28,7 +28,7 @@
       "id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
       "acquisition_method": "Purchase",
       "adjustment": {
-        "id": "1963h6cf-eb47-4e09-9e28-e20aa464adb7",
+        "id": "1963f6cf-eb47-4e09-9e28-e20aa464adb7",
         "credit": 0.0,
         "discount": 0.0,
         "insurance": 0.0,
@@ -45,7 +45,7 @@
       "cancellation_restriction_note": "",
       "claims": [
         {
-          "id": "07cld666-caxe-11e8-a8d5-f2801f1b9fd1",
+          "id": "07c1d666-cace-11e8-a8d5-f2801f1b9fd1",
           "claimed": false,
           "grace": 0,
           "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1"
@@ -55,11 +55,11 @@
       "contributors": [
         {
           "contributor": "",
-          "contributor_type": ""
+          "contributor_type": "07c3d791-cabe-11e8-a8d5-f2801f1b9fd1"
         }
       ],
       "cost": {
-        "id": "07c3d79v-cabe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07c3d796-cabe-11e8-a8d5-f2801f1b9fd1",
         "list_price": 200000.00,
         "currency": "USD",
         "quantity_physical": 0,
@@ -69,7 +69,7 @@
       },
       "description": "",
       "details": {
-        "id": "b7c5d792-cabe-1le9-a8d5-f2801f1b9fd1",
+        "id": "b7c5d792-cabe-11e9-a8d5-f2801f1b9fd1",
         "receiving_note": "Renewal, access continuous",
         "product_ids": [
           {
@@ -87,16 +87,16 @@
       },
       "donor": "",
       "eresource": {
-        "id": "07c5g803-cnbe-11e8-a8d5-f2801f1b9fd1",
+        "id": "07c51803-c9be-11e8-a8d5-f2801f1b9fd1",
         "activated": true,
         "activation_due": 0,
         "create_inventory": false,
         "trial": false,
         "expected_activation": "2019-01-01T00:00:00.000Z",
         "user_limit": 0,
-        "access_provider": "American Chemical Society",
+        "access_provider": "fde2cad6-cde3-11e8-a8d5-f2801f1b9fd1",
         "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
-        "license": "09cld8be-cabe-11e8-a8d5-f2801f1b9fd1"
+        "license": "09c1d8be-cabe-11e8-a8d5-f2801f1b9fd1"
       },
       "fund_distribution": [
         {
@@ -108,8 +108,8 @@
         }
       ],
       "location": {
-        "id": "07v5d9ea-cabe-11e8-a8d5-f2801f1b9f04",
-        "location_id": "ncc5d9ea-cabe-11e8-a8d5-f2901f1b9fd1",
+        "id": "07c5d9ea-cabe-11e8-a8d5-f2801f1b9f04",
+        "location_id": "9cc5d9ea-cabe-11e8-a8d5-f2901f1b9fd1",
         "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
         "quantity": 1,
         "quantity_electronic": 1,
@@ -120,13 +120,13 @@
       "payment_status": "Awaiting Payment",
       "physical": {
         "id": "50fb7332-cdf1-11e8-a8d5-f2801f1b9fd1",
-        "material_supplier": "",
+        "material_supplier": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd8",
         "receipt_due": null,
         "volumes": [],
         "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
       "po_line_description": "",
-      "po_line_number": "80",
+      "po_line_number": "841240-021",
       "po_line_workflow_status": "Closed",
       "publication_date": "2019",
       "publisher": "American Chemical Society",

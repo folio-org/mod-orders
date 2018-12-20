@@ -79,7 +79,9 @@ public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
    */
   public CompletableFuture<Void> updateOrderLine(PoLine compOrderLine, JsonObject lineFromStorage) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-
+    org.folio.rest.acq.model.PoLine existedPoLine = lineFromStorage.mapTo(org.folio.rest.acq.model.PoLine.class);
+    compOrderLine.setCreatedBy(existedPoLine.getCreatedBy());
+    compOrderLine.setCreated(existedPoLine.getCreated());
     updatePoLineSubObjects(compOrderLine, lineFromStorage)
       .thenCompose(poLine -> {
         logger.debug("Updating PO line...");

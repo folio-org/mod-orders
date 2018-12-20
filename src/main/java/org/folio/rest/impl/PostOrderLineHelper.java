@@ -22,6 +22,7 @@ import java.util.concurrent.CompletionException;
 
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
 import static org.folio.orders.utils.SubObjects.*;
+import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 
 public class PostOrderLineHelper extends AbstractOrderLineHelper  {
 
