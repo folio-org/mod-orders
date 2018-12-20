@@ -109,7 +109,23 @@
   "purchase_order_id": "95d29d04-34b1-4fe0-a15e-1cd129143692",
   "receipt_date": null,
   "receipt_status": "Awaiting Receipt",
-  "reporting_codes": [],
+  "reporting_codes": [
+    {
+      "id": "cb934e2a-8e0b-4721-b89a-f4e59a013d8e",
+      "code": "CODE1",
+      "description": "ABCDEF"
+    },
+    {
+      "id": "ff84a8b9-e004-434d-b64d-d907383e79f5",
+      "code": "CODE2",
+      "description": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    },
+    {
+      "id": "6b218686-bcdc-43a4-b72b-198896cd74e0",
+      "code": "CODE3",
+      "description": "ABCDE"
+    }
+  ],
   "requester": "",
   "rush": false,
   "selector": "Stevens",

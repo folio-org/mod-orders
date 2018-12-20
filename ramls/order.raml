@@ -98,5 +98,13 @@ resourceTypes:
           is: [validate]
         put:
           is: [validate]
+          responses:
+            500:
+              body:
+                application/json:
+                  type: errors
+                  example:
+                    strict: false
+                    value: !include raml-util/examples/errors.sample
         delete:
           is: [validate]

@@ -1,5 +1,7 @@
 package org.folio.rest.impl;
 
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.http.Header;
@@ -19,6 +21,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.acq.model.PurchaseOrder;
@@ -29,40 +32,39 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Stream;
 
-import static org.folio.orders.utils.HelperUtils.ADJUSTMENT;
-import static org.folio.orders.utils.HelperUtils.ALERTS;
-import static org.folio.orders.utils.HelperUtils.CLAIMS;
-import static org.folio.orders.utils.HelperUtils.COST;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
-import static org.folio.orders.utils.HelperUtils.DETAILS;
-import static org.folio.orders.utils.HelperUtils.ERESOURCE;
-import static org.folio.orders.utils.HelperUtils.FUND_DISTRIBUTION;
-import static org.folio.orders.utils.HelperUtils.LOCATION;
-import static org.folio.orders.utils.HelperUtils.PHYSICAL;
-import static org.folio.orders.utils.HelperUtils.PO_LINES;
-import static org.folio.orders.utils.HelperUtils.RENEWAL;
-import static org.folio.orders.utils.HelperUtils.SOURCE;
-import static org.folio.orders.utils.HelperUtils.VENDOR_DETAIL;
-import static org.folio.orders.utils.HelperUtils.getMockData;
+import static org.folio.orders.utils.SubObjects.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.OrdersImpl.OVER_LIMIT_ERROR_MESSAGE;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -71,10 +73,6 @@ import static org.junit.Assert.fail;
 
 @RunWith(VertxUnitRunner.class)
 public class OrdersImplTest {
-
-  public static final String INCORRECT_LANG_PARAMETER = "'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\"";
-
-  public static final String ID = "id";
 
   static {
     System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, "io.vertx.core.logging.Log4j2LogDelegateFactory");
@@ -116,6 +114,7 @@ public class OrdersImplTest {
   private static final String ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   private static final String PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED = "0009662b-8b80-4001-b704-ca10971f175d";
   private static final String PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE = "c2755a78-2f8d-47d0-a218-059a9b7391b4";
+  private static final String PO_LINE_ID_WITH_FUND_DISTRIBUTION_404_CODE = "f7223ce8-9e92-4c28-8fd9-097596053b7c";
 
   // API paths
   private final String rootPath = "/orders";
@@ -128,15 +127,19 @@ public class OrdersImplTest {
   private static final String ORDERS_MOCK_DATA_PATH = ORDER_MOCK_DATA_PATH + "getOrders.json";
   private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
   private static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
-  private final String mockDataRootPath = "src/test/resources/";
-  private final String listedPrintMonographPath = mockDataRootPath + "/po_listed_print_monograph.json";
-  private final String minimalOrderPath = mockDataRootPath + "/minimal_order.json";
-  private final String existedOrder = mockDataRootPath + "/existed_order.json";
-  private final String poCreationFailurePath = mockDataRootPath + "/po_creation_failure.json";
-  private final String poLineCreationFailurePath = mockDataRootPath + "/po_line_creation_failure.json";
+  private static final String MOCK_DATA_ROOT_PATH = "src/test/resources/";
+  private static final String listedPrintMonographPath = MOCK_DATA_ROOT_PATH + "/po_listed_print_monograph.json";
+  private static final String minimalOrderPath = MOCK_DATA_ROOT_PATH + "/minimal_order.json";
+  private static final String existedOrder = MOCK_DATA_ROOT_PATH + "/existed_order.json";
+  private static final String poCreationFailurePath = MOCK_DATA_ROOT_PATH + "/po_creation_failure.json";
+  private static final String poLineCreationFailurePath = MOCK_DATA_ROOT_PATH + "/po_line_creation_failure.json";
   private static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
+
   private static final String EMPTY_PO_LINE_BUT_WITH_IDS = "{\"id\": \"%s\", \"purchase_order_id\": \"%s\"}";
 
+  private static final String ID = "id";
+  private static final String PURCHASE_ORDER_ID = "purchase_order_id";
+  private static final String INCORRECT_LANG_PARAMETER = "'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\"";
   private static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
 
   private static Vertx vertx;
@@ -165,6 +168,11 @@ public class OrdersImplTest {
   public static void tearDownOnce(TestContext context) {
     vertx.close(context.asyncAssertSuccess());
     mockServer.close();
+  }
+
+  @Before
+  public void setUp() {
+    MockServer.serverRqRs.clear();
   }
 
   @Test
@@ -286,7 +294,7 @@ public class OrdersImplTest {
     logger.info("=== Test PO creation fail with default limit ===");
 
     JsonObject compPoLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
-    String id = compPoLineJson.getString("purchase_order_id");
+    String id = compPoLineJson.getString(PURCHASE_ORDER_ID);
 
     final Errors errors = verifyPostResponse(String.format(LINES_PATH, id), compPoLineJson.encodePrettily(),
       EMPTY_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422).body().as(Errors.class);
@@ -302,7 +310,7 @@ public class OrdersImplTest {
   public void testPoLineCreationIfPoAlreadyReachedLimit(TestContext ctx) {
     logger.info("=== Test PO Line over limit creation ===");
     JsonObject compPoLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
-    String id = compPoLineJson.getString("purchase_order_id");
+    String id = compPoLineJson.getString(PURCHASE_ORDER_ID);
 
     final Errors errors = verifyPostResponse(String.format(LINES_PATH, id), compPoLineJson.encodePrettily(),
       EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422).body().as(Errors.class);
@@ -991,9 +999,20 @@ public class OrdersImplTest {
     logger.info("=== Test Post Order Lines By Id (expected flow) ===");
 
     JsonObject compPoLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
-    String id = compPoLineJson.getString("purchase_order_id");
-    final PoLine response = verifyPostResponse(String.format(LINES_PATH, id), compPoLineJson.encodePrettily(),
-      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(PoLine.class);
+    String id = compPoLineJson.getString(PURCHASE_ORDER_ID);
+    final PoLine response = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+        .header(X_OKAPI_TOKEN)
+        .contentType(APPLICATION_JSON)
+        .body(compPoLineJson.encodePrettily())
+      .post(String.format(LINES_PATH, id))
+        .then()
+          .contentType(APPLICATION_JSON)
+          .statusCode(201)
+          .extract()
+          .response().as(PoLine.class);
 
     ctx.assertEquals(id, response.getPurchaseOrderId());
   }
@@ -1003,9 +1022,21 @@ public class OrdersImplTest {
     logger.info("=== Test Post Order Lines By Id (path and request body ids mismatching) ===");
 
     JsonObject body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
+    Errors resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+        .header(X_OKAPI_TOKEN)
+        .contentType(APPLICATION_JSON)
+        .body(body.encodePrettily())
+      .post(String.format(LINES_PATH, ID_DOES_NOT_EXIST))
+        .then()
+          .contentType(ContentType.JSON)
+          .statusCode(422)
+          .extract()
+          .response().as(Errors.class);
 
-    verifyPostResponse(String.format(LINES_PATH, ID_DOES_NOT_EXIST), body.encodePrettily(),
-      NON_EXIST_CONFIG_X_OKAPI_TENANT, TEXT_PLAIN, 400);
+    assertEquals(1, resp.getErrors().size());
   }
 
   @Test
@@ -1056,29 +1087,147 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPutOrderLineById() {
-    logger.info("=== Test PUT Order Line By Id - Success case ===");
+  public void testPutOrderLineByIdWithEmptyBody() {
+    logger.info("=== Test PUT Order Line By Id - Empty Json as body Success case ===");
 
-    putOrderLineByIdSuccess(PO_LINE_ID_FOR_SUCCESS_CASE);
+    String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
+    String orderId = getMockLine(lineId).getPurchaseOrderId();
+    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+
+    final Response resp = verifyPut(url, "{}", "", 204);
+    assertTrue(StringUtils.isEmpty(resp.getBody().asString()));
+
+    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(1, column.size());
+    assertThat(column, hasKey(PO_LINES));
+
+    column = MockServer.serverRqRs.column(HttpMethod.POST);
+    assertEquals(0, column.size());
+
+    column = MockServer.serverRqRs.column(HttpMethod.DELETE);
+    assertEquals(9, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, VENDOR_DETAIL, CLAIMS, FUND_DISTRIBUTION));
+    assertThat(column.get(CLAIMS), hasSize(2));
+
+    column = MockServer.serverRqRs.column(HttpMethod.PUT);
+    assertEquals(1, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(PO_LINES));
+
+    JsonObject lineWithIds = column.get(PO_LINES).get(0);
+
+    // Verify that object has only PO and PO line ids
+    assertEquals(lineId, lineWithIds.remove(ID));
+    assertEquals(orderId, lineWithIds.remove(PURCHASE_ORDER_ID));
+    lineWithIds.stream().forEach(entry -> {
+      Object value = entry.getValue();
+      assertTrue(Objects.isNull(value) || (value instanceof Iterable && !((Iterable) value).iterator().hasNext()));
+    });
   }
 
   @Test
-  public void testPutOrderLineByIdWithPartiallyDeletedSubObjects() {
-    logger.info("=== Test PUT Order Line By Id - Line partially removed ===");
+  public void testPutOrderLineById() {
+    logger.info("=== Test PUT Order Line By Id - Success case ===");
 
-    // This test should behave the same as regular test and only warning in log expected
-    putOrderLineByIdSuccess(PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED);
-  }
-
-  private void putOrderLineByIdSuccess(String lineId) {
-    String orderId = getMockLine(lineId).getPurchaseOrderId();
+    String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
+    JsonObject body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId);
+    String orderId = body.getString(PURCHASE_ORDER_ID);
 
     String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
-    JsonObject body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId);
 
     final Response resp = verifyPut(url, body.encodePrettily(), "", 204);
 
     assertTrue(StringUtils.isEmpty(resp.getBody().asString()));
+
+    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(1, column.size());
+    assertThat(column, hasKey(PO_LINES));
+
+    column = MockServer.serverRqRs.column(HttpMethod.POST);
+    assertEquals(2, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(REPORTING_CODES, SOURCE));
+    assertThat(column.get(REPORTING_CODES), hasSize(3));
+
+    column = MockServer.serverRqRs.column(HttpMethod.DELETE);
+    assertEquals(1, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(CLAIMS));
+
+    column = MockServer.serverRqRs.column(HttpMethod.PUT);
+    assertEquals(10, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, VENDOR_DETAIL, CLAIMS, FUND_DISTRIBUTION, PO_LINES));
+  }
+
+  @Test
+  public void testPutOrderLineByIdWithPartiallyDeletedSubObjects() {
+    logger.info("=== Test PUT Order Line By Id - Line refers to not existing sub-objects ===");
+
+    String lineId = PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED;
+    JsonObject body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId);
+
+    String orderId = body.getString(PURCHASE_ORDER_ID);
+    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+
+    final Response resp = verifyPut(url, body.encodePrettily(), APPLICATION_JSON, 500);
+    assertEquals(3, resp.as(Errors.class).getErrors().size());
+
+    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(1, column.size());
+    assertThat(column, hasKey(PO_LINES));
+
+    column = MockServer.serverRqRs.column(HttpMethod.POST);
+    assertEquals(4, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(CLAIMS, FUND_DISTRIBUTION, SOURCE, RENEWAL));
+
+    column = MockServer.serverRqRs.column(HttpMethod.DELETE);
+    assertTrue(column.isEmpty());
+
+    column = MockServer.serverRqRs.column(HttpMethod.PUT);
+    assertEquals(8, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, VENDOR_DETAIL, PO_LINES));
+
+    List<JsonObject> jsonObjects = column.get(PO_LINES);
+    assertThat(jsonObjects, hasSize(1));
+    JsonObject entry = jsonObjects.get(0);
+
+    // Verify that references to failed objects are not persisted
+    assertFalse(entry.containsKey(COST));
+    assertFalse(entry.containsKey(DETAILS));
+  }
+
+  @Test
+  public void testPutOrderLineByIdWithOneIncorrectFundDistroSubObject() {
+    logger.info("=== Test PUT Order Line By Id - Line refers to not existing fund_distribution ===");
+
+    String lineId = PO_LINE_ID_WITH_FUND_DISTRIBUTION_404_CODE;
+    JsonObject body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId);
+
+    String orderId = body.getString(PURCHASE_ORDER_ID);
+    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+
+    final Response resp = verifyPut(url, body.encodePrettily(), APPLICATION_JSON, 500);
+    assertEquals(2, resp.as(Errors.class).getErrors().size());
+
+    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(1, column.size());
+    assertThat(column, hasKey(PO_LINES));
+
+    column = MockServer.serverRqRs.column(HttpMethod.POST);
+    assertTrue(column.isEmpty());
+
+    column = MockServer.serverRqRs.column(HttpMethod.DELETE);
+    assertEquals(1, column.size());
+    assertThat(column, hasKey(FUND_DISTRIBUTION));
+
+    column = MockServer.serverRqRs.column(HttpMethod.PUT);
+    assertEquals(14, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, ALERTS, CLAIMS, COST, DETAILS, ERESOURCE, FUND_DISTRIBUTION, LOCATION, PHYSICAL, RENEWAL, REPORTING_CODES, SOURCE, VENDOR_DETAIL, PO_LINES));
+
+    List<JsonObject> jsonObjects = column.get(PO_LINES);
+    assertThat(jsonObjects, hasSize(1));
+    JsonObject entry = jsonObjects.get(0);
+
+    // Verify that reference failed to be deleted still presented
+    assertTrue(entry.containsKey(FUND_DISTRIBUTION));
+    assertEquals(2, entry.getJsonArray(FUND_DISTRIBUTION).size());
   }
 
   @Test
@@ -1100,6 +1249,9 @@ public class OrdersImplTest {
         .then()
           .contentType(TEXT_PLAIN)
           .statusCode(500);
+
+    // Verify that no calls reached mock server
+    assertTrue(MockServer.serverRqRs.isEmpty());
   }
 
   @Test
@@ -1115,6 +1267,19 @@ public class OrdersImplTest {
     Response actual = verifyPut(url, body, TEXT_PLAIN, 404);
 
     assertEquals(lineId, actual.asString());
+
+    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(1, column.size());
+    assertThat(column, hasKey(PO_LINES));
+
+    column = MockServer.serverRqRs.column(HttpMethod.POST);
+    assertTrue(column.isEmpty());
+
+    column = MockServer.serverRqRs.column(HttpMethod.PUT);
+    assertTrue(column.isEmpty());
+
+    column = MockServer.serverRqRs.column(HttpMethod.DELETE);
+    assertTrue(column.isEmpty());
   }
 
   @Test
@@ -1130,6 +1295,9 @@ public class OrdersImplTest {
 
     assertEquals(1, resp.as(Errors.class).getErrors().size());
     assertNotNull(resp.as(Errors.class).getErrors().get(0).getMessage());
+
+    // Verify that no calls reached mock server
+    assertTrue(MockServer.serverRqRs.isEmpty());
   }
 
   @Test
@@ -1145,6 +1313,9 @@ public class OrdersImplTest {
 
     assertEquals(1, resp.as(Errors.class).getErrors().size());
     assertNotNull(resp.as(Errors.class).getErrors().get(0).getMessage());
+
+    // Verify that no calls reached mock server
+    assertTrue(MockServer.serverRqRs.isEmpty());
   }
 
   @Test
@@ -1160,6 +1331,19 @@ public class OrdersImplTest {
     Response actual = verifyPut(url, body, TEXT_PLAIN, 500);
 
     assertNotNull(actual.asString());
+
+    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(1, column.size());
+    assertThat(column, hasKey(PO_LINES));
+
+    column = MockServer.serverRqRs.column(HttpMethod.POST);
+    assertTrue(column.isEmpty());
+
+    column = MockServer.serverRqRs.column(HttpMethod.PUT);
+    assertTrue(column.isEmpty());
+
+    column = MockServer.serverRqRs.column(HttpMethod.DELETE);
+    assertTrue(column.isEmpty());
   }
 
   @Test
@@ -1171,9 +1355,32 @@ public class OrdersImplTest {
 
     String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
     String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, lineId, orderId);
-    Response actual = verifyPut(url, body, TEXT_PLAIN, 500);
+    Response actual = verifyPut(url, body, APPLICATION_JSON, 500);
 
-    assertNotNull(actual.asString());
+    assertEquals(2, actual.as(Errors.class).getErrors().size());
+
+    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(1, column.size());
+    assertThat(column, hasKey(PO_LINES));
+
+    column = MockServer.serverRqRs.column(HttpMethod.POST);
+    assertTrue(column.isEmpty());
+
+    column = MockServer.serverRqRs.column(HttpMethod.DELETE);
+    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, VENDOR_DETAIL));
+
+    column = MockServer.serverRqRs.column(HttpMethod.PUT);
+    assertThat(column.keySet(), containsInAnyOrder(PO_LINES));
+
+    JsonObject lineWithIds = column.get(PO_LINES).get(0);
+
+    // Verify that object has only PO and PO line ids
+    assertEquals(lineId, lineWithIds.remove(ID));
+    assertEquals(orderId, lineWithIds.remove(PURCHASE_ORDER_ID));
+    lineWithIds.stream().forEach(entry -> {
+      Object value = entry.getValue();
+      assertTrue(Objects.isNull(value) || (value instanceof Iterable && !((Iterable) value).iterator().hasNext()));
+    });
   }
 
   private org.folio.rest.acq.model.PoLine getMockLine(String id) {
@@ -1204,8 +1411,23 @@ public class OrdersImplTest {
             .response();
   }
 
+  public static String getMockData(String path) throws IOException {
+    try (InputStream resourceAsStream = OrdersImplTest.class.getClassLoader().getResourceAsStream(path)) {
+      if (resourceAsStream != null) {
+        return IOUtils.toString(resourceAsStream, StandardCharsets.UTF_8);
+      } else {
+        StringBuilder sb = new StringBuilder();
+        try (Stream<String> lines = Files.lines(Paths.get(path))) {
+          lines.forEach(sb::append);
+        }
+        return sb.toString();
+      }
+    }
+  }
+
   public static class MockServer {
 
+    static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
     private static final Logger logger = LoggerFactory.getLogger(MockServer.class);
 
     final int port;
@@ -1232,61 +1454,77 @@ public class OrdersImplTest {
 
       router.route().handler(BodyHandler.create());
       router.route(HttpMethod.POST, "/purchase_order").handler(this::handlePostPurchaseOrder);
-      router.route(HttpMethod.POST, "/po_line").handler(this::handlePostPOLine);
-      router.route(HttpMethod.POST, "/adjustment").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Adjustment.class));
-      router.route(HttpMethod.POST, "/alert").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Alert.class));
-      router.route(HttpMethod.POST, "/cost").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Cost.class));
-      router.route(HttpMethod.POST, "/claim").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Claim.class));
-      router.route(HttpMethod.POST, "/details").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Details.class));
-      router.route(HttpMethod.POST, "/eresource").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Eresource.class));
-      router.route(HttpMethod.POST, "/location").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Location.class));
-      router.route(HttpMethod.POST, "/license").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.License.class));
-      router.route(HttpMethod.POST, "/physical").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Physical.class));
-      router.route(HttpMethod.POST, "/renewal").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Renewal.class));
-      router.route(HttpMethod.POST, "/source").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.Source.class));
-      router.route(HttpMethod.POST, "/reporting_code").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.ReportingCode.class));
-      router.route(HttpMethod.POST, "/vendor_detail").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.VendorDetail.class));
-      router.route(HttpMethod.POST, "/orders-storage/fund_distributions").handler(ctx -> handlePostGenericSubObj(ctx, org.folio.rest.acq.model.FundDistribution.class));
+      router.route(HttpMethod.POST, resourcesPath(PO_LINES)).handler(this::handlePostPOLine);
+      router.route(HttpMethod.POST, resourcesPath(ADJUSTMENT)).handler(ctx -> handlePostGenericSubObj(ctx, ADJUSTMENT));
+      router.route(HttpMethod.POST, resourcesPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
+      router.route(HttpMethod.POST, resourcesPath(CLAIMS)).handler(ctx -> handlePostGenericSubObj(ctx, CLAIMS));
+      router.route(HttpMethod.POST, resourcesPath(COST)).handler(ctx -> handlePostGenericSubObj(ctx, COST));
+      router.route(HttpMethod.POST, resourcesPath(DETAILS)).handler(ctx -> handlePostGenericSubObj(ctx, DETAILS));
+      router.route(HttpMethod.POST, resourcesPath(ERESOURCE)).handler(ctx -> handlePostGenericSubObj(ctx, ERESOURCE));
+      router.route(HttpMethod.POST, resourcesPath(FUND_DISTRIBUTION)).handler(ctx -> handlePostGenericSubObj(ctx, FUND_DISTRIBUTION));
+      router.route(HttpMethod.POST, resourcesPath(LOCATION)).handler(ctx -> handlePostGenericSubObj(ctx, LOCATION));
+      router.route(HttpMethod.POST, resourcesPath(PHYSICAL)).handler(ctx -> handlePostGenericSubObj(ctx, PHYSICAL));
+      router.route(HttpMethod.POST, resourcesPath(RENEWAL)).handler(ctx -> handlePostGenericSubObj(ctx, RENEWAL));
+      router.route(HttpMethod.POST, resourcesPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
+      router.route(HttpMethod.POST, resourcesPath(SOURCE)).handler(ctx -> handlePostGenericSubObj(ctx, SOURCE));
+      router.route(HttpMethod.POST, resourcesPath(VENDOR_DETAIL)).handler(ctx -> handlePostGenericSubObj(ctx, VENDOR_DETAIL));
 
       router.route(HttpMethod.GET, "/purchase_order/:id").handler(this::handleGetPurchaseOrderById);
-      router.route(HttpMethod.GET, "/po_line").handler(this::handleGetPoLines);
-      router.route(HttpMethod.GET, "/po_line/:id").handler(this::handleGetPoLineById);
-      router.route(HttpMethod.GET, "/adjustment/:id").handler(this::handleGetAdjustment);
-      router.route(HttpMethod.GET, "/alert/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/cost/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/claim/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/details/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/eresource/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/orders-storage/fund_distributions/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/location/:id").handler(this::handleGetLocation);
-      router.route(HttpMethod.GET, "/physical/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/renewal/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/source/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/vendor_detail/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/reporting_code/:id").handler(this::handleGetGenericSubObj);
-      router.route(HttpMethod.GET, "/renewal/:id").handler(this::handleGetGenericSubObj);
+      router.route(HttpMethod.GET, resourcesPath(PO_LINES)).handler(this::handleGetPoLines);
+      router.route(HttpMethod.GET, resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
+      router.route(HttpMethod.GET, resourcePath(ADJUSTMENT)).handler(this::handleGetAdjustment);
+      router.route(HttpMethod.GET, resourcePath(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
+      router.route(HttpMethod.GET, resourcePath(CLAIMS)).handler(ctx -> handleGetGenericSubObj(ctx, CLAIMS));
+      router.route(HttpMethod.GET, resourcePath(COST)).handler(ctx -> handleGetGenericSubObj(ctx, COST));
+      router.route(HttpMethod.GET, resourcePath(DETAILS)).handler(ctx -> handleGetGenericSubObj(ctx, DETAILS));
+      router.route(HttpMethod.GET, resourcePath(ERESOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, ERESOURCE));
+      router.route(HttpMethod.GET, resourcePath(FUND_DISTRIBUTION)).handler(ctx -> handleGetGenericSubObj(ctx, FUND_DISTRIBUTION));
+      router.route(HttpMethod.GET, resourcePath(LOCATION)).handler(this::handleGetLocation);
+      router.route(HttpMethod.GET, resourcePath(PHYSICAL)).handler(ctx -> handleGetGenericSubObj(ctx, PHYSICAL));
+      router.route(HttpMethod.GET, resourcePath(RENEWAL)).handler(ctx -> handleGetGenericSubObj(ctx, RENEWAL));
+      router.route(HttpMethod.GET, resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
+      router.route(HttpMethod.GET, resourcePath(SOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, SOURCE));
+      router.route(HttpMethod.GET, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleGetGenericSubObj(ctx, VENDOR_DETAIL));
 
-      router.route(HttpMethod.DELETE, "/purchase_order/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/po_line/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/adjustment/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/cost/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/details/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/eresource/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/location/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/physical/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/renewal/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/source/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/vendor_detail/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/alert/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/claim/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/orders-storage/fund_distributions/:id").handler(this::handleDeleteGenericSubObj);
-      router.route(HttpMethod.DELETE, "/reporting_code/:id").handler(this::handleDeleteGenericSubObj);
+      router.route(HttpMethod.PUT, resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
+      router.route(HttpMethod.PUT, resourcePath(ADJUSTMENT)).handler(ctx -> handlePutGenericSubObj(ctx, ADJUSTMENT));
+      router.route(HttpMethod.PUT, resourcePath(ALERTS)).handler(ctx -> handlePutGenericSubObj(ctx, ALERTS));
+      router.route(HttpMethod.PUT, resourcePath(CLAIMS)).handler(ctx -> handlePutGenericSubObj(ctx, CLAIMS));
+      router.route(HttpMethod.PUT, resourcePath(COST)).handler(ctx -> handlePutGenericSubObj(ctx, COST));
+      router.route(HttpMethod.PUT, resourcePath(DETAILS)).handler(ctx -> handlePutGenericSubObj(ctx, DETAILS));
+      router.route(HttpMethod.PUT, resourcePath(ERESOURCE)).handler(ctx -> handlePutGenericSubObj(ctx, ERESOURCE));
+      router.route(HttpMethod.PUT, resourcePath(FUND_DISTRIBUTION)).handler(ctx -> handlePutGenericSubObj(ctx, FUND_DISTRIBUTION));
+      router.route(HttpMethod.PUT, resourcePath(LOCATION)).handler(ctx -> handlePutGenericSubObj(ctx, LOCATION));
+      router.route(HttpMethod.PUT, resourcePath(PHYSICAL)).handler(ctx -> handlePutGenericSubObj(ctx, PHYSICAL));
+      router.route(HttpMethod.PUT, resourcePath(RENEWAL)).handler(ctx -> handlePutGenericSubObj(ctx, RENEWAL));
+      router.route(HttpMethod.PUT, resourcePath(REPORTING_CODES)).handler(ctx -> handlePutGenericSubObj(ctx, REPORTING_CODES));
+      router.route(HttpMethod.PUT, resourcePath(SOURCE)).handler(ctx -> handlePutGenericSubObj(ctx, SOURCE));
+      router.route(HttpMethod.PUT, resourcePath(VENDOR_DETAIL)).handler(ctx -> handlePutGenericSubObj(ctx, VENDOR_DETAIL));
+
+      router.route(HttpMethod.DELETE, "/purchase_order/:id").handler(ctx -> handleDeleteGenericSubObj(ctx, "purchase_order"));
+      router.route(HttpMethod.DELETE, resourcePath(PO_LINES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES));
+      router.route(HttpMethod.DELETE, resourcePath(ADJUSTMENT)).handler(ctx -> handleDeleteGenericSubObj(ctx, ADJUSTMENT));
+      router.route(HttpMethod.DELETE, resourcePath(ALERTS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ALERTS));
+      router.route(HttpMethod.DELETE, resourcePath(CLAIMS)).handler(ctx -> handleDeleteGenericSubObj(ctx, CLAIMS));
+      router.route(HttpMethod.DELETE, resourcePath(COST)).handler(ctx -> handleDeleteGenericSubObj(ctx, COST));
+      router.route(HttpMethod.DELETE, resourcePath(DETAILS)).handler(ctx -> handleDeleteGenericSubObj(ctx, DETAILS));
+      router.route(HttpMethod.DELETE, resourcePath(ERESOURCE)).handler(ctx -> handleDeleteGenericSubObj(ctx, ERESOURCE));
+      router.route(HttpMethod.DELETE, resourcePath(LOCATION)).handler(ctx -> handleDeleteGenericSubObj(ctx, LOCATION));
+      router.route(HttpMethod.DELETE, resourcePath(PHYSICAL)).handler(ctx -> handleDeleteGenericSubObj(ctx, PHYSICAL));
+      router.route(HttpMethod.DELETE, resourcePath(RENEWAL)).handler(ctx -> handleDeleteGenericSubObj(ctx, RENEWAL));
+      router.route(HttpMethod.DELETE, resourcePath(REPORTING_CODES)).handler(ctx -> handleDeleteGenericSubObj(ctx, REPORTING_CODES));
+      router.route(HttpMethod.DELETE, resourcePath(SOURCE)).handler(ctx -> handleDeleteGenericSubObj(ctx, SOURCE));
+      router.route(HttpMethod.DELETE, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleDeleteGenericSubObj(ctx, VENDOR_DETAIL));
+      router.route(HttpMethod.DELETE, resourcePath(FUND_DISTRIBUTION)).handler(ctx -> handleDeleteGenericSubObj(ctx, FUND_DISTRIBUTION));
 
       router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
 
       return router;
     }
 
+    private String resourcePath(String subObjName) {
+      return resourceByIdPath(subObjName) + ":id";
+    }
 
     private void handleConfigurationModuleResponse(RoutingContext ctx) {
       try {
@@ -1298,11 +1536,12 @@ public class OrdersImplTest {
 
     }
 
-    private void handleDeleteGenericSubObj(RoutingContext ctx) {
+    private void handleDeleteGenericSubObj(RoutingContext ctx, String subObj) {
       String id = ctx.request().getParam(ID);
-      if (ID_DOES_NOT_EXIST.equals(id)) {
-        serverResponse(ctx, 404, TEXT_PLAIN, id);
-      } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
+
+      addServerRqRsData(HttpMethod.DELETE, subObj, new JsonObject().put(ID, id));
+
+      if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
         serverResponse(ctx, 500, TEXT_PLAIN, INTERNAL_SERVER_ERROR);
       } else {
         ctx.response()
@@ -1373,7 +1612,7 @@ public class OrdersImplTest {
             .put("first", 0)
             .put("last", lines.size());
           if (EMPTY_CONFIG_TENANT.equals(tenant)) {
-            po_lines.put("total_records", DEFAULT_POLINE_LIMIT);
+            po_lines.put("total_records", Integer.parseInt(DEFAULT_POLINE_LIMIT));
           } else {
             po_lines.put("total_records", lines.size());
           }
@@ -1392,6 +1631,9 @@ public class OrdersImplTest {
       logger.info("got: " + ctx.request().path());
       String id = ctx.request().getParam(ID);
       logger.info("id: " + id);
+
+      addServerRqRsData(HttpMethod.GET, PO_LINES, new JsonObject().put(ID, id));
+
       if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
         serverResponse(ctx, 500, TEXT_PLAIN, INTERNAL_SERVER_ERROR);
       } else {
@@ -1411,10 +1653,13 @@ public class OrdersImplTest {
          .end(body);
     }
 
-    private void handleGetGenericSubObj(RoutingContext ctx) {
+    private void handleGetGenericSubObj(RoutingContext ctx, String subObj) {
       logger.info("got: " + ctx.request().path());
       String id = ctx.request().getParam(ID);
       logger.info("id: " + id);
+
+      JsonObject data = new JsonObject().put(ID, id);
+      addServerRqRsData(HttpMethod.GET, subObj, data);
 
       if (ID_DOES_NOT_EXIST.equals(id)) {
         serverResponse(ctx, 404, TEXT_PLAIN, id);
@@ -1424,14 +1669,45 @@ public class OrdersImplTest {
         ctx.response()
            .setStatusCode(200)
            .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-           .end(new JsonObject().put(ID, id).encodePrettily());
+           .end(data.encodePrettily());
       }
+    }
+
+    private void handlePutGenericSubObj(RoutingContext ctx, String subObj) {
+      logger.info("got: " + ctx.request().path());
+      String id = ctx.request().getParam(ID);
+
+      JsonObject body = ctx.getBodyAsJson();
+      logger.info("body: " + body.encodePrettily());
+
+      addServerRqRsData(HttpMethod.PUT, subObj, body);
+
+      if (ID_DOES_NOT_EXIST.equals(id)) {
+        serverResponse(ctx, 404, TEXT_PLAIN, id);
+      } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
+        serverResponse(ctx, 500, TEXT_PLAIN, INTERNAL_SERVER_ERROR);
+      } else {
+        ctx.response()
+           .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
+           .end();
+      }
+    }
+
+    private void addServerRqRsData(HttpMethod method, String subObj, JsonObject data) {
+      List<JsonObject> entries = serverRqRs.get(subObj, method);
+      if (entries == null) {
+        entries = new ArrayList<>();
+      }
+      entries.add(data);
+      serverRqRs.put(subObj, method, entries);
     }
 
     private void handleGetAdjustment(RoutingContext ctx) {
       logger.info("got: " + ctx.request().path());
       String id = ctx.request().getParam(ID);
       logger.info("id: " + id);
+
+      addServerRqRsData(HttpMethod.GET, ADJUSTMENT, new JsonObject().put(ID, id));
 
       Adjustment a = new Adjustment();
       a.setId(id);
@@ -1489,7 +1765,7 @@ public class OrdersImplTest {
         .end(JsonObject.mapFrom(po).encodePrettily());
     }
 
-    private void handlePostGenericSubObj(RoutingContext ctx, Class<?> clazz) {
+    private void handlePostGenericSubObj(RoutingContext ctx, String subObj) {
       logger.info("got: " + ctx.getBodyAsString());
 
       String echoStatus = ctx.request().getHeader(X_ECHO_STATUS);
@@ -1507,10 +1783,11 @@ public class OrdersImplTest {
       }
       ctx.response().setStatusCode(status);
 
+      JsonObject body = null;
       switch (status) {
         case 201:
           contentType = APPLICATION_JSON;
-          JsonObject body = JsonObject.mapFrom(ctx.getBodyAsJson().mapTo(clazz)).put(ID, UUID.randomUUID().toString());
+          body = JsonObject.mapFrom(ctx.getBodyAsJson().mapTo(getSubObjClass(subObj))).put(ID, UUID.randomUUID().toString());
           respBody = body.encodePrettily();
           break;
         case 403:
@@ -1521,7 +1798,42 @@ public class OrdersImplTest {
           break;
       }
 
+      addServerRqRsData(HttpMethod.POST, subObj, body);
       serverResponse(ctx, status, contentType, respBody);
+    }
+
+    private Class<?> getSubObjClass(String subObj) {
+      switch (subObj) {
+        case ADJUSTMENT:
+          return org.folio.rest.acq.model.Adjustment.class;
+        case ALERTS:
+          return org.folio.rest.acq.model.Alert.class;
+        case CLAIMS:
+          return org.folio.rest.acq.model.Claim.class;
+        case COST:
+          return org.folio.rest.acq.model.Cost.class;
+        case DETAILS:
+          return org.folio.rest.acq.model.Details.class;
+        case ERESOURCE:
+          return org.folio.rest.acq.model.Eresource.class;
+        case FUND_DISTRIBUTION:
+          return org.folio.rest.acq.model.FundDistribution.class;
+        case LOCATION:
+          return org.folio.rest.acq.model.Location.class;
+        case PHYSICAL:
+          return org.folio.rest.acq.model.Physical.class;
+        case RENEWAL:
+          return org.folio.rest.acq.model.Renewal.class;
+        case REPORTING_CODES:
+          return org.folio.rest.acq.model.ReportingCode.class;
+        case SOURCE:
+          return org.folio.rest.acq.model.Source.class;
+        case VENDOR_DETAIL:
+          return org.folio.rest.acq.model.VendorDetail.class;
+      }
+
+      fail("The sub-object is unknown");
+      return null;
     }
 
     private void handlePostPOLine(RoutingContext ctx) {
@@ -1558,6 +1870,8 @@ public class OrdersImplTest {
       logger.info("got: " + ctx.request().path());
       String id = ctx.request().getParam(ID);
       logger.info("id: " + id);
+
+      addServerRqRsData(HttpMethod.GET, LOCATION, new JsonObject().put(ID, id));
 
       Location location = new Location();
       location.setId(id);

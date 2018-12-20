@@ -31,6 +31,8 @@ import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.loadConfiguration;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
+import static io.vertx.core.Future.succeededFuture;
+
 public class OrdersImpl implements Orders {
 
   private static final Logger logger = LoggerFactory.getLogger(OrdersImpl.class);
@@ -57,7 +59,7 @@ public class OrdersImpl implements Orders {
       logger.info("Successfully deleted order: ");
       httpClient.closeClient();
       javax.ws.rs.core.Response response = DeleteOrdersByIdResponse.respond204();
-      AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
+      AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
       asyncResultHandler.handle(result);
     })
     .exceptionally(helper::handleError);
@@ -76,7 +78,7 @@ public class OrdersImpl implements Orders {
         logger.info("Successfully retrieved order: " + JsonObject.mapFrom(order).encodePrettily());
         httpClient.closeClient();
         javax.ws.rs.core.Response response = GetOrdersByIdResponse.respond200WithApplicationJson(order);
-        AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
+        AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
         asyncResultHandler.handle(result);
       })
       .exceptionally(helper::handleError);
@@ -159,17 +161,15 @@ public class OrdersImpl implements Orders {
                   httpClient.closeClient();
                   Response response = PostOrdersLinesByIdResponse.respond201WithApplicationJson
                     (poLine, PostOrdersLinesByIdResponse.headersFor201().withLocation(String.format(ORDER_LINE_LOCATION_PREFIX, orderId, pol.getId())));
-                  AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
-                  asyncResultHandler.handle(result);
+                  asyncResultHandler.handle(succeededFuture(response));
                 })
                 .exceptionally(helper::handleError);
             } else {
-              asyncResultHandler.handle(Future.succeededFuture(helper.buildErrorResponse(422, String.format(OVER_LIMIT_ERROR_MESSAGE, limit))));
+              asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422, String.format(OVER_LIMIT_ERROR_MESSAGE, limit))));
             }
           }).exceptionally(helper::handleError);
       } else {
-        asyncResultHandler
-          .handle(Future.succeededFuture(helper.buildErrorResponse(400, MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE)));
+        asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422, MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE)));
       }
     }).exceptionally(helper::handleError);
   }
@@ -188,7 +188,7 @@ public class OrdersImpl implements Orders {
         logger.info("Received POLine Response: " + JsonObject.mapFrom(poline).encodePrettily());
         httpClient.closeClient();
         javax.ws.rs.core.Response response = GetOrdersLinesByIdAndLineIdResponse.respond200WithApplicationJson(poline);
-        AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
+        AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
         asyncResultHandler.handle(result);
       })
       .exceptionally(helper::handleError);
@@ -208,7 +208,7 @@ public class OrdersImpl implements Orders {
                                             Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Handling PUT Order Line operation...");
 
-    PutOrderLineByIdHelper helper = new PutOrderLineByIdHelper(okapiHeaders, asyncResultHandler, vertxContext);
+    PutOrderLineByIdHelper helper = new PutOrderLineByIdHelper(lang, okapiHeaders, asyncResultHandler, vertxContext);
     if (StringUtils.isEmpty(poLine.getPurchaseOrderId())) {
       poLine.setPurchaseOrderId(orderId);
     }
@@ -216,11 +216,9 @@ public class OrdersImpl implements Orders {
       poLine.setId(lineId);
     }
     if (orderId.equals(poLine.getPurchaseOrderId()) && lineId.equals(poLine.getId())) {
-      helper
-        .updateOrder(orderId, lang, poLine);
+      helper.updateOrderLine(orderId, poLine);
     } else {
-      asyncResultHandler
-        .handle(Future.succeededFuture(helper.buildErrorResponse(422, MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE)));
+      asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422, MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE)));
     }
   }
 
@@ -233,8 +231,8 @@ public class OrdersImpl implements Orders {
 
   private static int getPoLineLimit(JsonObject config) {
     try {
-      return config.getInteger(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT);
-    } catch (ClassCastException e) {
+      return Integer.parseInt(config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));
+    } catch (NumberFormatException e) {
       throw new CompletionException("Invalid limit value in configuration.", e);
     }
   }

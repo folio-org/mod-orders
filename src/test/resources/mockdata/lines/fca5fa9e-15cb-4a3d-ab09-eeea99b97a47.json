@@ -5,7 +5,7 @@
   "alerts" : [ ],
   "cancellation_restriction" : false,
   "cancellation_restriction_note" : "ABCDEFGHIJKLMNOPQRSTUVW",
-  "claims" : [ ],
+  "claims" : ["07c5d666-cabe-11e8-a8d5-f2811f1b9fd1", "c64f1ad0-690a-46ed-8277-36b3948c33e4"],
   "collection" : false,
   "contributors" : [ {
     "contributor" : "Ed Mashburn",
@@ -16,7 +16,7 @@
   "details" : "9555108c-91ad-4489-9f12-821c5ed623f1",
   "donor" : "ABCDEFGHIJKLM",
   "eresource" : "b6162930-1f4d-4cdd-8f39-c2e377269061",
-  "fund_distribution" : [ ],
+  "fund_distribution" : ["fde2c22a-cde3-11e8-a8d5-f2801f1b9fd1"],
   "location" : "8654ba03-310f-4455-8fa0-ebaff272b158",
   "order_format" : "Physical Resource",
   "owner" : "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",

@@ -3,8 +3,6 @@ package org.folio.rest.impl;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
 
 import javax.ws.rs.core.Response;
 import java.util.Map;
@@ -43,10 +41,7 @@ class DeleteOrderLineByIdHelper extends AbstractOrderLineHelper {
         result = respond404WithTextPlain(message);
         break;
       case 422:
-        Errors errors = new Errors();
-        errors.getErrors()
-              .add(new Error().withMessage(message));
-        result = respond422WithApplicationJson(errors);
+        result = respond422WithApplicationJson(withErrors(message));
         break;
       default:
         result = respond500WithTextPlain(message);
