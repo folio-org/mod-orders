@@ -51,22 +51,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
-import static org.folio.orders.utils.SubObjects.ADJUSTMENT;
-import static org.folio.orders.utils.SubObjects.ALERTS;
-import static org.folio.orders.utils.SubObjects.CLAIMS;
-import static org.folio.orders.utils.SubObjects.COST;
-import static org.folio.orders.utils.SubObjects.DETAILS;
-import static org.folio.orders.utils.SubObjects.ERESOURCE;
-import static org.folio.orders.utils.SubObjects.FUND_DISTRIBUTION;
-import static org.folio.orders.utils.SubObjects.LOCATION;
-import static org.folio.orders.utils.SubObjects.PHYSICAL;
-import static org.folio.orders.utils.SubObjects.PO_LINES;
-import static org.folio.orders.utils.SubObjects.RENEWAL;
-import static org.folio.orders.utils.SubObjects.REPORTING_CODES;
-import static org.folio.orders.utils.SubObjects.SOURCE;
-import static org.folio.orders.utils.SubObjects.VENDOR_DETAIL;
-import static org.folio.orders.utils.SubObjects.resourceByIdPath;
-import static org.folio.orders.utils.SubObjects.resourcesPath;
+import static org.folio.orders.utils.SubObjects.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
@@ -123,6 +108,7 @@ public class OrdersImplTest {
 
   private static final String VALID_ORDER_ID = "07f65192-44a4-483d-97aa-b137bbd96390";
   private static final String PO_ID = "e5ae4afd-3fa9-494e-a972-f541df9b877e";
+  private static final String ID_FOR_MISMATCH = "00000000-1111-2222-8888-999999999999";
   private static final String ID_BAD_FORMAT = "123-45-678-90-abc";
   private static final String ID_DOES_NOT_EXIST = "d25498e7-3ae6-45fe-9612-ec99e2700d2f";
   private static final String ID_FOR_INTERNAL_SERVER_ERROR = "168f8a86-d26c-406e-813f-c7527f241ac3";
@@ -441,9 +427,9 @@ public class OrdersImplTest {
 
   @Test
   public void testGetOrderByIdIncorrectIdFormat() {
-    logger.info("=== Test Get Order By Id - Incorrect Id format ===");
+    logger.info("=== Test Get Order By Id - Incorrect Id format - 400 ===");
 
-    String id = "non-existent-po-id";
+    String id = ID_BAD_FORMAT;
 
     final Response resp = RestAssured
       .with()
@@ -452,7 +438,7 @@ public class OrdersImplTest {
       .get(rootPath + "/" + id)
         .then()
           // The status code should be 400 once Pattern validation annotation is added to Orders interface methods
-          .statusCode(404)
+          .statusCode(400)
           .extract()
             .response();
 
@@ -948,10 +934,10 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testGetOrderLineByIdError422() {
+  public void testGetOrderLineByIdMismatchError422() {
     logger.info("=== Test Get Orderline By Id - With 422 ===");
 
-    String orderId = "Error422OrderId";
+    String orderId = ID_FOR_MISMATCH;
 
     final Response resp = RestAssured
       .with()
@@ -972,9 +958,8 @@ public class OrdersImplTest {
   public void testGetOrderLineByIdWith404() {
     logger.info("=== Test Get Orderline By Id - With 404 ===");
 
-    String orderId = "NoMatterId";
-    String lineId = "NotExistingId";
-    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, lineId));
+    String orderId = ID_DOES_NOT_EXIST;
+    String lineId = ID_DOES_NOT_EXIST;
 
     final Response resp = RestAssured
       .with()
@@ -993,15 +978,11 @@ public class OrdersImplTest {
   public void testGetOrderLineByIdWith500() {
     logger.info("=== Test Get Orderline By Id - With 500 ===");
 
-    String orderId = "NoMatterId";
-    String lineId = "generateError500";
-    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, lineId));
-
     final Response resp = RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .get(String.format(LINE_BY_ID_PATH, orderId, ID_FOR_INTERNAL_SERVER_ERROR))
+      .get(String.format(LINE_BY_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR, ID_FOR_INTERNAL_SERVER_ERROR))
         .then()
           .statusCode(500)
           .extract()
@@ -1077,7 +1058,22 @@ public class OrdersImplTest {
       .put(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST, ID_DOES_NOT_EXIST) + INVALID_LANG)
         .then()
           .statusCode(400)
-          .body(containsString("'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\""));
+          .body(containsString(INCORRECT_LANG_PARAMETER));
+  }
+
+  @Test
+  public void testValidationOnPutWithIncorrectLineId() {
+    logger.info("=== Test validation on PUT line with invalid line ID path parameter ===");
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body("{}")
+      .put(String.format(LINE_BY_ID_PATH, PO_ID, ID_BAD_FORMAT))
+        .then()
+          .statusCode(400)
+          .body(containsString("parameter is incorrect"));
   }
 
   @Test
