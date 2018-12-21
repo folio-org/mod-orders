@@ -1443,7 +1443,7 @@ public class OrdersImplTest {
       Router router = Router.router(vertx);
 
       router.route().handler(BodyHandler.create());
-      router.route(HttpMethod.POST, "/purchase_order").handler(this::handlePostPurchaseOrder);
+      router.route(HttpMethod.POST, resourcesPath(PURCHASE_ORDER)).handler(this::handlePostPurchaseOrder);
       router.route(HttpMethod.POST, resourcesPath(PO_LINES)).handler(this::handlePostPOLine);
       router.route(HttpMethod.POST, resourcesPath(ADJUSTMENT)).handler(ctx -> handlePostGenericSubObj(ctx, ADJUSTMENT));
       router.route(HttpMethod.POST, resourcesPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
@@ -1459,7 +1459,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.POST, resourcesPath(SOURCE)).handler(ctx -> handlePostGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.POST, resourcesPath(VENDOR_DETAIL)).handler(ctx -> handlePostGenericSubObj(ctx, VENDOR_DETAIL));
 
-      router.route(HttpMethod.GET, "/purchase_order/:id").handler(this::handleGetPurchaseOrderById);
+      router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)+"/:id").handler(this::handleGetPurchaseOrderById);
       router.route(HttpMethod.GET, resourcesPath(PO_LINES)).handler(this::handleGetPoLines);
       router.route(HttpMethod.GET, resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
       router.route(HttpMethod.GET, resourcePath(ADJUSTMENT)).handler(this::handleGetAdjustment);
@@ -1491,7 +1491,8 @@ public class OrdersImplTest {
       router.route(HttpMethod.PUT, resourcePath(SOURCE)).handler(ctx -> handlePutGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.PUT, resourcePath(VENDOR_DETAIL)).handler(ctx -> handlePutGenericSubObj(ctx, VENDOR_DETAIL));
 
-      router.route(HttpMethod.DELETE, "/purchase_order/:id").handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER));
+
+      router.route(HttpMethod.DELETE, resourcesPath(PURCHASE_ORDER)+"/:id").handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER));
       router.route(HttpMethod.DELETE, resourcePath(PO_LINES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES));
       router.route(HttpMethod.DELETE, resourcePath(ADJUSTMENT)).handler(ctx -> handleDeleteGenericSubObj(ctx, ADJUSTMENT));
       router.route(HttpMethod.DELETE, resourcePath(ALERTS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ALERTS));
