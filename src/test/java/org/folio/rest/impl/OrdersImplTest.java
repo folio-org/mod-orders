@@ -126,6 +126,10 @@ public class OrdersImplTest {
 
   // Mock data paths
   private static final String BASE_MOCK_DATA_PATH = "mockdata/";
+  private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
+  private static final String INSTANCE_IDENTIFIERS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
+  private static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
+  private static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
   private static final String COMP_ORDER_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/";
   private static final String ORDERS_MOCK_DATA_PATH = COMP_ORDER_MOCK_DATA_PATH + "getOrders.json";
   private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
@@ -1444,6 +1448,7 @@ public class OrdersImplTest {
 
       router.route().handler(BodyHandler.create());
       router.route(HttpMethod.POST, "/purchase_order").handler(this::handlePostPurchaseOrder);
+      router.route(HttpMethod.POST, "/inventory/instances").handler(this::handlePostInstanceRecord);
       router.route(HttpMethod.POST, resourcesPath(PO_LINES)).handler(this::handlePostPOLine);
       router.route(HttpMethod.POST, resourcesPath(ADJUSTMENT)).handler(ctx -> handlePostGenericSubObj(ctx, ADJUSTMENT));
       router.route(HttpMethod.POST, resourcesPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
@@ -1460,6 +1465,10 @@ public class OrdersImplTest {
       router.route(HttpMethod.POST, resourcesPath(VENDOR_DETAIL)).handler(ctx -> handlePostGenericSubObj(ctx, VENDOR_DETAIL));
 
       router.route(HttpMethod.GET, "/purchase_order/:id").handler(this::handleGetPurchaseOrderById);
+      router.route(HttpMethod.GET, "/instance-types").handler(ctx -> handleGetInstanceType(ctx));
+      router.route(HttpMethod.GET, "/instance-statuses").handler(ctx -> handleGetInstanceStatus(ctx));
+      router.route(HttpMethod.GET, "/identifier-types").handler(ctx -> handleGetIdentifierType(ctx));
+      router.route(HttpMethod.GET, "/inventory/instances").handler(ctx -> handleGetInstanceRecord(ctx));
       router.route(HttpMethod.GET, resourcesPath(PO_LINES)).handler(this::handleGetPoLines);
       router.route(HttpMethod.GET, resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
       router.route(HttpMethod.GET, resourcePath(ADJUSTMENT)).handler(this::handleGetAdjustment);
@@ -1510,6 +1519,68 @@ public class OrdersImplTest {
       router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
 
       return router;
+    }
+
+    private void handlePostInstanceRecord(RoutingContext ctx) {
+      logger.info("got: " + ctx.getBodyAsString());
+      /*JsonObject body = ctx.getBodyAsJson();
+      org.folio.rest.acq.model.PurchaseOrder po = body.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
+      po.setId(UUID.randomUUID().toString());
+      addServerRqRsData(HttpMethod.POST, PURCHASE_ORDER, body);*/
+
+      ctx.response()
+        .setStatusCode(201)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .putHeader(HttpHeaders.LOCATION, ctx.request().absoluteURI() + "/11111-22222-33333-44444")
+        .end();
+    }
+
+    private void handleGetInstanceRecord(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+
+      try {
+        JsonObject po = new JsonObject(getMockData(INSTANCE_RECORDS_MOCK_DATA_PATH + "instance.json"));
+        serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+      } catch (IOException e) {
+        ctx.response()
+          .setStatusCode(404);
+      }
+    }
+
+    private void handleGetIdentifierType(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+
+      try {
+        JsonObject po = new JsonObject(getMockData(INSTANCE_IDENTIFIERS_MOCK_DATA_PATH + "ISBN.json"));
+        serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+      } catch (IOException e) {
+        ctx.response()
+          .setStatusCode(404);
+      }
+    }
+
+    private void handleGetInstanceStatus(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+
+      try {
+        JsonObject po = new JsonObject(getMockData(INSTANCE_STATUSES_MOCK_DATA_PATH + "temp.json"));
+        serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+      } catch (IOException e) {
+        ctx.response()
+          .setStatusCode(404);
+      }
+    }
+
+    private void handleGetInstanceType(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+
+      try {
+        JsonObject po = new JsonObject(getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "zzz.json"));
+        serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+      } catch (IOException e) {
+        ctx.response()
+          .setStatusCode(404);
+      }
     }
 
     private String resourcePath(String subObjName) {

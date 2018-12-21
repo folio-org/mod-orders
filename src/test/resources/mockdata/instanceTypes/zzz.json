@@ -1,0 +1,17 @@
+{
+  "instanceTypes": [
+    {
+      "id": "30fffe0e-e985-4144-b2e2-1e8179bdb41f",
+      "name": "unspecified",
+      "code": "zzz",
+      "source": "rdacontent",
+      "metadata": {
+        "createdDate": "2018-12-20T06:23:08.762+0000",
+        "createdByUserId": "b245d382-d91f-5d2d-a352-de48a4648ea9",
+        "updatedDate": "2018-12-20T06:23:08.762+0000",
+        "updatedByUserId": "b245d382-d91f-5d2d-a352-de48a4648ea9"
+      }
+    }
+  ],
+  "totalRecords": 1
+}
