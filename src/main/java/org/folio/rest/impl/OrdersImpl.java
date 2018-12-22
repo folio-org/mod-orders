@@ -11,8 +11,10 @@ import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.annotations.Validate;
+import org.folio.rest.jaxrs.model.CheckinCollection;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.ReceivingCollection;
 import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -220,6 +222,27 @@ public class OrdersImpl implements Orders {
     } else {
       asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422, MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE)));
     }
+  }
+
+  @Override
+  @Validate
+  public void postOrdersReceivingById(String id, String lang, ReceivingCollection entity, Map<String, String> okapiHeaders,
+                                      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    asyncResultHandler.handle(succeededFuture(Response.status(501).build()));
+  }
+
+  @Override
+  @Validate
+  public void postOrdersCheckInById(String id, String lang, CheckinCollection entity, Map<String, String> okapiHeaders,
+                                    Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    asyncResultHandler.handle(succeededFuture(Response.status(501).build()));
+  }
+
+  @Override
+  @Validate
+  public void getOrdersReceivingHistory(String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
+                                        Context vertxContext) {
+    asyncResultHandler.handle(succeededFuture(Response.status(501).build()));
   }
 
   public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {
