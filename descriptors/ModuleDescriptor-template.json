@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "1.0",
+      "version": "1.1",
       "handlers": [
         {
           "methods": ["POST"],
@@ -35,7 +35,7 @@
           "permissionsRequired": ["orders.item.get"],
           "modulePermissions": [
             "orders-storage.purchase_orders.item.get",
-            "orders-storage.po_lines.item.get",
+            "orders-storage.po_lines.collection.get",
             "orders-storage.adjustments.item.get",
             "orders-storage.alerts.item.get",
             "orders-storage.claims.item.get",
@@ -126,7 +126,7 @@
         {
           "methods": ["POST"],
           "pathPattern": "/orders/{id}/lines",
-          "permissionsRequired": ["orders.po_lines.item.post"],
+          "permissionsRequired": ["orders.po-lines.item.post"],
           "modulePermissions": [
             "orders-storage.po_lines.item.post",
             "orders-storage.adjustments.item.post",
@@ -148,7 +148,7 @@
         {
           "methods": ["GET"],
           "pathPattern": "/orders/{id}/lines/{lineId}",
-          "permissionsRequired": ["orders.po_lines.item.get"],
+          "permissionsRequired": ["orders.po-lines.item.get"],
           "modulePermissions": [
             "orders-storage.po_lines.item.get",
             "orders-storage.adjustments.item.get",
@@ -169,7 +169,7 @@
         {
           "methods": ["PUT"],
           "pathPattern": "/orders/{id}/lines/{lineId}",
-          "permissionsRequired": ["orders.po_lines.item.put"],
+          "permissionsRequired": ["orders.po-lines.item.put"],
           "modulePermissions": [
             "orders-storage.po_lines.item.put",
             "orders-storage.adjustments.item.put",
@@ -216,7 +216,7 @@
         {
           "methods": ["DELETE"],
           "pathPattern": "/orders/{id}/lines/{lineId}",
-          "permissionsRequired": ["orders.po_lines.item.delete"],
+          "permissionsRequired": ["orders.po-lines.item.delete"],
           "modulePermissions": [
             "orders-storage.po_lines.item.delete",
             "orders-storage.adjustments.item.delete",
@@ -232,6 +232,40 @@
             "orders-storage.reporting_codes.item.delete",
             "orders-storage.sources.item.delete",
             "orders-storage.vendor_details.item.delete"
+          ]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/orders/{id}/receiving",
+          "permissionsRequired": ["orders.receiving.collection.post"],
+          "modulePermissions": [
+            "orders-storage.pieces.collection.get",
+            "orders-storage.pieces.item.put",
+            "inventory-storage.items.collection.get",
+            "inventory-storage.items.item.put"
+          ]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/orders/{id}/check-in",
+          "permissionsRequired": ["orders.checkin.collection.post"],
+          "modulePermissions": [
+            "po_line.collection.get",
+            "orders-storage.pieces.collection.get",
+            "orders-storage.pieces.item.put",
+            "inventory-storage.items.collection.get",
+            "inventory-storage.items.item.post",
+            "inventory-storage.items.item.put"
+          ]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/orders/receiving_history",
+          "permissionsRequired": ["orders.receiving-history.collection.get"],
+          "modulePermissions": [
+            "orders-storage.receiving-history.collection.get",
+            "inventory-storage.items.item.get",
+            "inventory-storage.holdings.item.get"
           ]
         }
       ]
@@ -275,7 +309,15 @@
       "version": "1.0"
     },
     {
+      "id": "orders-storage.pieces",
+      "version": "1.0"
+    },
+    {
       "id": "orders-storage.physicals",
+      "version": "1.0"
+    },
+    {
+      "id": "orders-storage.receiving-history",
       "version": "1.0"
     },
     {
@@ -297,6 +339,14 @@
     {
       "id": "orders-storage.po_lines",
       "version": "1.0"
+    },
+    {
+      "id": "item-storage",
+      "version": "7.0"
+    },
+    {
+      "id": "holdings-storage",
+      "version": "3.0"
     }
   ],
     "permissionSets": [
@@ -321,24 +371,39 @@
       "description": "Delete an existing order"
     },
     {
-      "permissionName": "orders.po_lines.item.post",
+      "permissionName": "orders.po-lines.item.post",
       "displayName": "Orders - create a new PO line",
       "description": "Create a new PO line"
     },
     {
-      "permissionName": "orders.po_lines.item.get",
+      "permissionName": "orders.po-lines.item.get",
       "displayName": "Orders - get an existing PO line",
       "description": "Get an existing PO line"
     },
     {
-      "permissionName": "orders.po_lines.item.put",
+      "permissionName": "orders.po-lines.item.put",
       "displayName": "Orders - modify an existing PO line",
       "description": "Modify an existing PO line"
     },
     {
-      "permissionName": "orders.po_lines.item.delete",
+      "permissionName": "orders.po-lines.item.delete",
       "displayName": "Orders - delete an existing PO line",
       "description": "Delete an existing PO line"
+    },
+    {
+      "permissionName": "orders.receiving.collection.post",
+      "displayName": "Orders - Receive items",
+      "description": "Receive items spanning one or more po_lines in this order"
+    },
+    {
+      "permissionName": "orders.checkin.collection.post",
+      "displayName": "Orders - Check-in items",
+      "description": "Check-in items spanning one or more po_lines in this order"
+    },
+    {
+      "permissionName": "orders.receiving-history.collection.get",
+      "displayName": "Orders - Receiving history",
+      "description": "Get receiving history matching the provided criteria"
     },
     {
       "permissionName": "orders.all",
@@ -349,10 +414,13 @@
         "orders.item.get",
         "orders.item.put",
         "orders.item.delete",
-        "orders.po_lines.item.post",
-        "orders.po_lines.item.get",
-        "orders.po_lines.item.put",
-        "orders.po_lines.item.delete"
+        "orders.po-lines.item.post",
+        "orders.po-lines.item.get",
+        "orders.po-lines.item.put",
+        "orders.po-lines.item.delete",
+        "orders.receiving.collection.post",
+        "orders.checkin.collection.post",
+        "orders.receiving-history.collection.get"
       ]
     }
   ],
