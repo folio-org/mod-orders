@@ -26,9 +26,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
-import java.util.stream.Collectors;
 
 import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
 import static org.folio.orders.utils.SubObjects.*;
@@ -119,8 +119,8 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
     }
 
     String endpoint = compPOL.getDetails().getProductIds().stream()
-      .map(productId -> String.format("name=%s", productId.getProductIdType().toString()))
-      .collect(Collectors.joining(" or ", "/identifier-types?query=", ""));
+      .map(productId -> String.format("name==%s", productId.getProductIdType().toString()))
+      .collect(joining(" or ", "/identifier-types?query=", ""));
 
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(productTypes -> {
@@ -152,7 +152,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
 
     String query = compPOL.getDetails().getProductIds().stream()
       .map(productId -> buildProductIdQuery(productId, productTypesMap))
-      .collect(Collectors.joining(" or "));
+      .collect(joining(" or "));
 
     // query contains special characters so must be encoded before submitting
     String endpoint = null;
@@ -210,12 +210,12 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
   }
 
   private CompletableFuture<JsonObject> getInstanceType(String typeName) {
-    String endpoint = String.format("/instance-types?query=code=%s", typeName);
+    String endpoint = String.format("/instance-types?query=code==%s", typeName);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
   }
 
   private CompletableFuture<JsonObject> getStatus(String statusCode) {
-    String endpoint = String.format("/instance-statuses?query=code=%s", statusCode);
+    String endpoint = String.format("/instance-statuses?query=code==%s", statusCode);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
   }
 
