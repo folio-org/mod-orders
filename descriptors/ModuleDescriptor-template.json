@@ -26,7 +26,12 @@
             "orders-storage.reporting_codes.item.post",
             "orders-storage.sources.item.post",
             "orders-storage.vendor_details.item.post",
-            "configuration.entries.collection.get"
+            "configuration.entries.collection.get",
+            "inventory-storage.identifier-types.collection.get",
+            "inventory.instances.collection.get",
+            "inventory.instances.item.post",
+            "inventory-storage.instance-types.collection.get",
+            "inventory-storage.instance-statuses.collection.get"
           ]
         },
         {
@@ -98,7 +103,12 @@
             "orders-storage.sources.item.delete",
             "orders-storage.vendor_details.item.put",
             "orders-storage.vendor_details.item.post",
-            "orders-storage.vendor_details.item.delete"
+            "orders-storage.vendor_details.item.delete",
+            "inventory-storage.identifier-types.collection.get",
+            "inventory.instances.collection.get",
+            "inventory.instances.item.post",
+            "inventory-storage.instance-types.collection.get",
+            "inventory-storage.instance-statuses.collection.get"
           ]
         },
         {
@@ -296,6 +306,22 @@
     },
     {
       "id": "orders-storage.po_lines",
+      "version": "1.0"
+    },
+    {
+      "id": "identifier-types",
+      "version": "1.0"
+    },
+    {
+      "id": "inventory",
+      "version": "8.0"
+    },
+    {
+      "id": "instance-types",
+      "version": "2.0"
+    },
+    {
+      "id": "instance-statuses",
       "version": "1.0"
     }
   ],
