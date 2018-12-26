@@ -120,14 +120,6 @@
       "publisher": "Schiffer Publishing",
       "receipt_date": "2018-10-09T00:00:00.000Z",
       "receipt_status": "Awaiting Receipt",
-      "renewal": {
-        "interval": 182,
-        "id": "8e414baa-8cf2-4916-a90f-d1da4009e06e",
-        "cycle": "6 Months",
-        "manual_renewal": true,
-        "review_period": 30,
-        "renewal_date": "2019-04-09T00:00:00.000Z"
-      },
       "reporting_codes": [
         {
           "code": "CODE1",

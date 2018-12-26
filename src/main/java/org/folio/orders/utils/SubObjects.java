@@ -21,7 +21,6 @@ public class SubObjects {
   public static final String FUND_DISTRIBUTION = "fund_distribution";
   public static final String LOCATION = "location";
   public static final String PHYSICAL = "physical";
-  public static final String RENEWAL = "renewal";
   public static final String REPORTING_CODES = "reporting_codes";
   public static final String SOURCE = "source";
   public static final String VENDOR_DETAIL = "vendor_detail";
@@ -42,7 +41,6 @@ public class SubObjects {
     apis.put(FUND_DISTRIBUTION, "/orders-storage/fund_distributions");
     apis.put(LOCATION, "/orders-storage/locations");
     apis.put(PHYSICAL, "/orders-storage/physicals");
-    apis.put(RENEWAL, "/orders-storage/renewals");
     apis.put(REPORTING_CODES, "/orders-storage/reporting_codes");
     apis.put(SOURCE, "/orders-storage/sources");
     apis.put(VENDOR_DETAIL, "/orders-storage/vendor_details");
