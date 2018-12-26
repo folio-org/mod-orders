@@ -76,6 +76,8 @@ public class OrdersImplTest {
 
   public static final String PURCHASE_ORDER = "purchase_order";
 
+  private static final String INSTANCE_RECORD = "instance_record";
+
   static {
     System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, "io.vertx.core.logging.Log4j2LogDelegateFactory");
   }
@@ -185,10 +187,9 @@ public class OrdersImplTest {
   public void testListedPrintMonograph() throws Exception {
     logger.info("=== Test Listed Print Monograph ===");
 
-    String body = getMockData(listedPrintMonographPath);
-    JsonObject reqData = new JsonObject(body);
+    JsonObject reqData = getMockDraftOrder();
 
-    final CompositePurchaseOrder resp = verifyPostResponse(rootPath, body,
+    final CompositePurchaseOrder resp = verifyPostResponse(rootPath, reqData.toString(),
       NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp));
@@ -212,6 +213,51 @@ public class OrdersImplTest {
       assertNotNull(line.getCost().getId());
       assertNotNull(line.getDetails().getId());
       assertNotNull(line.getLocation().getId());
+      assertNull(line.getInstanceId());
+    }
+  }
+
+  @Test
+  public void testListedPrintMonographInOpenStatus() throws Exception {
+    logger.info("=== Test Listed Print Monograph in Open status ===");
+
+    String body = getMockData(listedPrintMonographPath);
+    JsonObject reqData = new JsonObject(body);
+    // remove productId from PO line to test scenario when it's not provided
+    reqData.getJsonArray("po_lines")
+      .getJsonObject(0)
+      .getJsonObject("details")
+      .getJsonArray("product_ids")
+      .clear();
+
+    final CompositePurchaseOrder resp = verifyPostResponse(rootPath, reqData.toString(),
+      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    logger.info(JsonObject.mapFrom(resp));
+
+    String poId = resp.getId();
+    String poNumber = resp.getPoNumber();
+
+    assertNotNull(poId);
+    assertNotNull(poNumber);
+    assertEquals(reqData.getJsonArray("po_lines").size(), resp.getPoLines().size());
+
+    for (int i = 0; i < resp.getPoLines().size(); i++) {
+      PoLine line = resp.getPoLines().get(i);
+      String polNumber = line.getPoLineNumber();
+      String polId = line.getId();
+
+      assertEquals(poId, line.getPurchaseOrderId());
+      assertNotNull(polId);
+      assertNotNull(polNumber);
+      assertTrue(polNumber.startsWith(poNumber));
+      assertNotNull(line.getCost().getId());
+      assertNotNull(line.getDetails().getId());
+      assertNotNull(line.getLocation().getId());
+      assertNotNull(line.getInstanceId());
+
+      JsonObject instance = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST).get(i);
+      verifyInstanceRecordRequest(instance, line);
     }
   }
 
@@ -271,7 +317,7 @@ public class OrdersImplTest {
   public void testPoCreationWithOverLimitPOLines(TestContext ctx) throws Exception {
     logger.info("=== Test PO, with over limit lines quantity, creation ===");
 
-    String body = getMockData(listedPrintMonographPath);
+    String body = getMockDraftOrder().toString();
 
     final Errors errors = verifyPostResponse(rootPath, body,
       EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422).body().as(Errors.class);
@@ -287,7 +333,7 @@ public class OrdersImplTest {
   public void testPostWithInvalidConfig(TestContext ctx) throws Exception {
     logger.info("=== Test PO creation fail if config is invalid ===");
 
-    String body = getMockData(listedPrintMonographPath);
+    String body = getMockDraftOrder().toString();
 
     final String error = verifyPostResponse(rootPath, body,
       INVALID_CONFIG_X_OKAPI_TENANT, TEXT_PLAIN, 500).body().print();
@@ -353,7 +399,7 @@ public class OrdersImplTest {
   public void testDetailsCreationFailure() throws Exception {
     logger.info("=== Test Details creation failure ===");
 
-    String body = getMockData(listedPrintMonographPath);
+    String body = getMockDraftOrder().toString();
 
     final Response resp = RestAssured
       .with()
@@ -524,7 +570,8 @@ public class OrdersImplTest {
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
-    String body = getMockData(listedPrintMonographPath);
+    String body = getMockDraftOrder().toString();
+
     RestAssured
       .with()
         .header(X_OKAPI_URL)
@@ -535,6 +582,33 @@ public class OrdersImplTest {
       .put(rootPath + "/" + id)
         .then()
           .statusCode(204);
+  }
+
+  @Test
+  public void testPutOrdersByIdToChangeStatusToOpen() throws Exception {
+    logger.info("=== Test Put Order By Id to change status of Order to Open ===");
+
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
+    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
+    JsonObject reqData = new JsonObject(getMockData(listedPrintMonographPath));
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
+        .contentType(APPLICATION_JSON)
+        .body(reqData.toString())
+      .put(rootPath + "/" + id)
+        .then()
+        .statusCode(204);
+
+    CompositePurchaseOrder orderRq = reqData.mapTo(CompositePurchaseOrder.class);
+    for (int i = 0; i < orderRq.getPoLines().size(); i++) {
+      JsonObject instance = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST).get(i);
+      verifyInstanceRecordRequest(instance, orderRq.getPoLines().get(i));
+    }
   }
 
   @Test
@@ -1005,6 +1079,7 @@ public class OrdersImplTest {
       NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(PoLine.class);
 
     ctx.assertEquals(id, response.getPurchaseOrderId());
+    ctx.assertNull(response.getInstanceId());
   }
 
   @Test
@@ -1026,6 +1101,7 @@ public class OrdersImplTest {
       NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(PoLine.class);
 
     ctx.assertEquals(PO_ID, response.getPurchaseOrderId());
+    ctx.assertNull(response.getInstanceId());
   }
 
   @Test
@@ -1405,6 +1481,26 @@ public class OrdersImplTest {
             .response();
   }
 
+  private JsonObject getMockDraftOrder() throws Exception {
+    JsonObject order = new JsonObject(getMockData(listedPrintMonographPath));
+    order.put("workflow_status", "Pending");
+
+    return order;
+  }
+
+  private void verifyInstanceRecordRequest(JsonObject instance, PoLine line) {
+    assertThat(instance.getString("title"), equalTo(line.getTitle()));
+    assertThat(instance.getString("source"), equalTo(line.getSource().getCode()));
+    assertThat(instance.getString("statusId"), equalTo("daf2681c-25af-4202-a3fa-e58fdf806183"));
+    assertThat(instance.getString("instanceTypeId"), equalTo("30fffe0e-e985-4144-b2e2-1e8179bdb41f"));
+    assertThat(instance.getJsonArray("publication").getJsonObject(0).getString("publisher"), equalTo(line.getPublisher()));
+    assertThat(instance.getJsonArray("publication").getJsonObject(0).getString("dateOfPublication"), equalTo(line.getPublicationDate()));
+    if (line.getDetails().getProductIds().size() > 0) {
+      assertThat(instance.getJsonArray("identifiers").getJsonObject(0).getString("identifierTypeId"), equalTo("8261054f-be78-422d-bd51-4ed9f33c3422"));
+      assertThat(instance.getJsonArray("identifiers").getJsonObject(0).getString("value"), equalTo(line.getDetails().getProductIds().get(0).getProductId()));
+    }
+  }
+
   public static String getMockData(String path) throws IOException {
     try (InputStream resourceAsStream = OrdersImplTest.class.getClassLoader().getResourceAsStream(path)) {
       if (resourceAsStream != null) {
@@ -1523,10 +1619,8 @@ public class OrdersImplTest {
 
     private void handlePostInstanceRecord(RoutingContext ctx) {
       logger.info("got: " + ctx.getBodyAsString());
-      /*JsonObject body = ctx.getBodyAsJson();
-      org.folio.rest.acq.model.PurchaseOrder po = body.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
-      po.setId(UUID.randomUUID().toString());
-      addServerRqRsData(HttpMethod.POST, PURCHASE_ORDER, body);*/
+      JsonObject body = ctx.getBodyAsJson();
+      addServerRqRsData(HttpMethod.POST, INSTANCE_RECORD, body);
 
       ctx.response()
         .setStatusCode(201)
@@ -1539,11 +1633,18 @@ public class OrdersImplTest {
       logger.info("got: " + ctx.request().path());
 
       try {
-        JsonObject po = new JsonObject(getMockData(INSTANCE_RECORDS_MOCK_DATA_PATH + "instance.json"));
-        serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+        if (ctx.request().getParam("query").contains("ocn956625961")) {
+          JsonObject instance = new JsonObject(getMockData(INSTANCE_RECORDS_MOCK_DATA_PATH + "instance.json"));
+          serverResponse(ctx, 200, APPLICATION_JSON, instance.encodePrettily());
+        } else {
+          JsonObject instance = new JsonObject();
+          instance.put("instances", new JsonArray());
+          serverResponse(ctx, 200, APPLICATION_JSON, instance.encodePrettily());
+        }
       } catch (IOException e) {
         ctx.response()
-          .setStatusCode(404);
+          .setStatusCode(404)
+          .end();
       }
     }
 
@@ -1555,7 +1656,8 @@ public class OrdersImplTest {
         serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
       } catch (IOException e) {
         ctx.response()
-          .setStatusCode(404);
+          .setStatusCode(404)
+          .end();
       }
     }
 
@@ -1567,7 +1669,8 @@ public class OrdersImplTest {
         serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
       } catch (IOException e) {
         ctx.response()
-          .setStatusCode(404);
+          .setStatusCode(404)
+          .end();
       }
     }
 
@@ -1579,7 +1682,8 @@ public class OrdersImplTest {
         serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
       } catch (IOException e) {
         ctx.response()
-          .setStatusCode(404);
+          .setStatusCode(404)
+          .end();
       }
     }
 
