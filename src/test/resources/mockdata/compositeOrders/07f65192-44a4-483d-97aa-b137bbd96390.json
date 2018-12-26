@@ -12,8 +12,6 @@
   },
   "approved": true,
   "assigned_to": "28d102a2-d137-11e8-a8d5-f2801f1b9fd1",
-  "created": "2018-07-18T00:00:00.000Z",
-  "created_by": "28d102a2-d137-11e8-a8d5-f2801f1b9fd1",
   "notes": [],
   "manual_po": false,
   "po_number": "S60402",
@@ -23,6 +21,10 @@
   "total_items": 80,
   "vendor": "50fb8b56-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflow_status": "Closed",
+  "metadata": {
+    "createdDate": "2018-07-18T00:00:00.000",
+    "createdByUserId": "28d102a2-d137-11e8-a8d5-f2801f1b9fd1"
+  },
   "po_lines": [
     {
       "id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
@@ -158,6 +160,10 @@
         "note_from_vendor": "",
         "vendor_account": "",
         "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "metadata": {
+        "createdDate": "2018-07-18T00:00:00.000",
+        "createdByUserId": "28d102a2-d137-11e8-a8d5-f2801f1b9fd1"
       }
     }
   ]

@@ -36,5 +36,9 @@
   "selector" : "ABCD",
   "tags" : [ "ABCDEFGHIJKLMNOPQRSTU", "ABCDEFG", "ABCDEFGHIJKLMNOPQRSTU", "ABCDEFGHIJKLMNO" ],
   "title" : "Kayak Fishing in the Northern Gulf Coast",
-  "vendor_detail" : "3af03b68-d45c-48f3-89f3-1f0f2afe9fb7"
+  "vendor_detail" : "3af03b68-d45c-48f3-89f3-1f0f2afe9fb7",
+  "metadata": {
+    "createdDate": "2018-06-29T00:00:00.000",
+    "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
+  }
 }

@@ -38,5 +38,9 @@
   "source" : "9a2b8dc6-4fe9-463e-8ed8-165aa0dbc6ba",
   "tags" : [ "First", "Second", "Alternative", "Unknown" ],
   "title" : "Excepteur sint occaecat cupidatat non proident",
-  "vendor_detail" : "051f3de2-547c-415b-97a9-ed6b13af14e7"
+  "vendor_detail" : "051f3de2-547c-415b-97a9-ed6b13af14e7",
+  "metadata": {
+    "createdDate": "2018-06-29T00:00:00.000",
+    "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
+  }
 }

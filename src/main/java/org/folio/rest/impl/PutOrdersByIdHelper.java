@@ -51,10 +51,7 @@ public class PutOrdersByIdHelper {
     DeleteOrdersByIdHelper delHelper = new DeleteOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
     getHelper.getOrder(id, lang).thenAccept(existedCompPO ->
       delHelper.deleteOrder(id, lang)
-        .thenRun(() -> {
-          compPO.setId(id);
-          compPO.setCreated(existedCompPO.getCreated());
-          compPO.setCreatedBy(existedCompPO.getCreatedBy());
+        .thenRun(() ->
           postHelper.createPOandPOLines(compPO)
             .thenAccept(withCompPO -> {
 
@@ -76,8 +73,8 @@ public class PutOrdersByIdHelper {
                 })
                 .exceptionally(this::handleError);
             })
-            .exceptionally(this::handleError);
-        })
+            .exceptionally(this::handleError)
+        )
         .exceptionally(this::handleError)
     ).exceptionally(this::handleError);
     return future;
