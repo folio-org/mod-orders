@@ -1,5 +1,9 @@
 package org.folio.rest.impl;
 
+import static org.folio.orders.utils.SubObjects.PURCHASE_ORDER;
+import static org.folio.orders.utils.SubObjects.resourceByIdPath;
+
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -46,7 +50,7 @@ public class DeleteOrdersByIdHelper {
 
     HelperUtils.deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger).thenRun(() -> {
       logger.info("Successfully deleted po_lines, proceding with purchase order");
-      HelperUtils.operateOnSubObj(HttpMethod.DELETE, "/purchase_order/" + id, httpClient, ctx, okapiHeaders, logger)
+      HelperUtils.operateOnSubObj(HttpMethod.DELETE, resourceByIdPath(PURCHASE_ORDER, id), httpClient, ctx, okapiHeaders, logger)
           .thenAccept(action -> future.complete(null)).exceptionally(t -> {
             logger.error("Failed to delete PO", t);
             future.completeExceptionally(t.getCause());

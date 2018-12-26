@@ -25,26 +25,29 @@ public class SubObjects {
   public static final String REPORTING_CODES = "reporting_codes";
   public static final String SOURCE = "source";
   public static final String VENDOR_DETAIL = "vendor_detail";
+  public static final String PURCHASE_ORDER = "purchase_order";
+
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
   private static final Map<String, String> SUB_OBJECT_COLLECTION_APIS;
 
   static {
     Map<String, String> apis = new HashMap<>();
-    apis.put(ADJUSTMENT, "/adjustment");
-    apis.put(ALERTS, "/alert");
-    apis.put(CLAIMS, "/claim");
-    apis.put(COST, "/cost");
-    apis.put(DETAILS, "/details");
-    apis.put(ERESOURCE, "/eresource");
+    apis.put(ADJUSTMENT, "/orders-storage/adjustments");
+    apis.put(ALERTS, "/orders-storage/alerts");
+    apis.put(CLAIMS, "/orders-storage/claims");
+    apis.put(COST, "/orders-storage/costs");
+    apis.put(DETAILS, "/orders-storage/details");
+    apis.put(ERESOURCE, "/orders-storage/eresources");
     apis.put(FUND_DISTRIBUTION, "/orders-storage/fund_distributions");
-    apis.put(LOCATION, "/location");
-    apis.put(PHYSICAL, "/physical");
-    apis.put(RENEWAL, "/renewal");
-    apis.put(REPORTING_CODES, "/reporting_code");
-    apis.put(SOURCE, "/source");
-    apis.put(VENDOR_DETAIL, "/vendor_detail");
-    apis.put(PO_LINES, "/po_line");
+    apis.put(LOCATION, "/orders-storage/locations");
+    apis.put(PHYSICAL, "/orders-storage/physicals");
+    apis.put(RENEWAL, "/orders-storage/renewals");
+    apis.put(REPORTING_CODES, "/orders-storage/reporting_codes");
+    apis.put(SOURCE, "/orders-storage/sources");
+    apis.put(VENDOR_DETAIL, "/orders-storage/vendor_details");
+    apis.put(PO_LINES, "/orders-storage/po_lines");
+    apis.put(PURCHASE_ORDER, "/orders-storage/purchase_orders");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);
     SUB_OBJECT_ITEM_APIS = Collections.unmodifiableMap(
