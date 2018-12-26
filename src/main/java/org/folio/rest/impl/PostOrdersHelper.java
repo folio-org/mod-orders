@@ -25,8 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static org.folio.orders.utils.SubObjects.ADJUSTMENT;
-import static org.folio.orders.utils.SubObjects.PO_LINES;
+import static org.folio.orders.utils.SubObjects.*;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 
 public class PostOrdersHelper {
@@ -69,7 +68,7 @@ public class PostOrdersHelper {
       if (purchaseOrder.containsKey(PO_LINES)) {
         purchaseOrder.remove(PO_LINES);
       }
-      httpClient.request(HttpMethod.POST, purchaseOrder, "/purchase_order", okapiHeaders)
+      httpClient.request(HttpMethod.POST, purchaseOrder, resourcesPath(PURCHASE_ORDER), okapiHeaders)
         .thenApply(HelperUtils::verifyAndExtractBody)
         .thenAccept(poBody -> {
           CompositePurchaseOrder po = poBody.mapTo(CompositePurchaseOrder.class);
@@ -106,7 +105,7 @@ public class PostOrdersHelper {
           return null;
         });
     } catch (Exception e) {
-      logger.error("Exception calling POST /purchase_order", e);
+      logger.error("Exception calling POST /orders-storage/purchase_orders", e);
       future.completeExceptionally(e);
     }
     return future;
