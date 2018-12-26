@@ -104,15 +104,6 @@
   "purchase_order_id" : "82db020c-2b1a-4f89-b40f-76f7b3cd01a1",
   "receipt_date" : "2018-10-09T00:00:00.000+0000",
   "receipt_status" : "Awaiting Receipt",
-  "renewal" : {
-    "id" : "e5c457d4-37c7-4e42-854d-60b1098c23f4",
-    "cycle" : "6 Months",
-    "interval" : 182,
-    "manual_renewal" : true,
-    "review_period" : 30,
-    "renewal_date" : "2019-04-09T00:00:00.000+0000",
-    "po_line_id" : "f7223ce8-9e92-4c28-8fd9-097596053b7c"
-  },
   "reporting_codes" : [ {
     "id" : "c2a02856-b8ba-49f6-a9ff-84d1228e76e6",
     "code" : "CODE2",

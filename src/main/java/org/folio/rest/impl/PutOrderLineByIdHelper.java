@@ -115,7 +115,6 @@ public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
     futures.add(handleSubObjOperation(ERESOURCE, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(LOCATION, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(PHYSICAL, updatedLineJson, lineFromStorage));
-    futures.add(handleSubObjOperation(RENEWAL, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(SOURCE, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(VENDOR_DETAIL, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage));
@@ -225,6 +224,7 @@ public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
     return null;
   }
 
+  @Override
   protected Response buildErrorResponse(int code, String message) {
     final Response result;
     switch (code) {
