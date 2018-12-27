@@ -12,8 +12,6 @@
   },
   "approved": true,
   "assigned_to": "",
-  "created": "2018-06-29T00:00:00.000Z",
-  "created_by": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1",
   "manual_po": false,
   "notes": [],
   "po_number": "268758",
@@ -23,6 +21,10 @@
   "total_items": 3,
   "vendor": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflow_status": "Open",
+  "metadata": {
+    "createdDate": "2018-06-29T00:00:00.000",
+    "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
+  },
   "po_lines": [
     {
       "id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1",
@@ -152,6 +154,10 @@
         "note_from_vendor": "",
         "vendor_account": "",
         "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "metadata": {
+        "createdDate": "2018-06-29T00:00:00.000",
+        "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
       }
     },
     {
@@ -282,6 +288,10 @@
         "note_from_vendor": "",
         "vendor_account": "",
         "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "metadata": {
+        "createdDate": "2018-06-29T00:00:00.000",
+        "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
       }
     },
     {
@@ -412,6 +422,10 @@
         "note_from_vendor": "",
         "vendor_account": "",
         "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "metadata": {
+        "createdDate": "2018-06-29T00:00:00.000",
+        "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
       }
     }
   ]

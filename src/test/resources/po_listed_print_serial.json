@@ -11,8 +11,6 @@
   },
   "approved": true,
   "assigned_to": "ab18897b-0e40-4f31-896b-9c9adc979a88",
-  "created": "2010-10-08T03:53:00.000Z",
-  "created_by": "ab18897b-0e40-4f31-896b-9c9adc979a88",
   "manual_po": false,
   "notes": [
     "ABCDEFGHIJKLMNO",
@@ -26,6 +24,10 @@
   "total_items": 2,
   "vendor": "168f8a86-d26c-406e-813f-c7527f241ac3",
   "workflow_status": "Open",
+  "metadata": {
+    "createdDate": "2010-10-08T03:53:00.000",
+    "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
+  },
   "po_lines": [
     {
       "acquisition_method": "Purchase At Vendor System",
@@ -165,6 +167,10 @@
         "ref_number": "123456-78",
         "ref_number_type": "Supplier's unique order line reference number",
         "vendor_account": "8910-10"
+      },
+      "metadata": {
+        "createdDate": "2010-10-08T03:53:00.000",
+        "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
       }
     }
   ]

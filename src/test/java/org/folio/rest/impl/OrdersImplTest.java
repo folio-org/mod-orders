@@ -24,7 +24,6 @@ import io.vertx.ext.web.handler.BodyHandler;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.RestVerticle;
-import org.folio.rest.acq.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Errors;
@@ -43,7 +42,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -62,7 +60,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -609,148 +606,6 @@ public class OrdersImplTest {
       JsonObject instance = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST).get(i);
       verifyInstanceRecordRequest(instance, orderRq.getPoLines().get(i));
     }
-  }
-
-  @Test
-  public void testPutOrdersByIdDoesNotAffectGeneratedData() {
-    logger.info("=== Test Put Order By Id doesn't affect generated data ===");
-
-    JsonObject mockOrder = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH,VALID_ORDER_ID);
-    CompositePurchaseOrder puttedOrder =  mockOrder.mapTo(CompositePurchaseOrder.class);
-    puttedOrder.setApproved(false);
-    puttedOrder.setCreated(new Date());
-    puttedOrder.setCreatedBy("1ab7ef6a-d1d4-4a4f-90a2-882aed18af14");
-    String body = JsonObject.mapFrom(puttedOrder).toString();
-
-    RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .header(X_OKAPI_USER_ID)
-        .contentType(APPLICATION_JSON)
-      .body(body)
-        .put(rootPath + "/" + VALID_ORDER_ID)
-          .then()
-            .statusCode(204);
-
-    PurchaseOrder changedOrder =  MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.POST).get(0).mapTo(PurchaseOrder.class);
-    PurchaseOrder initialOrder = MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET).get(0).mapTo(PurchaseOrder.class);
-
-    assertThat(initialOrder.getCreated(), equalTo(changedOrder.getCreated()));
-    assertThat(initialOrder.getCreatedBy(), equalTo(changedOrder.getCreatedBy()));
-    assertThat(initialOrder.getApproved(), not(equalTo(changedOrder.getApproved())));
-    assertThat(puttedOrder.getApproved(), equalTo(changedOrder.getApproved()));
-    assertThat(puttedOrder.getCreatedBy(), not(equalTo(changedOrder.getCreatedBy())));
-    assertThat(puttedOrder.getCreated(), not(equalTo(changedOrder.getCreated())));
-
-  }
-
-  @Test
-  public void testPutPoLineDoesNotAffectGeneratedData() {
-    logger.info("=== Test Put PO Line By Id doesn't affect generated data ===");
-
-
-    JsonObject jsonObject = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH,
-      ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
-    PoLine initialPoLine = jsonObject.mapTo(PoLine.class);
-
-    String orderId = getMockLine(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).getPurchaseOrderId();
-    PoLine puttedPoLine =  jsonObject.mapTo(PoLine.class);
-    puttedPoLine.setEdition("tesEdition");
-    puttedPoLine.setCreated(new Date());
-    puttedPoLine.setCreatedBy("440c89e3-7f6c-578a-9ea8-310dad23605e");
-    String body = JsonObject.mapFrom(puttedPoLine).toString();
-
-    RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .header(X_OKAPI_USER_ID)
-        .contentType(APPLICATION_JSON)
-        .body(body)
-      .put(String.format(LINE_BY_ID_PATH, orderId, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE))
-        .then()
-          .statusCode(204);
-    JsonObject responseJsonObject = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).get(0);
-    org.folio.rest.acq.model.PoLine changedPoLine = responseJsonObject.mapTo(org.folio.rest.acq.model.PoLine.class);
-
-    assertThat(initialPoLine.getCreated(), equalTo(changedPoLine.getCreated()));
-    assertThat(initialPoLine.getCreatedBy(), equalTo(changedPoLine.getCreatedBy()));
-    assertThat(initialPoLine.getEdition(), not(equalTo(changedPoLine.getEdition())));
-    assertThat(puttedPoLine.getEdition(), equalTo(changedPoLine.getEdition()));
-    assertThat(puttedPoLine.getCreatedBy(), not(equalTo(changedPoLine.getCreatedBy())));
-
-  }
-
-  @Test
-  public void testIgnoringGeneratedDataInResponseOnOrderPost() throws IOException {
-    logger.info("=== Test ignoring \"Created on\" from request on POST API ===");
-
-    String body = getMockData(minimalOrderPath);
-    JsonObject reqData = new JsonObject(body);
-    CompositePurchaseOrder compPo = reqData.mapTo(CompositePurchaseOrder.class);
-    Date dateFromRequest = compPo.getCreated();
-    String createdByFromRequest = compPo.getCreatedBy();
-    String poNumberFromRequest = compPo.getPoNumber();
-    final CompositePurchaseOrder resp = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .header(X_OKAPI_USER_ID)
-        .header(X_OKAPI_TOKEN)
-        .contentType(APPLICATION_JSON)
-        .body(body)
-      .post(rootPath)
-        .then()
-          .contentType(APPLICATION_JSON)
-          .statusCode(201)
-          .extract()
-            .response()
-              .as(CompositePurchaseOrder.class);
-
-    logger.info(JsonObject.mapFrom(resp));
-    Date dateFromResponse = resp.getCreated();
-    String createdByFromResponse = resp.getCreatedBy();
-    String poNumberFromResponse = resp.getPoNumber();
-    assertNotNull(dateFromResponse);
-    assertNotNull(createdByFromResponse);
-    assertNotNull(poNumberFromResponse);
-    assertThat(poNumberFromRequest, not(equalTo(poNumberFromResponse)));
-    assertThat(dateFromResponse, not(equalTo(dateFromRequest)));
-    assertThat(createdByFromResponse, not(equalTo(createdByFromRequest)));
-  }
-
-
-  @Test
-  public void testIgnoringGeneratedDataInResponseOnPoLinePost() {
-    logger.info("=== Test ignoring \"Created on\" from request on PO Line POST API ===");
-
-    JsonObject compPoLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
-    PoLine poLineFromRequest = compPoLineJson.mapTo(PoLine.class);
-    Date dateFromRequest = poLineFromRequest.getCreated();
-    String userFromRequest = poLineFromRequest.getCreatedBy();
-    String id = compPoLineJson.getString("purchase_order_id");
-    final PoLine response = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .header(X_OKAPI_TOKEN)
-        .header(X_OKAPI_USER_ID)
-        .contentType(APPLICATION_JSON)
-        .body(compPoLineJson.encodePrettily())
-      .post(String.format(LINES_PATH, id))
-        .then()
-          .contentType(APPLICATION_JSON)
-          .statusCode(201)
-            .extract()
-              .response().as(PoLine.class);
-
-    Date dateFromResponse = response.getCreated();
-    String createdByFromResponse = response.getCreatedBy();
-    assertNotNull(dateFromResponse);
-    assertNotNull(createdByFromResponse);
-    assertThat(dateFromResponse, not(equalTo(dateFromRequest)));
-    assertThat(createdByFromResponse, not(equalTo(userFromRequest)));
   }
 
   @Test
