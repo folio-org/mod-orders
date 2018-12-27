@@ -76,7 +76,7 @@
         "product_ids": [
           {
             "product_id": "807922",
-            "product_id_type": "Vendor Title Number"
+            "product_id_type": "ISBN"
           }
         ],
         "material_types": [

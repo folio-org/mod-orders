@@ -12,6 +12,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -23,10 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static org.folio.orders.utils.SubObjects.ADJUSTMENT;
-import static org.folio.orders.utils.SubObjects.PO_LINES;
-import static org.folio.orders.utils.SubObjects.PURCHASE_ORDER;
-import static org.folio.orders.utils.SubObjects.resourcesPath;
+import static org.folio.orders.utils.SubObjects.*;
 
 public class PostOrdersHelper {
 
@@ -77,13 +75,15 @@ public class PostOrdersHelper {
 
           List<PoLine> lines = new ArrayList<>(compPO.getPoLines().size());
           List<CompletableFuture<Void>> futures = new ArrayList<>();
+          boolean updateInventory = compPO.getWorkflowStatus() == WorkflowStatus.OPEN;
           for (int i = 0; i < compPO.getPoLines().size(); i++) {
             PoLine compPOL = compPO.getPoLines().get(i);
             compPOL.setPurchaseOrderId(poId);
             compPOL.setPoLineNumber(poNumber + "-" + (i + 1));
 
             futures.add(new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, ctx)
-              .createPoLine(compPOL).thenAccept(lines::add));
+              .createPoLine(compPOL, updateInventory)
+              .thenAccept(lines::add));
           }
 
           VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]))

@@ -49,22 +49,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
-import static org.folio.orders.utils.SubObjects.ADJUSTMENT;
-import static org.folio.orders.utils.SubObjects.ALERTS;
-import static org.folio.orders.utils.SubObjects.CLAIMS;
-import static org.folio.orders.utils.SubObjects.COST;
-import static org.folio.orders.utils.SubObjects.DETAILS;
-import static org.folio.orders.utils.SubObjects.ERESOURCE;
-import static org.folio.orders.utils.SubObjects.FUND_DISTRIBUTION;
-import static org.folio.orders.utils.SubObjects.LOCATION;
-import static org.folio.orders.utils.SubObjects.PHYSICAL;
-import static org.folio.orders.utils.SubObjects.PO_LINES;
-import static org.folio.orders.utils.SubObjects.RENEWAL;
-import static org.folio.orders.utils.SubObjects.REPORTING_CODES;
-import static org.folio.orders.utils.SubObjects.SOURCE;
-import static org.folio.orders.utils.SubObjects.VENDOR_DETAIL;
-import static org.folio.orders.utils.SubObjects.resourceByIdPath;
-import static org.folio.orders.utils.SubObjects.resourcesPath;
+import static org.folio.orders.utils.SubObjects.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
@@ -72,6 +57,7 @@ import static org.folio.rest.impl.OrdersImpl.OVER_LIMIT_ERROR_MESSAGE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
@@ -86,6 +72,8 @@ import static org.junit.Assert.fail;
 public class OrdersImplTest {
 
   public static final String PURCHASE_ORDER = "purchase_order";
+
+  private static final String INSTANCE_RECORD = "instance_record";
 
   static {
     System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, "io.vertx.core.logging.Log4j2LogDelegateFactory");
@@ -137,6 +125,10 @@ public class OrdersImplTest {
 
   // Mock data paths
   private static final String BASE_MOCK_DATA_PATH = "mockdata/";
+  private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
+  private static final String INSTANCE_IDENTIFIERS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
+  private static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
+  private static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
   private static final String COMP_ORDER_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/";
   private static final String ORDERS_MOCK_DATA_PATH = COMP_ORDER_MOCK_DATA_PATH + "getOrders.json";
   private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
@@ -192,10 +184,9 @@ public class OrdersImplTest {
   public void testListedPrintMonograph() throws Exception {
     logger.info("=== Test Listed Print Monograph ===");
 
-    String body = getMockData(listedPrintMonographPath);
-    JsonObject reqData = new JsonObject(body);
+    JsonObject reqData = getMockDraftOrder();
 
-    final CompositePurchaseOrder resp = verifyPostResponse(rootPath, body,
+    final CompositePurchaseOrder resp = verifyPostResponse(rootPath, reqData.toString(),
       NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp));
@@ -219,6 +210,51 @@ public class OrdersImplTest {
       assertNotNull(line.getCost().getId());
       assertNotNull(line.getDetails().getId());
       assertNotNull(line.getLocation().getId());
+      assertNull(line.getInstanceId());
+    }
+  }
+
+  @Test
+  public void testListedPrintMonographInOpenStatus() throws Exception {
+    logger.info("=== Test Listed Print Monograph in Open status ===");
+
+    String body = getMockData(listedPrintMonographPath);
+    JsonObject reqData = new JsonObject(body);
+    // remove productId from PO line to test scenario when it's not provided
+    reqData.getJsonArray("po_lines")
+      .getJsonObject(0)
+      .getJsonObject("details")
+      .getJsonArray("product_ids")
+      .clear();
+
+    final CompositePurchaseOrder resp = verifyPostResponse(rootPath, reqData.toString(),
+      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    logger.info(JsonObject.mapFrom(resp));
+
+    String poId = resp.getId();
+    String poNumber = resp.getPoNumber();
+
+    assertNotNull(poId);
+    assertNotNull(poNumber);
+    assertEquals(reqData.getJsonArray("po_lines").size(), resp.getPoLines().size());
+
+    for (int i = 0; i < resp.getPoLines().size(); i++) {
+      PoLine line = resp.getPoLines().get(i);
+      String polNumber = line.getPoLineNumber();
+      String polId = line.getId();
+
+      assertEquals(poId, line.getPurchaseOrderId());
+      assertNotNull(polId);
+      assertNotNull(polNumber);
+      assertTrue(polNumber.startsWith(poNumber));
+      assertNotNull(line.getCost().getId());
+      assertNotNull(line.getDetails().getId());
+      assertNotNull(line.getLocation().getId());
+      assertNotNull(line.getInstanceId());
+
+      JsonObject instance = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST).get(i);
+      verifyInstanceRecordRequest(instance, line);
     }
   }
 
@@ -278,7 +314,7 @@ public class OrdersImplTest {
   public void testPoCreationWithOverLimitPOLines(TestContext ctx) throws Exception {
     logger.info("=== Test PO, with over limit lines quantity, creation ===");
 
-    String body = getMockData(listedPrintMonographPath);
+    String body = getMockDraftOrder().toString();
 
     final Errors errors = verifyPostResponse(rootPath, body,
       EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422).body().as(Errors.class);
@@ -294,7 +330,7 @@ public class OrdersImplTest {
   public void testPostWithInvalidConfig(TestContext ctx) throws Exception {
     logger.info("=== Test PO creation fail if config is invalid ===");
 
-    String body = getMockData(listedPrintMonographPath);
+    String body = getMockDraftOrder().toString();
 
     final String error = verifyPostResponse(rootPath, body,
       INVALID_CONFIG_X_OKAPI_TENANT, TEXT_PLAIN, 500).body().print();
@@ -360,7 +396,7 @@ public class OrdersImplTest {
   public void testDetailsCreationFailure() throws Exception {
     logger.info("=== Test Details creation failure ===");
 
-    String body = getMockData(listedPrintMonographPath);
+    String body = getMockDraftOrder().toString();
 
     final Response resp = RestAssured
       .with()
@@ -531,7 +567,8 @@ public class OrdersImplTest {
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
-    String body = getMockData(listedPrintMonographPath);
+    String body = getMockDraftOrder().toString();
+
     RestAssured
       .with()
         .header(X_OKAPI_URL)
@@ -542,6 +579,33 @@ public class OrdersImplTest {
       .put(rootPath + "/" + id)
         .then()
           .statusCode(204);
+  }
+
+  @Test
+  public void testPutOrdersByIdToChangeStatusToOpen() throws Exception {
+    logger.info("=== Test Put Order By Id to change status of Order to Open ===");
+
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
+    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
+    JsonObject reqData = new JsonObject(getMockData(listedPrintMonographPath));
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
+        .contentType(APPLICATION_JSON)
+        .body(reqData.toString())
+      .put(rootPath + "/" + id)
+        .then()
+        .statusCode(204);
+
+    CompositePurchaseOrder orderRq = reqData.mapTo(CompositePurchaseOrder.class);
+    for (int i = 0; i < orderRq.getPoLines().size(); i++) {
+      JsonObject instance = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST).get(i);
+      verifyInstanceRecordRequest(instance, orderRq.getPoLines().get(i));
+    }
   }
 
   @Test
@@ -870,6 +934,7 @@ public class OrdersImplTest {
       NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(PoLine.class);
 
     ctx.assertEquals(id, response.getPurchaseOrderId());
+    ctx.assertNull(response.getInstanceId());
   }
 
   @Test
@@ -891,6 +956,7 @@ public class OrdersImplTest {
       NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(PoLine.class);
 
     ctx.assertEquals(PO_ID, response.getPurchaseOrderId());
+    ctx.assertNull(response.getInstanceId());
   }
 
   @Test
@@ -1270,6 +1336,26 @@ public class OrdersImplTest {
             .response();
   }
 
+  private JsonObject getMockDraftOrder() throws Exception {
+    JsonObject order = new JsonObject(getMockData(listedPrintMonographPath));
+    order.put("workflow_status", "Pending");
+
+    return order;
+  }
+
+  private void verifyInstanceRecordRequest(JsonObject instance, PoLine line) {
+    assertThat(instance.getString("title"), equalTo(line.getTitle()));
+    assertThat(instance.getString("source"), equalTo(line.getSource().getCode()));
+    assertThat(instance.getString("statusId"), equalTo("daf2681c-25af-4202-a3fa-e58fdf806183"));
+    assertThat(instance.getString("instanceTypeId"), equalTo("30fffe0e-e985-4144-b2e2-1e8179bdb41f"));
+    assertThat(instance.getJsonArray("publication").getJsonObject(0).getString("publisher"), equalTo(line.getPublisher()));
+    assertThat(instance.getJsonArray("publication").getJsonObject(0).getString("dateOfPublication"), equalTo(line.getPublicationDate()));
+    if (line.getDetails().getProductIds().size() > 0) {
+      assertThat(instance.getJsonArray("identifiers").getJsonObject(0).getString("identifierTypeId"), equalTo("8261054f-be78-422d-bd51-4ed9f33c3422"));
+      assertThat(instance.getJsonArray("identifiers").getJsonObject(0).getString("value"), equalTo(line.getDetails().getProductIds().get(0).getProductId()));
+    }
+  }
+
   public static String getMockData(String path) throws IOException {
     try (InputStream resourceAsStream = OrdersImplTest.class.getClassLoader().getResourceAsStream(path)) {
       if (resourceAsStream != null) {
@@ -1313,6 +1399,7 @@ public class OrdersImplTest {
 
       router.route().handler(BodyHandler.create());
       router.route(HttpMethod.POST, resourcesPath(PURCHASE_ORDER)).handler(this::handlePostPurchaseOrder);
+      router.route(HttpMethod.POST, "/inventory/instances").handler(this::handlePostInstanceRecord);
       router.route(HttpMethod.POST, resourcesPath(PO_LINES)).handler(this::handlePostPOLine);
       router.route(HttpMethod.POST, resourcesPath(ADJUSTMENT)).handler(ctx -> handlePostGenericSubObj(ctx, ADJUSTMENT));
       router.route(HttpMethod.POST, resourcesPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
@@ -1329,6 +1416,10 @@ public class OrdersImplTest {
       router.route(HttpMethod.POST, resourcesPath(VENDOR_DETAIL)).handler(ctx -> handlePostGenericSubObj(ctx, VENDOR_DETAIL));
 
       router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)+"/:id").handler(this::handleGetPurchaseOrderById);
+      router.route(HttpMethod.GET, "/instance-types").handler(ctx -> handleGetInstanceType(ctx));
+      router.route(HttpMethod.GET, "/instance-statuses").handler(ctx -> handleGetInstanceStatus(ctx));
+      router.route(HttpMethod.GET, "/identifier-types").handler(ctx -> handleGetIdentifierType(ctx));
+      router.route(HttpMethod.GET, "/inventory/instances").handler(ctx -> handleGetInstanceRecord(ctx));
       router.route(HttpMethod.GET, resourcesPath(PO_LINES)).handler(this::handleGetPoLines);
       router.route(HttpMethod.GET, resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
       router.route(HttpMethod.GET, resourcePath(ADJUSTMENT)).handler(this::handleGetAdjustment);
@@ -1380,6 +1471,76 @@ public class OrdersImplTest {
       router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
 
       return router;
+    }
+
+    private void handlePostInstanceRecord(RoutingContext ctx) {
+      logger.info("got: " + ctx.getBodyAsString());
+      JsonObject body = ctx.getBodyAsJson();
+      addServerRqRsData(HttpMethod.POST, INSTANCE_RECORD, body);
+
+      ctx.response()
+        .setStatusCode(201)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .putHeader(HttpHeaders.LOCATION, ctx.request().absoluteURI() + "/11111-22222-33333-44444")
+        .end();
+    }
+
+    private void handleGetInstanceRecord(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+
+      try {
+        if (ctx.request().getParam("query").contains("ocn956625961")) {
+          JsonObject instance = new JsonObject(getMockData(INSTANCE_RECORDS_MOCK_DATA_PATH + "instance.json"));
+          serverResponse(ctx, 200, APPLICATION_JSON, instance.encodePrettily());
+        } else {
+          JsonObject instance = new JsonObject();
+          instance.put("instances", new JsonArray());
+          serverResponse(ctx, 200, APPLICATION_JSON, instance.encodePrettily());
+        }
+      } catch (IOException e) {
+        ctx.response()
+          .setStatusCode(404)
+          .end();
+      }
+    }
+
+    private void handleGetIdentifierType(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+
+      try {
+        JsonObject po = new JsonObject(getMockData(INSTANCE_IDENTIFIERS_MOCK_DATA_PATH + "ISBN.json"));
+        serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+      } catch (IOException e) {
+        ctx.response()
+          .setStatusCode(404)
+          .end();
+      }
+    }
+
+    private void handleGetInstanceStatus(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+
+      try {
+        JsonObject po = new JsonObject(getMockData(INSTANCE_STATUSES_MOCK_DATA_PATH + "temp.json"));
+        serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+      } catch (IOException e) {
+        ctx.response()
+          .setStatusCode(404)
+          .end();
+      }
+    }
+
+    private void handleGetInstanceType(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+
+      try {
+        JsonObject po = new JsonObject(getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "zzz.json"));
+        serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+      } catch (IOException e) {
+        ctx.response()
+          .setStatusCode(404)
+          .end();
+      }
     }
 
     private String resourcePath(String subObjName) {
