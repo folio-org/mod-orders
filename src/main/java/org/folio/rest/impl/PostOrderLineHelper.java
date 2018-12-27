@@ -52,18 +52,15 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
     if (updateInventory) {
       return getProductTypesMap(compPOL)
         .thenCompose(productTypesMap -> getInstanceRecord(compPOL, productTypesMap))
-        .thenCompose(instanceId -> {
-          if (instanceId != null) {
-            compPOL.setInstanceId(instanceId);
-          }
-          return createPoLine(compPOL);
-        });
+        .thenCompose(instanceId -> createPoLine(compPOL, instanceId));
     }
-    return createPoLine(compPOL);
+    return createPoLine(compPOL, null);
   }
 
-  private CompletableFuture<PoLine> createPoLine(PoLine compPOL) {
-
+  private CompletableFuture<PoLine> createPoLine(PoLine compPOL, String instanceId) {
+    if (instanceId != null) {
+      compPOL.setInstanceId(instanceId);
+    }
     JsonObject line = JsonObject.mapFrom(compPOL);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
 
