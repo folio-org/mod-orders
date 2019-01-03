@@ -385,7 +385,7 @@ public class HelperUtils {
   }
 
   public static boolean isPOValid(PoNumber entity) {
-    return PONUMBER_PATTERN.matcher(entity.getId()).matches();
+    return PONUMBER_PATTERN.matcher(entity.getPoNumber()).matches();
   }
 
 }
