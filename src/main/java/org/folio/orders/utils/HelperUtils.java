@@ -11,6 +11,7 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -29,12 +30,14 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 
 public class HelperUtils {
 
+  private static final Pattern PONUMBER_PATTERN = Pattern.compile("^[a-zA-Z0-9]{5,16}$");
   public static final String DEFAULT_POLINE_LIMIT = "500";
   public static final String OKAPI_URL = "X-Okapi-Url";
   public static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
   public static final String URL_WITH_LANG_PARAM = "%s?lang=%s";
   public static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = resourcesPath(PO_LINES)+"?limit=%s&query=purchase_order_id==%s&lang=%s";
-  public static final String GET_ALL_PURCHASE_ORDER_QUERY = resourceByIdPath(PURCHASE_ORDER)+URL_WITH_LANG_PARAM;
+  public static final String GET_PURCHASE_ORDER_BYID = resourceByIdPath(PURCHASE_ORDER)+URL_WITH_LANG_PARAM;
+  public static final String GET_PURCHASE_ORDER_BYPONUMBER_QUERY = resourcesPath(PURCHASE_ORDER)+"?query=po_number==%s&lang=%s";
 
 
   private static final int DEFAULT_PORT = 9130;
@@ -87,11 +90,18 @@ public class HelperUtils {
     return (a + b);
   }
 
-  public static CompletableFuture<JsonObject> getPurchaseOrder(String id, String lang, HttpClientInterface httpClient, Context ctx,
+  public static CompletableFuture<JsonObject> getPurchaseOrderById(String id, String lang, HttpClientInterface httpClient, Context ctx,
                                                                Map<String, String> okapiHeaders, Logger logger) {
-    String endpoint = String.format(GET_ALL_PURCHASE_ORDER_QUERY, id, lang);
+    String endpoint = String.format(GET_PURCHASE_ORDER_BYID, id, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
   }
+
+  public static CompletableFuture<JsonObject> getPurchaseOrderByPONumber(String poNumber, String lang, HttpClientInterface httpClient, Context ctx,
+      Map<String, String> okapiHeaders, Logger logger) {
+      String endpoint = String.format(GET_PURCHASE_ORDER_BYPONUMBER_QUERY, poNumber, lang);
+      return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
+  }
+
 
   /**
    *  Retrieves PO lines from storage by PO id as JsonObject with array of po_lines (/acq-models/mod-orders-storage/schemas/po_line.json objects)
@@ -374,4 +384,9 @@ public class HelperUtils {
     }
     return future;
   }
+
+  public static boolean isPOValid(PoNumber entity) {
+    return PONUMBER_PATTERN.matcher(entity.getId()).matches();
+  }
+
 }

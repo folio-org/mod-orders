@@ -13,6 +13,7 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -29,6 +30,8 @@ import static org.folio.orders.utils.HelperUtils.OKAPI_URL;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.loadConfiguration;
+import static org.folio.orders.utils.HelperUtils.isPOValid;
+import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
 import static io.vertx.core.Future.succeededFuture;
@@ -222,6 +225,18 @@ public class OrdersImpl implements Orders {
     }
   }
 
+  @Override
+  public void postOrdersPoNumberValidate(String lang, PoNumber entity, Map<String, String> okapiHeaders,
+     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
+    ValidationHelper helper=new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+    logger.info("Validating a PO Number");
+    if(isPOValid(entity))
+     helper.checkPONumberUnique(entity, lang);
+    else
+     asyncResultHandler.handle(succeededFuture(PostOrdersPoNumberValidateResponse.respond400WithTextPlain("PO Number must match the pattern")));
+  }
+
   public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {
     final String okapiURL = okapiHeaders.getOrDefault(OKAPI_URL, "");
     final String tenantId = TenantTool.calculateTenantId(okapiHeaders.get(OKAPI_HEADER_TENANT));
@@ -236,6 +251,9 @@ public class OrdersImpl implements Orders {
       throw new CompletionException("Invalid limit value in configuration.", e);
     }
   }
+
+
+
 
 }
 

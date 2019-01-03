@@ -29,12 +29,14 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.raml.v2.api.model.v08.bodies.JSONBody;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -119,7 +121,7 @@ public class OrdersImplTest {
   private static final String PO_LINE_ID_WITH_FUND_DISTRIBUTION_404_CODE = "f7223ce8-9e92-4c28-8fd9-097596053b7c";
 
   // API paths
-  private final String rootPath = "/orders";
+  private final static String rootPath = "/orders";
   private final static String LINES_PATH = "/orders/%s/lines";
   private final static String LINE_BY_ID_PATH = "/orders/%s/lines/%s";
 
@@ -141,6 +143,8 @@ public class OrdersImplTest {
   private static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
 
   private static final String EMPTY_PO_LINE_BUT_WITH_IDS = "{\"id\": \"%s\", \"purchase_order_id\": \"%s\"}";
+
+  private static final String PONUMBER_VALIDATE_PATH=rootPath+"/po_number/validate";
 
   private static final String ID = "id";
   private static final String PURCHASE_ORDER_ID = "purchase_order_id";
@@ -1306,6 +1310,14 @@ public class OrdersImplTest {
       Object value = entry.getValue();
       assertTrue(Objects.isNull(value) || (value instanceof Iterable && !((Iterable) value).iterator().hasNext()));
     });
+  }
+
+  @Test
+  public void testPoNumberValidate()
+  {
+    JsonObject poNumber=new JsonObject("{\"id\": \"dasdas\"}");
+
+    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT, "PO Number must match the pattern", 400);
   }
 
   private org.folio.rest.acq.model.PoLine getMockLine(String id) {
