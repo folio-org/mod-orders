@@ -19,11 +19,13 @@
   "po_number": "S60402",
   "order_type": "Ongoing",
   "re_encumber": false,
-  "renewal_interval": 182,
-  "renewal_cycle": "6 Months",
-  "manual_renewal": true,
-  "renewal_review_period": 30,
-  "renewal_date": "2019-01-09T00:00:00.000Z",
+  "renewal": {
+     "cycle": "6 Months",
+     "interval": 182,
+     "manual_renewal": true,
+     "review_period": 30,
+     "renewal_date": "2019-04-09T00:00:00.000Z"
+  },
   "total_estimated_price": 200000.00,
   "total_items": 80,
   "vendor": "50fb8b56-cdf1-11e8-a8d5-f2801f1b9fd1",
