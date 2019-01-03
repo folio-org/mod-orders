@@ -1316,8 +1316,7 @@ public class OrdersImplTest {
   public void testPoNumberValidate()
   {
     JsonObject poNumber=new JsonObject("{\"id\": \"dasdas\"}");
-
-    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT, "PO Number must match the pattern", 400);
+    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT, "", 204);
   }
 
   private org.folio.rest.acq.model.PoLine getMockLine(String id) {
@@ -1428,6 +1427,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.POST, resourcesPath(VENDOR_DETAIL)).handler(ctx -> handlePostGenericSubObj(ctx, VENDOR_DETAIL));
 
       router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)+"/:id").handler(this::handleGetPurchaseOrderById);
+      router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)+"?query=po_number==dasdas&lang=en").handler(this::handleGetPurchaseOrderById);
       router.route(HttpMethod.GET, "/instance-types").handler(ctx -> handleGetInstanceType(ctx));
       router.route(HttpMethod.GET, "/instance-statuses").handler(ctx -> handleGetInstanceStatus(ctx));
       router.route(HttpMethod.GET, "/identifier-types").handler(ctx -> handleGetIdentifierType(ctx));
@@ -1482,6 +1482,7 @@ public class OrdersImplTest {
 
       router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
 
+        router.getRoutes().stream().forEach(System.out::println);
       return router;
     }
 
