@@ -226,15 +226,15 @@ public class OrdersImpl implements Orders {
   }
 
   @Override
+  @Validate
   public void postOrdersPoNumberValidate(String lang, PoNumber entity, Map<String, String> okapiHeaders,
      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
     ValidationHelper helper=new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
     logger.info("Validating a PO Number");
-    if(isPOValid(entity))
+    //@Validate asserts the pattern of a PO Number, the below method is used to check for uniqueness
      helper.checkPONumberUnique(entity, lang);
-    else
-     asyncResultHandler.handle(succeededFuture(PostOrdersPoNumberValidateResponse.respond400WithTextPlain("PO Number must match the pattern")));
+
   }
 
   public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {

@@ -41,11 +41,11 @@ public class ValidationHelper {
 
   void checkPONumberUnique(PoNumber poNumber,String lang)
   {
-    getPurchaseOrderByPONumber(poNumber.getId(), lang, httpClient, ctx, okapiHeaders, logger).thenAccept(po->{
+    getPurchaseOrderByPONumber(poNumber.getPoNumber(), lang, httpClient, ctx, okapiHeaders, logger).thenAccept(po->{
     if(po.getInteger("total_records")==0)
       asyncResultHandler.handle(succeededFuture(respond204()));
     else
-      asyncResultHandler.handle(succeededFuture(respond400WithTextPlain("PO Number already exists")));
+      asyncResultHandler.handle(succeededFuture(respond400WithTextPlain("PO Number must be unique")));
     httpClient.closeClient();
   })
   .exceptionally(this::handleResponse);

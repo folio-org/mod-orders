@@ -150,6 +150,9 @@ public class OrdersImplTest {
   private static final String PURCHASE_ORDER_ID = "purchase_order_id";
   private static final String INCORRECT_LANG_PARAMETER = "'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\"";
   private static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
+  private static final String EXISTING_PO_NUMBER = "oldPoNumber";
+  private static final String NONEXISTING_PO_NUMBER = "newPoNumber";
+
 
   private static Vertx vertx;
   private static MockServer mockServer;
@@ -1313,10 +1316,28 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPoNumberValidate()
+  public void testPoNumberValidatewithExistingPONumber()
   {
-    JsonObject poNumber=new JsonObject("{\"id\": \"dasdas\"}");
+    JsonObject poNumber=new JsonObject();
+    poNumber.put("po_number", EXISTING_PO_NUMBER);
+    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT, TEXT_PLAIN, 400);
+  }
+
+
+  @Test
+  public void testPoNumberValidatewithUniquePONumber()
+  {
+    JsonObject poNumber=new JsonObject();
+    poNumber.put("po_number", NONEXISTING_PO_NUMBER);
     verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT, "", 204);
+  }
+
+  @Test
+  public void testPoNumberValidatewithInvalidPattern()
+  {
+    JsonObject poNumber=new JsonObject();
+    poNumber.put("po_number", "11");
+    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422);
   }
 
   private org.folio.rest.acq.model.PoLine getMockLine(String id) {
@@ -1383,6 +1404,7 @@ public class OrdersImplTest {
 
   public static class MockServer {
 
+    private static final String TOTAL_RECORDS = "total_records";
     static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
     private static final Logger logger = LoggerFactory.getLogger(MockServer.class);
 
@@ -1427,7 +1449,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.POST, resourcesPath(VENDOR_DETAIL)).handler(ctx -> handlePostGenericSubObj(ctx, VENDOR_DETAIL));
 
       router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)+"/:id").handler(this::handleGetPurchaseOrderById);
-      router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)+"?query=po_number==dasdas&lang=en").handler(this::handleGetPurchaseOrderById);
+      router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)).handler(this::handleGetPurchaseOrderByQuery);
       router.route(HttpMethod.GET, "/instance-types").handler(ctx -> handleGetInstanceType(ctx));
       router.route(HttpMethod.GET, "/instance-statuses").handler(ctx -> handleGetInstanceStatus(ctx));
       router.route(HttpMethod.GET, "/identifier-types").handler(ctx -> handleGetIdentifierType(ctx));
@@ -1481,8 +1503,6 @@ public class OrdersImplTest {
       router.route(HttpMethod.DELETE, resourcePath(FUND_DISTRIBUTION)).handler(ctx -> handleDeleteGenericSubObj(ctx, FUND_DISTRIBUTION));
 
       router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
-
-        router.getRoutes().stream().forEach(System.out::println);
       return router;
     }
 
@@ -1646,9 +1666,9 @@ public class OrdersImplTest {
             .put("first", 0)
             .put("last", lines.size());
           if (EMPTY_CONFIG_TENANT.equals(tenant)) {
-            po_lines.put("total_records", Integer.parseInt(DEFAULT_POLINE_LIMIT));
+            po_lines.put(TOTAL_RECORDS, Integer.parseInt(DEFAULT_POLINE_LIMIT));
           } else {
-            po_lines.put("total_records", lines.size());
+            po_lines.put(TOTAL_RECORDS, lines.size());
           }
 
 
@@ -1780,6 +1800,27 @@ public class OrdersImplTest {
           .setStatusCode(404)
           .end(id);
       }
+    }
+
+    private void handleGetPurchaseOrderByQuery(RoutingContext ctx) {
+
+      JsonObject po;
+      po = new JsonObject();
+      String queryParam = ctx.request().getParam("query");
+      addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
+      final String PO_NUMBER_QUERY = "po_number==";
+      switch (queryParam) {
+      case PO_NUMBER_QUERY+EXISTING_PO_NUMBER:
+        po.put(TOTAL_RECORDS, 1);
+        break;
+      case PO_NUMBER_QUERY+NONEXISTING_PO_NUMBER:
+        po.put(TOTAL_RECORDS, 0);
+        break;
+      default:
+         po.put(TOTAL_RECORDS, 0);
+      }
+      addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
+      serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
     }
 
     private void handlePostPurchaseOrder(RoutingContext ctx) {
