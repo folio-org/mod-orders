@@ -2,7 +2,10 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderByPONumber;
-import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.*;
+import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond204;
+import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond400WithTextPlain;
+import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond422WithApplicationJson;
+import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond500WithTextPlain;
 
 import java.util.Map;
 
@@ -10,7 +13,6 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.PoNumber;
-import org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
