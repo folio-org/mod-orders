@@ -123,15 +123,6 @@
   "purchase_order_id": "e5ae4afd-3fa9-494e-a972-f541df9b877e",
   "receipt_date": "2018-10-09T00:00:00.000Z",
   "receipt_status": "Awaiting Receipt",
-  "renewal": {
-    "interval": 182,
-    "id": "8e414baa-8cf2-4916-a90f-d1da4009e06e",
-    "cycle": "6 Months",
-    "manual_renewal": true,
-    "review_period": 30,
-    "renewal_date": "2019-04-09T00:00:00.000Z",
-    "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
-  },
   "reporting_codes": [
     {
       "code": "CODE1",

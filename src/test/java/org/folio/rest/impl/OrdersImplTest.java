@@ -1099,8 +1099,8 @@ public class OrdersImplTest {
     assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
-    assertEquals(4, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(CLAIMS, FUND_DISTRIBUTION, SOURCE, RENEWAL));
+    assertEquals(3, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(CLAIMS, FUND_DISTRIBUTION, SOURCE));
 
     column = MockServer.serverRqRs.column(HttpMethod.DELETE);
     assertTrue(column.isEmpty());
@@ -1143,8 +1143,8 @@ public class OrdersImplTest {
     assertThat(column, hasKey(FUND_DISTRIBUTION));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
-    assertEquals(14, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, ALERTS, CLAIMS, COST, DETAILS, ERESOURCE, FUND_DISTRIBUTION, LOCATION, PHYSICAL, RENEWAL, REPORTING_CODES, SOURCE, VENDOR_DETAIL, PO_LINES));
+    assertEquals(13, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, ALERTS, CLAIMS, COST, DETAILS, ERESOURCE, FUND_DISTRIBUTION, LOCATION, PHYSICAL, REPORTING_CODES, SOURCE, VENDOR_DETAIL, PO_LINES));
 
     List<JsonObject> jsonObjects = column.get(PO_LINES);
     assertThat(jsonObjects, hasSize(1));
@@ -1410,7 +1410,6 @@ public class OrdersImplTest {
       router.route(HttpMethod.POST, resourcesPath(FUND_DISTRIBUTION)).handler(ctx -> handlePostGenericSubObj(ctx, FUND_DISTRIBUTION));
       router.route(HttpMethod.POST, resourcesPath(LOCATION)).handler(ctx -> handlePostGenericSubObj(ctx, LOCATION));
       router.route(HttpMethod.POST, resourcesPath(PHYSICAL)).handler(ctx -> handlePostGenericSubObj(ctx, PHYSICAL));
-      router.route(HttpMethod.POST, resourcesPath(RENEWAL)).handler(ctx -> handlePostGenericSubObj(ctx, RENEWAL));
       router.route(HttpMethod.POST, resourcesPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
       router.route(HttpMethod.POST, resourcesPath(SOURCE)).handler(ctx -> handlePostGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.POST, resourcesPath(VENDOR_DETAIL)).handler(ctx -> handlePostGenericSubObj(ctx, VENDOR_DETAIL));
@@ -1431,7 +1430,6 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, resourcePath(FUND_DISTRIBUTION)).handler(ctx -> handleGetGenericSubObj(ctx, FUND_DISTRIBUTION));
       router.route(HttpMethod.GET, resourcePath(LOCATION)).handler(this::handleGetLocation);
       router.route(HttpMethod.GET, resourcePath(PHYSICAL)).handler(ctx -> handleGetGenericSubObj(ctx, PHYSICAL));
-      router.route(HttpMethod.GET, resourcePath(RENEWAL)).handler(ctx -> handleGetGenericSubObj(ctx, RENEWAL));
       router.route(HttpMethod.GET, resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
       router.route(HttpMethod.GET, resourcePath(SOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.GET, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleGetGenericSubObj(ctx, VENDOR_DETAIL));
@@ -1446,7 +1444,6 @@ public class OrdersImplTest {
       router.route(HttpMethod.PUT, resourcePath(FUND_DISTRIBUTION)).handler(ctx -> handlePutGenericSubObj(ctx, FUND_DISTRIBUTION));
       router.route(HttpMethod.PUT, resourcePath(LOCATION)).handler(ctx -> handlePutGenericSubObj(ctx, LOCATION));
       router.route(HttpMethod.PUT, resourcePath(PHYSICAL)).handler(ctx -> handlePutGenericSubObj(ctx, PHYSICAL));
-      router.route(HttpMethod.PUT, resourcePath(RENEWAL)).handler(ctx -> handlePutGenericSubObj(ctx, RENEWAL));
       router.route(HttpMethod.PUT, resourcePath(REPORTING_CODES)).handler(ctx -> handlePutGenericSubObj(ctx, REPORTING_CODES));
       router.route(HttpMethod.PUT, resourcePath(SOURCE)).handler(ctx -> handlePutGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.PUT, resourcePath(VENDOR_DETAIL)).handler(ctx -> handlePutGenericSubObj(ctx, VENDOR_DETAIL));
@@ -1462,7 +1459,6 @@ public class OrdersImplTest {
       router.route(HttpMethod.DELETE, resourcePath(ERESOURCE)).handler(ctx -> handleDeleteGenericSubObj(ctx, ERESOURCE));
       router.route(HttpMethod.DELETE, resourcePath(LOCATION)).handler(ctx -> handleDeleteGenericSubObj(ctx, LOCATION));
       router.route(HttpMethod.DELETE, resourcePath(PHYSICAL)).handler(ctx -> handleDeleteGenericSubObj(ctx, PHYSICAL));
-      router.route(HttpMethod.DELETE, resourcePath(RENEWAL)).handler(ctx -> handleDeleteGenericSubObj(ctx, RENEWAL));
       router.route(HttpMethod.DELETE, resourcePath(REPORTING_CODES)).handler(ctx -> handleDeleteGenericSubObj(ctx, REPORTING_CODES));
       router.route(HttpMethod.DELETE, resourcePath(SOURCE)).handler(ctx -> handleDeleteGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.DELETE, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleDeleteGenericSubObj(ctx, VENDOR_DETAIL));
@@ -1606,9 +1602,6 @@ public class OrdersImplTest {
             line.put(ERESOURCE, ((Map<?, ?>) line.remove(ERESOURCE)).get(ID));
             line.put(LOCATION, ((Map<?, ?>) line.remove(LOCATION)).get(ID));
             line.put(PHYSICAL, ((Map<?, ?>) line.remove(PHYSICAL)).get(ID));
-            if (line.containsKey(RENEWAL)) {
-              line.put(RENEWAL, ((Map<?, ?>) line.remove(RENEWAL)).get(ID));
-            }
             line.put(SOURCE, ((Map<?, ?>) line.remove(SOURCE)).get(ID));
             line.put(VENDOR_DETAIL, ((Map<?, ?>) line.remove(VENDOR_DETAIL)).get(ID));
 
@@ -1839,8 +1832,6 @@ public class OrdersImplTest {
           return org.folio.rest.acq.model.Location.class;
         case PHYSICAL:
           return org.folio.rest.acq.model.Physical.class;
-        case RENEWAL:
-          return org.folio.rest.acq.model.Renewal.class;
         case REPORTING_CODES:
           return org.folio.rest.acq.model.ReportingCode.class;
         case SOURCE:

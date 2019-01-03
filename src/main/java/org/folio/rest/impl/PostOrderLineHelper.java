@@ -74,7 +74,6 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
     subObjFuts.add(createAlerts(compPOL, line, compPOL.getAlerts()));
     subObjFuts.add(createClaims(compPOL, line, compPOL.getClaims()));
     subObjFuts.add(createSource(compPOL, line, compPOL.getSource()));
-    subObjFuts.add(createRenewal(compPOL, line, compPOL.getRenewal()));
     subObjFuts.add(createReportingCodes(compPOL, line, compPOL.getReportingCodes()));
     subObjFuts.add(createFundDistribution(compPOL, line, compPOL.getFundDistribution()));
 
@@ -393,22 +392,6 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
         throw new CompletionException(t.getCause());
       });
 
-  }
-
-  private CompletableFuture<Void> createRenewal(PoLine compPOL, JsonObject line, Renewal renewal) {
-    return createSubObjIfPresent(line, renewal, RENEWAL, resourcesPath(RENEWAL))
-      .thenAccept(id -> {
-        if (id == null) {
-          line.remove(RENEWAL);
-          compPOL.setRenewal(null);
-        } else {
-          compPOL.getRenewal().setId(id);
-        }
-      })
-      .exceptionally(t -> {
-        logger.error("failed to create Renewal", t);
-        throw new CompletionException(t.getCause());
-      });
   }
 
   private CompletableFuture<Void> createSource(PoLine compPOL, JsonObject line, Source source) {

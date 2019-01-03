@@ -22,7 +22,6 @@
             "orders-storage.fund-distributions.item.post",
             "orders-storage.locations.item.post",
             "orders-storage.physicals.item.post",
-            "orders-storage.renewals.item.post",
             "orders-storage.reporting_codes.item.post",
             "orders-storage.sources.item.post",
             "orders-storage.vendor_details.item.post",
@@ -50,7 +49,6 @@
             "orders-storage.fund-distributions.item.get",
             "orders-storage.locations.item.get",
             "orders-storage.physicals.item.get",
-            "orders-storage.renewals.item.get",
             "orders-storage.reporting_codes.item.get",
             "orders-storage.sources.item.get",
             "orders-storage.vendor_details.item.get"
@@ -92,9 +90,6 @@
             "orders-storage.physicals.item.put",
             "orders-storage.physicals.item.post",
             "orders-storage.physicals.item.delete",
-            "orders-storage.renewals.item.put",
-            "orders-storage.renewals.item.post",
-            "orders-storage.renewals.item.delete",
             "orders-storage.reporting_codes.item.put",
             "orders-storage.reporting_codes.item.post",
             "orders-storage.reporting_codes.item.delete",
@@ -127,7 +122,6 @@
             "orders-storage.fund-distributions.item.delete",
             "orders-storage.locations.item.delete",
             "orders-storage.physicals.item.delete",
-            "orders-storage.renewals.item.delete",
             "orders-storage.reporting_codes.item.delete",
             "orders-storage.sources.item.delete",
             "orders-storage.vendor_details.item.delete"
@@ -148,7 +142,6 @@
             "orders-storage.fund-distributions.item.post",
             "orders-storage.locations.item.post",
             "orders-storage.physicals.item.post",
-            "orders-storage.renewals.item.post",
             "orders-storage.reporting_codes.item.post",
             "orders-storage.sources.item.post",
             "orders-storage.vendor_details.item.post",
@@ -170,7 +163,6 @@
             "orders-storage.fund-distributions.item.get",
             "orders-storage.locations.item.get",
             "orders-storage.physicals.item.get",
-            "orders-storage.renewals.item.get",
             "orders-storage.reporting_codes.item.get",
             "orders-storage.sources.item.get",
             "orders-storage.vendor_details.item.get"
@@ -209,9 +201,6 @@
             "orders-storage.physicals.item.put",
             "orders-storage.physicals.item.post",
             "orders-storage.physicals.item.delete",
-            "orders-storage.renewals.item.put",
-            "orders-storage.renewals.item.post",
-            "orders-storage.renewals.item.delete",
             "orders-storage.reporting_codes.item.put",
             "orders-storage.reporting_codes.item.post",
             "orders-storage.reporting_codes.item.delete",
@@ -238,7 +227,6 @@
             "orders-storage.fund-distributions.item.delete",
             "orders-storage.locations.item.delete",
             "orders-storage.physicals.item.delete",
-            "orders-storage.renewals.item.delete",
             "orders-storage.reporting_codes.item.delete",
             "orders-storage.sources.item.delete",
             "orders-storage.vendor_details.item.delete"
@@ -286,10 +274,6 @@
     },
     {
       "id": "orders-storage.physicals",
-      "version": "1.0"
-    },
-    {
-      "id": "orders-storage.renewals",
       "version": "1.0"
     },
     {
