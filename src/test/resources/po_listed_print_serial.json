@@ -20,6 +20,13 @@
   "order_type": "Ongoing",
   "po_number": "268758",
   "re_encumber": false,
+  "renewal": {
+     "cycle": "Manual",
+     "interval": 0,
+     "manual_renewal": true,
+     "review_period": 0,
+     "renewal_date": "2019-04-09T00:00:00.000Z"
+  },
   "total_estimated_price": 49.98,
   "total_items": 2,
   "vendor": "168f8a86-d26c-406e-813f-c7527f241ac3",
