@@ -41,6 +41,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   public PutOrdersByIdHelper(String lang, Map<String, String> okapiHeaders,
                              Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
     super(OrdersImpl.getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx);
+    setDefaultHeaders(httpClient);
     this.lang = lang;
     postHelper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, ctx);
     putLineHelper = new PutOrderLineByIdHelper(lang, httpClient, okapiHeaders, asyncResultHandler, ctx);
