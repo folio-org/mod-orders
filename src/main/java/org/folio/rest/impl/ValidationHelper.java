@@ -24,6 +24,8 @@ import io.vertx.core.logging.LoggerFactory;
 
 public class ValidationHelper {
 
+  private static final String PO_NUMBER_MUST_BE_UNIQUE = "PO Number must be unique";
+
   private static final Logger logger = LoggerFactory.getLogger(ValidationHelper.class);
 
   private final HttpClientInterface httpClient;
@@ -41,14 +43,15 @@ public class ValidationHelper {
 
   void checkPONumberUnique(PoNumber poNumber,String lang)
   {
-    getPurchaseOrderByPONumber(poNumber.getPoNumber(), lang, httpClient, ctx, okapiHeaders, logger).thenAccept(po->{
-    if(po.getInteger("total_records")==0)
-      asyncResultHandler.handle(succeededFuture(respond204()));
-    else
-      asyncResultHandler.handle(succeededFuture(respond400WithTextPlain("PO Number must be unique")));
-    httpClient.closeClient();
-  })
-  .exceptionally(this::handleResponse);
+    getPurchaseOrderByPONumber(poNumber.getPoNumber(), lang, httpClient, ctx, okapiHeaders, logger)
+    .thenAccept(po->{
+       if(po.getInteger("total_records")==0)
+         asyncResultHandler.handle(succeededFuture(respond204()));
+       else
+         asyncResultHandler.handle(succeededFuture(respond400WithTextPlain(PO_NUMBER_MUST_BE_UNIQUE)));
+      httpClient.closeClient();
+     })
+    .exceptionally(this::handleResponse);
   }
 
   public Void handleResponse(Throwable throwable) {

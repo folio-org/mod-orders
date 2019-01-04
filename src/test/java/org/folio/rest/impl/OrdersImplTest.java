@@ -29,15 +29,12 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.raml.v2.api.model.v08.bodies.JSONBody;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -1810,6 +1807,7 @@ public class OrdersImplTest {
         po.put(TOTAL_RECORDS, 0);
         break;
       default:
+         //modify later as needed
          po.put(TOTAL_RECORDS, 0);
       }
       addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);

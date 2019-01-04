@@ -251,9 +251,5 @@ public class OrdersImpl implements Orders {
       throw new CompletionException("Invalid limit value in configuration.", e);
     }
   }
-
-
-
-
 }
 
