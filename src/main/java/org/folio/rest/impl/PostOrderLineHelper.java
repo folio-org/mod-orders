@@ -21,7 +21,6 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProductId;
-import org.folio.rest.jaxrs.model.Renewal;
 import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.Source;
 import org.folio.rest.jaxrs.model.VendorDetail;
@@ -57,7 +56,6 @@ import static org.folio.orders.utils.SubObjects.FUND_DISTRIBUTION;
 import static org.folio.orders.utils.SubObjects.LOCATION;
 import static org.folio.orders.utils.SubObjects.PHYSICAL;
 import static org.folio.orders.utils.SubObjects.PO_LINES;
-import static org.folio.orders.utils.SubObjects.RENEWAL;
 import static org.folio.orders.utils.SubObjects.REPORTING_CODES;
 import static org.folio.orders.utils.SubObjects.SOURCE;
 import static org.folio.orders.utils.SubObjects.VENDOR_DETAIL;
@@ -104,7 +102,6 @@ public class PostOrderLineHelper extends AbstractHelper {
     subObjFuts.add(createAlerts(compPOL, line, compPOL.getAlerts()));
     subObjFuts.add(createClaims(compPOL, line, compPOL.getClaims()));
     subObjFuts.add(createSource(compPOL, line, compPOL.getSource()));
-    subObjFuts.add(createRenewal(compPOL, line, compPOL.getRenewal()));
     subObjFuts.add(createReportingCodes(compPOL, line, compPOL.getReportingCodes()));
     subObjFuts.add(createFundDistribution(compPOL, line, compPOL.getFundDistribution()));
 
@@ -423,22 +420,6 @@ public class PostOrderLineHelper extends AbstractHelper {
         throw new CompletionException(t.getCause());
       });
 
-  }
-
-  private CompletableFuture<Void> createRenewal(PoLine compPOL, JsonObject line, Renewal renewal) {
-    return createSubObjIfPresent(line, renewal, RENEWAL, resourcesPath(RENEWAL))
-      .thenAccept(id -> {
-        if (id == null) {
-          line.remove(RENEWAL);
-          compPOL.setRenewal(null);
-        } else {
-          compPOL.getRenewal().setId(id);
-        }
-      })
-      .exceptionally(t -> {
-        logger.error("failed to create Renewal", t);
-        throw new CompletionException(t.getCause());
-      });
   }
 
   private CompletableFuture<Void> createSource(PoLine compPOL, JsonObject line, Source source) {

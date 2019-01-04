@@ -184,7 +184,6 @@ public class HelperUtils {
     futures.add(operateOnSubObjIfPresent(operation, line, ERESOURCE, httpClient, ctx, okapiHeaders, logger));
     futures.add(operateOnSubObjIfPresent(operation, line, LOCATION, httpClient, ctx, okapiHeaders, logger));
     futures.add(operateOnSubObjIfPresent(operation, line, PHYSICAL, httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, RENEWAL, httpClient, ctx, okapiHeaders, logger));
     futures.add(operateOnSubObjIfPresent(operation, line, SOURCE, httpClient, ctx, okapiHeaders, logger));
     futures.add(operateOnSubObjIfPresent(operation, line, VENDOR_DETAIL, httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, ALERTS, httpClient, ctx, okapiHeaders, logger));

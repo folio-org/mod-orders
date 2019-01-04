@@ -17,6 +17,13 @@
   "po_number": "S60402",
   "order_type": "Ongoing",
   "re_encumber": false,
+  "renewal": {
+     "cycle": "6 Months",
+     "interval": 182,
+     "manual_renewal": true,
+     "review_period": 30,
+     "renewal_date": "2019-04-09T00:00:00.000Z"
+  },
   "total_estimated_price": 200000.00,
   "total_items": 80,
   "vendor": "50fb8b56-cdf1-11e8-a8d5-f2801f1b9fd1",
@@ -134,15 +141,6 @@
       "publisher": "American Chemical Society",
       "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB4bb",
       "receipt_date": null,
-      "renewal": {
-        "id": "9e414baa-8cf2-4916-a90f-d1da4009e06e",
-        "cycle": "One Year",
-        "interval": 12,
-        "manual_renewal": true,
-        "review_period": 60,
-        "renewal_date": "2018-07-18T00:00:00.000Z",
-        "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1"
-      },
       "reporting_codes": [],
       "requester": "",
       "rush": false,
