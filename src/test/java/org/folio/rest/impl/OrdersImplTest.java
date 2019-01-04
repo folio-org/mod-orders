@@ -603,8 +603,23 @@ public class OrdersImplTest {
 
     CompositePurchaseOrder orderRq = reqData.mapTo(CompositePurchaseOrder.class);
     for (int i = 0; i < orderRq.getPoLines().size(); i++) {
-      JsonObject instance = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST).get(i);
-      verifyInstanceRecordRequest(instance, orderRq.getPoLines().get(i));
+      PoLine pol = orderRq.getPoLines().get(i);
+
+      boolean verified = false;
+      // note we can't rely on the order being the same!
+      for (int j = 0; j < MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST).size(); j++) {
+        JsonObject instance = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST).get(j);
+
+        if (pol.getTitle().equals(instance.getString("title"))) {
+          verifyInstanceRecordRequest(instance, pol);
+          verified = true;
+          break;
+        }
+      }
+
+      if (!verified) {
+        fail("No matching instance for POL: " + JsonObject.mapFrom(pol).encodePrettily());
+      }
     }
   }
 
@@ -1477,7 +1492,7 @@ public class OrdersImplTest {
       ctx.response()
         .setStatusCode(201)
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .putHeader(HttpHeaders.LOCATION, ctx.request().absoluteURI() + "/11111-22222-33333-44444")
+        .putHeader(HttpHeaders.LOCATION, ctx.request().absoluteURI() + "/" + UUID.randomUUID().toString())
         .end();
     }
 
