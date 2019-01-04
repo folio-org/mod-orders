@@ -14,7 +14,7 @@ import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersLinesByIdAndLineI
 import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersLinesByIdAndLineIdResponse.respond422WithApplicationJson;
 import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersLinesByIdAndLineIdResponse.respond500WithTextPlain;
 
-class DeleteOrderLineByIdHelper extends AbstractOrderLineHelper {
+class DeleteOrderLineByIdHelper extends AbstractHelper {
 
   DeleteOrderLineByIdHelper(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
     super(OrdersImpl.getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx);
@@ -34,6 +34,7 @@ class DeleteOrderLineByIdHelper extends AbstractOrderLineHelper {
       .exceptionally(this::handleError);
   }
 
+  @Override
   protected Response buildErrorResponse(int code, String message) {
     final Response result;
     switch (code) {

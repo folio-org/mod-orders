@@ -5,7 +5,6 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.ws.rs.core.Response;
 
-import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.resource.Orders.GetOrdersByIdResponse;
@@ -13,28 +12,15 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
-public class GetOrdersByIdHelper {
-
-  private static final Logger logger = LoggerFactory.getLogger(GetOrdersByIdHelper.class);
-
-  private final HttpClientInterface httpClient;
-  private final Context ctx;
-  private final Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler;
-  private final Map<String, String> okapiHeaders;
+public class GetOrdersByIdHelper extends AbstractHelper {
 
   public GetOrdersByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
-    this.httpClient = httpClient;
-    this.okapiHeaders = okapiHeaders;
-    this.ctx = ctx;
-    this.asyncResultHandler = asyncResultHandler;
+                             Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
+    super(httpClient, okapiHeaders, asyncResultHandler, ctx);
   }
 
   public CompletableFuture<CompositePurchaseOrder> getOrder(String id, String lang) {
@@ -84,34 +70,12 @@ public class GetOrdersByIdHelper {
     return future;
   }
 
-  public Void handleError(Throwable throwable) {
-    final Future<javax.ws.rs.core.Response> result;
-
-    logger.error("Exception querying for orders", throwable.getCause());
-
-    final Throwable t = throwable.getCause();
-    if (t instanceof HttpException) {
-      final int code = ((HttpException) t).getCode();
-      final String message = t.getMessage();
-      switch (code) {
-      case 404:
-        result = Future.succeededFuture(GetOrdersByIdResponse.respond404WithTextPlain(message));
-        break;
-      case 500:
-        result = Future.succeededFuture(GetOrdersByIdResponse.respond500WithTextPlain(message));
-        break;
-      default:
-        result = Future.succeededFuture(GetOrdersByIdResponse.respond500WithTextPlain(message));
-      }
-    } else {
-      result = Future.succeededFuture(GetOrdersByIdResponse.respond500WithTextPlain(throwable.getMessage()));
+  @Override
+  Response buildErrorResponse(int code, String message) {
+    if (code == 404) {
+       return GetOrdersByIdResponse.respond404WithTextPlain(message);
     }
-
-    httpClient.closeClient();
-
-    asyncResultHandler.handle(result);
-
-    return null;
+    return GetOrdersByIdResponse.respond500WithTextPlain(message);
   }
 
 }

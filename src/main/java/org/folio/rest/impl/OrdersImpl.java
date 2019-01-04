@@ -4,7 +4,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -19,7 +18,6 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
 
 import javax.ws.rs.core.Response;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
 
@@ -41,23 +39,18 @@ public class OrdersImpl implements Orders {
   private static final String ORDER_LINE_LOCATION_PREFIX = "/orders/%s/lines/%s";
   public static final String OVER_LIMIT_ERROR_MESSAGE = "Your FOLIO system is configured to limit the number of PO Lines on each order to %s.";
   public static final String MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE = "Mismatch between id in path and PoLine";
+  public static final String LINES_LIMIT_ERROR_CODE = "lines_limit";
+  public static final int LIMIT_INTERNAL_HTTP_CODE = 1;
 
   @Override
   @Validate
   public void deleteOrdersById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
-    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
 
-    //to handle delete API's content-type text/plain
-    Map<String,String> customHeader=new HashMap<>();
-    customHeader.put(HttpHeaders.ACCEPT.toString(), "application/json, text/plain");
-    httpClient.setDefaultHeaders(customHeader);
-
-    DeleteOrdersByIdHelper helper = new DeleteOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+    DeleteOrdersByIdHelper helper = new DeleteOrdersByIdHelper(okapiHeaders, asyncResultHandler, vertxContext);
     helper.deleteOrder(id,lang)
     .thenRun(()->{
       logger.info("Successfully deleted order: ");
-      httpClient.closeClient();
       javax.ws.rs.core.Response response = DeleteOrdersByIdResponse.respond204();
       AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
       asyncResultHandler.handle(result);
@@ -69,7 +62,6 @@ public class OrdersImpl implements Orders {
   @Validate
   public void getOrdersById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
-
     final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
     GetOrdersByIdHelper helper = new GetOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
 
@@ -128,10 +120,16 @@ public class OrdersImpl implements Orders {
   @Validate
   public void putOrdersById(String id, String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
-    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
-    PutOrdersByIdHelper putHelper = new PutOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
-    putHelper.updateOrder(id, lang, compPO, vertxContext)
-       .exceptionally(putHelper::handleError);
+    PutOrdersByIdHelper putHelper = new PutOrdersByIdHelper(lang, okapiHeaders, asyncResultHandler, vertxContext);
+    loadConfiguration(okapiHeaders, vertxContext, logger).thenAccept(config -> {
+      int limit = getPoLineLimit(config);
+      if (compPO.getPoLines().size() <= limit) {
+        putHelper.updateOrderWithPoLines(id, compPO)
+          .exceptionally(putHelper::handleError);
+      } else {
+        putHelper.handleError(new Exception(new HttpException(LIMIT_INTERNAL_HTTP_CODE, String.format(OVER_LIMIT_ERROR_MESSAGE, limit))));
+      }
+    }).exceptionally(putHelper::handleError);
 
   }
 
@@ -165,7 +163,7 @@ public class OrdersImpl implements Orders {
                 })
                 .exceptionally(helper::handleError);
             } else {
-              asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422, String.format(OVER_LIMIT_ERROR_MESSAGE, limit))));
+              asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(LIMIT_INTERNAL_HTTP_CODE, String.format(OVER_LIMIT_ERROR_MESSAGE, limit))));
             }
           }).exceptionally(helper::handleError);
       } else {
@@ -233,7 +231,7 @@ public class OrdersImpl implements Orders {
     try {
       return Integer.parseInt(config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));
     } catch (NumberFormatException e) {
-      throw new CompletionException("Invalid limit value in configuration.", e);
+      throw new CompletionException(new HttpException(500, "Invalid limit value in configuration.", e));
     }
   }
 

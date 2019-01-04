@@ -4,109 +4,150 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.folio.orders.rest.exceptions.HttpException;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.resource.Orders.PutOrdersByIdResponse;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import javax.ws.rs.core.Response;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-public class PutOrdersByIdHelper {
-  private static final Logger logger = LoggerFactory.getLogger(DeleteOrdersByIdHelper.class);
+import static org.folio.orders.utils.HelperUtils.deletePoLine;
+import static org.folio.orders.utils.HelperUtils.getPoLines;
+import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
+import static org.folio.orders.utils.SubObjects.PO_LINES;
+import static org.folio.orders.utils.SubObjects.PURCHASE_ORDER;
+import static org.folio.orders.utils.SubObjects.resourceByIdPath;
+import static org.folio.rest.impl.OrdersImpl.LIMIT_INTERNAL_HTTP_CODE;
+import static org.folio.rest.impl.OrdersImpl.LINES_LIMIT_ERROR_CODE;
 
-  private final HttpClientInterface httpClient;
-  private final Context ctx;
-  private final Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler;
-  private final Map<String, String> okapiHeaders;
+public class PutOrdersByIdHelper extends AbstractHelper {
 
-  public PutOrdersByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
+  private String lang;
+
+  private final PostOrdersHelper postHelper;
+  private PutOrderLineByIdHelper putLineHelper;
+
+  public PutOrdersByIdHelper(String lang, Map<String, String> okapiHeaders,
                              Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
-    Map<String, String> customHeader = new HashMap<>();
-    customHeader.put(HttpHeaders.ACCEPT.toString(), "application/json, text/plain");
-    httpClient.setDefaultHeaders(customHeader);
-
-    this.httpClient = httpClient;
-    this.okapiHeaders = okapiHeaders;
-    this.ctx = ctx;
-    this.asyncResultHandler = asyncResultHandler;
+    super(OrdersImpl.getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx);
+    this.lang = lang;
+    postHelper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, ctx);
+    putLineHelper = new PutOrderLineByIdHelper(lang, httpClient, okapiHeaders, asyncResultHandler, ctx);
   }
 
-  /*
-   * Handle update order by doing Delete and Post
-   */
-  public CompletableFuture<Void> updateOrder(String id, String lang, CompositePurchaseOrder compPO,
-                                             Context vertxContext) {
+
+  public CompletableFuture<Void> updateOrderWithPoLines(String id, CompositePurchaseOrder compPO) {
+    if (CollectionUtils.isEmpty(compPO.getPoLines())) {
+      return updateOrders(id, compPO);
+    }
+    return getPoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(jsonObject -> {
+        JsonArray existedPoLinesArray = jsonObject.getJsonArray(PO_LINES);
+        return handlePoLines(compPO, existedPoLinesArray);})
+      .thenCompose(aVoid -> updateOrders(id, compPO));
+  }
+
+  private CompletableFuture<Void> updateOrders(String id, CompositePurchaseOrder compPO) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-    GetOrdersByIdHelper getHelper = new GetOrdersByIdHelper(httpClient, okapiHeaders,
-      asyncResultHandler, vertxContext);
-    PostOrdersHelper postHelper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
-    DeleteOrdersByIdHelper delHelper = new DeleteOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
-    getHelper.getOrder(id, lang).thenAccept(existedCompPO ->
-      delHelper.deleteOrder(id, lang)
-        .thenRun(() ->
-          postHelper.createPOandPOLines(compPO)
-            .thenAccept(withCompPO -> {
 
-              logger.info("Applying Funds...");
-              postHelper.applyFunds(withCompPO)
-                .thenAccept(withFunds -> {
+    logger.debug("Updating order...");
+    JsonObject purchaseOrder = getJsonOrderWithoutUnusedSubObjects(compPO);
+    operateOnSubObj(HttpMethod.PUT, resourceByIdPath(PURCHASE_ORDER, id), purchaseOrder, httpClient, ctx, okapiHeaders, logger)
+      .thenAccept(v -> {
 
-                  logger.info("Updating Inventory...");
-                  postHelper.updateInventory(withFunds)
-                    .thenAccept(withInventory -> {
+        logger.info("Applying Funds...");
+        postHelper.applyFunds(compPO)
+          .thenAccept(withFunds -> {
 
-                      logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withCompPO).encodePrettily());
-                      httpClient.closeClient();
-                      javax.ws.rs.core.Response response = PutOrdersByIdResponse.respond204();
-                      AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
-                      asyncResultHandler.handle(result);
-                    })
-                    .exceptionally(this::handleError);
-                })
-                .exceptionally(this::handleError);
-            })
-            .exceptionally(this::handleError)
-        )
-        .exceptionally(this::handleError)
-    ).exceptionally(this::handleError);
+            logger.info("Updating Inventory...");
+            postHelper.updateInventory(withFunds)
+              .thenAccept(withInventory -> {
+
+                logger.info("Successfully Placed Order: " + JsonObject.mapFrom(compPO).encodePrettily());
+                httpClient.closeClient();
+                javax.ws.rs.core.Response response = PutOrdersByIdResponse.respond204();
+                AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
+                asyncResultHandler.handle(result);
+              })
+              .exceptionally(this::handleError);
+          })
+          .exceptionally(this::handleError);
+      })
+      .exceptionally(this::handleError);
+
     return future;
   }
 
-  public Void handleError(Throwable throwable) {
-    final Future<javax.ws.rs.core.Response> result;
-
-    logger.error("Exception while updating orders", throwable.getCause());
-
-    final Throwable t = throwable.getCause();
-    if (t instanceof HttpException) {
-      final int code = ((HttpException) t).getCode();
-      final String message = ((HttpException) t).getMessage();
-      switch (code) {
-        case 404:
-          result = Future.succeededFuture(PutOrdersByIdResponse.respond404WithTextPlain(message));
-          break;
-        case 500:
-          result = Future.succeededFuture(PutOrdersByIdResponse.respond500WithTextPlain(message));
-          break;
-        default:
-          result = Future.succeededFuture(PutOrdersByIdResponse.respond500WithTextPlain(message));
-      }
+  private CompletableFuture<Void> handlePoLines(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
+    List<CompletableFuture<?>> futures = new ArrayList<>();
+    List<PoLine> linesToCreate = new ArrayList<>();
+    if (poLinesFromStorage.isEmpty()) {
+      linesToCreate.addAll(compOrder.getPoLines());
     } else {
-      result = Future.succeededFuture(PutOrdersByIdResponse.respond500WithTextPlain(throwable.getMessage()));
+      futures.addAll(filterPoLinesAndUpdateMatching(compOrder, poLinesFromStorage, linesToCreate));
     }
+    poLinesFromStorage.stream().forEach(poLine ->futures.add(deletePoLine((JsonObject) poLine, httpClient, ctx, okapiHeaders, logger)));
+    boolean updateInventory = compOrder.getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.OPEN;
+    linesToCreate.forEach(poLine -> futures.add(new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, ctx)
+      .createPoLine(poLine, updateInventory)));
+    return VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]));
+  }
 
-    httpClient.closeClient();
+  private List<CompletableFuture<?>> filterPoLinesAndUpdateMatching(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage, List<PoLine> linesToCreate) {
+    List<CompletableFuture<?>> futures = new ArrayList<>();
+    for (PoLine line : compOrder.getPoLines()) {
+      JsonObject existingLine = null;
+      for (int i = 0; i < poLinesFromStorage.size(); i++) {
+        JsonObject lineFromStorage = poLinesFromStorage.getJsonObject(i);
+        if (StringUtils.equals(lineFromStorage.getString("id"), line.getId())) {
+          existingLine = lineFromStorage;
+          poLinesFromStorage.remove(i);
+          break;
+        }
+      }
+      if (existingLine == null ) {
+        linesToCreate.add(line);
+      } else {
+        futures.add(putLineHelper.updateOrderLine(line, JsonObject.mapFrom(existingLine)));
+      }
+    }
+    return futures;
+  }
 
-    asyncResultHandler.handle(result);
-
-    return null;
+  @Override
+  Response buildErrorResponse(int code, String message) {
+    final Response result;
+    switch (code) {
+      case LIMIT_INTERNAL_HTTP_CODE:
+        result = PutOrdersByIdResponse.respond422WithApplicationJson(withErrors(message, LINES_LIMIT_ERROR_CODE));
+        break;
+      case 404:
+        result = PutOrdersByIdResponse.respond404WithTextPlain(message);
+        break;
+      case 422:
+        result = PutOrdersByIdResponse.respond422WithApplicationJson(withErrors(message));
+        break;
+      default:
+        if (putLineHelper.getProcessingErrors().isEmpty()) {
+          result = PutOrdersByIdResponse.respond500WithTextPlain(message);
+        } else {
+          Errors processingErrors = new Errors();
+          processingErrors.getErrors().addAll(putLineHelper.getProcessingErrors());
+          processingErrors.getErrors().add(new Error().withMessage(message));
+          result = PutOrdersByIdResponse.respond500WithApplicationJson(processingErrors);
+        }
+    }
+    return result;
   }
 }

@@ -10,7 +10,21 @@ import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.Alert;
+import org.folio.rest.jaxrs.model.Claim;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Details;
+import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.rest.jaxrs.model.Renewal;
+import org.folio.rest.jaxrs.model.ReportingCode;
+import org.folio.rest.jaxrs.model.Source;
+import org.folio.rest.jaxrs.model.VendorDetail;
 import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -18,8 +32,8 @@ import javax.ws.rs.core.Response;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -27,16 +41,32 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
 import static java.util.Collections.singletonList;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
-import static org.folio.orders.utils.SubObjects.*;
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toMap;
-import static org.folio.orders.utils.HelperUtils.*;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
+import static org.folio.orders.utils.SubObjects.ADJUSTMENT;
+import static org.folio.orders.utils.SubObjects.ALERTS;
+import static org.folio.orders.utils.SubObjects.CLAIMS;
+import static org.folio.orders.utils.SubObjects.COST;
+import static org.folio.orders.utils.SubObjects.DETAILS;
+import static org.folio.orders.utils.SubObjects.ERESOURCE;
+import static org.folio.orders.utils.SubObjects.FUND_DISTRIBUTION;
+import static org.folio.orders.utils.SubObjects.LOCATION;
+import static org.folio.orders.utils.SubObjects.PHYSICAL;
+import static org.folio.orders.utils.SubObjects.PO_LINES;
+import static org.folio.orders.utils.SubObjects.RENEWAL;
+import static org.folio.orders.utils.SubObjects.REPORTING_CODES;
+import static org.folio.orders.utils.SubObjects.SOURCE;
+import static org.folio.orders.utils.SubObjects.VENDOR_DETAIL;
+import static org.folio.orders.utils.SubObjects.resourcesPath;
+import static org.folio.rest.impl.OrdersImpl.LIMIT_INTERNAL_HTTP_CODE;
+import static org.folio.rest.impl.OrdersImpl.LINES_LIMIT_ERROR_CODE;
 import static org.folio.rest.tools.client.Response.isSuccess;
 
-public class PostOrderLineHelper extends AbstractOrderLineHelper  {
+public class PostOrderLineHelper extends AbstractHelper {
 
   private static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
   private static final String DEFAULT_STATUS_CODE = "temp";
@@ -550,6 +580,9 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
   Response buildErrorResponse(int code, String message) {
     final Response result;
     switch (code) {
+      case LIMIT_INTERNAL_HTTP_CODE:
+        result = Orders.PostOrdersLinesByIdResponse.respond422WithApplicationJson(withErrors(message, LINES_LIMIT_ERROR_CODE));
+        break;
       case 400:
         result = Orders.PostOrdersLinesByIdResponse.respond400WithTextPlain(message);
         break;

@@ -32,7 +32,7 @@ import static org.folio.rest.jaxrs.resource.Orders.PutOrdersLinesByIdAndLineIdRe
 import static org.folio.rest.jaxrs.resource.Orders.PutOrdersLinesByIdAndLineIdResponse.respond500WithApplicationJson;
 import static org.folio.rest.jaxrs.resource.Orders.PutOrdersLinesByIdAndLineIdResponse.respond500WithTextPlain;
 
-public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
+public class PutOrderLineByIdHelper extends AbstractHelper {
 
   public static final String ID = "id";
   private String lang;

@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-public class GetPOLineByIdHelper extends AbstractOrderLineHelper {
+public class GetPOLineByIdHelper extends AbstractHelper {
 
   GetPOLineByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
                       Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
@@ -42,6 +42,7 @@ public class GetPOLineByIdHelper extends AbstractOrderLineHelper {
     return HelperUtils.operateOnPoLine(HttpMethod.GET, poline, httpClient, ctx, okapiHeaders, logger);
   }
 
+  @Override
   protected Response buildErrorResponse(int code, String message) {
     final Response result;
     switch (code) {
