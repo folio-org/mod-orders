@@ -53,15 +53,11 @@ resourceTypes:
           strict: false
           value: !include acq-models/examples/composite_purchase_order.sample
   /po_number/validate:
-     type:
-        post-item:
-          exampleItem: !include acq-models/mod-orders-storage/examples/po_number_get.sample
-          schema: po_number
       
      displayName: PO Number Validation
      post:
         description: validate if the PO Number is unique and matches the pattern specified
-        is: [validate, auth]
+        is: [validate, auth , language]
         body:
           application/json:
             type: po_number

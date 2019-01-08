@@ -30,8 +30,6 @@ import static org.folio.orders.utils.HelperUtils.OKAPI_URL;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.loadConfiguration;
-import static org.folio.orders.utils.HelperUtils.isPOValid;
-import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
 import static io.vertx.core.Future.succeededFuture;
@@ -251,5 +249,6 @@ public class OrdersImpl implements Orders {
       throw new CompletionException("Invalid limit value in configuration.", e);
     }
   }
+
 }
 
