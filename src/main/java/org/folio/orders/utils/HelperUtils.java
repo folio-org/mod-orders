@@ -127,7 +127,7 @@ public class HelperUtils {
       })
       .exceptionally(t -> {
         logger.error("Exception deleting po_line data for order id={}:", t, orderId);
-        throw new CompletionException(t);
+        throw new CompletionException(t.getCause());
       });
   }
 

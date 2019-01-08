@@ -6,6 +6,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.resource.Orders.DeleteOrdersByIdResponse;
 
 import javax.ws.rs.core.Response;
@@ -19,7 +20,7 @@ public class DeleteOrdersByIdHelper extends AbstractHelper {
 
   public DeleteOrdersByIdHelper(Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
-    super(OrdersImpl.getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx);
+    super(AbstractHelper.getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx);
     setDefaultHeaders(httpClient);
   }
 
@@ -34,12 +35,12 @@ public class DeleteOrdersByIdHelper extends AbstractHelper {
             future.complete(null);
           }).exceptionally(t -> {
             logger.error("Failed to delete PO", t);
-            future.completeExceptionally(t.getCause());
+            future.completeExceptionally(t);
             return null;
           });
     }).exceptionally(t -> {
       logger.error("Failed to delete PO Lines", t);
-      future.completeExceptionally(t.getCause());
+      future.completeExceptionally(t);
       return null;
     });
 
@@ -48,10 +49,10 @@ public class DeleteOrdersByIdHelper extends AbstractHelper {
 
 
   @Override
-  Response buildErrorResponse(int code, String message) {
+  Response buildErrorResponse(int code, Error error) {
     if (code == 404) {
-      return DeleteOrdersByIdResponse.respond404WithTextPlain(message);
+      return DeleteOrdersByIdResponse.respond404WithTextPlain(error.getMessage());
     }
-    return DeleteOrdersByIdResponse.respond500WithTextPlain(message);
+    return DeleteOrdersByIdResponse.respond500WithTextPlain(error.getMessage());
   }
 }

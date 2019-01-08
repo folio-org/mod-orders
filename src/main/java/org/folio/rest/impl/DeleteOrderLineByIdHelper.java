@@ -3,6 +3,7 @@ package org.folio.rest.impl;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
+import org.folio.rest.jaxrs.model.Error;
 
 import javax.ws.rs.core.Response;
 import java.util.Map;
@@ -17,7 +18,7 @@ import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersLinesByIdAndLineI
 class DeleteOrderLineByIdHelper extends AbstractHelper {
 
   DeleteOrderLineByIdHelper(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
-    super(OrdersImpl.getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx);
+    super(AbstractHelper.getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx);
     setDefaultHeaders(httpClient);
   }
 
@@ -35,17 +36,17 @@ class DeleteOrderLineByIdHelper extends AbstractHelper {
   }
 
   @Override
-  protected Response buildErrorResponse(int code, String message) {
+  protected Response buildErrorResponse(int code, Error error) {
     final Response result;
     switch (code) {
       case 404:
-        result = respond404WithTextPlain(message);
+        result = respond404WithTextPlain(error.getMessage());
         break;
       case 422:
-        result = respond422WithApplicationJson(withErrors(message));
+        result = respond422WithApplicationJson(withErrors(error));
         break;
       default:
-        result = respond500WithTextPlain(message);
+        result = respond500WithTextPlain(error.getMessage());
     }
     return result;
   }

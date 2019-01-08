@@ -16,6 +16,7 @@ import org.folio.rest.jaxrs.model.Claim;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
@@ -46,22 +47,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
-import static org.folio.orders.utils.SubObjects.ADJUSTMENT;
-import static org.folio.orders.utils.SubObjects.ALERTS;
-import static org.folio.orders.utils.SubObjects.CLAIMS;
-import static org.folio.orders.utils.SubObjects.COST;
-import static org.folio.orders.utils.SubObjects.DETAILS;
-import static org.folio.orders.utils.SubObjects.ERESOURCE;
-import static org.folio.orders.utils.SubObjects.FUND_DISTRIBUTION;
-import static org.folio.orders.utils.SubObjects.LOCATION;
-import static org.folio.orders.utils.SubObjects.PHYSICAL;
-import static org.folio.orders.utils.SubObjects.PO_LINES;
-import static org.folio.orders.utils.SubObjects.REPORTING_CODES;
-import static org.folio.orders.utils.SubObjects.SOURCE;
-import static org.folio.orders.utils.SubObjects.VENDOR_DETAIL;
-import static org.folio.orders.utils.SubObjects.resourcesPath;
-import static org.folio.rest.impl.OrdersImpl.LIMIT_INTERNAL_HTTP_CODE;
-import static org.folio.rest.impl.OrdersImpl.LINES_LIMIT_ERROR_CODE;
+import static org.folio.orders.utils.SubObjects.*;
 import static org.folio.rest.tools.client.Response.isSuccess;
 
 public class PostOrderLineHelper extends AbstractHelper {
@@ -558,23 +544,20 @@ public class PostOrderLineHelper extends AbstractHelper {
 
 
   @Override
-  Response buildErrorResponse(int code, String message) {
+  Response buildErrorResponse(int code, Error error) {
     final Response result;
     switch (code) {
-      case LIMIT_INTERNAL_HTTP_CODE:
-        result = Orders.PostOrdersLinesByIdResponse.respond422WithApplicationJson(withErrors(message, LINES_LIMIT_ERROR_CODE));
-        break;
       case 400:
-        result = Orders.PostOrdersLinesByIdResponse.respond400WithTextPlain(message);
+        result = Orders.PostOrdersLinesByIdResponse.respond400WithTextPlain(error.getMessage());
         break;
       case 401:
-        result = Orders.PostOrdersLinesByIdResponse.respond401WithTextPlain(message);
+        result = Orders.PostOrdersLinesByIdResponse.respond401WithTextPlain(error.getMessage());
         break;
       case 422:
-        result = Orders.PostOrdersLinesByIdResponse.respond422WithApplicationJson(withErrors(message));
+        result = Orders.PostOrdersLinesByIdResponse.respond422WithApplicationJson(withErrors(error));
         break;
       default:
-        result = Orders.PostOrdersLinesByIdResponse.respond500WithTextPlain(message);
+        result = Orders.PostOrdersLinesByIdResponse.respond500WithTextPlain(error.getMessage());
     }
     return result;
   }

@@ -7,6 +7,7 @@ import javax.ws.rs.core.Response;
 
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.resource.Orders.GetOrdersByIdResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -33,7 +34,7 @@ public class GetOrdersByIdHelper extends AbstractHelper {
       })
       .exceptionally(t -> {
         logger.error("Error getting orders", t);
-        future.completeExceptionally(t.getCause());
+        future.completeExceptionally(t);
         return null;
       });
 
@@ -57,13 +58,13 @@ public class GetOrdersByIdHelper extends AbstractHelper {
           })
           .exceptionally(t -> {
             logger.error("Failed to get POLines", t);
-            future.completeExceptionally(t.getCause());
+            future.completeExceptionally(t);
             return null;
           });
       })
       .exceptionally(t -> {
         logger.error("Failed to build composite purchase order", t.getCause());
-        future.completeExceptionally(t.getCause());
+        future.completeExceptionally(t);
         return null;
       });
 
@@ -71,11 +72,11 @@ public class GetOrdersByIdHelper extends AbstractHelper {
   }
 
   @Override
-  Response buildErrorResponse(int code, String message) {
+  Response buildErrorResponse(int code, Error error) {
     if (code == 404) {
-       return GetOrdersByIdResponse.respond404WithTextPlain(message);
+       return GetOrdersByIdResponse.respond404WithTextPlain(error.getMessage());
     }
-    return GetOrdersByIdResponse.respond500WithTextPlain(message);
+    return GetOrdersByIdResponse.respond500WithTextPlain(error.getMessage());
   }
 
 }
