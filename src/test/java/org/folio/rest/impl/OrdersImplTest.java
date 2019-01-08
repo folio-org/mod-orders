@@ -141,7 +141,7 @@ public class OrdersImplTest {
 
   private static final String EMPTY_PO_LINE_BUT_WITH_IDS = "{\"id\": \"%s\", \"purchase_order_id\": \"%s\"}";
 
-  private static final String PONUMBER_VALIDATE_PATH=rootPath+"/po_number/validate";
+  private static final String PONUMBER_VALIDATE_PATH=rootPath+"/po-number/validate";
 
   private static final String ID = "id";
   private static final String PURCHASE_ORDER_ID = "purchase_order_id";
