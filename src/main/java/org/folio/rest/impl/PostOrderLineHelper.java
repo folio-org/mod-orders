@@ -192,7 +192,7 @@ public class PostOrderLineHelper extends AbstractOrderLineHelper  {
             })
             .thenApply(response -> {
               String location = response.getHeaders().get(LOCATION_HEADER);
-              return location.substring(location.lastIndexOf('/'));
+              return location.substring(location.lastIndexOf('/')+1);
             });
         } catch (Exception e) {
           throw new CompletionException(e);
