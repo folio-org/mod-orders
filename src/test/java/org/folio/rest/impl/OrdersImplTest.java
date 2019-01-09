@@ -52,6 +52,7 @@ import static org.folio.orders.utils.SubObjects.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
+import static org.folio.rest.impl.OrdersImpl.LINES_LIMIT_ERROR_CODE;
 import static org.folio.rest.impl.OrdersImpl.OVER_LIMIT_ERROR_MESSAGE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -70,9 +71,10 @@ import static org.junit.Assert.fail;
 @RunWith(VertxUnitRunner.class)
 public class OrdersImplTest {
 
-  public static final String PURCHASE_ORDER = "purchase_order";
-
   private static final String INSTANCE_RECORD = "instance_record";
+  public static final String ORDER_WITHOUT_PO_LINES = "order_without_po_lines.json";
+  public static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
+  public static final String ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON = "put_order_with_mismatch_id_in_po_lines.json";
 
   static {
     System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, "io.vertx.core.logging.Log4j2LogDelegateFactory");
@@ -116,6 +118,7 @@ public class OrdersImplTest {
   private static final String PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED = "0009662b-8b80-4001-b704-ca10971f175d";
   private static final String PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE = "c2755a78-2f8d-47d0-a218-059a9b7391b4";
   private static final String PO_LINE_ID_WITH_FUND_DISTRIBUTION_404_CODE = "f7223ce8-9e92-4c28-8fd9-097596053b7c";
+  private static final String ORDER_ID_WITHOUT_PO_LINES = "50fb922c-3fa9-494e-a972-f2801f1b9fd1";
 
   // API paths
   private final static String rootPath = "/orders";
@@ -356,6 +359,7 @@ public class OrdersImplTest {
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     ctx.assertFalse(errors.getErrors().isEmpty());
     ctx.assertEquals(String.format(OVER_LIMIT_ERROR_MESSAGE, DEFAULT_POLINE_LIMIT), errors.getErrors().get(0).getMessage());
+    ctx.assertEquals(LINES_LIMIT_ERROR_CODE, errors.getErrors().get(0).getCode());
   }
 
 
@@ -372,6 +376,7 @@ public class OrdersImplTest {
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     ctx.assertFalse(errors.getErrors().isEmpty());
     ctx.assertEquals(String.format(OVER_LIMIT_ERROR_MESSAGE, 1), errors.getErrors().get(0).getMessage());
+    ctx.assertEquals(LINES_LIMIT_ERROR_CODE, errors.getErrors().get(0).getCode());
   }
 
 
@@ -571,18 +576,86 @@ public class OrdersImplTest {
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
-    String body = getMockDraftOrder().toString();
-
+    JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_PO_LINES_JSON));
+    JsonObject storageData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id);
     RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
         .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
-        .body(body)
+        .body(reqData.toString())
       .put(rootPath + "/" + id)
         .then()
-          .statusCode(204);
+        .statusCode(204);
+
+    JsonArray poLinesFromRequest = reqData.getJsonArray(PO_LINES);
+    JsonArray poLinesFromStorage = storageData.getJsonArray(PO_LINES);
+    int sameLinesCount = 0;
+    for (int i = 0; i < poLinesFromRequest.size(); i++) {
+      JsonObject lineFromRequest = poLinesFromRequest.getJsonObject(i);
+      for (int j = 0; j < poLinesFromStorage.size(); j++) {
+        JsonObject lineFromStorage = poLinesFromStorage.getJsonObject(j);
+        if (StringUtils.equals(lineFromRequest.getString(ID), lineFromStorage.getString(ID))) {
+          sameLinesCount++;
+          break;
+        }
+      }
+    }
+
+    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), poLinesFromRequest.size() - sameLinesCount);
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE).size(), poLinesFromStorage.size() - sameLinesCount);
+    assertNotNull(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT));
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).size(), sameLinesCount);
+  }
+
+  @Test
+  public void testPutOrdersByIdWithIdMismatch() throws Exception {
+    logger.info("=== Test Put Order By Id with id mismatch  ===");
+
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
+    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
+    JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON));
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
+        .contentType(APPLICATION_JSON)
+        .body(reqData.toString())
+      .put(rootPath + "/" + id)
+        .then()
+          .statusCode(422);
+
+  }
+
+  @Test
+  public void testPoUpdateWithOverLimitPOLines(TestContext ctx) throws Exception {
+    logger.info("=== Test PUT PO, with over limit lines quantity ===");
+
+    String body = getMockData(listedPrintMonographPath);
+    final Errors errors = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT)
+        .header(X_OKAPI_TOKEN)
+        .header(X_OKAPI_USER_ID)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .put(rootPath + "/" + ORDER_ID_WITHOUT_PO_LINES)
+        .then()
+          .statusCode(422)
+            .extract()
+              .response()
+                .body()
+                  .as(Errors.class);
+
+    logger.info(JsonObject.mapFrom(errors).encodePrettily());
+    ctx.assertFalse(errors.getErrors().isEmpty());
+    ctx.assertEquals(String.format(OVER_LIMIT_ERROR_MESSAGE, 1), errors.getErrors().get(0).getMessage());
+    ctx.assertEquals(LINES_LIMIT_ERROR_CODE, errors.getErrors().get(0).getCode());
   }
 
   @Test
@@ -625,6 +698,53 @@ public class OrdersImplTest {
         fail("No matching instance for POL: " + JsonObject.mapFrom(pol).encodePrettily());
       }
     }
+  }
+
+  @Test
+  public void testPutOrderByIdWithoutPoLinesInRequestDoesNotDeletePoLinesFromStorage() throws IOException {
+    logger.info("=== Test Put Order By Id without PO lines doesn't delete lines from storage ===");
+
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
+    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
+    JsonObject reqData = new JsonObject(getMockData(ORDER_WITHOUT_PO_LINES));
+
+    RestAssured
+      .with()
+      .header(X_OKAPI_URL)
+      .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+      .header(X_OKAPI_USER_ID)
+      .contentType(APPLICATION_JSON)
+      .body(reqData.toString())
+      .put(rootPath + "/" + id)
+      .then()
+      .statusCode(204);
+
+
+    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
+    assertNull(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE));
+  }
+
+  @Test
+  public void testPutOrderByIdWithPoLinesInRequestAndNoPoLinesInStorage() throws IOException {
+    logger.info("=== Test Put Order By Id with PO lines and without PO lines in order from storage ===");
+
+    JsonObject reqData = new JsonObject(getMockData(listedPrintMonographPath));
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
+        .contentType(APPLICATION_JSON)
+        .body(reqData.toString())
+      .put(rootPath + "/" + ORDER_ID_WITHOUT_PO_LINES)
+        .then()
+          .statusCode(204);
+
+    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), reqData.getJsonArray(PO_LINES).size());
+
   }
 
   @Test
@@ -1480,6 +1600,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, resourcePath(SOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.GET, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleGetGenericSubObj(ctx, VENDOR_DETAIL));
 
+      router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
       router.route(HttpMethod.PUT, resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
       router.route(HttpMethod.PUT, resourcePath(ADJUSTMENT)).handler(ctx -> handlePutGenericSubObj(ctx, ADJUSTMENT));
       router.route(HttpMethod.PUT, resourcePath(ALERTS)).handler(ctx -> handlePutGenericSubObj(ctx, ALERTS));
@@ -1638,8 +1759,14 @@ public class OrdersImplTest {
         try {
           JsonObject compPO = new JsonObject(getMockData(String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id)));
           JsonArray lines = compPO.getJsonArray(PO_LINES);
-
-          lines.forEach(l -> {
+          JsonObject po_lines = new JsonObject();
+          if (lines == null) {
+            po_lines.put(PO_LINES, new JsonArray())
+              .put("total_records", 0)
+              .put("first", 0)
+              .put("last", 0);
+          } else {
+            lines.forEach(l -> {
             JsonObject line = (JsonObject) l;
             line.put(ADJUSTMENT, ((Map<?, ?>) line.remove(ADJUSTMENT)).get(ID));
             line.put(COST, ((Map<?, ?>) line.remove(COST)).get(ID));
@@ -1666,14 +1793,14 @@ public class OrdersImplTest {
                                                .add(((Map<?, ?>) f).get(ID)));
           });
 
-          JsonObject po_lines = new JsonObject()
-            .put(PO_LINES, lines)
+          po_lines.put(PO_LINES, lines)
             .put("first", 0)
             .put("last", lines.size());
           if (EMPTY_CONFIG_TENANT.equals(tenant)) {
             po_lines.put(TOTAL_RECORDS, Integer.parseInt(DEFAULT_POLINE_LIMIT));
           } else {
             po_lines.put(TOTAL_RECORDS, lines.size());
+          }
           }
 
 
@@ -1913,8 +2040,8 @@ public class OrdersImplTest {
 
     private void handlePostPOLine(RoutingContext ctx) {
       logger.info("got po_line: " + ctx.getBodyAsString());
-
-      org.folio.rest.acq.model.PoLine pol = ctx.getBodyAsJson().mapTo(org.folio.rest.acq.model.PoLine.class);
+      JsonObject body = ctx.getBodyAsJson();
+      org.folio.rest.acq.model.PoLine pol = body.mapTo(org.folio.rest.acq.model.PoLine.class);
 
       if (pol.getId() == null) {
         pol.setId(UUID.randomUUID().toString());
@@ -1932,6 +2059,8 @@ public class OrdersImplTest {
           .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
           .end(JsonObject.mapFrom(pol).encodePrettily());
       }
+
+      addServerRqRsData(HttpMethod.POST, PO_LINES, body);
     }
 
     private void handleGetLocation(RoutingContext ctx) {

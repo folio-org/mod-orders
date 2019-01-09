@@ -32,7 +32,7 @@ import static org.folio.rest.jaxrs.resource.Orders.PutOrdersLinesByIdAndLineIdRe
 import static org.folio.rest.jaxrs.resource.Orders.PutOrdersLinesByIdAndLineIdResponse.respond500WithApplicationJson;
 import static org.folio.rest.jaxrs.resource.Orders.PutOrdersLinesByIdAndLineIdResponse.respond500WithTextPlain;
 
-public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
+public class PutOrderLineByIdHelper extends AbstractHelper {
 
   public static final String ID = "id";
   private String lang;
@@ -46,7 +46,7 @@ public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
 
   public PutOrderLineByIdHelper(String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
                                 Context ctx) {
-    this(lang, OrdersImpl.getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx);
+    this(lang, AbstractHelper.getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx);
     setDefaultHeaders(httpClient);
   }
 
@@ -62,7 +62,7 @@ public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
         if (getProcessingErrors().isEmpty()) {
           response = respond204();
         } else {
-          response = buildErrorResponse(500, "PO Line partially updated but there are issues processing some PO Line sub-objects");
+          response = buildErrorResponse(500,  new Error().withMessage("PO Line partially updated but there are issues processing some PO Line sub-objects"));
         }
         asyncResultHandler.handle(succeededFuture(response));
       })
@@ -222,20 +222,20 @@ public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
   }
 
   @Override
-  protected Response buildErrorResponse(int code, String message) {
+  protected Response buildErrorResponse(int code, Error error) {
     final Response result;
     switch (code) {
       case 404:
-        result = respond404WithTextPlain(message);
+        result = respond404WithTextPlain(error.getMessage());
         break;
       case 422:
-        result = respond422WithApplicationJson(withErrors(message));
+        result = respond422WithApplicationJson(withErrors(error));
         break;
       default:
         if (getProcessingErrors().isEmpty()) {
-          result = respond500WithTextPlain(message);
+          result = respond500WithTextPlain(error.getMessage());
         } else {
-          processingErrors.getErrors().add(new Error().withMessage(message));
+          processingErrors.getErrors().add(error);
           result = respond500WithApplicationJson(processingErrors);
         }
     }

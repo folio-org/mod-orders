@@ -87,6 +87,14 @@ resourceTypes:
     put:
       description: Update an order by id
       is: [validate]
+      responses:
+        500:
+          body:
+            application/json:
+              type: errors
+              example:
+                strict: false
+                value: !include raml-util/examples/errors.sample
     /lines:
       displayName: Purchase Order Lines
       description: Manage purchase order (PO) lines

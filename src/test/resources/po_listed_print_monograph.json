@@ -29,6 +29,7 @@
   },
   "po_lines": [
     {
+      "id": "c2755a78-2f8d-47d0-a218-059a9b7391b3",
       "acquisition_method": "Purchase At Vendor System",
       "adjustment": {
         "credit": 0.0,
@@ -165,6 +166,7 @@
       }
     },
     {
+      "id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
       "acquisition_method": "Purchase",
       "adjustment": {
         "credit": 0.0,
@@ -242,7 +244,6 @@
       "po_line_workflow_status": "Closed",
       "publication_date": "2017",
       "publisher": "John Wiley & Sons, Inc.",
-      "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5Ba3bb",
       "receipt_date": null,
       "receipt_status": "Fully Received",
       "reporting_codes": [],

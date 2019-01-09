@@ -106,7 +106,7 @@ public class HelperUtils {
   /**
    *  Retrieves PO lines from storage by PO id as JsonObject with array of po_lines (/acq-models/mod-orders-storage/schemas/po_line.json objects)
    */
-  private static CompletableFuture<JsonObject> getPoLines(String id, String lang, HttpClientInterface httpClient, Context ctx,
+  public static CompletableFuture<JsonObject> getPoLines(String id, String lang, HttpClientInterface httpClient, Context ctx,
                                                           Map<String, String> okapiHeaders, Logger logger) {
     String endpoint = String.format(GET_ALL_POLINES_QUERY_WITH_LIMIT, DEFAULT_POLINE_LIMIT, id, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
@@ -137,7 +137,7 @@ public class HelperUtils {
       })
       .exceptionally(t -> {
         logger.error("Exception deleting po_line data for order id={}:", t, orderId);
-        throw new CompletionException(t);
+        throw new CompletionException(t.getCause());
       });
   }
 
