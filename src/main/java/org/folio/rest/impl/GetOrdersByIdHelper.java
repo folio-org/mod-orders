@@ -44,7 +44,7 @@ public class GetOrdersByIdHelper extends AbstractHelper {
   private CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrderById(String id, String lang) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
 
-    HelperUtils.getPurchaseOrder(id, lang, httpClient, ctx, okapiHeaders, logger)
+    HelperUtils.getPurchaseOrderById(id, lang, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(po -> {
         logger.info("got: " + po.encodePrettily());
         po.remove("adjustment");

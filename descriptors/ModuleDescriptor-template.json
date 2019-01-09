@@ -181,6 +181,14 @@
             "orders-storage.sources.item.delete",
             "orders-storage.vendor_details.item.delete"
           ]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/orders/po-number/validate",
+          "permissionsRequired": ["orders.po-number.item.post"],
+          "modulePermissions": [
+            "orders-storage.purchase_orders.collection.get"
+          ]
         }
       ]
     }
@@ -301,6 +309,11 @@
       "description": "Delete an existing PO line"
     },
     {
+      "permissionName": "orders.po-number.item.post",
+      "displayName": "Orders - validate a PO Number",
+      "description": "Validate a PO Number"
+    },
+    {
       "permissionName": "orders.all",
       "displayName": "orders - all permissions",
       "description": "Entire set of permissions needed to use orders",
@@ -312,7 +325,8 @@
         "orders.po_lines.item.post",
         "orders.po_lines.item.get",
         "orders.po_lines.item.put",
-        "orders.po_lines.item.delete"
+        "orders.po_lines.item.delete",
+        "orders.po-number.item.post"
       ]
     }
   ],
