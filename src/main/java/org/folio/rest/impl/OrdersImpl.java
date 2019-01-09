@@ -13,6 +13,7 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -220,6 +221,18 @@ public class OrdersImpl implements Orders {
     } else {
       asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422, MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE)));
     }
+  }
+
+  @Override
+  @Validate
+  public void postOrdersPoNumberValidate(String lang, PoNumber entity, Map<String, String> okapiHeaders,
+     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
+    ValidationHelper helper=new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+    logger.info("Validating a PO Number");
+    //@Validate asserts the pattern of a PO Number, the below method is used to check for uniqueness
+     helper.checkPONumberUnique(entity, lang);
+
   }
 
   public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {

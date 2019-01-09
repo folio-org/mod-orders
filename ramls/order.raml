@@ -13,6 +13,7 @@ types:
   composite_purchase_order: !include acq-models/composite_purchase_order.json
   po_line: !include acq-models/composite_po_line.json
   errors: !include raml-util/schemas/errors.schema
+  po-number: !include acq-models/mod-orders-storage/schemas/po_number.json
   UUID:
     type: string
     pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
@@ -51,7 +52,29 @@ resourceTypes:
         example:
           strict: false
           value: !include acq-models/examples/composite_purchase_order.sample
-
+  /po-number/validate:
+      
+     displayName: PO Number Validation
+     post:
+        description: validate if the PO Number is unique and matches the pattern specified
+        is: [validate, auth , language]
+        body:
+          application/json:
+            type: po-number
+        responses:
+          204:
+            description: "Valid PO Number"
+          400:
+            description: "Bad request, e.g. existing PO Number. Details of the error provided in the response."
+            body:
+              text/plain:
+                example: |
+                  "unable to add <<resourcePathName|!singularize>> -- malformed JSON at 13:3"
+          500:
+            description: "Internal server error, e.g. due to misconfiguration"
+            body:
+              text/plain:
+                example: "Internal server error, contact administrator"
   /{id}:
     uriParameters:
       id:
@@ -65,7 +88,7 @@ resourceTypes:
       description: Update an order by id
       is: [validate]
     /lines:
-      displayName: Purchace Order Lines
+      displayName: Purchase Order Lines
       description: Manage purchase order (PO) lines
       type:
         # Using `post-item` resource type because at the moment only POST is required. In case GET becomes also required, the `collection` resource type should be used instead
