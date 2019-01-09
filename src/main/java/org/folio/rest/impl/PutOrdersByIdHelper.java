@@ -93,6 +93,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     } else {
       futures.addAll(processPoLinesCreation(compOrder, poLinesFromStorage));
       futures.addAll(processPoLinesUpdate(compOrder, poLinesFromStorage));
+      // The remaining unprocessed PoLines should be removed
       poLinesFromStorage.stream().forEach(poLine -> futures.add(deletePoLine((JsonObject) poLine, httpClient, ctx, okapiHeaders, logger)));
     }
     return VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]));

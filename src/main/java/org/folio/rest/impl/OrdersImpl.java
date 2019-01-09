@@ -230,7 +230,7 @@ public class OrdersImpl implements Orders {
   @Validate
   public void postOrdersPoNumberValidate(String lang, PoNumber entity, Map<String, String> okapiHeaders,
      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
+    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
     ValidationHelper helper=new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
     logger.info("Validating a PO Number");
     //@Validate asserts the pattern of a PO Number, the below method is used to check for uniqueness
