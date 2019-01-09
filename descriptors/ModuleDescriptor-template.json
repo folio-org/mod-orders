@@ -237,7 +237,7 @@
           "pathPattern": "/orders/po-number/validate",
           "permissionsRequired": ["orders.po-number.item.post"],
           "modulePermissions": [
-            "orders-storage.purchase_orders.item.get"
+            "orders-storage.purchase_orders.collection.get"
           ]
         }
       ]
