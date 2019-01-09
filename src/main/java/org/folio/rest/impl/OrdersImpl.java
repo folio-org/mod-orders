@@ -7,6 +7,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.rest.annotations.Validate;
@@ -113,18 +114,28 @@ public class OrdersImpl implements Orders {
 
   @Override
   @Validate
-  public void putOrdersById(String id, String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
+  public void putOrdersById(String orderId, String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     PutOrdersByIdHelper putHelper = new PutOrdersByIdHelper(lang, okapiHeaders, asyncResultHandler, vertxContext);
-    loadConfiguration(okapiHeaders, vertxContext, logger).thenAccept(config -> {
-      int limit = getPoLineLimit(config);
-      if (compPO.getPoLines().size() <= limit) {
-        putHelper.updateOrderWithPoLines(id, compPO)
-          .exceptionally(putHelper::handleError);
-      } else {
-        throw new ValidationException(String.format(OVER_LIMIT_ERROR_MESSAGE, limit), LINES_LIMIT_ERROR_CODE);
-      }
-    }).exceptionally(putHelper::handleError);
+    if (CollectionUtils.isEmpty(compPO.getPoLines())) {
+      putHelper.updateOrder(orderId, compPO);
+    } else {
+      loadConfiguration(okapiHeaders, vertxContext, logger).thenAccept(config -> {
+        int limit = getPoLineLimit(config);
+        if (compPO.getPoLines().size() > limit) {
+          throw new ValidationException(String.format(OVER_LIMIT_ERROR_MESSAGE, limit), LINES_LIMIT_ERROR_CODE);
+        }
+        compPO.getPoLines().forEach(poLine -> {
+          if (StringUtils.isEmpty(poLine.getPurchaseOrderId())) {
+            poLine.setPurchaseOrderId(orderId);
+          }
+          if (!orderId.equals(poLine.getPurchaseOrderId())) {
+            throw new ValidationException(MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE, ID_MISMATCH_ERROR_CODE);
+          }
+        });
+        putHelper.updateOrderWithPoLines(orderId, compPO);
+      }).exceptionally(putHelper::handleError);
+    }
 
   }
 

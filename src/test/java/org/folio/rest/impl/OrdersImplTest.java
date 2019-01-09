@@ -75,6 +75,7 @@ public class OrdersImplTest {
   private static final String INSTANCE_RECORD = "instance_record";
   public static final String ORDER_WITHOUT_PO_LINES = "order_without_po_lines.json";
   public static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
+  public static final String ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON = "put_order_with_mismatch_id_in_po_lines.json";
 
   static {
     System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, "io.vertx.core.logging.Log4j2LogDelegateFactory");
@@ -603,6 +604,27 @@ public class OrdersImplTest {
     assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE).size(), poLinesFromStorage.size() - sameLinesCount);
     assertNotNull(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT));
     assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).size(), sameLinesCount);
+  }
+
+  @Test
+  public void testPutOrdersByIdWithIdMismatch() throws Exception {
+    logger.info("=== Test Put Order By Id with id mismatch  ===");
+
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
+    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
+    JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON));
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
+        .contentType(APPLICATION_JSON)
+        .body(reqData.toString())
+      .put(rootPath + "/" + id)
+        .then()
+          .statusCode(422);
+
   }
 
   @Test

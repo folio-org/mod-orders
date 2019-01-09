@@ -8,7 +8,6 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
@@ -40,7 +39,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
 
   public PutOrdersByIdHelper(String lang, Map<String, String> okapiHeaders,
                              Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
-    super(AbstractHelper.getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx);
+    super(getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx);
     setDefaultHeaders(httpClient);
     this.lang = lang;
     postHelper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, ctx);
@@ -48,11 +47,8 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     postOrderLineHelper = new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, ctx);
   }
 
-  public CompletableFuture<Void> updateOrderWithPoLines(String id, CompositePurchaseOrder compPO) {
-    if (CollectionUtils.isEmpty(compPO.getPoLines())) {
-      return updateOrder(id, compPO);
-    }
-    return getPoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
+  public void updateOrderWithPoLines(String id, CompositePurchaseOrder compPO) {
+      getPoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(jsonObject -> {
         JsonArray existedPoLinesArray = jsonObject.getJsonArray(PO_LINES);
         return handlePoLines(compPO, existedPoLinesArray);
@@ -60,7 +56,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
       .thenCompose(aVoid -> updateOrder(id, compPO));
   }
 
-  private CompletableFuture<Void> updateOrder(String id, CompositePurchaseOrder compPO) {
+  public CompletableFuture<Void> updateOrder(String id, CompositePurchaseOrder compPO) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
     logger.debug("Updating order...");

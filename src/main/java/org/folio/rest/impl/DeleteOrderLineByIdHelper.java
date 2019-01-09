@@ -18,7 +18,7 @@ import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersLinesByIdAndLineI
 class DeleteOrderLineByIdHelper extends AbstractHelper {
 
   DeleteOrderLineByIdHelper(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
-    super(AbstractHelper.getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx);
+    super(getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx);
     setDefaultHeaders(httpClient);
   }
 
