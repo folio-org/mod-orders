@@ -22,11 +22,15 @@
             "orders-storage.fund-distributions.item.post",
             "orders-storage.locations.item.post",
             "orders-storage.physicals.item.post",
-            "orders-storage.renewals.item.post",
             "orders-storage.reporting_codes.item.post",
             "orders-storage.sources.item.post",
             "orders-storage.vendor_details.item.post",
-            "configuration.entries.collection.get"
+            "configuration.entries.collection.get",
+            "inventory-storage.identifier-types.collection.get",
+            "inventory.instances.collection.get",
+            "inventory.instances.item.post",
+            "inventory-storage.instance-types.collection.get",
+            "inventory-storage.instance-statuses.collection.get"
           ]
         },
         {
@@ -45,7 +49,6 @@
             "orders-storage.fund-distributions.item.get",
             "orders-storage.locations.item.get",
             "orders-storage.physicals.item.get",
-            "orders-storage.renewals.item.get",
             "orders-storage.reporting_codes.item.get",
             "orders-storage.sources.item.get",
             "orders-storage.vendor_details.item.get"
@@ -87,9 +90,6 @@
             "orders-storage.physicals.item.put",
             "orders-storage.physicals.item.post",
             "orders-storage.physicals.item.delete",
-            "orders-storage.renewals.item.put",
-            "orders-storage.renewals.item.post",
-            "orders-storage.renewals.item.delete",
             "orders-storage.reporting_codes.item.put",
             "orders-storage.reporting_codes.item.post",
             "orders-storage.reporting_codes.item.delete",
@@ -98,7 +98,12 @@
             "orders-storage.sources.item.delete",
             "orders-storage.vendor_details.item.put",
             "orders-storage.vendor_details.item.post",
-            "orders-storage.vendor_details.item.delete"
+            "orders-storage.vendor_details.item.delete",
+            "inventory-storage.identifier-types.collection.get",
+            "inventory.instances.collection.get",
+            "inventory.instances.item.post",
+            "inventory-storage.instance-types.collection.get",
+            "inventory-storage.instance-statuses.collection.get"
           ]
         },
         {
@@ -117,7 +122,6 @@
             "orders-storage.fund-distributions.item.delete",
             "orders-storage.locations.item.delete",
             "orders-storage.physicals.item.delete",
-            "orders-storage.renewals.item.delete",
             "orders-storage.reporting_codes.item.delete",
             "orders-storage.sources.item.delete",
             "orders-storage.vendor_details.item.delete"
@@ -138,7 +142,6 @@
             "orders-storage.fund-distributions.item.post",
             "orders-storage.locations.item.post",
             "orders-storage.physicals.item.post",
-            "orders-storage.renewals.item.post",
             "orders-storage.reporting_codes.item.post",
             "orders-storage.sources.item.post",
             "orders-storage.vendor_details.item.post",
@@ -160,7 +163,6 @@
             "orders-storage.fund-distributions.item.get",
             "orders-storage.locations.item.get",
             "orders-storage.physicals.item.get",
-            "orders-storage.renewals.item.get",
             "orders-storage.reporting_codes.item.get",
             "orders-storage.sources.item.get",
             "orders-storage.vendor_details.item.get"
@@ -199,9 +201,6 @@
             "orders-storage.physicals.item.put",
             "orders-storage.physicals.item.post",
             "orders-storage.physicals.item.delete",
-            "orders-storage.renewals.item.put",
-            "orders-storage.renewals.item.post",
-            "orders-storage.renewals.item.delete",
             "orders-storage.reporting_codes.item.put",
             "orders-storage.reporting_codes.item.post",
             "orders-storage.reporting_codes.item.delete",
@@ -228,7 +227,6 @@
             "orders-storage.fund-distributions.item.delete",
             "orders-storage.locations.item.delete",
             "orders-storage.physicals.item.delete",
-            "orders-storage.renewals.item.delete",
             "orders-storage.reporting_codes.item.delete",
             "orders-storage.sources.item.delete",
             "orders-storage.vendor_details.item.delete"
@@ -248,7 +246,7 @@
         {
           "methods": ["POST"],
           "pathPattern": "/orders/{id}/check-in",
-          "permissionsRequired": ["orders.checkin.collection.post"],
+          "permissionsRequired": ["orders.check-in.collection.post"],
           "modulePermissions": [
             "po_line.collection.get",
             "orders-storage.pieces.collection.get",
@@ -260,7 +258,7 @@
         },
         {
           "methods": ["GET"],
-          "pathPattern": "/orders/receiving_history",
+          "pathPattern": "/orders/receiving-history",
           "permissionsRequired": ["orders.receiving-history.collection.get"],
           "modulePermissions": [
             "orders-storage.receiving-history.collection.get",
@@ -321,10 +319,6 @@
       "version": "1.0"
     },
     {
-      "id": "orders-storage.renewals",
-      "version": "1.0"
-    },
-    {
       "id": "orders-storage.reporting_codes",
       "version": "1.0"
     },
@@ -347,6 +341,22 @@
     {
       "id": "holdings-storage",
       "version": "3.0"
+    },
+    {
+      "id": "identifier-types",
+      "version": "1.0"
+    },
+    {
+      "id": "inventory",
+      "version": "8.0"
+    },
+    {
+      "id": "instance-types",
+      "version": "2.0"
+    },
+    {
+      "id": "instance-statuses",
+      "version": "1.0"
     }
   ],
     "permissionSets": [
@@ -396,7 +406,7 @@
       "description": "Receive items spanning one or more po_lines in this order"
     },
     {
-      "permissionName": "orders.checkin.collection.post",
+      "permissionName": "orders.check-in.collection.post",
       "displayName": "Orders - Check-in items",
       "description": "Check-in items spanning one or more po_lines in this order"
     },
@@ -419,7 +429,7 @@
         "orders.po-lines.item.put",
         "orders.po-lines.item.delete",
         "orders.receiving.collection.post",
-        "orders.checkin.collection.post",
+        "orders.check-in.collection.post",
         "orders.receiving-history.collection.get"
       ]
     }
