@@ -100,7 +100,12 @@
       },
       "donor": "ABCDEFGHIJKLM",
       "fund_distribution": [
-        "d10879e8-8c2d-4850-bcb9-0ec8e2e10021"
+        {
+          "id": "bde0b1f9-b286-4b5d-9cea-642bfbe4a0df",
+          "code": "HIST",
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3",
+          "percentage": 100
+        }
       ],
       "location": {
         "id": "a4e65e03-99a4-4b39-8e6a-ae666ac52bea",

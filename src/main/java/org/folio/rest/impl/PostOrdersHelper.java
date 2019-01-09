@@ -1,11 +1,15 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Handler;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import static org.folio.orders.utils.SubObjects.PURCHASE_ORDER;
+import static org.folio.orders.utils.SubObjects.resourcesPath;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import javax.ws.rs.core.Response;
+
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
@@ -14,13 +18,12 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.resource.Orders.PostOrdersResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
-import javax.ws.rs.core.Response;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import static org.folio.orders.utils.SubObjects.PURCHASE_ORDER;
-import static org.folio.orders.utils.SubObjects.resourcesPath;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Handler;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PostOrdersHelper extends AbstractHelper {
 
@@ -33,11 +36,29 @@ public class PostOrdersHelper extends AbstractHelper {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx);
   }
 
-  public CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO) {
+  public CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO, String lang) {
+    CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
+    if(compPO.getPoNumber().isEmpty()){
+      compPO.setPoNumber(generatePoNumber());
+      return createPOandPOLines(compPO);
+    }
+    else{
+      //If a PO  Number is already supplied, then verify if its valid and unique
+      HelperUtils.isPONumberValidAndUnique(compPO.getPoNumber(), lang, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(v->createPOandPOLines(compPO))
+      .exceptionally(e->{
+           logger.error(e.getMessage());
+           future.completeExceptionally(e);
+           return null;
+      });
+    }
+    return future;
+}
+
+  private CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
 
     try {
-      compPO.setPoNumber(generatePoNumber());
       JsonObject purchaseOrder = convertToPurchaseOrder(compPO);
       httpClient.request(HttpMethod.POST, purchaseOrder, resourcesPath(PURCHASE_ORDER), okapiHeaders)
         .thenApply(HelperUtils::verifyAndExtractBody)

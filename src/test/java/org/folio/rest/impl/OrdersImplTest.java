@@ -1,7 +1,38 @@
 package org.folio.rest.impl;
 
+import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
+import static org.folio.orders.utils.SubObjects.*;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
+import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
+import static org.folio.rest.impl.OrdersImpl.LINES_LIMIT_ERROR_CODE;
+import static org.folio.rest.impl.OrdersImpl.OVER_LIMIT_ERROR_MESSAGE;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.stream.Stream;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.rest.RestVerticle;
+import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.tools.utils.NetworkUtils;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
+
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.http.Header;
@@ -21,51 +52,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.rest.RestVerticle;
-import org.folio.rest.jaxrs.model.Adjustment;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.tools.utils.NetworkUtils;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.stream.Stream;
-
-import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
-import static org.folio.orders.utils.SubObjects.*;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
-import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
-import static org.folio.rest.impl.OrdersImpl.LINES_LIMIT_ERROR_CODE;
-import static org.folio.rest.impl.OrdersImpl.OVER_LIMIT_ERROR_MESSAGE;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasKey;
-import static org.hamcrest.Matchers.hasSize;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 
 @RunWith(VertxUnitRunner.class)
@@ -930,8 +916,8 @@ public class OrdersImplTest {
         .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
       .delete(url)
         .then()
-          .contentType(expectedContentType)
           .statusCode(expectedCode)
+          .contentType(expectedContentType)
           .extract()
             .response();
   }
@@ -949,9 +935,9 @@ public class OrdersImplTest {
         .then()
           .log()
             .all()
-          .contentType(expectedContentType)
-          .statusCode(expectedCode)
-          .extract()
+            .statusCode(expectedCode)
+            .contentType(expectedContentType)
+            .extract()
             .response();
   }
 
@@ -1311,8 +1297,9 @@ public class OrdersImplTest {
         .body(body)
       .put(url)
         .then()
-          .contentType(TEXT_PLAIN)
-          .statusCode(500);
+          .statusCode(500)
+          .contentType(TEXT_PLAIN);
+
 
     // Verify that no calls reached mock server
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -1494,8 +1481,8 @@ public class OrdersImplTest {
         .body(body)
       .put(url)
         .then()
-          .contentType(expectedContentType)
           .statusCode(expectedCode)
+          .contentType(expectedContentType)
           .extract()
             .response();
   }

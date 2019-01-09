@@ -1,19 +1,9 @@
 package org.folio.orders.utils;
 
-import io.vertx.core.Context;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.rest.client.ConfigurationsClient;
-import org.folio.rest.jaxrs.model.Adjustment;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PoNumber;
-import org.folio.rest.tools.client.Response;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import static java.util.Objects.nonNull;
+import static org.folio.orders.utils.SubObjects.*;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,13 +13,26 @@ import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.util.Objects.nonNull;
-import static org.folio.orders.utils.SubObjects.*;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.rest.exceptions.ValidationException;
+import org.folio.rest.client.ConfigurationsClient;
+import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.tools.client.Response;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+
+import io.vertx.core.Context;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class HelperUtils {
 
+  private static final String INVALID_INPUT_ERROR_CODE = "invalid_input";
+  private static final String PO_NUMBER_ALREADY_EXISTS = "PO Number already exists";
   private static final Pattern PONUMBER_PATTERN = Pattern.compile("^[a-zA-Z0-9]{5,16}$");
   public static final String DEFAULT_POLINE_LIMIT = "500";
   public static final String OKAPI_URL = "X-Okapi-Url";
@@ -384,8 +387,27 @@ public class HelperUtils {
     return future;
   }
 
-  public static boolean isPOValid(PoNumber entity) {
-    return PONUMBER_PATTERN.matcher(entity.getPoNumber()).matches();
-  }
-
+  public static CompletableFuture<Boolean> isPONumberValidAndUnique(String poNumber,String lang, HttpClientInterface httpClient, Context ctx,
+      Map<String, String> okapiHeaders, Logger logger) {
+      CompletableFuture<Boolean> future = new VertxCompletableFuture<>(ctx);
+        if(PONUMBER_PATTERN.matcher(poNumber).matches())
+        {
+           getPurchaseOrderByPONumber(poNumber, lang, httpClient, ctx, okapiHeaders, logger)
+          .thenAccept(po->{
+              if(po.getInteger("total_records")==0)
+                 future.complete(true);
+              else
+                future.completeExceptionally(new HttpException(400, PO_NUMBER_ALREADY_EXISTS));
+          })
+          .exceptionally(t -> {
+             logger.error("Exception validating PO Number existence", t.getCause());
+             future.completeExceptionally(t.getCause());
+             return null;
+           });
+        }
+        else {
+          future.completeExceptionally(new ValidationException(String.format("PO Number must follow Pattern %s",PONUMBER_PATTERN),INVALID_INPUT_ERROR_CODE));
+        }
+        return future;
+   }
 }

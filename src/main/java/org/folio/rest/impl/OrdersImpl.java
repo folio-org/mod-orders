@@ -83,7 +83,7 @@ public class OrdersImpl implements Orders {
       int limit = getPoLineLimit(config);
       if (compPO.getPoLines().size() <= limit) {
         logger.info("Creating PO and POLines...");
-        helper.createPOandPOLines(compPO)
+        helper.createPOandPOLines(compPO,lang)
           .thenAccept(withIds -> {
 
             logger.info("Applying Funds...");
