@@ -36,7 +36,6 @@ public class OrdersImpl implements Orders {
   public static final String OVER_LIMIT_ERROR_MESSAGE = "Your FOLIO system is configured to limit the number of PO Lines on each order to %s.";
   public static final String MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE = "Mismatch between id in path and PoLine";
   public static final String LINES_LIMIT_ERROR_CODE = "lines_limit";
-  public static final String ID_MISMATCH_ERROR_CODE = "id_mismatch";
 
   @Override
   @Validate
@@ -130,7 +129,7 @@ public class OrdersImpl implements Orders {
             poLine.setPurchaseOrderId(orderId);
           }
           if (!orderId.equals(poLine.getPurchaseOrderId())) {
-            throw new ValidationException(MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE, ID_MISMATCH_ERROR_CODE);
+            throw new ValidationException(MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE, AbstractHelper.ID_MISMATCH_ERROR_CODE);
           }
         });
         putHelper.updateOrderWithPoLines(orderId, compPO);
@@ -173,7 +172,7 @@ public class OrdersImpl implements Orders {
             }
           }).exceptionally(helper::handleError);
       } else {
-        throw new ValidationException(MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE, ID_MISMATCH_ERROR_CODE);
+        throw new ValidationException(MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE, AbstractHelper.ID_MISMATCH_ERROR_CODE);
       }
     }).exceptionally(helper::handleError);
   }
@@ -222,7 +221,7 @@ public class OrdersImpl implements Orders {
     if (orderId.equals(poLine.getPurchaseOrderId()) && lineId.equals(poLine.getId())) {
       helper.updateOrderLine(orderId, poLine);
     } else {
-      helper.handleError(new CompletionException(new ValidationException(MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE, ID_MISMATCH_ERROR_CODE)));
+      helper.handleError(new CompletionException(new ValidationException(MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE, AbstractHelper.ID_MISMATCH_ERROR_CODE)));
     }
   }
 

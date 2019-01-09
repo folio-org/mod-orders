@@ -17,7 +17,6 @@ import org.folio.rest.jaxrs.resource.Orders.PutOrdersByIdResponse;
 
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -89,40 +88,48 @@ public class PutOrdersByIdHelper extends AbstractHelper {
 
   private CompletableFuture<Void> handlePoLines(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
     List<CompletableFuture<?>> futures = new ArrayList<>();
-    List<PoLine> linesToCreate = new ArrayList<>();
-    Map<PoLine, JsonObject> linesToUpdate = new HashMap<>();
-
     if (poLinesFromStorage.isEmpty()) {
-      linesToCreate.addAll(compOrder.getPoLines());
+      futures.addAll(processPoLinesCreation(compOrder, poLinesFromStorage));
     } else {
-     sortOutPoLines(compOrder, poLinesFromStorage, linesToCreate, linesToUpdate);
+      futures.addAll(processPoLinesCreation(compOrder, poLinesFromStorage));
+      futures.addAll(processPoLinesUpdate(compOrder, poLinesFromStorage));
+      poLinesFromStorage.stream().forEach(poLine -> futures.add(deletePoLine((JsonObject) poLine, httpClient, ctx, okapiHeaders, logger)));
     }
-
-    boolean updateInventory = compOrder.getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.OPEN;
-    poLinesFromStorage.stream().forEach(poLine ->futures.add(deletePoLine((JsonObject) poLine, httpClient, ctx, okapiHeaders, logger)));
-    linesToUpdate.forEach((poLine, lineFromStorage) -> futures.add(putLineHelper.updateOrderLine(poLine, lineFromStorage)));
-    linesToCreate.forEach(poLine -> futures.add(postOrderLineHelper.createPoLine(poLine, updateInventory)));
     return VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]));
   }
 
-  private void sortOutPoLines(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage, List<PoLine> linesToCreate, Map<PoLine, JsonObject> linesToUpdate) {
-
-    for (PoLine line : compOrder.getPoLines()) {
-      JsonObject existingLine = null;
-      for (int i = 0; i < poLinesFromStorage.size(); i++) {
-        JsonObject lineFromStorage = poLinesFromStorage.getJsonObject(i);
+  private List<CompletableFuture<?>> processPoLinesUpdate(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
+    List<CompletableFuture<?>> futures = new ArrayList<>();
+    for (int i = 0; i < poLinesFromStorage.size(); i++) {
+      JsonObject lineFromStorage = poLinesFromStorage.getJsonObject(i);
+      for (PoLine line : compOrder.getPoLines()) {
         if (StringUtils.equals(lineFromStorage.getString("id"), line.getId())) {
-          existingLine = lineFromStorage;
+          futures.add(putLineHelper.updateOrderLine(line, lineFromStorage));
           poLinesFromStorage.remove(i);
           break;
         }
       }
-      if (existingLine == null ) {
-        linesToCreate.add(line);
-      } else {
-        linesToUpdate.put(line, existingLine);
+    }
+    return futures;
+  }
+
+  private List<CompletableFuture<?>> processPoLinesCreation(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
+    List<CompletableFuture<?>> futures = new ArrayList<>();
+    boolean updateInventory = compOrder.getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.OPEN;
+    for (PoLine line : compOrder.getPoLines()) {
+      boolean isNew = true;
+      for (int i = 0; i < poLinesFromStorage.size(); i++) {
+        JsonObject lineFromStorage = poLinesFromStorage.getJsonObject(i);
+        if (StringUtils.equals(lineFromStorage.getString("id"), line.getId())) {
+          isNew = false;
+          break;
+        }
+      }
+      if (isNew) {
+        futures.add(postOrderLineHelper.createPoLine(line, updateInventory));
       }
     }
+    return futures;
   }
 
   @Override

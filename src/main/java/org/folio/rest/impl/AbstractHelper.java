@@ -30,9 +30,9 @@ import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.SubObjects.ADJUSTMENT;
 import static org.folio.orders.utils.SubObjects.PO_LINES;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.rest.impl.OrdersImpl.ID_MISMATCH_ERROR_CODE;
 
 public abstract class AbstractHelper {
+  public static final String ID_MISMATCH_ERROR_CODE = "id_mismatch";
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   protected final HttpClientInterface httpClient;
