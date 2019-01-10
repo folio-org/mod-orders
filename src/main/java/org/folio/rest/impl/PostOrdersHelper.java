@@ -38,14 +38,20 @@ public class PostOrdersHelper extends AbstractHelper {
 
   public CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO, String lang) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
-    if(compPO.getPoNumber().isEmpty()){
+    if(null==compPO.getPoNumber()){
       compPO.setPoNumber(generatePoNumber());
       return createPOandPOLines(compPO);
     }
     else{
-      //If a PO  Number is already supplied, then verify if its valid and unique
-      HelperUtils.isPONumberValidAndUnique(compPO.getPoNumber(), lang, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(v->createPOandPOLines(compPO))
+      //If a PO  Number is already supplied, then verify if its unique
+      HelperUtils.isPONumberUnique(compPO.getPoNumber(), lang, httpClient, ctx, okapiHeaders, logger)
+      .thenAccept(v->
+        createPOandPOLines(compPO)
+          .thenAccept(future::complete)
+          .exceptionally(e->{
+           future.completeExceptionally(e);
+           return null;})
+      )
       .exceptionally(e->{
            logger.error(e.getMessage());
            future.completeExceptionally(e);

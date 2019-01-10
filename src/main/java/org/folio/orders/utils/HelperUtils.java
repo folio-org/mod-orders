@@ -15,7 +15,6 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -31,9 +30,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class HelperUtils {
 
-  private static final String INVALID_INPUT_ERROR_CODE = "invalid_input";
   private static final String PO_NUMBER_ALREADY_EXISTS = "PO Number already exists";
-  private static final Pattern PONUMBER_PATTERN = Pattern.compile("^[a-zA-Z0-9]{5,16}$");
   public static final String DEFAULT_POLINE_LIMIT = "500";
   public static final String OKAPI_URL = "X-Okapi-Url";
   public static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
@@ -387,11 +384,9 @@ public class HelperUtils {
     return future;
   }
 
-  public static CompletableFuture<Boolean> isPONumberValidAndUnique(String poNumber,String lang, HttpClientInterface httpClient, Context ctx,
+  public static CompletableFuture<Boolean> isPONumberUnique(String poNumber,String lang, HttpClientInterface httpClient, Context ctx,
       Map<String, String> okapiHeaders, Logger logger) {
       CompletableFuture<Boolean> future = new VertxCompletableFuture<>(ctx);
-        if(PONUMBER_PATTERN.matcher(poNumber).matches())
-        {
            getPurchaseOrderByPONumber(poNumber, lang, httpClient, ctx, okapiHeaders, logger)
           .thenAccept(po->{
               if(po.getInteger("total_records")==0)
@@ -404,10 +399,6 @@ public class HelperUtils {
              future.completeExceptionally(t.getCause());
              return null;
            });
-        }
-        else {
-          future.completeExceptionally(new ValidationException(String.format("PO Number must follow Pattern %s",PONUMBER_PATTERN),INVALID_INPUT_ERROR_CODE));
-        }
         return future;
    }
 }

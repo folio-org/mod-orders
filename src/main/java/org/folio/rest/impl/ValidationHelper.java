@@ -28,7 +28,7 @@ public class ValidationHelper extends AbstractHelper{
 
   void checkPONumberUnique(PoNumber poNumber,String lang)
   {
-    HelperUtils.isPONumberValidAndUnique(poNumber.getPoNumber(), lang, httpClient, ctx, okapiHeaders, logger)
+    HelperUtils.isPONumberUnique(poNumber.getPoNumber(), lang, httpClient, ctx, okapiHeaders, logger)
     .thenAccept(po->{
          asyncResultHandler.handle(succeededFuture(respond204()));
          httpClient.closeClient();
