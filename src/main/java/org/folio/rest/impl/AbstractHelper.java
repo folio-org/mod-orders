@@ -1,5 +1,12 @@
 package org.folio.rest.impl;
 
+import static io.vertx.core.Future.succeededFuture;
+import static org.folio.orders.utils.HelperUtils.OKAPI_URL;
+import static org.folio.orders.utils.HelperUtils.getPoLineById;
+import static org.folio.orders.utils.SubObjects.ADJUSTMENT;
+import static org.folio.orders.utils.SubObjects.PO_LINES;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -8,6 +15,11 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import javax.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.ValidationException;
@@ -18,19 +30,6 @@ import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
 
-import javax.ws.rs.core.Response;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-
-import static io.vertx.core.Future.succeededFuture;
-import static org.folio.orders.utils.HelperUtils.OKAPI_URL;
-import static org.folio.orders.utils.HelperUtils.getPoLineById;
-import static org.folio.orders.utils.SubObjects.ADJUSTMENT;
-import static org.folio.orders.utils.SubObjects.PO_LINES;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-
 public abstract class AbstractHelper {
   public static final String ID_MISMATCH_ERROR_CODE = "id_mismatch";
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -39,13 +38,15 @@ public abstract class AbstractHelper {
   protected final Handler<AsyncResult<Response>> asyncResultHandler;
   protected final Map<String, String> okapiHeaders;
   protected final Context ctx;
+  protected final String lang;
 
   AbstractHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
-                      Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
+                      Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
     this.httpClient = httpClient;
     this.asyncResultHandler = asyncResultHandler;
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
+    this.lang = lang;
   }
 
   public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {
@@ -58,7 +59,7 @@ public abstract class AbstractHelper {
   /**
    * Retrieves PO line from storage by PO line id as JsonObject and validates order id match.
    */
-  protected CompletableFuture<JsonObject> getPoLineByIdAndValidate(String orderId, String lineId, String lang) {
+  protected CompletableFuture<JsonObject> getPoLineByIdAndValidate(String orderId, String lineId) {
     return getPoLineById(lineId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(line -> {
         logger.debug("Validating if the retrieved PO line corresponds to PO");

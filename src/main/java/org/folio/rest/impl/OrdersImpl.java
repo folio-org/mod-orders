@@ -1,12 +1,17 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import static io.vertx.core.Future.succeededFuture;
+import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
+import static org.folio.orders.utils.HelperUtils.GET_ALL_POLINES_QUERY_WITH_LIMIT;
+import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.loadConfiguration;
+
+import java.util.Map;
+import java.util.concurrent.CompletionException;
+
+import javax.ws.rs.core.Response;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.ValidationException;
@@ -17,16 +22,13 @@ import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
-import javax.ws.rs.core.Response;
-import java.util.Map;
-import java.util.concurrent.CompletionException;
-
-import static io.vertx.core.Future.succeededFuture;
-import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
-import static org.folio.orders.utils.HelperUtils.GET_ALL_POLINES_QUERY_WITH_LIMIT;
-import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.loadConfiguration;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class OrdersImpl implements Orders {
 
@@ -43,8 +45,8 @@ public class OrdersImpl implements Orders {
   public void deleteOrdersById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
 
-    DeleteOrdersByIdHelper helper = new DeleteOrdersByIdHelper(okapiHeaders, asyncResultHandler, vertxContext);
-    helper.deleteOrder(id,lang)
+    DeleteOrdersByIdHelper helper = new DeleteOrdersByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang);
+    helper.deleteOrder(id)
     .thenRun(()->{
       logger.info("Successfully deleted order: ");
       javax.ws.rs.core.Response response = DeleteOrdersByIdResponse.respond204();
@@ -59,9 +61,9 @@ public class OrdersImpl implements Orders {
   public void getOrdersById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    GetOrdersByIdHelper helper = new GetOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+    GetOrdersByIdHelper helper = new GetOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
 
-    helper.getOrder(id, lang)
+    helper.getOrder(id)
       .thenAccept(order -> {
         logger.info("Successfully retrieved order: " + JsonObject.mapFrom(order).encodePrettily());
         httpClient.closeClient();
@@ -78,12 +80,12 @@ public class OrdersImpl implements Orders {
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
 
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    PostOrdersHelper helper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+    PostOrdersHelper helper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
     loadConfiguration(okapiHeaders, vertxContext, logger).thenAccept(config -> {
       int limit = getPoLineLimit(config);
       if (compPO.getPoLines().size() <= limit) {
         logger.info("Creating PO and POLines...");
-        helper.createPOandPOLines(compPO,lang)
+        helper.createPurchaseOrder(compPO)
           .thenAccept(withIds -> {
 
             logger.info("Applying Funds...");
@@ -116,7 +118,7 @@ public class OrdersImpl implements Orders {
   @Validate
   public void putOrdersById(String orderId, String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
-    PutOrdersByIdHelper putHelper = new PutOrdersByIdHelper(lang, okapiHeaders, asyncResultHandler, vertxContext);
+    PutOrdersByIdHelper putHelper = new PutOrdersByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang);
     if (CollectionUtils.isEmpty(compPO.getPoLines())) {
       putHelper.updateOrder(orderId, compPO);
     } else {
@@ -144,7 +146,7 @@ public class OrdersImpl implements Orders {
   public void postOrdersLinesById(String orderId, String lang, PoLine poLine, Map<String, String> okapiHeaders,
                                   Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    PostOrderLineHelper helper = new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+    PostOrderLineHelper helper = new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
 
     logger.info("Creating POLine to an existing order...");
 
@@ -185,9 +187,9 @@ public class OrdersImpl implements Orders {
 
     logger.info("Started Invocation of POLine Request with id = " + lineId);
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    GetPOLineByIdHelper helper = new GetPOLineByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+    GetPOLineByIdHelper helper = new GetPOLineByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
 
-    helper.getPOLineByPOLineId(id, lineId, lang)
+    helper.getPOLineByPOLineId(id, lineId)
       .thenAccept(poline -> {
         logger.info("Received POLine Response: " + JsonObject.mapFrom(poline).encodePrettily());
         httpClient.closeClient();
@@ -202,8 +204,8 @@ public class OrdersImpl implements Orders {
   @Validate
   public void deleteOrdersLinesByIdAndLineId(String orderId, String lineId, String lang, Map<String, String> okapiHeaders,
                                              Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
-    new DeleteOrderLineByIdHelper(okapiHeaders, asyncResultHandler, vertxContext)
-      .deleteLine(orderId, lineId, lang);
+    new DeleteOrderLineByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang)
+      .deleteLine(orderId, lineId);
   }
 
   @Override
@@ -212,7 +214,7 @@ public class OrdersImpl implements Orders {
                                             Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Handling PUT Order Line operation...");
 
-    PutOrderLineByIdHelper helper = new PutOrderLineByIdHelper(lang, okapiHeaders, asyncResultHandler, vertxContext);
+    PutOrderLineByIdHelper helper = new PutOrderLineByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang);
     if (StringUtils.isEmpty(poLine.getPurchaseOrderId())) {
       poLine.setPurchaseOrderId(orderId);
     }
@@ -231,7 +233,7 @@ public class OrdersImpl implements Orders {
   public void postOrdersPoNumberValidate(String lang, PoNumber entity, Map<String, String> okapiHeaders,
      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    ValidationHelper helper=new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+    ValidationHelper helper=new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
     logger.info("Validating a PO Number");
     //@Validate asserts the pattern of a PO Number, the below method is used to check for uniqueness
      helper.checkPONumberUnique(entity, lang);

@@ -32,11 +32,11 @@ public class PostOrdersHelper extends AbstractHelper {
   private static final long PO_NUMBER_EPOCH = 1535774400000L;
 
   public PostOrdersHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx) {
-    super(httpClient, okapiHeaders, asyncResultHandler, ctx);
+      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx, String lang) {
+    super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
-  public CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO, String lang) {
+  public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
     if(null==compPO.getPoNumber()){
       compPO.setPoNumber(generatePoNumber());
@@ -46,7 +46,7 @@ public class PostOrdersHelper extends AbstractHelper {
       //If a PO  Number is already supplied, then verify if its unique
       HelperUtils.isPONumberUnique(compPO.getPoNumber(), lang, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(v->
-        createPOandPOLines(compPO)
+      createPOandPOLines(compPO)
           .thenAccept(future::complete)
           .exceptionally(e->{
            future.completeExceptionally(e);
@@ -82,7 +82,7 @@ public class PostOrdersHelper extends AbstractHelper {
             compPOL.setPurchaseOrderId(poId);
             compPOL.setPoLineNumber(poNumber + "-" + (i + 1));
 
-            futures.add(new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, ctx)
+            futures.add(new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang)
               .createPoLine(compPOL, updateInventory)
               .thenAccept(lines::add));
           }

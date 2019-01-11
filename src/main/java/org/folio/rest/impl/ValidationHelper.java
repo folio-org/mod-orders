@@ -22,8 +22,8 @@ import io.vertx.core.Handler;
 public class ValidationHelper extends AbstractHelper{
 
   public ValidationHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx) {
-    super(httpClient, okapiHeaders, asyncResultHandler, ctx);
+      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx, String lang) {
+    super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
   void checkPONumberUnique(PoNumber poNumber,String lang)

@@ -1,30 +1,32 @@
 package org.folio.rest.impl;
 
+import static org.folio.orders.utils.SubObjects.PURCHASE_ORDER;
+import static org.folio.orders.utils.SubObjects.resourceByIdPath;
+
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import javax.ws.rs.core.Response;
+
+import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.resource.Orders.DeleteOrdersByIdResponse;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.resource.Orders.DeleteOrdersByIdResponse;
-
-import javax.ws.rs.core.Response;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-import static org.folio.orders.utils.SubObjects.PURCHASE_ORDER;
-import static org.folio.orders.utils.SubObjects.resourceByIdPath;
 
 public class DeleteOrdersByIdHelper extends AbstractHelper {
 
   public DeleteOrdersByIdHelper(Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
-    super(getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx);
+      Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
+    super(getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx, lang);
     setDefaultHeaders(httpClient);
   }
 
-  public CompletableFuture<Void> deleteOrder(String id, String lang) {
+  public CompletableFuture<Void> deleteOrder(String id) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
     HelperUtils.deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger).thenRun(() -> {
