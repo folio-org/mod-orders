@@ -20,11 +20,11 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 public class GetOrdersByIdHelper extends AbstractHelper {
 
   public GetOrdersByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
-                             Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
-    super(httpClient, okapiHeaders, asyncResultHandler, ctx);
+                             Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
+    super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
-  public CompletableFuture<CompositePurchaseOrder> getOrder(String id, String lang) {
+  public CompletableFuture<CompositePurchaseOrder> getOrder(String id) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
 
     getCompositePurchaseOrderById(id, lang)

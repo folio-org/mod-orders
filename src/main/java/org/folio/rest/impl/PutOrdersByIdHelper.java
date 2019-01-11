@@ -1,5 +1,26 @@
 package org.folio.rest.impl;
 
+import static org.folio.orders.utils.HelperUtils.deletePoLine;
+import static org.folio.orders.utils.HelperUtils.getPoLines;
+import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
+import static org.folio.orders.utils.SubObjects.PO_LINES;
+import static org.folio.orders.utils.SubObjects.PURCHASE_ORDER;
+import static org.folio.orders.utils.SubObjects.resourceByIdPath;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import javax.ws.rs.core.Response;
+
+import org.apache.commons.lang.StringUtils;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.resource.Orders.PutOrdersByIdResponse;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -8,42 +29,20 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.commons.lang.StringUtils;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.resource.Orders.PutOrdersByIdResponse;
-
-import javax.ws.rs.core.Response;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-import static org.folio.orders.utils.HelperUtils.deletePoLine;
-import static org.folio.orders.utils.HelperUtils.getPoLines;
-import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
-import static org.folio.orders.utils.SubObjects.PO_LINES;
-import static org.folio.orders.utils.SubObjects.PURCHASE_ORDER;
-import static org.folio.orders.utils.SubObjects.resourceByIdPath;
 
 public class PutOrdersByIdHelper extends AbstractHelper {
-
-  private String lang;
 
   private final PostOrdersHelper postHelper;
   private final PutOrderLineByIdHelper putLineHelper;
   private final PostOrderLineHelper postOrderLineHelper;
 
-  public PutOrdersByIdHelper(String lang, Map<String, String> okapiHeaders,
-                             Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
-    super(getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx);
+  public PutOrdersByIdHelper(Map<String, String> okapiHeaders,
+                             Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
+    super(getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx, lang);
     setDefaultHeaders(httpClient);
-    this.lang = lang;
-    postHelper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, ctx);
-    putLineHelper = new PutOrderLineByIdHelper(lang, httpClient, okapiHeaders, asyncResultHandler, ctx);
-    postOrderLineHelper = new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, ctx);
+    postHelper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
+    putLineHelper = new PutOrderLineByIdHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
+    postOrderLineHelper = new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
   public void updateOrderWithPoLines(String id, CompositePurchaseOrder compPO) {

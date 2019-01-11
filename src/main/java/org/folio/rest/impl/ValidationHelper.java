@@ -1,7 +1,6 @@
 package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
-import static org.folio.orders.utils.HelperUtils.getPurchaseOrderByPONumber;
 import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond204;
 import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond400WithTextPlain;
 import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond422WithApplicationJson;
@@ -9,77 +8,47 @@ import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateRes
 
 import java.util.Map;
 
-import org.folio.orders.rest.exceptions.HttpException;
+import javax.ws.rs.core.Response;
+
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
-public class ValidationHelper {
-
-  private static final String PO_NUMBER_MUST_BE_UNIQUE = "PO Number must be unique";
-
-  private static final Logger logger = LoggerFactory.getLogger(ValidationHelper.class);
-
-  private final HttpClientInterface httpClient;
-  private final Context ctx;
-  private final Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler;
-  private final Map<String, String> okapiHeaders;
+public class ValidationHelper extends AbstractHelper{
 
   public ValidationHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx) {
-    this.httpClient = httpClient;
-    this.okapiHeaders = okapiHeaders;
-    this.ctx = ctx;
-    this.asyncResultHandler = asyncResultHandler;
+      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx, String lang) {
+    super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
   void checkPONumberUnique(PoNumber poNumber,String lang)
   {
-    getPurchaseOrderByPONumber(poNumber.getPoNumber(), lang, httpClient, ctx, okapiHeaders, logger)
+    HelperUtils.isPONumberUnique(poNumber.getPoNumber(), lang, httpClient, ctx, okapiHeaders, logger)
     .thenAccept(po->{
-       if(po.getInteger("total_records")==0)
          asyncResultHandler.handle(succeededFuture(respond204()));
-       else
-         asyncResultHandler.handle(succeededFuture(respond400WithTextPlain(PO_NUMBER_MUST_BE_UNIQUE)));
-      httpClient.closeClient();
+         httpClient.closeClient();
      })
-    .exceptionally(this::handleResponse);
+    .exceptionally(this::handleError);
   }
 
-  public Void handleResponse(Throwable throwable) {
-    final Future<javax.ws.rs.core.Response> result;
-
-    final Throwable t = throwable.getCause();
-    if (t instanceof HttpException) {
-      final int code = ((HttpException) t).getCode();
-      final String message = t.getMessage();
-      switch (code) {
+  @Override
+  Response buildErrorResponse(int code, Error error) {
+    final Response result;
+    switch (code) {
       case 400:
-        result = Future.succeededFuture(respond400WithTextPlain(message));
+        result = respond400WithTextPlain(error.getMessage());
         break;
       case 422:
-        Errors errors = new Errors();
-        errors.getErrors().add(new Error().withMessage(message));
-        result = Future.succeededFuture(respond422WithApplicationJson(errors));
+        result = respond422WithApplicationJson(withErrors(error));
         break;
       default:
-        result = Future.succeededFuture(respond500WithTextPlain(message));
-      }
-    } else {
-      result = Future.succeededFuture(respond500WithTextPlain(throwable.getMessage()));
+        result = respond500WithTextPlain(error.getMessage());
     }
-
-    httpClient.closeClient();
-    asyncResultHandler.handle(result);
-
-    return null;
+    return result;
   }
 }

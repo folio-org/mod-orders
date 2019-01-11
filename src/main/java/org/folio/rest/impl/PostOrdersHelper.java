@@ -1,11 +1,15 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Handler;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import static org.folio.orders.utils.SubObjects.PURCHASE_ORDER;
+import static org.folio.orders.utils.SubObjects.resourcesPath;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import javax.ws.rs.core.Response;
+
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
@@ -14,13 +18,12 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.resource.Orders.PostOrdersResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
-import javax.ws.rs.core.Response;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import static org.folio.orders.utils.SubObjects.PURCHASE_ORDER;
-import static org.folio.orders.utils.SubObjects.resourcesPath;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Handler;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PostOrdersHelper extends AbstractHelper {
 
@@ -29,15 +32,39 @@ public class PostOrdersHelper extends AbstractHelper {
   private static final long PO_NUMBER_EPOCH = 1535774400000L;
 
   public PostOrdersHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx) {
-    super(httpClient, okapiHeaders, asyncResultHandler, ctx);
+      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx, String lang) {
+    super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
-  public CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO) {
+  public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO) {
+    CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
+    if(null==compPO.getPoNumber()){
+      compPO.setPoNumber(generatePoNumber());
+      return createPOandPOLines(compPO);
+    }
+    else{
+      //If a PO  Number is already supplied, then verify if its unique
+      HelperUtils.isPONumberUnique(compPO.getPoNumber(), lang, httpClient, ctx, okapiHeaders, logger)
+      .thenAccept(v->
+      createPOandPOLines(compPO)
+          .thenAccept(future::complete)
+          .exceptionally(e->{
+           future.completeExceptionally(e);
+           return null;})
+      )
+      .exceptionally(e->{
+           logger.error(e.getMessage());
+           future.completeExceptionally(e);
+           return null;
+      });
+    }
+    return future;
+}
+
+  private CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
 
     try {
-      compPO.setPoNumber(generatePoNumber());
       JsonObject purchaseOrder = convertToPurchaseOrder(compPO);
       httpClient.request(HttpMethod.POST, purchaseOrder, resourcesPath(PURCHASE_ORDER), okapiHeaders)
         .thenApply(HelperUtils::verifyAndExtractBody)
@@ -55,7 +82,7 @@ public class PostOrdersHelper extends AbstractHelper {
             compPOL.setPurchaseOrderId(poId);
             compPOL.setPoLineNumber(poNumber + "-" + (i + 1));
 
-            futures.add(new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, ctx)
+            futures.add(new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang)
               .createPoLine(compPOL, updateInventory)
               .thenAccept(lines::add));
           }

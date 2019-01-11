@@ -1,45 +1,5 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Handler;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.Adjustment;
-import org.folio.rest.jaxrs.model.Alert;
-import org.folio.rest.jaxrs.model.Claim;
-import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.Details;
-import org.folio.rest.jaxrs.model.Eresource;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.FundDistribution;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Physical;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.ProductId;
-import org.folio.rest.jaxrs.model.ReportingCode;
-import org.folio.rest.jaxrs.model.Source;
-import org.folio.rest.jaxrs.model.VendorDetail;
-import org.folio.rest.jaxrs.resource.Orders;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-
-import javax.ws.rs.core.Response;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
-
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.joining;
@@ -50,14 +10,39 @@ import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
 import static org.folio.orders.utils.SubObjects.*;
 import static org.folio.rest.tools.client.Response.isSuccess;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
+
+import javax.ws.rs.core.Response;
+
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.resource.Orders;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+
 public class PostOrderLineHelper extends AbstractHelper {
 
   private static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
   private static final String DEFAULT_STATUS_CODE = "temp";
   private static final String LOCATION_HEADER = "Location";
 
-  PostOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
-    super(httpClient, okapiHeaders, asyncResultHandler, ctx);
+  PostOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
+    super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
 
