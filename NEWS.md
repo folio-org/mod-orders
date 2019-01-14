@@ -2,7 +2,9 @@
 
 This primary focus of this release was to implement backend logic necessary for ui-orders to manage (Create, Read, Update, Delete) purchase orders and purchase order lines.
 
-NOTE: This was originally slated to be v1.1.0, but given the amount of changes made to the API, the major version number was bumped.
+NOTE: This was originally slated to be v1.1.0, but given the amount of changes made to API, schemas and interface permissions, the major version number was bumped.
+
+NOTE: Validation is enabled for all endpoints in this release.
 
 ### Stories
  * [MODORDERS-95](https://issues.folio.org/browse/MODORDERS-95) - Upgrade to RMB v23.3.0 to enable path parameters pattern validation
