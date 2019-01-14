@@ -2,7 +2,7 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.deletePoLine;
-import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersOrderLinesByLineIdResponse.*;
+import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersOrderLinesByIdResponse.*;
 
 import java.util.Map;
 

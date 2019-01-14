@@ -9,7 +9,7 @@ import javax.ws.rs.core.Response;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.PoLine;
-import static org.folio.rest.jaxrs.resource.Orders.GetOrdersOrderLinesByLineIdResponse.*;
+import static org.folio.rest.jaxrs.resource.Orders.GetOrdersOrderLinesByIdResponse.*;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;

@@ -11,7 +11,6 @@ documentation:
 types:
   composite_purchase_orders: !include acq-models/composite_purchase_orders.json
   composite_purchase_order: !include acq-models/composite_purchase_order.json
-  po_lines: !include acq-models/composite_po_lines.json
   po_line: !include acq-models/composite_po_line.json
   errors: !include raml-util/schemas/errors.schema
   po-number: !include acq-models/mod-orders-storage/schemas/po_number.json
@@ -36,22 +35,15 @@ resourceTypes:
   collection: !include raml-util/rtypes/collection.raml
   collection-item: !include raml-util/rtypes/item-collection.raml
   # The post-empty-body.raml does not declare request body but it can be defined when this resource type is used
-  # post-item: !include raml-util/rtypes/post-empty-body.raml
+  post-item: !include raml-util/rtypes/post-empty-body.raml
 
 /orders:
   /composite-orders:
     displayName: Orders
     type:
-      collection:
-        exampleCollection: !include acq-models/examples/composite_purchase_orders.sample
+      post-item:
         exampleItem: !include acq-models/examples/composite_purchase_order.sample
-        schemaCollection: composite_purchase_orders
-        schemaItem: composite_purchase_order
-    get:
-      is: [pageable,
-          searchable: {description: "using CQL (indexes for item and material type)",
-            example: "approved==\"true\""}
-          ]
+        schema: composite_purchase_order
     post:
       description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order
       is: [validate, auth]
@@ -61,7 +53,6 @@ resourceTypes:
           example:
             strict: false
             value: !include acq-models/examples/composite_purchase_order.sample
-
     /{id}:
         uriParameters:
           id:
@@ -71,6 +62,9 @@ resourceTypes:
           collection-item:
             exampleItem: !include acq-models/examples/composite_purchase_order.sample
             schema: composite_purchase_order
+        get:
+          description: Return a purchase order
+          is: [validate]
         put:
           description: Update an order by id
           is: [validate]
@@ -89,16 +83,9 @@ resourceTypes:
      description: Manage purchase order (PO) lines
      type:
        # Using `post-item` resource type because at the moment only POST is required. In case GET becomes also required, the `collection` resource type should be used instead
-       collection:
-         exampleCollection: !include acq-models/examples/composite_po_lines.sample
+       post-item:
          exampleItem: !include acq-models/examples/composite_po_line.sample
-         schemaCollection: po_lines
-         schemaItem: po_line
-     get:
-       is: [pageable,
-           searchable: {description: "using CQL (indexes for item and material type)",
-             example: "order_format==\"Physical Resource\""}
-           ]
+         schema: po_line
      post:
        displayName: Create a new purchace order line
        description: Post a purchase order (PO) line
@@ -109,11 +96,11 @@ resourceTypes:
            example:
              strict: false
              value: !include acq-models/examples/composite_po_line.sample
-     /{lineId}:
+     /{id}:
        displayName: Purchase Order Line
        description: Manage purchase order line (PO line) by id
        uriParameters:
-         lineId:
+         id:
            description: The UUID of a purchase order line
            type: UUID
        type:
