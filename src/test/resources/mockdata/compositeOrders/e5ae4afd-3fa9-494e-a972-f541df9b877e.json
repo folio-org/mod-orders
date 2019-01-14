@@ -12,8 +12,6 @@
   },
   "approved": true,
   "assigned_to": "",
-  "created": "2014-07-06T00:00:00.000Z",
-  "created_by": "28d10cfc-d137-11e8-a8d5-f2801f1b9fd1",
   "notes": [],
   "manual_po": false,
   "po_number": "268879",
@@ -23,6 +21,10 @@
   "total_items": 1,
   "vendor": "50fb922c-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflow_status": "Closed",
+  "metadata": {
+    "createdDate": "2014-07-06T00:00:00.000",
+    "createdByUserId": "28d10cfc-d137-11e8-a8d5-f2801f1b9fd1"
+  },
   "po_lines": [
     {
       "id": "50fb63b0-cdf1-11e8-a8d5-f2801f1b9fd1",
@@ -133,15 +135,6 @@
       "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BM3bb",
       "receipt_date": null,
       "receipt_status": "Fully Received",
-      "renewal": {
-        "id": "9e414baa-8cf2-4916-a90f-d1da4009e29e",
-        "cycle": "Manual",
-        "interval": 0,
-        "manual_renewal": true,
-        "review_period": 0,
-        "renewal_date": null,
-        "po_line_id": "50fb63b0-cdf1-11e8-a8d5-f2801f1b9fd1"
-      },
       "reporting_codes": [],
       "requester": "",
       "rush": false,
@@ -161,6 +154,10 @@
         "ref_number_type": "Supplier's unique order line reference number",
         "vendor_account": "12345-50",
         "po_line_id": "50fb63b0-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "metadata": {
+        "createdDate": "2014-07-06T00:00:00.000",
+        "createdByUserId": "28d10cfc-d137-11e8-a8d5-f2801f1b9fd1"
       }
     }
   ]

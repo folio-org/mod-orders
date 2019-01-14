@@ -20,10 +20,13 @@ Upon receiving a request to create a PO, it does the following:
 * Make the appropriate transactions against the associated funds
 
 Upon receiving a request to update a PO, it does the following:
-* Retrieve PO data from storage; then
-* Delete PO Lines; then
-* Delete PO; then
-* Create PO following the steps described above
+* if provided PO doesn't contain PO Lines, just update the PO information via the /orders-storage/purchase_orders endpoint
+* if provided PO contain PO Lines:
+  * Get the current list of PO Lines for this order; then
+  * Compare the provided list of PO Lines with what's in the database:
+    * if PO Line already exists, update it and any sub-objects
+    * if PO Line exists in the database, but not in the request, delete this PO Line
+    * if PO Line exists in the request but not in the database, create PO Line
 
 Upon receiving a request to delete a PO, it does the following:
 * Retrieve PO lines by the `id` of the PO and delete them; then
@@ -34,7 +37,7 @@ Upon receiving a request to create a PO Line, it does the following:
 * Save a PO Line sub-objects in the storage; then 
 * Save a PO Line content with references to the created sub-objects in the storage.
 
-Upon receiving a request to update a PO, it does the following:
+Upon receiving a request to update a PO Line, it does the following:
 * Retrieve PO Line data from storage; then
 * Validate that PO id of the PO Line from storage corresponds to order id in the path; then
 * Depending on the content in the storage the sub-object updates are following:
@@ -44,7 +47,7 @@ Upon receiving a request to update a PO, it does the following:
     For example, to remove existing `fund_distribution` sub-object `DELETE` request should be sent to [/orders-storage/fund_distributions/{id}](https://s3.amazonaws.com/foliodocs/api/mod-orders-storage/fund_distribution.html#orders_storage_fund_distributions__id__delete) endpoint.
   * In case the sub-object is not available in the storage but the updated PO Line data contains this, the `POST` request is being sent to the storage to corresponding endpoint.  
     For example, to add `fund_distribution` sub-object `POST` request should be sent to [/orders-storage/fund_distributions](https://s3.amazonaws.com/foliodocs/api/mod-orders-storage/fund_distribution.html#orders_storage_fund_distributions_post) endpoint.
-* Final step is to store the updated PO Line content with references to the created/updated sub-objects. The `PUT` request is being sent to [/po_line/{id}](https://s3.amazonaws.com/foliodocs/api/mod-orders-storage/po_line.html#po_line__id__put) endpoint.
+* Final step is to store the updated PO Line content with references to the created/updated sub-objects. The `PUT` request is being sent to [/orders-storage/po_line/{id}](https://s3.amazonaws.com/foliodocs/api/mod-orders-storage/po_line.html#po_line__id__put) endpoint.
 
 Upon receiving a request to delete a PO Line, it does the following:
 * Retrieve PO line by the `id` of the PO and delete them; then

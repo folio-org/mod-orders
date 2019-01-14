@@ -1,0 +1,13 @@
+{
+  "approved": false,
+  "assigned_to": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1",
+  "manual_po": false,
+  "notes": [],
+  "po_number": "268758",
+  "order_type": "One-Time",
+  "re_encumber": false,
+  "total_estimated_price": 127.94,
+  "total_items": 3,
+  "vendor": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "workflow_status": "Pending"
+}

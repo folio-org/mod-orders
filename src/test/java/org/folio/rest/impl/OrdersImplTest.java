@@ -1,7 +1,38 @@
 package org.folio.rest.impl;
 
+import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
+import static org.folio.orders.utils.SubObjects.*;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
+import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
+import static org.folio.rest.impl.OrdersImpl.LINES_LIMIT_ERROR_CODE;
+import static org.folio.rest.impl.OrdersImpl.OVER_LIMIT_ERROR_MESSAGE;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.stream.Stream;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.rest.RestVerticle;
+import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.tools.utils.NetworkUtils;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
+
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.http.Header;
@@ -21,60 +52,15 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.rest.RestVerticle;
-import org.folio.rest.acq.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.Adjustment;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.tools.utils.NetworkUtils;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.stream.Stream;
-
-import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
-import static org.folio.orders.utils.SubObjects.*;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
-import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
-import static org.folio.rest.impl.OrdersImpl.OVER_LIMIT_ERROR_MESSAGE;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasKey;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 
 @RunWith(VertxUnitRunner.class)
 public class OrdersImplTest {
 
-  public static final String PURCHASE_ORDER = "purchase_order";
+  private static final String INSTANCE_RECORD = "instance_record";
+  public static final String ORDER_WITHOUT_PO_LINES = "order_without_po_lines.json";
+  public static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
+  public static final String ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON = "put_order_with_mismatch_id_in_po_lines.json";
 
   static {
     System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, "io.vertx.core.logging.Log4j2LogDelegateFactory");
@@ -118,14 +104,19 @@ public class OrdersImplTest {
   private static final String PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED = "0009662b-8b80-4001-b704-ca10971f175d";
   private static final String PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE = "c2755a78-2f8d-47d0-a218-059a9b7391b4";
   private static final String PO_LINE_ID_WITH_FUND_DISTRIBUTION_404_CODE = "f7223ce8-9e92-4c28-8fd9-097596053b7c";
+  private static final String ORDER_ID_WITHOUT_PO_LINES = "50fb922c-3fa9-494e-a972-f2801f1b9fd1";
 
   // API paths
-  private final String rootPath = "/orders";
+  private final static String rootPath = "/orders";
   private final static String LINES_PATH = "/orders/%s/lines";
   private final static String LINE_BY_ID_PATH = "/orders/%s/lines/%s";
 
   // Mock data paths
   private static final String BASE_MOCK_DATA_PATH = "mockdata/";
+  private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
+  private static final String INSTANCE_IDENTIFIERS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
+  private static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
+  private static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
   private static final String COMP_ORDER_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/";
   private static final String ORDERS_MOCK_DATA_PATH = COMP_ORDER_MOCK_DATA_PATH + "getOrders.json";
   private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
@@ -139,10 +130,15 @@ public class OrdersImplTest {
 
   private static final String EMPTY_PO_LINE_BUT_WITH_IDS = "{\"id\": \"%s\", \"purchase_order_id\": \"%s\"}";
 
+  private static final String PONUMBER_VALIDATE_PATH=rootPath+"/po-number/validate";
+
   private static final String ID = "id";
   private static final String PURCHASE_ORDER_ID = "purchase_order_id";
   private static final String INCORRECT_LANG_PARAMETER = "'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\"";
   private static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
+  private static final String EXISTING_PO_NUMBER = "oldPoNumber";
+  private static final String NONEXISTING_PO_NUMBER = "newPoNumber";
+
 
   private static Vertx vertx;
   private static MockServer mockServer;
@@ -181,10 +177,9 @@ public class OrdersImplTest {
   public void testListedPrintMonograph() throws Exception {
     logger.info("=== Test Listed Print Monograph ===");
 
-    String body = getMockData(listedPrintMonographPath);
-    JsonObject reqData = new JsonObject(body);
+    JsonObject reqData = getMockDraftOrder();
 
-    final CompositePurchaseOrder resp = verifyPostResponse(rootPath, body,
+    final CompositePurchaseOrder resp = verifyPostResponse(rootPath, reqData.toString(),
       NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp));
@@ -208,6 +203,51 @@ public class OrdersImplTest {
       assertNotNull(line.getCost().getId());
       assertNotNull(line.getDetails().getId());
       assertNotNull(line.getLocation().getId());
+      assertNull(line.getInstanceId());
+    }
+  }
+
+  @Test
+  public void testListedPrintMonographInOpenStatus() throws Exception {
+    logger.info("=== Test Listed Print Monograph in Open status ===");
+
+    String body = getMockData(listedPrintMonographPath);
+    JsonObject reqData = new JsonObject(body);
+    // remove productId from PO line to test scenario when it's not provided
+    reqData.getJsonArray("po_lines")
+      .getJsonObject(0)
+      .getJsonObject("details")
+      .getJsonArray("product_ids")
+      .clear();
+
+    final CompositePurchaseOrder resp = verifyPostResponse(rootPath, reqData.toString(),
+      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    logger.info(JsonObject.mapFrom(resp));
+
+    String poId = resp.getId();
+    String poNumber = resp.getPoNumber();
+
+    assertNotNull(poId);
+    assertNotNull(poNumber);
+    assertEquals(reqData.getJsonArray("po_lines").size(), resp.getPoLines().size());
+
+    for (int i = 0; i < resp.getPoLines().size(); i++) {
+      PoLine line = resp.getPoLines().get(i);
+      String polNumber = line.getPoLineNumber();
+      String polId = line.getId();
+
+      assertEquals(poId, line.getPurchaseOrderId());
+      assertNotNull(polId);
+      assertNotNull(polNumber);
+      assertTrue(polNumber.startsWith(poNumber));
+      assertNotNull(line.getCost().getId());
+      assertNotNull(line.getDetails().getId());
+      assertNotNull(line.getLocation().getId());
+      assertNotNull(line.getInstanceId());
+
+      JsonObject instance = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST).get(i);
+      verifyInstanceRecordRequest(instance, line);
     }
   }
 
@@ -244,6 +284,49 @@ public class OrdersImplTest {
   }
 
   @Test
+  public void testPostOrderFailsWithInvalidPONumber() throws Exception {
+    logger.info("=== Test Placement of minimal order failure with Invalid PO Number===");
+
+    JsonObject request = new JsonObject();
+    request.put("po_number", "1234");
+    String body= request.toString();
+
+     verifyPostResponse(rootPath, body,
+      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422);
+
+  }
+
+  @Test
+  public void testPostOrderFailsWithExistingPONumber() throws Exception {
+    logger.info("=== Test Placement of minimal order failure with Existing PO Number===");
+
+    JsonObject request = new JsonObject();
+    request.put("po_number", EXISTING_PO_NUMBER);
+    String body= request.toString();
+
+     verifyPostResponse(rootPath, body,
+      NON_EXIST_CONFIG_X_OKAPI_TENANT, TEXT_PLAIN, 400);
+
+  }
+
+  @Test
+  public void testPostOrderPONumberAutoGenerated() throws Exception {
+    logger.info("=== Test Placement of Empty order with Auto Generated PO Number===");
+
+    JsonObject request = new JsonObject();
+    String body= request.toString();
+
+    final CompositePurchaseOrder resp = verifyPostResponse(rootPath, body,
+        NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    String poId = resp.getId();
+    String poNumber = resp.getPoNumber();
+
+    assertNotNull(poId);
+    assertNotNull(poNumber);
+  }
+
+  @Test
   public void testPoCreationFailure(TestContext ctx) throws Exception {
     logger.info("=== Test PO creation failure ===");
 
@@ -267,7 +350,7 @@ public class OrdersImplTest {
   public void testPoCreationWithOverLimitPOLines(TestContext ctx) throws Exception {
     logger.info("=== Test PO, with over limit lines quantity, creation ===");
 
-    String body = getMockData(listedPrintMonographPath);
+    String body = getMockDraftOrder().toString();
 
     final Errors errors = verifyPostResponse(rootPath, body,
       EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422).body().as(Errors.class);
@@ -283,7 +366,7 @@ public class OrdersImplTest {
   public void testPostWithInvalidConfig(TestContext ctx) throws Exception {
     logger.info("=== Test PO creation fail if config is invalid ===");
 
-    String body = getMockData(listedPrintMonographPath);
+    String body = getMockDraftOrder().toString();
 
     final String error = verifyPostResponse(rootPath, body,
       INVALID_CONFIG_X_OKAPI_TENANT, TEXT_PLAIN, 500).body().print();
@@ -305,6 +388,7 @@ public class OrdersImplTest {
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     ctx.assertFalse(errors.getErrors().isEmpty());
     ctx.assertEquals(String.format(OVER_LIMIT_ERROR_MESSAGE, DEFAULT_POLINE_LIMIT), errors.getErrors().get(0).getMessage());
+    ctx.assertEquals(LINES_LIMIT_ERROR_CODE, errors.getErrors().get(0).getCode());
   }
 
 
@@ -321,6 +405,7 @@ public class OrdersImplTest {
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     ctx.assertFalse(errors.getErrors().isEmpty());
     ctx.assertEquals(String.format(OVER_LIMIT_ERROR_MESSAGE, 1), errors.getErrors().get(0).getMessage());
+    ctx.assertEquals(LINES_LIMIT_ERROR_CODE, errors.getErrors().get(0).getCode());
   }
 
 
@@ -349,7 +434,7 @@ public class OrdersImplTest {
   public void testDetailsCreationFailure() throws Exception {
     logger.info("=== Test Details creation failure ===");
 
-    String body = getMockData(listedPrintMonographPath);
+    String body = getMockDraftOrder().toString();
 
     final Response resp = RestAssured
       .with()
@@ -520,159 +605,175 @@ public class OrdersImplTest {
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
-    String body = getMockData(listedPrintMonographPath);
+    JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_PO_LINES_JSON));
+    JsonObject storageData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id);
     RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
         .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
-        .body(body)
+        .body(reqData.toString())
       .put(rootPath + "/" + id)
         .then()
-          .statusCode(204);
+        .statusCode(204);
+
+    JsonArray poLinesFromRequest = reqData.getJsonArray(PO_LINES);
+    JsonArray poLinesFromStorage = storageData.getJsonArray(PO_LINES);
+    int sameLinesCount = 0;
+    for (int i = 0; i < poLinesFromRequest.size(); i++) {
+      JsonObject lineFromRequest = poLinesFromRequest.getJsonObject(i);
+      for (int j = 0; j < poLinesFromStorage.size(); j++) {
+        JsonObject lineFromStorage = poLinesFromStorage.getJsonObject(j);
+        if (StringUtils.equals(lineFromRequest.getString(ID), lineFromStorage.getString(ID))) {
+          sameLinesCount++;
+          break;
+        }
+      }
+    }
+
+    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), poLinesFromRequest.size() - sameLinesCount);
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE).size(), poLinesFromStorage.size() - sameLinesCount);
+    assertNotNull(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT));
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).size(), sameLinesCount);
   }
 
   @Test
-  public void testPutOrdersByIdDoesNotAffectGeneratedData() {
-    logger.info("=== Test Put Order By Id doesn't affect generated data ===");
+  public void testPutOrdersByIdWithIdMismatch() throws Exception {
+    logger.info("=== Test Put Order By Id with id mismatch  ===");
 
-    JsonObject mockOrder = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH,VALID_ORDER_ID);
-    CompositePurchaseOrder puttedOrder =  mockOrder.mapTo(CompositePurchaseOrder.class);
-    puttedOrder.setApproved(false);
-    puttedOrder.setCreated(new Date());
-    puttedOrder.setCreatedBy("1ab7ef6a-d1d4-4a4f-90a2-882aed18af14");
-    String body = JsonObject.mapFrom(puttedOrder).toString();
-
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
+    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
+    JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON));
     RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
         .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
-      .body(body)
-        .put(rootPath + "/" + VALID_ORDER_ID)
-          .then()
-            .statusCode(204);
-
-    PurchaseOrder changedOrder =  MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.POST).get(0).mapTo(PurchaseOrder.class);
-    PurchaseOrder initialOrder = MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET).get(0).mapTo(PurchaseOrder.class);
-
-    assertThat(initialOrder.getCreated(), equalTo(changedOrder.getCreated()));
-    assertThat(initialOrder.getCreatedBy(), equalTo(changedOrder.getCreatedBy()));
-    assertThat(initialOrder.getApproved(), not(equalTo(changedOrder.getApproved())));
-    assertThat(puttedOrder.getApproved(), equalTo(changedOrder.getApproved()));
-    assertThat(puttedOrder.getCreatedBy(), not(equalTo(changedOrder.getCreatedBy())));
-    assertThat(puttedOrder.getCreated(), not(equalTo(changedOrder.getCreated())));
-
-  }
-
-  @Test
-  public void testPutPoLineDoesNotAffectGeneratedData() {
-    logger.info("=== Test Put PO Line By Id doesn't affect generated data ===");
-
-
-    JsonObject jsonObject = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH,
-      ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
-    PoLine initialPoLine = jsonObject.mapTo(PoLine.class);
-
-    String orderId = getMockLine(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).getPurchaseOrderId();
-    PoLine puttedPoLine =  jsonObject.mapTo(PoLine.class);
-    puttedPoLine.setEdition("tesEdition");
-    puttedPoLine.setCreated(new Date());
-    puttedPoLine.setCreatedBy("440c89e3-7f6c-578a-9ea8-310dad23605e");
-    String body = JsonObject.mapFrom(puttedPoLine).toString();
-
-    RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .header(X_OKAPI_USER_ID)
-        .contentType(APPLICATION_JSON)
-        .body(body)
-      .put(String.format(LINE_BY_ID_PATH, orderId, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE))
+        .body(reqData.toString())
+      .put(rootPath + "/" + id)
         .then()
-          .statusCode(204);
-    JsonObject responseJsonObject = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).get(0);
-    org.folio.rest.acq.model.PoLine changedPoLine = responseJsonObject.mapTo(org.folio.rest.acq.model.PoLine.class);
-
-    assertThat(initialPoLine.getCreated(), equalTo(changedPoLine.getCreated()));
-    assertThat(initialPoLine.getCreatedBy(), equalTo(changedPoLine.getCreatedBy()));
-    assertThat(initialPoLine.getEdition(), not(equalTo(changedPoLine.getEdition())));
-    assertThat(puttedPoLine.getEdition(), equalTo(changedPoLine.getEdition()));
-    assertThat(puttedPoLine.getCreatedBy(), not(equalTo(changedPoLine.getCreatedBy())));
+          .statusCode(422);
 
   }
 
   @Test
-  public void testIgnoringGeneratedDataInResponseOnOrderPost() throws IOException {
-    logger.info("=== Test ignoring \"Created on\" from request on POST API ===");
+  public void testPoUpdateWithOverLimitPOLines(TestContext ctx) throws Exception {
+    logger.info("=== Test PUT PO, with over limit lines quantity ===");
 
-    String body = getMockData(minimalOrderPath);
-    JsonObject reqData = new JsonObject(body);
-    CompositePurchaseOrder compPo = reqData.mapTo(CompositePurchaseOrder.class);
-    Date dateFromRequest = compPo.getCreated();
-    String createdByFromRequest = compPo.getCreatedBy();
-    String poNumberFromRequest = compPo.getPoNumber();
-    final CompositePurchaseOrder resp = RestAssured
+    String body = getMockData(listedPrintMonographPath);
+    final Errors errors = RestAssured
       .with()
         .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .header(X_OKAPI_USER_ID)
-        .header(X_OKAPI_TOKEN)
-        .contentType(APPLICATION_JSON)
-        .body(body)
-      .post(rootPath)
-        .then()
-          .contentType(APPLICATION_JSON)
-          .statusCode(201)
-          .extract()
-            .response()
-              .as(CompositePurchaseOrder.class);
-
-    logger.info(JsonObject.mapFrom(resp));
-    Date dateFromResponse = resp.getCreated();
-    String createdByFromResponse = resp.getCreatedBy();
-    String poNumberFromResponse = resp.getPoNumber();
-    assertNotNull(dateFromResponse);
-    assertNotNull(createdByFromResponse);
-    assertNotNull(poNumberFromResponse);
-    assertThat(poNumberFromRequest, not(equalTo(poNumberFromResponse)));
-    assertThat(dateFromResponse, not(equalTo(dateFromRequest)));
-    assertThat(createdByFromResponse, not(equalTo(createdByFromRequest)));
-  }
-
-
-  @Test
-  public void testIgnoringGeneratedDataInResponseOnPoLinePost() {
-    logger.info("=== Test ignoring \"Created on\" from request on PO Line POST API ===");
-
-    JsonObject compPoLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
-    PoLine poLineFromRequest = compPoLineJson.mapTo(PoLine.class);
-    Date dateFromRequest = poLineFromRequest.getCreated();
-    String userFromRequest = poLineFromRequest.getCreatedBy();
-    String id = compPoLineJson.getString("purchase_order_id");
-    final PoLine response = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT)
         .header(X_OKAPI_TOKEN)
         .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
-        .body(compPoLineJson.encodePrettily())
-      .post(String.format(LINES_PATH, id))
+        .body(body)
+      .put(rootPath + "/" + ORDER_ID_WITHOUT_PO_LINES)
         .then()
-          .contentType(APPLICATION_JSON)
-          .statusCode(201)
+          .statusCode(422)
             .extract()
-              .response().as(PoLine.class);
+              .response()
+                .body()
+                  .as(Errors.class);
 
-    Date dateFromResponse = response.getCreated();
-    String createdByFromResponse = response.getCreatedBy();
-    assertNotNull(dateFromResponse);
-    assertNotNull(createdByFromResponse);
-    assertThat(dateFromResponse, not(equalTo(dateFromRequest)));
-    assertThat(createdByFromResponse, not(equalTo(userFromRequest)));
+    logger.info(JsonObject.mapFrom(errors).encodePrettily());
+    ctx.assertFalse(errors.getErrors().isEmpty());
+    ctx.assertEquals(String.format(OVER_LIMIT_ERROR_MESSAGE, 1), errors.getErrors().get(0).getMessage());
+    ctx.assertEquals(LINES_LIMIT_ERROR_CODE, errors.getErrors().get(0).getCode());
+  }
+
+  @Test
+  public void testPutOrdersByIdToChangeStatusToOpen() throws Exception {
+    logger.info("=== Test Put Order By Id to change status of Order to Open ===");
+
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
+    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
+    JsonObject reqData = new JsonObject(getMockData(listedPrintMonographPath));
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
+        .contentType(APPLICATION_JSON)
+        .body(reqData.toString())
+      .put(rootPath + "/" + id)
+        .then()
+        .statusCode(204);
+
+    CompositePurchaseOrder orderRq = reqData.mapTo(CompositePurchaseOrder.class);
+    for (int i = 0; i < orderRq.getPoLines().size(); i++) {
+      PoLine pol = orderRq.getPoLines().get(i);
+
+      boolean verified = false;
+      // note we can't rely on the order being the same!
+      for (int j = 0; j < MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST).size(); j++) {
+        JsonObject instance = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST).get(j);
+
+        if (pol.getTitle().equals(instance.getString("title"))) {
+          verifyInstanceRecordRequest(instance, pol);
+          verified = true;
+          break;
+        }
+      }
+
+      if (!verified) {
+        fail("No matching instance for POL: " + JsonObject.mapFrom(pol).encodePrettily());
+      }
+    }
+  }
+
+  @Test
+  public void testPutOrderByIdWithoutPoLinesInRequestDoesNotDeletePoLinesFromStorage() throws IOException {
+    logger.info("=== Test Put Order By Id without PO lines doesn't delete lines from storage ===");
+
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
+    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
+    JsonObject reqData = new JsonObject(getMockData(ORDER_WITHOUT_PO_LINES));
+
+    RestAssured
+      .with()
+      .header(X_OKAPI_URL)
+      .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+      .header(X_OKAPI_USER_ID)
+      .contentType(APPLICATION_JSON)
+      .body(reqData.toString())
+      .put(rootPath + "/" + id)
+      .then()
+      .statusCode(204);
+
+
+    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
+    assertNull(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE));
+  }
+
+  @Test
+  public void testPutOrderByIdWithPoLinesInRequestAndNoPoLinesInStorage() throws IOException {
+    logger.info("=== Test Put Order By Id with PO lines and without PO lines in order from storage ===");
+
+    JsonObject reqData = new JsonObject(getMockData(listedPrintMonographPath));
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
+        .contentType(APPLICATION_JSON)
+        .body(reqData.toString())
+      .put(rootPath + "/" + ORDER_ID_WITHOUT_PO_LINES)
+        .then()
+          .statusCode(204);
+
+    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), reqData.getJsonArray(PO_LINES).size());
+
   }
 
   @Test
@@ -858,8 +959,8 @@ public class OrdersImplTest {
         .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
       .delete(url)
         .then()
-          .contentType(expectedContentType)
           .statusCode(expectedCode)
+          .contentType(expectedContentType)
           .extract()
             .response();
   }
@@ -877,9 +978,9 @@ public class OrdersImplTest {
         .then()
           .log()
             .all()
-          .contentType(expectedContentType)
-          .statusCode(expectedCode)
-          .extract()
+            .statusCode(expectedCode)
+            .contentType(expectedContentType)
+            .extract()
             .response();
   }
 
@@ -1001,6 +1102,7 @@ public class OrdersImplTest {
       NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(PoLine.class);
 
     ctx.assertEquals(id, response.getPurchaseOrderId());
+    ctx.assertNull(response.getInstanceId());
   }
 
   @Test
@@ -1022,6 +1124,7 @@ public class OrdersImplTest {
       NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(PoLine.class);
 
     ctx.assertEquals(PO_ID, response.getPurchaseOrderId());
+    ctx.assertNull(response.getInstanceId());
   }
 
   @Test
@@ -1164,8 +1267,8 @@ public class OrdersImplTest {
     assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
-    assertEquals(4, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(CLAIMS, FUND_DISTRIBUTION, SOURCE, RENEWAL));
+    assertEquals(3, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(CLAIMS, FUND_DISTRIBUTION, SOURCE));
 
     column = MockServer.serverRqRs.column(HttpMethod.DELETE);
     assertTrue(column.isEmpty());
@@ -1208,8 +1311,8 @@ public class OrdersImplTest {
     assertThat(column, hasKey(FUND_DISTRIBUTION));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
-    assertEquals(14, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, ALERTS, CLAIMS, COST, DETAILS, ERESOURCE, FUND_DISTRIBUTION, LOCATION, PHYSICAL, RENEWAL, REPORTING_CODES, SOURCE, VENDOR_DETAIL, PO_LINES));
+    assertEquals(13, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, ALERTS, CLAIMS, COST, DETAILS, ERESOURCE, FUND_DISTRIBUTION, LOCATION, PHYSICAL, REPORTING_CODES, SOURCE, VENDOR_DETAIL, PO_LINES));
 
     List<JsonObject> jsonObjects = column.get(PO_LINES);
     assertThat(jsonObjects, hasSize(1));
@@ -1237,8 +1340,9 @@ public class OrdersImplTest {
         .body(body)
       .put(url)
         .then()
-          .contentType(TEXT_PLAIN)
-          .statusCode(500);
+          .statusCode(500)
+          .contentType(TEXT_PLAIN);
+
 
     // Verify that no calls reached mock server
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -1373,6 +1477,31 @@ public class OrdersImplTest {
     });
   }
 
+  @Test
+  public void testPoNumberValidatewithExistingPONumber()
+  {
+    JsonObject poNumber=new JsonObject();
+    poNumber.put("po_number", EXISTING_PO_NUMBER);
+    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT, TEXT_PLAIN, 400);
+  }
+
+
+  @Test
+  public void testPoNumberValidatewithUniquePONumber()
+  {
+    JsonObject poNumber=new JsonObject();
+    poNumber.put("po_number", NONEXISTING_PO_NUMBER);
+    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT, "", 204);
+  }
+
+  @Test
+  public void testPoNumberValidatewithInvalidPattern()
+  {
+    JsonObject poNumber=new JsonObject();
+    poNumber.put("po_number", "11");
+    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422);
+  }
+
   private org.folio.rest.acq.model.PoLine getMockLine(String id) {
     return getMockAsJson(PO_LINES_MOCK_DATA_PATH, id).mapTo(org.folio.rest.acq.model.PoLine.class);
   }
@@ -1395,10 +1524,30 @@ public class OrdersImplTest {
         .body(body)
       .put(url)
         .then()
-          .contentType(expectedContentType)
           .statusCode(expectedCode)
+          .contentType(expectedContentType)
           .extract()
             .response();
+  }
+
+  private JsonObject getMockDraftOrder() throws Exception {
+    JsonObject order = new JsonObject(getMockData(listedPrintMonographPath));
+    order.put("workflow_status", "Pending");
+
+    return order;
+  }
+
+  private void verifyInstanceRecordRequest(JsonObject instance, PoLine line) {
+    assertThat(instance.getString("title"), equalTo(line.getTitle()));
+    assertThat(instance.getString("source"), equalTo(line.getSource().getCode()));
+    assertThat(instance.getString("statusId"), equalTo("daf2681c-25af-4202-a3fa-e58fdf806183"));
+    assertThat(instance.getString("instanceTypeId"), equalTo("30fffe0e-e985-4144-b2e2-1e8179bdb41f"));
+    assertThat(instance.getJsonArray("publication").getJsonObject(0).getString("publisher"), equalTo(line.getPublisher()));
+    assertThat(instance.getJsonArray("publication").getJsonObject(0).getString("dateOfPublication"), equalTo(line.getPublicationDate()));
+    if (line.getDetails().getProductIds().size() > 0) {
+      assertThat(instance.getJsonArray("identifiers").getJsonObject(0).getString("identifierTypeId"), equalTo("8261054f-be78-422d-bd51-4ed9f33c3422"));
+      assertThat(instance.getJsonArray("identifiers").getJsonObject(0).getString("value"), equalTo(line.getDetails().getProductIds().get(0).getProductId()));
+    }
   }
 
   public static String getMockData(String path) throws IOException {
@@ -1417,6 +1566,7 @@ public class OrdersImplTest {
 
   public static class MockServer {
 
+    private static final String TOTAL_RECORDS = "total_records";
     static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
     private static final Logger logger = LoggerFactory.getLogger(MockServer.class);
 
@@ -1444,6 +1594,7 @@ public class OrdersImplTest {
 
       router.route().handler(BodyHandler.create());
       router.route(HttpMethod.POST, resourcesPath(PURCHASE_ORDER)).handler(this::handlePostPurchaseOrder);
+      router.route(HttpMethod.POST, "/inventory/instances").handler(this::handlePostInstanceRecord);
       router.route(HttpMethod.POST, resourcesPath(PO_LINES)).handler(this::handlePostPOLine);
       router.route(HttpMethod.POST, resourcesPath(ADJUSTMENT)).handler(ctx -> handlePostGenericSubObj(ctx, ADJUSTMENT));
       router.route(HttpMethod.POST, resourcesPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
@@ -1454,12 +1605,16 @@ public class OrdersImplTest {
       router.route(HttpMethod.POST, resourcesPath(FUND_DISTRIBUTION)).handler(ctx -> handlePostGenericSubObj(ctx, FUND_DISTRIBUTION));
       router.route(HttpMethod.POST, resourcesPath(LOCATION)).handler(ctx -> handlePostGenericSubObj(ctx, LOCATION));
       router.route(HttpMethod.POST, resourcesPath(PHYSICAL)).handler(ctx -> handlePostGenericSubObj(ctx, PHYSICAL));
-      router.route(HttpMethod.POST, resourcesPath(RENEWAL)).handler(ctx -> handlePostGenericSubObj(ctx, RENEWAL));
       router.route(HttpMethod.POST, resourcesPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
       router.route(HttpMethod.POST, resourcesPath(SOURCE)).handler(ctx -> handlePostGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.POST, resourcesPath(VENDOR_DETAIL)).handler(ctx -> handlePostGenericSubObj(ctx, VENDOR_DETAIL));
 
       router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)+"/:id").handler(this::handleGetPurchaseOrderById);
+      router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)).handler(this::handleGetPurchaseOrderByQuery);
+      router.route(HttpMethod.GET, "/instance-types").handler(ctx -> handleGetInstanceType(ctx));
+      router.route(HttpMethod.GET, "/instance-statuses").handler(ctx -> handleGetInstanceStatus(ctx));
+      router.route(HttpMethod.GET, "/identifier-types").handler(ctx -> handleGetIdentifierType(ctx));
+      router.route(HttpMethod.GET, "/inventory/instances").handler(ctx -> handleGetInstanceRecord(ctx));
       router.route(HttpMethod.GET, resourcesPath(PO_LINES)).handler(this::handleGetPoLines);
       router.route(HttpMethod.GET, resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
       router.route(HttpMethod.GET, resourcePath(ADJUSTMENT)).handler(this::handleGetAdjustment);
@@ -1471,11 +1626,11 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, resourcePath(FUND_DISTRIBUTION)).handler(ctx -> handleGetGenericSubObj(ctx, FUND_DISTRIBUTION));
       router.route(HttpMethod.GET, resourcePath(LOCATION)).handler(this::handleGetLocation);
       router.route(HttpMethod.GET, resourcePath(PHYSICAL)).handler(ctx -> handleGetGenericSubObj(ctx, PHYSICAL));
-      router.route(HttpMethod.GET, resourcePath(RENEWAL)).handler(ctx -> handleGetGenericSubObj(ctx, RENEWAL));
       router.route(HttpMethod.GET, resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
       router.route(HttpMethod.GET, resourcePath(SOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.GET, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleGetGenericSubObj(ctx, VENDOR_DETAIL));
 
+      router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
       router.route(HttpMethod.PUT, resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
       router.route(HttpMethod.PUT, resourcePath(ADJUSTMENT)).handler(ctx -> handlePutGenericSubObj(ctx, ADJUSTMENT));
       router.route(HttpMethod.PUT, resourcePath(ALERTS)).handler(ctx -> handlePutGenericSubObj(ctx, ALERTS));
@@ -1486,7 +1641,6 @@ public class OrdersImplTest {
       router.route(HttpMethod.PUT, resourcePath(FUND_DISTRIBUTION)).handler(ctx -> handlePutGenericSubObj(ctx, FUND_DISTRIBUTION));
       router.route(HttpMethod.PUT, resourcePath(LOCATION)).handler(ctx -> handlePutGenericSubObj(ctx, LOCATION));
       router.route(HttpMethod.PUT, resourcePath(PHYSICAL)).handler(ctx -> handlePutGenericSubObj(ctx, PHYSICAL));
-      router.route(HttpMethod.PUT, resourcePath(RENEWAL)).handler(ctx -> handlePutGenericSubObj(ctx, RENEWAL));
       router.route(HttpMethod.PUT, resourcePath(REPORTING_CODES)).handler(ctx -> handlePutGenericSubObj(ctx, REPORTING_CODES));
       router.route(HttpMethod.PUT, resourcePath(SOURCE)).handler(ctx -> handlePutGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.PUT, resourcePath(VENDOR_DETAIL)).handler(ctx -> handlePutGenericSubObj(ctx, VENDOR_DETAIL));
@@ -1502,15 +1656,83 @@ public class OrdersImplTest {
       router.route(HttpMethod.DELETE, resourcePath(ERESOURCE)).handler(ctx -> handleDeleteGenericSubObj(ctx, ERESOURCE));
       router.route(HttpMethod.DELETE, resourcePath(LOCATION)).handler(ctx -> handleDeleteGenericSubObj(ctx, LOCATION));
       router.route(HttpMethod.DELETE, resourcePath(PHYSICAL)).handler(ctx -> handleDeleteGenericSubObj(ctx, PHYSICAL));
-      router.route(HttpMethod.DELETE, resourcePath(RENEWAL)).handler(ctx -> handleDeleteGenericSubObj(ctx, RENEWAL));
       router.route(HttpMethod.DELETE, resourcePath(REPORTING_CODES)).handler(ctx -> handleDeleteGenericSubObj(ctx, REPORTING_CODES));
       router.route(HttpMethod.DELETE, resourcePath(SOURCE)).handler(ctx -> handleDeleteGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.DELETE, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleDeleteGenericSubObj(ctx, VENDOR_DETAIL));
       router.route(HttpMethod.DELETE, resourcePath(FUND_DISTRIBUTION)).handler(ctx -> handleDeleteGenericSubObj(ctx, FUND_DISTRIBUTION));
 
       router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
-
       return router;
+    }
+
+    private void handlePostInstanceRecord(RoutingContext ctx) {
+      logger.info("got: " + ctx.getBodyAsString());
+      JsonObject body = ctx.getBodyAsJson();
+      addServerRqRsData(HttpMethod.POST, INSTANCE_RECORD, body);
+
+      ctx.response()
+        .setStatusCode(201)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .putHeader(HttpHeaders.LOCATION, ctx.request().absoluteURI() + "/" + UUID.randomUUID().toString())
+        .end();
+    }
+
+    private void handleGetInstanceRecord(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+
+      try {
+        if (ctx.request().getParam("query").contains("ocn956625961")) {
+          JsonObject instance = new JsonObject(getMockData(INSTANCE_RECORDS_MOCK_DATA_PATH + "instance.json"));
+          serverResponse(ctx, 200, APPLICATION_JSON, instance.encodePrettily());
+        } else {
+          JsonObject instance = new JsonObject();
+          instance.put("instances", new JsonArray());
+          serverResponse(ctx, 200, APPLICATION_JSON, instance.encodePrettily());
+        }
+      } catch (IOException e) {
+        ctx.response()
+          .setStatusCode(404)
+          .end();
+      }
+    }
+
+    private void handleGetIdentifierType(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+
+      try {
+        JsonObject po = new JsonObject(getMockData(INSTANCE_IDENTIFIERS_MOCK_DATA_PATH + "ISBN.json"));
+        serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+      } catch (IOException e) {
+        ctx.response()
+          .setStatusCode(404)
+          .end();
+      }
+    }
+
+    private void handleGetInstanceStatus(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+
+      try {
+        JsonObject po = new JsonObject(getMockData(INSTANCE_STATUSES_MOCK_DATA_PATH + "temp.json"));
+        serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+      } catch (IOException e) {
+        ctx.response()
+          .setStatusCode(404)
+          .end();
+      }
+    }
+
+    private void handleGetInstanceType(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+
+      try {
+        JsonObject po = new JsonObject(getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "zzz.json"));
+        serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+      } catch (IOException e) {
+        ctx.response()
+          .setStatusCode(404)
+          .end();
+      }
     }
 
     private String resourcePath(String subObjName) {
@@ -1567,8 +1789,14 @@ public class OrdersImplTest {
         try {
           JsonObject compPO = new JsonObject(getMockData(String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id)));
           JsonArray lines = compPO.getJsonArray(PO_LINES);
-
-          lines.forEach(l -> {
+          JsonObject po_lines = new JsonObject();
+          if (lines == null) {
+            po_lines.put(PO_LINES, new JsonArray())
+              .put("total_records", 0)
+              .put("first", 0)
+              .put("last", 0);
+          } else {
+            lines.forEach(l -> {
             JsonObject line = (JsonObject) l;
             line.put(ADJUSTMENT, ((Map<?, ?>) line.remove(ADJUSTMENT)).get(ID));
             line.put(COST, ((Map<?, ?>) line.remove(COST)).get(ID));
@@ -1576,9 +1804,6 @@ public class OrdersImplTest {
             line.put(ERESOURCE, ((Map<?, ?>) line.remove(ERESOURCE)).get(ID));
             line.put(LOCATION, ((Map<?, ?>) line.remove(LOCATION)).get(ID));
             line.put(PHYSICAL, ((Map<?, ?>) line.remove(PHYSICAL)).get(ID));
-            if (line.containsKey(RENEWAL)) {
-              line.put(RENEWAL, ((Map<?, ?>) line.remove(RENEWAL)).get(ID));
-            }
             line.put(SOURCE, ((Map<?, ?>) line.remove(SOURCE)).get(ID));
             line.put(VENDOR_DETAIL, ((Map<?, ?>) line.remove(VENDOR_DETAIL)).get(ID));
 
@@ -1598,14 +1823,14 @@ public class OrdersImplTest {
                                                .add(((Map<?, ?>) f).get(ID)));
           });
 
-          JsonObject po_lines = new JsonObject()
-            .put(PO_LINES, lines)
+          po_lines.put(PO_LINES, lines)
             .put("first", 0)
             .put("last", lines.size());
           if (EMPTY_CONFIG_TENANT.equals(tenant)) {
-            po_lines.put("total_records", Integer.parseInt(DEFAULT_POLINE_LIMIT));
+            po_lines.put(TOTAL_RECORDS, Integer.parseInt(DEFAULT_POLINE_LIMIT));
           } else {
-            po_lines.put("total_records", lines.size());
+            po_lines.put(TOTAL_RECORDS, lines.size());
+          }
           }
 
 
@@ -1739,6 +1964,28 @@ public class OrdersImplTest {
       }
     }
 
+    private void handleGetPurchaseOrderByQuery(RoutingContext ctx) {
+
+      JsonObject po;
+      po = new JsonObject();
+      String queryParam = ctx.request().getParam("query");
+      addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
+      final String PO_NUMBER_QUERY = "po_number==";
+      switch (queryParam) {
+      case PO_NUMBER_QUERY+EXISTING_PO_NUMBER:
+        po.put(TOTAL_RECORDS, 1);
+        break;
+      case PO_NUMBER_QUERY+NONEXISTING_PO_NUMBER:
+        po.put(TOTAL_RECORDS, 0);
+        break;
+      default:
+         //modify later as needed
+         po.put(TOTAL_RECORDS, 0);
+      }
+      addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
+      serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+    }
+
     private void handlePostPurchaseOrder(RoutingContext ctx) {
       logger.info("got: " + ctx.getBodyAsString());
       JsonObject body = ctx.getBodyAsJson();
@@ -1809,8 +2056,6 @@ public class OrdersImplTest {
           return org.folio.rest.acq.model.Location.class;
         case PHYSICAL:
           return org.folio.rest.acq.model.Physical.class;
-        case RENEWAL:
-          return org.folio.rest.acq.model.Renewal.class;
         case REPORTING_CODES:
           return org.folio.rest.acq.model.ReportingCode.class;
         case SOURCE:
@@ -1825,8 +2070,8 @@ public class OrdersImplTest {
 
     private void handlePostPOLine(RoutingContext ctx) {
       logger.info("got po_line: " + ctx.getBodyAsString());
-
-      org.folio.rest.acq.model.PoLine pol = ctx.getBodyAsJson().mapTo(org.folio.rest.acq.model.PoLine.class);
+      JsonObject body = ctx.getBodyAsJson();
+      org.folio.rest.acq.model.PoLine pol = body.mapTo(org.folio.rest.acq.model.PoLine.class);
 
       if (pol.getId() == null) {
         pol.setId(UUID.randomUUID().toString());
@@ -1844,6 +2089,8 @@ public class OrdersImplTest {
           .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
           .end(JsonObject.mapFrom(pol).encodePrettily());
       }
+
+      addServerRqRsData(HttpMethod.POST, PO_LINES, body);
     }
 
     private void handleGetLocation(RoutingContext ctx) {

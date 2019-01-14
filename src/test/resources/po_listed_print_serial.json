@@ -11,8 +11,6 @@
   },
   "approved": true,
   "assigned_to": "ab18897b-0e40-4f31-896b-9c9adc979a88",
-  "created": "2010-10-08T03:53:00.000Z",
-  "created_by": "ab18897b-0e40-4f31-896b-9c9adc979a88",
   "manual_po": false,
   "notes": [
     "ABCDEFGHIJKLMNO",
@@ -22,10 +20,21 @@
   "order_type": "Ongoing",
   "po_number": "268758",
   "re_encumber": false,
+  "renewal": {
+     "cycle": "Manual",
+     "interval": 0,
+     "manual_renewal": true,
+     "review_period": 0,
+     "renewal_date": "2019-04-09T00:00:00.000Z"
+  },
   "total_estimated_price": 49.98,
   "total_items": 2,
   "vendor": "168f8a86-d26c-406e-813f-c7527f241ac3",
   "workflow_status": "Open",
+  "metadata": {
+    "createdDate": "2010-10-08T03:53:00.000",
+    "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
+  },
   "po_lines": [
     {
       "acquisition_method": "Purchase At Vendor System",
@@ -91,7 +100,12 @@
       },
       "donor": "ABCDEFGHIJKLM",
       "fund_distribution": [
-        "d10879e8-8c2d-4850-bcb9-0ec8e2e10021"
+        {
+          "id": "bde0b1f9-b286-4b5d-9cea-642bfbe4a0df",
+          "code": "HIST",
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3",
+          "percentage": 100
+        }
       ],
       "location": {
         "id": "a4e65e03-99a4-4b39-8e6a-ae666ac52bea",
@@ -118,14 +132,6 @@
       "publisher": "Schiffer Publishing",
       "receipt_date": "2018-10-09T00:00:00.000Z",
       "receipt_status": "Awaiting Receipt",
-      "renewal": {
-        "interval": 182,
-        "id": "8e414baa-8cf2-4916-a90f-d1da4009e06e",
-        "cycle": "6 Months",
-        "manual_renewal": true,
-        "review_period": 30,
-        "renewal_date": "2019-04-09T00:00:00.000Z"
-      },
       "reporting_codes": [
         {
           "code": "CODE1",
@@ -165,6 +171,10 @@
         "ref_number": "123456-78",
         "ref_number_type": "Supplier's unique order line reference number",
         "vendor_account": "8910-10"
+      },
+      "metadata": {
+        "createdDate": "2010-10-08T03:53:00.000",
+        "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
       }
     }
   ]

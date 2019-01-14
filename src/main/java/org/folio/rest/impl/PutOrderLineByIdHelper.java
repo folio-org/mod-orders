@@ -1,20 +1,11 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Handler;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import static io.vertx.core.Future.succeededFuture;
+import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
+import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
+import static org.folio.orders.utils.SubObjects.*;
+import static org.folio.rest.jaxrs.resource.Orders.PutOrdersLinesByIdAndLineIdResponse.*;
 
-import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -22,31 +13,36 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-import static io.vertx.core.Future.succeededFuture;
-import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
-import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
-import static org.folio.orders.utils.SubObjects.*;
-import static org.folio.rest.jaxrs.resource.Orders.PutOrdersLinesByIdAndLineIdResponse.respond204;
-import static org.folio.rest.jaxrs.resource.Orders.PutOrdersLinesByIdAndLineIdResponse.respond404WithTextPlain;
-import static org.folio.rest.jaxrs.resource.Orders.PutOrdersLinesByIdAndLineIdResponse.respond422WithApplicationJson;
-import static org.folio.rest.jaxrs.resource.Orders.PutOrdersLinesByIdAndLineIdResponse.respond500WithApplicationJson;
-import static org.folio.rest.jaxrs.resource.Orders.PutOrdersLinesByIdAndLineIdResponse.respond500WithTextPlain;
+import javax.ws.rs.core.Response;
 
-public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
+import org.apache.commons.lang3.StringUtils;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Handler;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+
+public class PutOrderLineByIdHelper extends AbstractHelper {
 
   public static final String ID = "id";
-  private String lang;
   private Errors processingErrors = new Errors();
 
-  public PutOrderLineByIdHelper(String lang, HttpClientInterface httpClient, Map<String, String> okapiHeaders,
-                                Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
-    super(httpClient, okapiHeaders, asyncResultHandler, ctx);
-    this.lang = lang;
+  public PutOrderLineByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
+                                Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
+    super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
-  public PutOrderLineByIdHelper(String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-                                Context ctx) {
-    this(lang, OrdersImpl.getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx);
+  public PutOrderLineByIdHelper(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
+                                Context ctx, String lang) {
+    this(AbstractHelper.getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx, lang);
     setDefaultHeaders(httpClient);
   }
 
@@ -54,7 +50,7 @@ public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
   public void updateOrderLine(String orderId, PoLine compOrderLine) {
-    getPoLineByIdAndValidate(orderId, compOrderLine.getId(), lang)
+    getPoLineByIdAndValidate(orderId, compOrderLine.getId())
       .thenCompose(lineFromStorage -> updateOrderLine(compOrderLine, lineFromStorage))
       .thenAccept(v -> {
         httpClient.closeClient();
@@ -62,7 +58,7 @@ public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
         if (getProcessingErrors().isEmpty()) {
           response = respond204();
         } else {
-          response = buildErrorResponse(500, "PO Line partially updated but there are issues processing some PO Line sub-objects");
+          response = buildErrorResponse(500,  new Error().withMessage("PO Line partially updated but there are issues processing some PO Line sub-objects"));
         }
         asyncResultHandler.handle(succeededFuture(response));
       })
@@ -79,9 +75,6 @@ public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
    */
   public CompletableFuture<Void> updateOrderLine(PoLine compOrderLine, JsonObject lineFromStorage) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-    org.folio.rest.acq.model.PoLine existedPoLine = lineFromStorage.mapTo(org.folio.rest.acq.model.PoLine.class);
-    compOrderLine.setCreatedBy(existedPoLine.getCreatedBy());
-    compOrderLine.setCreated(existedPoLine.getCreated());
     updatePoLineSubObjects(compOrderLine, lineFromStorage)
       .thenCompose(poLine -> {
         logger.debug("Updating PO line...");
@@ -115,7 +108,6 @@ public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
     futures.add(handleSubObjOperation(ERESOURCE, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(LOCATION, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(PHYSICAL, updatedLineJson, lineFromStorage));
-    futures.add(handleSubObjOperation(RENEWAL, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(SOURCE, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(VENDOR_DETAIL, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage));
@@ -225,20 +217,21 @@ public class PutOrderLineByIdHelper extends AbstractOrderLineHelper {
     return null;
   }
 
-  protected Response buildErrorResponse(int code, String message) {
+  @Override
+  protected Response buildErrorResponse(int code, Error error) {
     final Response result;
     switch (code) {
       case 404:
-        result = respond404WithTextPlain(message);
+        result = respond404WithTextPlain(error.getMessage());
         break;
       case 422:
-        result = respond422WithApplicationJson(withErrors(message));
+        result = respond422WithApplicationJson(withErrors(error));
         break;
       default:
         if (getProcessingErrors().isEmpty()) {
-          result = respond500WithTextPlain(message);
+          result = respond500WithTextPlain(error.getMessage());
         } else {
-          processingErrors.getErrors().add(new Error().withMessage(message));
+          processingErrors.getErrors().add(error);
           result = respond500WithApplicationJson(processingErrors);
         }
     }

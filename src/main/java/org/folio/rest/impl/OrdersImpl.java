@@ -1,37 +1,34 @@
 package org.folio.rest.impl;
 
+import static io.vertx.core.Future.succeededFuture;
+import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
+import static org.folio.orders.utils.HelperUtils.GET_ALL_POLINES_QUERY_WITH_LIMIT;
+import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.loadConfiguration;
+
+import java.util.Map;
+import java.util.concurrent.CompletionException;
+
+import javax.ws.rs.core.Response;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.rest.exceptions.ValidationException;
+import org.folio.rest.annotations.Validate;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoNumber;
+import org.folio.rest.jaxrs.resource.Orders;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.rest.annotations.Validate;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.resource.Orders;
-import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.rest.tools.utils.TenantTool;
-
-import javax.ws.rs.core.Response;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.CompletionException;
-
-import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
-import static org.folio.orders.utils.HelperUtils.GET_ALL_POLINES_QUERY_WITH_LIMIT;
-import static org.folio.orders.utils.HelperUtils.OKAPI_URL;
-import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.loadConfiguration;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-
-import static io.vertx.core.Future.succeededFuture;
 
 public class OrdersImpl implements Orders {
 
@@ -41,23 +38,17 @@ public class OrdersImpl implements Orders {
   private static final String ORDER_LINE_LOCATION_PREFIX = "/orders/%s/lines/%s";
   public static final String OVER_LIMIT_ERROR_MESSAGE = "Your FOLIO system is configured to limit the number of PO Lines on each order to %s.";
   public static final String MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE = "Mismatch between id in path and PoLine";
+  public static final String LINES_LIMIT_ERROR_CODE = "lines_limit";
 
   @Override
   @Validate
   public void deleteOrdersById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
-    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
 
-    //to handle delete API's content-type text/plain
-    Map<String,String> customHeader=new HashMap<>();
-    customHeader.put(HttpHeaders.ACCEPT.toString(), "application/json, text/plain");
-    httpClient.setDefaultHeaders(customHeader);
-
-    DeleteOrdersByIdHelper helper = new DeleteOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
-    helper.deleteOrder(id,lang)
+    DeleteOrdersByIdHelper helper = new DeleteOrdersByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang);
+    helper.deleteOrder(id)
     .thenRun(()->{
       logger.info("Successfully deleted order: ");
-      httpClient.closeClient();
       javax.ws.rs.core.Response response = DeleteOrdersByIdResponse.respond204();
       AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
       asyncResultHandler.handle(result);
@@ -69,11 +60,10 @@ public class OrdersImpl implements Orders {
   @Validate
   public void getOrdersById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
+    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
+    GetOrdersByIdHelper helper = new GetOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
 
-    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
-    GetOrdersByIdHelper helper = new GetOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
-
-    helper.getOrder(id, lang)
+    helper.getOrder(id)
       .thenAccept(order -> {
         logger.info("Successfully retrieved order: " + JsonObject.mapFrom(order).encodePrettily());
         httpClient.closeClient();
@@ -89,13 +79,13 @@ public class OrdersImpl implements Orders {
   public void postOrders(String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
 
-    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
-    PostOrdersHelper helper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
+    PostOrdersHelper helper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
     loadConfiguration(okapiHeaders, vertxContext, logger).thenAccept(config -> {
       int limit = getPoLineLimit(config);
       if (compPO.getPoLines().size() <= limit) {
         logger.info("Creating PO and POLines...");
-        helper.createPOandPOLinesWithAutoGeneratedData(compPO)
+        helper.createPurchaseOrder(compPO)
           .thenAccept(withIds -> {
 
             logger.info("Applying Funds...");
@@ -119,19 +109,35 @@ public class OrdersImpl implements Orders {
           })
           .exceptionally(helper::handleError);
       } else {
-       helper.handleError(new Exception(new HttpException(422, String.format(OVER_LIMIT_ERROR_MESSAGE, limit))));
+        throw new ValidationException(String.format(OVER_LIMIT_ERROR_MESSAGE, limit), LINES_LIMIT_ERROR_CODE);
       }
     }).exceptionally(helper::handleError);
   }
 
   @Override
   @Validate
-  public void putOrdersById(String id, String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
+  public void putOrdersById(String orderId, String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
-    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
-    PutOrdersByIdHelper putHelper = new PutOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
-    putHelper.updateOrder(id, lang, compPO, vertxContext)
-       .exceptionally(putHelper::handleError);
+    PutOrdersByIdHelper putHelper = new PutOrdersByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang);
+    if (CollectionUtils.isEmpty(compPO.getPoLines())) {
+      putHelper.updateOrder(orderId, compPO);
+    } else {
+      loadConfiguration(okapiHeaders, vertxContext, logger).thenAccept(config -> {
+        int limit = getPoLineLimit(config);
+        if (compPO.getPoLines().size() > limit) {
+          throw new ValidationException(String.format(OVER_LIMIT_ERROR_MESSAGE, limit), LINES_LIMIT_ERROR_CODE);
+        }
+        compPO.getPoLines().forEach(poLine -> {
+          if (StringUtils.isEmpty(poLine.getPurchaseOrderId())) {
+            poLine.setPurchaseOrderId(orderId);
+          }
+          if (!orderId.equals(poLine.getPurchaseOrderId())) {
+            throw new ValidationException(MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE, AbstractHelper.ID_MISMATCH_ERROR_CODE);
+          }
+        });
+        putHelper.updateOrderWithPoLines(orderId, compPO);
+      }).exceptionally(putHelper::handleError);
+    }
 
   }
 
@@ -139,8 +145,8 @@ public class OrdersImpl implements Orders {
   @Validate
   public void postOrdersLinesById(String orderId, String lang, PoLine poLine, Map<String, String> okapiHeaders,
                                   Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
-    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
-    PostOrderLineHelper helper = new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
+    PostOrderLineHelper helper = new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
 
     logger.info("Creating POLine to an existing order...");
 
@@ -155,7 +161,7 @@ public class OrdersImpl implements Orders {
           .thenAccept(entries -> {
             int limit = getPoLineLimit(config);
             if (entries.getInteger("total_records") < limit) {
-              helper.createPoLineWithAutoGeneratedData(poLine)
+              helper.createPoLine(poLine, false)
                 .thenAccept(pol -> {
                   logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
                   httpClient.closeClient();
@@ -165,11 +171,11 @@ public class OrdersImpl implements Orders {
                 })
                 .exceptionally(helper::handleError);
             } else {
-              asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422, String.format(OVER_LIMIT_ERROR_MESSAGE, limit))));
+              throw new ValidationException(String.format(OVER_LIMIT_ERROR_MESSAGE, limit), LINES_LIMIT_ERROR_CODE);
             }
           }).exceptionally(helper::handleError);
       } else {
-        asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422, MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE)));
+        throw new ValidationException(MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE, AbstractHelper.ID_MISMATCH_ERROR_CODE);
       }
     }).exceptionally(helper::handleError);
   }
@@ -180,10 +186,10 @@ public class OrdersImpl implements Orders {
                                           Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
 
     logger.info("Started Invocation of POLine Request with id = " + lineId);
-    final HttpClientInterface httpClient = getHttpClient(okapiHeaders);
-    GetPOLineByIdHelper helper = new GetPOLineByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext);
+    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
+    GetPOLineByIdHelper helper = new GetPOLineByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
 
-    helper.getPOLineByPOLineId(id, lineId, lang)
+    helper.getPOLineByPOLineId(id, lineId)
       .thenAccept(poline -> {
         logger.info("Received POLine Response: " + JsonObject.mapFrom(poline).encodePrettily());
         httpClient.closeClient();
@@ -198,8 +204,8 @@ public class OrdersImpl implements Orders {
   @Validate
   public void deleteOrdersLinesByIdAndLineId(String orderId, String lineId, String lang, Map<String, String> okapiHeaders,
                                              Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
-    new DeleteOrderLineByIdHelper(okapiHeaders, asyncResultHandler, vertxContext)
-      .deleteLine(orderId, lineId, lang);
+    new DeleteOrderLineByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang)
+      .deleteLine(orderId, lineId);
   }
 
   @Override
@@ -208,7 +214,7 @@ public class OrdersImpl implements Orders {
                                             Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Handling PUT Order Line operation...");
 
-    PutOrderLineByIdHelper helper = new PutOrderLineByIdHelper(lang, okapiHeaders, asyncResultHandler, vertxContext);
+    PutOrderLineByIdHelper helper = new PutOrderLineByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang);
     if (StringUtils.isEmpty(poLine.getPurchaseOrderId())) {
       poLine.setPurchaseOrderId(orderId);
     }
@@ -218,22 +224,27 @@ public class OrdersImpl implements Orders {
     if (orderId.equals(poLine.getPurchaseOrderId()) && lineId.equals(poLine.getId())) {
       helper.updateOrderLine(orderId, poLine);
     } else {
-      asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422, MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE)));
+      helper.handleError(new CompletionException(new ValidationException(MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE, AbstractHelper.ID_MISMATCH_ERROR_CODE)));
     }
   }
 
-  public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {
-    final String okapiURL = okapiHeaders.getOrDefault(OKAPI_URL, "");
-    final String tenantId = TenantTool.calculateTenantId(okapiHeaders.get(OKAPI_HEADER_TENANT));
+  @Override
+  @Validate
+  public void postOrdersPoNumberValidate(String lang, PoNumber entity, Map<String, String> okapiHeaders,
+     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
+    ValidationHelper helper=new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
+    logger.info("Validating a PO Number");
+    //@Validate asserts the pattern of a PO Number, the below method is used to check for uniqueness
+     helper.checkPONumberUnique(entity, lang);
 
-    return HttpClientFactory.getHttpClient(okapiURL, tenantId);
   }
 
   private static int getPoLineLimit(JsonObject config) {
     try {
       return Integer.parseInt(config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));
     } catch (NumberFormatException e) {
-      throw new CompletionException("Invalid limit value in configuration.", e);
+      throw new NumberFormatException("Invalid limit value in configuration.");
     }
   }
 

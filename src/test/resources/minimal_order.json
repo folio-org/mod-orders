@@ -1,12 +1,14 @@
 {
   "assigned_to": "ab18897b-0e40-4f31-896b-9c9adc979a88",
-  "created": "2010-10-08T03:53:00.000Z",
-  "created_by": "ab18897b-0e40-4f31-896b-9c9adc979a88",
   "order_type": "Ongoing",
   "po_number": "268758",
   "total_items": 1,
   "vendor": "168f8a86-d26c-406e-813f-c7527f241ac3",
-  "workflow_status": "Open",
+  "workflow_status": "Pending",
+  "metadata": {
+    "createdDate": "2010-10-08T03:53:00.000",
+    "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
+  },
   "po_lines": [
     {
       "acquisition_method": "Purchase At Vendor System",
@@ -14,7 +16,11 @@
       "po_line_description": "ABCDEFGHIJKLMNOPQRSTUVWXY",
       "po_line_number": "268758-03",
       "po_line_workflow_status": "Open",
-      "title": "Kayak Fishing in the Northern Gulf Coast"
+      "title": "Kayak Fishing in the Northern Gulf Coast",
+      "metadata": {
+        "createdDate": "2010-10-08T03:53:00.000",
+        "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
+      }
     }
   ]
 }

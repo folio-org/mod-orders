@@ -1,12 +1,5 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Handler;
-
-import javax.ws.rs.core.Response;
-import java.util.Map;
-
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.deletePoLine;
 import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersLinesByIdAndLineIdResponse.respond204;
@@ -14,15 +7,25 @@ import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersLinesByIdAndLineI
 import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersLinesByIdAndLineIdResponse.respond422WithApplicationJson;
 import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersLinesByIdAndLineIdResponse.respond500WithTextPlain;
 
-class DeleteOrderLineByIdHelper extends AbstractOrderLineHelper {
+import java.util.Map;
 
-  DeleteOrderLineByIdHelper(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
-    super(OrdersImpl.getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx);
+import javax.ws.rs.core.Response;
+
+import org.folio.rest.jaxrs.model.Error;
+
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Handler;
+
+class DeleteOrderLineByIdHelper extends AbstractHelper {
+
+  DeleteOrderLineByIdHelper(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
+    super(getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx, lang);
     setDefaultHeaders(httpClient);
   }
 
-  void deleteLine(String orderId, String lineId, String lang) {
-    getPoLineByIdAndValidate(orderId, lineId, lang)
+  void deleteLine(String orderId, String lineId) {
+    getPoLineByIdAndValidate(orderId, lineId)
       .thenCompose(line -> {
         logger.debug("Deleting PO line...");
         return deletePoLine(line, httpClient, ctx, okapiHeaders, logger);
@@ -34,17 +37,18 @@ class DeleteOrderLineByIdHelper extends AbstractOrderLineHelper {
       .exceptionally(this::handleError);
   }
 
-  protected Response buildErrorResponse(int code, String message) {
+  @Override
+  protected Response buildErrorResponse(int code, Error error) {
     final Response result;
     switch (code) {
       case 404:
-        result = respond404WithTextPlain(message);
+        result = respond404WithTextPlain(error.getMessage());
         break;
       case 422:
-        result = respond422WithApplicationJson(withErrors(message));
+        result = respond422WithApplicationJson(withErrors(error));
         break;
       default:
-        result = respond500WithTextPlain(message);
+        result = respond500WithTextPlain(error.getMessage());
     }
     return result;
   }
