@@ -209,6 +209,23 @@ public class OrdersImpl implements Orders {
   }
 
   @Override
+  public void getOrdersPoNumber(String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    logger.info("Receiving generated po_number ...");
+
+    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
+    PoNumberHelper helper = new PoNumberHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
+
+    helper.generatePoNumber()
+      .thenAccept(poNum -> {
+        logger.info("Received PoNumber Response: " + JsonObject.mapFrom(poNum).encodePrettily());
+        httpClient.closeClient();
+        javax.ws.rs.core.Response response = GetOrdersPoNumberResponse.respond200WithApplicationJson(poNum);
+        AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
+        asyncResultHandler.handle(result);
+      }).exceptionally(helper::handleError);
+  }
+
+  @Override
   @Validate
   public void putOrdersLinesByIdAndLineId(String orderId, String lineId, String lang, PoLine poLine, Map<String, String> okapiHeaders,
                                             Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
@@ -233,7 +250,7 @@ public class OrdersImpl implements Orders {
   public void postOrdersPoNumberValidate(String lang, PoNumber entity, Map<String, String> okapiHeaders,
      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    ValidationHelper helper=new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
+    PoNumberHelper helper=new PoNumberHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
     logger.info("Validating a PO Number");
     //@Validate asserts the pattern of a PO Number, the below method is used to check for uniqueness
      helper.checkPONumberUnique(entity, lang);

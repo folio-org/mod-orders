@@ -189,6 +189,14 @@
           "modulePermissions": [
             "orders-storage.purchase_orders.collection.get"
           ]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/orders/po-number",
+          "permissionsRequired": ["orders.po-number.item.get"],
+          "modulePermissions": [
+            "orders-storage.po_number.get"
+          ]
         }
       ]
     }
@@ -309,6 +317,11 @@
       "description": "Delete an existing PO line"
     },
     {
+      "permissionName": "orders.po-number.item.get",
+      "displayName": "Orders - generate a PO Number",
+      "description": "Generate a PO Number"
+    },
+    {
       "permissionName": "orders.po-number.item.post",
       "displayName": "Orders - validate a PO Number",
       "description": "Validate a PO Number"
@@ -326,6 +339,7 @@
         "orders.po_lines.item.get",
         "orders.po_lines.item.put",
         "orders.po_lines.item.delete",
+        "orders.po-number.item.get",
         "orders.po-number.item.post"
       ]
     }

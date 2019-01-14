@@ -27,20 +27,20 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PostOrdersHelper extends AbstractHelper {
 
-  // epoch time @ 9/1/2018.
-  // if you change this, you run the risk of duplicate poNumbers
-  private static final long PO_NUMBER_EPOCH = 1535774400000L;
+  private PoNumberHelper poNumberHelper;
 
   public PostOrdersHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx, String lang) {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
+    poNumberHelper = new PoNumberHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
   public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
     if(null==compPO.getPoNumber()){
-      compPO.setPoNumber(generatePoNumber());
-      return createPOandPOLines(compPO);
+      return poNumberHelper.generatePoNumber()
+        .thenAccept(poNumberResp -> compPO.setPoNumber(poNumberResp.getPoNumber()))
+        .thenCompose(rVoid -> createPOandPOLines(compPO));
     }
     else{
       //If a PO  Number is already supplied, then verify if its unique
@@ -139,11 +139,4 @@ public class PostOrdersHelper extends AbstractHelper {
     }
     return result;
   }
-
-  private static String generatePoNumber() {
-    return (Long.toHexString(System.currentTimeMillis() - PO_NUMBER_EPOCH) +
-        Long.toHexString(System.nanoTime() % 100))
-          .toUpperCase();
-  }
-
 }

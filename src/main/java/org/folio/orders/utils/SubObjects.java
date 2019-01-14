@@ -11,6 +11,7 @@ public class SubObjects {
   }
 
   public static final String PO_LINES = "po_lines";
+  public static final String PO_NUMBER = "po_number";
 
   public static final String ADJUSTMENT = "adjustment";
   public static final String ALERTS = "alerts";
@@ -45,6 +46,7 @@ public class SubObjects {
     apis.put(SOURCE, "/orders-storage/sources");
     apis.put(VENDOR_DETAIL, "/orders-storage/vendor_details");
     apis.put(PO_LINES, "/orders-storage/po_lines");
+    apis.put(PO_NUMBER, "/orders-storage/po_number");
     apis.put(PURCHASE_ORDER, "/orders-storage/purchase_orders");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);

@@ -139,3 +139,22 @@ resourceTypes:
                     value: !include raml-util/examples/errors.sample
         delete:
           is: [validate]
+  /po_number:
+    get:
+      description: Get generated PO number
+      is: [validate, language]
+      responses:
+        200:
+          body:
+            application/json:
+              type: po-number
+        400:
+          description: "Bad request, malformed request"
+          body:
+            text/plain:
+              example: "Unable to generate purchase order number"
+        500:
+          description: "Internal server error"
+          body:
+            text/plain:
+              example: "internal server error, contact administrator"

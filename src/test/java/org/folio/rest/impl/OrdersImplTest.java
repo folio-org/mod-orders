@@ -61,6 +61,7 @@ public class OrdersImplTest {
   public static final String ORDER_WITHOUT_PO_LINES = "order_without_po_lines.json";
   public static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
   public static final String ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON = "put_order_with_mismatch_id_in_po_lines.json";
+  public static final String PO_NUMBER_VALUE = "228D126";
 
   static {
     System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, "io.vertx.core.logging.Log4j2LogDelegateFactory");
@@ -78,6 +79,7 @@ public class OrdersImplTest {
   private static final String INVALID_EXIST_CONFIG_TENANT = "invalid_config";
   private static final String EMPTY_CONFIG_TENANT = "config_empty";
   private static final String NON_EXIST_CONFIG_TENANT = "ordersimpltest";
+  private static final String PO_NUMBER_ERROR_TENANT = "po_number_error_tenant";
 
 
   private static final Header X_OKAPI_URL = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
@@ -85,6 +87,7 @@ public class OrdersImplTest {
   private static final Header EXIST_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, EXIST_CONFIG_TENANT);
   private static final Header INVALID_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, INVALID_EXIST_CONFIG_TENANT);
   private static final Header EMPTY_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, EMPTY_CONFIG_TENANT);
+  private static final Header PO_NUMBER_ERROR_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, PO_NUMBER_ERROR_TENANT);
   private static final Header X_OKAPI_USER_ID = new Header(OKAPI_USERID_HEADER, "440c89e3-7f6c-578a-9ea8-310dad23605e");
   private static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
 
@@ -1515,6 +1518,45 @@ public class OrdersImplTest {
     return new JsonObject();
   }
 
+  @Test
+  public void testGetPoNumber() {
+    logger.info("=== Test Get PO Number (generate po_number) ===");
+
+    final Response response = RestAssured
+      .with()
+      .header(X_OKAPI_URL)
+      .header(EXIST_CONFIG_X_OKAPI_TENANT)
+      .get("/orders/po_number")
+      .then()
+      .statusCode(200)
+      .extract()
+      .response();
+
+    String actualResponse = response.getBody().asString();
+    logger.info(actualResponse);
+
+    PoNumber poNumber = response.as(PoNumber.class);
+    String actualPoNumberValue = poNumber.getPoNumber();
+
+    assertEquals(PO_NUMBER_VALUE, actualPoNumberValue);
+    assertNotNull(actualResponse);
+  }
+
+  @Test
+  public void testGetPoNumberError() {
+    logger.info("=== Test Get PO Number (generate po_number) - fail ===");
+
+    RestAssured
+      .with()
+      .header(X_OKAPI_URL)
+      .header(PO_NUMBER_ERROR_X_OKAPI_TENANT)
+      .get("/orders/po_number")
+      .then()
+      .statusCode(500)
+      .extract()
+      .response();
+  }
+
   private Response verifyPut(String url, String body, String expectedContentType, int expectedCode) {
     return RestAssured
       .with()
@@ -1629,6 +1671,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
       router.route(HttpMethod.GET, resourcePath(SOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.GET, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleGetGenericSubObj(ctx, VENDOR_DETAIL));
+      router.route(HttpMethod.GET, resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
 
       router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
       router.route(HttpMethod.PUT, resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -2112,6 +2155,22 @@ public class OrdersImplTest {
         .setStatusCode(200)
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
         .end(JsonObject.mapFrom(location).encodePrettily());
+    }
+
+    private void handleGetPoNumber(RoutingContext ctx) {
+      if(PO_NUMBER_ERROR_TENANT.equals(ctx.request().getHeader(OKAPI_HEADER_TENANT))) {
+        ctx.response()
+          .setStatusCode(500)
+          .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
+          .end();
+      } else {
+        PoNumber poNumber = new PoNumber();
+        poNumber.setPoNumber(PO_NUMBER_VALUE);
+        ctx.response()
+          .setStatusCode(200)
+          .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
+          .end(JsonObject.mapFrom(poNumber).encodePrettily());
+      }
     }
 
   }
