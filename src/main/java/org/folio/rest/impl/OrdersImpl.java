@@ -120,7 +120,7 @@ public class OrdersImpl implements Orders {
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     PutOrdersByIdHelper putHelper = new PutOrdersByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang);
     if (CollectionUtils.isEmpty(compPO.getPoLines())) {
-      putHelper.updateOrder(orderId, compPO);
+      putHelper.updateOrderWithPoLines(orderId, compPO);
     } else {
       loadConfiguration(okapiHeaders, vertxContext, logger).thenAccept(config -> {
         int limit = getPoLineLimit(config);
@@ -230,14 +230,13 @@ public class OrdersImpl implements Orders {
 
   @Override
   @Validate
-  public void postOrdersPoNumberValidate(String lang, PoNumber entity, Map<String, String> okapiHeaders,
+  public void postOrdersPoNumberValidate(String lang, PoNumber poNumber, Map<String, String> okapiHeaders,
      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
     ValidationHelper helper=new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
     logger.info("Validating a PO Number");
     //@Validate asserts the pattern of a PO Number, the below method is used to check for uniqueness
-     helper.checkPONumberUnique(entity, lang);
-
+     helper.checkPONumberUnique(poNumber, lang);
   }
 
   private static int getPoLineLimit(JsonObject config) {

@@ -5,6 +5,7 @@ import static org.folio.orders.utils.SubObjects.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
+import static org.folio.rest.impl.AbstractHelper.PO_LINE_NUMBER;
 import static org.folio.rest.impl.OrdersImpl.LINES_LIMIT_ERROR_CODE;
 import static org.folio.rest.impl.OrdersImpl.OVER_LIMIT_ERROR_MESSAGE;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -1184,7 +1185,9 @@ public class OrdersImplTest {
     logger.info("=== Test PUT Order Line By Id - Empty Json as body Success case ===");
 
     String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
-    String orderId = getMockLine(lineId).getPurchaseOrderId();
+    org.folio.rest.acq.model.PoLine line = getMockLine(lineId);
+    String orderId = line.getPurchaseOrderId();
+    String poLineNumber = line.getPoLineNumber();
     String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
 
     final Response resp = verifyPut(url, "{}", "", 204);
@@ -1211,6 +1214,7 @@ public class OrdersImplTest {
     // Verify that object has only PO and PO line ids
     assertEquals(lineId, lineWithIds.remove(ID));
     assertEquals(orderId, lineWithIds.remove(PURCHASE_ORDER_ID));
+    assertEquals(poLineNumber, lineWithIds.remove(PO_LINE_NUMBER));
     lineWithIds.stream().forEach(entry -> {
       Object value = entry.getValue();
       assertTrue(Objects.isNull(value) || (value instanceof Iterable && !((Iterable) value).iterator().hasNext()));
@@ -1445,7 +1449,9 @@ public class OrdersImplTest {
     logger.info("=== Test PUT Order Line By Id - 500 From Storage On Sub-Object deletion ===");
 
     String lineId = PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE;
-    String orderId = getMockLine(lineId).getPurchaseOrderId();
+    org.folio.rest.acq.model.PoLine line = getMockLine(lineId);
+    String orderId = line.getPurchaseOrderId();
+    String poLineNumber = line.getPoLineNumber();
 
     String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
     String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, lineId, orderId);
@@ -1471,6 +1477,7 @@ public class OrdersImplTest {
     // Verify that object has only PO and PO line ids
     assertEquals(lineId, lineWithIds.remove(ID));
     assertEquals(orderId, lineWithIds.remove(PURCHASE_ORDER_ID));
+    assertEquals(poLineNumber, lineWithIds.remove(PO_LINE_NUMBER));
     lineWithIds.stream().forEach(entry -> {
       Object value = entry.getValue();
       assertTrue(Objects.isNull(value) || (value instanceof Iterable && !((Iterable) value).iterator().hasNext()));

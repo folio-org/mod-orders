@@ -32,7 +32,6 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PutOrderLineByIdHelper extends AbstractHelper {
 
-  public static final String ID = "id";
   private Errors processingErrors = new Errors();
 
   public PutOrderLineByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
@@ -51,7 +50,10 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    */
   public void updateOrderLine(String orderId, PoLine compOrderLine) {
     getPoLineByIdAndValidate(orderId, compOrderLine.getId())
-      .thenCompose(lineFromStorage -> updateOrderLine(compOrderLine, lineFromStorage))
+      .thenCompose(lineFromStorage -> {
+        compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
+        return updateOrderLine(compOrderLine, lineFromStorage);
+      })
       .thenAccept(v -> {
         httpClient.closeClient();
         Response response;
