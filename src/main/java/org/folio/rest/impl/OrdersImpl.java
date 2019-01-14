@@ -13,7 +13,6 @@ import java.util.concurrent.CompletionException;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.rest.annotations.Validate;
@@ -41,15 +40,6 @@ public class OrdersImpl implements Orders {
   public static final String MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE = "Mismatch between id in path and PoLine";
   public static final String LINES_LIMIT_ERROR_CODE = "lines_limit";
 
-  @Override
-  public void getOrdersCompositeOrders(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    asyncResultHandler.handle(Future.failedFuture(new NotImplementedException("Get PO is not implemented yet")));
-  }
-
-  @Override
-  public void getOrdersOrderLines(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    asyncResultHandler.handle(Future.failedFuture(new NotImplementedException("GET PO lines is not implemented yet")));
-  }
 
   @Override
   @Validate
@@ -157,14 +147,13 @@ public class OrdersImpl implements Orders {
     PostOrderLineHelper helper = new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
 
     logger.info("Creating POLine to an existing order...");
-
-/*    if (poLine.getPurchaseOrderId() == null) {
-      logger.info("POLine without id. Set id from path url: " + orderId);
-      poLine.setPurchaseOrderId(orderId);
-    }*/
     loadConfiguration(okapiHeaders, vertxContext, logger)
       .thenAccept(config -> {
-        String endpoint = String.format(GET_ALL_POLINES_QUERY_WITH_LIMIT, 1, lang);
+        String orderId = poLine.getPurchaseOrderId();
+        if (orderId == null) {
+          throw new ValidationException(MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE, "id_not_exists");
+        }
+        String endpoint = String.format(GET_ALL_POLINES_QUERY_WITH_LIMIT, 1, orderId, lang);
         handleGetRequest(endpoint, httpClient, vertxContext, okapiHeaders, logger)
           .thenAccept(entries -> {
             int limit = getPoLineLimit(config);
@@ -187,7 +176,7 @@ public class OrdersImpl implements Orders {
 
   @Override
   @Validate
-  public void getOrdersOrderLinesByLineId(String lineId, String lang, Map<String, String> okapiHeaders,
+  public void getOrdersOrderLinesById(String lineId, String lang, Map<String, String> okapiHeaders,
                                           Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Started Invocation of POLine Request with id = " + lineId);
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
@@ -197,7 +186,7 @@ public class OrdersImpl implements Orders {
       .thenAccept(poline -> {
         logger.info("Received POLine Response: " + JsonObject.mapFrom(poline).encodePrettily());
         httpClient.closeClient();
-        javax.ws.rs.core.Response response = GetOrdersOrderLinesByLineIdResponse.respond200WithApplicationJson(poline);
+        javax.ws.rs.core.Response response = GetOrdersOrderLinesByIdResponse.respond200WithApplicationJson(poline);
         AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
         asyncResultHandler.handle(result);
       })
@@ -206,7 +195,7 @@ public class OrdersImpl implements Orders {
 
   @Override
   @Validate
-  public void deleteOrdersOrderLinesByLineId(String lineId, String lang, Map<String, String> okapiHeaders,
+  public void deleteOrdersOrderLinesById(String lineId, String lang, Map<String, String> okapiHeaders,
                                              Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     new DeleteOrderLineByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang)
       .deleteLine(lineId);
@@ -214,7 +203,7 @@ public class OrdersImpl implements Orders {
 
   @Override
   @Validate
-  public void putOrdersOrderLinesByLineId(String lineId, String lang, PoLine poLine, Map<String, String> okapiHeaders,
+  public void putOrdersOrderLinesById(String lineId, String lang, PoLine poLine, Map<String, String> okapiHeaders,
                                           Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Handling PUT Order Line operation...");
 
