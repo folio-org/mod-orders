@@ -1,18 +1,9 @@
 package org.folio.orders.utils;
 
-import io.vertx.core.Context;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.rest.client.ConfigurationsClient;
-import org.folio.rest.jaxrs.model.Adjustment;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.tools.client.Response;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import static java.util.Objects.nonNull;
+import static org.folio.orders.utils.SubObjects.*;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,19 +13,31 @@ import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.util.Objects.nonNull;
-import static org.folio.orders.utils.SubObjects.*;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.client.ConfigurationsClient;
+import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.tools.client.Response;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+
+import io.vertx.core.Context;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class HelperUtils {
 
+  private static final String PO_NUMBER_ALREADY_EXISTS = "PO Number already exists";
   public static final String DEFAULT_POLINE_LIMIT = "500";
   public static final String OKAPI_URL = "X-Okapi-Url";
   public static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
   public static final String URL_WITH_LANG_PARAM = "%s?lang=%s";
   public static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = resourcesPath(PO_LINES)+"?limit=%s&query=purchase_order_id==%s&lang=%s";
-  public static final String GET_ALL_PURCHASE_ORDER_QUERY = resourceByIdPath(PURCHASE_ORDER)+URL_WITH_LANG_PARAM;
+  public static final String GET_PURCHASE_ORDER_BYID = resourceByIdPath(PURCHASE_ORDER)+URL_WITH_LANG_PARAM;
+  public static final String GET_PURCHASE_ORDER_BYPONUMBER_QUERY = resourcesPath(PURCHASE_ORDER)+"?query=po_number==%s&lang=%s";
 
 
   private static final int DEFAULT_PORT = 9130;
@@ -87,16 +90,23 @@ public class HelperUtils {
     return (a + b);
   }
 
-  public static CompletableFuture<JsonObject> getPurchaseOrder(String id, String lang, HttpClientInterface httpClient, Context ctx,
+  public static CompletableFuture<JsonObject> getPurchaseOrderById(String id, String lang, HttpClientInterface httpClient, Context ctx,
                                                                Map<String, String> okapiHeaders, Logger logger) {
-    String endpoint = String.format(GET_ALL_PURCHASE_ORDER_QUERY, id, lang);
+    String endpoint = String.format(GET_PURCHASE_ORDER_BYID, id, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
   }
+
+  public static CompletableFuture<JsonObject> getPurchaseOrderByPONumber(String poNumber, String lang, HttpClientInterface httpClient, Context ctx,
+      Map<String, String> okapiHeaders, Logger logger) {
+      String endpoint = String.format(GET_PURCHASE_ORDER_BYPONUMBER_QUERY, poNumber, lang);
+      return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
+  }
+
 
   /**
    *  Retrieves PO lines from storage by PO id as JsonObject with array of po_lines (/acq-models/mod-orders-storage/schemas/po_line.json objects)
    */
-  private static CompletableFuture<JsonObject> getPoLines(String id, String lang, HttpClientInterface httpClient, Context ctx,
+  public static CompletableFuture<JsonObject> getPoLines(String id, String lang, HttpClientInterface httpClient, Context ctx,
                                                           Map<String, String> okapiHeaders, Logger logger) {
     String endpoint = String.format(GET_ALL_POLINES_QUERY_WITH_LIMIT, DEFAULT_POLINE_LIMIT, id, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
@@ -127,7 +137,7 @@ public class HelperUtils {
       })
       .exceptionally(t -> {
         logger.error("Exception deleting po_line data for order id={}:", t, orderId);
-        throw new CompletionException(t);
+        throw new CompletionException(t.getCause());
       });
   }
 
@@ -184,7 +194,6 @@ public class HelperUtils {
     futures.add(operateOnSubObjIfPresent(operation, line, ERESOURCE, httpClient, ctx, okapiHeaders, logger));
     futures.add(operateOnSubObjIfPresent(operation, line, LOCATION, httpClient, ctx, okapiHeaders, logger));
     futures.add(operateOnSubObjIfPresent(operation, line, PHYSICAL, httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, RENEWAL, httpClient, ctx, okapiHeaders, logger));
     futures.add(operateOnSubObjIfPresent(operation, line, SOURCE, httpClient, ctx, okapiHeaders, logger));
     futures.add(operateOnSubObjIfPresent(operation, line, VENDOR_DETAIL, httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, ALERTS, httpClient, ctx, okapiHeaders, logger));
@@ -374,4 +383,22 @@ public class HelperUtils {
     }
     return future;
   }
+
+  public static CompletableFuture<Boolean> isPONumberUnique(String poNumber,String lang, HttpClientInterface httpClient, Context ctx,
+      Map<String, String> okapiHeaders, Logger logger) {
+      CompletableFuture<Boolean> future = new VertxCompletableFuture<>(ctx);
+           getPurchaseOrderByPONumber(poNumber, lang, httpClient, ctx, okapiHeaders, logger)
+          .thenAccept(po->{
+              if(po.getInteger("total_records")==0)
+                 future.complete(true);
+              else
+                future.completeExceptionally(new HttpException(400, PO_NUMBER_ALREADY_EXISTS));
+          })
+          .exceptionally(t -> {
+             logger.error("Exception validating PO Number existence", t.getCause());
+             future.completeExceptionally(t.getCause());
+             return null;
+           });
+        return future;
+   }
 }

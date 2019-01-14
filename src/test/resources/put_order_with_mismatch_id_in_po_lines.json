@@ -1,17 +1,6 @@
 {
-  "id": "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
-  "adjustment": {
-    "credit": 0.0,
-    "discount": 0.0,
-    "insurance": 0.0,
-    "overhead": 0.0,
-    "shipment": 0.0,
-    "tax_1": 0.0,
-    "tax_2": 0.0,
-    "use_pro_rate": false
-  },
   "approved": true,
-  "assigned_to": "",
+  "assigned_to": "ab18897b-0e40-4f31-896b-9c9adc979a88",
   "manual_po": false,
   "notes": [],
   "po_number": "268758",
@@ -20,17 +9,12 @@
   "total_estimated_price": 127.94,
   "total_items": 3,
   "vendor": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
-  "workflow_status": "Open",
-  "metadata": {
-    "createdDate": "2018-06-29T00:00:00.000",
-    "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
-  },
+  "workflow_status": "Pending",
   "po_lines": [
     {
       "id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1",
       "acquisition_method": "Purchase",
       "adjustment": {
-        "id": "1963h6cf-eb47-4e09-9e28-e25aa484abb7",
         "credit": 0.0,
         "discount": 0.0,
         "insurance": 0.0,
@@ -47,21 +31,13 @@
       "cancellation_restriction_note": "",
       "claims": [
         {
-          "id": "07c5d666-cabe-11e8-a8d5-f2811f1b9fd1",
           "claimed": false,
           "grace": 90,
           "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
         }
       ],
       "collection": false,
-      "contributors": [
-        {
-          "contributor": "Steinar Imsen (ed.)",
-          "contributor_type": ""
-        }
-      ],
       "cost": {
-        "id": "07c5d792-cabe-11e8-a8d5-f2801j1b9fd1",
         "list_price": 68.00,
         "currency": "USD",
         "quantity_physical": 1,
@@ -70,26 +46,8 @@
         "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
       "description": "",
-      "details": {
-        "id": "07c5d792-cabe-11e9-a8d5-i2801f1b9fd1",
-        "receiving_note": "",
-        "product_ids": [
-          {
-            "product_id": "10407849",
-            "product_id_type": "Vendor Item Number"
-          }
-        ],
-        "material_types": [
-          "fde2dc42-cde3-11e8-a8d5-f2801f1b9fd1"
-        ],
-        "subscription_from": null,
-        "subscription_interval": 0,
-        "subscription_to": null,
-        "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
-      },
       "donor": "",
       "eresource": {
-        "id": "07c5d8be-cabe-11e8-a9d5-f2801f1b9fd1",
         "activated": false,
         "activation_due": 0,
         "create_inventory": false,
@@ -102,7 +60,6 @@
       },
       "fund_distribution": [
         {
-          "id": "fde2c22a-cde3-11e8-a8d5-f2801f1b9fd1",
           "code": "EUROHIST-FY19",
           "percentage": 100.0,
           "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08003",
@@ -110,8 +67,6 @@
         }
       ],
       "location": {
-        "id": "07c5d9ea-ckbe-11e8-a8d5-f2801f1b9fd1",
-        "location_id": "07c5d9ea-cabe-11e8-a8d5-f2901f1b9fd1",
         "quantity": 1,
         "quantity_electronic": 0,
         "quantity_physical": 1,
@@ -121,8 +76,6 @@
       "owner": "LTS Acquisitions",
       "payment_status": "Awaiting Payment",
       "physical": {
-        "id": "5ee243f9-72e5-4464-bdbc-43a21873d648",
-        "material_supplier": "",
         "receipt_due": "2018-09-29T00:00:00.000Z",
         "volumes": [
           "vol. 1"
@@ -134,7 +87,6 @@
       "po_line_workflow_status": "Open",
       "publication_date": "2011",
       "publisher": "Tapir Academic Press",
-      "purchase_order_id": "d79b2bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
       "receipt_date": null,
       "receipt_status": "Awaiting Receipt",
       "reporting_codes": [],
@@ -142,163 +94,22 @@
       "rush": false,
       "selector": "Stevens",
       "source": {
-        "id": "024b6f40-c5c6-4280-858e-33fba452a334",
         "code": "",
         "description": "Manually entered"
       },
       "tags": [],
       "title": "Taxes, tributes and tributary lands in the making of Scandinavian kingdoms in the Middle Ages",
       "vendor_detail": {
-        "id": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
         "instructions": "",
         "note_from_vendor": "",
         "vendor_account": "",
         "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
-      },
-      "metadata": {
-        "createdDate": "2018-06-29T00:00:00.000",
-        "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
-      }
-    },
-    {
-      "id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd2",
-      "acquisition_method": "Purchase",
-      "adjustment": {
-        "id": "2063h6cf-eb47-4e09-9e28-e25aa484abb7",
-        "credit": 0.0,
-        "discount": 0.0,
-        "insurance": 0.0,
-        "invoice_id": "3d6d495c-c237-476f-aa48-50f7cbf74ca4",
-        "overhead": 0.0,
-        "shipment": 0.0,
-        "tax_1": 0.0,
-        "tax_2": 0.0,
-        "use_pro_rate": false,
-        "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd2"
-      },
-      "alerts": [],
-      "cancellation_restriction": false,
-      "cancellation_restriction_note": "",
-      "claims": [
-        {
-          "id": "07c5d666-cabe-18e8-a8d5-f2801f1b9fd1",
-          "claimed": false,
-          "grace": 90,
-          "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd2"
-        }
-      ],
-      "collection": false,
-      "contributors": [
-        {
-          "contributor": "Steinar Imsen (ed.)",
-          "contributor_type": ""
-        }
-      ],
-      "cost": {
-        "id": "07c5d792-cnbe-11e8-a8d5-f2801f1b9fd1",
-        "list_price": 34.95,
-        "currency": "USD",
-        "quantity_physical": 1,
-        "quantity_electronic": 0,
-        "po_line_estimated_price": 34.95,
-        "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd2"
-      },
-      "description": "",
-      "details": {
-        "id": "07c5d792-cabe-11e9-a8d5-f2801f199fd1",
-        "receiving_note": "",
-        "product_ids": [
-          {
-            "product_id": "9780820350790",
-            "product_id_type": "ISBN"
-          }
-        ],
-        "material_types": [
-          "fde2dc42-cde3-11e8-a8d5-f2801f1b9fd1"
-        ],
-        "subscription_from": null,
-        "subscription_interval": 0,
-        "subscription_to": null,
-        "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd2"
-      },
-      "donor": "",
-      "eresource": {
-        "id": "07c5d8be-cabw-11e8-a8d5-f2801f1b9fd1",
-        "activated": false,
-        "activation_due": 0,
-        "create_inventory": false,
-        "trial": false,
-        "expected_activation": null,
-        "user_limit": 0,
-        "access_provider": null,
-        "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd2",
-        "license": "07cvd8be-cabe-11e8-a8d5-f2801f1b9fd1"
-      },
-      "fund_distribution": [
-        {
-          "id": "fde2c39c-cde3-11e8-a8d5-f2801f1b9fd1",
-          "code": "USHIST-FY19",
-          "percentage": 100.0,
-          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08004",
-          "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd2"
-        }
-      ],
-      "location": {
-        "id": "07c5d9ea-cabe-11c8-a8d5-f2801f1b9fd1",
-        "location_id": "07c5d9ea-cabe-11e8-a8d5-f5901f1b9fd1",
-        "quantity": 1,
-        "quantity_electronic": 0,
-        "quantity_physical": 1,
-        "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd2"
-      },
-      "order_format": "Physical Resource",
-      "owner": "LTS Acquisitions",
-      "payment_status": "Awaiting Payment",
-      "physical": {
-        "id": "5ee243f9-72e5-4464-bd6c-43a21873d648",
-        "material_supplier": "",
-        "receipt_due": "2018-09-29T00:00:00.000Z",
-        "volumes": [
-          "vol. 1"
-        ],
-        "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd2"
-      },
-      "po_line_description": "",
-      "po_line_number": "268758-02",
-      "po_line_workflow_status": "Open",
-      "publication_date": "2011",
-      "publisher": "Tapir Academic Press",
-      "purchase_order_id": "d75b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
-      "receipt_date": null,
-      "receipt_status": "Awaiting Receipt",
-      "reporting_codes": [],
-      "requester": "",
-      "rush": false,
-      "selector": "Brown",
-      "source": {
-        "id": "02dbff41-c5c6-4280-858e-33fba452a334",
-        "code": "",
-        "description": "Manually entered"
-      },
-      "tags": [],
-      "title": "Alabama Women: Their Lives and Times",
-      "vendor_detail": {
-        "id": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
-        "instructions": "",
-        "note_from_vendor": "",
-        "vendor_account": "",
-        "po_line_id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd2"
-      },
-      "metadata": {
-        "createdDate": "2018-06-29T00:00:00.000",
-        "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
       }
     },
     {
       "id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3",
       "acquisition_method": "Purchase",
       "adjustment": {
-        "id": "2163h6cf-eb47-4e09-9e28-e25aa484abb7",
         "credit": 0.0,
         "discount": 0.0,
         "insurance": 0.0,
@@ -315,21 +126,14 @@
       "cancellation_restriction_note": "",
       "claims": [
         {
-          "id": "07c5d666-cabe-h1e8-a8d5-f2801f1b9fd1",
           "claimed": false,
           "grace": 90,
           "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3"
         }
       ],
       "collection": false,
-      "contributors": [
-        {
-          "contributor": "Steinar Imsen (ed.)",
-          "contributor_type": ""
-        }
-      ],
+
       "cost": {
-        "id": "07c5d792-cabe-11e8-a8v5-f2801f1b9fd1",
         "list_price": 24.99,
         "currency": "USD",
         "quantity_physical": 1,
@@ -339,7 +143,6 @@
       },
       "description": "",
       "details": {
-        "id": "07c5d792-cvbe-11e9-a8d5-f2801f1b9fd1",
         "receiving_note": "",
         "product_ids": [
           {
@@ -357,7 +160,6 @@
       },
       "donor": "",
       "eresource": {
-        "id": "07c5d8bc-cabe-11e8-a8d5-f2801f1b9fd1",
         "activated": false,
         "activation_due": 0,
         "create_inventory": false,
@@ -365,12 +167,10 @@
         "expected_activation": null,
         "user_limit": 0,
         "access_provider": null,
-        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3",
-        "license": "07c5d8bv-cabe-11e8-a8d5-f2801f1b9fd1"
+        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3"
       },
       "fund_distribution": [
         {
-          "id": "fde2c626-cde3-11e8-a8d5-f2801f1b9fd1",
           "code": "USHIST-FY19",
           "percentage": 100.0,
           "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08005",
@@ -378,8 +178,6 @@
         }
       ],
       "location": {
-        "id": "07c5d97a-cabe-11e8-a8d5-f2801f1b9fd1",
-        "location_id": "07cvd9ea-cabe-11e8-a8d5-f2901f1b9fd1",
         "quantity": 1,
         "quantity_electronic": 0,
         "quantity_physical": 1,
@@ -389,8 +187,6 @@
       "owner": "LTS Acquisitions",
       "payment_status": "Awaiting Payment",
       "physical": {
-        "id": "5ee243f9-72e5-b464-bdbc-43a21873d648",
-        "material_supplier": "",
         "receipt_due": "2018-09-29T00:00:00.000Z",
         "volumes": [
           "vol. 1"
@@ -402,7 +198,6 @@
       "po_line_workflow_status": "Open",
       "publication_date": "2011",
       "publisher": "Tapir Academic Press",
-      "purchase_order_id": "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
       "receipt_date": null,
       "receipt_status": "Awaiting Receipt",
       "reporting_codes": [],
@@ -410,22 +205,258 @@
       "rush": false,
       "selector": "Brown",
       "source": {
-        "id": "0b4b6f41-c5c6-4280-858e-33fba452a334",
         "code": "",
         "description": "Manually entered"
       },
       "tags": [],
       "title": "Kayak Fishing in the Northern Gulf Coast",
       "vendor_detail": {
-        "id": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
         "instructions": "",
         "note_from_vendor": "",
         "vendor_account": "",
         "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3"
+      }
+    },
+    {
+      "id": "c2755a78-2f8d-47d0-a218-059a9b7391b3",
+      "acquisition_method": "Purchase At Vendor System",
+      "adjustment": {
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoice_id": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax_1": 0.0,
+        "tax_2": 0.0,
+        "use_pro_rate": false
+      },
+      "alerts": [
+        {
+          "alert": "Receipt overdue"
+        }
+      ],
+      "cancellation_restriction": false,
+      "cancellation_restriction_note": "ABCDEFGHIJKLMNOPQRSTUVW",
+      "claims": [
+        {
+          "claimed": false,
+          "sent": "2018-10-09T00:00:00.000Z",
+          "grace": 30
+        }
+      ],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "Ed Mashburn",
+          "contributor_type": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+        }
+      ],
+      "cost": {
+        "list_price": 24.99,
+        "currency": "USD",
+        "quantity_physical": 1,
+        "quantity_electronic": 1,
+        "po_line_estimated_price": 49.98
+      },
+      "description": "ABCDEFGH",
+      "details": {
+        "receiving_note": "ABCDEFGHIJKL",
+        "product_ids": [
+          {
+            "product_id": "9780764354113",
+            "product_id_type": "ISBN"
+          }
+        ],
+        "material_types": [
+          "f7e72403-2a13-43a4-a069-aaabe6c9dea8"
+        ],
+        "subscription_from": "2018-10-09T00:00:00.000Z",
+        "subscription_interval": 824,
+        "subscription_to": "2020-10-09T00:00:00.000Z"
+      },
+      "donor": "ABCDEFGHIJKLM",
+      "fund_distribution": [
+        {
+          "code": "HIST",
+          "percentage": 80.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3"
+        },
+        {
+          "code": "GENRL",
+          "percentage": 20.0,
+          "encumbrance": "0466cb77-0344-43c6-85eb-0a64aa2934e5"
+        }
+      ],
+      "location": {
+        "quantity": 2,
+        "quantity_electronic": 1,
+        "quantity_physical": 1
+      },
+      "order_format": "Physical Resource",
+      "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
+      "payment_status": "Awaiting Payment",
+      "physical": {
+        "volumes": [
+          "vol.1"
+        ],
+        "material_supplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "receipt_due": "2018-10-10T00:00:00.000Z"
+      },
+      "po_line_description": "ABCDEFGHIJKLMNOPQRSTUVWXY",
+      "po_line_number": "268758-03",
+      "po_line_workflow_status": "Open",
+      "publication_date": "2017",
+      "publisher": "Schiffer Publishing",
+      "receipt_date": "2018-10-09T00:00:00.000Z",
+      "receipt_status": "Awaiting Receipt",
+      "reporting_codes": [
+        {
+          "code": "CODE1",
+          "id": "5926dcd7-85f5-4504-8283-712595ebc38b",
+          "description": "ABCDEF"
+        },
+        {
+          "code": "CODE2",
+          "id": "fa316c04-8101-4e72-8aaf-01281bac718f",
+          "description": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        },
+        {
+          "code": "CODE3",
+          "id": "ea68b696-3125-4940-bf91-1d128323473e",
+          "description": "ABCDE"
+        }
+      ],
+      "requester": "Leo Bulero",
+      "rush": true,
+      "selector": "ABCD",
+      "source": {
+        "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
+        "id": "024b6f41-c5c6-4280-858e-33fba452a334",
+        "description": "ABCDEFGHIJKLMNO"
+      },
+      "tags": [
+        "ABCDEFGHIJKLMNOPQRSTU",
+        "ABCDEFG",
+        "ABCDEFGHIJKLMNOPQRSTU",
+        "ABCDEFGHIJKLMNO"
+      ],
+      "title": "Kayak Fishing in the Northern Gulf Coast",
+      "vendor_detail": {
+        "instructions": "ABCDEFG",
+        "note_from_vendor": "ABCDEFGHIKJKLMNOP",
+        "ref_number": "123456-78",
+        "ref_number_type": "Supplier's unique order line reference number",
+        "vendor_account": "8910-10"
       },
       "metadata": {
-        "createdDate": "2018-06-29T00:00:00.000",
-        "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
+        "createdDate": "2010-10-08T03:53:00.000",
+        "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
+      }
+    },
+    {
+      "id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
+      "acquisition_method": "Purchase",
+      "adjustment": {
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoice_id": "2ddfeb5c-1237-476f-aa88-57f7cbf74ca4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax_1": 0.0,
+        "tax_2": 0.0,
+        "use_pro_rate": false,
+        "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+      },
+      "alerts": [],
+      "cancellation_restriction": false,
+      "cancellation_restriction_note": "",
+      "claims": [
+        {
+          "claimed": false,
+          "grace": 0,
+          "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+        }
+      ],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "Ed Mashburn",
+          "contributor_type": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+        }
+      ],
+      "cost": {
+        "list_price": 75.22,
+        "currency": "USD",
+        "quantity_physical": 0,
+        "quantity_electronic": 1,
+        "po_line_estimated_price": 75.22,
+        "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+      },
+      "description": "",
+      "details": {
+        "receiving_note": "",
+        "product_ids": [
+          {
+            "product_id": "9781118416068",
+            "product_id_type": "ISBN"
+          }
+        ],
+        "material_types": [
+          "fde2e958-cde3-11e8-a8d5-f2801f1b9fd1"
+        ],
+        "subscription_from": null,
+        "subscription_interval": 0,
+        "subscription_to": null,
+        "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+      },
+      "donor": "",
+      "fund_distribution": [
+        {
+          "code": "MISCHIST-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08015",
+          "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+        }
+      ],
+      "location": {
+        "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
+        "quantity": 1,
+        "quantity_electronic": 1,
+        "quantity_physical": 0
+      },
+      "order_format": "Electronic Resource",
+      "owner": "LTS E-Resources & Serials",
+      "payment_status": "Awaiting Payment",
+      "po_line_description": "",
+      "po_line_workflow_status": "Closed",
+      "publication_date": "2017",
+      "publisher": "John Wiley & Sons, Inc.",
+      "purchase_order_id": "ab18897b-0e40-4f31-896b-9c9adc979a89",
+      "receipt_date": null,
+      "receipt_status": "Fully Received",
+      "reporting_codes": [],
+      "requester": "",
+      "rush": false,
+      "selector": "Woods",
+      "source": {
+        "code": "",
+        "description": "Manually entered"
+      },
+      "tags": [""],
+      "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
+      "vendor_detail": {
+        "note_from_vendor": "",
+        "instructions": "ABCDEFG",
+        "ref_number": "999632785",
+        "ref_number_type": "Supplier's unique order line reference number",
+        "vendor_account": "12345-50",
+        "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+      },
+      "metadata": {
+        "createdDate": "2010-10-08T03:53:00.000",
+        "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
       }
     }
   ]

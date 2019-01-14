@@ -17,6 +17,7 @@ types:
   receiving_results: !include acq-models/mod-orders/schemas/receiving_results.json
   receiving_history: !include acq-models/mod-orders-storage/schemas/receiving_history_collection.json
   errors: !include raml-util/schemas/errors.schema
+  po-number: !include acq-models/mod-orders-storage/schemas/po_number.json
   UUID:
     type: string
     pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
@@ -57,6 +58,29 @@ resourceTypes:
         example:
           strict: false
           value: !include acq-models/examples/composite_purchase_order.sample
+  /po-number/validate:
+
+     displayName: PO Number Validation
+     post:
+        description: validate if the PO Number is unique and matches the pattern specified
+        is: [validate, auth , language]
+        body:
+          application/json:
+            type: po-number
+        responses:
+          204:
+            description: "Valid PO Number"
+          400:
+            description: "Bad request, e.g. existing PO Number. Details of the error provided in the response."
+            body:
+              text/plain:
+                example: |
+                  "unable to add <<resourcePathName|!singularize>> -- malformed JSON at 13:3"
+          500:
+            description: "Internal server error, e.g. due to misconfiguration"
+            body:
+              text/plain:
+                example: "Internal server error, contact administrator"
   /{id}:
     uriParameters:
       id:
@@ -67,8 +91,19 @@ resourceTypes:
         exampleItem: !include acq-models/examples/composite_purchase_order.sample
         schema: composite_purchase_order
     is: [validate]
+    put:
+      description: Update an order by id
+      is: [validate]
+      responses:
+        500:
+          body:
+            application/json:
+              type: errors
+              example:
+                strict: false
+                value: !include raml-util/examples/errors.sample
     /lines:
-      displayName: Purchace Order Lines
+      displayName: Purchase Order Lines
       description: Manage purchase order (PO) lines
       type:
         # Using `post-item` resource type because at the moment only POST is required. In case GET becomes also required, the `collection` resource type should be used instead

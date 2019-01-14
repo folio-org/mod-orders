@@ -3,6 +3,7 @@
  * [MODORDERS-78](https://issues.folio.org/browse/MODORDERS-78) - Implemented GET order line logic
  * [MODORDERS-77](https://issues.folio.org/browse/MODORDERS-77) - Implemented PUT order line logic
  * [MODORDERS-76](https://issues.folio.org/browse/MODORDERS-76) - Implemented POST order line logic
+ * [MODORDERS-89](https://issues.folio.org/browse/MODORDERS-89) - New API to validate PO Number
  * [MODORDERS-72](https://issues.folio.org/browse/MODORDERS-72) - Define receiving endpoints
 ## 1.0.2
  * [MODORDERS-79](https://issues.folio.org/browse/MODORDERS-79) - Implemented delete order line logic

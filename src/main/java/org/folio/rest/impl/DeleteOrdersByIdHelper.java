@@ -3,95 +3,58 @@ package org.folio.rest.impl;
 import static org.folio.orders.utils.SubObjects.PURCHASE_ORDER;
 import static org.folio.orders.utils.SubObjects.resourceByIdPath;
 
-
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import javax.ws.rs.core.Response;
 
-import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.resource.Orders.DeleteOrdersByIdResponse;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
-public class DeleteOrdersByIdHelper {
-  private static final Logger logger = LoggerFactory.getLogger(DeleteOrdersByIdHelper.class);
+public class DeleteOrdersByIdHelper extends AbstractHelper {
 
-  private final HttpClientInterface httpClient;
-  private final Context ctx;
-  private final Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler;
-  private final Map<String, String> okapiHeaders;
-
-  public DeleteOrdersByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context ctx) {
-    Map<String, String> customHeader = new HashMap<>();
-    customHeader.put(HttpHeaders.ACCEPT.toString(), "application/json, text/plain");
-    httpClient.setDefaultHeaders(customHeader);
-
-    this.httpClient = httpClient;
-    this.okapiHeaders = okapiHeaders;
-    this.ctx = ctx;
-    this.asyncResultHandler = asyncResultHandler;
+  public DeleteOrdersByIdHelper(Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
+    super(getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx, lang);
+    setDefaultHeaders(httpClient);
   }
 
-  public CompletableFuture<Void> deleteOrder(String id, String lang) {
+  public CompletableFuture<Void> deleteOrder(String id) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
     HelperUtils.deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger).thenRun(() -> {
       logger.info("Successfully deleted po_lines, proceding with purchase order");
       HelperUtils.operateOnSubObj(HttpMethod.DELETE, resourceByIdPath(PURCHASE_ORDER, id), httpClient, ctx, okapiHeaders, logger)
-          .thenAccept(action -> future.complete(null)).exceptionally(t -> {
+          .thenAccept(action -> {
+            httpClient.closeClient();
+            future.complete(null);
+          }).exceptionally(t -> {
             logger.error("Failed to delete PO", t);
-            future.completeExceptionally(t.getCause());
+            future.completeExceptionally(t);
             return null;
           });
     }).exceptionally(t -> {
       logger.error("Failed to delete PO Lines", t);
-      future.completeExceptionally(t.getCause());
+      future.completeExceptionally(t);
       return null;
     });
 
     return future;
   }
 
-  public Void handleError(Throwable throwable) {
-    final Future<javax.ws.rs.core.Response> result;
 
-    logger.error("Exception deleting an order", throwable.getCause());
-
-    final Throwable t = throwable.getCause();
-    if (t instanceof HttpException) {
-      final int code = ((HttpException) t).getCode();
-      final String message = t.getMessage();
-      switch (code) {
-      case 404:
-        result = Future.succeededFuture(DeleteOrdersByIdResponse.respond404WithTextPlain(message));
-        break;
-      case 500:
-        result = Future.succeededFuture(DeleteOrdersByIdResponse.respond500WithTextPlain(message));
-        break;
-      default:
-        result = Future.succeededFuture(DeleteOrdersByIdResponse.respond500WithTextPlain(message));
-      }
-    } else {
-      result = Future.succeededFuture(DeleteOrdersByIdResponse.respond500WithTextPlain(throwable.getMessage()));
+  @Override
+  Response buildErrorResponse(int code, Error error) {
+    if (code == 404) {
+      return DeleteOrdersByIdResponse.respond404WithTextPlain(error.getMessage());
     }
-
-    httpClient.closeClient();
-
-    asyncResultHandler.handle(result);
-
-    return null;
+    return DeleteOrdersByIdResponse.respond500WithTextPlain(error.getMessage());
   }
 }

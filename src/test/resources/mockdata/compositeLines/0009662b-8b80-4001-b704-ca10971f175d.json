@@ -107,15 +107,6 @@
   "purchase_order_id": "95d29d04-34b1-4fe0-a15e-1cd129143692",
   "receipt_date": null,
   "receipt_status": "Pending",
-  "renewal": {
-    "id": "9e414baa-8cf2-4916-a90f-d1da4009e04e",
-    "cycle": "Two Years",
-    "interval": 12,
-    "manual_renewal": true,
-    "review_period": 90,
-    "renewal_date": "2020-07-19T00:00:00.000Z",
-    "po_line_id": "0009662b-8b80-4001-b704-ca10971f175d"
-  },
   "reporting_codes": [],
   "requester": "",
   "rush": false,
@@ -133,5 +124,9 @@
     "note_from_vendor": "",
     "vendor_account": "",
     "po_line_id": "0009662b-8b80-4001-b704-ca10971f175d"
+  },
+  "metadata": {
+    "createdDate": "2010-10-08T03:53:00.000",
+    "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
   }
 }
