@@ -205,7 +205,7 @@
         {
           "methods": ["POST"],
           "pathPattern": "/orders/check-in",
-          "permissionsRequired": ["orders.checkin.collection.post"],
+          "permissionsRequired": ["orders.check-in.collection.post"],
           "modulePermissions": [
             "orders-storage.pieces.collection.get",
             "orders-storage.pieces.item.put",
@@ -371,7 +371,7 @@
       "description": "Receive items spanning one or more po_lines in this order"
     },
     {
-      "permissionName": "orders.checkin.collection.post",
+      "permissionName": "orders.check-in.collection.post",
       "displayName": "Orders - Check-in items",
       "description": "Check-in items spanning one or more po_lines in this order"
     },
@@ -395,7 +395,7 @@
         "orders.po-lines.item.delete",
         "orders.po-number.item.post",
         "orders.receiving.collection.post",
-        "orders.checkin.collection.post",
+        "orders.check-in.collection.post",
         "orders.receiving-history.collection.get"
       ]
     }
