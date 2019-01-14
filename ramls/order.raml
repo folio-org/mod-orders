@@ -1,7 +1,7 @@
 #%RAML 1.0
 title: Orders
 baseUri: https://github.com/folio-org/mod-orders
-version: v1
+version: v1.1
 protocols: [ HTTP, HTTPS ]
 
 documentation:
@@ -12,10 +12,11 @@ types:
   composite_purchase_orders: !include acq-models/composite_purchase_orders.json
   composite_purchase_order: !include acq-models/composite_purchase_order.json
   po_line: !include acq-models/composite_po_line.json
-  checkin_collection: !include acq-models/mod-orders/schemas/checkin_collection.json
-  receiving_collection: !include acq-models/mod-orders/schemas/receiving_collection.json
-  receiving_results: !include acq-models/mod-orders/schemas/receiving_results.json
-  receiving_history: !include acq-models/mod-orders-storage/schemas/receiving_history_collection.json
+  checkin-collection: !include acq-models/mod-orders/schemas/checkinCollection.json
+  receiving-collection: !include acq-models/mod-orders/schemas/receivingCollection.json
+  receiving-results: !include acq-models/mod-orders/schemas/receivingResults.json
+  # Using for now mod-orders-storage schema. Once agreed what kind of extra data is required, the new schema will be defined
+  receiving-history: !include acq-models/mod-orders-storage/schemas/receiving_history_collection.json
   errors: !include raml-util/schemas/errors.schema
   po-number: !include acq-models/mod-orders-storage/schemas/po_number.json
   UUID:
@@ -155,30 +156,30 @@ resourceTypes:
                   example:
                     strict: false
                     value: !include raml-util/examples/errors.sample
-    /receiving:
-      displayName: Receive items
-      description: Receive items spanning one or more po_lines in this order
-      type:
-        post-with-200:
-          requestSchema: receiving_collection
-          responseSchema: receiving_results
-          requestExample: !include acq-models/mod-orders/examples/receiving_collection.sample
-          responseExample: !include acq-models/mod-orders/examples/receiving_results.sample
-      is: [validate]
-      post:
-        description: Receive items spanning one or more po_lines in this order
-    /check-in:
-      displayName: Check-in items
+  /receive:
+    displayName: Receive items
+    description: Receive items spanning one or more PO lines
+    type:
+      post-with-200:
+        requestSchema: receiving-collection
+        responseSchema: receiving-results
+        requestExample: !include acq-models/mod-orders/examples/receivingCollection.sample
+        responseExample: !include acq-models/mod-orders/examples/receivingResults.sample
+    is: [validate]
+    post:
+      description: Receive items spanning one or more PO lines
+  /check-in:
+    displayName: Check-in items
+    description: Check-in items spanning one or more PO lines
+    type:
+      post-with-200:
+        requestSchema: checkin-collection
+        responseSchema: receiving-results
+        requestExample: !include acq-models/mod-orders/examples/checkinCollection.sample
+        responseExample: !include acq-models/mod-orders/examples/receivingResults.sample
+    is: [validate]
+    post:
       description: Check-in items spanning one or more po_lines in this order
-      type:
-        post-with-200:
-          requestSchema: checkin_collection
-          responseSchema: receiving_results
-          requestExample: !include acq-models/mod-orders/examples/checkin_collection.sample
-          responseExample: !include acq-models/mod-orders/examples/receiving_results.sample
-      is: [validate]
-      post:
-        description: Check-in items spanning one or more po_lines in this order
   /receiving-history:
     displayName: Receiving history
     description: Get receiveing history matching the provided criteria
@@ -188,11 +189,11 @@ resourceTypes:
         description:
           "With valid searchable fields",
         example:
-          "title==Harry Potter AND receiving_status==received sortBy po_line_id"
+          "title==Harry Potter AND receiving_status==received sortBy po_line_number"
       },
       validate
     ]
     type:
       collection-get:
         exampleCollection: !include acq-models/mod-orders-storage/examples/receiving_history_collection.sample
-        schemaCollection: receiving_history
+        schemaCollection: receiving-history

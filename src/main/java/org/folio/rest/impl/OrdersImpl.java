@@ -1,27 +1,5 @@
 package org.folio.rest.impl;
 
-import static io.vertx.core.Future.succeededFuture;
-import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
-import static org.folio.orders.utils.HelperUtils.GET_ALL_POLINES_QUERY_WITH_LIMIT;
-import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.loadConfiguration;
-
-import java.util.Map;
-import java.util.concurrent.CompletionException;
-
-import javax.ws.rs.core.Response;
-
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.rest.exceptions.ValidationException;
-import org.folio.rest.annotations.Validate;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PoNumber;
-import org.folio.rest.jaxrs.resource.Orders;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -29,32 +7,28 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.CheckinCollection;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.rest.jaxrs.model.ReceivingCollection;
 import org.folio.rest.jaxrs.resource.Orders;
-import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.rest.tools.utils.TenantTool;
 
 import javax.ws.rs.core.Response;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
 
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.GET_ALL_POLINES_QUERY_WITH_LIMIT;
-import static org.folio.orders.utils.HelperUtils.OKAPI_URL;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.loadConfiguration;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-
-import static io.vertx.core.Future.succeededFuture;
 
 public class OrdersImpl implements Orders {
 
@@ -259,21 +233,25 @@ public class OrdersImpl implements Orders {
   public void postOrdersPoNumberValidate(String lang, PoNumber entity, Map<String, String> okapiHeaders,
      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    ValidationHelper helper=new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
+    ValidationHelper helper = new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
     logger.info("Validating a PO Number");
     //@Validate asserts the pattern of a PO Number, the below method is used to check for uniqueness
-     helper.checkPONumberUnique(entity, lang);
+    helper.checkPONumberUnique(entity, lang);
+  }
+
   @Override
   @Validate
-  public void postOrdersReceivingById(String id, String lang, ReceivingCollection entity, Map<String, String> okapiHeaders,
+  public void postOrdersReceive(String lang, ReceivingCollection entity, Map<String, String> okapiHeaders,
                                       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    // Return 501 (Not Implemented) for now
     asyncResultHandler.handle(succeededFuture(Response.status(501).build()));
   }
 
   @Override
   @Validate
-  public void postOrdersCheckInById(String id, String lang, CheckinCollection entity, Map<String, String> okapiHeaders,
+  public void postOrdersCheckIn(String lang, CheckinCollection entity, Map<String, String> okapiHeaders,
                                     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    // Return 501 (Not Implemented) for now
     asyncResultHandler.handle(succeededFuture(Response.status(501).build()));
   }
 
@@ -281,13 +259,8 @@ public class OrdersImpl implements Orders {
   @Validate
   public void getOrdersReceivingHistory(String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
                                         Context vertxContext) {
+    // Return 501 (Not Implemented) for now
     asyncResultHandler.handle(succeededFuture(Response.status(501).build()));
-  }
-
-  public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {
-    final String okapiURL = okapiHeaders.getOrDefault(OKAPI_URL, "");
-    final String tenantId = TenantTool.calculateTenantId(okapiHeaders.get(OKAPI_HEADER_TENANT));
-
   }
 
   private static int getPoLineLimit(JsonObject config) {
