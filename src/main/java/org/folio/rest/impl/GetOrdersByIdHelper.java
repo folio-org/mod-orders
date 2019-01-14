@@ -8,7 +8,7 @@ import javax.ws.rs.core.Response;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.resource.Orders.GetOrdersByIdResponse;
+import org.folio.rest.jaxrs.resource.Orders.GetOrdersCompositeOrdersByIdResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
@@ -74,9 +74,9 @@ public class GetOrdersByIdHelper extends AbstractHelper {
   @Override
   Response buildErrorResponse(int code, Error error) {
     if (code == 404) {
-       return GetOrdersByIdResponse.respond404WithTextPlain(error.getMessage());
+       return GetOrdersCompositeOrdersByIdResponse.respond404WithTextPlain(error.getMessage());
     }
-    return GetOrdersByIdResponse.respond500WithTextPlain(error.getMessage());
+    return GetOrdersCompositeOrdersByIdResponse.respond500WithTextPlain(error.getMessage());
   }
 
 }

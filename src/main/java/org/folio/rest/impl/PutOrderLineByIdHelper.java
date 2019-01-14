@@ -4,7 +4,7 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
 import static org.folio.orders.utils.SubObjects.*;
-import static org.folio.rest.jaxrs.resource.Orders.PutOrdersLinesByIdAndLineIdResponse.*;
+import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByLineIdResponse.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -49,8 +49,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   /**
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
-  public void updateOrderLine(String orderId, PoLine compOrderLine) {
-    getPoLineByIdAndValidate(orderId, compOrderLine.getId())
+  public void updateOrderLine(PoLine compOrderLine) {
+    getPoLineByIdAndValidate(compOrderLine.getId())
       .thenCompose(lineFromStorage -> updateOrderLine(compOrderLine, lineFromStorage))
       .thenAccept(v -> {
         httpClient.closeClient();
