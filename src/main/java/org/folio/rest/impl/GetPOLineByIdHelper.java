@@ -9,7 +9,7 @@ import javax.ws.rs.core.Response;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.PoLine;
-import static org.folio.rest.jaxrs.resource.Orders.GetOrdersOrderLinesByIdResponse.*;
+import org.folio.rest.jaxrs.resource.Orders.GetOrdersOrderLinesByIdResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
@@ -49,13 +49,13 @@ public class GetPOLineByIdHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 404:
-        result = respond404WithTextPlain(error.getMessage());
+        result = GetOrdersOrderLinesByIdResponse.respond404WithTextPlain(error.getMessage());
         break;
       case 422:
-        result = respond422WithApplicationJson(withErrors(error));
+        result = GetOrdersOrderLinesByIdResponse.respond422WithApplicationJson(withErrors(error));
         break;
       default:
-        result = respond500WithTextPlain(error.getMessage());
+        result = GetOrdersOrderLinesByIdResponse.respond500WithTextPlain(error.getMessage());
     }
     return result;
   }

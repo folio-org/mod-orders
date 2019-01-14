@@ -2,7 +2,7 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.deletePoLine;
-import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersOrderLinesByIdResponse.*;
+import org.folio.rest.jaxrs.resource.Orders.DeleteOrdersOrderLinesByIdResponse;
 
 import java.util.Map;
 
@@ -29,7 +29,7 @@ class DeleteOrderLineByIdHelper extends AbstractHelper {
       })
       .thenAccept(v -> {
         httpClient.closeClient();
-        asyncResultHandler.handle(succeededFuture(respond204()));
+        asyncResultHandler.handle(succeededFuture(DeleteOrdersOrderLinesByIdResponse.respond204()));
       })
       .exceptionally(this::handleError);
   }
@@ -39,13 +39,13 @@ class DeleteOrderLineByIdHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 404:
-        result = respond404WithTextPlain(error.getMessage());
+        result = DeleteOrdersOrderLinesByIdResponse.respond404WithTextPlain(error.getMessage());
         break;
       case 422:
-        result = respond422WithApplicationJson(withErrors(error));
+        result = DeleteOrdersOrderLinesByIdResponse.respond422WithApplicationJson(withErrors(error));
         break;
       default:
-        result = respond500WithTextPlain(error.getMessage());
+        result = DeleteOrdersOrderLinesByIdResponse.respond500WithTextPlain(error.getMessage());
     }
     return result;
   }
