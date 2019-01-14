@@ -28,23 +28,20 @@ public class ValidationHelper extends AbstractHelper{
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
-  void checkPONumberUnique(PoNumber poNumber, String lang) {
-    try {
-      checkPONumberUnique(poNumber.getPoNumber(), lang)
-        .thenAccept(aVoid -> {
-          asyncResultHandler.handle(succeededFuture(respond204()));
-          httpClient.closeClient();
-        })
-        .exceptionally(this::handleError);
-    } catch (Exception e) {
-      handleError(e);
-    }
+  void checkPONumberUnique(PoNumber poNumber) {
+    checkPONumberUnique(poNumber.getPoNumber())
+      .thenAccept(aVoid -> {
+        asyncResultHandler.handle(succeededFuture(respond204()));
+        httpClient.closeClient();
+      })
+      .exceptionally(this::handleError);
   }
 
-  CompletableFuture<Void> checkPONumberUnique(String poNumber, String lang) {
+  CompletableFuture<Void> checkPONumberUnique(String poNumber) {
     return getPurchaseOrderByPONumber(poNumber, lang, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(po -> {
          if (po.getInteger("total_records") != 0) {
+           logger.error("Exception validating PO Number existence");
            throw new CompletionException(new HttpException(400, PO_NUMBER_ALREADY_EXISTS));
          }
       });

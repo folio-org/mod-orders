@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.deletePoLine;
@@ -56,11 +57,12 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   public void updateOrderWithPoLines(String orderId, CompositePurchaseOrder compPO) {
     getPurchaseOrderById(orderId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(poFromStorage -> {
-        boolean isPoNumberChanged = !StringUtils.equals(poFromStorage.getString(PO_NUMBER), compPO.getPoNumber());
+        String oldPoNumber = poFromStorage.getString(PO_NUMBER);
+        boolean isPoNumberChanged = !StringUtils.equalsIgnoreCase(oldPoNumber, compPO.getPoNumber());
         boolean isRequestContainsLines = !CollectionUtils.isEmpty(compPO.getPoLines());
 
         if (isPoNumberChanged) {
-          validationHelper.checkPONumberUnique(compPO.getPoNumber(), lang)
+          validationHelper.checkPONumberUnique(compPO.getPoNumber())
             .thenAccept(aVoid -> {
               if (isRequestContainsLines) {
                 updateOrderWithPoLines(poFromStorage, compPO, this::handlePoLines);
@@ -91,8 +93,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
       .exceptionally(this::handleError);
   }
 
-  private CompletableFuture<Void> updateOrder(String orderId, CompositePurchaseOrder compPO) {
-    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+  private void updateOrder(String orderId, CompositePurchaseOrder compPO) {
 
     logger.debug("Updating order...");
     JsonObject purchaseOrder = convertToPurchaseOrder(compPO);
@@ -119,17 +120,15 @@ public class PutOrdersByIdHelper extends AbstractHelper {
       })
       .exceptionally(this::handleError);
 
-    return future;
   }
 
   private CompletableFuture<Void> updatePoLinesNumber(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
-    List<CompletableFuture<?>> futures = new ArrayList<>();
-    poLinesFromStorage.forEach(object -> {
-      JsonObject lineFromStorage = (JsonObject) object;
-      lineFromStorage.put(PO_LINE_NUMBER, buildNewPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER), compOrder.getPoNumber()));
+    List<CompletableFuture<?>> futures = poLinesFromStorage.stream().map(o -> {
+      JsonObject lineFromStorage = (JsonObject) o;
+      lineFromStorage.put(PO_LINE_NUMBER, buildNewPoLineNumber(lineFromStorage, compOrder.getPoNumber()));
       String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES, lineFromStorage.getString(ID)), lang);
-      futures.add(operateOnSubObj(HttpMethod.PUT, endpoint, lineFromStorage, httpClient, ctx, okapiHeaders, logger));
-    });
+      return operateOnSubObj(HttpMethod.PUT, endpoint, lineFromStorage, httpClient, ctx, okapiHeaders, logger);
+    }).collect(Collectors.toList());
     return VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]));
   }
 
@@ -139,19 +138,20 @@ public class PutOrdersByIdHelper extends AbstractHelper {
       futures.addAll(processPoLinesCreation(compOrder, poLinesFromStorage));
     } else {
       futures.addAll(processPoLinesCreation(compOrder, poLinesFromStorage));
-      futures.addAll(processPoLinesUpdate(compOrder.getPoLines(), poLinesFromStorage));
+      futures.addAll(processPoLinesUpdate(compOrder, poLinesFromStorage));
       // The remaining unprocessed PoLines should be removed
       poLinesFromStorage.stream().forEach(poLine -> futures.add(deletePoLine((JsonObject) poLine, httpClient, ctx, okapiHeaders, logger)));
     }
     return VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]));
   }
 
-  private List<CompletableFuture<?>> processPoLinesUpdate(List<PoLine> poLines, JsonArray poLinesFromStorage) {
+  private List<CompletableFuture<?>> processPoLinesUpdate(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
     List<CompletableFuture<?>> futures = new ArrayList<>();
     for (int i = 0; i < poLinesFromStorage.size(); i++) {
       JsonObject lineFromStorage = poLinesFromStorage.getJsonObject(i);
-      for (PoLine line : poLines) {
+      for (PoLine line : compOrder.getPoLines()) {
         if (StringUtils.equals(lineFromStorage.getString(ID), line.getId())) {
+          line.setPoLineNumber(buildNewPoLineNumber(lineFromStorage, compOrder.getPoNumber()));
           futures.add(putLineHelper.updateOrderLine(line, lineFromStorage));
           poLinesFromStorage.remove(i);
           break;
@@ -162,36 +162,31 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   }
 
   private List<CompletableFuture<?>> processPoLinesCreation(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
-    List<CompletableFuture<?>> futures = new ArrayList<>();
     boolean updateInventory = compOrder.getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.OPEN;
-    for (PoLine line : compOrder.getPoLines()) {
-      boolean isNew = true;
-      for (int i = 0; i < poLinesFromStorage.size(); i++) {
-        JsonObject lineFromStorage = poLinesFromStorage.getJsonObject(i);
-        if (StringUtils.equals(lineFromStorage.getString(ID), line.getId())) {
-          isNew = false;
-          break;
-        }
-      }
-      if (isNew) {
-        futures.add(postOrderLineHelper.createPoLine(line, updateInventory));
-      }
-    }
-    return futures;
+    return  compOrder.getPoLines().stream().filter(poLine ->
+      poLinesFromStorage.stream()
+        .map(o -> ((JsonObject) o).getString(ID))
+        .noneMatch(s -> StringUtils.equals(s, poLine.getId()))
+    ).map(poLine -> postOrderLineHelper.createPoLine(poLine, updateInventory))
+      .collect(Collectors.toList());
   }
 
-  private String buildNewPoLineNumber(String poLineFromStorage, String poNumber) {
-    Matcher matcher = PO_LINE_NUMBER_PATTERN.matcher(poLineFromStorage);
+  private String buildNewPoLineNumber(JsonObject poLineFromStorage, String poNumber) {
+    String oldPoLineNumber = poLineFromStorage.getString(PO_LINE_NUMBER);
+    Matcher matcher = PO_LINE_NUMBER_PATTERN.matcher(oldPoLineNumber);
     if (matcher.find()) {
-      return poNumber + matcher.group(1);
+      return poNumber + matcher.group(2);
     }
-    return poLineFromStorage;
+    return oldPoLineNumber;
   }
 
   @Override
   Response buildErrorResponse(int code, Error error) {
     final Response result;
     switch (code) {
+      case 400:
+        result = PutOrdersByIdResponse.respond400WithTextPlain(error.getMessage());
+        break;
       case 404:
         result = PutOrdersByIdResponse.respond404WithTextPlain(error.getMessage());
         break;
