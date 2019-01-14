@@ -2,10 +2,7 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.deletePoLine;
-import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersLinesByIdAndLineIdResponse.respond204;
-import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersLinesByIdAndLineIdResponse.respond404WithTextPlain;
-import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersLinesByIdAndLineIdResponse.respond422WithApplicationJson;
-import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersLinesByIdAndLineIdResponse.respond500WithTextPlain;
+import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersOrderLinesByLineIdResponse.*;
 
 import java.util.Map;
 
@@ -24,8 +21,8 @@ class DeleteOrderLineByIdHelper extends AbstractHelper {
     setDefaultHeaders(httpClient);
   }
 
-  void deleteLine(String orderId, String lineId) {
-    getPoLineByIdAndValidate(orderId, lineId)
+  void deleteLine(String lineId) {
+    getPoLineByIdAndValidate(lineId)
       .thenCompose(line -> {
         logger.debug("Deleting PO line...");
         return deletePoLine(line, httpClient, ctx, okapiHeaders, logger);

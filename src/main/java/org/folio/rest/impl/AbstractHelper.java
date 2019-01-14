@@ -63,23 +63,22 @@ public abstract class AbstractHelper {
   /**
    * Retrieves PO line from storage by PO line id as JsonObject and validates order id match.
    */
-  protected CompletableFuture<JsonObject> getPoLineByIdAndValidate(String orderId, String lineId) {
+  protected CompletableFuture<JsonObject> getPoLineByIdAndValidate(String lineId) {
     return getPoLineById(lineId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(line -> {
         logger.debug("Validating if the retrieved PO line corresponds to PO");
-        validateOrderId(orderId, line);
+        validateOrderId(line);
         return line;
       });
   }
 
   /**
-   * Validates if the retrieved PO line corresponds to PO (orderId). In case the PO line does not correspond to order id the exception is thrown
-   * @param orderId order identifier
+   * Validates if the retrieved PO line corresponds to PO (orderId). In case the PO line does not correspond to any order id the exception is thrown
    * @param line PO line retrieved from storage
    */
-  private void validateOrderId(String orderId, JsonObject line) {
-    if (!StringUtils.equals(orderId, line.getString("purchase_order_id"))) {
-      String msg = String.format("The PO line with id=%s does not belong to order with id=%s", line.getString(ID), orderId);
+  private void validateOrderId(JsonObject line) {
+    if (StringUtils.equals("", line.getString("purchase_order_id"))) {
+      String msg = String.format("The PO line with id=%s does not contain order id", line.getString("id"));
       throw new CompletionException(new ValidationException(msg, ID_MISMATCH_ERROR_CODE));
     }
   }
