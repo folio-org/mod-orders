@@ -828,7 +828,6 @@ public class OrdersImplTest {
   @Test
   public void testValidationDelete() {
     logger.info("=== Test validation Annotation on DELETE API ===");
-    String id = "non-existent-po-id";
 
     logger.info("=== Test validation on invalid lang query parameter ===");
     RestAssured
@@ -836,7 +835,7 @@ public class OrdersImplTest {
        .header(X_OKAPI_URL)
        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
        .contentType(APPLICATION_JSON)
-     .delete(rootPath+"/"+id+INVALID_LANG)
+      .delete(rootPath + "/" + VALID_ORDER_ID + INVALID_LANG)
        .then()
          .statusCode(400)
          .body(containsString(INCORRECT_LANG_PARAMETER));
