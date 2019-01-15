@@ -148,31 +148,32 @@ public class OrdersImpl implements Orders {
     PostOrderLineHelper helper = new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
 
     logger.info("Creating POLine to an existing order...");
-    loadConfiguration(okapiHeaders, vertxContext, logger)
-      .thenAccept(config -> {
-        String orderId = poLine.getPurchaseOrderId();
-        if (orderId == null) {
-          throw new ValidationException(MISSING_ORDER_ID, "id_not_exists");
-        }
-        String endpoint = String.format(GET_ALL_POLINES_QUERY_WITH_LIMIT, 1, orderId, lang);
-        handleGetRequest(endpoint, httpClient, vertxContext, okapiHeaders, logger)
-          .thenAccept(entries -> {
-            int limit = getPoLineLimit(config);
-            if (entries.getInteger("total_records") < limit) {
-              helper.createPoLine(poLine, false)
-                .thenAccept(pol -> {
-                  logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
-                  httpClient.closeClient();
-                  Response response = PostOrdersOrderLinesResponse.respond201WithApplicationJson
-                    (poLine, PostOrdersOrderLinesResponse.headersFor201().withLocation(String.format(ORDER_LINE_LOCATION_PREFIX, pol.getId())));
-                  asyncResultHandler.handle(succeededFuture(response));
-                })
-                .exceptionally(helper::handleError);
-            } else {
-              throw new ValidationException(String.format(OVER_LIMIT_ERROR_MESSAGE, limit), LINES_LIMIT_ERROR_CODE);
-            }
-          }).exceptionally(helper::handleError);
-      }).exceptionally(helper::handleError);
+    String orderId = poLine.getPurchaseOrderId();
+    if (orderId == null) {
+      helper.handleError(new CompletionException(new ValidationException(MISSING_ORDER_ID, "id_not_exists")));
+    } else {
+      loadConfiguration(okapiHeaders, vertxContext, logger)
+        .thenAccept(config -> {
+          String endpoint = String.format(GET_ALL_POLINES_QUERY_WITH_LIMIT, 1, orderId, lang);
+          handleGetRequest(endpoint, httpClient, vertxContext, okapiHeaders, logger)
+            .thenAccept(entries -> {
+              int limit = getPoLineLimit(config);
+              if (entries.getInteger("total_records") < limit) {
+                helper.createPoLine(poLine, false)
+                  .thenAccept(pol -> {
+                    logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
+                    httpClient.closeClient();
+                    Response response = PostOrdersOrderLinesResponse.respond201WithApplicationJson
+                      (poLine, PostOrdersOrderLinesResponse.headersFor201().withLocation(String.format(ORDER_LINE_LOCATION_PREFIX, pol.getId())));
+                    asyncResultHandler.handle(succeededFuture(response));
+                  })
+                  .exceptionally(helper::handleError);
+              } else {
+                throw new ValidationException(String.format(OVER_LIMIT_ERROR_MESSAGE, limit), LINES_LIMIT_ERROR_CODE);
+              }
+            }).exceptionally(helper::handleError);
+        }).exceptionally(helper::handleError);
+    }
   }
 
   @Override
