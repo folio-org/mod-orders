@@ -18,6 +18,7 @@ import org.folio.rest.jaxrs.resource.Orders.PutOrdersByIdResponse;
 
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -149,13 +150,14 @@ public class PutOrdersByIdHelper extends AbstractHelper {
 
   private List<CompletableFuture<?>> processPoLinesUpdate(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
     List<CompletableFuture<?>> futures = new ArrayList<>();
-    for (int i = 0; i < poLinesFromStorage.size(); i++) {
-      JsonObject lineFromStorage = poLinesFromStorage.getJsonObject(i);
+    Iterator<Object> iterator = poLinesFromStorage.iterator();
+    while (iterator.hasNext()) {
+      JsonObject lineFromStorage = (JsonObject) iterator.next();
       for (PoLine line : compOrder.getPoLines()) {
         if (StringUtils.equals(lineFromStorage.getString(ID), line.getId())) {
           line.setPoLineNumber(buildNewPoLineNumber(lineFromStorage, compOrder.getPoNumber()));
           futures.add(putLineHelper.updateOrderLine(line, lineFromStorage));
-          poLinesFromStorage.remove(i);
+          iterator.remove();
           break;
         }
       }
