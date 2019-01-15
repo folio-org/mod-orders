@@ -1524,13 +1524,13 @@ public class OrdersImplTest {
 
     final Response response = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(EXIST_CONFIG_X_OKAPI_TENANT)
-      .get("/orders/po_number")
-      .then()
-      .statusCode(200)
-      .extract()
-      .response();
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT)
+      .get("/orders/po-number")
+        .then()
+          .statusCode(200)
+          .extract()
+          .response();
 
     String actualResponse = response.getBody().asString();
     logger.info(actualResponse);
@@ -1548,13 +1548,13 @@ public class OrdersImplTest {
 
     RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(PO_NUMBER_ERROR_X_OKAPI_TENANT)
-      .get("/orders/po_number")
-      .then()
-      .statusCode(500)
-      .extract()
-      .response();
+        .header(X_OKAPI_URL)
+        .header(PO_NUMBER_ERROR_X_OKAPI_TENANT)
+      .get("/orders/po-number")
+        .then()
+          .statusCode(500)
+          .extract()
+          .response();
   }
 
   private Response verifyPut(String url, String body, String expectedContentType, int expectedCode) {

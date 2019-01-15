@@ -22,6 +22,7 @@
             "orders-storage.fund-distributions.item.post",
             "orders-storage.locations.item.post",
             "orders-storage.physicals.item.post",
+            "orders-storage.po_number.get",
             "orders-storage.reporting_codes.item.post",
             "orders-storage.sources.item.post",
             "orders-storage.vendor_details.item.post",
@@ -256,6 +257,10 @@
     },
     {
       "id": "orders-storage.po_lines",
+      "version": "1.0"
+    },
+    {
+      "id": "orders-storage.po_number",
       "version": "1.0"
     },
     {
