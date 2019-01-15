@@ -77,7 +77,7 @@ resourceTypes:
                     strict: false
                     value: !include raml-util/examples/errors.sample
         delete:
-          is: [validate]
+          is: [validate, language]
   /order-lines:
      displayName: Purchase Order Lines
      description: Manage purchase order (PO) lines
@@ -121,7 +121,7 @@ resourceTypes:
                    strict: false
                    value: !include raml-util/examples/errors.sample
        delete:
-         is: [validate]
+         is: [validate, language]
   /po-number:
     displayName: Purchase Order Lines Number
     description: Manage purchase order (PO) lines
@@ -129,7 +129,7 @@ resourceTypes:
        displayName: PO Number Validation
        post:
          description: validate if the PO Number is unique and matches the pattern specified
-         is: [validate, auth , language]
+         is: [validate, auth, language]
          body:
            application/json:
              type: po-number

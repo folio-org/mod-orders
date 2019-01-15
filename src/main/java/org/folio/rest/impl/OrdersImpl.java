@@ -39,6 +39,7 @@ public class OrdersImpl implements Orders {
   public static final String OVER_LIMIT_ERROR_MESSAGE = "Your FOLIO system is configured to limit the number of PO Lines on each order to %s.";
   public static final String MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE = "Mismatch between id in path and PoLine";
   public static final String LINES_LIMIT_ERROR_CODE = "lines_limit";
+  private static final String MISSING_ORDER_ID = "Purchase order id is missing in PoLine object";
 
 
   @Override
@@ -151,7 +152,7 @@ public class OrdersImpl implements Orders {
       .thenAccept(config -> {
         String orderId = poLine.getPurchaseOrderId();
         if (orderId == null) {
-          throw new ValidationException(MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE, "id_not_exists");
+          throw new ValidationException(MISSING_ORDER_ID, "id_not_exists");
         }
         String endpoint = String.format(GET_ALL_POLINES_QUERY_WITH_LIMIT, 1, orderId, lang);
         handleGetRequest(endpoint, httpClient, vertxContext, okapiHeaders, logger)

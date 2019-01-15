@@ -77,7 +77,7 @@ public abstract class AbstractHelper {
    * @param line PO line retrieved from storage
    */
   private void validateOrderId(JsonObject line) {
-    if (StringUtils.equals("", line.getString("purchase_order_id"))) {
+    if (StringUtils.isEmpty(line.getString("purchase_order_id"))) {
       String msg = String.format("The PO line with id=%s does not contain order id", line.getString("id"));
       throw new CompletionException(new ValidationException(msg, ID_MISMATCH_ERROR_CODE));
     }
