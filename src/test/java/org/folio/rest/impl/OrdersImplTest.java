@@ -1111,33 +1111,9 @@ public class OrdersImplTest {
     String orderId = getMockLine(lineId).getPurchaseOrderId();
     String url = String.format(LINE_BY_ID_PATH, lineId);
 
-    final Response resp = verifyPut(url, "{}", "", 204);
-    assertTrue(StringUtils.isEmpty(resp.getBody().asString()));
+    Errors resp = verifyPut(url, "{}", "", 422).as(Errors.class);
 
-    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(1, column.size());
-    assertThat(column, hasKey(PO_LINES));
-
-    column = MockServer.serverRqRs.column(HttpMethod.POST);
-    assertEquals(0, column.size());
-
-    column = MockServer.serverRqRs.column(HttpMethod.DELETE);
-    assertEquals(9, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, VENDOR_DETAIL, CLAIMS, FUND_DISTRIBUTION));
-    assertThat(column.get(CLAIMS), hasSize(2));
-
-    column = MockServer.serverRqRs.column(HttpMethod.PUT);
-    assertEquals(1, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(PO_LINES));
-
-    JsonObject lineWithIds = column.get(PO_LINES).get(0);
-
-    // Verify that object has only PO and PO line ids
-    assertEquals(lineId, lineWithIds.remove(ID));
-    lineWithIds.stream().forEach(entry -> {
-      Object value = entry.getValue();
-      assertTrue(Objects.isNull(value) || (value instanceof Iterable && !((Iterable) value).iterator().hasNext()));
-    });
+    assertEquals(1, resp.getErrors().size());
   }
 
   @Test

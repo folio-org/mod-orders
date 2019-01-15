@@ -51,7 +51,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
   public void updateOrderLine(PoLine compOrderLine) {
-    getPoLineByIdAndValidate(compOrderLine.getId())
+    getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(),compOrderLine.getId())
       .thenCompose(lineFromStorage -> updateOrderLine(compOrderLine, lineFromStorage))
       .thenAccept(v -> {
         httpClient.closeClient();
@@ -242,22 +242,23 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   /**
    * Retrieves PO line from storage by PO line id as JsonObject and validates order id match.
    */
-  protected CompletableFuture<JsonObject> getPoLineByIdAndValidate(String lineId) {
+  protected CompletableFuture<JsonObject> getPoLineByIdAndValidate(String orderId, String lineId) {
     return getPoLineById(lineId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(line -> {
         logger.debug("Validating if the retrieved PO line corresponds to PO");
-        validateOrderId(line);
+        validateOrderId(orderId, line);
         return line;
       });
   }
 
   /**
-   * Validates if the retrieved PO line corresponds to PO (orderId). In case the PO line does not correspond to any order id the exception is thrown
+   * Validates if the retrieved PO line corresponds to PO (orderId). In case the PO line does not correspond to order id the exception is thrown
+   * @param orderId order identifier
    * @param line PO line retrieved from storage
    */
-  private void validateOrderId(JsonObject line) {
-    if (StringUtils.isEmpty(line.getString("purchase_order_id"))) {
-      String msg = String.format("The PO line with id=%s does not contain order id", line.getString("id"));
+  private void validateOrderId(String orderId, JsonObject line) {
+    if (!StringUtils.equals(orderId, line.getString("purchase_order_id"))) {
+      String msg = String.format("The PO line with id=%s does not belong to order with id=%s", line.getString("id"), orderId);
       throw new CompletionException(new ValidationException(msg, ID_MISMATCH_ERROR_CODE));
     }
   }

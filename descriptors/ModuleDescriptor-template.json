@@ -35,7 +35,7 @@
         },
         {
           "methods": ["GET"],
-          "pathPattern": "/orders/composite-order/{id}",
+          "pathPattern": "/orders/composite-orders/{id}",
           "permissionsRequired": ["orders.item.get"],
           "modulePermissions": [
             "orders-storage.purchase_orders.item.get",
