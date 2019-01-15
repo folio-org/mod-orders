@@ -120,19 +120,20 @@ public class OrdersImpl implements Orders {
       putHelper.handleError(new CompletionException((new ValidationException("po_number is missing"))));
     } else {
       if (CollectionUtils.isEmpty(compPO.getPoLines())) {
-        putHelper.updateOrderWithPoLines(orderId, compPO);
+        putHelper.updateOrder(orderId, compPO);
       } else {
-        loadConfiguration(okapiHeaders, vertxContext, logger).thenAccept(config -> {
-          validatePoLinesQuantity(compPO, config);
-          compPO.getPoLines().forEach(poLine -> {
-            if (StringUtils.isEmpty(poLine.getPurchaseOrderId())) {
-              poLine.setPurchaseOrderId(orderId);
-            }
-            if (!orderId.equals(poLine.getPurchaseOrderId())) {
-              throw new ValidationException(MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE, AbstractHelper.ID_MISMATCH_ERROR_CODE);
-            }
-          });
-          putHelper.updateOrderWithPoLines(orderId, compPO);
+        loadConfiguration(okapiHeaders, vertxContext, logger)
+          .thenAccept(config -> {
+            validatePoLinesQuantity(compPO, config);
+            compPO.getPoLines().forEach(poLine -> {
+              if (StringUtils.isEmpty(poLine.getPurchaseOrderId())) {
+                poLine.setPurchaseOrderId(orderId);
+              }
+              if (!orderId.equals(poLine.getPurchaseOrderId())) {
+                throw new ValidationException(MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE, AbstractHelper.ID_MISMATCH_ERROR_CODE);
+              }
+            });
+            putHelper.updateOrder(orderId, compPO);
         }).exceptionally(putHelper::handleError);
       }
     }

@@ -51,6 +51,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   public void updateOrderLine(String orderId, PoLine compOrderLine) {
     getPoLineByIdAndValidate(orderId, compOrderLine.getId())
       .thenCompose(lineFromStorage -> {
+        // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line update
         compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
         return updateOrderLine(compOrderLine, lineFromStorage);
       })
@@ -78,11 +79,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   public CompletableFuture<Void> updateOrderLine(PoLine compOrderLine, JsonObject lineFromStorage) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
     updatePoLineSubObjects(compOrderLine, lineFromStorage)
-      .thenCompose(poLine -> {
-        logger.debug("Updating PO line...");
-        String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES, compOrderLine.getId()), lang);
-        return operateOnSubObj(HttpMethod.PUT, endpoint, poLine, httpClient, ctx, okapiHeaders, logger);
-      })
+      .thenCompose(poLine -> updateOrderLineSummary(compOrderLine.getId(), poLine))
       .thenAccept(entries -> future.complete(null))
       .exceptionally(throwable -> {
         future.completeExceptionally(throwable);
@@ -90,6 +87,15 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       });
 
     return future;
+  }
+
+  /**
+   * Handle update of the order line without sub-objects
+   */
+  public CompletableFuture<JsonObject> updateOrderLineSummary(String poLineId, JsonObject poLine) {
+    logger.debug("Updating PO line...");
+    String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES, poLineId), lang);
+    return operateOnSubObj(HttpMethod.PUT, endpoint, poLine, httpClient, ctx, okapiHeaders, logger);
   }
 
   /**

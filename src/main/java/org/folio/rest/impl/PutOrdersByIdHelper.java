@@ -21,12 +21,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.deletePoLine;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
@@ -53,51 +51,57 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     postOrderLineHelper = new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
     validationHelper = new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
-
-  public void updateOrderWithPoLines(String orderId, CompositePurchaseOrder compPO) {
+  /**
+   * Handles update of the order. First retrieve the PO from storage and depending on its content handle passed PO.
+   */
+  public void updateOrder(String orderId, CompositePurchaseOrder compPO) {
     getPurchaseOrderById(orderId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(poFromStorage -> {
-        String oldPoNumber = poFromStorage.getString(PO_NUMBER);
-        boolean isPoNumberChanged = !StringUtils.equalsIgnoreCase(oldPoNumber, compPO.getPoNumber());
-        boolean isRequestContainsLines = !CollectionUtils.isEmpty(compPO.getPoLines());
-
-        if (isPoNumberChanged) {
-          validationHelper.checkPONumberUnique(compPO.getPoNumber())
-            .thenAccept(aVoid -> {
-              if (isRequestContainsLines) {
-                updateOrderWithPoLines(poFromStorage, compPO, this::handlePoLines);
-              } else {
-                updateOrderWithPoLines(poFromStorage, compPO, this::updatePoLinesNumber);
-              }
-            })
-            .exceptionally(this::handleError);
+        compPO.setId(orderId);
+        if (isPoNumberChanged(poFromStorage, compPO) || isRequestContainsLines(compPO)) {
+          updateOrderWithPoLines(poFromStorage, compPO);
         } else {
-          if (isRequestContainsLines) {
-            updateOrderWithPoLines(poFromStorage, compPO, this::handlePoLines);
-          } else {
-            updateOrder(orderId, compPO);
-          }
+          updateOrder(compPO);
         }
       })
       .exceptionally(this::handleError);
   }
 
-  private void updateOrderWithPoLines(JsonObject poFromStorage, CompositePurchaseOrder compPO,
-                                      BiFunction<CompositePurchaseOrder, JsonArray, CompletableFuture<Void>> updatePoLines) {
+  private boolean isRequestContainsLines(CompositePurchaseOrder compPO) {
+    return !CollectionUtils.isEmpty(compPO.getPoLines());
+  }
+
+  private boolean isPoNumberChanged(JsonObject poFromStorage, CompositePurchaseOrder compPO) {
+    String oldPoNumber = poFromStorage.getString(PO_NUMBER);
+    return !StringUtils.equalsIgnoreCase(oldPoNumber, compPO.getPoNumber());
+  }
+
+  private void updateOrderWithPoLines(JsonObject poFromStorage, CompositePurchaseOrder compPO) {
     getPoLines(poFromStorage.getString(ID), lang, httpClient, ctx ,okapiHeaders, logger)
       .thenCompose(jsonObject -> {
         JsonArray existedPoLinesArray = jsonObject.getJsonArray(PO_LINES);
-        return updatePoLines.apply(compPO, existedPoLinesArray);
+        if (isPoNumberChanged(poFromStorage, compPO)) {
+          return validationHelper.checkPONumberUnique(compPO.getPoNumber())
+            .thenCompose(aVoid -> {
+              if (isRequestContainsLines(compPO)) {
+                return handlePoLines(compPO, existedPoLinesArray);
+              } else {
+                return updatePoLinesNumber(compPO, existedPoLinesArray);
+              }
+            });
+        } else {
+          return handlePoLines(compPO, existedPoLinesArray);
+        }
       })
-      .thenAccept(aVoid -> updateOrder(poFromStorage.getString(ID), compPO))
+      .thenAccept(aVoid -> updateOrder(compPO))
       .exceptionally(this::handleError);
   }
 
-  private void updateOrder(String orderId, CompositePurchaseOrder compPO) {
+  private void updateOrder(CompositePurchaseOrder compPO) {
 
     logger.debug("Updating order...");
     JsonObject purchaseOrder = convertToPurchaseOrder(compPO);
-    operateOnSubObj(HttpMethod.PUT, resourceByIdPath(PURCHASE_ORDER, orderId), purchaseOrder, httpClient, ctx, okapiHeaders, logger)
+    operateOnSubObj(HttpMethod.PUT, resourceByIdPath(PURCHASE_ORDER, compPO.getId()), purchaseOrder, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(v -> {
 
         logger.info("Applying Funds...");
@@ -123,13 +127,11 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> updatePoLinesNumber(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
-    List<CompletableFuture<?>> futures = poLinesFromStorage.stream().map(o -> {
+    return VertxCompletableFuture.allOf(ctx, poLinesFromStorage.stream().map(o -> {
       JsonObject lineFromStorage = (JsonObject) o;
       lineFromStorage.put(PO_LINE_NUMBER, buildNewPoLineNumber(lineFromStorage, compOrder.getPoNumber()));
-      String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES, lineFromStorage.getString(ID)), lang);
-      return operateOnSubObj(HttpMethod.PUT, endpoint, lineFromStorage, httpClient, ctx, okapiHeaders, logger);
-    }).collect(Collectors.toList());
-    return VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]));
+      return putLineHelper.updateOrderLineSummary(lineFromStorage.getString(ID), lineFromStorage);
+    }).toArray(CompletableFuture[]::new));
   }
 
   private CompletableFuture<Void> handlePoLines(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
