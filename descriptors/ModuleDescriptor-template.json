@@ -8,7 +8,7 @@
       "handlers": [
         {
           "methods": ["POST"],
-          "pathPattern": "/orders/composite-order",
+          "pathPattern": "/orders/composite-orders",
           "permissionsRequired": ["orders.item.post"],
           "modulePermissions": [
             "orders-storage.purchase_orders.item.post",
@@ -56,7 +56,7 @@
         },
         {
           "methods": ["PUT"],
-          "pathPattern": "/orders/composite-order/{id}",
+          "pathPattern": "/orders/composite-orders/{id}",
           "permissionsRequired": ["orders.item.put"],
           "modulePermissions": [
             "orders-storage.purchase_orders.item.put",
@@ -82,7 +82,7 @@
         },
         {
           "methods": ["DELETE"],
-          "pathPattern": "/orders/composite-order/{id}",
+          "pathPattern": "/orders/composite-orders/{id}",
           "permissionsRequired": ["orders.item.delete"],
           "modulePermissions": [
             "orders-storage.purchase_orders.item.delete",
