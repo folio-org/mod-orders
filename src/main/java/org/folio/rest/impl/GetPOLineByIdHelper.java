@@ -28,8 +28,7 @@ public class GetPOLineByIdHelper extends AbstractHelper {
 
   public CompletableFuture<PoLine> getPOLineByPOLineId(String polineId) {
     CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
-
-    getPoLineByIdAndValidate(polineId)
+    HelperUtils.getPoLineById(polineId, lang, httpClient,ctx, okapiHeaders, logger)
       .thenCompose(this::populateCompositeLine)
       .thenAccept(future::complete)
       .exceptionally(t -> {

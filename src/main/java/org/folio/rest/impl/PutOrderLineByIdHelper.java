@@ -1,8 +1,7 @@
 package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
-import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
-import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
+import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.orders.utils.SubObjects.*;
 import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.*;
 
@@ -11,11 +10,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -236,5 +237,28 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
         }
     }
     return result;
+  }
+
+  /**
+   * Retrieves PO line from storage by PO line id as JsonObject and validates order id match.
+   */
+  protected CompletableFuture<JsonObject> getPoLineByIdAndValidate(String lineId) {
+    return getPoLineById(lineId, lang, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(line -> {
+        logger.debug("Validating if the retrieved PO line corresponds to PO");
+        validateOrderId(line);
+        return line;
+      });
+  }
+
+  /**
+   * Validates if the retrieved PO line corresponds to PO (orderId). In case the PO line does not correspond to any order id the exception is thrown
+   * @param line PO line retrieved from storage
+   */
+  private void validateOrderId(JsonObject line) {
+    if (StringUtils.isEmpty(line.getString("purchase_order_id"))) {
+      String msg = String.format("The PO line with id=%s does not contain order id", line.getString("id"));
+      throw new CompletionException(new ValidationException(msg, ID_MISMATCH_ERROR_CODE));
+    }
   }
 }
