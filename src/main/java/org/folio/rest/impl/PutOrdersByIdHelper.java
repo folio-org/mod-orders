@@ -181,6 +181,8 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     if (matcher.find()) {
       return poNumber + matcher.group(2);
     }
+    logger.error("PO Line - {} has invalid or missing number.", poLineFromStorage.getString(ID));
+    //TODO assign the line a new, valid number using the poNumber once the POLine sequence/API is ready
     return oldPoLineNumber;
   }
 
