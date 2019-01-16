@@ -33,7 +33,7 @@ public class PostOrdersHelper extends AbstractHelper {
   private static final long PO_NUMBER_EPOCH = 1535774400000L;
 
   private final ValidationHelper validationHelper;
-  private PostOrderLineHelper postOrderLineHelper;
+  private final PostOrderLineHelper postOrderLineHelper;
 
   public PostOrdersHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx, String lang) {
@@ -82,7 +82,6 @@ public class PostOrdersHelper extends AbstractHelper {
           if (CollectionUtils.isEmpty(compPO.getPoLines())) {
             future.complete(compPO);
           } else {
-
             String poNumber = po.getPoNumber();
             List<PoLine> lines = new ArrayList<>(compPO.getPoLines().size());
             List<CompletableFuture<Void>> futures = new ArrayList<>();
