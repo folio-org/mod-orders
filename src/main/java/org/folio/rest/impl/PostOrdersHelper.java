@@ -31,35 +31,39 @@ public class PostOrdersHelper extends AbstractHelper {
   // if you change this, you run the risk of duplicate poNumbers
   private static final long PO_NUMBER_EPOCH = 1535774400000L;
 
+  private final ValidationHelper validationHelper;
+
   public PostOrdersHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx, String lang) {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
+    this.validationHelper = new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
   public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
-    if(null==compPO.getPoNumber()){
+    if (null == compPO.getPoNumber()) {
       compPO.setPoNumber(generatePoNumber());
       return createPOandPOLines(compPO);
     }
-    else{
+    else {
       //If a PO  Number is already supplied, then verify if its unique
-      HelperUtils.isPONumberUnique(compPO.getPoNumber(), lang, httpClient, ctx, okapiHeaders, logger)
-      .thenAccept(v->
-      createPOandPOLines(compPO)
-          .thenAccept(future::complete)
-          .exceptionally(e->{
-           future.completeExceptionally(e);
-           return null;})
+      validationHelper.checkPONumberUnique(compPO.getPoNumber())
+      .thenAccept(v ->
+        createPOandPOLines(compPO)
+            .thenAccept(future::complete)
+            .exceptionally(e -> {
+             future.completeExceptionally(e);
+             return null;
+            })
       )
-      .exceptionally(e->{
+      .exceptionally(e -> {
            logger.error(e.getMessage());
            future.completeExceptionally(e);
            return null;
       });
     }
     return future;
-}
+  }
 
   private CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);

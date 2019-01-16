@@ -17,6 +17,8 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
+import static org.folio.orders.utils.SubObjects.ADJUSTMENT;
+
 public class GetOrdersByIdHelper extends AbstractHelper {
 
   public GetOrdersByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
@@ -47,7 +49,7 @@ public class GetOrdersByIdHelper extends AbstractHelper {
     HelperUtils.getPurchaseOrderById(id, lang, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(po -> {
         logger.info("got: " + po.encodePrettily());
-        po.remove("adjustment");
+        po.remove(ADJUSTMENT);
         CompositePurchaseOrder compPO = po.mapTo(CompositePurchaseOrder.class);
 
         HelperUtils.getCompositePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
