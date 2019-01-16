@@ -1,7 +1,7 @@
 #%RAML 1.0
 title: Orders
 baseUri: https://github.com/folio-org/mod-orders
-version: v1.1
+version: v2
 protocols: [ HTTP, HTTPS ]
 
 documentation:
@@ -94,7 +94,6 @@ resourceTypes:
     is: [validate]
     put:
       description: Update an order by id
-      is: [validate]
       responses:
         500:
           body:
@@ -148,14 +147,6 @@ resourceTypes:
           description: Return a purchase order line with given {lineId}
         delete:
           description: Delete a purchase order line with given {lineId}
-          responses:
-            500:
-              body:
-                application/json:
-                  type: errors
-                  example:
-                    strict: false
-                    value: !include raml-util/examples/errors.sample
   /receive:
     displayName: Receive items
     description: Receive items spanning one or more PO lines

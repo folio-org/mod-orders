@@ -32,6 +32,10 @@ import org.folio.rest.tools.utils.TenantTool;
 
 public abstract class AbstractHelper {
   public static final String ID_MISMATCH_ERROR_CODE = "id_mismatch";
+  public static final String PO_LINE_NUMBER = "po_line_number";
+  public static final String ID = "id";
+  public static final String PO_NUMBER = "po_number";
+
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   protected final HttpClientInterface httpClient;
@@ -75,7 +79,7 @@ public abstract class AbstractHelper {
    */
   private void validateOrderId(String orderId, JsonObject line) {
     if (!StringUtils.equals(orderId, line.getString("purchase_order_id"))) {
-      String msg = String.format("The PO line with id=%s does not belong to order with id=%s", line.getString("id"), orderId);
+      String msg = String.format("The PO line with id=%s does not belong to order with id=%s", line.getString(ID), orderId);
       throw new CompletionException(new ValidationException(msg, ID_MISMATCH_ERROR_CODE));
     }
   }
@@ -106,7 +110,6 @@ public abstract class AbstractHelper {
     }
     return purchaseOrder;
   }
-
 
   protected Void handleError(Throwable throwable) {
     final Future<Response> result;

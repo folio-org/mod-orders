@@ -1,23 +1,25 @@
 package org.folio.rest.impl;
 
-import static io.vertx.core.Future.succeededFuture;
-import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond204;
-import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond400WithTextPlain;
-import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond422WithApplicationJson;
-import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond500WithTextPlain;
-
-import java.util.Map;
-
-import javax.ws.rs.core.Response;
-
-import org.folio.orders.utils.HelperUtils;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Handler;
+import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Handler;
+import javax.ws.rs.core.Response;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+
+import static io.vertx.core.Future.succeededFuture;
+import static org.folio.orders.utils.HelperUtils.PO_NUMBER_ALREADY_EXISTS;
+import static org.folio.orders.utils.HelperUtils.getPurchaseOrderByPONumber;
+import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond204;
+import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond400WithTextPlain;
+import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond422WithApplicationJson;
+import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond500WithTextPlain;
 
 public class ValidationHelper extends AbstractHelper{
 
@@ -26,14 +28,23 @@ public class ValidationHelper extends AbstractHelper{
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
-  void checkPONumberUnique(PoNumber poNumber,String lang)
-  {
-    HelperUtils.isPONumberUnique(poNumber.getPoNumber(), lang, httpClient, ctx, okapiHeaders, logger)
-    .thenAccept(po->{
-         asyncResultHandler.handle(succeededFuture(respond204()));
-         httpClient.closeClient();
-     })
-    .exceptionally(this::handleError);
+  void checkPONumberUnique(PoNumber poNumber) {
+    checkPONumberUnique(poNumber.getPoNumber())
+      .thenAccept(aVoid -> {
+        asyncResultHandler.handle(succeededFuture(respond204()));
+        httpClient.closeClient();
+      })
+      .exceptionally(this::handleError);
+  }
+
+  CompletableFuture<Void> checkPONumberUnique(String poNumber) {
+    return getPurchaseOrderByPONumber(poNumber, lang, httpClient, ctx, okapiHeaders, logger)
+      .thenAccept(po -> {
+         if (po.getInteger("total_records") != 0) {
+           logger.error("Exception validating PO Number existence");
+           throw new CompletionException(new HttpException(400, PO_NUMBER_ALREADY_EXISTS));
+         }
+      });
   }
 
   @Override
@@ -51,4 +62,5 @@ public class ValidationHelper extends AbstractHelper{
     }
     return result;
   }
+
 }
