@@ -82,35 +82,32 @@ public class OrdersImpl implements Orders {
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
     PostOrdersHelper helper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
     loadConfiguration(okapiHeaders, vertxContext, logger).thenAccept(config -> {
-      int limit = getPoLineLimit(config);
-      if (compPO.getPoLines().size() <= limit) {
-        logger.info("Creating PO and POLines...");
-        helper.createPurchaseOrder(compPO)
-          .thenAccept(withIds -> {
+      validatePoLinesQuantity(compPO, config);
+      logger.info("Creating PO and POLines...");
+      helper.createPurchaseOrder(compPO)
+        .thenAccept(withIds -> {
 
-            logger.info("Applying Funds...");
-            helper.applyFunds(withIds)
-              .thenAccept(withFunds -> {
+          logger.info("Applying Funds...");
+          helper.applyFunds(withIds)
+            .thenAccept(withFunds -> {
 
-                logger.info("Updating Inventory...");
-                helper.updateInventory(withFunds)
-                  .thenAccept(withInventory -> {
+              logger.info("Updating Inventory...");
+              helper.updateInventory(withFunds)
+                .thenAccept(withInventory -> {
 
-                    logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withInventory).encodePrettily());
-                    httpClient.closeClient();
-                    javax.ws.rs.core.Response response = PostOrdersResponse.respond201WithApplicationJson(withInventory,
-                      PostOrdersResponse.headersFor201().withLocation(ORDERS_LOCATION_PREFIX + withInventory.getId()));
-                    AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
-                    asyncResultHandler.handle(result);
-                  })
-                  .exceptionally(helper::handleError);
-              })
-              .exceptionally(helper::handleError);
-          })
-          .exceptionally(helper::handleError);
-      } else {
-        throw new ValidationException(String.format(OVER_LIMIT_ERROR_MESSAGE, limit), LINES_LIMIT_ERROR_CODE);
-      }
+                  logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withInventory).encodePrettily());
+                  httpClient.closeClient();
+                  javax.ws.rs.core.Response response = PostOrdersResponse.respond201WithApplicationJson(withInventory,
+                    PostOrdersResponse.headersFor201().withLocation(ORDERS_LOCATION_PREFIX + withInventory.getId()));
+                  AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
+                  asyncResultHandler.handle(result);
+                })
+                .exceptionally(helper::handleError);
+            })
+            .exceptionally(helper::handleError);
+        })
+        .exceptionally(helper::handleError);
+
     }).exceptionally(helper::handleError);
   }
 
@@ -119,26 +116,27 @@ public class OrdersImpl implements Orders {
   public void putOrdersById(String orderId, String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
     PutOrdersByIdHelper putHelper = new PutOrdersByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang);
-    if (CollectionUtils.isEmpty(compPO.getPoLines())) {
-      putHelper.updateOrder(orderId, compPO);
+    if (org.apache.commons.lang.StringUtils.isEmpty(compPO.getPoNumber())) {
+      putHelper.handleError(new CompletionException((new ValidationException("po_number is missing"))));
     } else {
-      loadConfiguration(okapiHeaders, vertxContext, logger).thenAccept(config -> {
-        int limit = getPoLineLimit(config);
-        if (compPO.getPoLines().size() > limit) {
-          throw new ValidationException(String.format(OVER_LIMIT_ERROR_MESSAGE, limit), LINES_LIMIT_ERROR_CODE);
-        }
-        compPO.getPoLines().forEach(poLine -> {
-          if (StringUtils.isEmpty(poLine.getPurchaseOrderId())) {
-            poLine.setPurchaseOrderId(orderId);
-          }
-          if (!orderId.equals(poLine.getPurchaseOrderId())) {
-            throw new ValidationException(MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE, AbstractHelper.ID_MISMATCH_ERROR_CODE);
-          }
-        });
-        putHelper.updateOrderWithPoLines(orderId, compPO);
-      }).exceptionally(putHelper::handleError);
+      if (CollectionUtils.isEmpty(compPO.getPoLines())) {
+        putHelper.updateOrder(orderId, compPO);
+      } else {
+        loadConfiguration(okapiHeaders, vertxContext, logger)
+          .thenAccept(config -> {
+            validatePoLinesQuantity(compPO, config);
+            compPO.getPoLines().forEach(poLine -> {
+              if (StringUtils.isEmpty(poLine.getPurchaseOrderId())) {
+                poLine.setPurchaseOrderId(orderId);
+              }
+              if (!orderId.equals(poLine.getPurchaseOrderId())) {
+                throw new ValidationException(MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE, AbstractHelper.ID_MISMATCH_ERROR_CODE);
+              }
+            });
+            putHelper.updateOrder(orderId, compPO);
+        }).exceptionally(putHelper::handleError);
+      }
     }
-
   }
 
   @Override
@@ -230,14 +228,13 @@ public class OrdersImpl implements Orders {
 
   @Override
   @Validate
-  public void postOrdersPoNumberValidate(String lang, PoNumber entity, Map<String, String> okapiHeaders,
+  public void postOrdersPoNumberValidate(String lang, PoNumber poNumber, Map<String, String> okapiHeaders,
      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
     ValidationHelper helper=new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
     logger.info("Validating a PO Number");
     //@Validate asserts the pattern of a PO Number, the below method is used to check for uniqueness
-     helper.checkPONumberUnique(entity, lang);
-
+     helper.checkPONumberUnique(poNumber);
   }
 
   private static int getPoLineLimit(JsonObject config) {
@@ -245,6 +242,13 @@ public class OrdersImpl implements Orders {
       return Integer.parseInt(config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));
     } catch (NumberFormatException e) {
       throw new NumberFormatException("Invalid limit value in configuration.");
+    }
+  }
+
+  private void validatePoLinesQuantity(CompositePurchaseOrder compPO, JsonObject config) {
+    int limit = getPoLineLimit(config);
+    if (compPO.getPoLines().size() > limit) {
+      throw new ValidationException(String.format(OVER_LIMIT_ERROR_MESSAGE, limit), LINES_LIMIT_ERROR_CODE);
     }
   }
 

@@ -4,11 +4,17 @@ import org.folio.rest.jaxrs.model.Error;
 
 public class ValidationException extends IllegalStateException {
 
+  private static final String DEFAULT_ERROR_CODE = "-1";
+
   private final String errorCode;
 
   public ValidationException(String message, String errorCode) {
     super(message);
     this.errorCode = errorCode;
+  }
+
+  public ValidationException(String message) {
+    this(message, DEFAULT_ERROR_CODE);
   }
 
   public Error getError() {

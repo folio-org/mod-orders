@@ -5,6 +5,8 @@ import static org.folio.orders.utils.SubObjects.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
+import static org.folio.rest.impl.AbstractHelper.PO_LINE_NUMBER;
+import static org.folio.rest.impl.AbstractHelper.PO_NUMBER;
 import static org.folio.rest.impl.OrdersImpl.LINES_LIMIT_ERROR_CODE;
 import static org.folio.rest.impl.OrdersImpl.OVER_LIMIT_ERROR_MESSAGE;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -17,6 +19,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
@@ -607,17 +611,13 @@ public class OrdersImplTest {
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_PO_LINES_JSON));
     JsonObject storageData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id);
-    RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .header(X_OKAPI_USER_ID)
-        .contentType(APPLICATION_JSON)
-        .body(reqData.toString())
-      .put(rootPath + "/" + id)
-        .then()
-        .statusCode(204);
 
+    verifyPut(rootPath + "/" + id, reqData.toString(), "", 204);
+
+    verifyPoWithPoLinesUpdate(reqData, storageData);
+  }
+
+  private void verifyPoWithPoLinesUpdate(JsonObject reqData, JsonObject storageData) {
     JsonArray poLinesFromRequest = reqData.getJsonArray(PO_LINES);
     JsonArray poLinesFromStorage = storageData.getJsonArray(PO_LINES);
     int sameLinesCount = 0;
@@ -647,16 +647,91 @@ public class OrdersImplTest {
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON));
-    RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .header(X_OKAPI_USER_ID)
-        .contentType(APPLICATION_JSON)
-        .body(reqData.toString())
-      .put(rootPath + "/" + id)
-        .then()
-          .statusCode(422);
+
+    verifyPut(rootPath + "/" + id, reqData.toString(), APPLICATION_JSON, 422);
+  }
+
+  @Test
+  public void testUpdatePoNumber() throws Exception {
+    logger.info("=== Test Put Order By Id without POLines, with new PO number  ===");
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
+    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
+    JsonObject storData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id);
+    JsonObject reqData = new JsonObject(getMockData(ORDER_WITHOUT_PO_LINES));
+    String newPoNumber = reqData.getString(PO_NUMBER) + "A";
+    reqData.put(PO_NUMBER, newPoNumber);
+    Pattern poLinePattern = Pattern.compile(String.format("(%s)(-[0-9]{1,3})", newPoNumber));
+
+    verifyPut(rootPath + "/" + id, reqData.toString(), "", 204);
+
+    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).size(), storData.getJsonArray(PO_LINES).size());
+    MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).forEach(poLine -> {
+      Matcher matcher = poLinePattern.matcher(poLine.getString(PO_LINE_NUMBER));
+      assertTrue(matcher.find());
+    });
+    assertNull(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE));
+  }
+
+  @Test
+  public void testUpdatePoNumberWithPoLines() throws Exception {
+    logger.info("=== Test Put Order By Id without POLines, with new PO number  ===");
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
+    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
+    JsonObject storageData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id);
+    JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_PO_LINES_JSON));
+    String newPoNumber = reqData.getString(PO_NUMBER) + "A";
+    reqData.put(PO_NUMBER, newPoNumber);
+    Pattern poLinePattern = Pattern.compile(String.format("(%s)(-[0-9]{1,3})", newPoNumber));
+
+    verifyPut(rootPath + "/" + id, reqData.toString(), "", 204);
+    verifyPoWithPoLinesUpdate(reqData, storageData);
+    MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).forEach(poLine -> {
+      Matcher matcher = poLinePattern.matcher(poLine.getString(PO_LINE_NUMBER));
+      assertTrue(matcher.find());
+    });
+  }
+
+  @Test
+  public void testPutOrderWithoutPoNumberValidation() throws IOException {
+    logger.info("=== Test Put Order By Id without po number validation  ===");
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
+    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
+    JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_PO_LINES_JSON));
+    reqData.remove(PO_NUMBER);
+
+    verifyPut(rootPath + "/" + id, reqData.toString(), APPLICATION_JSON, 422);
+  }
+
+  @Test
+  public void testPutOrderFailsWithInvalidPONumber() throws Exception {
+    logger.info("=== Test update order failure with Invalid PO Number===");
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
+
+    JsonObject request = new JsonObject();
+    request.put("po_number", "1234");
+    String body= request.toString();
+
+    verifyPut(rootPath + "/" + id, body, APPLICATION_JSON, 422);
+
+  }
+
+  @Test
+  public void testPutOrderFailsWithExistingPONumber() throws Exception {
+    logger.info("=== Test update of order failure with Existing PO Number===");
+
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
+
+    JsonObject request = new JsonObject();
+    request.put("po_number", EXISTING_PO_NUMBER);
+    String body= request.toString();
+
+    verifyPut(rootPath + "/" + id, body, TEXT_PLAIN, 400);
 
   }
 
@@ -696,16 +771,7 @@ public class OrdersImplTest {
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
     JsonObject reqData = new JsonObject(getMockData(listedPrintMonographPath));
 
-    RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .header(X_OKAPI_USER_ID)
-        .contentType(APPLICATION_JSON)
-        .body(reqData.toString())
-      .put(rootPath + "/" + id)
-        .then()
-        .statusCode(204);
+    verifyPut(rootPath + "/" + id, reqData.toString(), "", 204);
 
     CompositePurchaseOrder orderRq = reqData.mapTo(CompositePurchaseOrder.class);
     for (int i = 0; i < orderRq.getPoLines().size(); i++) {
@@ -738,17 +804,7 @@ public class OrdersImplTest {
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITHOUT_PO_LINES));
 
-    RestAssured
-      .with()
-      .header(X_OKAPI_URL)
-      .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .header(X_OKAPI_USER_ID)
-      .contentType(APPLICATION_JSON)
-      .body(reqData.toString())
-      .put(rootPath + "/" + id)
-      .then()
-      .statusCode(204);
-
+    verifyPut(rootPath + "/" + id, reqData.toString(), "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     assertNull(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE));
@@ -760,16 +816,7 @@ public class OrdersImplTest {
 
     JsonObject reqData = new JsonObject(getMockData(listedPrintMonographPath));
 
-    RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .header(X_OKAPI_USER_ID)
-        .contentType(APPLICATION_JSON)
-        .body(reqData.toString())
-      .put(rootPath + "/" + ORDER_ID_WITHOUT_PO_LINES)
-        .then()
-          .statusCode(204);
+    verifyPut(rootPath + "/" + ORDER_ID_WITHOUT_PO_LINES, reqData.toString(), "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), reqData.getJsonArray(PO_LINES).size());
@@ -1184,7 +1231,9 @@ public class OrdersImplTest {
     logger.info("=== Test PUT Order Line By Id - Empty Json as body Success case ===");
 
     String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
-    String orderId = getMockLine(lineId).getPurchaseOrderId();
+    org.folio.rest.acq.model.PoLine line = getMockLine(lineId);
+    String orderId = line.getPurchaseOrderId();
+    String poLineNumber = line.getPoLineNumber();
     String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
 
     final Response resp = verifyPut(url, "{}", "", 204);
@@ -1211,6 +1260,7 @@ public class OrdersImplTest {
     // Verify that object has only PO and PO line ids
     assertEquals(lineId, lineWithIds.remove(ID));
     assertEquals(orderId, lineWithIds.remove(PURCHASE_ORDER_ID));
+    assertEquals(poLineNumber, lineWithIds.remove(PO_LINE_NUMBER));
     lineWithIds.stream().forEach(entry -> {
       Object value = entry.getValue();
       assertTrue(Objects.isNull(value) || (value instanceof Iterable && !((Iterable) value).iterator().hasNext()));
@@ -1445,7 +1495,9 @@ public class OrdersImplTest {
     logger.info("=== Test PUT Order Line By Id - 500 From Storage On Sub-Object deletion ===");
 
     String lineId = PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE;
-    String orderId = getMockLine(lineId).getPurchaseOrderId();
+    org.folio.rest.acq.model.PoLine line = getMockLine(lineId);
+    String orderId = line.getPurchaseOrderId();
+    String poLineNumber = line.getPoLineNumber();
 
     String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
     String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, lineId, orderId);
@@ -1471,6 +1523,7 @@ public class OrdersImplTest {
     // Verify that object has only PO and PO line ids
     assertEquals(lineId, lineWithIds.remove(ID));
     assertEquals(orderId, lineWithIds.remove(PURCHASE_ORDER_ID));
+    assertEquals(poLineNumber, lineWithIds.remove(PO_LINE_NUMBER));
     lineWithIds.stream().forEach(entry -> {
       Object value = entry.getValue();
       assertTrue(Objects.isNull(value) || (value instanceof Iterable && !((Iterable) value).iterator().hasNext()));
