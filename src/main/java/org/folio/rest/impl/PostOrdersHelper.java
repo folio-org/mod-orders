@@ -10,6 +10,7 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
@@ -32,11 +33,13 @@ public class PostOrdersHelper extends AbstractHelper {
   private static final long PO_NUMBER_EPOCH = 1535774400000L;
 
   private final ValidationHelper validationHelper;
+  private PostOrderLineHelper postOrderLineHelper;
 
   public PostOrdersHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx, String lang) {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
     this.validationHelper = new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
+    this.postOrderLineHelper = new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
   public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO) {
@@ -74,33 +77,35 @@ public class PostOrdersHelper extends AbstractHelper {
         .thenApply(HelperUtils::verifyAndExtractBody)
         .thenAccept(poBody -> {
           CompositePurchaseOrder po = poBody.mapTo(CompositePurchaseOrder.class);
-          String poNumber = po.getPoNumber();
           String poId = po.getId();
           compPO.setId(poId);
+          if (CollectionUtils.isEmpty(compPO.getPoLines())) {
+            future.complete(compPO);
+          } else {
 
-          List<PoLine> lines = new ArrayList<>(compPO.getPoLines().size());
-          List<CompletableFuture<Void>> futures = new ArrayList<>();
-          boolean updateInventory = compPO.getWorkflowStatus() == WorkflowStatus.OPEN;
-          for (int i = 0; i < compPO.getPoLines().size(); i++) {
-            PoLine compPOL = compPO.getPoLines().get(i);
-            compPOL.setPurchaseOrderId(poId);
-            compPOL.setPoLineNumber(poNumber + "-" + (i + 1));
+            String poNumber = po.getPoNumber();
+            List<PoLine> lines = new ArrayList<>(compPO.getPoLines().size());
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
+            boolean updateInventory = compPO.getWorkflowStatus() == WorkflowStatus.OPEN;
+            for (int i = 0; i < compPO.getPoLines().size(); i++) {
+              PoLine compPOL = compPO.getPoLines().get(i);
+              compPOL.setPurchaseOrderId(poId);
+              compPOL.setPoLineNumber(poNumber + "-" + (i + 1));
+              futures.add(postOrderLineHelper.createPoLine(compPOL, updateInventory)
+                .thenAccept(lines::add));
+            }
 
-            futures.add(new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang)
-              .createPoLine(compPOL, updateInventory)
-              .thenAccept(lines::add));
+            VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]))
+              .thenAccept(v -> {
+                compPO.setPoLines(lines);
+                compPO.setAdjustment(HelperUtils.calculateAdjustment(lines));
+                future.complete(compPO);
+              })
+              .exceptionally(e -> {
+                future.completeExceptionally(e.getCause());
+                return null;
+              });
           }
-
-          VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]))
-            .thenAccept(v -> {
-              compPO.setPoLines(lines);
-              compPO.setAdjustment(HelperUtils.calculateAdjustment(lines));
-              future.complete(compPO);
-            })
-            .exceptionally(e -> {
-              future.completeExceptionally(e.getCause());
-              return null;
-            });
         })
         .exceptionally(e -> {
           future.completeExceptionally(e.getCause());

@@ -62,9 +62,10 @@ import io.vertx.ext.web.handler.BodyHandler;
 public class OrdersImplTest {
 
   private static final String INSTANCE_RECORD = "instance_record";
-  public static final String ORDER_WITHOUT_PO_LINES = "order_without_po_lines.json";
-  public static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
-  public static final String ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON = "put_order_with_mismatch_id_in_po_lines.json";
+  private static final String ORDER_WITHOUT_PO_LINES = "order_without_po_lines.json";
+  private static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
+  private static final String ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON = "put_order_with_mismatch_id_in_po_lines.json";
+  private static final String ORDER_WITH_EMPTY_PO_LINES = "order_with_empty_array_in_po_lines.json";
 
   static {
     System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, "io.vertx.core.logging.Log4j2LogDelegateFactory");
@@ -808,6 +809,22 @@ public class OrdersImplTest {
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     assertNull(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE));
+  }
+
+  @Test
+  public void testPutOrderByIdWithoutEmptyPoLinesDeleteAllPoLines() throws IOException {
+    logger.info("=== Test Put Order By Id with empty PO lines field delete lines from storage ===");
+
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
+    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
+    JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_EMPTY_PO_LINES));
+    JsonObject storageData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id);
+
+    verifyPut(rootPath + "/" + id, reqData.toString(), "", 204);
+
+    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE).size(), storageData.getJsonArray(PO_LINES).size());
   }
 
   @Test
@@ -2004,7 +2021,6 @@ public class OrdersImplTest {
         JsonObject po;
 
         po = new JsonObject(getMockData(String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id)));
-        addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
         po.remove(ADJUSTMENT);
         po.remove(PO_LINES);
         po.put(ADJUSTMENT, UUID.randomUUID().toString());

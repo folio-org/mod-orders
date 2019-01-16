@@ -247,7 +247,7 @@ public class OrdersImpl implements Orders {
 
   private void validatePoLinesQuantity(CompositePurchaseOrder compPO, JsonObject config) {
     int limit = getPoLineLimit(config);
-    if (compPO.getPoLines().size() > limit) {
+    if (compPO.getPoLines() != null && compPO.getPoLines().size() > limit) {
       throw new ValidationException(String.format(OVER_LIMIT_ERROR_MESSAGE, limit), LINES_LIMIT_ERROR_CODE);
     }
   }

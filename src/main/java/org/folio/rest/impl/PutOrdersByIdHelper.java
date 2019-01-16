@@ -8,7 +8,6 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
@@ -69,7 +68,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   }
 
   private boolean isRequestContainsLines(CompositePurchaseOrder compPO) {
-    return !CollectionUtils.isEmpty(compPO.getPoLines());
+    return compPO.getPoLines() != null;
   }
 
   private boolean isPoNumberChanged(JsonObject poFromStorage, CompositePurchaseOrder compPO) {
@@ -139,13 +138,19 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     List<CompletableFuture<?>> futures = new ArrayList<>();
     if (poLinesFromStorage.isEmpty()) {
       futures.addAll(processPoLinesCreation(compOrder, poLinesFromStorage));
+    } else if (compOrder.getPoLines().isEmpty()) {
+      futures.addAll(processPoLinesDelete(poLinesFromStorage));
     } else {
       futures.addAll(processPoLinesCreation(compOrder, poLinesFromStorage));
       futures.addAll(processPoLinesUpdate(compOrder, poLinesFromStorage));
       // The remaining unprocessed PoLines should be removed
-      poLinesFromStorage.stream().forEach(poLine -> futures.add(deletePoLine((JsonObject) poLine, httpClient, ctx, okapiHeaders, logger)));
+      futures.addAll(processPoLinesDelete(poLinesFromStorage));
     }
     return VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]));
+  }
+
+  private List<CompletableFuture<?>> processPoLinesDelete(JsonArray poLinesFromStorage) {
+    return poLinesFromStorage.stream().map(poLine -> deletePoLine((JsonObject) poLine, httpClient, ctx, okapiHeaders, logger)).collect(Collectors.toList());
   }
 
   private List<CompletableFuture<?>> processPoLinesUpdate(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
