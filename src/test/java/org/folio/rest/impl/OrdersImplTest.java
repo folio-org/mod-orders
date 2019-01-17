@@ -97,7 +97,6 @@ public class OrdersImplTest {
 
   private static final String VALID_ORDER_ID = "07f65192-44a4-483d-97aa-b137bbd96390";
   private static final String PO_ID = "e5ae4afd-3fa9-494e-a972-f541df9b877e";
-  private static final String ID_FOR_MISMATCH = "00000000-1111-2222-8888-999999999999";
   private static final String ID_BAD_FORMAT = "123-45-678-90-abc";
   private static final String ID_DOES_NOT_EXIST = "d25498e7-3ae6-45fe-9612-ec99e2700d2f";
   private static final String ID_FOR_INTERNAL_SERVER_ERROR = "168f8a86-d26c-406e-813f-c7527f241ac3";
