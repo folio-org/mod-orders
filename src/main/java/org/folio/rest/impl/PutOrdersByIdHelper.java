@@ -14,7 +14,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.resource.Orders.PutOrdersByIdResponse;
+import org.folio.rest.jaxrs.resource.Orders.PutOrdersCompositeOrdersByIdResponse;
 
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
@@ -182,7 +182,6 @@ public class PutOrdersByIdHelper extends AbstractHelper {
       return poNumber + matcher.group(2);
     }
     logger.error("PO Line - {} has invalid or missing number.", poLineFromStorage.getString(ID));
-    //TODO assign the line a new, valid number using the poNumber once the POLine sequence/API is ready
     return oldPoLineNumber;
   }
 
@@ -191,7 +190,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 400:
-        result = PutOrdersByIdResponse.respond400WithTextPlain(error.getMessage());
+        result = PutOrdersCompositeOrdersByIdResponse.respond400WithTextPlain(error.getMessage());
         break;
       case 404:
         result = PutOrdersCompositeOrdersByIdResponse.respond404WithTextPlain(error.getMessage());

@@ -98,8 +98,8 @@ public class OrdersImpl implements Orders {
 
                   logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withInventory).encodePrettily());
                   httpClient.closeClient();
-                  javax.ws.rs.core.Response response = PostOrdersResponse.respond201WithApplicationJson(withInventory,
-                    PostOrdersResponse.headersFor201().withLocation(ORDERS_LOCATION_PREFIX + withInventory.getId()));
+                  javax.ws.rs.core.Response response = PostOrdersCompositeOrdersResponse.respond201WithApplicationJson(withInventory,
+                    PostOrdersCompositeOrdersResponse.headersFor201().withLocation(ORDERS_LOCATION_PREFIX + withInventory.getId()));
                   AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
                   asyncResultHandler.handle(result);
                 })
