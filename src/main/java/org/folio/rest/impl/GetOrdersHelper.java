@@ -3,7 +3,6 @@ package org.folio.rest.impl;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.Error;
@@ -33,10 +32,7 @@ public class GetOrdersHelper extends AbstractHelper {
 
     String endpoint = String.format(GET_PURCHASE_ORDERS_BY_QUERY, limit, offset, query, lang);
     HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenAccept(jsonOrders -> {
-        logger.info("Retrieved orders: " + JsonObject.mapFrom(jsonOrders).encodePrettily());
-        future.complete(jsonOrders.mapTo(PurchaseOrders.class));
-      })
+      .thenAccept(jsonOrders -> future.complete(jsonOrders.mapTo(PurchaseOrders.class)))
       .exceptionally(t -> {
         logger.error("Error getting orders", t);
         future.completeExceptionally(t.getCause());
