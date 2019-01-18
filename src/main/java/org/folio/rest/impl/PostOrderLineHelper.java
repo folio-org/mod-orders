@@ -60,6 +60,9 @@ public class PostOrderLineHelper extends AbstractHelper {
     if (instanceId != null) {
       compPOL.setInstanceId(instanceId);
     }
+
+    compPOL.setId(UUID.randomUUID().toString());
+
     JsonObject line = JsonObject.mapFrom(compPOL);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
 
@@ -259,6 +262,7 @@ public class PostOrderLineHelper extends AbstractHelper {
           compPOL.setAdjustment(null);
         } else {
           compPOL.getAdjustment().setId(id);
+          compPOL.getAdjustment().setPoLineId(compPOL.getId());
         }
       })
       .exceptionally(t -> {
@@ -276,6 +280,7 @@ public class PostOrderLineHelper extends AbstractHelper {
           compPOL.setCost(null);
         } else {
           compPOL.getCost().setId(id);
+          compPOL.getCost().setPoLineId(compPOL.getId());
         }
       })
       .exceptionally(t -> {
@@ -292,6 +297,7 @@ public class PostOrderLineHelper extends AbstractHelper {
           compPOL.setDetails(null);
         } else {
           compPOL.getDetails().setId(id);
+          compPOL.getDetails().setPoLineId(compPOL.getId());
         }
       })
       .exceptionally(t -> {
@@ -308,6 +314,7 @@ public class PostOrderLineHelper extends AbstractHelper {
           compPOL.setEresource(null);
         } else {
           compPOL.getEresource().setId(id);
+          compPOL.getEresource().setPoLineId(compPOL.getId());
         }
       })
       .exceptionally(t -> {
@@ -324,6 +331,7 @@ public class PostOrderLineHelper extends AbstractHelper {
           compPOL.setLocation(null);
         } else {
           compPOL.getLocation().setId(id);
+          compPOL.getLocation().setPoLineId(compPOL.getId());
         }
       })
       .exceptionally(t -> {
@@ -340,6 +348,7 @@ public class PostOrderLineHelper extends AbstractHelper {
           compPOL.setPhysical(null);
         } else {
           compPOL.getPhysical().setId(id);
+          compPOL.getPhysical().setPoLineId(compPOL.getId());
         }
       })
       .exceptionally(t -> {
@@ -356,6 +365,7 @@ public class PostOrderLineHelper extends AbstractHelper {
           compPOL.setVendorDetail(null);
         } else {
           compPOL.getVendorDetail().setId(id);
+          compPOL.getVendorDetail().setPoLineId(compPOL.getId());
         }
       })
       .exceptionally(t -> {
@@ -420,6 +430,7 @@ public class PostOrderLineHelper extends AbstractHelper {
             .thenAccept(id -> {
               if (id != null) {
                 claimObject.setId(id);
+                claimObject.setPoLineId(compPOL.getId());
                 claimsIds.add(id);
               }
             }))
@@ -449,6 +460,7 @@ public class PostOrderLineHelper extends AbstractHelper {
           .thenAccept(id -> {
             if (id != null) {
               alertObject.setId(id);
+              alertObject.setPoLineId(compPOL.getId());
               alertIds.add(id);
             }
           }))
@@ -510,6 +522,7 @@ public class PostOrderLineHelper extends AbstractHelper {
             .thenAccept(id -> {
               if (id != null) {
                 fundObject.setId(id);
+                fundObject.setPoLineId(compPOL.getId());
                 fundDistributionIds.add(id);
               }
             }))
