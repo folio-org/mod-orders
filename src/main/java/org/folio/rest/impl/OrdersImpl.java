@@ -246,5 +246,20 @@ public class OrdersImpl implements Orders {
     }
   }
 
+  @Override
+  public void getOrdersCompositeOrders(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
+    GetOrdersHelper helper = new GetOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
+    helper.getPurchaseOrders(limit, offset, query)
+      .thenAccept(order -> {
+        logger.info("Successfully retrieved orders: " + JsonObject.mapFrom(order).encodePrettily());
+        httpClient.closeClient();
+        javax.ws.rs.core.Response response = GetOrdersCompositeOrdersResponse.respond200WithApplicationJson(order);
+        AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
+        asyncResultHandler.handle(result);
+      })
+      .exceptionally(helper::handleError);
+  }
+
 }
 

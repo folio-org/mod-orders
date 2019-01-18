@@ -1447,6 +1447,23 @@ public class OrdersImplTest {
     verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422);
   }
 
+  @Test
+  public void testGetOrdersNoParameters() {
+    logger.info("=== Test Get Orders - With empty query ===");
+
+    final Response resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT)
+      .get(rootPath)
+        .then()
+          .statusCode(200)
+          .extract()
+          .response();
+
+    assertEquals(3, resp.getBody().as(PurchaseOrders.class).getTotalRecords().intValue());
+  }
+
   private org.folio.rest.acq.model.PoLine getMockLine(String id) {
     return getMockAsJson(PO_LINES_MOCK_DATA_PATH, id).mapTo(org.folio.rest.acq.model.PoLine.class);
   }
@@ -1917,15 +1934,18 @@ public class OrdersImplTest {
       addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
       final String PO_NUMBER_QUERY = "po_number==";
       switch (queryParam) {
-      case PO_NUMBER_QUERY+EXISTING_PO_NUMBER:
-        po.put(TOTAL_RECORDS, 1);
-        break;
-      case PO_NUMBER_QUERY+NONEXISTING_PO_NUMBER:
-        po.put(TOTAL_RECORDS, 0);
-        break;
-      default:
-         //modify later as needed
-         po.put(TOTAL_RECORDS, 0);
+        case PO_NUMBER_QUERY + EXISTING_PO_NUMBER:
+          po.put(TOTAL_RECORDS, 1);
+          break;
+        case PO_NUMBER_QUERY + NONEXISTING_PO_NUMBER:
+          po.put(TOTAL_RECORDS, 0);
+          break;
+        case "null":
+          po.put(TOTAL_RECORDS, 3);
+          break;
+        default:
+          //modify later as needed
+          po.put(TOTAL_RECORDS, 0);
       }
       addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
       serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());

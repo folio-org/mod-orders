@@ -11,6 +11,8 @@ documentation:
 types:
   composite_purchase_orders: !include acq-models/composite_purchase_orders.json
   composite_purchase_order: !include acq-models/composite_purchase_order.json
+  purchase_orders: !include acq-models/mod-orders-storage/schemas/purchase_order_collection.json
+  purchase_order: !include acq-models/mod-orders-storage/schemas/purchase_order.json
   po_line: !include acq-models/composite_po_line.json
   errors: !include raml-util/schemas/errors.schema
   po-number: !include acq-models/mod-orders-storage/schemas/po_number.json
@@ -41,9 +43,13 @@ resourceTypes:
   /composite-orders:
     displayName: Orders
     type:
-      post-item:
-        exampleItem: !include acq-models/examples/composite_purchase_order.sample
-        schema: composite_purchase_order
+      collection:
+        exampleCollection: !include acq-models/mod-orders-storage/examples/purchase_order_collection.sample
+        exampleItem: !include acq-models/mod-orders-storage/examples/purchase_order_get.sample
+        schemaCollection: purchase_orders
+        schemaItem: purchase_order
+    get:
+      is: [pageable, searchable: {description: "using CQL (indexes for purchase orders)", example: "workflow_status==\"Pending\""} ]
     post:
       description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order
       is: [validate, auth]
