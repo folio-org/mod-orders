@@ -9,7 +9,6 @@ documentation:
     content: <b>API for managing purchase orders</b>
 
 types:
-  composite_purchase_orders: !include acq-models/composite_purchase_orders.json
   composite_purchase_order: !include acq-models/composite_purchase_order.json
   purchase_orders: !include acq-models/mod-orders-storage/schemas/purchase_order_collection.json
   purchase_order: !include acq-models/mod-orders-storage/schemas/purchase_order.json
@@ -45,20 +44,14 @@ resourceTypes:
     type:
       collection:
         exampleCollection: !include acq-models/mod-orders-storage/examples/purchase_order_collection.sample
-        exampleItem: !include acq-models/mod-orders-storage/examples/purchase_order_get.sample
+        exampleItem: !include acq-models/examples/composite_purchase_order.sample
         schemaCollection: purchase_orders
-        schemaItem: purchase_order
+        schemaItem: composite_purchase_order
     get:
       is: [pageable, searchable: {description: "using CQL (indexes for purchase orders)", example: "workflow_status==\"Pending\""} ]
     post:
       description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order
       is: [validate, auth]
-      body:
-        application/json:
-          type: composite_purchase_order
-          example:
-            strict: false
-            value: !include acq-models/examples/composite_purchase_order.sample
     /{id}:
         uriParameters:
           id:
