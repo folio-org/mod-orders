@@ -7,7 +7,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
-import static org.folio.orders.utils.SubObjects.*;
+import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.tools.client.Response.isSuccess;
 
 import java.io.UnsupportedEncodingException;

@@ -1,7 +1,7 @@
 package org.folio.rest.impl;
 
-import static org.folio.orders.utils.SubObjects.PURCHASE_ORDER;
-import static org.folio.orders.utils.SubObjects.resourcesPath;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -5,9 +5,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class SubObjects {
+public class ResourcePathResolver {
 
-  private SubObjects() {
+  private ResourcePathResolver() {
   }
 
   public static final String PO_LINES = "po_lines";

@@ -1,7 +1,7 @@
 package org.folio.rest.impl;
 
-import static org.folio.orders.utils.SubObjects.PURCHASE_ORDER;
-import static org.folio.orders.utils.SubObjects.resourceByIdPath;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;

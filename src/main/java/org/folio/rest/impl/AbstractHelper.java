@@ -3,8 +3,8 @@ package org.folio.rest.impl;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.OKAPI_URL;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
-import static org.folio.orders.utils.SubObjects.ADJUSTMENT;
-import static org.folio.orders.utils.SubObjects.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.ADJUSTMENT;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
 import io.vertx.core.AsyncResult;

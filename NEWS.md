@@ -1,5 +1,6 @@
-## 1.1.0 - unreleased
+## 3.0.0
  * [MODORDERS-87](https://issues.folio.org/browse/MODORDERS-87) - Implemented GET PO Number (PO Number generation)
+## 1.1.0 - unreleased
  * [MODORDERS-95](https://issues.folio.org/browse/MODORDERS-95) - Upgrade to RMB v23.3.0 to enable path parameters pattern validation
  * [MODORDERS-78](https://issues.folio.org/browse/MODORDERS-78) - Implemented GET order line logic
  * [MODORDERS-77](https://issues.folio.org/browse/MODORDERS-77) - Implemented PUT order line logic
