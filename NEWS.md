@@ -1,4 +1,5 @@
 ## 3.0.0 - Unreleased
+ * [MODORDERS-124](https://issues.folio.org/browse/MODORDERS-124) - Redefined existing order/lines endpoints
 
 ## 2.0.1 - Released
 
