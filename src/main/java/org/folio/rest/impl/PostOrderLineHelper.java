@@ -255,6 +255,7 @@ public class PostOrderLineHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> createAdjustment(PoLine compPOL, JsonObject line, Adjustment adjustment) {
+    compPOL.getAdjustment().setPoLineId(compPOL.getId());
     return createSubObjIfPresent(line, adjustment, ADJUSTMENT, resourcesPath(ADJUSTMENT))
       .thenAccept(id -> {
         if (id == null) {
@@ -272,6 +273,7 @@ public class PostOrderLineHelper extends AbstractHelper {
 
 
   private CompletableFuture<Void> createCost(PoLine compPOL, JsonObject line, Cost cost) {
+    compPOL.getCost().setPoLineId(compPOL.getId());
     return createSubObjIfPresent(line, cost, COST, resourcesPath(COST))
       .thenAccept(id -> {
         if (id == null) {
@@ -288,6 +290,7 @@ public class PostOrderLineHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> createDetails(PoLine compPOL, JsonObject line, Details details) {
+    compPOL.getDetails().setPoLineId(compPOL.getId());
     return createSubObjIfPresent(line, details, DETAILS, resourcesPath(DETAILS))
       .thenAccept(id -> {
         if (id == null) {
@@ -304,6 +307,7 @@ public class PostOrderLineHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> createEresource(PoLine compPOL, JsonObject line, Eresource eresource) {
+    compPOL.getEresource().setPoLineId(compPOL.getId());
     return createSubObjIfPresent(line, eresource, ERESOURCE, resourcesPath(ERESOURCE))
       .thenAccept(id -> {
         if (id == null) {
@@ -320,6 +324,7 @@ public class PostOrderLineHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> createLocation(PoLine compPOL, JsonObject line, Location location) {
+    compPOL.getLocation().setPoLineId(compPOL.getId());
     return createSubObjIfPresent(line, location, LOCATION, resourcesPath(LOCATION))
       .thenAccept(id -> {
         if (id == null) {
@@ -336,6 +341,7 @@ public class PostOrderLineHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> createPhysical(PoLine compPOL, JsonObject line, Physical physical) {
+    compPOL.getPhysical().setPoLineId(compPOL.getId());
     return createSubObjIfPresent(line, physical, PHYSICAL, resourcesPath(PHYSICAL))
       .thenAccept(id -> {
         if (id == null) {
@@ -352,6 +358,7 @@ public class PostOrderLineHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> createVendorDetail(PoLine compPOL, JsonObject line, VendorDetail vendor) {
+    compPOL.getVendorDetail().setPoLineId(compPOL.getId());
     return createSubObjIfPresent(line, vendor, VENDOR_DETAIL, resourcesPath(VENDOR_DETAIL))
       .thenAccept(id -> {
         if (id == null) {
@@ -418,14 +425,16 @@ public class PostOrderLineHelper extends AbstractHelper {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     if(null!=claims)
       claims
-        .forEach(claimObject ->
+        .forEach(claimObject -> {
+          claimObject.setPoLineId(compPOL.getId());
           futures.add(createSubObjIfPresent(line, claimObject, CLAIMS, resourcesPath(CLAIMS))
             .thenAccept(id -> {
               if (id != null) {
                 claimObject.setId(id);
                 claimsIds.add(id);
               }
-            }))
+            }));
+          }
         );
 
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
@@ -447,14 +456,16 @@ public class PostOrderLineHelper extends AbstractHelper {
     List<String> alertIds = new ArrayList<>();
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     if(null!=alerts)
-      alerts.forEach(alertObject ->
+      alerts.forEach(alertObject -> {
+        alertObject.setPoLineId(compPOL.getId());
         futures.add(createSubObjIfPresent(line, alertObject, ALERTS, resourcesPath(ALERTS))
           .thenAccept(id -> {
             if (id != null) {
               alertObject.setId(id);
               alertIds.add(id);
             }
-          }))
+          }));
+        }
       );
 
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
@@ -510,14 +521,16 @@ public class PostOrderLineHelper extends AbstractHelper {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     if (null != fundDistribution)
       fundDistribution
-        .forEach(fundObject ->
+        .forEach(fundObject -> {
+          fundObject.setPoLineId(compPOL.getId());
           futures.add(createSubObjIfPresent(line, fundObject, FUND_DISTRIBUTION, resourcesPath(FUND_DISTRIBUTION))
             .thenAccept(id -> {
               if (id != null) {
                 fundObject.setId(id);
                 fundDistributionIds.add(id);
               }
-            }))
+            }));
+          }
         );
 
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
