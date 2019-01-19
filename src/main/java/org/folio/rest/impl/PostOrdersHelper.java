@@ -11,6 +11,7 @@ import java.util.concurrent.CompletableFuture;
 import javax.ws.rs.core.Response;
 
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.acq.model.PoNumber;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
@@ -39,7 +40,7 @@ public class PostOrdersHelper extends AbstractHelper {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
     if(null==compPO.getPoNumber()){
       return poNumberHelper.generatePoNumber()
-        .thenAccept(poNumberResp -> compPO.setPoNumber(poNumberResp.getPoNumber()))
+        .thenAccept(poNumberResp -> compPO.setPoNumber(poNumberResp.mapTo(PoNumber.class).getPoNumber()))
         .thenCompose(rVoid -> createPOandPOLines(compPO));
     }
     else{

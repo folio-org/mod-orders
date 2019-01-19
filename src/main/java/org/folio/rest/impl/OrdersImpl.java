@@ -216,10 +216,10 @@ public class OrdersImpl implements Orders {
     PoNumberHelper helper = new PoNumberHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
 
     helper.generatePoNumber()
-      .thenAccept(poNum -> {
-        logger.info("Received PoNumber Response: " + JsonObject.mapFrom(poNum).encodePrettily());
+      .thenAccept(poNumberJson -> {
+        logger.info("Received PoNumber Response: " + poNumberJson.encodePrettily());
         httpClient.closeClient();
-        javax.ws.rs.core.Response response = GetOrdersPoNumberResponse.respond200WithApplicationJson(poNum);
+        javax.ws.rs.core.Response response = GetOrdersPoNumberResponse.respond200WithApplicationJson(poNumberJson.mapTo(PoNumber.class));
         AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
         asyncResultHandler.handle(result);
       }).exceptionally(helper::handleError);

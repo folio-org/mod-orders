@@ -7,16 +7,13 @@ import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateRes
 import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond400WithTextPlain;
 import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond422WithApplicationJson;
 import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond500WithTextPlain;
-import static org.folio.rest.tools.client.Response.isSuccess;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import javax.ws.rs.core.Response;
 
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.folio.orders.rest.exceptions.HttpException;
+import io.vertx.core.json.JsonObject;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.PoNumber;
@@ -43,24 +40,8 @@ public class PoNumberHelper extends AbstractHelper{
     .exceptionally(this::handleError);
   }
 
-  public CompletableFuture<PoNumber> generatePoNumber() {
-    CompletableFuture<PoNumber> future = new VertxCompletableFuture<>(ctx);
-    try {
-      httpClient.request(resourcesPath(PO_NUMBER)).thenAccept(poNumberResp -> {
-        if (!isSuccess(poNumberResp.getCode())) {
-          throw new CompletionException(
-            new HttpException(poNumberResp.getCode(), poNumberResp.getError().getString("errorMessage")));
-        } else {
-          PoNumber poNumber = new PoNumber();
-          poNumber.setPoNumber(poNumberResp.getBody().getString(PO_NUMBER));
-          future.complete(poNumber);
-        }
-      }).exceptionally(this::handleError);
-    } catch (Exception e) {
-      logger.error("Error retrieving po_number", e);
-      future.completeExceptionally(e);
-    }
-    return future;
+  public CompletableFuture<JsonObject> generatePoNumber() {
+    return HelperUtils.handleGetRequest(resourcesPath(PO_NUMBER), httpClient, ctx, okapiHeaders, logger);
   }
 
   @Override
