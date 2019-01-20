@@ -38,7 +38,6 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 
 import io.restassured.RestAssured;
-import io.restassured.http.ContentType;
 import io.restassured.http.Header;
 import io.restassured.response.Response;
 import io.vertx.core.DeploymentOptions;
@@ -101,7 +100,6 @@ public class OrdersImplTest {
 
   private static final String VALID_ORDER_ID = "07f65192-44a4-483d-97aa-b137bbd96390";
   private static final String PO_ID = "e5ae4afd-3fa9-494e-a972-f541df9b877e";
-  private static final String ID_FOR_MISMATCH = "00000000-1111-2222-8888-999999999999";
   private static final String ID_BAD_FORMAT = "123-45-678-90-abc";
   private static final String ID_DOES_NOT_EXIST = "d25498e7-3ae6-45fe-9612-ec99e2700d2f";
   private static final String ID_FOR_INTERNAL_SERVER_ERROR = "168f8a86-d26c-406e-813f-c7527f241ac3";
@@ -114,9 +112,9 @@ public class OrdersImplTest {
   private static final String ORDER_ID_WITHOUT_PO_LINES = "50fb922c-3fa9-494e-a972-f2801f1b9fd1";
 
   // API paths
-  private final static String rootPath = "/orders";
-  private final static String LINES_PATH = "/orders/%s/lines";
-  private final static String LINE_BY_ID_PATH = "/orders/%s/lines/%s";
+  private final static String rootPath = "/orders/composite-orders";
+  private final static String LINES_PATH = "/orders/order-lines";
+  private final static String LINE_BY_ID_PATH = "/orders/order-lines/%s";
 
   // Mock data paths
   private static final String BASE_MOCK_DATA_PATH = "mockdata/";
@@ -137,7 +135,7 @@ public class OrdersImplTest {
 
   private static final String EMPTY_PO_LINE_BUT_WITH_IDS = "{\"id\": \"%s\", \"purchase_order_id\": \"%s\"}";
 
-  private static final String PONUMBER_VALIDATE_PATH=rootPath+"/po-number/validate";
+  private static final String PONUMBER_VALIDATE_PATH = "/orders/po-number/validate";
 
   private static final String ID = "id";
   private static final String PURCHASE_ORDER_ID = "purchase_order_id";
@@ -880,7 +878,6 @@ public class OrdersImplTest {
   @Test
   public void testValidationDelete() {
     logger.info("=== Test validation Annotation on DELETE API ===");
-    String id = "non-existent-po-id";
 
     logger.info("=== Test validation on invalid lang query parameter ===");
     RestAssured
@@ -888,7 +885,7 @@ public class OrdersImplTest {
        .header(X_OKAPI_URL)
        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
        .contentType(APPLICATION_JSON)
-     .delete(rootPath+"/"+id+INVALID_LANG)
+      .delete(rootPath + "/" + VALID_ORDER_ID + INVALID_LANG)
        .then()
          .statusCode(400)
          .body(containsString(INCORRECT_LANG_PARAMETER));
@@ -951,7 +948,7 @@ public class OrdersImplTest {
   }
 
   private void deleteOrderLineByIdSuccess(String lineId) {
-    String url = String.format(LINE_BY_ID_PATH, PO_ID_FOR_SUCCESS_CASE, lineId);
+    String url = String.format(LINE_BY_ID_PATH, lineId);
 
     final Response resp = verifyDeleteResponse(url, "", 204);
     assertTrue(StringUtils.isEmpty(resp.getBody().asString()));
@@ -972,18 +969,17 @@ public class OrdersImplTest {
   public void testDeleteOrderLineByIdNotFound() {
     logger.info("=== Test Delete Order Line By Id - Not Found ===");
 
-    String id = ID_DOES_NOT_EXIST;
-    String url = String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST, id);
+    String url = String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST);
     Response actual = verifyDeleteResponse(url, TEXT_PLAIN, 404);
 
-    assertEquals(id, actual.asString());
+    assertEquals(ID_DOES_NOT_EXIST, actual.asString());
   }
 
   @Test
   public void testDeleteOrderLineById500FromStorageOnGetPoLine() {
     logger.info("=== Test Delete Order Line By Id - 500 From Storage On Get PO Line ===");
 
-    String url = String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST, ID_FOR_INTERNAL_SERVER_ERROR);
+    String url = String.format(LINE_BY_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR);
     Response actual = verifyDeleteResponse(url, TEXT_PLAIN, 500);
 
     assertNotNull(actual.asString());
@@ -994,9 +990,8 @@ public class OrdersImplTest {
     logger.info("=== Test Delete Order Line By Id - 500 From Storage On Sub-Object deletion ===");
 
     String lineId = PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE;
-    String orderId = getMockLine(lineId).getPurchaseOrderId();
 
-    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+    String url = String.format(LINE_BY_ID_PATH, lineId);
     Response actual = verifyDeleteResponse(url, TEXT_PLAIN, 500);
 
     assertNotNull(actual.asString());
@@ -1035,36 +1030,6 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testDeleteOrderLineByIdNotCorrespondingToOrderId() {
-    logger.info("=== Test Delete Order Line By Id - Order line does not match PO id ===");
-
-    final Response resp = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .delete(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST, PO_LINE_ID_FOR_SUCCESS_CASE))
-        .then()
-          .contentType(ContentType.JSON)
-          .statusCode(422)
-          .extract()
-            .response();
-
-    JsonObject respBody = new JsonObject(resp.getBody().asString());
-    logger.info(respBody.encodePrettily());
-
-    assertNotNull(respBody.getValue("errors"));
-    Errors errors = respBody.mapTo(Errors.class);
-
-    assertEquals(1, errors.getErrors().size());
-    String message = errors.getErrors()
-                           .get(0)
-                           .getMessage();
-    assertNotNull(message);
-    assertTrue(message.contains(ID_DOES_NOT_EXIST));
-    assertTrue(message.contains(PO_LINE_ID_FOR_SUCCESS_CASE));
-  }
-
-  @Test
   public void testGetOrderLineById() {
     logger.info("=== Test Get Orderline By Id ===");
 
@@ -1072,7 +1037,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .get(String.format(LINE_BY_ID_PATH, PO_ID, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE))
+      .get(String.format(LINE_BY_ID_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE))
         .then()
           .statusCode(200)
           .extract()
@@ -1084,26 +1049,6 @@ public class OrdersImplTest {
     assertEquals(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE, resp.getId());
   }
 
-  @Test
-  public void testGetOrderLineByIdMismatchError422() {
-    logger.info("=== Test Get Orderline By Id - With 422 ===");
-
-    String orderId = ID_FOR_MISMATCH;
-
-    final Response resp = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .get(String.format(LINE_BY_ID_PATH, orderId, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE))
-        .then()
-          .statusCode(422)
-          .extract()
-          .response();
-
-    logger.info(resp.prettyPrint());
-    String msg = String.format("The PO line with id=%s does not belong to order with id=%s", ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE, orderId);
-    assertEquals(resp.as(Errors.class).getErrors().get(0).getMessage(), msg);
-  }
 
   @Test
   public void testGetOrderLineByIdWith404() {
@@ -1156,34 +1101,13 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPostOrdersLinesByIdWithIdMismatch() {
-    logger.info("=== Test Post Order Lines By Id (path and request body ids mismatching) ===");
-
-    JsonObject body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
-
-    Errors resp = verifyPostResponse(String.format(LINES_PATH, ID_DOES_NOT_EXIST), body.encodePrettily(),
-      NON_EXIST_CONFIG_X_OKAPI_TENANT, ContentType.JSON.toString(), 422).as(Errors.class);
-    assertEquals(1, resp.getErrors().size());
-  }
-
-  @Test
   public void testPostOrdersLinesByIdPoLineWithoutId(TestContext ctx) {
     logger.info("=== Test Post Order Lines By Id (empty id in body) ===");
 
-    PoLine response = verifyPostResponse(String.format(LINES_PATH, PO_ID), "{}",
-      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(PoLine.class);
+    Errors resp = verifyPostResponse(LINES_PATH, "{}",
+      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422).as(Errors.class);
 
-    ctx.assertEquals(PO_ID, response.getPurchaseOrderId());
-    ctx.assertNull(response.getInstanceId());
-  }
-
-  @Test
-  public void testPostOrdersLinesByIdStorageError() {
-    logger.info("=== Test Post Order Lines By Id (mod-orders-storage error) ===");
-
-    verifyPostResponse(String.format(LINES_PATH, ID_FOR_INTERNAL_SERVER_ERROR), "{}",
-      NON_EXIST_CONFIG_X_OKAPI_TENANT, TEXT_PLAIN, 500);
-
+    assertEquals(1, resp.getErrors().size());
   }
 
   @Test
@@ -1208,7 +1132,7 @@ public class OrdersImplTest {
         .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
         .contentType(APPLICATION_JSON)
         .body("{}")
-      .put(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST, ID_DOES_NOT_EXIST) + INVALID_LANG)
+      .put(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST) + INVALID_LANG)
         .then()
           .statusCode(400)
           .body(containsString(INCORRECT_LANG_PARAMETER));
@@ -1223,7 +1147,7 @@ public class OrdersImplTest {
         .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
         .contentType(APPLICATION_JSON)
         .body("{}")
-      .put(String.format(LINE_BY_ID_PATH, PO_ID, ID_BAD_FORMAT))
+      .put(String.format(LINE_BY_ID_PATH, ID_BAD_FORMAT))
         .then()
           .statusCode(400)
           .body(containsString("parameter is incorrect"));
@@ -1234,40 +1158,12 @@ public class OrdersImplTest {
     logger.info("=== Test PUT Order Line By Id - Empty Json as body Success case ===");
 
     String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
-    org.folio.rest.acq.model.PoLine line = getMockLine(lineId);
-    String orderId = line.getPurchaseOrderId();
-    String poLineNumber = line.getPoLineNumber();
-    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+    String orderId = getMockLine(lineId).getPurchaseOrderId();
+    String url = String.format(LINE_BY_ID_PATH, lineId);
 
-    final Response resp = verifyPut(url, "{}", "", 204);
-    assertTrue(StringUtils.isEmpty(resp.getBody().asString()));
+    Errors resp = verifyPut(url, "{}", "", 422).as(Errors.class);
 
-    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(1, column.size());
-    assertThat(column, hasKey(PO_LINES));
-
-    column = MockServer.serverRqRs.column(HttpMethod.POST);
-    assertEquals(0, column.size());
-
-    column = MockServer.serverRqRs.column(HttpMethod.DELETE);
-    assertEquals(9, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, VENDOR_DETAIL, CLAIMS, FUND_DISTRIBUTION));
-    assertThat(column.get(CLAIMS), hasSize(2));
-
-    column = MockServer.serverRqRs.column(HttpMethod.PUT);
-    assertEquals(1, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(PO_LINES));
-
-    JsonObject lineWithIds = column.get(PO_LINES).get(0);
-
-    // Verify that object has only PO and PO line ids
-    assertEquals(lineId, lineWithIds.remove(ID));
-    assertEquals(orderId, lineWithIds.remove(PURCHASE_ORDER_ID));
-    assertEquals(poLineNumber, lineWithIds.remove(PO_LINE_NUMBER));
-    lineWithIds.stream().forEach(entry -> {
-      Object value = entry.getValue();
-      assertTrue(Objects.isNull(value) || (value instanceof Iterable && !((Iterable) value).iterator().hasNext()));
-    });
+    assertEquals(1, resp.getErrors().size());
   }
 
   @Test
@@ -1276,9 +1172,8 @@ public class OrdersImplTest {
 
     String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
     JsonObject body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId);
-    String orderId = body.getString(PURCHASE_ORDER_ID);
 
-    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+    String url = String.format(LINE_BY_ID_PATH, lineId);
 
     final Response resp = verifyPut(url, body.encodePrettily(), "", 204);
 
@@ -1308,9 +1203,7 @@ public class OrdersImplTest {
 
     String lineId = PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED;
     JsonObject body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId);
-
-    String orderId = body.getString(PURCHASE_ORDER_ID);
-    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+    String url = String.format(LINE_BY_ID_PATH, lineId);
 
     final Response resp = verifyPut(url, body.encodePrettily(), APPLICATION_JSON, 500);
     assertEquals(3, resp.as(Errors.class).getErrors().size());
@@ -1346,8 +1239,7 @@ public class OrdersImplTest {
     String lineId = PO_LINE_ID_WITH_FUND_DISTRIBUTION_404_CODE;
     JsonObject body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId);
 
-    String orderId = body.getString(PURCHASE_ORDER_ID);
-    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+    String url = String.format(LINE_BY_ID_PATH, lineId);
 
     final Response resp = verifyPut(url, body.encodePrettily(), APPLICATION_JSON, 500);
     assertEquals(2, resp.as(Errors.class).getErrors().size());
@@ -1383,7 +1275,7 @@ public class OrdersImplTest {
     String lineId = ID_DOES_NOT_EXIST;
     String orderId = ID_DOES_NOT_EXIST;
 
-    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+    String url = String.format(LINE_BY_ID_PATH, lineId);
     String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, lineId, orderId);
 
     RestAssured
@@ -1408,7 +1300,7 @@ public class OrdersImplTest {
     String lineId = ID_DOES_NOT_EXIST;
     String orderId = PO_ID;
 
-    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+    String url = String.format(LINE_BY_ID_PATH, lineId);
     String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, lineId, orderId);
 
     Response actual = verifyPut(url, body, TEXT_PLAIN, 404);
@@ -1472,7 +1364,7 @@ public class OrdersImplTest {
     String lineId = ID_FOR_INTERNAL_SERVER_ERROR;
     String orderId = PO_ID;
 
-    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+    String url = String.format(LINE_BY_ID_PATH, lineId);
     String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, lineId, orderId);
 
     Response actual = verifyPut(url, body, TEXT_PLAIN, 500);
@@ -1502,7 +1394,7 @@ public class OrdersImplTest {
     String orderId = line.getPurchaseOrderId();
     String poLineNumber = line.getPoLineNumber();
 
-    String url = String.format(LINE_BY_ID_PATH, orderId, lineId);
+    String url = String.format(LINE_BY_ID_PATH, lineId);
     String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, lineId, orderId);
     Response actual = verifyPut(url, body, APPLICATION_JSON, 500);
 
@@ -1556,6 +1448,23 @@ public class OrdersImplTest {
     JsonObject poNumber=new JsonObject();
     poNumber.put("po_number", "11");
     verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422);
+  }
+
+  @Test
+  public void testGetOrdersNoParameters() {
+    logger.info("=== Test Get Orders - With empty query ===");
+
+    final Response resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT)
+      .get(rootPath)
+        .then()
+          .statusCode(200)
+          .extract()
+          .response();
+
+    assertEquals(3, resp.getBody().as(PurchaseOrders.class).getTotalRecords().intValue());
   }
 
   private org.folio.rest.acq.model.PoLine getMockLine(String id) {
@@ -2068,15 +1977,18 @@ public class OrdersImplTest {
       addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
       final String PO_NUMBER_QUERY = "po_number==";
       switch (queryParam) {
-      case PO_NUMBER_QUERY+EXISTING_PO_NUMBER:
-        po.put(TOTAL_RECORDS, 1);
-        break;
-      case PO_NUMBER_QUERY+NONEXISTING_PO_NUMBER:
-        po.put(TOTAL_RECORDS, 0);
-        break;
-      default:
-         //modify later as needed
-         po.put(TOTAL_RECORDS, 0);
+        case PO_NUMBER_QUERY + EXISTING_PO_NUMBER:
+          po.put(TOTAL_RECORDS, 1);
+          break;
+        case PO_NUMBER_QUERY + NONEXISTING_PO_NUMBER:
+          po.put(TOTAL_RECORDS, 0);
+          break;
+        case "null":
+          po.put(TOTAL_RECORDS, 3);
+          break;
+        default:
+          //modify later as needed
+          po.put(TOTAL_RECORDS, 0);
       }
       addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
       serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());

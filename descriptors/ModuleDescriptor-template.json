@@ -4,11 +4,11 @@
   "provides": [
     {
       "id": "orders",
-      "version": "2.0",
+      "version": "3.0",
       "handlers": [
         {
           "methods": ["POST"],
-          "pathPattern": "/orders",
+          "pathPattern": "/orders/composite-orders",
           "permissionsRequired": ["orders.item.post"],
           "modulePermissions": [
             "orders-storage.purchase_orders.item.post",
@@ -36,7 +36,7 @@
         },
         {
           "methods": ["GET"],
-          "pathPattern": "/orders/{id}",
+          "pathPattern": "/orders/composite-orders/{id}",
           "permissionsRequired": ["orders.item.get"],
           "modulePermissions": [
             "orders-storage.purchase_orders.item.get",
@@ -57,7 +57,7 @@
         },
         {
           "methods": ["PUT"],
-          "pathPattern": "/orders/{id}",
+          "pathPattern": "/orders/composite-orders/{id}",
           "permissionsRequired": ["orders.item.put"],
           "modulePermissions": [
             "orders-storage.purchase_orders.item.put",
@@ -83,7 +83,7 @@
         },
         {
           "methods": ["DELETE"],
-          "pathPattern": "/orders/{id}",
+          "pathPattern": "/orders/composite-orders/{id}",
           "permissionsRequired": ["orders.item.delete"],
           "modulePermissions": [
             "orders-storage.purchase_orders.item.delete",
@@ -104,7 +104,7 @@
         },
         {
           "methods": ["POST"],
-          "pathPattern": "/orders/{id}/lines",
+          "pathPattern": "/orders/order-lines",
           "permissionsRequired": ["orders.po_lines.item.post"],
           "modulePermissions": [
             "orders-storage.po_lines.item.post",
@@ -125,7 +125,7 @@
         },
         {
           "methods": ["GET"],
-          "pathPattern": "/orders/{id}/lines/{lineId}",
+          "pathPattern": "/orders/order-lines/{id}",
           "permissionsRequired": ["orders.po_lines.item.get"],
           "modulePermissions": [
             "orders-storage.po_lines.item.get",
@@ -145,7 +145,7 @@
         },
         {
           "methods": ["PUT"],
-          "pathPattern": "/orders/{id}/lines/{lineId}",
+          "pathPattern": "/orders/order-lines/{id}",
           "permissionsRequired": ["orders.po_lines.item.put"],
           "modulePermissions": [
             "orders-storage.po_lines.item.put",
@@ -165,7 +165,7 @@
         },
         {
           "methods": ["DELETE"],
-          "pathPattern": "/orders/{id}/lines/{lineId}",
+          "pathPattern": "/orders/order-lines/{id}",
           "permissionsRequired": ["orders.po_lines.item.delete"],
           "modulePermissions": [
             "orders-storage.po_lines.item.delete",

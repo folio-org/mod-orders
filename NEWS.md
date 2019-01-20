@@ -1,5 +1,6 @@
 ## 3.0.0 - Unreleased
 * [MODORDERS-87](https://issues.folio.org/browse/MODORDERS-87) - Implemented GET PO Number (PO Number generation)
+* [MODORDERS-124](https://issues.folio.org/browse/MODORDERS-124) - Redefined existing order/lines endpoints
 
 ## 2.0.1 - Released
 

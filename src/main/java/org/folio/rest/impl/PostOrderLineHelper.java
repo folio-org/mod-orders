@@ -7,12 +7,29 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
-import static org.folio.orders.utils.ResourcePathResolver.*;
+import static org.folio.orders.utils.ResourcePathResolver.ADJUSTMENT;
+import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.CLAIMS;
+import static org.folio.orders.utils.ResourcePathResolver.COST;
+import static org.folio.orders.utils.ResourcePathResolver.DETAILS;
+import static org.folio.orders.utils.ResourcePathResolver.ERESOURCE;
+import static org.folio.orders.utils.ResourcePathResolver.FUND_DISTRIBUTION;
+import static org.folio.orders.utils.ResourcePathResolver.LOCATION;
+import static org.folio.orders.utils.ResourcePathResolver.PHYSICAL;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
+import static org.folio.orders.utils.ResourcePathResolver.SOURCE;
+import static org.folio.orders.utils.ResourcePathResolver.VENDOR_DETAIL;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.tools.client.Response.isSuccess;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -21,8 +38,21 @@ import javax.ws.rs.core.Response;
 
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.Alert;
+import org.folio.rest.jaxrs.model.Claim;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Details;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.rest.jaxrs.model.ReportingCode;
+import org.folio.rest.jaxrs.model.Source;
+import org.folio.rest.jaxrs.model.VendorDetail;
 import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -533,16 +563,16 @@ public class PostOrderLineHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 400:
-        result = Orders.PostOrdersLinesByIdResponse.respond400WithTextPlain(error.getMessage());
+        result = Orders.PostOrdersOrderLinesResponse.respond400WithTextPlain(error.getMessage());
         break;
       case 401:
-        result = Orders.PostOrdersLinesByIdResponse.respond401WithTextPlain(error.getMessage());
+        result = Orders.PostOrdersOrderLinesResponse.respond401WithTextPlain(error.getMessage());
         break;
       case 422:
-        result = Orders.PostOrdersLinesByIdResponse.respond422WithApplicationJson(withErrors(error));
+        result = Orders.PostOrdersOrderLinesResponse.respond422WithApplicationJson(withErrors(error));
         break;
       default:
-        result = Orders.PostOrdersLinesByIdResponse.respond500WithTextPlain(error.getMessage());
+        result = Orders.PostOrdersOrderLinesResponse.respond500WithTextPlain(error.getMessage());
     }
     return result;
   }

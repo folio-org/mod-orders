@@ -2,7 +2,6 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.OKAPI_URL;
-import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.ResourcePathResolver.ADJUSTMENT;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
@@ -17,10 +16,7 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import javax.ws.rs.core.Response;
-import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -60,29 +56,7 @@ public abstract class AbstractHelper {
     return HttpClientFactory.getHttpClient(okapiURL, tenantId);
   }
 
-  /**
-   * Retrieves PO line from storage by PO line id as JsonObject and validates order id match.
-   */
-  protected CompletableFuture<JsonObject> getPoLineByIdAndValidate(String orderId, String lineId) {
-    return getPoLineById(lineId, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(line -> {
-        logger.debug("Validating if the retrieved PO line corresponds to PO");
-        validateOrderId(orderId, line);
-        return line;
-      });
-  }
 
-  /**
-   * Validates if the retrieved PO line corresponds to PO (orderId). In case the PO line does not correspond to order id the exception is thrown
-   * @param orderId order identifier
-   * @param line PO line retrieved from storage
-   */
-  private void validateOrderId(String orderId, JsonObject line) {
-    if (!StringUtils.equals(orderId, line.getString("purchase_order_id"))) {
-      String msg = String.format("The PO line with id=%s does not belong to order with id=%s", line.getString(ID), orderId);
-      throw new CompletionException(new ValidationException(msg, ID_MISMATCH_ERROR_CODE));
-    }
-  }
 
   /**
    * Some requests do not have body and in happy flow do not produce response body. The Accept header is required for calls to storage
