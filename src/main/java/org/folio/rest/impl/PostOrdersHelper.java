@@ -11,11 +11,11 @@ import java.util.concurrent.CompletableFuture;
 import javax.ws.rs.core.Response;
 
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.acq.model.PoNumber;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.rest.jaxrs.resource.Orders.PostOrdersResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -30,6 +30,7 @@ public class PostOrdersHelper extends AbstractHelper {
 
   private PoNumberHelper poNumberHelper;
 
+
   public PostOrdersHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx, String lang) {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
@@ -43,24 +44,25 @@ public class PostOrdersHelper extends AbstractHelper {
         .thenAccept(poNumberResp -> compPO.setPoNumber(poNumberResp.mapTo(PoNumber.class).getPoNumber()))
         .thenCompose(rVoid -> createPOandPOLines(compPO));
     }
-    else{
+    else {
       //If a PO  Number is already supplied, then verify if its unique
-      HelperUtils.isPONumberUnique(compPO.getPoNumber(), lang, httpClient, ctx, okapiHeaders, logger)
-      .thenAccept(v->
-      createPOandPOLines(compPO)
-          .thenAccept(future::complete)
-          .exceptionally(e->{
-           future.completeExceptionally(e);
-           return null;})
+      poNumberHelper.checkPONumberUnique(compPO.getPoNumber())
+      .thenAccept(v ->
+        createPOandPOLines(compPO)
+            .thenAccept(future::complete)
+            .exceptionally(e -> {
+             future.completeExceptionally(e);
+             return null;
+            })
       )
-      .exceptionally(e->{
+      .exceptionally(e -> {
            logger.error(e.getMessage());
            future.completeExceptionally(e);
            return null;
       });
     }
     return future;
-}
+  }
 
   private CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);

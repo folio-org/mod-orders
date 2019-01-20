@@ -85,7 +85,7 @@ public class PostOrderLineHelper extends AbstractHelper {
             .thenApply(body -> {
               logger.info("response from /po_line: " + body.encodePrettily());
 
-              compPOL.setId(body.getString("id"));
+              compPOL.setId(body.getString(ID));
               return compPOL;
             });
         } catch (Exception e) {

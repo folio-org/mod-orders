@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "1.0",
+      "version": "2.0",
       "handlers": [
         {
           "methods": ["POST"],
@@ -205,59 +205,59 @@
   "requires": [
     {
       "id": "orders-storage.purchase_orders",
-      "version": "1.0"
+      "version": "2.0"
     },
     {
       "id": "orders-storage.adjustments",
-      "version": "1.0"
+      "version": "2.0"
     },
     {
       "id": "orders-storage.alerts",
-      "version": "1.0"
+      "version": "2.0"
     },
     {
       "id": "orders-storage.claims",
-      "version": "1.0"
+      "version": "2.0"
     },
     {
       "id": "orders-storage.costs",
-      "version": "1.0"
+      "version": "2.0"
     },
     {
       "id": "orders-storage.details",
-      "version": "1.0"
+      "version": "2.0"
     },
     {
       "id": "orders-storage.eresources",
-      "version": "1.0"
+      "version": "2.0"
     },
     {
       "id": "orders-storage.fund-distributions",
-      "version": "1.0"
+      "version": "2.0"
     },
     {
       "id": "orders-storage.locations",
-      "version": "1.0"
+      "version": "2.0"
     },
     {
       "id": "orders-storage.physicals",
-      "version": "1.0"
+      "version": "2.0"
     },
     {
       "id": "orders-storage.reporting_codes",
-      "version": "1.0"
+      "version": "2.0"
     },
     {
       "id": "orders-storage.sources",
-      "version": "1.0"
+      "version": "2.0"
     },
     {
       "id": "orders-storage.vendor_details",
-      "version": "1.0"
+      "version": "2.0"
     },
     {
       "id": "orders-storage.po_lines",
-      "version": "1.0"
+      "version": "2.0"
     },
     {
       "id": "orders-storage.po_number",

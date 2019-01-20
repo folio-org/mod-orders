@@ -30,7 +30,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class HelperUtils {
 
-  private static final String PO_NUMBER_ALREADY_EXISTS = "PO Number already exists";
+  public static final String PO_NUMBER_ALREADY_EXISTS = "PO Number already exists";
   public static final String DEFAULT_POLINE_LIMIT = "500";
   public static final String OKAPI_URL = "X-Okapi-Url";
   public static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
@@ -384,21 +384,4 @@ public class HelperUtils {
     return future;
   }
 
-  public static CompletableFuture<Boolean> isPONumberUnique(String poNumber,String lang, HttpClientInterface httpClient, Context ctx,
-      Map<String, String> okapiHeaders, Logger logger) {
-      CompletableFuture<Boolean> future = new VertxCompletableFuture<>(ctx);
-           getPurchaseOrderByPONumber(poNumber, lang, httpClient, ctx, okapiHeaders, logger)
-          .thenAccept(po->{
-              if(po.getInteger("total_records")==0)
-                 future.complete(true);
-              else
-                future.completeExceptionally(new HttpException(400, PO_NUMBER_ALREADY_EXISTS));
-          })
-          .exceptionally(t -> {
-             logger.error("Exception validating PO Number existence", t.getCause());
-             future.completeExceptionally(t.getCause());
-             return null;
-           });
-        return future;
-   }
 }
