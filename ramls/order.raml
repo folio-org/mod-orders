@@ -9,8 +9,9 @@ documentation:
     content: <b>API for managing purchase orders</b>
 
 types:
-  composite_purchase_orders: !include acq-models/composite_purchase_orders.json
   composite_purchase_order: !include acq-models/composite_purchase_order.json
+  purchase_orders: !include acq-models/mod-orders-storage/schemas/purchase_order_collection.json
+  purchase_order: !include acq-models/mod-orders-storage/schemas/purchase_order.json
   po_line: !include acq-models/composite_po_line.json
   checkin-collection: !include acq-models/mod-orders/schemas/checkinCollection.json
   receiving-collection: !include acq-models/mod-orders/schemas/receivingCollection.json
@@ -37,6 +38,7 @@ traits:
             example: "unable to create <<resourcePathName|!singularize>> -- unauthorized"
 
 resourceTypes:
+  collection: !include raml-util/rtypes/collection.raml
   collection-item: !include raml-util/rtypes/item-collection.raml
   collection-get: !include raml-util/rtypes/collection-get.raml
   # The post-empty-body.raml does not declare request body but it can be defined when this resource type is used
@@ -44,27 +46,96 @@ resourceTypes:
   post-with-200: !include rtypes/post-json-body-200.raml
 
 /orders:
-  displayName: Orders
-  type:
-    # Using `post-item` resource type because at the moment only POST is required. In case GET becomes also required, the `collection` resource type should be used instead
-    post-item:
-      exampleItem: !include acq-models/examples/composite_purchase_order.sample
-      schema: composite_purchase_order
-  post:
-    description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order
-    is: [validate, auth]
-    body:
-      application/json:
-        type: composite_purchase_order
-        example:
-          strict: false
-          value: !include acq-models/examples/composite_purchase_order.sample
-  /po-number/validate:
-
-     displayName: PO Number Validation
-     post:
+  /composite-orders:
+    displayName: Orders
+    type:
+      collection:
+        exampleCollection: !include acq-models/mod-orders-storage/examples/purchase_order_collection.sample
+        exampleItem: !include acq-models/examples/composite_purchase_order.sample
+        schemaCollection: purchase_orders
+        schemaItem: composite_purchase_order
+    is: [validate]
+    get:
+      is: [pageable, searchable: {description: "using CQL (indexes for purchase orders)", example: "workflow_status==\"Pending\""} ]
+    post:
+      description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order
+      is: [auth]
+    /{id}:
+      uriParameters:
+        id:
+          description: The UUID of a purchase order
+          type: UUID
+      type:
+        collection-item:
+          exampleItem: !include acq-models/examples/composite_purchase_order.sample
+          schema: composite_purchase_order
+      is: [validate]
+      get:
+        description: Return a purchase order with given {id}
+      put:
+        description: Update a purchase order with given {id}
+        responses:
+          500:
+            body:
+              application/json:
+                type: errors
+                example:
+                  strict: false
+                  value: !include raml-util/examples/errors.sample
+      delete:
+        description: Delete a purchase order with given {id}
+  /order-lines:
+    displayName: Purchase Order Lines
+    description: Manage purchase order (PO) lines
+    type:
+      # Using `post-item` resource type because at the moment only POST is required. In case GET becomes also required, the `collection` resource type should be used instead
+      post-item:
+        exampleItem: !include acq-models/examples/composite_po_line.sample
+        schema: po_line
+    post:
+      displayName: Create a new purchace order line
+      description: Post a purchase order (PO) line
+      is: [validate, auth]
+      body:
+        application/json:
+          type: po_line
+          example:
+            strict: false
+            value: !include acq-models/examples/composite_po_line.sample
+    /{id}:
+      displayName: Purchase Order Line
+      description: Manage purchase order line (PO line) by id
+      uriParameters:
+        id:
+          description: The UUID of a purchase order line
+          type: UUID
+      type:
+        collection-item:
+          exampleItem: !include acq-models/examples/composite_po_line.sample
+          schema: po_line
+      is: [validate]
+      get:
+        description: Return a purchase order line with given {id}
+      put:
+        description: Update a purchase order line with given {id}
+        responses:
+          500:
+            body:
+              application/json:
+                type: errors
+                example:
+                  strict: false
+                  value: !include raml-util/examples/errors.sample
+      delete:
+        description: Delete a purchase order line with given {id}
+  /po-number:
+    displayName: Purchase Order Lines Number
+    description: Manage purchase order (PO) number
+    /validate:
+      displayName: PO Number Validation
+      post:
         description: validate if the PO Number is unique and matches the pattern specified
-        is: [validate, auth , language]
+        is: [validate, auth, language]
         body:
           application/json:
             type: po-number
@@ -82,71 +153,6 @@ resourceTypes:
             body:
               text/plain:
                 example: "Internal server error, contact administrator"
-  /{id}:
-    uriParameters:
-      id:
-        description: The UUID of a purchase order
-        type: UUID
-    type:
-      collection-item:
-        exampleItem: !include acq-models/examples/composite_purchase_order.sample
-        schema: composite_purchase_order
-    is: [validate]
-    put:
-      description: Update an order by id
-      responses:
-        500:
-          body:
-            application/json:
-              type: errors
-              example:
-                strict: false
-                value: !include raml-util/examples/errors.sample
-    /lines:
-      displayName: Purchase Order Lines
-      description: Manage purchase order (PO) lines
-      type:
-        # Using `post-item` resource type because at the moment only POST is required. In case GET becomes also required, the `collection` resource type should be used instead
-        post-item:
-          exampleItem: !include acq-models/examples/composite_po_line.sample
-          schema: po_line
-      is: [validate]
-      post:
-        displayName: Create a new purchace order line
-        description: Post a purchase order (PO) line
-        is: [auth]
-        body:
-          application/json:
-            type: po_line
-            example:
-              strict: false
-              value: !include acq-models/examples/composite_po_line.sample
-      /{lineId}:
-        displayName: Purchase Order Line
-        description: Manage purchase order line (PO line) by id
-        uriParameters:
-          lineId:
-            description: The UUID of a purchase order line
-            type: UUID
-        type:
-          collection-item:
-            exampleItem: !include acq-models/examples/composite_po_line.sample
-            schema: po_line
-        is: [validate]
-        put:
-          description: Update a purchase order line with given {lineId}
-          responses:
-            500:
-              body:
-                application/json:
-                  type: errors
-                  example:
-                    strict: false
-                    value: !include raml-util/examples/errors.sample
-        get:
-          description: Return a purchase order line with given {lineId}
-        delete:
-          description: Delete a purchase order line with given {lineId}
   /receive:
     displayName: Receive items
     description: Receive items spanning one or more PO lines

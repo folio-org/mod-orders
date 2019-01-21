@@ -9,7 +9,7 @@ import javax.ws.rs.core.Response;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.resource.Orders.GetOrdersLinesByIdAndLineIdResponse;
+import org.folio.rest.jaxrs.resource.Orders.GetOrdersOrderLinesByIdResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
@@ -26,10 +26,9 @@ public class GetPOLineByIdHelper extends AbstractHelper {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
-  public CompletableFuture<PoLine> getPOLineByPOLineId(String orderId, String polineId) {
+  public CompletableFuture<PoLine> getPOLineByPOLineId(String polineId) {
     CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
-
-    getPoLineByIdAndValidate(orderId, polineId)
+    HelperUtils.getPoLineById(polineId, lang, httpClient,ctx, okapiHeaders, logger)
       .thenCompose(this::populateCompositeLine)
       .thenAccept(future::complete)
       .exceptionally(t -> {
@@ -49,13 +48,13 @@ public class GetPOLineByIdHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 404:
-        result = GetOrdersLinesByIdAndLineIdResponse.respond404WithTextPlain(error.getMessage());
+        result = GetOrdersOrderLinesByIdResponse.respond404WithTextPlain(error.getMessage());
         break;
       case 422:
-        result = GetOrdersLinesByIdAndLineIdResponse.respond422WithApplicationJson(withErrors(error));
+        result = GetOrdersOrderLinesByIdResponse.respond422WithApplicationJson(withErrors(error));
         break;
       default:
-        result = GetOrdersLinesByIdAndLineIdResponse.respond500WithTextPlain(error.getMessage());
+        result = GetOrdersOrderLinesByIdResponse.respond500WithTextPlain(error.getMessage());
     }
     return result;
   }

@@ -1,21 +1,22 @@
 package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
-import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
-import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
+import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.orders.utils.SubObjects.*;
-import static org.folio.rest.jaxrs.resource.Orders.PutOrdersLinesByIdAndLineIdResponse.*;
+import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -32,6 +33,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PutOrderLineByIdHelper extends AbstractHelper {
 
+  public static final String ID = "id";
   private Errors processingErrors = new Errors();
 
   public PutOrderLineByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
@@ -48,8 +50,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   /**
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
-  public void updateOrderLine(String orderId, PoLine compOrderLine) {
-    getPoLineByIdAndValidate(orderId, compOrderLine.getId())
+  public void updateOrderLine(PoLine compOrderLine) {
+    getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(),compOrderLine.getId())
       .thenCompose(lineFromStorage -> {
         // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line update
         compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
@@ -244,5 +246,29 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
         }
     }
     return result;
+  }
+
+  /**
+   * Retrieves PO line from storage by PO line id as JsonObject and validates order id match.
+   */
+  protected CompletableFuture<JsonObject> getPoLineByIdAndValidate(String orderId, String lineId) {
+    return getPoLineById(lineId, lang, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(line -> {
+        logger.debug("Validating if the retrieved PO line corresponds to PO");
+        validateOrderId(orderId, line);
+        return line;
+      });
+  }
+
+  /**
+   * Validates if the retrieved PO line corresponds to PO (orderId). In case the PO line does not correspond to order id the exception is thrown
+   * @param orderId order identifier
+   * @param line PO line retrieved from storage
+   */
+  private void validateOrderId(String orderId, JsonObject line) {
+    if (!StringUtils.equals(orderId, line.getString("purchase_order_id"))) {
+      String msg = String.format("The PO line with id=%s does not belong to order with id=%s", line.getString("id"), orderId);
+      throw new CompletionException(new ValidationException(msg, ID_MISMATCH_ERROR_CODE));
+    }
   }
 }
