@@ -18,7 +18,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.resource.Orders.PostOrdersResponse;
+import org.folio.rest.jaxrs.resource.Orders.PostOrdersCompositeOrdersResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
@@ -145,16 +145,16 @@ public class PostOrdersHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 400:
-        result = PostOrdersResponse.respond400WithTextPlain(error.getMessage());
+        result = PostOrdersCompositeOrdersResponse.respond400WithTextPlain(error.getMessage());
         break;
       case 401:
-        result = PostOrdersResponse.respond401WithTextPlain(error.getMessage());
+        result = PostOrdersCompositeOrdersResponse.respond401WithTextPlain(error.getMessage());
         break;
       case 422:
-        result = PostOrdersResponse.respond422WithApplicationJson(withErrors(error));
+        result = PostOrdersCompositeOrdersResponse.respond422WithApplicationJson(withErrors(error));
         break;
       default:
-        result = PostOrdersResponse.respond500WithTextPlain(error.getMessage());
+        result = PostOrdersCompositeOrdersResponse.respond500WithTextPlain(error.getMessage());
     }
     return result;
   }

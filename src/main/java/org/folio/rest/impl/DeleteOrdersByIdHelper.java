@@ -10,7 +10,7 @@ import javax.ws.rs.core.Response;
 
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.resource.Orders.DeleteOrdersByIdResponse;
+import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersCompositeOrdersByIdResponse.*;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -53,8 +53,8 @@ public class DeleteOrdersByIdHelper extends AbstractHelper {
   @Override
   Response buildErrorResponse(int code, Error error) {
     if (code == 404) {
-      return DeleteOrdersByIdResponse.respond404WithTextPlain(error.getMessage());
+      return respond404WithTextPlain(error.getMessage());
     }
-    return DeleteOrdersByIdResponse.respond500WithTextPlain(error.getMessage());
+    return respond500WithTextPlain(error.getMessage());
   }
 }

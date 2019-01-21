@@ -1,7 +1,7 @@
 #%RAML 1.0
 title: Orders
 baseUri: https://github.com/folio-org/mod-orders
-version: v1
+version: v2
 protocols: [ HTTP, HTTPS ]
 
 documentation:
@@ -9,8 +9,9 @@ documentation:
     content: <b>API for managing purchase orders</b>
 
 types:
-  composite_purchase_orders: !include acq-models/composite_purchase_orders.json
   composite_purchase_order: !include acq-models/composite_purchase_order.json
+  purchase_orders: !include acq-models/mod-orders-storage/schemas/purchase_order_collection.json
+  purchase_order: !include acq-models/mod-orders-storage/schemas/purchase_order.json
   po_line: !include acq-models/composite_po_line.json
   errors: !include raml-util/schemas/errors.schema
   po-number: !include acq-models/mod-orders-storage/schemas/po_number.json
@@ -32,102 +33,39 @@ traits:
             example: "unable to create <<resourcePathName|!singularize>> -- unauthorized"
 
 resourceTypes:
+  collection: !include raml-util/rtypes/collection.raml
   collection-item: !include raml-util/rtypes/item-collection.raml
   # The post-empty-body.raml does not declare request body but it can be defined when this resource type is used
   post-item: !include raml-util/rtypes/post-empty-body.raml
 
 /orders:
-  displayName: Orders
-  type:
-    post-item:
-      exampleItem: !include acq-models/examples/composite_purchase_order.sample
-      schema: composite_purchase_order
-
-  post:
-    description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order
-    is: [validate, auth]
-    body:
-      application/json:
-        type: composite_purchase_order
-        example:
-          strict: false
-          value: !include acq-models/examples/composite_purchase_order.sample
-  /po-number/validate:
-      
-     displayName: PO Number Validation
-     post:
-        description: validate if the PO Number is unique and matches the pattern specified
-        is: [validate, auth , language]
-        body:
-          application/json:
-            type: po-number
-        responses:
-          204:
-            description: "Valid PO Number"
-          400:
-            description: "Bad request, e.g. existing PO Number. Details of the error provided in the response."
-            body:
-              text/plain:
-                example: |
-                  "unable to add <<resourcePathName|!singularize>> -- malformed JSON at 13:3"
-          500:
-            description: "Internal server error, e.g. due to misconfiguration"
-            body:
-              text/plain:
-                example: "Internal server error, contact administrator"
-  /{id}:
-    uriParameters:
-      id:
-        description: The UUID of a purchase order
-        type: UUID
+  /composite-orders:
+    displayName: Orders
     type:
-      collection-item:
+      collection:
+        exampleCollection: !include acq-models/mod-orders-storage/examples/purchase_order_collection.sample
         exampleItem: !include acq-models/examples/composite_purchase_order.sample
-        schema: composite_purchase_order
-    put:
-      description: Update an order by id
-      is: [validate]
-      responses:
-        500:
-          body:
-            application/json:
-              type: errors
-              example:
-                strict: false
-                value: !include raml-util/examples/errors.sample
-    /lines:
-      displayName: Purchase Order Lines
-      description: Manage purchase order (PO) lines
-      type:
-        # Using `post-item` resource type because at the moment only POST is required. In case GET becomes also required, the `collection` resource type should be used instead
-        post-item:
-          exampleItem: !include acq-models/examples/composite_po_line.sample
-          schema: po_line
-      post:
-        displayName: Create a new purchace order line
-        description: Post a purchase order (PO) line
-        is: [validate, auth]
-        body:
-          application/json:
-            type: po_line
-            example:
-              strict: false
-              value: !include acq-models/examples/composite_po_line.sample
-      /{lineId}:
-        displayName: Purchase Order Line
-        description: Manage purchase order line (PO line) by id
+        schemaCollection: purchase_orders
+        schemaItem: composite_purchase_order
+    get:
+      is: [pageable, searchable: {description: "using CQL (indexes for purchase orders)", example: "workflow_status==\"Pending\""} ]
+    post:
+      description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order
+      is: [validate, auth]
+    /{id}:
         uriParameters:
-          lineId:
-            description: The UUID of a purchase order line
+          id:
+            description: The UUID of a purchase order
             type: UUID
         type:
           collection-item:
-            exampleItem: !include acq-models/examples/composite_po_line.sample
-            schema: po_line
+            exampleItem: !include acq-models/examples/composite_purchase_order.sample
+            schema: composite_purchase_order
         get:
-          description: Return a purchase order line
+          description: Return a purchase order
           is: [validate]
         put:
+          description: Update an order by id
           is: [validate]
           responses:
             500:
@@ -138,4 +76,73 @@ resourceTypes:
                     strict: false
                     value: !include raml-util/examples/errors.sample
         delete:
-          is: [validate]
+          is: [validate, language]
+  /order-lines:
+     displayName: Purchase Order Lines
+     description: Manage purchase order (PO) lines
+     type:
+       # Using `post-item` resource type because at the moment only POST is required. In case GET becomes also required, the `collection` resource type should be used instead
+       post-item:
+         exampleItem: !include acq-models/examples/composite_po_line.sample
+         schema: po_line
+     post:
+       displayName: Create a new purchace order line
+       description: Post a purchase order (PO) line
+       is: [validate, auth]
+       body:
+         application/json:
+           type: po_line
+           example:
+             strict: false
+             value: !include acq-models/examples/composite_po_line.sample
+     /{id}:
+       displayName: Purchase Order Line
+       description: Manage purchase order line (PO line) by id
+       uriParameters:
+         id:
+           description: The UUID of a purchase order line
+           type: UUID
+       type:
+         collection-item:
+           exampleItem: !include acq-models/examples/composite_po_line.sample
+           schema: po_line
+       get:
+         description: Return a purchase order line
+         is: [validate]
+       put:
+         is: [validate]
+         responses:
+           500:
+             body:
+               application/json:
+                 type: errors
+                 example:
+                   strict: false
+                   value: !include raml-util/examples/errors.sample
+       delete:
+         is: [validate, language]
+  /po-number:
+    displayName: Purchase Order Lines Number
+    description: Manage purchase order (PO) lines
+    /validate:
+       displayName: PO Number Validation
+       post:
+         description: validate if the PO Number is unique and matches the pattern specified
+         is: [validate, auth, language]
+         body:
+           application/json:
+             type: po-number
+         responses:
+           204:
+             description: "Valid PO Number"
+           400:
+             description: "Bad request, e.g. existing PO Number. Details of the error provided in the response."
+             body:
+               text/plain:
+                 example: |
+                   "unable to add <<resourcePathName|!singularize>> -- malformed JSON at 13:3"
+           500:
+             description: "Internal server error, e.g. due to misconfiguration"
+             body:
+               text/plain:
+                 example: "Internal server error, contact administrator"
