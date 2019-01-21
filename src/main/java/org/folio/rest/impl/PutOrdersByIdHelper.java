@@ -77,7 +77,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
           .thenAccept(v -> {
             logger.info("Successfully Updated Order: " + JsonObject.mapFrom(compPO).encodePrettily());
             httpClient.closeClient();
-            javax.ws.rs.core.Response response = PutOrdersByIdResponse.respond204();
+            javax.ws.rs.core.Response response = PutOrdersCompositeOrdersByIdResponse.respond204();
             AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
             asyncResultHandler.handle(result);
           })
