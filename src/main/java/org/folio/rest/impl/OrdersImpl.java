@@ -161,7 +161,7 @@ public class OrdersImpl implements Orders {
             .thenAccept(entries -> {
               int limit = getPoLineLimit(config);
               if (entries.getInteger("total_records") < limit) {
-                helper.createPoLine(poLine, false)
+                helper.createPoLine(poLine)
                   .thenAccept(pol -> {
                     logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
                     httpClient.closeClient();
