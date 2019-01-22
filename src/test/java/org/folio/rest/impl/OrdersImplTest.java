@@ -1153,6 +1153,33 @@ public class OrdersImplTest {
   }
 
   @Test
+  public void testAddingPOLineIdFieldsToPoLine(TestContext ctx) {
+    logger.info("=== Test adding po_line_id fields to po-line ===");
+
+    JsonObject compPoLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
+    String id = compPoLineJson.getString(PURCHASE_ORDER_ID);
+    verifyPostResponse(String.format(LINES_PATH, id), compPoLineJson.encodePrettily(),
+      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(PoLine.class);
+
+    String poLineIdInitial = compPoLineJson.getString("id");
+
+    Set<String> poNumberIds = new HashSet<>();
+    for (Map.Entry<String, List<JsonObject>> obj : MockServer.serverRqRs.column(HttpMethod.POST).entrySet()) {
+      String poLineId = obj.getValue().get(0).getString("po_line_id");
+
+      // Sub-Objects Ids should be different from initial PoLine Id
+      ctx.assertNotEquals(poLineIdInitial, poLineId);
+
+      if(poLineId != null) {
+        poNumberIds.add(poLineId);
+      }
+    }
+
+    // Sub-Objects Ids should be the same
+    ctx.assertEquals(1, poNumberIds.size());
+  }
+
+  @Test
   public void testPostOrdersLinesByIdWithIdMismatch() {
     logger.info("=== Test Post Order Lines By Id (path and request body ids mismatching) ===");
 
