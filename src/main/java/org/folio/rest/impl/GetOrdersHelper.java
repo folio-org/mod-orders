@@ -33,15 +33,19 @@ public class GetOrdersHelper extends AbstractHelper {
   public CompletableFuture<PurchaseOrders> getPurchaseOrders(int limit, int offset, String query) {
     CompletableFuture<PurchaseOrders> future = new VertxCompletableFuture<>(ctx);
 
-    String queryParam = isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
-    String endpoint = String.format(GET_PURCHASE_ORDERS_BY_QUERY, limit, offset, queryParam, lang);
-    HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenAccept(jsonOrders -> future.complete(jsonOrders.mapTo(PurchaseOrders.class)))
-      .exceptionally(t -> {
-        logger.error("Error getting orders", t);
-        future.completeExceptionally(t.getCause());
-        return null;
-      });
+    try {
+      String queryParam = isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
+      String endpoint = String.format(GET_PURCHASE_ORDERS_BY_QUERY, limit, offset, queryParam, lang);
+      HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+        .thenAccept(jsonOrders -> future.complete(jsonOrders.mapTo(PurchaseOrders.class)))
+        .exceptionally(t -> {
+          logger.error("Error getting orders", t);
+          future.completeExceptionally(t.getCause());
+          return null;
+        });
+    } catch (Exception e) {
+      future.completeExceptionally(e);
+    }
 
     return future;
   }
