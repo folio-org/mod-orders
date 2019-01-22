@@ -5,6 +5,8 @@ import static org.folio.orders.utils.SubObjects.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -300,6 +302,20 @@ public class HelperUtils {
     }
 
     return future;
+  }
+
+  /**
+   * @param query string representing CQL query
+   * @param logger {@link Logger} to log error if any
+   * @return URL encoded string
+   */
+  public static String encodeQuery(String query, Logger logger) {
+    try {
+      return URLEncoder.encode(query, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      logger.error("Error happened while attempting to encode '{}'", e, query);
+      throw new CompletionException(e);
+    }
   }
 
   public static CompletableFuture<JsonObject> handleGetRequest(String endpoint, HttpClientInterface
