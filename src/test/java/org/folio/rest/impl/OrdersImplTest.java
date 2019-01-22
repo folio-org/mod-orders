@@ -1930,7 +1930,7 @@ public class OrdersImplTest {
 
       JsonObject po;
       po = new JsonObject();
-      String queryParam = ctx.request().getParam("query");
+      String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
       addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
       final String PO_NUMBER_QUERY = "po_number==";
       switch (queryParam) {
@@ -1940,7 +1940,7 @@ public class OrdersImplTest {
         case PO_NUMBER_QUERY + NONEXISTING_PO_NUMBER:
           po.put(TOTAL_RECORDS, 0);
           break;
-        case "null":
+        case StringUtils.EMPTY:
           po.put(TOTAL_RECORDS, 3);
           break;
         default:
