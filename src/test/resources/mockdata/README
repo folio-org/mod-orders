@@ -1,0 +1,13 @@
+Describes files and how they can be used
+
+# compositeOrders:
+1ab7ef6a-d1d4-4a4f-90a2-882aed18af14.json - Pending order with 3 POLs
+bad500aa-aaaa-500a-aaaa-aaaaaaaaaaaa.json - Pending order with 1 POL:
+  - c2755a78-2f8d-47d0-a218-059a9b7391b4 - 500 from storage for some of sub-objects (see below)
+
+# compositeLines and lines:
+fca5fa9e-15cb-4a3d-ab09-eeea99b97a47.json - PO line. Considered to be valid
+c0d08448-347b-418a-8c2f-5fb50248d67e.json - PO line. Considered to be valid
+0009662b-8b80-4001-b704-ca10971f175d.json - PO line. 'cost' and 'details' refer to d25498e7-3ae6-45fe-9612-ec99e2700d2f used for 404 to be returned by storage
+c2755a78-2f8d-47d0-a218-059a9b7391b4.json - PO line. 'details' refer to 168f8a86-d26c-406e-813f-c7527f241ac3 used for 500 to be returned by storage; 'cost' refers to d25498e7-3ae6-45fe-9612-ec99e2700d2f used for 404 to be returned by storage.
+f7223ce8-9e92-4c28-8fd9-097596053b7c.json - PO line. One of 'fund_distribution' elements refer to 168f8a86-d26c-406e-813f-c7527f241ac3 used for 500 to be returned by storage.
