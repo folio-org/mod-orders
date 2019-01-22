@@ -16,9 +16,11 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.rest.annotations.Validate;
+import org.folio.rest.jaxrs.model.CheckinCollection;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoNumber;
+import org.folio.rest.jaxrs.model.ReceivingCollection;
 import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -159,7 +161,7 @@ public class OrdersImpl implements Orders {
             .thenAccept(entries -> {
               int limit = getPoLineLimit(config);
               if (entries.getInteger("total_records") < limit) {
-                helper.createPoLine(poLine, false)
+                helper.createPoLine(poLine)
                   .thenAccept(pol -> {
                     logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
                     httpClient.closeClient();
@@ -246,6 +248,30 @@ public class OrdersImpl implements Orders {
     logger.info("Validating a PO Number");
     //@Validate asserts the pattern of a PO Number, the below method is used to check for uniqueness
      helper.checkPONumberUnique(poNumber);
+  }
+
+  @Override
+  @Validate
+  public void postOrdersReceive(String lang, ReceivingCollection entity, Map<String, String> okapiHeaders,
+                                Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    // Return 501 (Not Implemented) for now
+    asyncResultHandler.handle(succeededFuture(Response.status(501).build()));
+  }
+
+  @Override
+  @Validate
+  public void postOrdersCheckIn(String lang, CheckinCollection entity, Map<String, String> okapiHeaders,
+                                Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    // Return 501 (Not Implemented) for now
+    asyncResultHandler.handle(succeededFuture(Response.status(501).build()));
+  }
+
+  @Override
+  @Validate
+  public void getOrdersReceivingHistory(String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
+                                        Context vertxContext) {
+    // Return 501 (Not Implemented) for now
+    asyncResultHandler.handle(succeededFuture(Response.status(501).build()));
   }
 
   private static int getPoLineLimit(JsonObject config) {

@@ -1,7 +1,22 @@
 package org.folio.rest.impl;
 
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
-import static org.folio.orders.utils.ResourcePathResolver.*;
+import static org.folio.orders.utils.ResourcePathResolver.ADJUSTMENT;
+import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.CLAIMS;
+import static org.folio.orders.utils.ResourcePathResolver.COST;
+import static org.folio.orders.utils.ResourcePathResolver.DETAILS;
+import static org.folio.orders.utils.ResourcePathResolver.ERESOURCE;
+import static org.folio.orders.utils.ResourcePathResolver.FUND_DISTRIBUTION;
+import static org.folio.orders.utils.ResourcePathResolver.LOCATION;
+import static org.folio.orders.utils.ResourcePathResolver.PHYSICAL;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
+import static org.folio.orders.utils.ResourcePathResolver.SOURCE;
+import static org.folio.orders.utils.ResourcePathResolver.VENDOR_DETAIL;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
@@ -10,8 +25,17 @@ import static org.folio.rest.impl.AbstractHelper.PO_NUMBER;
 import static org.folio.rest.impl.OrdersImpl.LINES_LIMIT_ERROR_CODE;
 import static org.folio.rest.impl.OrdersImpl.OVER_LIMIT_ERROR_MESSAGE;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.hasSize;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,7 +50,13 @@ import java.util.stream.Stream;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.RestVerticle;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoNumber;
+import org.folio.rest.jaxrs.model.PurchaseOrders;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -1973,7 +2003,7 @@ public class OrdersImplTest {
 
       JsonObject po;
       po = new JsonObject();
-      String queryParam = ctx.request().getParam("query");
+      String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
       addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
       final String PO_NUMBER_QUERY = "po_number==";
       switch (queryParam) {
@@ -1983,7 +2013,7 @@ public class OrdersImplTest {
         case PO_NUMBER_QUERY + NONEXISTING_PO_NUMBER:
           po.put(TOTAL_RECORDS, 0);
           break;
-        case "null":
+        case StringUtils.EMPTY:
           po.put(TOTAL_RECORDS, 3);
           break;
         default:
