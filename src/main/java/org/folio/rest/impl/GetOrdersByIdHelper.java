@@ -17,7 +17,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
-import static org.folio.orders.utils.SubObjects.ADJUSTMENT;
+import static org.folio.orders.utils.ResourcePathResolver.ADJUSTMENT;
 
 public class GetOrdersByIdHelper extends AbstractHelper {
 

@@ -206,6 +206,23 @@ public class OrdersImpl implements Orders {
   }
 
   @Override
+  public void getOrdersPoNumber(String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    logger.info("Receiving generated po_number ...");
+
+    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
+    PoNumberHelper helper = new PoNumberHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
+
+    helper.generatePoNumber()
+      .thenAccept(poNumberJson -> {
+        logger.info("Received PoNumber Response: " + poNumberJson.encodePrettily());
+        httpClient.closeClient();
+        javax.ws.rs.core.Response response = GetOrdersPoNumberResponse.respond200WithApplicationJson(poNumberJson.mapTo(PoNumber.class));
+        AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
+        asyncResultHandler.handle(result);
+      }).exceptionally(helper::handleError);
+  }
+
+  @Override
   @Validate
   public void putOrdersOrderLinesById(String lineId, String lang, PoLine poLine, Map<String, String> okapiHeaders,
                                           Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
@@ -227,7 +244,7 @@ public class OrdersImpl implements Orders {
   public void postOrdersPoNumberValidate(String lang, PoNumber poNumber, Map<String, String> okapiHeaders,
      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    ValidationHelper helper = new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
+    PoNumberHelper helper=new PoNumberHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
     logger.info("Validating a PO Number");
     //@Validate asserts the pattern of a PO Number, the below method is used to check for uniqueness
      helper.checkPONumberUnique(poNumber);

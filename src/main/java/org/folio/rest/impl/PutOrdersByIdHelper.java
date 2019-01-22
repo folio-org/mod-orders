@@ -35,11 +35,11 @@ import static org.folio.orders.utils.HelperUtils.deletePoLine;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
-import static org.folio.orders.utils.SubObjects.PO_LINES;
-import static org.folio.orders.utils.SubObjects.PURCHASE_ORDER;
-import static org.folio.orders.utils.SubObjects.resourceByIdPath;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 
 public class PutOrdersByIdHelper extends AbstractHelper {
 
@@ -47,7 +47,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
 
   private final PutOrderLineByIdHelper putLineHelper;
   private final PostOrderLineHelper postOrderLineHelper;
-  private final ValidationHelper validationHelper;
+  private final PoNumberHelper poNumberHelper;
 
   PutOrdersByIdHelper(Map<String, String> okapiHeaders,
                              Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
@@ -55,7 +55,8 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     setDefaultHeaders(httpClient);
     putLineHelper = new PutOrderLineByIdHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
     postOrderLineHelper = new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
-    validationHelper = new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
+    poNumberHelper = new PoNumberHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
+
   }
 
   /**
@@ -100,7 +101,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
 
   private CompletionStage<JsonObject> validatePoNumber(CompositePurchaseOrder compPO, JsonObject poFromStorage) {
     if (isPoNumberChanged(poFromStorage, compPO)) {
-      return validationHelper
+      return poNumberHelper
         .checkPONumberUnique(compPO.getPoNumber())
         .thenApply(v -> poFromStorage);
     }
