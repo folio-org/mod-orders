@@ -4,6 +4,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
@@ -20,7 +21,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 public class GetOrdersHelper extends AbstractHelper {
 
-  public static final String GET_PURCHASE_ORDERS_BY_QUERY = resourcesPath(PURCHASE_ORDER) + "?limit=%s&offset=%s&query=%s&lang=%s";
+  public static final String GET_PURCHASE_ORDERS_BY_QUERY = resourcesPath(PURCHASE_ORDER) + "?limit=%s&offset=%s%s&lang=%s";
 
   GetOrdersHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
                   Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
@@ -31,7 +32,8 @@ public class GetOrdersHelper extends AbstractHelper {
   public CompletableFuture<PurchaseOrders> getPurchaseOrders(int limit, int offset, String query) {
     CompletableFuture<PurchaseOrders> future = new VertxCompletableFuture<>(ctx);
 
-    String endpoint = String.format(GET_PURCHASE_ORDERS_BY_QUERY, limit, offset, query, lang);
+    String queryParam = StringUtils.isEmpty(query) ? StringUtils.EMPTY : "&query=" + query;
+    String endpoint = String.format(GET_PURCHASE_ORDERS_BY_QUERY, limit, offset, queryParam, lang);
     HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(jsonOrders -> future.complete(jsonOrders.mapTo(PurchaseOrders.class)))
       .exceptionally(t -> {
