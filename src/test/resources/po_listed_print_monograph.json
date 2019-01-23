@@ -29,7 +29,7 @@
   },
   "po_lines": [
     {
-      "id": "c2755a78-2f8d-47d0-a218-059a9b7391b3",
+      "id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47",
       "acquisition_method": "Purchase At Vendor System",
       "adjustment": {
         "credit": 0.0,
@@ -116,7 +116,6 @@
       },
       "po_line_description": "ABCDEFGHIJKLMNOPQRSTUVWXY",
       "po_line_number": "268758-03",
-      "po_line_workflow_status": "Open",
       "publication_date": "2017",
       "publisher": "Schiffer Publishing",
       "receipt_date": "2018-10-09T00:00:00.000Z",
@@ -241,7 +240,6 @@
       "owner": "LTS E-Resources & Serials",
       "payment_status": "Awaiting Payment",
       "po_line_description": "",
-      "po_line_workflow_status": "Closed",
       "publication_date": "2017",
       "publisher": "John Wiley & Sons, Inc.",
       "receipt_date": null,
