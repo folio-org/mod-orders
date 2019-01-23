@@ -1897,12 +1897,14 @@ public class OrdersImplTest {
       if (bodyAsString.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
         serverResponse(ctx, 500, TEXT_PLAIN, INTERNAL_SERVER_ERROR);
       } else {
-        addServerRqRsData(HttpMethod.POST, ITEM_RECORDS, ctx.getBodyAsJson());
+        JsonObject bodyAsJson = ctx.getBodyAsJson();
+        bodyAsJson.put(ID, UUID.randomUUID().toString());
+        addServerRqRsData(HttpMethod.POST, ITEM_RECORDS, bodyAsJson);
         ctx.response()
            .setStatusCode(201)
            .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-           .putHeader(HttpHeaders.LOCATION, ctx.request().absoluteURI() + "/" + UUID.randomUUID().toString())
-           .end();
+           .putHeader(HttpHeaders.LOCATION, ctx.request().absoluteURI() + "/" + bodyAsJson.getString(ID))
+           .end(bodyAsJson.encode());
       }
     }
 

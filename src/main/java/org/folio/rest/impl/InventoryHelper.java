@@ -353,9 +353,14 @@ public class InventoryHelper {
           return response;
         })
         .thenAccept(response -> {
-          String location = response.getHeaders()
-                                    .get(LOCATION_HEADER);
-          String id = location.substring(location.lastIndexOf('/') + 1);
+          String id;
+          JsonObject body = response.getBody();
+          if (body != null && !body.isEmpty() && body.containsKey(ID)) {
+            id = body.getString(ID);
+          } else {
+            String location = response.getHeaders().get(LOCATION_HEADER);
+            id = location.substring(location.lastIndexOf('/') + 1);
+          }
           future.complete(id);
           logger.debug("The request to '{}' successfully processed. Entity with '{}' id created", endpoint, id);
         })

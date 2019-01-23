@@ -80,7 +80,7 @@
           }
         ],
         "material_types": [
-          "f7e72403-2a13-43a4-a069-aaabe6c9dea8"
+          "1a54b431-2e4f-452d-9cae-9cee66c9a892"
         ],
         "subscription_from": "2018-10-09T00:00:00.000Z",
         "subscription_interval": 824,
@@ -217,7 +217,7 @@
           }
         ],
         "material_types": [
-          "fde2e958-cde3-11e8-a8d5-f2801f1b9fd1"
+          "615b8413-82d5-4203-aa6e-e37984cb5ac3"
         ],
         "subscription_from": null,
         "subscription_interval": 0,
@@ -248,7 +248,7 @@
       "po_line_description": "",
       "publication_date": "2017",
       "publisher": "John Wiley & Sons, Inc.",
-      "receipt_date": null,
+      "receipt_date": "2020-10-10T00:00:00.000Z",
       "receipt_status": "Fully Received",
       "reporting_codes": [],
       "requester": "",
