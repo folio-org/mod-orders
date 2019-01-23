@@ -1,7 +1,7 @@
 package org.folio.rest.impl;
 
-import static org.folio.orders.utils.SubObjects.PURCHASE_ORDER;
-import static org.folio.orders.utils.SubObjects.resourceByIdPath;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -10,7 +10,8 @@ import javax.ws.rs.core.Response;
 
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.Error;
-import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersCompositeOrdersByIdResponse.*;
+import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersCompositeOrdersByIdResponse.respond404WithTextPlain;
+import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersCompositeOrdersByIdResponse.respond500WithTextPlain;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;

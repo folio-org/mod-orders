@@ -30,6 +30,7 @@
             "orders-storage.fund-distributions.item.post",
             "orders-storage.locations.item.post",
             "orders-storage.physicals.item.post",
+            "orders-storage.po_number.get",
             "orders-storage.reporting_codes.item.post",
             "orders-storage.sources.item.post",
             "orders-storage.vendor_details.item.post",
@@ -199,6 +200,14 @@
           ]
         },
         {
+          "methods": ["GET"],
+          "pathPattern": "/orders/po-number",
+          "permissionsRequired": ["orders.po-number.item.get"],
+          "modulePermissions": [
+            "orders-storage.po_number.get"
+          ]
+        },
+        {
           "methods": ["POST"],
           "pathPattern": "/orders/receive",
           "permissionsRequired": ["orders.receiving.collection.post"],
@@ -306,6 +315,10 @@
       "version": "3.0"
     },
     {
+      "id": "orders-storage.po_number",
+      "version": "1.0"
+    },
+    {
       "id": "identifier-types",
       "version": "1.1"
     },
@@ -375,6 +388,11 @@
       "permissionName": "orders.po-lines.item.delete",
       "displayName": "Orders - delete an existing PO line",
       "description": "Delete an existing PO line"
+    },
+    {
+      "permissionName": "orders.po-number.item.get",
+      "displayName": "Orders - generate a PO Number",
+      "description": "Generate a PO Number"
     },
     {
       "permissionName": "orders.po-number.item.post",
