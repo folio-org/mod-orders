@@ -73,7 +73,11 @@ resourceTypes:
       get:
         description: Return a purchase order with given {id}
       put:
-        description: Update a purchase order with given {id}
+        description: |
+          Update a purchase order with given {id}
+          - if request does not include po_lines or includes "po_lines": [] - update just purchase order summary
+          - if request includes "po_lines": null - delete the PO lines
+          - if request includes array of "po_lines" - update PO lines as per request
         responses:
           500:
             body:

@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
@@ -109,8 +110,12 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   }
 
   private boolean isTransitionToOpen(CompositePurchaseOrder compPO, JsonObject poFromStorage) {
-    WorkflowStatus currentStatus = WorkflowStatus.fromValue(poFromStorage.getString("workflow_status"));
-    return currentStatus == PENDING && compPO.getWorkflowStatus() == OPEN;
+    String workflowStatus = poFromStorage.getString("workflow_status");
+    if (StringUtils.isNotEmpty(workflowStatus)) {
+      WorkflowStatus currentStatus = WorkflowStatus.fromValue(workflowStatus);
+      return currentStatus == PENDING && compPO.getWorkflowStatus() == OPEN;
+    }
+    return false;
   }
 
   private boolean isPoNumberChanged(JsonObject poFromStorage, CompositePurchaseOrder compPO) {
@@ -119,19 +124,28 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> updatePoLines(JsonObject poFromStorage, CompositePurchaseOrder compPO) {
-    if (isNotEmpty(compPO.getPoLines()) || isPoNumberChanged(poFromStorage, compPO)) {
+    if (shouldUpdatePoLines(poFromStorage, compPO)) {
       return getPoLines(poFromStorage.getString(ID), lang, httpClient, ctx, okapiHeaders, logger)
         .thenCompose(jsonObject -> {
           JsonArray existedPoLinesArray = jsonObject.getJsonArray(PO_LINES);
-          if (isNotEmpty(compPO.getPoLines())) {
+          if (shouldHandlePoLines(compPO, existedPoLinesArray)) {
             return handlePoLines(compPO, existedPoLinesArray);
-          } else {
+          } else if (!existedPoLinesArray.isEmpty()) {
             return updatePoLinesNumber(compPO, existedPoLinesArray);
           }
+          return VertxCompletableFuture.completedFuture(null);
         });
     } else {
       return completedFuture(null);
     }
+  }
+
+  private boolean shouldUpdatePoLines(JsonObject poFromStorage, CompositePurchaseOrder compPO) {
+    return compPO.getPoLines() == null || !compPO.getPoLines().isEmpty() || isPoNumberChanged(poFromStorage, compPO);
+  }
+
+  private boolean shouldHandlePoLines(CompositePurchaseOrder compPO, JsonArray poLinesFromStorage) {
+    return isNotEmpty(compPO.getPoLines()) || (compPO.getPoLines() == null && !poLinesFromStorage.isEmpty());
   }
 
   private CompletableFuture<Void> updateOrderSummary(CompositePurchaseOrder compPO) {
@@ -163,19 +177,19 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     }
 
     return compositePoLines
-      .thenCompose(poLines -> {
-        List<CompletableFuture<Void>> futures = poLines.stream()
-          .map(putLineHelper::updateInventory)
-          .collect(toList());
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-          .thenApply(v -> compPO);
-      });
+      .thenCompose(poLines ->
+        CompletableFuture.allOf(poLines.stream()
+          .map(putLineHelper::updateInventory).toArray(CompletableFuture[]::new))
+          .thenApply(v -> compPO)
+      );
   }
 
   private CompletableFuture<Void> handlePoLines(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
     List<CompletableFuture<?>> futures = new ArrayList<>();
     if (poLinesFromStorage.isEmpty()) {
       futures.addAll(processPoLinesCreation(compOrder, poLinesFromStorage));
+    } else if (compOrder.getPoLines() == null) {
+      futures.addAll(processPoLinesDelete(poLinesFromStorage));
     } else {
       futures.addAll(processPoLinesCreation(compOrder, poLinesFromStorage));
       futures.addAll(processPoLinesUpdate(compOrder, poLinesFromStorage));
@@ -200,6 +214,10 @@ public class PutOrdersByIdHelper extends AbstractHelper {
       }
     }
     return futures;
+  }
+
+  private List<CompletableFuture<?>> processPoLinesDelete(JsonArray poLinesFromStorage) {
+    return poLinesFromStorage.stream().map(poLine -> deletePoLine((JsonObject) poLine, httpClient, ctx, okapiHeaders, logger)).collect(Collectors.toList());
   }
 
   private List<CompletableFuture<?>> processPoLinesCreation(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
