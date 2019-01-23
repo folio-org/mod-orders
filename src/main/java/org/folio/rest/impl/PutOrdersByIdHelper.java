@@ -31,7 +31,6 @@ import java.util.stream.Collectors;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
-import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.HelperUtils.deletePoLine;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
@@ -124,28 +123,31 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> updatePoLines(JsonObject poFromStorage, CompositePurchaseOrder compPO) {
-    if (shouldUpdatePoLines(poFromStorage, compPO)) {
+    if (isPoLinesUpdateRequired(poFromStorage, compPO)) {
       return getPoLines(poFromStorage.getString(ID), lang, httpClient, ctx, okapiHeaders, logger)
         .thenCompose(jsonObject -> {
           JsonArray existedPoLinesArray = jsonObject.getJsonArray(PO_LINES);
-          if (shouldHandlePoLines(compPO, existedPoLinesArray)) {
-            return handlePoLines(compPO, existedPoLinesArray);
-          } else if (!existedPoLinesArray.isEmpty()) {
+          if (isOnlyPoLinesNumbersUpdateRequired(poFromStorage, compPO)) {
             return updatePoLinesNumber(compPO, existedPoLinesArray);
+          } else {
+            return handlePoLines(compPO, existedPoLinesArray);
           }
-          return VertxCompletableFuture.completedFuture(null);
         });
     } else {
       return completedFuture(null);
     }
   }
 
-  private boolean shouldUpdatePoLines(JsonObject poFromStorage, CompositePurchaseOrder compPO) {
-    return compPO.getPoLines() == null || !compPO.getPoLines().isEmpty() || isPoNumberChanged(poFromStorage, compPO);
+  private boolean isPoLinesUpdateRequired(JsonObject poFromStorage, CompositePurchaseOrder compPO) {
+    return !isPoLinesEmptyAndNotNull(compPO) || isPoNumberChanged(poFromStorage, compPO);
   }
 
-  private boolean shouldHandlePoLines(CompositePurchaseOrder compPO, JsonArray poLinesFromStorage) {
-    return isNotEmpty(compPO.getPoLines()) || (compPO.getPoLines() == null && !poLinesFromStorage.isEmpty());
+  private boolean isOnlyPoLinesNumbersUpdateRequired(JsonObject poFromStorage, CompositePurchaseOrder compPO) {
+    return isPoLinesEmptyAndNotNull(compPO) && isPoNumberChanged(poFromStorage, compPO);
+  }
+
+  private boolean isPoLinesEmptyAndNotNull(CompositePurchaseOrder compPO) {
+    return compPO.getPoLines() != null && compPO.getPoLines().isEmpty();
   }
 
   private CompletableFuture<Void> updateOrderSummary(CompositePurchaseOrder compPO) {
@@ -177,10 +179,13 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     }
 
     return compositePoLines
-      .thenCompose(poLines ->
-        CompletableFuture.allOf(poLines.stream()
-          .map(putLineHelper::updateInventory).toArray(CompletableFuture[]::new))
-          .thenApply(v -> compPO)
+      .thenCompose(poLines -> {
+          CompletableFuture[] futures = poLines.stream()
+            .map(putLineHelper::updateInventory).
+              toArray(CompletableFuture[]::new);
+          return CompletableFuture.allOf(futures)
+            .thenApply(v -> compPO);
+        }
       );
   }
 
