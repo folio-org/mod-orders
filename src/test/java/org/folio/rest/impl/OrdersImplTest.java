@@ -1134,12 +1134,22 @@ public class OrdersImplTest {
     logger.info("=== Test Post Order Lines By Id (expected flow) ===");
 
     JsonObject compPoLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
-    String id = compPoLineJson.getString(PURCHASE_ORDER_ID);
-    final PoLine response = verifyPostResponse(LINES_PATH, compPoLineJson.encodePrettily(),
+    String poId = compPoLineJson.getString(PURCHASE_ORDER_ID);
+    final PoLine response = verifyPostResponse(String.format(LINES_PATH, poId), compPoLineJson.encodePrettily(),
       NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(PoLine.class);
 
-    ctx.assertEquals(id, response.getPurchaseOrderId());
+    ctx.assertEquals(poId, response.getPurchaseOrderId());
     ctx.assertNull(response.getInstanceId());
+
+    Set<String> poLinesIds = new HashSet<>();
+    for (Map.Entry<String, List<JsonObject>> obj : MockServer.serverRqRs.column(HttpMethod.POST).entrySet()) {
+      String poLineId = obj.getValue().get(0).getString("po_line_id");
+      if(poLineId != null) {
+        poLinesIds.add(poLineId);
+      }
+    }
+
+    ctx.assertEquals(1, poLinesIds.size());
   }
 
   @Test
@@ -1502,32 +1512,19 @@ public class OrdersImplTest {
     assertEquals(3, resp.getBody().as(PurchaseOrders.class).getTotalRecords().intValue());
   }
 
-  private org.folio.rest.acq.model.PoLine getMockLine(String id) {
-    return getMockAsJson(PO_LINES_MOCK_DATA_PATH, id).mapTo(org.folio.rest.acq.model.PoLine.class);
-  }
-
-  private JsonObject getMockAsJson(String path, String id) {
-    try {
-      return new JsonObject(getMockData(String.format("%s%s.json", path, id)));
-    } catch (IOException e) {
-      fail(e.getMessage());
-    }
-    return new JsonObject();
-  }
-
   @Test
   public void testGetPoNumber() {
     logger.info("=== Test Get PO Number (generate po_number) ===");
 
     final Response response = RestAssured
       .with()
-        .header(X_OKAPI_URL)
-        .header(EXIST_CONFIG_X_OKAPI_TENANT)
+      .header(X_OKAPI_URL)
+      .header(EXIST_CONFIG_X_OKAPI_TENANT)
       .get("/orders/po-number")
-        .then()
-          .statusCode(200)
-          .extract()
-          .response();
+      .then()
+      .statusCode(200)
+      .extract()
+      .response();
 
     String actualResponse = response.getBody().asString();
     logger.info(actualResponse);
@@ -1545,13 +1542,26 @@ public class OrdersImplTest {
 
     RestAssured
       .with()
-        .header(X_OKAPI_URL)
-        .header(PO_NUMBER_ERROR_X_OKAPI_TENANT)
+      .header(X_OKAPI_URL)
+      .header(PO_NUMBER_ERROR_X_OKAPI_TENANT)
       .get("/orders/po-number")
-        .then()
-          .statusCode(500)
-          .extract()
-          .response();
+      .then()
+      .statusCode(500)
+      .extract()
+      .response();
+  }
+
+  private org.folio.rest.acq.model.PoLine getMockLine(String id) {
+    return getMockAsJson(PO_LINES_MOCK_DATA_PATH, id).mapTo(org.folio.rest.acq.model.PoLine.class);
+  }
+
+  private JsonObject getMockAsJson(String path, String id) {
+    try {
+      return new JsonObject(getMockData(String.format("%s%s.json", path, id)));
+    } catch (IOException e) {
+      fail(e.getMessage());
+    }
+    return new JsonObject();
   }
 
   private Response verifyPut(String url, String body, String expectedContentType, int expectedCode) {
@@ -1894,7 +1904,26 @@ public class OrdersImplTest {
         serverResponse(ctx, 500, TEXT_PLAIN, INTERNAL_SERVER_ERROR);
       } else {
         try {
-          JsonObject po = new JsonObject(getMockData(String.format("%s%s.json", PO_LINES_MOCK_DATA_PATH, id)));
+
+          JsonObject po = null;
+
+          // Attempt to find POLine in mock server memory
+          Map<String, List<JsonObject>> column = serverRqRs.column(HttpMethod.POST);
+          if(!column.isEmpty()) {
+            List<JsonObject> objects = new ArrayList<>(column.get("po_lines"));
+            Comparator<JsonObject> comparator = Comparator.comparing(o -> o.getString(ID));
+            objects.sort(comparator);
+            int ind = Collections.binarySearch(objects, new JsonObject().put(ID, id), comparator);
+            if(ind > -1) {
+              po = objects.get(ind);
+            }
+          }
+
+          // If previous step has no result then attempt to find POLine in stubs
+          if (po == null) {
+            po = new JsonObject(getMockData(String.format("%s%s.json", PO_LINES_MOCK_DATA_PATH, id)));
+          }
+
           serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
         } catch (IOException e) {
           serverResponse(ctx, 404, TEXT_PLAIN, id);
