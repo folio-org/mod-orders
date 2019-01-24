@@ -1583,7 +1583,7 @@ public class OrdersImplTest {
 
   private void verifyInstanceRecordRequest(JsonObject instance, PoLine line) {
     assertThat(instance.getString("title"), equalTo(line.getTitle()));
-    assertThat(instance.getString("source"), equalTo(line.getSource().getCode()));
+    assertThat(instance.getString("source"), equalTo("FOLIO"));
     assertThat(instance.getString("statusId"), equalTo("daf2681c-25af-4202-a3fa-e58fdf806183"));
     assertThat(instance.getString("instanceTypeId"), equalTo("30fffe0e-e985-4144-b2e2-1e8179bdb41f"));
     assertThat(instance.getJsonArray("publication").getJsonObject(0).getString("publisher"), equalTo(line.getPublisher()));

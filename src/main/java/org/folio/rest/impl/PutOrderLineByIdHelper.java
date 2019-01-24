@@ -67,6 +67,7 @@ import static org.folio.rest.tools.client.Response.isSuccess;
 
 public class PutOrderLineByIdHelper extends AbstractHelper {
 
+  private static final String INSTANCE_SOURCE = "FOLIO";
   private static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
   private static final String DEFAULT_STATUS_CODE = "temp";
   private static final String LOCATION_HEADER = "Location";
@@ -287,9 +288,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 
   private JsonObject buildInstanceRecordJsonObject(PoLine compPOL, Map<String, String> productTypes, JsonObject lookupObj) {
     JsonObject instance = new JsonObject();
-    if (compPOL.getSource() != null) {
-      instance.put("source", compPOL.getSource().getCode());
-    }
+    instance.put("source", INSTANCE_SOURCE);
     if (compPOL.getTitle() != null) {
       instance.put("title", compPOL.getTitle());
     }
