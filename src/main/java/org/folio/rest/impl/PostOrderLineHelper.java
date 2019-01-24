@@ -20,6 +20,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
@@ -58,6 +59,7 @@ public class PostOrderLineHelper extends AbstractHelper {
   }
 
   public CompletableFuture<PoLine> createPoLine(PoLine compPOL) {
+    compPOL.setId(UUID.randomUUID().toString());
     JsonObject line = JsonObject.mapFrom(compPOL);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
 
@@ -323,7 +325,9 @@ public class PostOrderLineHelper extends AbstractHelper {
 
   private CompletableFuture<String> createSubObj(JsonObject pol, JsonObject obj, String field, String url) {
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
-
+    if (!(SOURCE.equals(field) || REPORTING_CODES.equals(field))) {
+      obj.put("po_line_id", pol.getString(ID));
+    }
     try {
       operateOnSubObj(HttpMethod.POST, url, obj, httpClient, ctx, okapiHeaders, logger)
         .thenAccept(body -> {
