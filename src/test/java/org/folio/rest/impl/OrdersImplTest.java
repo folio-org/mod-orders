@@ -263,6 +263,8 @@ public class OrdersImplTest {
     CompositePurchaseOrder reqData = new JsonObject(getMockData(listedPrintMonographPath)).mapTo(CompositePurchaseOrder.class);
     // remove productId from PO line to test scenario when it's not provided so there is no check for existing instance but new one will be created
     reqData.getPoLines().get(0).getDetails().getProductIds().clear();
+    // MODORDERS-117 only physical quantity will be used
+    reqData.getPoLines().get(0).setOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE);
     // Set status to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
@@ -319,7 +321,7 @@ public class OrdersImplTest {
     assertEquals(2, reqData.getPoLines().size());
     // Make sure that Order moves to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    // Setting OrderFormat to OTHER which means create nothing in inventory
+    // MODORDERS-117 Setting OrderFormat to OTHER which means create nothing in inventory for the second PO Line
     reqData.getPoLines().get(1).setOrderFormat(PoLine.OrderFormat.OTHER);
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
@@ -847,13 +849,19 @@ public class OrdersImplTest {
 
     // Get Open Order
     CompositePurchaseOrder reqData = new JsonObject(getMockData(listedPrintMonographPath)).mapTo(CompositePurchaseOrder.class);
+    // Make sure that mock PO has 2 po lines
+    assertEquals(2, reqData.getPoLines().size());
+
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    // MODORDERS-117 guarantee electronic resource for the second PO Line but set "create items" to false
+    reqData.getPoLines().get(1).setOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE);
+    reqData.getPoLines().get(1).getEresource().setCreateInventory(false);
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ID_FOR_PENDING_ORDER), JsonObject.mapFrom(reqData).toString(), "", 204);
 
     int polCount = reqData.getPoLines().size();
 
-    verifyInventoryInteraction(reqData, polCount);
+    verifyInventoryInteraction(reqData, polCount - 1);
   }
 
   private void verifyInventoryInteraction(CompositePurchaseOrder reqData, int createdInstancesCount) {

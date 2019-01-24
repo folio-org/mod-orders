@@ -13,6 +13,7 @@ import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import java.util.ArrayList;
@@ -34,8 +35,8 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
 import static org.folio.rest.impl.AbstractHelper.ID;
-import static org.folio.rest.tools.client.Response.isSuccess;
 
 public class InventoryHelper {
 
@@ -343,30 +344,14 @@ public class InventoryHelper {
       }
       httpClient
         .request(HttpMethod.POST, recordData.toBuffer(), endpoint, okapiHeaders)
-        .thenApply(response -> {
-          logger.debug("Validating received response");
-          if (!isSuccess(response.getCode())) {
-            throw new CompletionException(
-              new HttpException(response.getCode(), response.getError()
-                                                            .getString("errorMessage")));
-          }
-          return response;
-        })
-        .thenAccept(response -> {
-          String id;
-          JsonObject body = response.getBody();
-          if (body != null && !body.isEmpty() && body.containsKey(ID)) {
-            id = body.getString(ID);
-          } else {
-            String location = response.getHeaders().get(LOCATION_HEADER);
-            id = location.substring(location.lastIndexOf('/') + 1);
-          }
+        .thenApply(this::verifyAndExtractRecordId)
+        .thenAccept(id -> {
           future.complete(id);
-          logger.debug("The request to '{}' successfully processed. Entity with '{}' id created", endpoint, id);
+          logger.debug("'POST {}' request successfully processed. Record with '{}' id has been created", endpoint, id);
         })
         .exceptionally(throwable -> {
           future.completeExceptionally(throwable);
-          logger.error("The request to '{}' failed.", throwable, endpoint );
+          logger.error("'POST {}' request failed.", throwable, endpoint);
           return null;
         });
     } catch (Exception e) {
@@ -374,6 +359,21 @@ public class InventoryHelper {
     }
 
     return future;
+  }
+
+  private String verifyAndExtractRecordId(Response response) {
+    logger.debug("Validating received response");
+
+    JsonObject body = verifyAndExtractBody(response);
+
+    String id;
+    if (body != null && !body.isEmpty() && body.containsKey(ID)) {
+      id = body.getString(ID);
+    } else {
+      String location = response.getHeaders().get(LOCATION_HEADER);
+      id = location.substring(location.lastIndexOf('/') + 1);
+    }
+    return id;
   }
 
   private CompletableFuture<JsonObject> buildItemRecordJsonObject(PoLine compPOL, String holdingId) {
@@ -395,7 +395,7 @@ public class InventoryHelper {
     return Optional.ofNullable(compPOL.getDetails())
                    .map(Details::getMaterialTypes)
                    .flatMap(ids -> ids.stream().findFirst())
-                   .orElseThrow(() -> new CompletionException(new ValidationException("The Material Type is required but not available in PO line", "")));
+                   .orElseThrow(() -> new CompletionException(new ValidationException("The Material Type is required but not available in PO line")));
   }
 
   private String extractId(JsonObject json) {

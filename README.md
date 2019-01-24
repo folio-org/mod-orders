@@ -13,13 +13,15 @@ This is the Orders business logic module.
 
 ### Purchase Order logic 
 Upon receiving a request to create a PO, it does the following:
-* Save a PO object as Pending Order; then 
+* Save a PO object in `Pending` status; then 
 * Retrieve the `id` of the PO and pass that to the related PO lines; then
 * Save the PO lines; then
 * In case an order is in Open status and updates are required in the Inventory, it does the following:
-  * Find or create instance record
-  * Find or create holding record 
+  * Find or create instance record; then
+  * Update PO lines with instance record identifier; then 
+  * Find or create holding record; then
   * Find or create item record per unit of physical/electronic quantity identified in the order line record
+* In case expected order status is `Open`, update a PO object; then 
 * Retrieve the fund transactions associated with each PO line; then
 * Make the appropriate transactions against the associated funds
 
@@ -31,10 +33,12 @@ Upon receiving a request to update a PO, it does the following:
     * if PO Line already exists, update it and any sub-objects
     * if PO Line exists in the database, but not in the request, delete this PO Line
     * if PO Line exists in the request but not in the database, create PO Line
-* In case an order's status changes from Pending to Open and updates are required in the Inventory, it does the following:
-  * Find or create instance record
-  * Find or create holding record 
+* In case an order's status changes from `Pending` to `Open` and updates are required in the Inventory, it does the following:
+  * Find or create instance record; then
+  * Update PO lines with instance record identifier; then 
+  * Find or create holding record; then
   * Find or create item record per unit of physical/electronic quantity identified in the order line record
+  * Update a PO object with `Open` status 
 
 Upon receiving a request to delete a PO, it does the following:
 * Retrieve PO lines by the `id` of the PO and delete them; then
