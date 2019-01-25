@@ -1135,7 +1135,7 @@ public class OrdersImplTest {
 
     JsonObject compPoLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
     String poId = compPoLineJson.getString(PURCHASE_ORDER_ID);
-    final PoLine response = verifyPostResponse(String.format(LINES_PATH, poId), compPoLineJson.encodePrettily(),
+    final PoLine response = verifyPostResponse(LINES_PATH, compPoLineJson.encodePrettily(),
       NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(PoLine.class);
 
     ctx.assertEquals(poId, response.getPurchaseOrderId());
