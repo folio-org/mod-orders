@@ -1,0 +1,16 @@
+{
+  "items": [
+    {
+      "id": "f96275e4-8b36-4084-a25f-38b48c45e88b",
+      "hrid": "it00000127",
+      "holdingsRecordId": "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61",
+      "status": {
+        "name": "On order"
+      },
+      "materialTypeId": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+      "permanentLoanTypeId": "2b94c631-fca9-4892-a730-03ee529ffe27",
+      "purchaseOrderLineIdentifier": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47"
+    }
+  ],
+  "totalRecords": 1
+}

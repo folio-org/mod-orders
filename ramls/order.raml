@@ -142,6 +142,9 @@ resourceTypes:
           body:
             application/json:
               type: po-number
+              example:
+                strict: false
+                value: !include acq-models/mod-orders-storage/examples/po_number_get.sample
         400:
           description: "Bad request, malformed request"
           body:
