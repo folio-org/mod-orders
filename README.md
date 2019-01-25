@@ -21,7 +21,6 @@ Upon receiving a request to create a PO, it does the following:
 
 Upon receiving a request to update a PO, it does the following:
 * if provided PO doesn't contain PO Lines, just update the PO information via the /orders-storage/purchase_orders endpoint
-* if provided PO includes "po_lines": null - delete the PO lines
 * if provided PO contain PO Lines:
   * Get the current list of PO Lines for this order; then
   * Compare the provided list of PO Lines with what's in the database:

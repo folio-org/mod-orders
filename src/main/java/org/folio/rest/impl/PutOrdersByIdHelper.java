@@ -26,11 +26,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.HelperUtils.deletePoLine;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
@@ -123,31 +123,19 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> updatePoLines(JsonObject poFromStorage, CompositePurchaseOrder compPO) {
-    if (isPoLinesUpdateRequired(poFromStorage, compPO)) {
+    if (isNotEmpty(compPO.getPoLines()) || isPoNumberChanged(poFromStorage, compPO)) {
       return getPoLines(poFromStorage.getString(ID), lang, httpClient, ctx, okapiHeaders, logger)
         .thenCompose(jsonObject -> {
           JsonArray existedPoLinesArray = jsonObject.getJsonArray(PO_LINES);
-          if (isOnlyPoLinesNumbersUpdateRequired(poFromStorage, compPO)) {
-            return updatePoLinesNumber(compPO, existedPoLinesArray);
-          } else {
+          if (isNotEmpty(compPO.getPoLines())) {
             return handlePoLines(compPO, existedPoLinesArray);
+          } else {
+            return updatePoLinesNumber(compPO, existedPoLinesArray);
           }
         });
     } else {
       return completedFuture(null);
     }
-  }
-
-  private boolean isPoLinesUpdateRequired(JsonObject poFromStorage, CompositePurchaseOrder compPO) {
-    return !isPoLinesEmptyAndNotNull(compPO) || isPoNumberChanged(poFromStorage, compPO);
-  }
-
-  private boolean isOnlyPoLinesNumbersUpdateRequired(JsonObject poFromStorage, CompositePurchaseOrder compPO) {
-    return isPoLinesEmptyAndNotNull(compPO) && isPoNumberChanged(poFromStorage, compPO);
-  }
-
-  private boolean isPoLinesEmptyAndNotNull(CompositePurchaseOrder compPO) {
-    return compPO.getPoLines() != null && compPO.getPoLines().isEmpty();
   }
 
   private CompletableFuture<Void> updateOrderSummary(CompositePurchaseOrder compPO) {
@@ -180,21 +168,18 @@ public class PutOrdersByIdHelper extends AbstractHelper {
 
     return compositePoLines
       .thenCompose(poLines -> {
-          CompletableFuture[] futures = poLines.stream()
-            .map(putLineHelper::updateInventory).
-              toArray(CompletableFuture[]::new);
-          return CompletableFuture.allOf(futures)
-            .thenApply(v -> compPO);
-        }
-      );
+        List<CompletableFuture<Void>> futures = poLines.stream()
+          .map(putLineHelper::updateInventory)
+          .collect(toList());
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+          .thenApply(v -> compPO);
+      });
   }
 
   private CompletableFuture<Void> handlePoLines(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
     List<CompletableFuture<?>> futures = new ArrayList<>();
     if (poLinesFromStorage.isEmpty()) {
       futures.addAll(processPoLinesCreation(compOrder, poLinesFromStorage));
-    } else if (compOrder.getPoLines() == null) {
-      futures.addAll(processPoLinesDelete(poLinesFromStorage));
     } else {
       futures.addAll(processPoLinesCreation(compOrder, poLinesFromStorage));
       futures.addAll(processPoLinesUpdate(compOrder, poLinesFromStorage));
@@ -219,10 +204,6 @@ public class PutOrdersByIdHelper extends AbstractHelper {
       }
     }
     return futures;
-  }
-
-  private List<CompletableFuture<?>> processPoLinesDelete(JsonArray poLinesFromStorage) {
-    return poLinesFromStorage.stream().map(poLine -> deletePoLine((JsonObject) poLine, httpClient, ctx, okapiHeaders, logger)).collect(Collectors.toList());
   }
 
   private List<CompletableFuture<?>> processPoLinesCreation(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {

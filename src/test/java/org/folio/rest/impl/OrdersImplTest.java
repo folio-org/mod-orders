@@ -94,7 +94,6 @@ public class OrdersImplTest {
   private static final String ORDER_WITHOUT_PO_LINES = "order_without_po_lines.json";
   private static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
   private static final String ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON = "put_order_with_mismatch_id_in_po_lines.json";
-  private static final String ORDER_WITH_NULL_VALUE_IN_PO_LINES_JSON = "order_with_null_value_in_po_lines.json";
   private static final String PO_NUMBER_VALUE = "228D126";
 
   static {
@@ -793,24 +792,6 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPutOrderByIdWithNullPoLinesDeleteAllPoLines() throws IOException {
-    logger.info("=== Test Put Order By Id with empty PO lines field delete lines from storage ===");
-
-    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
-    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
-    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
-    JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_NULL_VALUE_IN_PO_LINES_JSON));
-    JsonObject storageData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id);
-
-    verifyPut(rootPath + "/" + id, reqData.toString(), "", 204);
-
-    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
-    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE).size(), storageData.getJsonArray(PO_LINES).size());
-  }
-
-
-
-  @Test
   public void testPutOrdersByIdToChangeStatusToOpen() throws Exception {
     logger.info("=== Test Put Order By Id to change status of Order to Open ===");
 
@@ -1099,17 +1080,20 @@ public class OrdersImplTest {
   public void testGetOrderLineByIdWith404() {
     logger.info("=== Test Get Orderline By Id - With 404 ===");
 
+    String orderId = ID_DOES_NOT_EXIST;
+    String lineId = ID_DOES_NOT_EXIST;
+
     final Response resp = RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .get(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST))
+      .get(String.format(LINE_BY_ID_PATH, orderId))
         .then()
           .statusCode(404)
           .extract()
           .response();
 
-    assertEquals(ID_DOES_NOT_EXIST, resp.getBody().asString());
+    assertEquals(lineId, resp.getBody().asString());
   }
 
   @Test
@@ -1153,7 +1137,7 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPostOrdersLinesByIdPoLineWithoutId() {
+  public void testPostOrdersLinesByIdPoLineWithoutId(TestContext ctx) {
     logger.info("=== Test Post Order Lines By Id (empty id in body) ===");
 
     Errors resp = verifyPostResponse(LINES_PATH, "{}",
@@ -1209,7 +1193,8 @@ public class OrdersImplTest {
   public void testPutOrderLineByIdWithEmptyBody() {
     logger.info("=== Test PUT Order Line By Id - Empty Json as body Success case ===");
 
-    String url = String.format(LINE_BY_ID_PATH, PO_LINE_ID_FOR_SUCCESS_CASE);
+    String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
+    String url = String.format(LINE_BY_ID_PATH, lineId);
 
     Errors resp = verifyPut(url, "{}", "", 422).as(Errors.class);
 
@@ -1322,8 +1307,11 @@ public class OrdersImplTest {
   public void testPutOrderLineByIdWithoutOkapiUrlHeader() {
     logger.info("=== Test PUT Order Line By Id - 500 due to missing Okapi URL header ===");
 
-    String url = String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST);
-    String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, ID_DOES_NOT_EXIST, ID_DOES_NOT_EXIST);
+    String lineId = ID_DOES_NOT_EXIST;
+    String orderId = ID_DOES_NOT_EXIST;
+
+    String url = String.format(LINE_BY_ID_PATH, lineId);
+    String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, lineId, orderId);
 
     RestAssured
       .with()
@@ -1345,9 +1333,10 @@ public class OrdersImplTest {
     logger.info("=== Test PUT Order Line By Id - Not Found ===");
 
     String lineId = ID_DOES_NOT_EXIST;
+    String orderId = PO_ID;
 
     String url = String.format(LINE_BY_ID_PATH, lineId);
-    String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, lineId, PO_ID);
+    String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, lineId, orderId);
 
     Response actual = verifyPut(url, body, TEXT_PLAIN, 404);
 
@@ -1373,7 +1362,7 @@ public class OrdersImplTest {
 
     String orderId = PO_ID;
 
-    String url = String.format(LINE_BY_ID_PATH, orderId);
+    String url = String.format(LINE_BY_ID_PATH, orderId, ID_DOES_NOT_EXIST);
     String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, ID_BAD_FORMAT, orderId);
 
     Response resp = verifyPut(url, body, APPLICATION_JSON, 422);
@@ -1391,7 +1380,7 @@ public class OrdersImplTest {
 
     String orderId = PO_ID;
 
-    String url = String.format(LINE_BY_ID_PATH, orderId);
+    String url = String.format(LINE_BY_ID_PATH, orderId, ID_DOES_NOT_EXIST);
     String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, PO_ID_FOR_SUCCESS_CASE, orderId);
 
     Response resp = verifyPut(url, body, APPLICATION_JSON, 422);
@@ -1408,9 +1397,10 @@ public class OrdersImplTest {
     logger.info("=== Test PUT Order Line By Id - 500 From Storage On Get PO Line ===");
 
     String lineId = ID_FOR_INTERNAL_SERVER_ERROR;
+    String orderId = PO_ID;
 
     String url = String.format(LINE_BY_ID_PATH, lineId);
-    String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, lineId, PO_ID);
+    String body = String.format(EMPTY_PO_LINE_BUT_WITH_IDS, lineId, orderId);
 
     Response actual = verifyPut(url, body, TEXT_PLAIN, 500);
 
