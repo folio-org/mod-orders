@@ -327,7 +327,7 @@ public class OrdersImplTest {
     reqData.getPoLines().get(1).setOrderFormat(PoLine.OrderFormat.OTHER);
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     // Check that search of the existing instances and items was done for first PO line only
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
@@ -857,7 +857,7 @@ public class OrdersImplTest {
       .header(X_OKAPI_USER_ID)
       .contentType(APPLICATION_JSON)
       .body(body)
-      .put(rootPath + "/" + ORDER_ID_WITHOUT_PO_LINES)
+      .put(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES)
       .then()
       .statusCode(422)
       .extract()
