@@ -33,7 +33,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 public class HelperUtils {
 
   public static final String PO_NUMBER_ALREADY_EXISTS = "PO Number already exists";
-  public static final String DEFAULT_POLINE_LIMIT = "500";
+  public static final String DEFAULT_POLINE_LIMIT = "1";
   public static final String OKAPI_URL = "X-Okapi-Url";
   public static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
   public static final String URL_WITH_LANG_PARAM = "%s?lang=%s";
