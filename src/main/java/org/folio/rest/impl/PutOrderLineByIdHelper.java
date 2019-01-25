@@ -56,7 +56,6 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PutOrderLineByIdHelper extends AbstractHelper {
 
-  private static final String INSTANCE_SOURCE = "FOLIO";
   private final InventoryHelper inventoryHelper;
   private final Errors processingErrors = new Errors();
 
