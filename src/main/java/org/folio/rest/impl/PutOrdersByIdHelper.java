@@ -15,7 +15,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.resource.Orders.PutOrdersByIdResponse;
+import org.folio.rest.jaxrs.resource.Orders.PutOrdersCompositeOrdersByIdResponse;
 
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
@@ -35,11 +35,11 @@ import static org.folio.orders.utils.HelperUtils.deletePoLine;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
-import static org.folio.orders.utils.SubObjects.PO_LINES;
-import static org.folio.orders.utils.SubObjects.PURCHASE_ORDER;
-import static org.folio.orders.utils.SubObjects.resourceByIdPath;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 
 public class PutOrdersByIdHelper extends AbstractHelper {
 
@@ -47,7 +47,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
 
   private final PutOrderLineByIdHelper putLineHelper;
   private final PostOrderLineHelper postOrderLineHelper;
-  private final ValidationHelper validationHelper;
+  private final PoNumberHelper poNumberHelper;
 
   PutOrdersByIdHelper(Map<String, String> okapiHeaders,
                              Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
@@ -55,7 +55,8 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     setDefaultHeaders(httpClient);
     putLineHelper = new PutOrderLineByIdHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
     postOrderLineHelper = new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
-    validationHelper = new ValidationHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
+    poNumberHelper = new PoNumberHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
+
   }
 
   /**
@@ -77,7 +78,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
           .thenAccept(v -> {
             logger.info("Successfully Updated Order: " + JsonObject.mapFrom(compPO).encodePrettily());
             httpClient.closeClient();
-            javax.ws.rs.core.Response response = PutOrdersByIdResponse.respond204();
+            javax.ws.rs.core.Response response = PutOrdersCompositeOrdersByIdResponse.respond204();
             AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
             asyncResultHandler.handle(result);
           })
@@ -100,7 +101,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
 
   private CompletionStage<JsonObject> validatePoNumber(CompositePurchaseOrder compPO, JsonObject poFromStorage) {
     if (isPoNumberChanged(poFromStorage, compPO)) {
-      return validationHelper
+      return poNumberHelper
         .checkPONumberUnique(compPO.getPoNumber())
         .thenApply(v -> poFromStorage);
     }
@@ -217,7 +218,6 @@ public class PutOrdersByIdHelper extends AbstractHelper {
       return poNumber + matcher.group(2);
     }
     logger.error("PO Line - {} has invalid or missing number.", poLineFromStorage.getString(ID));
-    //TODO assign the line a new, valid number using the poNumber once the POLine sequence/API is ready
     return oldPoLineNumber;
   }
 
@@ -226,22 +226,22 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 400:
-        result = PutOrdersByIdResponse.respond400WithTextPlain(error.getMessage());
+        result = PutOrdersCompositeOrdersByIdResponse.respond400WithTextPlain(error.getMessage());
         break;
       case 404:
-        result = PutOrdersByIdResponse.respond404WithTextPlain(error.getMessage());
+        result = PutOrdersCompositeOrdersByIdResponse.respond404WithTextPlain(error.getMessage());
         break;
       case 422:
-        result = PutOrdersByIdResponse.respond422WithApplicationJson(withErrors(error));
+        result = PutOrdersCompositeOrdersByIdResponse.respond422WithApplicationJson(withErrors(error));
         break;
       default:
         if (putLineHelper.getProcessingErrors().isEmpty()) {
-          result = PutOrdersByIdResponse.respond500WithTextPlain(error.getMessage());
+          result = PutOrdersCompositeOrdersByIdResponse.respond500WithTextPlain(error.getMessage());
         } else {
           Errors processingErrors = new Errors();
           processingErrors.getErrors().addAll(putLineHelper.getProcessingErrors());
           processingErrors.getErrors().add(error);
-          result = PutOrdersByIdResponse.respond500WithApplicationJson(processingErrors);
+          result = PutOrdersCompositeOrdersByIdResponse.respond500WithApplicationJson(processingErrors);
         }
     }
     return result;

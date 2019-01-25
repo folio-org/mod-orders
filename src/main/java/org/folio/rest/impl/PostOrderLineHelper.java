@@ -2,17 +2,45 @@ package org.folio.rest.impl;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
-import static org.folio.orders.utils.SubObjects.*;
+import static org.folio.orders.utils.ResourcePathResolver.ADJUSTMENT;
+import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.CLAIMS;
+import static org.folio.orders.utils.ResourcePathResolver.COST;
+import static org.folio.orders.utils.ResourcePathResolver.DETAILS;
+import static org.folio.orders.utils.ResourcePathResolver.ERESOURCE;
+import static org.folio.orders.utils.ResourcePathResolver.FUND_DISTRIBUTION;
+import static org.folio.orders.utils.ResourcePathResolver.LOCATION;
+import static org.folio.orders.utils.ResourcePathResolver.PHYSICAL;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
+import static org.folio.orders.utils.ResourcePathResolver.SOURCE;
+import static org.folio.orders.utils.ResourcePathResolver.VENDOR_DETAIL;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import javax.ws.rs.core.Response;
 
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.Alert;
+import org.folio.rest.jaxrs.model.Claim;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Details;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.ReportingCode;
+import org.folio.rest.jaxrs.model.Source;
+import org.folio.rest.jaxrs.model.VendorDetail;
 import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -26,13 +54,12 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PostOrderLineHelper extends AbstractHelper {
 
-
-
   PostOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
   public CompletableFuture<PoLine> createPoLine(PoLine compPOL) {
+    compPOL.setId(UUID.randomUUID().toString());
     JsonObject line = JsonObject.mapFrom(compPOL);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
 
@@ -298,7 +325,9 @@ public class PostOrderLineHelper extends AbstractHelper {
 
   private CompletableFuture<String> createSubObj(JsonObject pol, JsonObject obj, String field, String url) {
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
-
+    if (!(SOURCE.equals(field) || REPORTING_CODES.equals(field))) {
+      obj.put("po_line_id", pol.getString(ID));
+    }
     try {
       operateOnSubObj(HttpMethod.POST, url, obj, httpClient, ctx, okapiHeaders, logger)
         .thenAccept(body -> {
@@ -352,16 +381,16 @@ public class PostOrderLineHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 400:
-        result = Orders.PostOrdersLinesByIdResponse.respond400WithTextPlain(error.getMessage());
+        result = Orders.PostOrdersOrderLinesResponse.respond400WithTextPlain(error.getMessage());
         break;
       case 401:
-        result = Orders.PostOrdersLinesByIdResponse.respond401WithTextPlain(error.getMessage());
+        result = Orders.PostOrdersOrderLinesResponse.respond401WithTextPlain(error.getMessage());
         break;
       case 422:
-        result = Orders.PostOrdersLinesByIdResponse.respond422WithApplicationJson(withErrors(error));
+        result = Orders.PostOrdersOrderLinesResponse.respond422WithApplicationJson(withErrors(error));
         break;
       default:
-        result = Orders.PostOrdersLinesByIdResponse.respond500WithTextPlain(error.getMessage());
+        result = Orders.PostOrdersOrderLinesResponse.respond500WithTextPlain(error.getMessage());
     }
     return result;
   }

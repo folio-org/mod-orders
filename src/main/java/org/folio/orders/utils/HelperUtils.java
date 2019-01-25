@@ -1,13 +1,16 @@
 package org.folio.orders.utils;
 
 import static java.util.Objects.nonNull;
-import static org.folio.orders.utils.SubObjects.*;
+import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
@@ -17,6 +20,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -302,6 +307,63 @@ public class HelperUtils {
     return future;
   }
 
+  /**
+   * @param query string representing CQL query
+   * @param logger {@link Logger} to log error if any
+   * @return URL encoded string
+   */
+  public static String encodeQuery(String query, Logger logger) {
+    try {
+      return URLEncoder.encode(query, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      logger.error("Error happened while attempting to encode '{}'", e, query);
+      throw new CompletionException(e);
+    }
+  }
+
+  /**
+   * The quantity is based on Order Format (please see MODORDERS-117):<br/>
+   * If format equals Physical the associated quantities will result in item records<br/>
+   * If format equals Other the associated quantities will NOT result in item records<br/>
+   * If format = Electronic and Create Item = True, the associated electronic quantities will result in item records being created in inventory<br/>
+   * If format = Electronic and Create Item = False, the associated electronic quantities will NOT result in item records being created in inventory
+   *
+   * @param compPOL composite PO Line
+   * @return quantity of items expected in the inventory for PO Line
+   */
+  public static int calculateInventoryItemsQuantity(PoLine compPOL) {
+    switch (compPOL.getOrderFormat()) {
+      case P_E_MIX:
+        return getPhysicalQuantity(compPOL) + getElectronicQuantity(compPOL);
+      case PHYSICAL_RESOURCE:
+        return getPhysicalQuantity(compPOL);
+      case ELECTRONIC_RESOURCE:
+        return getElectronicQuantity(compPOL);
+      case OTHER:
+      default:
+        return 0;
+    }
+  }
+
+  private static int getPhysicalQuantity(PoLine compPOL) {
+    return Optional.ofNullable(compPOL.getLocation())
+                   .map(Location::getQuantityPhysical)
+                   .orElse(0);
+  }
+
+  private static int getElectronicQuantity(PoLine compPOL) {
+    boolean createItems = Optional.ofNullable(compPOL.getEresource())
+                                  .map(Eresource::getCreateInventory)
+                                  .orElse(false);
+    if (createItems) {
+      return Optional.ofNullable(compPOL.getLocation())
+                     .map(Location::getQuantityElectronic)
+                     .orElse(0);
+    } else {
+      return 0;
+    }
+  }
+
   public static CompletableFuture<JsonObject> handleGetRequest(String endpoint, HttpClientInterface
     httpClient, Context ctx, Map<String, String> okapiHeaders,
                                        Logger logger) {
@@ -312,12 +374,12 @@ public class HelperUtils {
       httpClient
         .request(HttpMethod.GET, endpoint, okapiHeaders)
         .thenApply(response -> {
-          logger.debug("Validating received response");
+          logger.debug("Validating response for GET {}", endpoint);
           return verifyAndExtractBody(response);
         })
         .thenAccept(body -> {
           if (logger.isDebugEnabled()) {
-            logger.debug("The response is valid. The response body: {}", nonNull(body) ? body.encodePrettily() : null);
+            logger.debug("The response body for GET {}: {}", endpoint, nonNull(body) ? body.encodePrettily() : null);
           }
           future.complete(body);
         })
