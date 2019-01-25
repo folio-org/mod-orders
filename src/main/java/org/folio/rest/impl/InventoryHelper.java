@@ -8,7 +8,7 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.collections4.ListUtils;
-import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -41,6 +41,12 @@ import static org.folio.rest.impl.AbstractHelper.ID;
 public class InventoryHelper {
 
   public static final String ON_ORDER_ITEM_STATUS = "On order";
+  private static final String HOLDINGS_RECORDS = "holdingsRecords";
+  private static final String IDENTIFIER_TYPES = "identifierTypes";
+  private static final String INSTANCES = "instances";
+  private static final String ITEMS = "items";
+  private static final String LOAN_TYPES = "loantypes";
+
   private static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
   private static final String DEFAULT_STATUS_CODE = "temp";
   private static final String DEFAULT_LOAN_TYPE_NAME = "Can circulate";
@@ -74,7 +80,7 @@ public class InventoryHelper {
     // TODO the logic here will be implemented in scope of MODORDERS-66
     String endpoint = "/holdings-storage/holdings?limit=1";
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(response -> getFirstObjectFromResponse(response, "holdingsRecords"))
+      .thenApply(response -> getFirstObjectFromResponse(response, HOLDINGS_RECORDS))
       .thenApply(this::extractId);
   }
 
@@ -113,13 +119,12 @@ public class InventoryHelper {
 
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(productTypes -> {
-        if (productTypes.getJsonArray("identifierTypes").size() != compPOL.getDetails().getProductIds().size()) {
-          throw new CompletionException(new HttpException(422,
-            "Invalid product type(s) is specified for the PO line with id " + compPOL.getId()));
+        if (productTypes.getJsonArray(IDENTIFIER_TYPES).size() != compPOL.getDetails().getProductIds().size()) {
+          throw new ValidationException("Invalid product type(s) is specified for the PO line with id " + compPOL.getId());
         }
         return productTypes;
       })
-      .thenApply(productTypes -> productTypes.getJsonArray("identifierTypes").stream()
+      .thenApply(productTypes -> productTypes.getJsonArray(IDENTIFIER_TYPES).stream()
         .collect(toMap(jsonObj -> ((JsonObject) jsonObj).getString("name"),
           jsonObj -> ((JsonObject) jsonObj).getString("id"),
           (k1, k2) -> k1)));
@@ -148,8 +153,8 @@ public class InventoryHelper {
 
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(instances -> {
-        if (instances.getJsonArray("instances").size() > 0) {
-          return completedFuture(extractId(getFirstObjectFromResponse(instances, "instances")));
+        if (!instances.getJsonArray(INSTANCES).isEmpty()) {
+          return completedFuture(extractId(getFirstObjectFromResponse(instances, INSTANCES)));
         }
         return createInstanceRecord(compPOL, productTypesMap);
       });
@@ -252,7 +257,7 @@ public class InventoryHelper {
    * @return list of the item ids if any item returned
    */
   private List<String> collectItemIds(JsonObject itemEntries) {
-    return Optional.ofNullable(itemEntries.getJsonArray("items"))
+    return Optional.ofNullable(itemEntries.getJsonArray(ITEMS))
                    .map(items -> items.stream()
                                       .map(item -> (JsonObject) item)
                                       .map(this::extractId)
@@ -281,9 +286,9 @@ public class InventoryHelper {
       .thenAccept(createdItemIds -> {
         // In case no items created at all, throw an exception because nothing can be done at this stage
         if (createdItemIds.isEmpty()) {
-          throw new IllegalStateException(String.format("No items created for PO Line with %s id", compPOL.getId()));
+          throw new InventoryException(String.format("No items created for PO Line with %s id", compPOL.getId()));
         } else if (count != createdItemIds.size()) {
-          // Just logging the error. The logic should try to created piece records for successfully created items
+          // Just logging the error. The logic should try to create piece records for successfully created items
           logger.error("The issue happened creating items for PO Line with '{}' id. Expected {} but {} created",
             compPOL.getId(), count, createdItemIds.size());
         }
@@ -310,12 +315,13 @@ public class InventoryHelper {
       futures.add(createItemInInventory(itemRecord));
     }
 
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                            .thenApply(v -> futures.stream().map(CompletableFuture::join)
-                                                   // In case item creation failed, null is returned as a result instead of id
-                                                   .filter(Objects::nonNull)
-                                                   .collect(toList())
-                            );
+    return allOf(futures.toArray(new CompletableFuture[0]))
+      .thenApply(v -> futures.stream()
+                             .map(CompletableFuture::join)
+                             // In case item creation failed, null is returned as a result instead of id
+                             .filter(Objects::nonNull)
+                             .collect(toList())
+      );
   }
 
   /**
@@ -340,7 +346,7 @@ public class InventoryHelper {
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
     try {
       if (logger.isDebugEnabled()) {
-        logger.debug("Sending POST {} with body: {}", endpoint, recordData.encodePrettily());
+        logger.debug("Sending 'POST {}' with body: {}", endpoint, recordData.encodePrettily());
       }
       httpClient
         .request(HttpMethod.POST, recordData.toBuffer(), endpoint, okapiHeaders)
@@ -376,6 +382,13 @@ public class InventoryHelper {
     return id;
   }
 
+  /**
+   * Builds JsonObject representing inventory item minimal data. The schema is located directly in 'mod-inventory-storage' module.
+   *
+   * @param compPOL   PO line to create Item Records for
+   * @param holdingId holding uuid from the inventory
+   * @return item data to be used as request body for POST operation
+   */
   private CompletableFuture<JsonObject> buildItemRecordJsonObject(PoLine compPOL, String holdingId) {
     String materialTypeId = getMaterialTypeId(compPOL);
     return getLoanTypeId(DEFAULT_LOAN_TYPE_NAME)
@@ -395,7 +408,8 @@ public class InventoryHelper {
     return Optional.ofNullable(compPOL.getDetails())
                    .map(Details::getMaterialTypes)
                    .flatMap(ids -> ids.stream().findFirst())
-                   .orElseThrow(() -> new CompletionException(new ValidationException("The Material Type is required but not available in PO line")));
+                   .orElseThrow(() -> new CompletionException(
+                     new ValidationException("The Material Type is required but not available in PO line", "materialTypeRequired")));
   }
 
   private String extractId(JsonObject json) {
@@ -410,7 +424,7 @@ public class InventoryHelper {
   private CompletableFuture<JsonObject> getLoanType(String typeName) {
     String endpoint = "/loan-types?query=name==" + encodeQuery(typeName, logger);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(response -> getFirstObjectFromResponse(response, "loantypes"));
+      .thenApply(response -> getFirstObjectFromResponse(response, LOAN_TYPES));
   }
 
   /**
@@ -424,6 +438,6 @@ public class InventoryHelper {
     return Optional.ofNullable(response.getJsonArray(propertyName))
                    .flatMap(items -> items.stream().findFirst())
                    .map(item -> (JsonObject) item)
-                   .orElseThrow(() -> new CompletionException(new HttpException(404, String.format("The %s cannot be found", propertyName))));
+                   .orElseThrow(() -> new CompletionException(new InventoryException(String.format("No records of '%s' can be found", propertyName))));
   }
 }
