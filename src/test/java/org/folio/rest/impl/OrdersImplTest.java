@@ -10,6 +10,7 @@ import static org.folio.orders.utils.ResourcePathResolver.DETAILS;
 import static org.folio.orders.utils.ResourcePathResolver.ERESOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.FUND_DISTRIBUTION;
 import static org.folio.orders.utils.ResourcePathResolver.LOCATION;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PHYSICAL;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
@@ -1835,6 +1836,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.POST, resourcesPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
       router.route(HttpMethod.POST, resourcesPath(SOURCE)).handler(ctx -> handlePostGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.POST, resourcesPath(VENDOR_DETAIL)).handler(ctx -> handlePostGenericSubObj(ctx, VENDOR_DETAIL));
+      router.route(HttpMethod.POST, resourcesPath(PIECES)).handler(ctx -> handlePostGenericSubObj(ctx, PIECES));
 
       router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)+"/:id").handler(this::handleGetPurchaseOrderById);
       router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)).handler(this::handleGetPurchaseOrderByQuery);
@@ -1860,6 +1862,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, resourcePath(SOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.GET, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleGetGenericSubObj(ctx, VENDOR_DETAIL));
       router.route(HttpMethod.GET, resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
+      router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(ctx -> handleGetGenericPieceObj(ctx, PIECES));
 
       router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
       router.route(HttpMethod.PUT, resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -2207,6 +2210,22 @@ public class OrdersImplTest {
       }
     }
 
+    private void handleGetGenericPieceObj(RoutingContext ctx, String subObj) {
+      logger.info("got: " + ctx.request().path());
+      String id = ctx.request().getParam("query").split("poLineId=")[1];
+      logger.info("id: " + id);
+
+      JsonArray pieces = new JsonArray();
+
+      JsonObject data = new JsonObject().put("pieces", pieces).put("total_records", 0);
+      addServerRqRsData(HttpMethod.GET, subObj, data);
+
+      ctx.response()
+        .setStatusCode(200)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .end(data.encodePrettily());
+    }
+    
     private void handlePutGenericSubObj(RoutingContext ctx, String subObj) {
       logger.info("got: " + ctx.request().path());
       String id = ctx.request().getParam(ID);
@@ -2383,6 +2402,8 @@ public class OrdersImplTest {
           return org.folio.rest.acq.model.Source.class;
         case VENDOR_DETAIL:
           return org.folio.rest.acq.model.VendorDetail.class;
+        case PIECES:
+            return org.folio.rest.acq.model.Piece.class;
       }
 
       fail("The sub-object is unknown");

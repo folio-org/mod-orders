@@ -5,6 +5,7 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.comple
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
 import static org.folio.orders.utils.ResourcePathResolver.ADJUSTMENT;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
@@ -19,6 +20,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.SOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_DETAIL;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.respond204;
@@ -82,7 +84,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
         return updateOrderLine(compOrderLine, lineFromStorage);
       })
       .thenAccept(v -> {
-        httpClient.closeClient();
+        //httpClient.closeClient();
         asyncResultHandler.handle(succeededFuture(respond204()));
       })
       .exceptionally(this::handleError);
@@ -162,13 +164,70 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenCompose(v -> inventoryHelper.handleHoldingRecord(compPOL))
       .thenCompose(holdingId -> inventoryHelper.handleItemRecords(compPOL, holdingId))
       .thenAccept(itemIds -> {
-        // Temporal check. The idea is to create piece records for successfully created items and then throw exception
-        if (itemIds.size() != expectedItemsQuantity) {
+        logger.debug("-------------------itemIds, expectedItemsQuantity --------------" + itemIds.size() + ", " + expectedItemsQuantity);
+    	if (itemIds.size() != expectedItemsQuantity) {
           throw new IllegalStateException("Expected items quantity does not correspond to created items");
         }
+    	else {
+    	  createPieces(compPOL, expectedItemsQuantity, itemIds);
+    	}
       });
   }
 
+  private CompletableFuture<PoLine> createPieces(PoLine compPOL, int expectedItemsQuantity, List<String> itemIds) {
+	CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx); 
+	if(itemIds.isEmpty()) {
+	  future.complete(compPOL);
+	  return future;
+	}
+	
+	List<CompletableFuture<PoLine>> futuresList = new ArrayList<>();	
+	String poLineId = compPOL.getId();
+	
+	handleGetRequest(resourcesPath(PIECES) + "?query=poLineId="+ poLineId, httpClient, ctx, okapiHeaders, logger)
+	.thenAccept(body -> {
+	  logger.debug("------------------- total_records --------------" + body.encodePrettily());
+	    if(body.getInteger("total_records") == 0) {		// No Pieces exists
+	      int i=0;
+	      while(i < expectedItemsQuantity) {
+		    JsonObject pieceObj = new JsonObject();
+		    pieceObj.put("poLineId", poLineId);
+		    pieceObj.put("itemId", itemIds.get(i));
+		    pieceObj.put("receivingStatus", "Expected");			
+
+ 		    futuresList.add(createPiece(compPOL, pieceObj));
+		    i++;
+		  }
+		}
+	    logger.info("response from GET /pieces: " + body.encodePrettily());
+	});
+	
+	CompletableFuture.allOf(futuresList.toArray(new CompletableFuture[0]))
+	  .thenAccept(v -> {
+		  future.complete(compPOL);	//return complete POL
+	  })
+	  .exceptionally(t -> {
+        future.completeExceptionally(t);
+        return null;
+	  });
+	return future;
+  }
+  
+  private CompletableFuture<PoLine> createPiece(PoLine compPOL, JsonObject pieceObj) {
+    logger.debug("-----inside createPiece with obj --------------" + pieceObj.toString());
+    CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
+	try {	
+		operateOnSubObj(HttpMethod.POST, resourcesPath(PIECES), pieceObj, httpClient, ctx, okapiHeaders, logger)
+		  .thenAccept(body -> {
+		    logger.info("response from /pieces: " + body.encodePrettily());
+		    future.complete(compPOL);	//this is like returning complete POL
+		  });
+	} catch(Exception e) {
+	      future.completeExceptionally(e);
+	  }
+	return future;
+  }
+  
   private CompletionStage<JsonObject> updatePoLineSubObjects(PoLine compOrderLine, JsonObject lineFromStorage) {
     JsonObject updatedLineJson = JsonObject.mapFrom(compOrderLine);
     logger.debug("Updating PO line sub-objects...");
