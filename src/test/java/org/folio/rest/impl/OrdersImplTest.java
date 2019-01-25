@@ -852,18 +852,18 @@ public class OrdersImplTest {
     String body = getMockData(listedPrintMonographPath);
     final Errors errors = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .header(X_OKAPI_USER_ID)
-      .contentType(APPLICATION_JSON)
-      .body(body)
+        .header(X_OKAPI_URL)
+        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+        .header(X_OKAPI_USER_ID)
+        .contentType(APPLICATION_JSON)
+        .body(body)
       .put(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES)
-      .then()
-      .statusCode(422)
-      .extract()
-      .response()
-      .body()
-      .as(Errors.class);
+        .then()
+          .statusCode(422)
+            .extract()
+              .response()
+                .body()
+                  .as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     ctx.assertFalse(errors.getErrors().isEmpty());
