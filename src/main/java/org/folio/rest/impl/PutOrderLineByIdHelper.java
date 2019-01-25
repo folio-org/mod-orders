@@ -163,15 +163,20 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenCompose(jsonObj -> updateOrderLine(compPOL, jsonObj))
       .thenCompose(v -> inventoryHelper.handleHoldingRecord(compPOL))
       .thenCompose(holdingId -> inventoryHelper.handleItemRecords(compPOL, holdingId))
-      .thenAccept(itemIds -> {
-        logger.debug("-------------------itemIds, expectedItemsQuantity --------------" + itemIds.size() + ", " + expectedItemsQuantity);
-    	if (itemIds.size() != expectedItemsQuantity) {
-          throw new IllegalStateException("Expected items quantity does not correspond to created items");
-        }
-    	else {
-    	  createPieces(compPOL, expectedItemsQuantity, itemIds);
-    	}
+      .thenApply(itemIds -> createPieces(compPOL, expectedItemsQuantity, itemIds))
+      .thenAccept(piece -> {
+    	  completedFuture(piece);
       });
+      
+//      .thenAccept(itemIds -> {
+//        logger.debug("-------------------itemIds, expectedItemsQuantity --------------" + itemIds.size() + ", " + expectedItemsQuantity);
+//    	if (itemIds.size() != expectedItemsQuantity) {
+//          throw new IllegalStateException("Expected items quantity does not correspond to created items");
+//        }
+//    	else {
+//    	  createPieces(compPOL, expectedItemsQuantity, itemIds);
+//    	}
+//      });
   }
 
   private CompletableFuture<PoLine> createPieces(PoLine compPOL, int expectedItemsQuantity, List<String> itemIds) {
