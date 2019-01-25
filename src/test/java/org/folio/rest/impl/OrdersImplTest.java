@@ -1459,7 +1459,7 @@ public class OrdersImplTest {
   public void testPoNumberValidatewithExistingPONumber()
   {
     JsonObject poNumber=new JsonObject();
-    poNumber.put("po_number", EXISTING_PO_NUMBER);
+    poNumber.put("poNumber", EXISTING_PO_NUMBER);
     verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT, TEXT_PLAIN, 400);
   }
 
@@ -1468,7 +1468,7 @@ public class OrdersImplTest {
   public void testPoNumberValidatewithUniquePONumber()
   {
     JsonObject poNumber=new JsonObject();
-    poNumber.put("po_number", NONEXISTING_PO_NUMBER);
+    poNumber.put("poNumber", NONEXISTING_PO_NUMBER);
     verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT, "", 204);
   }
 
@@ -1476,7 +1476,7 @@ public class OrdersImplTest {
   public void testPoNumberValidatewithInvalidPattern()
   {
     JsonObject poNumber=new JsonObject();
-    poNumber.put("po_number", "11");
+    poNumber.put("poNumber", "11");
     verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422);
   }
 
