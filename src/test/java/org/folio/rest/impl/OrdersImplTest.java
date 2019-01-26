@@ -116,7 +116,8 @@ public class OrdersImplTest {
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();
 
-  private static final String EXIST_CONFIG_TENANT = "test_diku";
+  private static final String EXIST_CONFIG_TENANT_LIMIT_10 = "test_diku_limit_10";
+  private static final String EXIST_CONFIG_TENANT_LIMIT_1 = "test_diku_limit_1";
   private static final String INVALID_EXIST_CONFIG_TENANT = "invalid_config";
   private static final String EMPTY_CONFIG_TENANT = "config_empty";
   private static final String NON_EXIST_CONFIG_TENANT = "ordersimpltest";
@@ -125,7 +126,8 @@ public class OrdersImplTest {
 
   private static final Header X_OKAPI_URL = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
   private static final Header NON_EXIST_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, NON_EXIST_CONFIG_TENANT);
-  private static final Header EXIST_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, EXIST_CONFIG_TENANT);
+  private static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10 = new Header(OKAPI_HEADER_TENANT, EXIST_CONFIG_TENANT_LIMIT_10);
+  private static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1 = new Header(OKAPI_HEADER_TENANT, EXIST_CONFIG_TENANT_LIMIT_1);
   private static final Header INVALID_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, INVALID_EXIST_CONFIG_TENANT);
   private static final Header EMPTY_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, EMPTY_CONFIG_TENANT);
   private static final Header PO_NUMBER_ERROR_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, PO_NUMBER_ERROR_TENANT);
@@ -229,7 +231,7 @@ public class OrdersImplTest {
     JsonObject reqData = getMockDraftOrder();
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, reqData.toString(),
-      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp));
 
@@ -269,7 +271,7 @@ public class OrdersImplTest {
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp));
 
@@ -325,7 +327,7 @@ public class OrdersImplTest {
     reqData.getPoLines().get(1).setOrderFormat(PoLine.OrderFormat.OTHER);
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     // Check that search of the existing instances and items was done for first PO line only
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
@@ -440,7 +442,7 @@ public class OrdersImplTest {
     String body = getMockDraftOrder().toString();
 
     final Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
-      EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422).body().as(Errors.class);
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1, APPLICATION_JSON, 422).body().as(Errors.class);
 
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
@@ -484,7 +486,7 @@ public class OrdersImplTest {
     JsonObject compPoLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
 
     final Errors errors = verifyPostResponse(LINES_PATH, compPoLineJson.encodePrettily(),
-      EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422).body().as(Errors.class);
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1, APPLICATION_JSON, 422).body().as(Errors.class);
 
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
@@ -524,7 +526,7 @@ public class OrdersImplTest {
     final Response resp = RestAssured
       .with()
         .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
         .header(X_OKAPI_USER_ID)
         .header(X_OKAPI_TOKEN)
         .header(X_ECHO_STATUS, 403)
@@ -824,8 +826,34 @@ public class OrdersImplTest {
     final Errors errors = RestAssured
       .with()
         .header(X_OKAPI_URL)
-        .header(EXIST_CONFIG_X_OKAPI_TENANT)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1)
         .header(X_OKAPI_TOKEN)
+        .header(X_OKAPI_USER_ID)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .put(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES)
+        .then()
+          .statusCode(422)
+            .extract()
+              .response()
+                .body()
+                  .as(Errors.class);
+
+    logger.info(JsonObject.mapFrom(errors).encodePrettily());
+    ctx.assertFalse(errors.getErrors().isEmpty());
+    ctx.assertEquals(String.format(OVER_LIMIT_ERROR_MESSAGE, 1), errors.getErrors().get(0).getMessage());
+    ctx.assertEquals(LINES_LIMIT_ERROR_CODE, errors.getErrors().get(0).getCode());
+  }
+
+  @Test
+  public void testPoUpdateWithOverLimitPOLinesWithDefaultLimit(TestContext ctx) throws Exception {
+    logger.info("=== Test PUT PO, with over limit lines quantity with default limit ===");
+
+    String body = getMockData(listedPrintMonographPath);
+    final Errors errors = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
         .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
         .body(body)
@@ -1110,7 +1138,6 @@ public class OrdersImplTest {
         .then()
           .statusCode(400)
           .body(containsString(INCORRECT_LANG_PARAMETER));
-
   }
 
   @Test
@@ -1329,7 +1356,7 @@ public class OrdersImplTest {
     JsonObject reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
 
     final PoLine response = verifyPostResponse(LINES_PATH, reqData.encodePrettily(),
-      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 201).as(PoLine.class);
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(PoLine.class);
 
     ctx.assertEquals(reqData.getString(PURCHASE_ORDER_ID), response.getPurchaseOrderId());
     ctx.assertNull(response.getInstanceId());
@@ -1665,7 +1692,7 @@ public class OrdersImplTest {
   {
     JsonObject poNumber=new JsonObject();
     poNumber.put("po_number", EXISTING_PO_NUMBER);
-    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT, TEXT_PLAIN, 400);
+    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, TEXT_PLAIN, 400);
   }
 
 
@@ -1674,7 +1701,7 @@ public class OrdersImplTest {
   {
     JsonObject poNumber=new JsonObject();
     poNumber.put("po_number", NONEXISTING_PO_NUMBER);
-    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT, "", 204);
+    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, "", 204);
   }
 
   @Test
@@ -1682,7 +1709,7 @@ public class OrdersImplTest {
   {
     JsonObject poNumber=new JsonObject();
     poNumber.put("po_number", "11");
-    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422);
+    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 422);
   }
 
   @Test
@@ -1692,7 +1719,7 @@ public class OrdersImplTest {
     final Response resp = RestAssured
       .with()
         .header(X_OKAPI_URL)
-        .header(EXIST_CONFIG_X_OKAPI_TENANT)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
       .get(COMPOSITE_ORDERS_PATH)
         .then()
           .statusCode(200)
@@ -1709,7 +1736,7 @@ public class OrdersImplTest {
     final Response response = RestAssured
       .with()
       .header(X_OKAPI_URL)
-      .header(EXIST_CONFIG_X_OKAPI_TENANT)
+      .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
       .get("/orders/po-number")
       .then()
       .statusCode(200)
@@ -1758,7 +1785,8 @@ public class OrdersImplTest {
     return RestAssured
       .with()
         .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
+        .header(X_OKAPI_TOKEN)
         .contentType(APPLICATION_JSON)
         .body(body)
       .put(url)
