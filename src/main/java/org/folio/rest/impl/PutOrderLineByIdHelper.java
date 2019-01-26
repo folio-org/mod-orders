@@ -62,26 +62,24 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   private final Errors processingErrors = new Errors();
 
   public PutOrderLineByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
+		  						Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   public PutOrderLineByIdHelper(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-      Context ctx, String lang) {
+		  						Context ctx, String lang) {
     this(AbstractHelper.getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx, lang);
     setDefaultHeaders(httpClient);
   }
 
   /**
-   * Handles update of the order line. First retrieve the PO line from storage
-   * and depending on its content handle passed PO line.
+   * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
   public void updateOrderLine(PoLine compOrderLine) {
-    getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
+    getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(),compOrderLine.getId())
       .thenCompose(lineFromStorage -> {
-        // override PO line number in the request with one from the storage,
-        // because it's not allowed to change it during PO line update
+        // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line update
         compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
         return updateOrderLine(compOrderLine, lineFromStorage);
       })
@@ -93,22 +91,16 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   }
 
   /**
-   * Handles update of the order line depending on the content in the storage.
-   * Returns {@link CompletableFuture} as a result. In case the exception
-   * happened in future lifecycle, the caller should handle it. The logic is
-   * like following:<br/>
-   * 1. Handle sub-objects operations's. All the exception happened for any
-   * sub-object are handled generating an error. All errors can be retrieved by
-   * calling {@link #getProcessingErrors()}.<br/>
-   * 2. Store PO line summary. On success, the logic checks if there are no
-   * errors happened on sub-objects operations and returns succeeded future.
+   * Handles update of the order line depending on the content in the storage. Returns {@link CompletableFuture} as a result. 
+   * In case the exception happened in future lifecycle, the caller should handle it. The logic is like following:<br/>
+   * 1. Handle sub-objects operations's. All the exception happened for any sub-object are handled generating an error. 
+   * All errors can be retrieved by calling {@link #getProcessingErrors()}.<br/>
+   * 2. Store PO line summary. On success, the logic checks if there are no errors happened on sub-objects operations and 
+   * returns succeeded future.
    * Otherwise {@link HttpException} will be returned as result of the future.
    *
-   * @param compOrderLine
-   *          The composite {@link PoLine} to use for storage data update
-   * @param lineFromStorage
-   *          {@link JsonObject} representing PO line from storage
-   *          (/acq-models/mod-orders-storage/schemas/po_line.json)
+   * @param compOrderLine The composite {@link PoLine} to use for storage data update
+   * @param lineFromStorage {@link JsonObject} representing PO line from storage (/acq-models/mod-orders-storage/schemas/po_line.json)
    */
   public CompletableFuture<Void> updateOrderLine(PoLine compOrderLine, JsonObject lineFromStorage) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
