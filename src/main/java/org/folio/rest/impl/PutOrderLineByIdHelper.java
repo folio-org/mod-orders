@@ -150,11 +150,9 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   }
 
   /**
-   * Creates Inventory records associated with given PO line and updates PO line
-   * with corresponding links.
+   * Creates Inventory records associated with given PO line and updates PO line with corresponding links.
    *
-   * @param compPOL
-   *          Composite PO line to update Inventory for
+   * @param compPOL Composite PO line to update Inventory for
    * @return CompletableFuture with updated PO line.
    */
   public CompletableFuture<Void> updateInventory(PoLine compPOL) {
@@ -187,7 +185,6 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       future.complete(compPOL);
       return future;
     }
-
     List<CompletableFuture<PoLine>> futuresList = new ArrayList<>();
     String poLineId = compPOL.getId();
 

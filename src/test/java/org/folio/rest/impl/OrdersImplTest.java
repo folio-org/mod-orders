@@ -869,21 +869,27 @@ public class OrdersImplTest {
     // Check that search of the existing instances and items was done for each PO line
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
     List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
+    List<JsonObject> piecesSearches = MockServer.serverRqRs.get("pieces", HttpMethod.GET);
     assertNotNull(instancesSearches);
     assertNotNull(itemsSearches);
+    assertNotNull(piecesSearches);
 
     // Check that creation of the new instances and items was done
     List<JsonObject> createdInstances = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST);
     List<JsonObject> createdItems = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.POST);
+    List<JsonObject> createdPieces = MockServer.serverRqRs.get("pieces", HttpMethod.POST);
     assertNotNull(createdInstances);
     assertNotNull(createdItems);
+    assertNotNull(createdPieces);
     assertEquals(createdInstancesCount, createdInstances.size());
+    assertEquals(createdPieces.size(), createdItems.size());
 
     List<JsonObject> items = joinExistingAndNewItems(itemsSearches, createdItems);
     for (PoLine pol : reqData.getPoLines()) {
       verifyInstanceCreated(createdInstances, pol);
       verifyItemsCreated(items, pol, calculateInventoryItemsQuantity(pol));
-    }
+      verifyPiecesCreated(items, createdPieces, pol);
+    }   
   }
 
   private List<JsonObject> joinExistingAndNewItems(List<JsonObject> itemsSearches, List<JsonObject> createdItems) {
@@ -917,6 +923,32 @@ public class OrdersImplTest {
     }
   }
 
+  private void verifyPiecesCreated(List<JsonObject> inventoryItems, List<JsonObject> pieces, PoLine pol) {
+	boolean verified = false;
+	JsonObject pieceObj = null;
+	 for (JsonObject item : inventoryItems) {
+		 //logger.debug("-----items in piece verified --------------" + JsonObject.mapFrom(item).encodePrettily());
+		 String itemId = item.getString("id");
+		for(JsonObject piece : pieces) {
+		  pieceObj = piece;
+		  if(itemId.equals(piece.getString("itemId"))) {
+			//logger.debug("-----piece verified --------------" + JsonObject.mapFrom(piece).encodePrettily());
+			  assertThat(piece.getString("itemId"), equalTo(itemId));
+			  assertThat(piece.getString("receivingStatus"), equalTo("Expected"));
+	        verified = true;
+	        continue;		  
+		  }
+		  else {
+			break;
+		  }
+		}
+	 }
+	
+	if (!verified) {
+	  fail("No matching item for piece: " + JsonObject.mapFrom(pieceObj).encodePrettily());
+    }
+  }
+  
   private void verifyItemsCreated(List<JsonObject> inventoryItems, PoLine pol, int expectedQuantity) {
     int actualQuantity = 0;
 
