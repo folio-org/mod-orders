@@ -91,12 +91,11 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   }
 
   /**
-   * Handles update of the order line depending on the content in the storage. Returns {@link CompletableFuture} as a result. 
+   * Handles update of the order line depending on the content in the storage. Returns {@link CompletableFuture} as a result.
    * In case the exception happened in future lifecycle, the caller should handle it. The logic is like following:<br/>
-   * 1. Handle sub-objects operations's. All the exception happened for any sub-object are handled generating an error. 
+   * 1. Handle sub-objects operations's. All the exception happened for any sub-object are handled generating an error.
    * All errors can be retrieved by calling {@link #getProcessingErrors()}.<br/>
-   * 2. Store PO line summary. On success, the logic checks if there are no errors happened on sub-objects operations and 
-   * returns succeeded future.
+   * 2. Store PO line summary. On success, the logic checks if there are no errors happened on sub-objects operations and returns succeeded future.
    * Otherwise {@link HttpException} will be returned as result of the future.
    *
    * @param compOrderLine The composite {@link PoLine} to use for storage data update
