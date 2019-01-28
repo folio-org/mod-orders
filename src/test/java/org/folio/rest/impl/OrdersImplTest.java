@@ -63,6 +63,7 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoNumber;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
@@ -735,7 +736,20 @@ public class OrdersImplTest {
     String body = JsonObject.mapFrom(reqData).encode();
     verifyPut(url, body, "", 204);
 
-    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
+    List<JsonObject> orderRetrievals = MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET);
+    assertNotNull(orderRetrievals);
+    assertEquals(1, orderRetrievals.size());
+    PurchaseOrder storageData = orderRetrievals.get(0).mapTo(PurchaseOrder.class);
+    assertNull(storageData.getWorkflowStatus());
+
+    List<JsonObject> orderUpdates = MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT);
+    assertNotNull(orderUpdates);
+    assertEquals(1, orderUpdates.size());
+
+    PurchaseOrder storageReqData = orderUpdates.get(0).mapTo(PurchaseOrder.class);
+    assertNotNull(storageReqData.getWorkflowStatus());
+    assertEquals(CompositePurchaseOrder.WorkflowStatus.CLOSED.value(), storageReqData.getWorkflowStatus().value());
+
   }
 
   @Test
@@ -2305,7 +2319,7 @@ public class OrdersImplTest {
     }
 
     private void handleGetPurchaseOrderById(RoutingContext ctx) {
-      logger.info("got: " + ctx.request().path());
+      logger.info("handleGetPurchaseOrderById got: GET " + ctx.request().path());
       String id = ctx.request().getParam(ID);
       logger.info("id: " + id);
 
@@ -2313,7 +2327,6 @@ public class OrdersImplTest {
         JsonObject po;
 
         po = new JsonObject(getMockData(String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id)));
-        addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
         po.remove(ADJUSTMENT);
         po.remove(PO_LINES);
         po.put(ADJUSTMENT, UUID.randomUUID().toString());
