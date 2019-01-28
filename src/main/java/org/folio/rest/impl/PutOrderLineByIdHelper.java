@@ -85,9 +85,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
         compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
         return updateOrderLine(compOrderLine, lineFromStorage);
       })
-      .thenAccept(v -> {
-        asyncResultHandler.handle(succeededFuture(respond204()));
-      })
+      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(respond204())))
       .exceptionally(this::handleError);
   }
 
@@ -188,8 +186,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 			return future;
 		}
 		List<CompletableFuture<Void>> futuresList = new ArrayList<>();
-		String poLineId = compPOL.getId();
-		
+		String poLineId = compPOL.getId();		
 		String endpoint = String.format(PIECES_ENDPOINT, poLineId);
 		
 		handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
@@ -202,16 +199,15 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 					    pieceObj.put("itemId", itemIds.get(i));
 					    pieceObj.put("receivingStatus", "Expected");
 
-					    futuresList.add(createPiece(compPOL, pieceObj));
+					    futuresList.add(createPiece(pieceObj));
 					    i++;
 				    }
 			    }
 			    logger.info("response from GET /pieces: " + body.encodePrettily());
 
 			    CompletableFuture.allOf(futuresList.toArray(new CompletableFuture[0]))
-			    .thenAccept(v -> {
-				    future.complete(null);
-			    }).exceptionally(t -> {
+			    .thenAccept(v -> future.complete(null))
+			    .exceptionally(t -> {
 				    future.completeExceptionally(t);
 				    return null;
 			    });
@@ -227,7 +223,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    * @param pieceObj piece record to construct
    * @return CompletableFuture with new Piece record.
    */
-  private CompletableFuture<Void> createPiece(PoLine compPOL, JsonObject pieceObj) {
+  private CompletableFuture<Void> createPiece(JsonObject pieceObj) {
 		CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 		try {
 			operateOnSubObj(HttpMethod.POST, resourcesPath(PIECES), pieceObj, httpClient, ctx, okapiHeaders, logger)

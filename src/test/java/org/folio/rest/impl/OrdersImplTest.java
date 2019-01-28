@@ -1078,7 +1078,7 @@ public class OrdersImplTest {
     // Check that search of the existing instances and items was done for each PO line
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
     List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
-    List<JsonObject> piecesSearches = MockServer.serverRqRs.get("pieces", HttpMethod.GET);
+    List<JsonObject> piecesSearches = MockServer.serverRqRs.get(PIECES, HttpMethod.GET);
     ctx.assertNotNull(instancesSearches);
     ctx.assertNotNull(itemsSearches);
     ctx.assertNotNull(piecesSearches);
