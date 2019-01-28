@@ -86,7 +86,6 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
         return updateOrderLine(compOrderLine, lineFromStorage);
       })
       .thenAccept(v -> {
-        // httpClient.closeClient();
         asyncResultHandler.handle(succeededFuture(respond204()));
       })
       .exceptionally(this::handleError);
