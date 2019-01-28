@@ -2,16 +2,20 @@
   "po_number": "123",
   "po_lines": [
     {
-      "po_line_number": "12345-1"
+      "po_line_number": "12345-1",
+      "source": { "code": "FOLIO" }
     },
     {
-      "po_line_number": "12345-2"
+      "po_line_number": "12345-2",
+      "source": { "code": "FOLIO" }
     },
     {
-      "po_line_number": "12345-3"
+      "po_line_number": "12345-3",
+      "source": { "code": "FOLIO" }
     },
     {
-      "po_line_number": "12345-4"
+      "po_line_number": "12345-4",
+      "source": { "code": "FOLIO" }
     }
   ]
 }
