@@ -62,13 +62,13 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   private final Errors processingErrors = new Errors();
 
   public PutOrderLineByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
-		  						Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
+                                Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   public PutOrderLineByIdHelper(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-		  						Context ctx, String lang) {
+                                Context ctx, String lang) {
     this(AbstractHelper.getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx, lang);
     setDefaultHeaders(httpClient);
   }
@@ -109,9 +109,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
         if (isUpdateSuccessful()) {
           future.complete(null);
         } else {
-          String message = String.format(
-              "PO Line with '%s' id partially updated but there are issues processing some PO Line sub-objects",
-              compOrderLine.getId());
+          String message = String.format("PO Line with '%s' id partially updated but there are issues processing some PO Line sub-objects",
+            compOrderLine.getId());
           future.completeExceptionally(new HttpException(500, message));
         }
       })
@@ -133,17 +132,14 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   }
 
   /**
-   * @return unmodifiable List of the {@link Error} objects. In case the list is
-   *         empty, the update of the PO line was successful
+   * @return unmodifiable List of the {@link Error} objects. In case the list is empty, the update of the PO line was successful
    */
   public List<Error> getProcessingErrors() {
     return Collections.unmodifiableList(processingErrors.getErrors());
   }
 
   /**
-   * @return {@code true} if the the update of the PO line sub-objects was
-   *         successful and there were no error happened communicating with
-   *         other services
+   * @return {@code true} if the the update of the PO line sub-objects was successful and there were no error happened communicating with other services
    */
   public boolean isUpdateSuccessful() {
     return processingErrors.getErrors().isEmpty();
@@ -168,8 +164,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenCompose(v -> inventoryHelper.handleHoldingRecord(compPOL))
       .thenCompose(holdingId -> inventoryHelper.handleItemRecords(compPOL, holdingId))
       .thenCompose(itemIds -> {
-        logger.debug("-------------------itemIds, expectedItemsQuantity --------------" + itemIds.size() + ", "
-            + expectedItemsQuantity);
+        //logger.debug("-------------------itemIds, expectedItemsQuantity --------------" + itemIds.size() + ", " + expectedItemsQuantity);
         if (itemIds.size() != expectedItemsQuantity) {
           throw new IllegalStateException("Expected items quantity does not correspond to created items");
         }
@@ -179,63 +174,77 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenAccept(piece -> completedFuture(null));
   }
 
-  private CompletableFuture<PoLine> createPieces(PoLine compPOL, int expectedItemsQuantity, List<String> itemIds) {
-    CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
-    if (itemIds.isEmpty()) {
-      future.complete(compPOL);
-      return future;
-    }
-    List<CompletableFuture<PoLine>> futuresList = new ArrayList<>();
-    String poLineId = compPOL.getId();
+  /**
+   * Creates Piece records corresponding to each item record associated with PO Line
+   *
+   * @param compPOL Composite PO line to update Inventory for
+   * @param expectedItemsQuantity Inventory items quantity
+   * @param itemIds List of item id
+   * @return CompletableFuture with newly created Pieces associated with PO line.
+   */
+  private CompletableFuture<Void> createPieces(PoLine compPOL, int expectedItemsQuantity, List<String> itemIds) {
+		CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+		if (itemIds.isEmpty()) {
+			future.complete(null);
+			return future;
+		}
+		List<CompletableFuture<Void>> futuresList = new ArrayList<>();
+		String poLineId = compPOL.getId();
 
-    handleGetRequest(resourcesPath(PIECES) + "?query=poLineId=" + poLineId, httpClient, ctx, okapiHeaders, logger)
-      .thenAccept(body -> {
-        logger.debug("------------------- total_records --------------" + body.encodePrettily());
-        if (body.getInteger("total_records") == 0) { // No Pieces exists
-          int i = 0;
-          while (i < expectedItemsQuantity) {
-            JsonObject pieceObj = new JsonObject();
-            pieceObj.put("poLineId", poLineId);
-            pieceObj.put("itemId", itemIds.get(i));
-            pieceObj.put("receivingStatus", "Expected");
+		handleGetRequest(resourcesPath(PIECES) + "?query=poLineId=" + poLineId, httpClient, ctx, okapiHeaders, logger)
+		    .thenAccept(body -> {
+			    // logger.debug("------------------- total_records --------------" +
+			    // body.encodePrettily());
+			    if (body.getInteger("total_records") == 0) { // No Pieces exists
+				    int i = 0;
+				    while (i < expectedItemsQuantity) {
+					    JsonObject pieceObj = new JsonObject();
+					    pieceObj.put("poLineId", poLineId);
+					    pieceObj.put("itemId", itemIds.get(i));
+					    pieceObj.put("receivingStatus", "Expected");
 
-            futuresList.add(createPiece(compPOL, pieceObj));
-            i++;
-          }
-        }
-        logger.info("response from GET /pieces: " + body.encodePrettily());
+					    futuresList.add(createPiece(compPOL, pieceObj));
+					    i++;
+				    }
+			    }
+			    logger.info("response from GET /pieces: " + body.encodePrettily());
 
-        CompletableFuture.allOf(futuresList.toArray(new CompletableFuture[0]))
-          .thenAccept(v -> {
-            future.complete(compPOL); // return complete POL
-          })
-          .exceptionally(t -> {
-            future.completeExceptionally(t);
-            return null;
-          });
-      });
+			    CompletableFuture.allOf(futuresList.toArray(new CompletableFuture[0]))
+			    .thenAccept(v -> {
+				    future.complete(null);
+			    }).exceptionally(t -> {
+				    future.completeExceptionally(t);
+				    return null;
+			    });
+		    });
 
-    return future;
+		return future;
   }
 
-  private CompletableFuture<PoLine> createPiece(PoLine compPOL, JsonObject pieceObj) {
-    logger.debug("-----inside createPiece with obj --------------" + pieceObj.toString());
-    CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
-    try {
-      operateOnSubObj(HttpMethod.POST, resourcesPath(PIECES), pieceObj, httpClient, ctx, okapiHeaders, logger)
-        .thenAccept(body -> {
-          logger.info("response from /pieces: " + body.encodePrettily());
-          future.complete(compPOL); // this is like returning complete POL
-        })
-        .exceptionally(t -> {
-          future.completeExceptionally(t);
-          return null;
-        });
-    } catch (Exception e) {
-      future.completeExceptionally(e);
-    }
-    return future;
-  }
+  /**
+   * Construct Piece object associated with PO Line
+   *
+   * @param compPOL Composite PO line to update Inventory for
+   * @param pieceObj piece record to construct
+   * @return CompletableFuture with new Piece record.
+   */
+  private CompletableFuture<Void> createPiece(PoLine compPOL, JsonObject pieceObj) {
+		//logger.debug("-----inside createPiece with obj --------------" + pieceObj.toString());
+		CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+		try {
+			operateOnSubObj(HttpMethod.POST, resourcesPath(PIECES), pieceObj, httpClient, ctx, okapiHeaders, logger)
+			    .thenAccept(body -> {
+				    logger.info("response from /pieces: " + body.encodePrettily());
+				    future.complete(null);
+			    }).exceptionally(t -> {
+				    future.completeExceptionally(t);
+				    return null;
+			    });
+		} catch (Exception e) {
+			future.completeExceptionally(e);
+		}
+		return future;
+	}
 
   private CompletionStage<JsonObject> updatePoLineSubObjects(PoLine compOrderLine, JsonObject lineFromStorage) {
     JsonObject updatedLineJson = JsonObject.mapFrom(compOrderLine);
@@ -255,14 +264,12 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     futures.add(handleSubObjsOperation(FUND_DISTRIBUTION, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage));
 
-    // Once all operations completed, return updated PO Line with new sub-object
-    // id's as json object
+    // Once all operations completed, return updated PO Line with new sub-object id's as json object
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-      .thenApply(v -> updatedLineJson);
+                            .thenApply(v -> updatedLineJson);
   }
 
-  private CompletableFuture<Void> handleSubObjOperation(String prop, JsonObject updatedLine,
-      JsonObject lineFromStorage) {
+  private CompletableFuture<Void> handleSubObjOperation(String prop, JsonObject updatedLine, JsonObject lineFromStorage) {
     String objId = lineFromStorage.getString(prop);
     JsonObject jsonObject = updatedLine.getJsonObject(prop);
 
@@ -281,8 +288,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   private CompletableFuture<String> handleSubObjOperation(String prop, JsonObject subObjContent, String storageId) {
     final String url;
     final HttpMethod operation;
-    // In case the id is available in the PO line from storage, depending on the
-    // request content the sub-object is going to be updated or removed
+    // In case the id is available in the PO line from storage, depending on the request content the sub-object is going to be updated or removed
     if (StringUtils.isNotEmpty(storageId)) {
       url = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(prop, storageId), lang);
       operation = (subObjContent != null) ? HttpMethod.PUT : HttpMethod.DELETE;
@@ -305,8 +311,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<Void> handleSubObjsOperation(String prop, JsonObject updatedLine,
-      JsonObject lineFromStorage) {
+  private CompletableFuture<Void> handleSubObjsOperation(String prop, JsonObject updatedLine, JsonObject lineFromStorage) {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     JsonArray idsInStorage = lineFromStorage.getJsonArray(prop);
     JsonArray jsonObjects = updatedLine.getJsonArray(prop);
@@ -320,13 +325,13 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       for (int i = 0; i < jsonObjects.size(); i++) {
         JsonObject subObj = jsonObjects.getJsonObject(i);
         if (subObj != null) {
-          // In case there is existing id in the sub-object, the content will be
-          // replaced
+          // In case there is existing id in the sub-object, the content will be replaced
           String id = idsInStorage.remove(subObj.getString(ID)) ? subObj.getString(ID) : null;
 
           futures.add(handleSubObjOperation(prop, subObj, id)
             .thenAccept(newIds::add)
-            .exceptionally(throwable -> addProcessingError(throwable, prop, id)));
+            .exceptionally(throwable -> addProcessingError(throwable, prop, id))
+          );
         }
       }
     }
@@ -342,21 +347,22 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
             // In case the object is not deleted, still keep reference to old id
             newIds.add(id);
             return addProcessingError(throwable, prop, id);
-          }));
+          })
+        );
       }
     }
 
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-      .thenAccept(v -> updatedLine.put(prop, newIds));
+                            .thenAccept(v -> updatedLine.put(prop, newIds));
   }
 
   private Void addProcessingError(Throwable exc, String propName, String propId) {
     Error error = new Error().withMessage(exc.getMessage());
     error.getParameters()
-      .add(new Parameter().withKey(propName)
-        .withValue(propId));
+         .add(new Parameter().withKey(propName)
+                             .withValue(propId));
     processingErrors.getErrors()
-      .add(error);
+                    .add(error);
     return null;
   }
 
@@ -364,26 +370,25 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   protected Response buildErrorResponse(int code, Error error) {
     final Response result;
     switch (code) {
-    case 404:
-      result = respond404WithTextPlain(error.getMessage());
-      break;
-    case 422:
-      result = respond422WithApplicationJson(withErrors(error));
-      break;
-    default:
-      if (getProcessingErrors().isEmpty()) {
-        result = respond500WithTextPlain(error.getMessage());
-      } else {
-        processingErrors.getErrors().add(error);
-        result = respond500WithApplicationJson(processingErrors);
-      }
+      case 404:
+        result = respond404WithTextPlain(error.getMessage());
+        break;
+      case 422:
+        result = respond422WithApplicationJson(withErrors(error));
+        break;
+      default:
+        if (getProcessingErrors().isEmpty()) {
+          result = respond500WithTextPlain(error.getMessage());
+        } else {
+          processingErrors.getErrors().add(error);
+          result = respond500WithApplicationJson(processingErrors);
+        }
     }
     return result;
   }
 
   /**
-   * Retrieves PO line from storage by PO line id as JsonObject and validates
-   * order id match.
+   * Retrieves PO line from storage by PO line id as JsonObject and validates order id match.
    */
   protected CompletableFuture<JsonObject> getPoLineByIdAndValidate(String orderId, String lineId) {
     return getPoLineById(lineId, lang, httpClient, ctx, okapiHeaders, logger)
@@ -395,18 +400,13 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   }
 
   /**
-   * Validates if the retrieved PO line corresponds to PO (orderId). In case the
-   * PO line does not correspond to order id the exception is thrown
-   * 
-   * @param orderId
-   *          order identifier
-   * @param line
-   *          PO line retrieved from storage
+   * Validates if the retrieved PO line corresponds to PO (orderId). In case the PO line does not correspond to order id the exception is thrown
+   * @param orderId order identifier
+   * @param line PO line retrieved from storage
    */
   private void validateOrderId(String orderId, JsonObject line) {
     if (!StringUtils.equals(orderId, line.getString("purchase_order_id"))) {
-      String msg = String.format("The PO line with id=%s does not belong to order with id=%s", line.getString("id"),
-          orderId);
+      String msg = String.format("The PO line with id=%s does not belong to order with id=%s", line.getString("id"), orderId);
       throw new CompletionException(new ValidationException(msg, ID_MISMATCH_ERROR_CODE));
     }
   }

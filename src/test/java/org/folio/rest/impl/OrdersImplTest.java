@@ -10,7 +10,6 @@ import static org.folio.orders.utils.ResourcePathResolver.DETAILS;
 import static org.folio.orders.utils.ResourcePathResolver.ERESOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.FUND_DISTRIBUTION;
 import static org.folio.orders.utils.ResourcePathResolver.LOCATION;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PHYSICAL;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
@@ -49,7 +48,15 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -100,6 +107,7 @@ public class OrdersImplTest {
 
   private static final String INSTANCE_RECORD = "instance_record";
   private static final String ITEM_RECORDS = "item_records";
+  private static final String PIECES = "pieces";
   private static final String ORDER_WITHOUT_PO_LINES = "order_without_po_lines.json";
   private static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
   private static final String ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON = "put_order_with_mismatch_id_in_po_lines.json";
@@ -877,10 +885,12 @@ public class OrdersImplTest {
     // Check that creation of the new instances and items was done
     List<JsonObject> createdInstances = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST);
     List<JsonObject> createdItems = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.POST);
-    List<JsonObject> createdPieces = MockServer.serverRqRs.get("pieces", HttpMethod.POST);
+    List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
     assertNotNull(createdInstances);
     assertNotNull(createdItems);
+    logger.debug("--------------------------- Items created -------------------------------\n" + createdItems.toString());
     assertNotNull(createdPieces);
+    logger.debug("--------------------------- Pieces created -------------------------------\n" + createdPieces.toString());
     assertEquals(createdInstancesCount, createdInstances.size());
     assertEquals(createdPieces.size(), createdItems.size());
 
@@ -888,7 +898,7 @@ public class OrdersImplTest {
     for (PoLine pol : reqData.getPoLines()) {
       verifyInstanceCreated(createdInstances, pol);
       verifyItemsCreated(items, pol, calculateInventoryItemsQuantity(pol));
-      verifyPiecesCreated(items, createdPieces, pol);
+      verifyPiecesCreated(items, createdPieces);
     }   
   }
 
@@ -923,48 +933,45 @@ public class OrdersImplTest {
     }
   }
 
-  private void verifyPiecesCreated(List<JsonObject> inventoryItems, List<JsonObject> pieces, PoLine pol) {
-	boolean verified = false;
-	JsonObject pieceObj = null;
-	 for (JsonObject item : inventoryItems) {
-		 //logger.debug("-----items in piece verified --------------" + JsonObject.mapFrom(item).encodePrettily());
-		 String itemId = item.getString("id");
-		for(JsonObject piece : pieces) {
-		  pieceObj = piece;
-		  if(itemId.equals(piece.getString("itemId"))) {
-			//logger.debug("-----piece verified --------------" + JsonObject.mapFrom(piece).encodePrettily());
-			  assertThat(piece.getString("itemId"), equalTo(itemId));
-			  assertThat(piece.getString("receivingStatus"), equalTo("Expected"));
-	        verified = true;
-	        continue;		  
-		  }
-		  else {
-			break;
-		  }
+	private void verifyPiecesCreated(List<JsonObject> inventoryItems, List<JsonObject> pieces) {
+		boolean verified = false;
+		JsonObject pieceObj = null;
+		for (JsonObject item : inventoryItems) {
+			String itemIdFromItems = item.getString("id");
+			for (JsonObject piece : pieces) {
+				pieceObj = piece;
+				if (itemIdFromItems.equals(piece.getString("itemId"))) {
+					assertThat(piece.getString("itemId"), equalTo(itemIdFromItems));
+					assertThat(piece.getString("receivingStatus"), equalTo("Expected"));
+					verified = true;
+					continue;
+				} else {
+					break;
+				}
+			}
 		}
-	 }
-	
-	if (!verified) {
-	  fail("No matching item for piece: " + JsonObject.mapFrom(pieceObj).encodePrettily());
-    }
-  }
+
+		if (!verified) {
+			fail("No matching item for piece: " + JsonObject.mapFrom(pieceObj).encodePrettily());
+		}
+	}
   
-  private void verifyItemsCreated(List<JsonObject> inventoryItems, PoLine pol, int expectedQuantity) {
-    int actualQuantity = 0;
+	private void verifyItemsCreated(List<JsonObject> inventoryItems, PoLine pol, int expectedQuantity) {
+		int actualQuantity = 0;
 
-    for (JsonObject item : inventoryItems) {
-      // TODO uncomment once MODINVSTOR-245 merged to master
-      //if (pol.getId().equals(item.getString("purchaseOrderLineIdentifier"))) {
-      if (pol.getDetails().getMaterialTypes().contains(item.getString("materialTypeId"))) {
-        verifyItemRecordRequest(item, pol);
-        actualQuantity++;
-      }
-    }
+		for (JsonObject item : inventoryItems) {
+			// TODO uncomment once MODINVSTOR-245 merged to master
+			// if (pol.getId().equals(item.getString("purchaseOrderLineIdentifier"))) {
+			if (pol.getDetails().getMaterialTypes().contains(item.getString("materialTypeId"))) {
+				verifyItemRecordRequest(item, pol);
+				actualQuantity++;
+			}
+		}
 
-    if (expectedQuantity != actualQuantity) {
-      fail(String.format("Actual items quantity is %d but expected %d", actualQuantity, expectedQuantity));
-    }
-  }
+		if (expectedQuantity != actualQuantity) {
+			fail(String.format("Actual items quantity is %d but expected %d", actualQuantity, expectedQuantity));
+		}
+	}
 
   private void verifyInstanceRecordRequest(JsonObject instance, PoLine line) {
     assertThat(instance.getString("title"), equalTo(line.getTitle()));
