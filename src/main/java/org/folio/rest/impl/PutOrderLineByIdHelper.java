@@ -191,15 +191,19 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 		
 		handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
 		    .thenAccept(body -> {
-			    if (body.getInteger("total_records") == 0) { // No Pieces exists
-				    int i = 0;
+		    	int i=0;
+		      // No Pieces exists
+			    if (body.getInteger("total_records") == 0) { 
 				    while (i < expectedItemsQuantity) {
-					    JsonObject pieceObj = new JsonObject();	// Construct Piece object
-					    pieceObj.put("poLineId", poLineId);
-					    pieceObj.put("itemId", itemIds.get(i));
-					    pieceObj.put("receivingStatus", "Expected");
-
-					    futuresList.add(createPiece(pieceObj));
+					    futuresList.add(createPiece(poLineId, itemIds, i));
+					    i++;
+				    }
+			    } else if(body.getInteger("total_records") > 0) {
+			    	// if some of the piece records already exists out of expectedItemsQuantity then only create remaining pieces
+			    	int existingPieceRecordCount = body.getInteger("total_records");
+			    	int newQuantity = expectedItemsQuantity - existingPieceRecordCount;
+			    	while (i < newQuantity) {
+					    futuresList.add(createPiece(poLineId, itemIds, i));
 					    i++;
 				    }
 			    }
@@ -220,10 +224,17 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    * Construct Piece object associated with PO Line
    *
    * @param compPOL Composite PO line to update Inventory for
-   * @param pieceObj piece record to construct
+   * @param itemIds List of itemIds that were created
+   * @param index index associated with each Piece to count total Pieces created
    * @return CompletableFuture with new Piece record.
    */
-  private CompletableFuture<Void> createPiece(JsonObject pieceObj) {
+  private CompletableFuture<Void> createPiece(String poLineId, List<String> itemIds, int index) {
+		// Construct Piece object
+		JsonObject pieceObj = new JsonObject();
+		pieceObj.put("poLineId", poLineId);
+		pieceObj.put("itemId", itemIds.get(index));
+		pieceObj.put("receivingStatus", "Expected");
+
 		CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 		try {
 			operateOnSubObj(HttpMethod.POST, resourcesPath(PIECES), pieceObj, httpClient, ctx, okapiHeaders, logger)
