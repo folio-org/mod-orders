@@ -905,7 +905,7 @@ public class OrdersImplTest {
     // Check that search of the existing instances and items was done for each PO line
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
     List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
-    List<JsonObject> piecesSearches = MockServer.serverRqRs.get("pieces", HttpMethod.GET);
+    List<JsonObject> piecesSearches = MockServer.serverRqRs.get(PIECES, HttpMethod.GET);
     assertNotNull(instancesSearches);
     assertNotNull(itemsSearches);
     assertNotNull(piecesSearches);
@@ -2290,7 +2290,6 @@ public class OrdersImplTest {
       logger.info("id: " + id);
 
       JsonArray pieces = new JsonArray();
-
       JsonObject data = new JsonObject().put("pieces", pieces).put("total_records", 0);
       addServerRqRsData(HttpMethod.GET, subObj, data);
 
