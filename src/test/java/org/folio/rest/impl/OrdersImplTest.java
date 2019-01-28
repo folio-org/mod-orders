@@ -899,7 +899,9 @@ public class OrdersImplTest {
       verifyInstanceCreated(createdInstances, pol);
       verifyItemsCreated(items, pol, calculateInventoryItemsQuantity(pol));
       verifyPiecesCreated(items, createdPieces);
-    }   
+    }
+    
+    
   }
 
   private List<JsonObject> joinExistingAndNewItems(List<JsonObject> itemsSearches, List<JsonObject> createdItems) {
@@ -956,22 +958,22 @@ public class OrdersImplTest {
 		}
 	}
   
-	private void verifyItemsCreated(List<JsonObject> inventoryItems, PoLine pol, int expectedQuantity) {
-		int actualQuantity = 0;
+  private void verifyItemsCreated(List<JsonObject> inventoryItems, PoLine pol, int expectedQuantity) {
+    int actualQuantity = 0;
 
-		for (JsonObject item : inventoryItems) {
-			// TODO uncomment once MODINVSTOR-245 merged to master
-			// if (pol.getId().equals(item.getString("purchaseOrderLineIdentifier"))) {
-			if (pol.getDetails().getMaterialTypes().contains(item.getString("materialTypeId"))) {
-				verifyItemRecordRequest(item, pol);
-				actualQuantity++;
-			}
-		}
+    for (JsonObject item : inventoryItems) {
+      // TODO uncomment once MODINVSTOR-245 merged to master
+      //if (pol.getId().equals(item.getString("purchaseOrderLineIdentifier"))) {
+      if (pol.getDetails().getMaterialTypes().contains(item.getString("materialTypeId"))) {
+        verifyItemRecordRequest(item, pol);
+        actualQuantity++;
+      }
+    }
 
-		if (expectedQuantity != actualQuantity) {
-			fail(String.format("Actual items quantity is %d but expected %d", actualQuantity, expectedQuantity));
-		}
-	}
+    if (expectedQuantity != actualQuantity) {
+      fail(String.format("Actual items quantity is %d but expected %d", actualQuantity, expectedQuantity));
+    }
+  }
 
   private void verifyInstanceRecordRequest(JsonObject instance, PoLine line) {
     assertThat(instance.getString("title"), equalTo(line.getTitle()));
@@ -1049,25 +1051,32 @@ public class OrdersImplTest {
     // Check that search of the existing instances and items was done for each PO line
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
     List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
+    List<JsonObject> piecesSearches = MockServer.serverRqRs.get("pieces", HttpMethod.GET);
     ctx.assertNotNull(instancesSearches);
     ctx.assertNotNull(itemsSearches);
+    ctx.assertNotNull(piecesSearches);
     assertEquals(polCount, instancesSearches.size());
     assertEquals(polCount, itemsSearches.size());
 
     // Check that 2 new instances created and items created successfully only for first POL
     List<JsonObject> createdInstances = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST);
     List<JsonObject> createdItems = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.POST);
+    List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
     assertNotNull(createdInstances);
     assertNotNull(createdItems);
+    assertNotNull(createdPieces);
     assertEquals(polCount, createdInstances.size());
-
+    assertEquals(createdPieces.size(), createdItems.size());
+    logger.debug("-----Created pieces " + createdPieces.size() + "----created items " + createdItems.size());
+    
     List<JsonObject> items = joinExistingAndNewItems(itemsSearches, createdItems);
 
     // Check that instance and items created successfully for first POL
     PoLine firstPol = reqData.getPoLines().get(0);
     verifyInstanceCreated(createdInstances, firstPol);
     verifyItemsCreated(items, firstPol, calculateInventoryItemsQuantity(firstPol));
-
+    verifyPiecesCreated(items, createdPieces);
+    
     // Check that instance created successfully for second POL but no items created (but expected)
     PoLine secondPol = reqData.getPoLines().get(1);
     verifyInstanceCreated(createdInstances, secondPol);

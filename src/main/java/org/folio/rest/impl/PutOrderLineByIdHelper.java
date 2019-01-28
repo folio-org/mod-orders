@@ -170,8 +170,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
         }
         return completedFuture(itemIds);
       })
-      .thenCompose(itemIds -> createPieces(compPOL, expectedItemsQuantity, itemIds))
-      .thenAccept(piece -> completedFuture(null));
+      .thenCompose(itemIds -> createPieces(compPOL, expectedItemsQuantity, itemIds));
+      //.thenAccept(piece -> completedFuture(null));
   }
 
   /**
