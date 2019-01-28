@@ -151,6 +151,7 @@ public class OrdersImplTest {
   private static final String PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE = "c2755a78-2f8d-47d0-a218-059a9b7391b4";
   private static final String PO_LINE_ID_WITH_FUND_DISTRIBUTION_404_CODE = "f7223ce8-9e92-4c28-8fd9-097596053b7c";
   private static final String ORDER_ID_WITHOUT_PO_LINES = "50fb922c-3fa9-494e-a972-f2801f1b9fd1";
+  private static final String ORDER_WITHOUT_WORKFLOW_STATUS = "41d56e59-46db-4d5e-a1ad-a178228913e5";
 
   // API paths
   private final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
@@ -174,7 +175,7 @@ public class OrdersImplTest {
   private static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private static final String MOCK_DATA_ROOT_PATH = "src/test/resources/";
   private static final String listedPrintMonographPath = MOCK_DATA_ROOT_PATH + "/po_listed_print_monograph.json";
-  private static final String minimalOrderPath = MOCK_DATA_ROOT_PATH + "/minimal_order.json";
+  private static final String MINIMAL_ORDER_PATH = MOCK_DATA_ROOT_PATH + "/minimal_order.json";
   private static final String poCreationFailurePath = MOCK_DATA_ROOT_PATH + "/po_creation_failure.json";
   private static final String poLineCreationFailurePath = MOCK_DATA_ROOT_PATH + "/po_line_creation_failure.json";
   private static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
@@ -344,7 +345,7 @@ public class OrdersImplTest {
   public void testPlaceOrderMinimal() throws Exception {
     logger.info("=== Test Placement of minimal order ===");
 
-    String body = getMockData(minimalOrderPath);
+    String body = getMockData(MINIMAL_ORDER_PATH);
     JsonObject reqData = new JsonObject(body);
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
@@ -720,6 +721,21 @@ public class OrdersImplTest {
     assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE).size(), poLinesFromStorage.size() - sameLinesCount);
     assertNotNull(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT));
     assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).size(), sameLinesCount);
+  }
+
+  @Test
+  public void testUpdateOrderWithStatus_MODORDERS150() throws Exception {
+    logger.info("=== Test Put Order By Id - MODORDERS-150 ===");
+
+    CompositePurchaseOrder reqData = new JsonObject(getMockData(MINIMAL_ORDER_PATH)).mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ORDER_WITHOUT_WORKFLOW_STATUS);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
+
+    String url = COMPOSITE_ORDERS_PATH + "/" + reqData.getId();
+    String body = JsonObject.mapFrom(reqData).encode();
+    verifyPut(url, body, "", 204);
+
+    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
   }
 
   @Test

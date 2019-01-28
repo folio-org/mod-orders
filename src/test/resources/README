@@ -9,6 +9,7 @@ po_listed_print_monograph.json - Pending order with 2 POLs:
 1ab7ef6a-d1d4-4a4f-90a2-882aed18af14.json - Pending order with 3 POLs
 bad500aa-aaaa-500a-aaaa-aaaaaaaaaaaa.json - Pending order with 1 POL:
   - c2755a78-2f8d-47d0-a218-059a9b7391b4 - 500 from storage for some of sub-objects (see below)
+41d56e59-46db-4d5e-a1ad-a178228913e5.json - Order with no POL and no workflow status set
 
 # mockdata/compositeLines and lines:
 fca5fa9e-15cb-4a3d-ab09-eeea99b97a47.json - PO line. Considered to be valid

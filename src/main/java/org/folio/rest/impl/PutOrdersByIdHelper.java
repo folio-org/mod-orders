@@ -8,7 +8,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
@@ -109,7 +109,13 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   }
 
   private boolean isTransitionToOpen(CompositePurchaseOrder compPO, JsonObject poFromStorage) {
-    WorkflowStatus currentStatus = WorkflowStatus.fromValue(poFromStorage.getString("workflow_status"));
+    // MODORDERS-150 Workflow status might be null. Use default as 'Pending' in such case
+    WorkflowStatus currentStatus;
+    if (StringUtils.isNotEmpty(poFromStorage.getString("workflow_status"))) {
+      currentStatus = WorkflowStatus.fromValue(poFromStorage.getString("workflow_status"));
+    } else {
+      currentStatus = PENDING;
+    }
     return currentStatus == PENDING && compPO.getWorkflowStatus() == OPEN;
   }
 
