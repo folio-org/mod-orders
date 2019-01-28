@@ -315,6 +315,23 @@ public class OrdersImplTest {
   }
 
   @Test
+  public void testOrderWithPoLinesWithoutSource() throws Exception {
+    logger.info("=== Test Listed Print Monograph with POL without source ===");
+
+    CompositePurchaseOrder reqData = new JsonObject(getMockData(listedPrintMonographPath)).mapTo(CompositePurchaseOrder.class);
+    // Assert that there are 2 lines
+    assertEquals(2, reqData.getPoLines().size());
+    // remove source to verify validation for first POL
+    reqData.getPoLines().get(0).setSource(null);
+    // Set source code to null to verify validation for second POL
+    reqData.getPoLines().get(1).getSource().setCode(null);
+
+    final Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422).as(Errors.class);
+    assertEquals(reqData.getPoLines().size(), errors.getErrors().size());
+  }
+
+  @Test
   public void testPostOpenOrderInventoryUpdateOnlyForFirstPOL() throws Exception {
     logger.info("=== Test Put Order By Id to change status of Order to Open - inventory interaction required only for first POL ===");
 
