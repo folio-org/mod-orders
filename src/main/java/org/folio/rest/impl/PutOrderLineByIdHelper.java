@@ -61,6 +61,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   private final InventoryHelper inventoryHelper;
   private final Errors processingErrors = new Errors();
 
+  private static final String PIECES_ENDPOINT = "/orders-storage/pieces?query=poLineId=%s";
+  
   public PutOrderLineByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
                                 Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
@@ -164,14 +166,12 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenCompose(v -> inventoryHelper.handleHoldingRecord(compPOL))
       .thenCompose(holdingId -> inventoryHelper.handleItemRecords(compPOL, holdingId))
       .thenCompose(itemIds -> {
-        //logger.debug("-------------------itemIds, expectedItemsQuantity --------------" + itemIds.size() + ", " + expectedItemsQuantity);
         if (itemIds.size() != expectedItemsQuantity) {
           throw new IllegalStateException("Expected items quantity does not correspond to created items");
         }
         return completedFuture(itemIds);
       })
       .thenCompose(itemIds -> createPieces(compPOL, expectedItemsQuantity, itemIds));
-      //.thenAccept(piece -> completedFuture(null));
   }
 
   /**
@@ -190,15 +190,15 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 		}
 		List<CompletableFuture<Void>> futuresList = new ArrayList<>();
 		String poLineId = compPOL.getId();
-
-		handleGetRequest(resourcesPath(PIECES) + "?query=poLineId=" + poLineId, httpClient, ctx, okapiHeaders, logger)
+		
+		String endpoint = String.format(PIECES_ENDPOINT, poLineId);
+		
+		handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
 		    .thenAccept(body -> {
-			    // logger.debug("------------------- total_records --------------" +
-			    // body.encodePrettily());
 			    if (body.getInteger("total_records") == 0) { // No Pieces exists
 				    int i = 0;
 				    while (i < expectedItemsQuantity) {
-					    JsonObject pieceObj = new JsonObject();
+					    JsonObject pieceObj = new JsonObject();	// Construct Piece object
 					    pieceObj.put("poLineId", poLineId);
 					    pieceObj.put("itemId", itemIds.get(i));
 					    pieceObj.put("receivingStatus", "Expected");
@@ -229,7 +229,6 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    * @return CompletableFuture with new Piece record.
    */
   private CompletableFuture<Void> createPiece(PoLine compPOL, JsonObject pieceObj) {
-		//logger.debug("-----inside createPiece with obj --------------" + pieceObj.toString());
 		CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 		try {
 			operateOnSubObj(HttpMethod.POST, resourcesPath(PIECES), pieceObj, httpClient, ctx, okapiHeaders, logger)

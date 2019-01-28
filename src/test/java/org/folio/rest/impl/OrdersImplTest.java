@@ -900,8 +900,6 @@ public class OrdersImplTest {
       verifyItemsCreated(items, pol, calculateInventoryItemsQuantity(pol));
       verifyPiecesCreated(items, createdPieces);
     }
-    
-    
   }
 
   private List<JsonObject> joinExistingAndNewItems(List<JsonObject> itemsSearches, List<JsonObject> createdItems) {
@@ -942,6 +940,7 @@ public class OrdersImplTest {
 			String itemIdFromItems = item.getString("id");
 			for (JsonObject piece : pieces) {
 				pieceObj = piece;
+				// Check if itemId in inventoryItems match itemId in piece record
 				if (itemIdFromItems.equals(piece.getString("itemId"))) {
 					assertThat(piece.getString("itemId"), equalTo(itemIdFromItems));
 					assertThat(piece.getString("receivingStatus"), equalTo("Expected"));
@@ -1067,7 +1066,6 @@ public class OrdersImplTest {
     assertNotNull(createdPieces);
     assertEquals(polCount, createdInstances.size());
     assertEquals(createdPieces.size(), createdItems.size());
-    logger.debug("-----Created pieces " + createdPieces.size() + "----created items " + createdItems.size());
     
     List<JsonObject> items = joinExistingAndNewItems(itemsSearches, createdItems);
 
