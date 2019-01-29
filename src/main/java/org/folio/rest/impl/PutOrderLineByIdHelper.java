@@ -90,7 +90,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       })
       .thenAccept(v -> {
         httpClient.closeClient();
-      	asyncResultHandler.handle(succeededFuture(respond204()));
+        asyncResultHandler.handle(succeededFuture(respond204()));
       })
       .exceptionally(this::handleError);
   }
