@@ -103,7 +103,7 @@
   "po_line_number": "268758-03",
   "publication_date": "2017",
   "publisher": "John Wiley & Sons, Inc.",
-  "purchase_order_id": "96a07b68-3cb5-4452-b957-f55479005e69",
+  "purchase_order_id": "3419ed01-a339-4448-9539-9815f231d405",
   "receipt_date": null,
   "receipt_status": "Fully Received",
   "reporting_codes": [],
@@ -112,7 +112,7 @@
   "selector": "Woods",
   "source": {
     "id": "ecb05974-8cc8-481d-a3ce-f20af51110c1",
-    "code": "",
+    "code": "FOLIO",
     "description": "Manually entered"
   },
   "tags": [""],
