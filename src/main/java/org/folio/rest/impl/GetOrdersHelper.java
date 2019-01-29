@@ -16,10 +16,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.getSearcheableEndpoint;
 
 public class GetOrdersHelper extends AbstractHelper {
 
@@ -35,7 +32,7 @@ public class GetOrdersHelper extends AbstractHelper {
     CompletableFuture<PurchaseOrders> future = new VertxCompletableFuture<>(ctx);
 
     try {
-      String queryParam = isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
+      String queryParam = getSearcheableEndpoint(query, logger);
       String endpoint = String.format(GET_PURCHASE_ORDERS_BY_QUERY, limit, offset, queryParam, lang);
       HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
         .thenAccept(jsonOrders -> future.complete(jsonOrders.mapTo(PurchaseOrders.class)))
@@ -50,6 +47,9 @@ public class GetOrdersHelper extends AbstractHelper {
 
     return future;
   }
+
+
+
 
 
   @Override
