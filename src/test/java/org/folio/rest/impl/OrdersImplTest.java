@@ -100,6 +100,7 @@ import io.vertx.ext.web.handler.BodyHandler;
 public class OrdersImplTest {
 
   private static final String INSTANCE_RECORD = "instance_record";
+  private static final String HOLDINGS_RECORD = "holding_record";
   private static final String ITEM_RECORDS = "item_records";
   private static final String ORDER_WITHOUT_PO_LINES = "order_without_po_lines.json";
   private static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
@@ -303,9 +304,11 @@ public class OrdersImplTest {
     int polCount = resp.getPoLines().size();
 
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
+    List<JsonObject> holdingsSearches = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
     List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
 
     assertNotNull(instancesSearches);
+    assertNotNull(holdingsSearches);
     assertNotNull(itemsSearches);
 
     // Check that search for existing instances was done not for all PO lines
@@ -351,10 +354,13 @@ public class OrdersImplTest {
 
     // Check that search of the existing instances and items was done for first PO line only
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
+    List<JsonObject> holdingsSearches = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
     List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
     assertNotNull(instancesSearches);
+    assertNotNull(holdingsSearches);
     assertNotNull(itemsSearches);
     assertEquals(1, instancesSearches.size());
+    assertEquals(1, holdingsSearches.size());
     assertEquals(1, itemsSearches.size());
 
     verifyInventoryInteraction(resp, 1);
@@ -915,20 +921,25 @@ public class OrdersImplTest {
   private void verifyInventoryInteraction(CompositePurchaseOrder reqData, int createdInstancesCount) {
     // Check that search of the existing instances and items was done for each PO line
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
+    List<JsonObject> holdingsSearches = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
     List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
     assertNotNull(instancesSearches);
+    assertNotNull(holdingsSearches);
     assertNotNull(itemsSearches);
 
     // Check that creation of the new instances and items was done
     List<JsonObject> createdInstances = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST);
+    List<JsonObject> createdHoldings = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.POST);
     List<JsonObject> createdItems = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.POST);
     assertNotNull(createdInstances);
+    assertNotNull(createdHoldings);
     assertNotNull(createdItems);
     assertEquals(createdInstancesCount, createdInstances.size());
 
     List<JsonObject> items = joinExistingAndNewItems(itemsSearches, createdItems);
     for (PoLine pol : reqData.getPoLines()) {
       verifyInstanceCreated(createdInstances, pol);
+      verifyHoldingsCreated(createdHoldings, pol);
       verifyItemsCreated(items, pol, calculateInventoryItemsQuantity(pol));
     }
   }
@@ -961,6 +972,26 @@ public class OrdersImplTest {
 
     if ((!verified && StringUtils.isNotEmpty(pol.getInstanceId()) || (verified && expectedItemsQuantity == 0))) {
       fail("No instance expected for POL: " + JsonObject.mapFrom(pol).encodePrettily());
+    }
+  }
+
+  private void verifyHoldingsCreated(List<JsonObject> holdings, PoLine pol) {
+    boolean verified = false;
+    for (JsonObject holding : holdings) {
+      if (StringUtils.isNotEmpty(pol.getLocation().getLocationId())
+          && pol.getLocation().getLocationId().equals(holding.getString("permanentLocationId"))) {
+        verified = true;
+        break;
+      }
+    }
+
+    int expectedItemsQuantity = calculateInventoryItemsQuantity(pol);
+    if (!verified && expectedItemsQuantity > 0) {
+      fail("No matching holdings record for POL: " + JsonObject.mapFrom(pol).encodePrettily());
+    }
+
+    if (!verified && StringUtils.isNotEmpty(pol.getInstanceId())) {
+      fail("Holdings Record could not be found for POL: " + JsonObject.mapFrom(pol).encodePrettily());
     }
   }
 
@@ -1064,6 +1095,7 @@ public class OrdersImplTest {
 
     // Check that 2 new instances created and items created successfully only for first POL
     List<JsonObject> createdInstances = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST);
+    List<JsonObject> createdHoldings = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.POST);
     List<JsonObject> createdItems = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.POST);
     assertNotNull(createdInstances);
     assertNotNull(createdItems);
@@ -1074,11 +1106,13 @@ public class OrdersImplTest {
     // Check that instance and items created successfully for first POL
     PoLine firstPol = reqData.getPoLines().get(0);
     verifyInstanceCreated(createdInstances, firstPol);
+    verifyHoldingsCreated(createdHoldings, firstPol);
     verifyItemsCreated(items, firstPol, calculateInventoryItemsQuantity(firstPol));
 
     // Check that instance created successfully for second POL but no items created (but expected)
     PoLine secondPol = reqData.getPoLines().get(1);
     verifyInstanceCreated(createdInstances, secondPol);
+    verifyHoldingsCreated(createdHoldings, secondPol);
     verifyItemsCreated(items, secondPol, 0);
   }
 
@@ -1882,6 +1916,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.POST, resourcesPath(PURCHASE_ORDER)).handler(this::handlePostPurchaseOrder);
       router.route(HttpMethod.POST, "/inventory/instances").handler(this::handlePostInstanceRecord);
       router.route(HttpMethod.POST, "/item-storage/items").handler(this::handlePostItemRecord);
+      router.route(HttpMethod.POST, "/holdings-storage/holdings").handler(this::handlePostHoldingRecord);
       router.route(HttpMethod.POST, resourcesPath(PO_LINES)).handler(this::handlePostPOLine);
       router.route(HttpMethod.POST, resourcesPath(ADJUSTMENT)).handler(ctx -> handlePostGenericSubObj(ctx, ADJUSTMENT));
       router.route(HttpMethod.POST, resourcesPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
@@ -1968,6 +2003,18 @@ public class OrdersImplTest {
         .end();
     }
 
+    private void handlePostHoldingRecord(RoutingContext ctx) {
+      logger.info("handlePostHoldingsRecord got: " + ctx.getBodyAsString());
+      JsonObject body = ctx.getBodyAsJson();
+      addServerRqRsData(HttpMethod.POST, HOLDINGS_RECORD, body);
+
+      ctx.response()
+        .setStatusCode(201)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .putHeader(HttpHeaders.LOCATION, ctx.request().absoluteURI() + "/" + UUID.randomUUID().toString())
+        .end();
+    }
+
     private void handlePostItemRecord(RoutingContext ctx) {
       String bodyAsString = ctx.getBodyAsString();
       logger.info("handlePostItemRecord got: " + bodyAsString);
@@ -2008,14 +2055,15 @@ public class OrdersImplTest {
     private void handleGetHoldingRecord(RoutingContext ctx) {
       logger.info("handleGetHoldingRecord got: " + ctx.request().path());
 
-      try {
-        JsonObject instance = new JsonObject(getMockData(HOLDINGS_RECORDS_MOCK_DATA_PATH + "holdingRecords-1.json"));
-        serverResponse(ctx, 200, APPLICATION_JSON, instance.encodePrettily());
-      } catch (IOException e) {
-        ctx.response()
-           .setStatusCode(404)
-           .end();
-      }
+      JsonObject instance;
+
+      //if (ctx.request().query().contains("fcd64ce1-6995-48f0-840e-89ffa2288371")) {
+        instance = new JsonObject().put("holdingsRecords", new JsonArray());
+//        }else {
+//          instance = new JsonObject(getMockData(HOLDINGS_RECORDS_MOCK_DATA_PATH + "holdingRecords-1.json"));
+//        }
+      addServerRqRsData(HttpMethod.GET, HOLDINGS_RECORD, instance);
+      serverResponse(ctx, 200, APPLICATION_JSON, instance.encodePrettily());
     }
 
     private void handleGetItemsRecords(RoutingContext ctx) {
