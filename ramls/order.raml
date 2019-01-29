@@ -17,7 +17,7 @@ types:
   receiving-collection: !include acq-models/mod-orders/schemas/receivingCollection.json
   receiving-results: !include acq-models/mod-orders/schemas/receivingResults.json
   # Using for now mod-orders-storage schema. Once agreed what kind of extra data is required, the new schema will be defined
-  receiving-history: !include acq-models/mod-orders-storage/schemas/receiving_history_collection.json
+  receiving-history-collection: !include acq-models/mod-orders-storage/schemas/receiving_history_collection.json
   errors: !include raml-util/schemas/errors.schema
   po-number: !include acq-models/mod-orders-storage/schemas/po_number.json
   UUID:
@@ -205,19 +205,20 @@ resourceTypes:
     post:
       description: Check-in items spanning one or more po_lines in this order
   /receiving-history:
-    displayName: Receiving history
-    description: Get receiveing history matching the provided criteria
-    is: [
-      pageable,
-      searchable: {
+    get: 
+      displayName: Receiving history
+      description: Get receiving history matching the provided criteria
+      is: [
+       pageable,
+       searchable: {
         description:
           "With valid searchable fields",
         example:
           "title==Harry Potter AND receiving_status==received sortBy po_line_number"
-      },
-      validate
-    ]
+       },
+       validate
+      ]
     type:
       collection-get:
         exampleCollection: !include acq-models/mod-orders-storage/examples/receiving_history_collection.sample
-        schemaCollection: receiving-history
+        schemaCollection: receiving-history-collection

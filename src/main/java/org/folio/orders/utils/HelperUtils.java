@@ -1,6 +1,9 @@
 package org.folio.orders.utils;
 
 import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
@@ -320,6 +323,10 @@ public class HelperUtils {
       logger.error("Error happened while attempting to encode '{}'", e, query);
       throw new CompletionException(e);
     }
+  }
+
+  public static String getSearcheableEndpoint(String query, Logger logger) {
+    return isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
   }
 
   /**
