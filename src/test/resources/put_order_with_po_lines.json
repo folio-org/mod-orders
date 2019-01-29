@@ -93,7 +93,7 @@
       "rush": false,
       "selector": "Stevens",
       "source": {
-        "code": "",
+        "code": "FOLIO",
         "description": "Manually entered"
       },
       "tags": [],
@@ -203,7 +203,7 @@
       "rush": false,
       "selector": "Brown",
       "source": {
-        "code": "",
+        "code": "FOLIO",
         "description": "Manually entered"
       },
       "tags": [],
@@ -436,7 +436,7 @@
       "rush": false,
       "selector": "Woods",
       "source": {
-        "code": "",
+        "code": "FOLIO",
         "description": "Manually entered"
       },
       "tags": [""],

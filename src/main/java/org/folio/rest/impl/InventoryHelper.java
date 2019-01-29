@@ -47,7 +47,6 @@ public class InventoryHelper {
   private static final String ITEMS = "items";
   private static final String LOAN_TYPES = "loantypes";
 
-  private static final String INSTANCE_SOURCE = "FOLIO";
   private static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
   private static final String DEFAULT_STATUS_CODE = "temp";
   private static final String DEFAULT_LOAN_TYPE_NAME = "Can circulate";
@@ -200,7 +199,8 @@ public class InventoryHelper {
   private JsonObject buildInstanceRecordJsonObject(PoLine compPOL, Map<String, String> productTypes, JsonObject lookupObj) {
     JsonObject instance = new JsonObject();
 
-    instance.put("source", INSTANCE_SOURCE);
+    // MODORDERS-145 The Source and source code are required by schema
+    instance.put("source", compPOL.getSource().getCode());
     if (compPOL.getTitle() != null) {
       instance.put("title", compPOL.getTitle());
     }
