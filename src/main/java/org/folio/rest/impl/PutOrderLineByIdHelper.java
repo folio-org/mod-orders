@@ -36,12 +36,15 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.acq.model.Piece;
+import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -61,7 +64,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   private final InventoryHelper inventoryHelper;
   private final Errors processingErrors = new Errors();
 
-  private static final String PIECES_ENDPOINT = "/orders-storage/pieces?query=poLineId=%s";
+  private static final String PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId=%s";
   
   public PutOrderLineByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
                                 Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
@@ -191,22 +194,17 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 		
 		handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
 		    .thenAccept(body -> {
-		    	int i=0;
-		      // No Pieces exists
-			    if (body.getInteger("total_records") == 0) { 
-				    while (i < expectedItemsQuantity) {
-					    futuresList.add(createPiece(poLineId, itemIds, i));
-					    i++;
-				    }
-			    } else if(body.getInteger("total_records") > 0) {
-			    	// if some of the piece records already exists out of expectedItemsQuantity then only create remaining pieces
-			    	int existingPieceRecordCount = body.getInteger("total_records");
-			    	int newQuantity = expectedItemsQuantity - existingPieceRecordCount;
-			    	while (i < newQuantity) {
-					    futuresList.add(createPiece(poLineId, itemIds, i));
-					    i++;
-				    }
-			    }
+			    PieceCollection pieces = body.mapTo(PieceCollection.class);
+		    	List<String> existingItemIds = pieces.getPieces()
+							.stream()
+							.map(Piece::getItemId)
+							.filter(StringUtils::isNotEmpty)
+							.collect(Collectors.toList());
+			    	
+				 itemIds.stream()
+				 				.filter(id -> !existingItemIds.contains(id))
+				 				.forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
+
 			    logger.info("response from GET /pieces: " + body.encodePrettily());
 
 			    CompletableFuture.allOf(futuresList.toArray(new CompletableFuture[0]))
@@ -228,16 +226,16 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    * @param index index associated with each Piece to count total Pieces created
    * @return CompletableFuture with new Piece record.
    */
-  private CompletableFuture<Void> createPiece(String poLineId, List<String> itemIds, int index) {
+  private CompletableFuture<Void> createPiece(String poLineId, String itemId) {
 		// Construct Piece object
-		JsonObject pieceObj = new JsonObject();
-		pieceObj.put("poLineId", poLineId);
-		pieceObj.put("itemId", itemIds.get(index));
-		pieceObj.put("receivingStatus", "Expected");
+  	Piece pieceObj = new Piece();
+  	pieceObj.setPoLineId(poLineId);
+  	pieceObj.setItemId(itemId);
+  	pieceObj.setReceivingStatus(Piece.ReceivingStatus.EXPECTED);
 
 		CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 		try {
-			operateOnSubObj(HttpMethod.POST, resourcesPath(PIECES), pieceObj, httpClient, ctx, okapiHeaders, logger)
+			operateOnSubObj(HttpMethod.POST, resourcesPath(PIECES), JsonObject.mapFrom(pieceObj), httpClient, ctx, okapiHeaders, logger)
 			    .thenAccept(body -> {
 				    logger.info("response from /pieces: " + body.encodePrettily());
 				    future.complete(null);
