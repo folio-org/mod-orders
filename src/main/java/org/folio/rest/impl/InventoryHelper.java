@@ -90,11 +90,11 @@ public class InventoryHelper {
             if (!holdings.getJsonArray(HOLDINGS_RECORDS).isEmpty()) {
               return completedFuture(extractId(getFirstObjectFromResponse(holdings, HOLDINGS_RECORDS)));
             }
-            return createHoldingsrecord(compPOL);
+            return createHoldingsRecord(compPOL);
           });
   }
 
-  private CompletableFuture<String> createHoldingsrecord(PoLine compPOL) {
+  private CompletableFuture<String> createHoldingsRecord(PoLine compPOL) {
     JsonObject holdingsRecJson=new JsonObject();
     holdingsRecJson.put("instanceId", compPOL.getInstanceId());
     holdingsRecJson.put("permanentLocationId", compPOL.getLocation().getLocationId());
