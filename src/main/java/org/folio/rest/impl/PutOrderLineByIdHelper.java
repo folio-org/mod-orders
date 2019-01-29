@@ -88,8 +88,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
         compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
         return updateOrderLine(compOrderLine, lineFromStorage);
       })
-      .thenAccept(v -> { 
-      	httpClient.closeClient();
+      .thenAccept(v -> {
+        httpClient.closeClient();
       	asyncResultHandler.handle(succeededFuture(respond204()));
       })
       .exceptionally(this::handleError);
