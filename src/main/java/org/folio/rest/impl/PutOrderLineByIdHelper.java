@@ -163,9 +163,10 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     return inventoryHelper.handleInstanceRecord(compPOL)
       .thenCompose(withInstId -> getPoLineById(compPOL.getId(), lang, httpClient, ctx, okapiHeaders, logger))
       .thenCompose(jsonObj -> updateOrderLine(compPOL, jsonObj))
-      .thenCompose(v -> inventoryHelper.handleHoldingRecord(compPOL))
-      .thenCompose(holdingId -> inventoryHelper.handleItemRecords(compPOL, holdingId))
-      .thenCompose(itemIds -> {
+      .thenCompose(v -> inventoryHelper.getOrCreateHoldingsRecord(compPOL))
+      .thenCompose(holdingsId -> inventoryHelper.handleItemRecords(compPOL, holdingsId))
+      .thenAccept(itemIds -> {
+        // Temporal check. The idea is to create piece records for successfully created items and then throw exception
         if (itemIds.size() != expectedItemsQuantity) {
           throw new IllegalStateException("Expected items quantity does not correspond to created items");
         }
