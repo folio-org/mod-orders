@@ -97,7 +97,7 @@ resourceTypes:
         schemaItem: composite-po-line
     is: [validate]
     get:
-      is: [pageable, searchable: {description: "using CQL (indexes for PO lines)", example: "workflow_status==\"Pending\""} ]
+      is: [pageable, searchable: {description: "using CQL (indexes for PO lines)", example: "payment_status==\"Cancelled\""} ]
     post:
       description: Post a PO lines to corresponding PO
       is: [auth]

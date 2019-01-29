@@ -147,6 +147,7 @@ public class OrdersImplTest {
   private static final String PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE = "c2755a78-2f8d-47d0-a218-059a9b7391b4";
   private static final String PO_LINE_ID_WITH_FUND_DISTRIBUTION_404_CODE = "f7223ce8-9e92-4c28-8fd9-097596053b7c";
   private static final String ORDER_ID_WITHOUT_PO_LINES = "50fb922c-3fa9-494e-a972-f2801f1b9fd1";
+  private static final String ORDER_ID_WITH_PO_LINES = "ab18897b-0e40-4f31-896b-9c9adc979a87";
 
   // API paths
   private final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
@@ -170,6 +171,7 @@ public class OrdersImplTest {
   private static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private static final String MOCK_DATA_ROOT_PATH = "src/test/resources/";
   private static final String listedPrintMonographPath = MOCK_DATA_ROOT_PATH + "/po_listed_print_monograph.json";
+  private static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "/po_line_collection.json";
   private static final String MINIMAL_ORDER_PATH = MOCK_DATA_ROOT_PATH + "/minimal_order.json";
   private static final String poCreationFailurePath = MOCK_DATA_ROOT_PATH + "/po_creation_failure.json";
   private static final String poLineCreationFailurePath = MOCK_DATA_ROOT_PATH + "/po_line_creation_failure.json";
@@ -1756,20 +1758,20 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testGetOrderPOLinesNoParameters() {
+  public void testGetOrderPOLinesByPoId() {
     logger.info("=== Test Get Orders lines - With empty query ===");
 
     final Response resp = RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
-      .get(LINES_PATH)
+      .get(LINES_PATH + "?query=purchase_order_id==" + ORDER_ID_WITH_PO_LINES)
         .then()
          // .statusCode(200)
           .extract()
           .response();
 
-    assertEquals(3, resp.getBody().as(PoLineCollection.class).getTotalRecords().intValue());
+    assertEquals(2, resp.getBody().as(PoLineCollection.class).getTotalRecords().intValue());
   }
 
   @Test
@@ -2152,6 +2154,11 @@ public class OrdersImplTest {
         serverResponse(ctx, 500, TEXT_PLAIN, INTERNAL_SERVER_ERROR);
       } else {
         try {
+          if (id.equals(ORDER_ID_WITH_PO_LINES)) {
+            JsonObject po_lines = new JsonObject(getMockData(POLINES_COLLECTION));
+            serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encodePrettily());
+            return;
+          }
           JsonObject compPO = new JsonObject(getMockData(String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id)));
           JsonArray lines = compPO.getJsonArray(COMPOSITE_PO_LINES);
           JsonObject po_lines = new JsonObject();
