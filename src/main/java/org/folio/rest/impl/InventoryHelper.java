@@ -47,7 +47,6 @@ public class InventoryHelper {
   private static final String ITEMS = "items";
   private static final String LOAN_TYPES = "loantypes";
 
-  private static final String INSTANCE_SOURCE = "FOLIO";
   private static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
   private static final String DEFAULT_STATUS_CODE = "temp";
   private static final String DEFAULT_LOAN_TYPE_NAME = "Can circulate";
@@ -56,6 +55,8 @@ public class InventoryHelper {
   private static final String CREATE_INSTANCE_ENDPOINT = "/inventory/instances?lang=%s";
   private static final String LOOKUP_ITEMS_ENDPOINT = "/item-storage/items?query=purchaseOrderLineIdentifier==%s&limit=%d&lang=%s";
   private static final String CREATE_ITEM_ENDPOINT = "/item-storage/items?lang=%s";
+  private static final String HOLDINGS_LOOKUP_ENDPOINT = "/holdings-storage/holdings?query=instanceId==%s&permanentLocationId==%s&lang=%s ";
+  private static final String HOLDINGS_CREATE_ENDPOINT = "/holdings-storage/holdings?lang=%s";
 
   private static final Logger logger = LoggerFactory.getLogger(InventoryHelper.class);
 
@@ -77,12 +78,27 @@ public class InventoryHelper {
       .thenApply(compPOL::withInstanceId);
   }
 
-  public CompletableFuture<String> handleHoldingRecord(PoLine compPOL) {
-    // TODO the logic here will be implemented in scope of MODORDERS-66
-    String endpoint = "/holdings-storage/holdings?limit=1";
+  public CompletableFuture<String> getOrCreateHoldingsRecord(PoLine compPOL) {
+    String instanceId = compPOL.getInstanceId();
+    //Location will be a required field on the schema, so expected always
+    String locationId = compPOL.getLocation().getLocationId();
+
+    String endpoint = String.format(HOLDINGS_LOOKUP_ENDPOINT, instanceId, locationId, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(response -> getFirstObjectFromResponse(response, HOLDINGS_RECORDS))
-      .thenApply(this::extractId);
+          .thenCompose(holdings -> {
+            if (!holdings.getJsonArray(HOLDINGS_RECORDS).isEmpty()) {
+              return completedFuture(extractId(getFirstObjectFromResponse(holdings, HOLDINGS_RECORDS)));
+            }
+            return createHoldingsRecord(compPOL);
+          });
+  }
+
+  private CompletableFuture<String> createHoldingsRecord(PoLine compPOL) {
+    JsonObject holdingsRecJson=new JsonObject();
+    holdingsRecJson.put("instanceId", compPOL.getInstanceId());
+    holdingsRecJson.put("permanentLocationId", compPOL.getLocation().getLocationId());
+
+    return createRecordInStorage(holdingsRecJson, String.format(HOLDINGS_CREATE_ENDPOINT, lang));
   }
 
   /**
@@ -200,7 +216,8 @@ public class InventoryHelper {
   private JsonObject buildInstanceRecordJsonObject(PoLine compPOL, Map<String, String> productTypes, JsonObject lookupObj) {
     JsonObject instance = new JsonObject();
 
-    instance.put("source", INSTANCE_SOURCE);
+    // MODORDERS-145 The Source and source code are required by schema
+    instance.put("source", compPOL.getSource().getCode());
     if (compPOL.getTitle() != null) {
       instance.put("title", compPOL.getTitle());
     }
@@ -337,7 +354,8 @@ public class InventoryHelper {
   }
 
   /**
-   * Creates new entry in the inventory storage based on the PO line data.
+   * A common method to create a new entry in the inventory storage
+   * based on the Json Object and returns the created id.
    *
    * @param recordData json to post
    * @return id of newly created entity Record

@@ -41,7 +41,9 @@
             "inventory.instances.collection.get",
             "inventory.instances.item.post",
             "inventory-storage.instance-types.collection.get",
-            "inventory-storage.instance-statuses.collection.get"
+            "inventory-storage.instance-statuses.collection.get",
+            "inventory-storage.holdings.item.post",
+            "inventory-storage.holdings.collection.get"
           ]
         },
         {
@@ -90,7 +92,9 @@
             "inventory.instances.collection.get",
             "inventory.instances.item.post",
             "inventory-storage.instance-types.collection.get",
-            "inventory-storage.instance-statuses.collection.get"
+            "inventory-storage.instance-statuses.collection.get",
+            "inventory-storage.holdings.item.post",
+            "inventory-storage.holdings.collection.get"
           ]
         },
         {

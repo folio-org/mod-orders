@@ -103,6 +103,7 @@
         }
       ],
       "location": {
+        "location_id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
         "quantity": 2,
         "quantity_electronic": 1,
         "quantity_physical": 1
@@ -238,6 +239,7 @@
       ],
       "location": {
         "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
+        "location_id": "d15db63b-ab00-4c9a-9b0e-35fa0a519467",
         "quantity": 1,
         "quantity_electronic": 1,
         "quantity_physical": 0
@@ -255,7 +257,7 @@
       "rush": false,
       "selector": "Woods",
       "source": {
-        "code": "",
+        "code": "FOLIO",
         "description": "Manually entered"
       },
       "tags": [""],

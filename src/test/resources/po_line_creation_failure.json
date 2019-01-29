@@ -2,10 +2,12 @@
   "po_number": "TESTDATA0123",
   "po_lines": [
     {
-      "po_line_number": "8675309-1"
+      "po_line_number": "8675309-1",
+      "source": { "code": "FOLIO" }
     },
     {
-      "po_line_number": "invalid"
+      "po_line_number": "invalid",
+      "source": { "code": "FOLIO" }
     }
   ]
 }
