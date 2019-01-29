@@ -175,7 +175,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
         }
         return completedFuture(itemIds);
       })
-      .thenCompose(itemIds -> createPieces(compPOL, expectedItemsQuantity, itemIds));
+      .thenCompose(itemIds -> createPieces(compPOL, itemIds));
   }
 
   /**
@@ -186,7 +186,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    * @param itemIds List of item id
    * @return CompletableFuture with newly created Pieces associated with PO line.
    */
-  private CompletableFuture<Void> createPieces(PoLine compPOL, int expectedItemsQuantity, List<String> itemIds) {
+  private CompletableFuture<Void> createPieces(PoLine compPOL, List<String> itemIds) {
 		CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 		if (itemIds.isEmpty()) {
 			future.complete(null);
