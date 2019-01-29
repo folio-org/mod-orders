@@ -27,7 +27,7 @@
     "createdDate": "2010-10-08T03:53:00.000",
     "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
   },
-  "po_lines": [
+  "compositePoLines": [
     {
       "id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47",
       "acquisition_method": "Purchase At Vendor System",

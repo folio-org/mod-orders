@@ -20,9 +20,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -41,7 +41,7 @@ public class HelperUtils {
   public static final String OKAPI_URL = "X-Okapi-Url";
   public static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
   public static final String URL_WITH_LANG_PARAM = "%s?lang=%s";
-  public static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = resourcesPath(PO_LINES)+"?limit=%s&query=purchase_order_id==%s&lang=%s";
+  public static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = resourcesPath(COMPOSITE_PO_LINES)+"?limit=%s&query=purchase_order_id==%s&lang=%s";
   public static final String GET_PURCHASE_ORDER_BYID = resourceByIdPath(PURCHASE_ORDER)+URL_WITH_LANG_PARAM;
   public static final String GET_PURCHASE_ORDER_BYPONUMBER_QUERY = resourcesPath(PURCHASE_ORDER)+"?query=po_number==%s&lang=%s";
 
@@ -64,9 +64,9 @@ public class HelperUtils {
     return response.getBody();
   }
 
-  public static Adjustment calculateAdjustment(List<PoLine> lines) {
+  public static Adjustment calculateAdjustment(List<CompositePoLine> lines) {
     Adjustment ret = null;
-    for (PoLine line : lines) {
+    for (CompositePoLine line : lines) {
       Adjustment a = line.getAdjustment();
       if (a != null) {
         if (ret == null) {
@@ -123,7 +123,7 @@ public class HelperUtils {
    */
   public static CompletableFuture<JsonObject> getPoLineById(String lineId, String lang, HttpClientInterface httpClient, Context ctx,
                                                             Map<String, String> okapiHeaders, Logger logger) {
-    String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES, lineId), lang);
+    String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(COMPOSITE_PO_LINES, lineId), lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
   }
 
@@ -134,8 +134,8 @@ public class HelperUtils {
       .thenCompose(body -> {
         List<CompletableFuture<JsonObject>> futures = new ArrayList<>();
 
-        for (int i = 0; i < body.getJsonArray(PO_LINES).size(); i++) {
-          JsonObject line = body.getJsonArray(PO_LINES).getJsonObject(i);
+        for (int i = 0; i < body.getJsonArray(COMPOSITE_PO_LINES).size(); i++) {
+          JsonObject line = body.getJsonArray(COMPOSITE_PO_LINES).getJsonObject(i);
           futures.add(deletePoLine(line, httpClient, ctx, okapiHeaders, logger));
         }
 
@@ -152,21 +152,21 @@ public class HelperUtils {
     return operateOnPoLine(HttpMethod.DELETE, line, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(poline -> {
         String polineId = poline.getId();
-        return operateOnSubObj(HttpMethod.DELETE, resourceByIdPath(PO_LINES, polineId), httpClient, ctx, okapiHeaders, logger);
+        return operateOnSubObj(HttpMethod.DELETE, resourceByIdPath(COMPOSITE_PO_LINES, polineId), httpClient, ctx, okapiHeaders, logger);
       });
   }
 
-  public static CompletableFuture<List<PoLine>> getCompositePoLines(String id, String lang, HttpClientInterface httpClient,
+  public static CompletableFuture<List<CompositePoLine>> getCompositePoLines(String id, String lang, HttpClientInterface httpClient,
                                                                     Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-    CompletableFuture<List<PoLine>> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<List<CompositePoLine>> future = new VertxCompletableFuture<>(ctx);
 
     getPoLines(id,lang, httpClient,ctx, okapiHeaders, logger)
       .thenAccept(body -> {
-        List<PoLine> lines = new ArrayList<>();
+        List<CompositePoLine> lines = new ArrayList<>();
         List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-        for (int i = 0; i < body.getJsonArray(PO_LINES).size(); i++) {
-          JsonObject line = body.getJsonArray(PO_LINES).getJsonObject(i);
+        for (int i = 0; i < body.getJsonArray(COMPOSITE_PO_LINES).size(); i++) {
+          JsonObject line = body.getJsonArray(COMPOSITE_PO_LINES).getJsonObject(i);
           futures.add(operateOnPoLine(HttpMethod.GET, line, httpClient, ctx, okapiHeaders, logger)
             .thenAccept(lines::add));
         }
@@ -185,9 +185,9 @@ public class HelperUtils {
     return future;
   }
 
-  public static CompletableFuture<PoLine> operateOnPoLine(HttpMethod operation, JsonObject line, HttpClientInterface httpClient,
-                                                          Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-    CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
+  public static CompletableFuture<CompositePoLine> operateOnPoLine(HttpMethod operation, JsonObject line, HttpClientInterface httpClient,
+                                                                   Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+    CompletableFuture<CompositePoLine> future = new VertxCompletableFuture<>(ctx);
 
     if (logger.isDebugEnabled()) {
       logger.debug("The PO line prior to {} operation: {}", operation, line.encodePrettily());
@@ -212,7 +212,7 @@ public class HelperUtils {
         if (logger.isDebugEnabled()) {
           logger.debug("The PO line after {} operation on sub-objects: {}", operation, line.encodePrettily());
         }
-        future.complete(line.mapTo(PoLine.class));
+        future.complete(line.mapTo(CompositePoLine.class));
       })
       .exceptionally(t -> {
         logger.error("Exception resolving one or more po_line sub-object(s) on {} operation:", t, operation);
@@ -332,7 +332,7 @@ public class HelperUtils {
    * @param compPOL composite PO Line
    * @return quantity of items expected in the inventory for PO Line
    */
-  public static int calculateInventoryItemsQuantity(PoLine compPOL) {
+  public static int calculateInventoryItemsQuantity(CompositePoLine compPOL) {
     switch (compPOL.getOrderFormat()) {
       case P_E_MIX:
         return getPhysicalQuantity(compPOL) + getElectronicQuantity(compPOL);
@@ -346,13 +346,13 @@ public class HelperUtils {
     }
   }
 
-  private static int getPhysicalQuantity(PoLine compPOL) {
+  private static int getPhysicalQuantity(CompositePoLine compPOL) {
     return Optional.ofNullable(compPOL.getLocation())
                    .map(Location::getQuantityPhysical)
                    .orElse(0);
   }
 
-  private static int getElectronicQuantity(PoLine compPOL) {
+  private static int getElectronicQuantity(CompositePoLine compPOL) {
     boolean createItems = Optional.ofNullable(compPOL.getEresource())
                                   .map(Eresource::getCreateInventory)
                                   .orElse(false);

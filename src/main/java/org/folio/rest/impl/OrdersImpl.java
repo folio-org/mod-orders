@@ -16,11 +16,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.rest.annotations.Validate;
-import org.folio.rest.jaxrs.model.CheckinCollection;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PoNumber;
-import org.folio.rest.jaxrs.model.ReceivingCollection;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -57,6 +53,22 @@ public class OrdersImpl implements Orders {
       asyncResultHandler.handle(result);
     })
     .exceptionally(helper::handleError);
+  }
+
+  @Override
+  @Validate
+  public void getOrdersOrderLines(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
+    GetPOLinesHelper helper = new GetPOLinesHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
+    helper.getPOLines(limit, offset, query)
+      .thenAccept(lines -> {
+        logger.info("Successfully retrieved orders: " + JsonObject.mapFrom(lines).encodePrettily());
+        httpClient.closeClient();
+        javax.ws.rs.core.Response response = GetOrdersOrderLinesResponse.respond200WithApplicationJson(lines);
+        AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
+        asyncResultHandler.handle(result);
+      })
+      .exceptionally(helper::handleError);
   }
 
   @Override
@@ -122,13 +134,13 @@ public class OrdersImpl implements Orders {
     if (org.apache.commons.lang.StringUtils.isEmpty(compPO.getPoNumber())) {
       putHelper.handleError(new CompletionException((new ValidationException("po_number is missing"))));
     } else {
-      if (CollectionUtils.isEmpty(compPO.getPoLines())) {
+      if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
         putHelper.updateOrder(orderId, compPO);
       } else {
         loadConfiguration(okapiHeaders, vertxContext, logger)
           .thenAccept(config -> {
             validatePoLinesQuantity(compPO, config);
-            compPO.getPoLines().forEach(poLine -> {
+            compPO.getCompositePoLines().forEach(poLine -> {
               if (StringUtils.isEmpty(poLine.getPurchaseOrderId())) {
                 poLine.setPurchaseOrderId(orderId);
               }
@@ -144,7 +156,7 @@ public class OrdersImpl implements Orders {
 
   @Override
   @Validate
-  public void postOrdersOrderLines(String lang, PoLine poLine, Map<String, String> okapiHeaders,
+  public void postOrdersOrderLines(String lang, CompositePoLine poLine, Map<String, String> okapiHeaders,
                                    Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
     PostOrderLineHelper helper = new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
@@ -225,8 +237,8 @@ public class OrdersImpl implements Orders {
 
   @Override
   @Validate
-  public void putOrdersOrderLinesById(String lineId, String lang, PoLine poLine, Map<String, String> okapiHeaders,
-                                          Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void putOrdersOrderLinesById(String lineId, String lang, CompositePoLine poLine, Map<String, String> okapiHeaders,
+                                      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Handling PUT Order Line operation...");
 
     PutOrderLineByIdHelper helper = new PutOrderLineByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang);
@@ -285,7 +297,7 @@ public class OrdersImpl implements Orders {
 
   private void validatePoLinesQuantity(CompositePurchaseOrder compPO, JsonObject config) {
     int limit = getPoLineLimit(config);
-    if (compPO.getPoLines().size() > limit) {
+    if (compPO.getCompositePoLines().size() > limit) {
       throw new ValidationException(String.format(OVER_LIMIT_ERROR_MESSAGE, limit), LINES_LIMIT_ERROR_CODE);
     }
   }

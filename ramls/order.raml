@@ -12,7 +12,9 @@ types:
   composite_purchase_order: !include acq-models/composite_purchase_order.json
   purchase_orders: !include acq-models/mod-orders-storage/schemas/purchase_order_collection.json
   purchase_order: !include acq-models/mod-orders-storage/schemas/purchase_order.json
-  po_line: !include acq-models/composite_po_line.json
+  composite-po-line: !include acq-models/composite_po_line.json
+  po-line-collection: !include acq-models/mod-orders-storage/schemas/po_line_collection.json
+  po-line: !include acq-models/mod-orders-storage/schemas/po_line.json
   checkin-collection: !include acq-models/mod-orders/schemas/checkinCollection.json
   receiving-collection: !include acq-models/mod-orders/schemas/receivingCollection.json
   receiving-results: !include acq-models/mod-orders/schemas/receivingResults.json
@@ -88,20 +90,17 @@ resourceTypes:
     displayName: Purchase Order Lines
     description: Manage purchase order (PO) lines
     type:
-      # Using `post-item` resource type because at the moment only POST is required. In case GET becomes also required, the `collection` resource type should be used instead
-      post-item:
+      collection:
+        exampleCollection: !include acq-models/mod-orders-storage/examples/po_line_collection.sample
         exampleItem: !include acq-models/examples/composite_po_line.sample
-        schema: po_line
+        schemaCollection: po-line-collection
+        schemaItem: composite-po-line
+    is: [validate]
+    get:
+      is: [pageable, searchable: {description: "using CQL (indexes for PO lines)", example: "workflow_status==\"Pending\""} ]
     post:
-      displayName: Create a new purchace order line
-      description: Post a purchase order (PO) line
-      is: [validate, auth]
-      body:
-        application/json:
-          type: po_line
-          example:
-            strict: false
-            value: !include acq-models/examples/composite_po_line.sample
+      description: Post a PO lines to corresponding PO
+      is: [auth]
     /{id}:
       displayName: Purchase Order Line
       description: Manage purchase order line (PO line) by id
@@ -112,7 +111,7 @@ resourceTypes:
       type:
         collection-item:
           exampleItem: !include acq-models/examples/composite_po_line.sample
-          schema: po_line
+          schema: composite-po-line
       is: [validate]
       get:
         description: Return a purchase order line with given {id}

@@ -10,8 +10,8 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.collections4.ListUtils;
 import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.rest.exceptions.ValidationException;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Details;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -70,13 +70,13 @@ public class InventoryHelper {
     this.lang = lang;
   }
 
-  public CompletableFuture<PoLine> handleInstanceRecord(PoLine compPOL) {
+  public CompletableFuture<CompositePoLine> handleInstanceRecord(CompositePoLine compPOL) {
     return getProductTypesMap(compPOL)
       .thenCompose(productTypesMap -> getInstanceRecord(compPOL, productTypesMap))
       .thenApply(compPOL::withInstanceId);
   }
 
-  public CompletableFuture<String> handleHoldingRecord(PoLine compPOL) {
+  public CompletableFuture<String> handleHoldingRecord(CompositePoLine compPOL) {
     // TODO the logic here will be implemented in scope of MODORDERS-66
     String endpoint = "/holdings-storage/holdings?limit=1";
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
@@ -92,7 +92,7 @@ public class InventoryHelper {
    * @param holdingId holding uuid from the inventory
    * @return future with list of item id's
    */
-  public CompletableFuture<List<String>> handleItemRecords(PoLine compPOL, String holdingId) {
+  public CompletableFuture<List<String>> handleItemRecords(CompositePoLine compPOL, String holdingId) {
     int expectedCount = calculateInventoryItemsQuantity(compPOL);
     return searchForExistingItems(compPOL)
       .thenCompose(existingItemIds -> createMissingItems(compPOL, holdingId, expectedCount - existingItemIds.size())
@@ -107,7 +107,7 @@ public class InventoryHelper {
    * @param compPOL the PO line to retrieve product type details for
    * @return product types map
    */
-  private CompletableFuture<Map<String, String>> getProductTypesMap(PoLine compPOL) {
+  private CompletableFuture<Map<String, String>> getProductTypesMap(CompositePoLine compPOL) {
     // do not fail if no productId is provided, should be enforced on schema level if it's required
     if (compPOL.getDetails() == null || compPOL.getDetails().getProductIds().isEmpty()) {
       return completedFuture(Collections.emptyMap());
@@ -138,7 +138,7 @@ public class InventoryHelper {
    * @param productTypesMap product types Map used to build Inventory query
    * @return future with Instance Id
    */
-  private CompletionStage<String> getInstanceRecord(PoLine compPOL, Map<String, String> productTypesMap) {
+  private CompletionStage<String> getInstanceRecord(CompositePoLine compPOL, Map<String, String> productTypesMap) {
     // proceed with new Instance Record creation if no productId is provided
     if (compPOL.getDetails() == null || compPOL.getDetails().getProductIds().isEmpty()) {
       return createInstanceRecord(compPOL, productTypesMap);
@@ -167,7 +167,7 @@ public class InventoryHelper {
    * @param productTypesMap product types Map used to build Instance Record json object
    * @return id of newly created Instance Record
    */
-  private CompletableFuture<String> createInstanceRecord(PoLine compPOL, Map<String, String> productTypesMap) {
+  private CompletableFuture<String> createInstanceRecord(CompositePoLine compPOL, Map<String, String> productTypesMap) {
     JsonObject lookupObj = new JsonObject();
     CompletableFuture<Void> instanceTypeFuture = getInstanceType(DEFAULT_INSTANCE_TYPE_CODE)
       .thenAccept(lookupObj::mergeIn);
@@ -196,7 +196,7 @@ public class InventoryHelper {
       productId.getProductId());
   }
 
-  private JsonObject buildInstanceRecordJsonObject(PoLine compPOL, Map<String, String> productTypes, JsonObject lookupObj) {
+  private JsonObject buildInstanceRecordJsonObject(CompositePoLine compPOL, Map<String, String> productTypes, JsonObject lookupObj) {
     JsonObject instance = new JsonObject();
 
     // MODORDERS-145 The Source and source code are required by schema
@@ -240,7 +240,7 @@ public class InventoryHelper {
    * @param compPOL PO line to retrieve Item Records for
    * @return future with list of item id's
    */
-  private CompletableFuture<List<String>> searchForExistingItems(PoLine compPOL) {
+  private CompletableFuture<List<String>> searchForExistingItems(CompositePoLine compPOL) {
     int expectedCount = calculateInventoryItemsQuantity(compPOL);
     String endpoint = String.format(LOOKUP_ITEMS_ENDPOINT, compPOL.getId(), expectedCount, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
@@ -265,7 +265,7 @@ public class InventoryHelper {
                    .orElseGet(Collections::emptyList);
   }
 
-  private CompletableFuture<List<String>> createMissingItems(PoLine compPOL, String holdingId, int count) {
+  private CompletableFuture<List<String>> createMissingItems(CompositePoLine compPOL, String holdingId, int count) {
     return (count > 0) ? createItemRecords(compPOL, holdingId, count) : completedFuture(Collections.emptyList());
   }
 
@@ -277,7 +277,7 @@ public class InventoryHelper {
    * @param count expected number of items to create
    * @return id of newly created Instance Record
    */
-  private CompletableFuture<List<String>> createItemRecords(PoLine compPOL, String holdingId, int count) {
+  private CompletableFuture<List<String>> createItemRecords(CompositePoLine compPOL, String holdingId, int count) {
     CompletableFuture<List<String>> result = new VertxCompletableFuture<>(ctx);
     logger.debug("Creating {} items for PO Line with '{}' id", count, compPOL.getId());
 
@@ -389,7 +389,7 @@ public class InventoryHelper {
    * @param holdingId holding uuid from the inventory
    * @return item data to be used as request body for POST operation
    */
-  private CompletableFuture<JsonObject> buildItemRecordJsonObject(PoLine compPOL, String holdingId) {
+  private CompletableFuture<JsonObject> buildItemRecordJsonObject(CompositePoLine compPOL, String holdingId) {
     String materialTypeId = getMaterialTypeId(compPOL);
     return getLoanTypeId(DEFAULT_LOAN_TYPE_NAME)
       .thenApply(loanTypeId -> {
@@ -404,7 +404,7 @@ public class InventoryHelper {
       });
   }
 
-  private String getMaterialTypeId(PoLine compPOL) {
+  private String getMaterialTypeId(CompositePoLine compPOL) {
     return Optional.ofNullable(compPOL.getDetails())
                    .map(Details::getMaterialTypes)
                    .flatMap(ids -> ids.stream().findFirst())

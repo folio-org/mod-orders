@@ -15,7 +15,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ERESOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.FUND_DISTRIBUTION;
 import static org.folio.orders.utils.ResourcePathResolver.LOCATION;
 import static org.folio.orders.utils.ResourcePathResolver.PHYSICAL;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.SOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_DETAIL;
@@ -40,10 +40,10 @@ import javax.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
@@ -74,7 +74,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   /**
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
-  public void updateOrderLine(PoLine compOrderLine) {
+  public void updateOrderLine(CompositePoLine compOrderLine) {
     getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(),compOrderLine.getId())
       .thenCompose(lineFromStorage -> {
         // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line update
@@ -96,10 +96,10 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    * 2. Store PO line summary. On success, the logic checks if there are no errors happened on sub-objects operations and
    * returns succeeded future. Otherwise {@link HttpException} will be returned as result of the future.
    *
-   * @param compOrderLine The composite {@link PoLine} to use for storage data update
+   * @param compOrderLine The composite {@link CompositePoLine} to use for storage data update
    * @param lineFromStorage {@link JsonObject} representing PO line from storage (/acq-models/mod-orders-storage/schemas/po_line.json)
    */
-  public CompletableFuture<Void> updateOrderLine(PoLine compOrderLine, JsonObject lineFromStorage) {
+  public CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
     updatePoLineSubObjects(compOrderLine, lineFromStorage)
       .thenCompose(poLine -> updateOrderLineSummary(compOrderLine.getId(), poLine))
@@ -125,7 +125,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    */
   public CompletableFuture<JsonObject> updateOrderLineSummary(String poLineId, JsonObject poLine) {
     logger.debug("Updating PO line...");
-    String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES, poLineId), lang);
+    String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(COMPOSITE_PO_LINES, poLineId), lang);
     return operateOnSubObj(HttpMethod.PUT, endpoint, poLine, httpClient, ctx, okapiHeaders, logger);
   }
 
@@ -149,7 +149,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    * @param compPOL Composite PO line to update Inventory for
    * @return CompletableFuture with updated PO line.
    */
-  public CompletableFuture<Void> updateInventory(PoLine compPOL) {
+  public CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
     // Check if any item should be created
     int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
     if (expectedItemsQuantity == 0) {
@@ -169,7 +169,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       });
   }
 
-  private CompletionStage<JsonObject> updatePoLineSubObjects(PoLine compOrderLine, JsonObject lineFromStorage) {
+  private CompletionStage<JsonObject> updatePoLineSubObjects(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
     JsonObject updatedLineJson = JsonObject.mapFrom(compOrderLine);
     logger.debug("Updating PO line sub-objects...");
 
