@@ -301,13 +301,10 @@ public class InventoryHelper {
     buildItemRecordJsonObject(compPOL, holdingId)
       .thenCompose(itemData -> createItemRecords(itemData, count))
       .thenAccept(createdItemIds -> {
-        // In case no items created at all, throw an exception because nothing can be done at this stage
+        // In case no items created, return an exception because nothing can be done at this stage
         if (createdItemIds.isEmpty()) {
-          throw new InventoryException(String.format("No items created for PO Line with %s id", compPOL.getId()));
-        } else if (count != createdItemIds.size()) {
-          // Just logging the error. The logic should try to create piece records for successfully created items
-          logger.error("The issue happened creating items for PO Line with '{}' id. Expected {} but {} created",
-            compPOL.getId(), count, createdItemIds.size());
+          String message = String.format("No items created for PO Line with %s id", compPOL.getId());
+          result.completeExceptionally(new InventoryException(message));
         }
         result.complete(createdItemIds);
       })
@@ -416,8 +413,7 @@ public class InventoryHelper {
         itemRecord.put("status", new JsonObject().put("name", ON_ORDER_ITEM_STATUS));
         itemRecord.put("materialTypeId", materialTypeId);
         itemRecord.put("permanentLoanTypeId", loanTypeId);
-        // TODO uncomment once MODINVSTOR-245 merged to master
-        //itemRecord.put("purchaseOrderLineIdentifier", compPOL.getId());
+        itemRecord.put("purchaseOrderLineIdentifier", compPOL.getId());
         return itemRecord;
       });
   }
