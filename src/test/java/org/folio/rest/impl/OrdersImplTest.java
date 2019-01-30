@@ -49,7 +49,15 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -94,7 +102,9 @@ import io.vertx.ext.web.handler.BodyHandler;
 public class OrdersImplTest {
 
   private static final String INSTANCE_RECORD = "instance_record";
+  private static final String HOLDINGS_RECORD = "holding_record";
   private static final String ITEM_RECORDS = "item_records";
+  private static final String PIECES = "pieces";
   private static final String ORDER_WITHOUT_PO_LINES = "order_without_po_lines.json";
   private static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
   private static final String ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON = "put_order_with_mismatch_id_in_po_lines.json";
@@ -299,9 +309,11 @@ public class OrdersImplTest {
     int polCount = resp.getCompositePoLines().size();
 
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
+    List<JsonObject> holdingsSearches = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
     List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
 
     assertNotNull(instancesSearches);
+    assertNotNull(holdingsSearches);
     assertNotNull(itemsSearches);
 
     // Check that search for existing instances was done not for all PO lines
@@ -347,10 +359,13 @@ public class OrdersImplTest {
 
     // Check that search of the existing instances and items was done for first PO line only
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
+    List<JsonObject> holdingsSearches = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
     List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
     assertNotNull(instancesSearches);
+    assertNotNull(holdingsSearches);
     assertNotNull(itemsSearches);
     assertEquals(1, instancesSearches.size());
+    assertEquals(1, holdingsSearches.size());
     assertEquals(1, itemsSearches.size());
 
     verifyInventoryInteraction(resp, 1);
@@ -911,21 +926,34 @@ public class OrdersImplTest {
   private void verifyInventoryInteraction(CompositePurchaseOrder reqData, int createdInstancesCount) {
     // Check that search of the existing instances and items was done for each PO line
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
+    List<JsonObject> holdingsSearches = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
     List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
+    List<JsonObject> piecesSearches = MockServer.serverRqRs.get(PIECES, HttpMethod.GET);
     assertNotNull(instancesSearches);
+    assertNotNull(holdingsSearches);
     assertNotNull(itemsSearches);
+    assertNotNull(piecesSearches);
 
     // Check that creation of the new instances and items was done
     List<JsonObject> createdInstances = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST);
+    List<JsonObject> createdHoldings = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.POST);
     List<JsonObject> createdItems = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.POST);
+    List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
     assertNotNull(createdInstances);
+    assertNotNull(createdHoldings);
     assertNotNull(createdItems);
+    logger.debug("--------------------------- Items created -------------------------------\n" + createdItems.toString());
+    assertNotNull(createdPieces);
+    logger.debug("--------------------------- Pieces created -------------------------------\n" + createdPieces.toString());
     assertEquals(createdInstancesCount, createdInstances.size());
+    assertEquals(createdPieces.size(), createdItems.size());
 
     List<JsonObject> items = joinExistingAndNewItems(itemsSearches, createdItems);
     for (CompositePoLine pol : reqData.getCompositePoLines()) {
       verifyInstanceCreated(createdInstances, pol);
+      verifyHoldingsCreated(createdHoldings, pol);
       verifyItemsCreated(items, pol, calculateInventoryItemsQuantity(pol));
+      verifyPiecesCreated(items, createdPieces);
     }
   }
 
@@ -960,7 +988,51 @@ public class OrdersImplTest {
     }
   }
 
-  private void verifyItemsCreated(List<JsonObject> inventoryItems, CompositePoLine pol, int expectedQuantity) {
+	private void verifyPiecesCreated(List<JsonObject> inventoryItems, List<JsonObject> pieces) {
+		boolean verified = false;
+		JsonObject pieceObj = null;
+		for (JsonObject item : inventoryItems) {
+			String itemIdFromItems = item.getString("id");
+			for (JsonObject piece : pieces) {
+				pieceObj = piece;
+				// Check if itemId in inventoryItems match itemId in piece record
+				if (itemIdFromItems.equals(piece.getString("itemId"))) {
+					assertThat(piece.getString("itemId"), equalTo(itemIdFromItems));
+					assertThat(piece.getString("receivingStatus"), equalTo("Expected"));
+					verified = true;
+					continue;
+				} else {
+					break;
+				}
+			}
+		}
+
+		if (!verified) {
+			fail("No matching item for piece: " + JsonObject.mapFrom(pieceObj).encodePrettily());
+		}
+	}
+
+  private void verifyHoldingsCreated(List<JsonObject> holdings, CompositePoLine pol) {
+    boolean verified = false;
+    for (JsonObject holding : holdings) {
+      if (StringUtils.isNotEmpty(pol.getLocation().getLocationId())
+          && pol.getLocation().getLocationId().equals(holding.getString("permanentLocationId"))) {
+        verified = true;
+        break;
+      }
+    }
+
+    int expectedItemsQuantity = calculateInventoryItemsQuantity(pol);
+    if (!verified && expectedItemsQuantity > 0) {
+      fail("No matching holdings record for POL: " + JsonObject.mapFrom(pol).encodePrettily());
+    }
+
+    if (!verified && StringUtils.isNotEmpty(pol.getInstanceId())) {
+      fail("Holdings Record could not be found for POL: " + JsonObject.mapFrom(pol).encodePrettily());
+    }
+  }
+
+  private void verifyItemsCreated(List<JsonObject> inventoryItems, PoLine pol, int expectedQuantity) {
     int actualQuantity = 0;
 
     for (JsonObject item : inventoryItems) {
@@ -1053,28 +1125,37 @@ public class OrdersImplTest {
     // Check that search of the existing instances and items was done for each PO line
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
     List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
+    List<JsonObject> piecesSearches = MockServer.serverRqRs.get(PIECES, HttpMethod.GET);
     ctx.assertNotNull(instancesSearches);
     ctx.assertNotNull(itemsSearches);
+    ctx.assertNotNull(piecesSearches);
     assertEquals(polCount, instancesSearches.size());
     assertEquals(polCount, itemsSearches.size());
 
     // Check that 2 new instances created and items created successfully only for first POL
     List<JsonObject> createdInstances = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST);
+    List<JsonObject> createdHoldings = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.POST);
     List<JsonObject> createdItems = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.POST);
+    List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
     assertNotNull(createdInstances);
     assertNotNull(createdItems);
+    assertNotNull(createdPieces);
     assertEquals(polCount, createdInstances.size());
+    assertEquals(createdPieces.size(), createdItems.size());
 
     List<JsonObject> items = joinExistingAndNewItems(itemsSearches, createdItems);
 
     // Check that instance and items created successfully for first POL
     CompositePoLine firstPol = reqData.getCompositePoLines().get(0);
     verifyInstanceCreated(createdInstances, firstPol);
+    verifyHoldingsCreated(createdHoldings, firstPol);
     verifyItemsCreated(items, firstPol, calculateInventoryItemsQuantity(firstPol));
+    verifyPiecesCreated(items, createdPieces);
 
     // Check that instance created successfully for second POL but no items created (but expected)
     CompositePoLine secondPol = reqData.getCompositePoLines().get(1);
     verifyInstanceCreated(createdInstances, secondPol);
+    verifyHoldingsCreated(createdHoldings, secondPol);
     verifyItemsCreated(items, secondPol, 0);
   }
 
@@ -1895,6 +1976,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.POST, resourcesPath(PURCHASE_ORDER)).handler(this::handlePostPurchaseOrder);
       router.route(HttpMethod.POST, "/inventory/instances").handler(this::handlePostInstanceRecord);
       router.route(HttpMethod.POST, "/item-storage/items").handler(this::handlePostItemRecord);
+      router.route(HttpMethod.POST, "/holdings-storage/holdings").handler(this::handlePostHoldingRecord);
       router.route(HttpMethod.POST, resourcesPath(COMPOSITE_PO_LINES)).handler(this::handlePostPOLine);
       router.route(HttpMethod.POST, resourcesPath(ADJUSTMENT)).handler(ctx -> handlePostGenericSubObj(ctx, ADJUSTMENT));
       router.route(HttpMethod.POST, resourcesPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
@@ -1908,6 +1990,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.POST, resourcesPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
       router.route(HttpMethod.POST, resourcesPath(SOURCE)).handler(ctx -> handlePostGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.POST, resourcesPath(VENDOR_DETAIL)).handler(ctx -> handlePostGenericSubObj(ctx, VENDOR_DETAIL));
+      router.route(HttpMethod.POST, resourcesPath(PIECES)).handler(ctx -> handlePostGenericSubObj(ctx, PIECES));
 
       router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)+"/:id").handler(this::handleGetPurchaseOrderById);
       router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)).handler(this::handleGetPurchaseOrderByQuery);
@@ -1933,6 +2016,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, resourcePath(SOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.GET, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleGetGenericSubObj(ctx, VENDOR_DETAIL));
       router.route(HttpMethod.GET, resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
+      router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(ctx -> handleGetGenericPieceObj(ctx, PIECES));
 
       router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
       router.route(HttpMethod.PUT, resourcePath(COMPOSITE_PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, COMPOSITE_PO_LINES));
@@ -1981,6 +2065,18 @@ public class OrdersImplTest {
         .end();
     }
 
+    private void handlePostHoldingRecord(RoutingContext ctx) {
+      logger.info("handlePostHoldingsRecord got: " + ctx.getBodyAsString());
+      JsonObject body = ctx.getBodyAsJson();
+      addServerRqRsData(HttpMethod.POST, HOLDINGS_RECORD, body);
+
+      ctx.response()
+        .setStatusCode(201)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .putHeader(HttpHeaders.LOCATION, ctx.request().absoluteURI() + "/" + UUID.randomUUID().toString())
+        .end();
+    }
+
     private void handlePostItemRecord(RoutingContext ctx) {
       String bodyAsString = ctx.getBodyAsString();
       logger.info("handlePostItemRecord got: " + bodyAsString);
@@ -2021,14 +2117,15 @@ public class OrdersImplTest {
     private void handleGetHoldingRecord(RoutingContext ctx) {
       logger.info("handleGetHoldingRecord got: " + ctx.request().path());
 
-      try {
-        JsonObject instance = new JsonObject(getMockData(HOLDINGS_RECORDS_MOCK_DATA_PATH + "holdingRecords-1.json"));
-        serverResponse(ctx, 200, APPLICATION_JSON, instance.encodePrettily());
-      } catch (IOException e) {
-        ctx.response()
-           .setStatusCode(404)
-           .end();
-      }
+      JsonObject instance;
+
+      //if (ctx.request().query().contains("fcd64ce1-6995-48f0-840e-89ffa2288371")) {
+        instance = new JsonObject().put("holdingsRecords", new JsonArray());
+//        }else {
+//          instance = new JsonObject(getMockData(HOLDINGS_RECORDS_MOCK_DATA_PATH + "holdingRecords-1.json"));
+//        }
+      addServerRqRsData(HttpMethod.GET, HOLDINGS_RECORD, instance);
+      serverResponse(ctx, 200, APPLICATION_JSON, instance.encodePrettily());
     }
 
     private void handleGetItemsRecords(RoutingContext ctx) {
@@ -2285,6 +2382,21 @@ public class OrdersImplTest {
       }
     }
 
+    private void handleGetGenericPieceObj(RoutingContext ctx, String subObj) {
+      logger.info("got: " + ctx.request().path());
+      String id = ctx.request().getParam("query").split("poLineId=")[1];
+      logger.info("id: " + id);
+
+      JsonArray pieces = new JsonArray();
+      JsonObject data = new JsonObject().put("pieces", pieces).put("total_records", 0);
+      addServerRqRsData(HttpMethod.GET, subObj, data);
+
+      ctx.response()
+        .setStatusCode(200)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .end(data.encodePrettily());
+    }
+
     private void handlePutGenericSubObj(RoutingContext ctx, String subObj) {
       logger.info("handlePutGenericSubObj got: PUT " + ctx.request().path());
       String id = ctx.request().getParam(ID);
@@ -2461,6 +2573,8 @@ public class OrdersImplTest {
           return org.folio.rest.acq.model.Source.class;
         case VENDOR_DETAIL:
           return org.folio.rest.acq.model.VendorDetail.class;
+        case PIECES:
+            return org.folio.rest.acq.model.Piece.class;
       }
 
       fail("The sub-object is unknown");
