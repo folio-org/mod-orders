@@ -50,8 +50,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +78,8 @@ import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
 import org.folio.rest.tools.utils.NetworkUtils;
+import org.joda.time.DateTime;
+import org.joda.time.LocalDate;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -285,9 +289,31 @@ public class OrdersImplTest {
     // Set status to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
+	  //Setup - store current date, month, year before setting DateOrdered
+	  Calendar cal = Calendar.getInstance();
+	  cal.setTime(DateTime.now().toDate());
+	  int monthBeforeSetting = cal.get(Calendar.MONTH);
+	  int yearBeforeSetting = cal.get(Calendar.YEAR);
+	  int dateBeforeSetting = cal.get(Calendar.DATE);
+	  
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
+    //Test - verify date, month, year after getting DateOrdered
+    Date getDateOrdered = resp.getDateOrdered();
+    
+    Calendar getCal = Calendar.getInstance();
+    getCal.setTime(getDateOrdered);
+    int monthAfterSetting = getCal.get(Calendar.MONTH);
+    int yearAfterSetting = getCal.get(Calendar.YEAR);
+    int dateAfterSetting = getCal.get(Calendar.DATE);
+    
+    // Verify before and after match
+    assertNotNull(getDateOrdered);
+	  assertEquals(monthBeforeSetting, monthAfterSetting);
+	  assertEquals(yearBeforeSetting, yearAfterSetting);
+	  assertEquals(dateBeforeSetting, dateAfterSetting);
+	  
     logger.info(JsonObject.mapFrom(resp));
 
     String poId = resp.getId();
@@ -360,9 +386,31 @@ public class OrdersImplTest {
     // MODORDERS-117 Setting OrderFormat to OTHER which means create nothing in inventory for the second PO Line
     reqData.getPoLines().get(1).setOrderFormat(PoLine.OrderFormat.OTHER);
 
+	  //Setup - store current date, month, year before setting DateOrdered
+	  Calendar cal = Calendar.getInstance();
+	  cal.setTime(DateTime.now().toDate());
+	  int monthBeforeSetting = cal.get(Calendar.MONTH);
+	  int yearBeforeSetting = cal.get(Calendar.YEAR);
+	  int dateBeforeSetting = cal.get(Calendar.DATE);
+	  
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
-
+    
+    //Test - verify date, month, year after getting DateOrdered
+    Date getDateOrdered = resp.getDateOrdered();
+    
+    Calendar getCal = Calendar.getInstance();
+    getCal.setTime(getDateOrdered);
+    int monthAfterSetting = getCal.get(Calendar.MONTH);
+    int yearAfterSetting = getCal.get(Calendar.YEAR);
+    int dateAfterSetting = getCal.get(Calendar.DATE);
+    
+    // Verify before and after match
+    assertNotNull(getDateOrdered);
+	  assertEquals(monthBeforeSetting, monthAfterSetting);
+	  assertEquals(yearBeforeSetting, yearAfterSetting);
+	  assertEquals(dateBeforeSetting, dateAfterSetting);
+    
     // Check that search of the existing instances and items was done for first PO line only
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
     List<JsonObject> holdingsSearches = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
@@ -950,9 +998,9 @@ public class OrdersImplTest {
     // MODORDERS-117 guarantee electronic resource for the second PO Line but set "create items" to false
     reqData.getPoLines().get(1).setOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE);
     reqData.getPoLines().get(1).getEresource().setCreateInventory(false);
-
+    
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ID_FOR_PENDING_ORDER), JsonObject.mapFrom(reqData).toString(), "", 204);
-
+    
     int polCount = reqData.getPoLines().size();
 
     verifyInventoryInteraction(reqData, polCount - 1);

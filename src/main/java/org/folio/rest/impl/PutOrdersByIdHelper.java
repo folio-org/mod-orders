@@ -16,9 +16,13 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.resource.Orders.PutOrdersCompositeOrdersByIdResponse;
+import org.joda.time.DateTime;
 
 import javax.ws.rs.core.Response;
+
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -95,6 +99,10 @@ public class PutOrdersByIdHelper extends AbstractHelper {
    */
   public CompletableFuture<Void> openOrder(CompositePurchaseOrder compPO) {
     compPO.setWorkflowStatus(OPEN);
+//    Date date = new Date();
+//    Date date1 = DateTime.now().toDate();
+    //compPO.setDateOrdered(DateTime.now().toDate());
+    //Date d = compPO.getDateOrdered();
     return updateInventory(compPO)
       .thenCompose(this::updateOrderSummary);
   }
