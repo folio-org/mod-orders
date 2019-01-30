@@ -991,7 +991,7 @@ public class OrdersImplTest {
       fail("No instance expected for POL: " + JsonObject.mapFrom(pol).encodePrettily());
     }
   }
-  
+
 	private void verifyPiecesCreated(List<JsonObject> inventoryItems, List<JsonObject> pieces) {
 		boolean verified = false;
 		JsonObject pieceObj = null;
@@ -1015,7 +1015,7 @@ public class OrdersImplTest {
 			fail("No matching item for piece: " + JsonObject.mapFrom(pieceObj).encodePrettily());
 		}
 	}
-  
+
   private void verifyHoldingsCreated(List<JsonObject> holdings, PoLine pol) {
     boolean verified = false;
     for (JsonObject holding : holdings) {
@@ -1146,7 +1146,7 @@ public class OrdersImplTest {
     assertNotNull(createdPieces);
     assertEquals(polCount, createdInstances.size());
     assertEquals(createdPieces.size(), createdItems.size());
-    
+
     List<JsonObject> items = joinExistingAndNewItems(itemsSearches, createdItems);
 
     // Check that instance and items created successfully for first POL
@@ -1155,7 +1155,7 @@ public class OrdersImplTest {
     verifyHoldingsCreated(createdHoldings, firstPol);
     verifyItemsCreated(items, firstPol, calculateInventoryItemsQuantity(firstPol));
     verifyPiecesCreated(items, createdPieces);
-    
+
     // Check that instance created successfully for second POL but no items created (but expected)
     PoLine secondPol = reqData.getPoLines().get(1);
     verifyInstanceCreated(createdInstances, secondPol);
@@ -1804,7 +1804,7 @@ public class OrdersImplTest {
   public void testPoNumberValidatewithExistingPONumber()
   {
     JsonObject poNumber=new JsonObject();
-    poNumber.put("po_number", EXISTING_PO_NUMBER);
+    poNumber.put("poNumber", EXISTING_PO_NUMBER);
     verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, TEXT_PLAIN, 400);
   }
 
@@ -1813,7 +1813,7 @@ public class OrdersImplTest {
   public void testPoNumberValidatewithUniquePONumber()
   {
     JsonObject poNumber=new JsonObject();
-    poNumber.put("po_number", NONEXISTING_PO_NUMBER);
+    poNumber.put("poNumber", NONEXISTING_PO_NUMBER);
     verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, "", 204);
   }
 
@@ -1821,7 +1821,7 @@ public class OrdersImplTest {
   public void testPoNumberValidatewithInvalidPattern()
   {
     JsonObject poNumber=new JsonObject();
-    poNumber.put("po_number", "11");
+    poNumber.put("poNumber", "11");
     verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 422);
   }
 
@@ -2378,7 +2378,7 @@ public class OrdersImplTest {
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
         .end(data.encodePrettily());
     }
-    
+
     private void handlePutGenericSubObj(RoutingContext ctx, String subObj) {
       logger.info("handlePutGenericSubObj got: PUT " + ctx.request().path());
       String id = ctx.request().getParam(ID);
