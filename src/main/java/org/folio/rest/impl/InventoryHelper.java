@@ -94,7 +94,7 @@ public class InventoryHelper {
           });
   }
 
-  private CompletableFuture<String> createHoldingsRecord(PoLine compPOL) {
+  private CompletableFuture<String> createHoldingsRecord(CompositePoLine compPOL) {
     JsonObject holdingsRecJson=new JsonObject();
     holdingsRecJson.put("instanceId", compPOL.getInstanceId());
     holdingsRecJson.put("permanentLocationId", compPOL.getLocation().getLocationId());

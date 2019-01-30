@@ -1032,7 +1032,7 @@ public class OrdersImplTest {
     }
   }
 
-  private void verifyItemsCreated(List<JsonObject> inventoryItems, PoLine pol, int expectedQuantity) {
+  private void verifyItemsCreated(List<JsonObject> inventoryItems, CompositePoLine pol, int expectedQuantity) {
     int actualQuantity = 0;
 
     for (JsonObject item : inventoryItems) {
