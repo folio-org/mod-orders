@@ -998,9 +998,7 @@ public class OrdersImplTest {
     // MODORDERS-117 guarantee electronic resource for the second PO Line but set "create items" to false
     reqData.getPoLines().get(1).setOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE);
     reqData.getPoLines().get(1).getEresource().setCreateInventory(false);
-    
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ID_FOR_PENDING_ORDER), JsonObject.mapFrom(reqData).toString(), "", 204);
-    
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ID_FOR_PENDING_ORDER), JsonObject.mapFrom(reqData).toString(), "", 204);   
     int polCount = reqData.getPoLines().size();
 
     verifyInventoryInteraction(reqData, polCount - 1);
