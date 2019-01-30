@@ -1767,7 +1767,7 @@ public class OrdersImplTest {
         .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
       .get(LINES_PATH + "?query=purchase_order_id==" + ORDER_ID_WITH_PO_LINES)
         .then()
-         // .statusCode(200)
+          .statusCode(200)
           .extract()
           .response();
 
