@@ -1,10 +1,12 @@
 package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
+import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.completedFuture;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
 import static org.folio.orders.utils.ResourcePathResolver.ADJUSTMENT;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
@@ -19,6 +21,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.SOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_DETAIL;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.respond204;
@@ -34,12 +37,15 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.acq.model.Piece;
+import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -59,6 +65,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   private final InventoryHelper inventoryHelper;
   private final Errors processingErrors = new Errors();
 
+  private static final String PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId=%s";
+  
   public PutOrderLineByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
                                 Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
@@ -161,13 +169,92 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenCompose(jsonObj -> updateOrderLine(compPOL, jsonObj))
       .thenCompose(v -> inventoryHelper.getOrCreateHoldingsRecord(compPOL))
       .thenCompose(holdingsId -> inventoryHelper.handleItemRecords(compPOL, holdingsId))
-      .thenAccept(itemIds -> {
+      .thenCompose(itemIds -> {
         // Temporal check. The idea is to create piece records for successfully created items and then throw exception
         if (itemIds.size() != expectedItemsQuantity) {
           throw new IllegalStateException("Expected items quantity does not correspond to created items");
         }
-      });
+        return completedFuture(itemIds);
+      })
+      .thenCompose(itemIds -> createPieces(compPOL, itemIds));
   }
+
+  /**
+   * Creates Piece records corresponding to each item record associated with PO Line
+   *
+   * @param compPOL Composite PO line to update Inventory for
+   * @param itemIds List of item id
+   * @return CompletableFuture with newly created Pieces associated with PO line.
+   */
+  private CompletableFuture<Void> createPieces(PoLine compPOL, List<String> itemIds) {
+		CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+		if (itemIds.isEmpty()) {
+			future.complete(null);
+			return future;
+		}
+		List<CompletableFuture<Void>> futuresList = new ArrayList<>();
+		String poLineId = compPOL.getId();		
+		String endpoint = String.format(PIECES_ENDPOINT, poLineId);
+		
+		handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenAccept(body -> {
+        PieceCollection pieces = body.mapTo(PieceCollection.class);
+
+        // Extract item Id's which already associated with piece records
+        List<String> existingItemIds = pieces.getPieces()
+            .stream()
+            .map(Piece::getItemId)
+            .filter(StringUtils::isNotEmpty)
+            .collect(Collectors.toList());
+
+        // Create piece records for item id's which do not have piece records yet
+        itemIds.stream()
+               .filter(id -> !existingItemIds.contains(id))
+               .forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
+
+        allOf(futuresList.toArray(new CompletableFuture[0]))
+          .thenAccept(v -> future.complete(null))
+          .exceptionally(t -> {
+            logger.error("One or more piece record failed to be created for PO Line with '{}' id", poLineId);
+            future.completeExceptionally(t);
+            return null;
+          });
+      })
+      .exceptionally(t -> {
+        future.completeExceptionally(t);
+        return null;
+      });
+
+		return future;
+  }
+
+  /**
+   * Construct Piece object associated with PO Line and create in the storage
+   *
+   * @param poLineId PO line identifier
+   * @param itemId itemId that was created for PO Line
+   * @return CompletableFuture with new Piece record.
+   */
+  private CompletableFuture<Void> createPiece(String poLineId, String itemId) {
+		// Construct Piece object
+  	Piece piece = new Piece();
+  	piece.setPoLineId(poLineId);
+  	piece.setItemId(itemId);
+  	piece.setReceivingStatus(Piece.ReceivingStatus.EXPECTED);
+
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+
+    JsonObject pieceObj = JsonObject.mapFrom(piece);
+    operateOnSubObj(HttpMethod.POST, resourcesPath(PIECES), pieceObj, httpClient, ctx, okapiHeaders, logger)
+      .thenAccept(body -> future.complete(null))
+      .exceptionally(t -> {
+        logger.error("The piece record failed to be created. The request body: {}", pieceObj.encodePrettily());
+        future.completeExceptionally(t);
+        return null;
+      });
+
+    return future;
+	}
 
   private CompletionStage<JsonObject> updatePoLineSubObjects(PoLine compOrderLine, JsonObject lineFromStorage) {
     JsonObject updatedLineJson = JsonObject.mapFrom(compOrderLine);
@@ -188,8 +275,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage));
 
     // Once all operations completed, return updated PO Line with new sub-object id's as json object
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                            .thenApply(v -> updatedLineJson);
+    return allOf(futures.toArray(new CompletableFuture[0]))
+      .thenApply(v -> updatedLineJson);
   }
 
   private CompletableFuture<Void> handleSubObjOperation(String prop, JsonObject updatedLine, JsonObject lineFromStorage) {
@@ -275,8 +362,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       }
     }
 
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                            .thenAccept(v -> updatedLine.put(prop, newIds));
+    return allOf(futures.toArray(new CompletableFuture[0]))
+      .thenAccept(v -> updatedLine.put(prop, newIds));
   }
 
   private Void addProcessingError(Throwable exc, String propName, String propId) {
