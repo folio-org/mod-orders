@@ -73,6 +73,7 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoNumber;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
@@ -163,6 +164,7 @@ public class OrdersImplTest {
   private static final String PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE = "c2755a78-2f8d-47d0-a218-059a9b7391b4";
   private static final String PO_LINE_ID_WITH_FUND_DISTRIBUTION_404_CODE = "f7223ce8-9e92-4c28-8fd9-097596053b7c";
   private static final String ORDER_ID_WITHOUT_PO_LINES = "50fb922c-3fa9-494e-a972-f2801f1b9fd1";
+  private static final String ORDER_WITHOUT_WORKFLOW_STATUS = "41d56e59-46db-4d5e-a1ad-a178228913e5";
 
   // API paths
   private final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
@@ -755,6 +757,35 @@ public class OrdersImplTest {
     assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE).size(), poLinesFromStorage.size() - sameLinesCount);
     assertNotNull(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT));
     assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).size(), sameLinesCount);
+  }
+
+  @Test
+  public void testUpdateOrderWithDefaultStatus() throws Exception {
+    logger.info("=== Test Put Order By Id - Make sure that default status is used ===");
+
+    CompositePurchaseOrder reqData = new JsonObject(getMockData(MINIMAL_ORDER_PATH)).mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ORDER_WITHOUT_WORKFLOW_STATUS);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
+
+    String url = COMPOSITE_ORDERS_PATH + "/" + reqData.getId();
+    String body = JsonObject.mapFrom(reqData).encode();
+    verifyPut(url, body, "", 204);
+
+    List<JsonObject> orderRetrievals = MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET);
+    assertNotNull(orderRetrievals);
+    assertEquals(1, orderRetrievals.size());
+    PurchaseOrder storageOrderBeforeUpdate = orderRetrievals.get(0).mapTo(PurchaseOrder.class);
+    // Assert default status is Pending
+    assertEquals(PurchaseOrder.WorkflowStatus.PENDING, storageOrderBeforeUpdate.getWorkflowStatus());
+
+    List<JsonObject> orderUpdates = MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT);
+    assertNotNull(orderUpdates);
+    assertEquals(1, orderUpdates.size());
+
+    PurchaseOrder storageUpdatedOrder = orderUpdates.get(0).mapTo(PurchaseOrder.class);
+    assertNotNull(storageUpdatedOrder.getWorkflowStatus());
+    assertEquals(CompositePurchaseOrder.WorkflowStatus.CLOSED.value(), storageUpdatedOrder.getWorkflowStatus().value());
+
   }
 
   @Test
@@ -2433,18 +2464,19 @@ public class OrdersImplTest {
     }
 
     private void handleGetPurchaseOrderById(RoutingContext ctx) {
-      logger.info("got: " + ctx.request().path());
+      logger.info("handleGetPurchaseOrderById got: GET " + ctx.request().path());
       String id = ctx.request().getParam(ID);
       logger.info("id: " + id);
 
       try {
-        JsonObject po;
-
-        po = new JsonObject(getMockData(String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id)));
-        addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
+        JsonObject po = new JsonObject(getMockData(String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id)));
         po.remove(ADJUSTMENT);
         po.remove(PO_LINES);
         po.put(ADJUSTMENT, UUID.randomUUID().toString());
+
+        // Validate the content against schema
+        org.folio.rest.acq.model.PurchaseOrder order = po.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
+        po = JsonObject.mapFrom(order);
         addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
         serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
       } catch (IOException e) {
