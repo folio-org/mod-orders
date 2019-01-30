@@ -73,7 +73,10 @@ resourceTypes:
       get:
         description: Return a purchase order with given {id}
       put:
-        description: Update a purchase order with given {id}
+        description: |
+          Update a purchase order with given {id}
+          - if request does not include po_lines or includes "po_lines": [] or "po_lines": null - update just purchase order summary
+          - if request includes array of "po_lines" - update PO lines as per request
         responses:
           500:
             body:
@@ -139,6 +142,9 @@ resourceTypes:
           body:
             application/json:
               type: po-number
+              example:
+                strict: false
+                value: !include acq-models/mod-orders-storage/examples/po_number_get.sample
         400:
           description: "Bad request, malformed request"
           body:
@@ -157,6 +163,9 @@ resourceTypes:
         body:
           application/json:
             type: po-number
+            example:
+              strict: false
+              value: !include acq-models/mod-orders-storage/examples/po_number_get.sample
         responses:
           204:
             description: "Valid PO Number"

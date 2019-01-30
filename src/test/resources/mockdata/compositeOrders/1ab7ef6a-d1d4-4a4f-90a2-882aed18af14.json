@@ -57,7 +57,7 @@
       "contributors": [
         {
           "contributor": "Steinar Imsen (ed.)",
-          "contributor_type": ""
+          "contributor_type": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
         }
       ],
       "cost": {
@@ -142,7 +142,7 @@
       "selector": "Stevens",
       "source": {
         "id": "024b6f40-c5c6-4280-858e-33fba452a334",
-        "code": "",
+        "code": "FOLIO",
         "description": "Manually entered"
       },
       "tags": [],
@@ -190,7 +190,7 @@
       "contributors": [
         {
           "contributor": "Steinar Imsen (ed.)",
-          "contributor_type": ""
+          "contributor_type": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
         }
       ],
       "cost": {
@@ -275,7 +275,7 @@
       "selector": "Brown",
       "source": {
         "id": "02dbff41-c5c6-4280-858e-33fba452a334",
-        "code": "",
+        "code": "FOLIO",
         "description": "Manually entered"
       },
       "tags": [],
@@ -323,7 +323,7 @@
       "contributors": [
         {
           "contributor": "Steinar Imsen (ed.)",
-          "contributor_type": ""
+          "contributor_type": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
         }
       ],
       "cost": {
@@ -408,7 +408,7 @@
       "selector": "Brown",
       "source": {
         "id": "0b4b6f41-c5c6-4280-858e-33fba452a334",
-        "code": "",
+        "code": "FOLIO",
         "description": "Manually entered"
       },
       "tags": [],

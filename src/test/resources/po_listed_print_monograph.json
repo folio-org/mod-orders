@@ -22,7 +22,7 @@
   "total_estimated_price": 49.98,
   "total_items": 2,
   "vendor": "168f8a86-d26c-406e-813f-c7527f241ac3",
-  "workflow_status": "Open",
+  "workflow_status": "Pending",
   "metadata": {
     "createdDate": "2010-10-08T03:53:00.000",
     "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
@@ -80,13 +80,16 @@
           }
         ],
         "material_types": [
-          "f7e72403-2a13-43a4-a069-aaabe6c9dea8"
+          "1a54b431-2e4f-452d-9cae-9cee66c9a892"
         ],
         "subscription_from": "2018-10-09T00:00:00.000Z",
         "subscription_interval": 824,
         "subscription_to": "2020-10-09T00:00:00.000Z"
       },
       "donor": "ABCDEFGHIJKLM",
+      "eresource": {
+        "create_inventory": true
+      },
       "fund_distribution": [
         {
           "code": "HIST",
@@ -100,11 +103,12 @@
         }
       ],
       "location": {
+        "location_id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
         "quantity": 2,
         "quantity_electronic": 1,
         "quantity_physical": 1
       },
-      "order_format": "Physical Resource",
+      "order_format": "P/E Mix",
       "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
       "payment_status": "Awaiting Payment",
       "physical": {
@@ -165,7 +169,7 @@
       }
     },
     {
-      "id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
+      "id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
       "acquisition_method": "Purchase",
       "adjustment": {
         "credit": 0.0,
@@ -177,7 +181,7 @@
         "tax_1": 0.0,
         "tax_2": 0.0,
         "use_pro_rate": false,
-        "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+        "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
       },
       "alerts": [],
       "cancellation_restriction": false,
@@ -186,7 +190,7 @@
         {
           "claimed": false,
           "grace": 0,
-          "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+          "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
         }
       ],
       "collection": false,
@@ -202,7 +206,7 @@
         "quantity_physical": 0,
         "quantity_electronic": 1,
         "po_line_estimated_price": 75.22,
-        "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+        "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
       },
       "description": "",
       "details": {
@@ -214,24 +218,28 @@
           }
         ],
         "material_types": [
-          "fde2e958-cde3-11e8-a8d5-f2801f1b9fd1"
+          "615b8413-82d5-4203-aa6e-e37984cb5ac3"
         ],
         "subscription_from": null,
         "subscription_interval": 0,
         "subscription_to": null,
-        "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+        "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
       },
       "donor": "",
+      "eresource": {
+        "create_inventory": true
+      },
       "fund_distribution": [
         {
           "code": "MISCHIST-FY19",
           "percentage": 100.0,
           "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08015",
-          "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+          "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
         }
       ],
       "location": {
-        "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
+        "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
+        "location_id": "b241764c-1466-4e1d-a028-1a3684a5da87",
         "quantity": 1,
         "quantity_electronic": 1,
         "quantity_physical": 0
@@ -242,14 +250,14 @@
       "po_line_description": "",
       "publication_date": "2017",
       "publisher": "John Wiley & Sons, Inc.",
-      "receipt_date": null,
+      "receipt_date": "2020-10-10T00:00:00.000Z",
       "receipt_status": "Fully Received",
       "reporting_codes": [],
       "requester": "",
       "rush": false,
       "selector": "Woods",
       "source": {
-        "code": "",
+        "code": "FOLIO",
         "description": "Manually entered"
       },
       "tags": [""],
@@ -260,7 +268,7 @@
         "ref_number": "999632785",
         "ref_number_type": "Supplier's unique order line reference number",
         "vendor_account": "12345-50",
-        "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+        "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
       },
       "metadata": {
         "createdDate": "2010-10-08T03:53:00.000",

@@ -1,8 +1,12 @@
 package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
+import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
+import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.completedFuture;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
+import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
 import static org.folio.orders.utils.ResourcePathResolver.ADJUSTMENT;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
@@ -17,6 +21,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.SOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_DETAIL;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.respond204;
@@ -32,11 +37,15 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.ValidationException;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.acq.model.Piece;
+import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -50,33 +59,18 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.rest.jaxrs.model.ProductId;
-
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.util.Arrays;
-
-import static java.util.Collections.singletonList;
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.rest.tools.client.Response.isSuccess;
 
 public class PutOrderLineByIdHelper extends AbstractHelper {
 
-  private static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
-  private static final String DEFAULT_STATUS_CODE = "temp";
-  private static final String LOCATION_HEADER = "Location";
+  private final InventoryHelper inventoryHelper;
+  private final Errors processingErrors = new Errors();
 
-  public static final String ID = "id";
-  private Errors processingErrors = new Errors();
-
+  private static final String PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId=%s";
+  
   public PutOrderLineByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
                                 Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
+    inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   public PutOrderLineByIdHelper(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
@@ -97,21 +91,18 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       })
       .thenAccept(v -> {
         httpClient.closeClient();
-        Response response;
-        if (getProcessingErrors().isEmpty()) {
-          response = respond204();
-        } else {
-          response = buildErrorResponse(500,  new Error().withMessage("PO Line partially updated but there are issues processing some PO Line sub-objects"));
-        }
-        asyncResultHandler.handle(succeededFuture(response));
+        asyncResultHandler.handle(succeededFuture(respond204()));
       })
       .exceptionally(this::handleError);
   }
 
   /**
    * Handles update of the order line depending on the content in the storage. Returns {@link CompletableFuture} as a result.
-   * In case the exception is happened in future lifecycle, the caller should handle it. However the sub-objects operations's
-   * exceptions are handled generating an error. All the errors can be retrieved by calling {@link #getProcessingErrors()}
+   * In case the exception happened in future lifecycle, the caller should handle it. The logic is like following:<br/>
+   * 1. Handle sub-objects operations's. All the exception happened for any sub-object are handled generating an error.
+   * All errors can be retrieved by calling {@link #getProcessingErrors()}.<br/>
+   * 2. Store PO line summary. On success, the logic checks if there are no errors happened on sub-objects operations and
+   * returns succeeded future. Otherwise {@link HttpException} will be returned as result of the future.
    *
    * @param compOrderLine The composite {@link PoLine} to use for storage data update
    * @param lineFromStorage {@link JsonObject} representing PO line from storage (/acq-models/mod-orders-storage/schemas/po_line.json)
@@ -120,7 +111,15 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
     updatePoLineSubObjects(compOrderLine, lineFromStorage)
       .thenCompose(poLine -> updateOrderLineSummary(compOrderLine.getId(), poLine))
-      .thenAccept(entries -> future.complete(null))
+      .thenAccept(json -> {
+        if (isUpdateSuccessful()) {
+          future.complete(null);
+        } else {
+          String message = String.format("PO Line with '%s' id partially updated but there are issues processing some PO Line sub-objects",
+            compOrderLine.getId());
+          future.completeExceptionally(new HttpException(500, message));
+        }
+      })
       .exceptionally(throwable -> {
         future.completeExceptionally(throwable);
         return null;
@@ -146,179 +145,116 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   }
 
   /**
+   * @return {@code true} if the the update of the PO line sub-objects was successful and there were no error happened communicating with other services
+   */
+  public boolean isUpdateSuccessful() {
+    return processingErrors.getErrors().isEmpty();
+  }
+
+  /**
    * Creates Inventory records associated with given PO line and updates PO line with corresponding links.
    *
    * @param compPOL Composite PO line to update Inventory for
    * @return CompletableFuture with updated PO line.
    */
   public CompletableFuture<Void> updateInventory(PoLine compPOL) {
-    return handleInstanceRecord(compPOL)
+    // Check if any item should be created
+    int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
+    if (expectedItemsQuantity == 0) {
+      logger.debug("PO Line with '{}' id does not require inventory updates", compPOL.getId());
+      return completedFuture(null);
+    }
+    return inventoryHelper.handleInstanceRecord(compPOL)
       .thenCompose(withInstId -> getPoLineById(compPOL.getId(), lang, httpClient, ctx, okapiHeaders, logger))
       .thenCompose(jsonObj -> updateOrderLine(compPOL, jsonObj))
-      .thenAccept(json -> {});
-  }
-
-  private CompletableFuture<PoLine> handleInstanceRecord(PoLine compPOL) {
-    return getProductTypesMap(compPOL)
-      .thenCompose(productTypesMap -> getInstanceRecord(compPOL, productTypesMap))
-      .thenApply(compPOL::withInstanceId);
-  }
-
-  /**
-   * Retrieves product type details associated with given PO line
-   * and builds 'product type name' -> 'product type id' map.
-   *
-   * @param compPOL the PO line to retrieve product type details for
-   * @return product types map
-   */
-  private CompletableFuture<Map<String, String>> getProductTypesMap(PoLine compPOL) {
-    // do not fail if no productId is provided, should be enforced on schema level if it's required
-    if (compPOL.getDetails() == null || compPOL.getDetails().getProductIds().isEmpty()) {
-      return completedFuture(Collections.emptyMap());
-    }
-
-    String endpoint = compPOL.getDetails().getProductIds().stream()
-      .map(productId -> String.format("name==%s", productId.getProductIdType().toString()))
-      .collect(joining(" or ", "/identifier-types?query=", ""));
-
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(productTypes -> {
-        if (productTypes.getJsonArray("identifierTypes").size() != compPOL.getDetails().getProductIds().size()) {
-          throw new CompletionException(new HttpException(422,
-            "Invalid product type(s) is specified for the PO line with id " + compPOL.getId()));
+      .thenCompose(v -> inventoryHelper.getOrCreateHoldingsRecord(compPOL))
+      .thenCompose(holdingsId -> inventoryHelper.handleItemRecords(compPOL, holdingsId))
+      .thenCompose(itemIds -> {
+        // Temporal check. The idea is to create piece records for successfully created items and then throw exception
+        if (itemIds.size() != expectedItemsQuantity) {
+          throw new IllegalStateException("Expected items quantity does not correspond to created items");
         }
-        return productTypes;
+        return completedFuture(itemIds);
       })
-      .thenApply(productTypes -> productTypes.getJsonArray("identifierTypes").stream()
-        .collect(toMap(jsonObj -> ((JsonObject) jsonObj).getString("name"),
-          jsonObj -> ((JsonObject) jsonObj).getString("id"),
-          (k1, k2) -> k1)));
+      .thenCompose(itemIds -> createPieces(compPOL, itemIds));
   }
 
   /**
-   * Returns Id of the Instance Record corresponding to given PO line.
-   * Instance record is either retrieved from Inventory or a new one is created if no corresponding Record exists.
+   * Creates Piece records corresponding to each item record associated with PO Line
    *
-   * @param compPOL PO line to retrieve Instance Record Id for
-   * @param productTypesMap product types Map used to build Inventory query
-   * @return future with Instance Id
+   * @param compPOL Composite PO line to update Inventory for
+   * @param itemIds List of item id
+   * @return CompletableFuture with newly created Pieces associated with PO line.
    */
-  private CompletionStage<String> getInstanceRecord(PoLine compPOL, Map<String, String> productTypesMap) {
-    // proceed with new Instance Record creation if no productId is provided
-    if (compPOL.getDetails() == null || compPOL.getDetails().getProductIds().isEmpty()) {
-      return createInstanceRecord(compPOL, productTypesMap);
-    }
+  private CompletableFuture<Void> createPieces(PoLine compPOL, List<String> itemIds) {
+		CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+		if (itemIds.isEmpty()) {
+			future.complete(null);
+			return future;
+		}
+		List<CompletableFuture<Void>> futuresList = new ArrayList<>();
+		String poLineId = compPOL.getId();		
+		String endpoint = String.format(PIECES_ENDPOINT, poLineId);
+		
+		handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenAccept(body -> {
+        PieceCollection pieces = body.mapTo(PieceCollection.class);
 
-    String query = compPOL.getDetails().getProductIds().stream()
-      .map(productId -> buildProductIdQuery(productId, productTypesMap))
-      .collect(joining(" or "));
+        // Extract item Id's which already associated with piece records
+        List<String> existingItemIds = pieces.getPieces()
+            .stream()
+            .map(Piece::getItemId)
+            .filter(StringUtils::isNotEmpty)
+            .collect(Collectors.toList());
 
-    // query contains special characters so must be encoded before submitting
-    String endpoint = null;
-    try {
-      endpoint = "/inventory/instances?query=" + URLEncoder.encode(query, "UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      logger.error(String.format("Error during query encoding: %s", e.getMessage()));
-      throw new CompletionException(e);
-    }
+        // Create piece records for item id's which do not have piece records yet
+        itemIds.stream()
+               .filter(id -> !existingItemIds.contains(id))
+               .forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
 
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenCompose(instances -> {
-        if (instances.getJsonArray("instances").size() > 0) {
-          return completedFuture(instances.getJsonArray("instances").getJsonObject(0).getString("id"));
-        }
-        return createInstanceRecord(compPOL, productTypesMap);
+        allOf(futuresList.toArray(new CompletableFuture[0]))
+          .thenAccept(v -> future.complete(null))
+          .exceptionally(t -> {
+            logger.error("One or more piece record failed to be created for PO Line with '{}' id", poLineId);
+            future.completeExceptionally(t);
+            return null;
+          });
+      })
+      .exceptionally(t -> {
+        future.completeExceptionally(t);
+        return null;
       });
+
+		return future;
   }
 
   /**
-   * Creates Instance Record in Inventory and returns its Id.
+   * Construct Piece object associated with PO Line and create in the storage
    *
-   * @param compPOL PO line to create Instance Record for
-   * @param productTypesMap product types Map used to build Instance Record json object
-   * @return id of newly created Instance Record
+   * @param poLineId PO line identifier
+   * @param itemId itemId that was created for PO Line
+   * @return CompletableFuture with new Piece record.
    */
-  private CompletableFuture<String> createInstanceRecord(PoLine compPOL, Map<String, String> productTypesMap) {
-    JsonObject lookupObj = new JsonObject();
-    CompletableFuture<Void> instanceTypeFuture = getInstanceType(DEFAULT_INSTANCE_TYPE_CODE)
-      .thenAccept(lookupObj::mergeIn);
-    CompletableFuture<Void> statusFuture = getStatus(DEFAULT_STATUS_CODE)
-      .thenAccept(lookupObj::mergeIn);
+  private CompletableFuture<Void> createPiece(String poLineId, String itemId) {
+		// Construct Piece object
+  	Piece piece = new Piece();
+  	piece.setPoLineId(poLineId);
+  	piece.setItemId(itemId);
+  	piece.setReceivingStatus(Piece.ReceivingStatus.EXPECTED);
 
-    return VertxCompletableFuture.allOf(ctx, instanceTypeFuture, statusFuture)
-      .thenApply(v -> buildInstanceRecordJsonObject(compPOL, productTypesMap, lookupObj))
-      .thenCompose(instanceRecJson -> {
-        try {
-          return httpClient.request(HttpMethod.POST, instanceRecJson.toBuffer(), "/inventory/instances", okapiHeaders)
-            .thenApply(response -> {
-              logger.debug("Validating received response");
-              if (!isSuccess(response.getCode())) {
-                throw new CompletionException(
-                  new HttpException(response.getCode(), response.getError().getString("errorMessage")));
-              }
-              return response;
-            })
-            .thenApply(response -> {
-              String location = response.getHeaders().get(LOCATION_HEADER);
-              return location.substring(location.lastIndexOf('/')+1);
-            });
-        } catch (Exception e) {
-          throw new CompletionException(e);
-        }
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+
+    JsonObject pieceObj = JsonObject.mapFrom(piece);
+    operateOnSubObj(HttpMethod.POST, resourcesPath(PIECES), pieceObj, httpClient, ctx, okapiHeaders, logger)
+      .thenAccept(body -> future.complete(null))
+      .exceptionally(t -> {
+        logger.error("The piece record failed to be created. The request body: {}", pieceObj.encodePrettily());
+        future.completeExceptionally(t);
+        return null;
       });
-  }
 
-  private CompletableFuture<JsonObject> getInstanceType(String typeName) {
-    String endpoint = String.format("/instance-types?query=code==%s", typeName);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
-  }
-
-  private CompletableFuture<JsonObject> getStatus(String statusCode) {
-    String endpoint = String.format("/instance-statuses?query=code==%s", statusCode);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
-  }
-
-  private String buildProductIdQuery(ProductId productId, Map<String, String> productTypes) {
-    return String.format("(identifiers adj \"\\\"identifierTypeId\\\": \\\"%s\\\"\" " +
-        "and identifiers adj \"\\\"value\\\": \\\"%s\\\"\")",
-      productTypes.get(productId.getProductIdType().toString()),
-      productId.getProductId());
-  }
-
-  private JsonObject buildInstanceRecordJsonObject(PoLine compPOL, Map<String, String> productTypes, JsonObject lookupObj) {
-    JsonObject instance = new JsonObject();
-    if (compPOL.getSource() != null) {
-      instance.put("source", compPOL.getSource().getCode());
-    }
-    if (compPOL.getTitle() != null) {
-      instance.put("title", compPOL.getTitle());
-    }
-    if (compPOL.getEdition() != null) {
-      instance.put("editions", new JsonArray(singletonList(compPOL.getEdition())));
-    }
-    instance.put("statusId", lookupObj.getJsonArray("instanceStatuses").getJsonObject(0).getString("id"));
-    instance.put("instanceTypeId", lookupObj.getJsonArray("instanceTypes").getJsonObject(0).getString("id"));
-
-    if (compPOL.getPublisher() != null || compPOL.getPublicationDate() != null) {
-      JsonObject publication = new JsonObject();
-      publication.put("publisher", compPOL.getPublisher());
-      publication.put("dateOfPublication", compPOL.getPublicationDate());
-      instance.put("publication", new JsonArray(Arrays.asList(publication)));
-    }
-
-    if (compPOL.getDetails() != null && compPOL.getDetails().getProductIds() != null) {
-      List<JsonObject> identifiers = compPOL.getDetails().getProductIds().stream()
-        .map(pId -> {
-          JsonObject identifier = new JsonObject();
-          identifier.put("identifierTypeId", productTypes.get(pId.getProductIdType().toString()));
-          identifier.put("value", pId.getProductId());
-          return identifier;
-        })
-        .collect(toList());
-      instance.put("identifiers", new JsonArray(identifiers));
-    }
-    return instance;
-  }
+    return future;
+	}
 
   private CompletionStage<JsonObject> updatePoLineSubObjects(PoLine compOrderLine, JsonObject lineFromStorage) {
     JsonObject updatedLineJson = JsonObject.mapFrom(compOrderLine);
@@ -339,8 +275,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage));
 
     // Once all operations completed, return updated PO Line with new sub-object id's as json object
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                            .thenApply(v -> updatedLineJson);
+    return allOf(futures.toArray(new CompletableFuture[0]))
+      .thenApply(v -> updatedLineJson);
   }
 
   private CompletableFuture<Void> handleSubObjOperation(String prop, JsonObject updatedLine, JsonObject lineFromStorage) {
@@ -371,7 +307,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       url = String.format(URL_WITH_LANG_PARAM, resourcesPath(prop), lang);
     } else {
       // There is no object in storage nor in request - skipping operation
-      return CompletableFuture.completedFuture(null);
+      return completedFuture(null);
     }
 
     return operateOnSubObj(operation, url, subObjContent, httpClient, ctx, okapiHeaders, logger)
@@ -426,8 +362,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       }
     }
 
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                            .thenAccept(v -> updatedLine.put(prop, newIds));
+    return allOf(futures.toArray(new CompletableFuture[0]))
+      .thenAccept(v -> updatedLine.put(prop, newIds));
   }
 
   private Void addProcessingError(Throwable exc, String propName, String propId) {

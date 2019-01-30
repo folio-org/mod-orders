@@ -1,5 +1,4 @@
 {
-  "id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
   "acquisition_method": "Purchase At Vendor System",
   "adjustment": {
     "id": "1363467f-eb47-4e09-9e28-e25aa464adb7",
@@ -11,14 +10,12 @@
     "shipment": 0.0,
     "tax_1": 0.0,
     "tax_2": 0.0,
-    "use_pro_rate": false,
-    "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+    "use_pro_rate": false
   },
   "alerts": [
     {
       "alert": "Receipt overdue",
-      "id": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",
-      "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+      "id": "9a665b22-9fe5-4c95-b4ee-837a5433c95d"
     }
   ],
   "cancellation_restriction": false,
@@ -28,8 +25,7 @@
       "id": "f7d7d4e4-255e-46dc-9f08-b953fb1e872d",
       "claimed": false,
       "sent": "2018-10-09T00:00:00.000Z",
-      "grace": 30,
-      "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+      "grace": 30
     }
   ],
   "collection": false,
@@ -45,8 +41,7 @@
     "currency": "USD",
     "quantity_physical": 1,
     "quantity_electronic": 1,
-    "po_line_estimated_price": 49.98,
-    "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+    "po_line_estimated_price": 49.98
   },
   "description": "ABCDEFGH",
   "details": {
@@ -59,12 +54,11 @@
       }
     ],
     "material_types": [
-      "f7e72403-2a13-43a4-a069-aaabe6c9dea8"
+      "1a54b431-2e4f-452d-9cae-9cee66c9a892"
     ],
     "subscription_from": "2018-10-09T00:00:00.000Z",
     "subscription_interval": 824,
-    "subscription_to": "2020-10-09T00:00:00.000Z",
-    "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+    "subscription_to": "2020-10-09T00:00:00.000Z"
   },
   "donor": "ABCDEFGHIJKLM",
   "eresource": {
@@ -76,7 +70,6 @@
     "expected_activation": "2018-10-09T00:00:00.000Z",
     "user_limit": 10,
     "access_provider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
-    "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2",
     "license": "7c063655-b384-4a6f-b367-3c2f95f7a49c"
   },
   "fund_distribution": [
@@ -84,15 +77,13 @@
       "id": "64774a83-fd1d-469e-a4d9-ed4033082799",
       "code": "HIST",
       "percentage": 80.0,
-      "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3",
-      "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
+      "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3"
     },
     {
       "id": "0d1b2d39-512f-4e0f-a497-b89eba6ecae9",
       "code": "GENRL",
       "percentage": 20.0,
-      "encumbrance": "0466cb77-0344-43c6-85eb-0a64aa2934e5",
-      "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
+      "encumbrance": "0466cb77-0344-43c6-85eb-0a64aa2934e5"
     }
   ],
   "location": {
@@ -100,8 +91,7 @@
     "location_id": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
     "quantity": 2,
     "quantity_electronic": 1,
-    "quantity_physical": 1,
-    "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+    "quantity_physical": 1
   },
   "order_format": "Physical Resource",
   "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
@@ -112,8 +102,7 @@
     ],
     "id": "5ee243f9-72e5-4464-bdbc-43a21873d648",
     "material_supplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
-    "receipt_due": "2018-10-10T00:00:00.000Z",
-    "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+    "receipt_due": "2018-10-10T00:00:00.000Z"
   },
   "po_line_description": "ABCDEFGHIJKLMNOPQRSTUVWXY",
   "po_line_number": "268758-03",
@@ -160,8 +149,7 @@
     "note_from_vendor": "ABCDEFGHIKJKLMNOP",
     "ref_number": "123456-78",
     "ref_number_type": "Supplier's unique order line reference number",
-    "vendor_account": "8910-10",
-    "po_line_id": "8c778aee-97fa-4586-b131-3ea588a728e2"
+    "vendor_account": "8910-10"
   },
   "metadata": {
     "createdDate": "2018-06-29T00:00:00.000",
