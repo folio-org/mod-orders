@@ -745,8 +745,8 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testUpdateOrderWithStatus_MODORDERS150() throws Exception {
-    logger.info("=== Test Put Order By Id - MODORDERS-150 ===");
+  public void testUpdateOrderWithDefaultStatus() throws Exception {
+    logger.info("=== Test Put Order By Id - Make sure that default status is used ===");
 
     CompositePurchaseOrder reqData = new JsonObject(getMockData(MINIMAL_ORDER_PATH)).mapTo(CompositePurchaseOrder.class);
     reqData.setId(ORDER_WITHOUT_WORKFLOW_STATUS);
@@ -2356,12 +2356,14 @@ public class OrdersImplTest {
       logger.info("id: " + id);
 
       try {
-        JsonObject po;
-
-        po = new JsonObject(getMockData(String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id)));
+        JsonObject po = new JsonObject(getMockData(String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id)));
         po.remove(ADJUSTMENT);
         po.remove(PO_LINES);
         po.put(ADJUSTMENT, UUID.randomUUID().toString());
+
+        // Validate the content against schema
+        org.folio.rest.acq.model.PurchaseOrder order = po.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
+        po = JsonObject.mapFrom(order);
         addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
         serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
       } catch (IOException e) {

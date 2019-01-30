@@ -109,13 +109,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   }
 
   private boolean isTransitionToOpen(CompositePurchaseOrder compPO, JsonObject poFromStorage) {
-    // MODORDERS-150 Workflow status might be null. Use default as 'Pending' in such case
-    WorkflowStatus currentStatus;
-    if (StringUtils.isNotEmpty(poFromStorage.getString("workflow_status"))) {
-      currentStatus = WorkflowStatus.fromValue(poFromStorage.getString("workflow_status"));
-    } else {
-      currentStatus = PENDING;
-    }
+    WorkflowStatus currentStatus = WorkflowStatus.fromValue(poFromStorage.getString("workflow_status"));
     return currentStatus == PENDING && compPO.getWorkflowStatus() == OPEN;
   }
 
