@@ -11,7 +11,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ERESOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.FUND_DISTRIBUTION;
 import static org.folio.orders.utils.ResourcePathResolver.LOCATION;
 import static org.folio.orders.utils.ResourcePathResolver.PHYSICAL;
-import static org.folio.orders.utils.ResourcePathResolver.COMPOSITE_PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.SOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_DETAIL;
@@ -68,7 +68,7 @@ public class PostOrderLineHelper extends AbstractHelper {
       .thenCompose(v -> {
         try {
           Buffer polBuf = JsonObject.mapFrom(line).toBuffer();
-          return httpClient.request(HttpMethod.POST, polBuf, resourcesPath(COMPOSITE_PO_LINES), okapiHeaders)
+          return httpClient.request(HttpMethod.POST, polBuf, resourcesPath(PO_LINES), okapiHeaders)
             .thenApply(HelperUtils::verifyAndExtractBody)
             .thenApply(body -> {
               logger.info("response from /po_line: " + body.encodePrettily());

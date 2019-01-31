@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.ResourcePathResolver.ADJUSTMENT;
@@ -11,7 +12,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ERESOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.FUND_DISTRIBUTION;
 import static org.folio.orders.utils.ResourcePathResolver.LOCATION;
 import static org.folio.orders.utils.ResourcePathResolver.PHYSICAL;
-import static org.folio.orders.utils.ResourcePathResolver.COMPOSITE_PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.SOURCE;
@@ -748,10 +749,10 @@ public class OrdersImplTest {
     }
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
-    assertEquals(MockServer.serverRqRs.get(COMPOSITE_PO_LINES, HttpMethod.POST).size(), poLinesFromRequest.size() - sameLinesCount);
-    assertEquals(MockServer.serverRqRs.get(COMPOSITE_PO_LINES, HttpMethod.DELETE).size(), poLinesFromStorage.size() - sameLinesCount);
-    assertNotNull(MockServer.serverRqRs.get(COMPOSITE_PO_LINES, HttpMethod.PUT));
-    assertEquals(MockServer.serverRqRs.get(COMPOSITE_PO_LINES, HttpMethod.PUT).size(), sameLinesCount);
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), poLinesFromRequest.size() - sameLinesCount);
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE).size(), poLinesFromStorage.size() - sameLinesCount);
+    assertNotNull(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT));
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).size(), sameLinesCount);
   }
 
   @Test
@@ -810,12 +811,12 @@ public class OrdersImplTest {
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData.toString(), "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
-    assertEquals(MockServer.serverRqRs.get(COMPOSITE_PO_LINES, HttpMethod.PUT).size(), storData.getJsonArray(COMPOSITE_PO_LINES).size());
-    MockServer.serverRqRs.get(COMPOSITE_PO_LINES, HttpMethod.PUT).forEach(poLine -> {
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).size(), storData.getJsonArray(COMPOSITE_PO_LINES).size());
+    MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).forEach(poLine -> {
       Matcher matcher = poLinePattern.matcher(poLine.getString(PO_LINE_NUMBER));
       assertTrue(matcher.find());
     });
-    assertNull(MockServer.serverRqRs.get(COMPOSITE_PO_LINES, HttpMethod.DELETE));
+    assertNull(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE));
   }
 
   @Test
@@ -832,7 +833,7 @@ public class OrdersImplTest {
 
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData.toString(), "", 204);
     verifyPoWithPoLinesUpdate(reqData, storageData);
-    MockServer.serverRqRs.get(COMPOSITE_PO_LINES, HttpMethod.PUT).forEach(poLine -> {
+    MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).forEach(poLine -> {
       Matcher matcher = poLinePattern.matcher(poLine.getString(PO_LINE_NUMBER));
       assertTrue(matcher.find());
     });
@@ -1201,7 +1202,7 @@ public class OrdersImplTest {
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData.toString(), "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
-    assertNull(MockServer.serverRqRs.get(COMPOSITE_PO_LINES, HttpMethod.DELETE));
+    assertNull(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE));
   }
 
   @Test
@@ -1213,7 +1214,7 @@ public class OrdersImplTest {
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES, reqData.toString(), "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
-    assertEquals(MockServer.serverRqRs.get(COMPOSITE_PO_LINES, HttpMethod.POST).size(), reqData.getJsonArray(COMPOSITE_PO_LINES).size());
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), reqData.getJsonArray(COMPOSITE_PO_LINES).size());
 
   }
 
@@ -1578,7 +1579,7 @@ public class OrdersImplTest {
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
     assertEquals(1, column.size());
-    assertThat(column, hasKey(COMPOSITE_PO_LINES));
+    assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertEquals(2, column.size());
@@ -1591,7 +1592,7 @@ public class OrdersImplTest {
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
     assertEquals(10, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, VENDOR_DETAIL, CLAIMS, FUND_DISTRIBUTION, COMPOSITE_PO_LINES));
+    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, VENDOR_DETAIL, CLAIMS, FUND_DISTRIBUTION, PO_LINES));
   }
 
   @Test
@@ -1607,7 +1608,7 @@ public class OrdersImplTest {
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
     assertEquals(1, column.size());
-    assertThat(column, hasKey(COMPOSITE_PO_LINES));
+    assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertEquals(3, column.size());
@@ -1618,9 +1619,9 @@ public class OrdersImplTest {
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
     assertEquals(8, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, VENDOR_DETAIL, COMPOSITE_PO_LINES));
+    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, VENDOR_DETAIL, PO_LINES));
 
-    List<JsonObject> jsonObjects = column.get(COMPOSITE_PO_LINES);
+    List<JsonObject> jsonObjects = column.get(PO_LINES);
     assertThat(jsonObjects, hasSize(1));
     JsonObject entry = jsonObjects.get(0);
 
@@ -1643,7 +1644,7 @@ public class OrdersImplTest {
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
     assertEquals(1, column.size());
-    assertThat(column, hasKey(COMPOSITE_PO_LINES));
+    assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertTrue(column.isEmpty());
@@ -1654,9 +1655,9 @@ public class OrdersImplTest {
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
     assertEquals(13, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, ALERTS, CLAIMS, COST, DETAILS, ERESOURCE, FUND_DISTRIBUTION, LOCATION, PHYSICAL, REPORTING_CODES, SOURCE, VENDOR_DETAIL, COMPOSITE_PO_LINES));
+    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, ALERTS, CLAIMS, COST, DETAILS, ERESOURCE, FUND_DISTRIBUTION, LOCATION, PHYSICAL, REPORTING_CODES, SOURCE, VENDOR_DETAIL, PO_LINES));
 
-    List<JsonObject> jsonObjects = column.get(COMPOSITE_PO_LINES);
+    List<JsonObject> jsonObjects = column.get(PO_LINES);
     assertThat(jsonObjects, hasSize(1));
     JsonObject entry = jsonObjects.get(0);
 
@@ -1703,7 +1704,7 @@ public class OrdersImplTest {
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
     assertEquals(1, column.size());
-    assertThat(column, hasKey(COMPOSITE_PO_LINES));
+    assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertTrue(column.isEmpty());
@@ -1762,7 +1763,7 @@ public class OrdersImplTest {
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
     assertEquals(1, column.size());
-    assertThat(column, hasKey(COMPOSITE_PO_LINES));
+    assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertTrue(column.isEmpty());
@@ -1791,7 +1792,7 @@ public class OrdersImplTest {
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
     assertEquals(1, column.size());
-    assertThat(column, hasKey(COMPOSITE_PO_LINES));
+    assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertTrue(column.isEmpty());
@@ -1800,9 +1801,9 @@ public class OrdersImplTest {
     assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, VENDOR_DETAIL));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
-    assertThat(column.keySet(), containsInAnyOrder(COMPOSITE_PO_LINES, SOURCE));
+    assertThat(column.keySet(), containsInAnyOrder(PO_LINES, SOURCE));
 
-    JsonObject lineWithIds = column.get(COMPOSITE_PO_LINES).get(0);
+    JsonObject lineWithIds = column.get(PO_LINES).get(0);
 
     // Verify that object has only PO and PO line ids
     assertEquals(lineId, lineWithIds.remove(ID));
@@ -2007,7 +2008,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.POST, "/inventory/instances").handler(this::handlePostInstanceRecord);
       router.route(HttpMethod.POST, "/item-storage/items").handler(this::handlePostItemRecord);
       router.route(HttpMethod.POST, "/holdings-storage/holdings").handler(this::handlePostHoldingRecord);
-      router.route(HttpMethod.POST, resourcesPath(COMPOSITE_PO_LINES)).handler(this::handlePostPOLine);
+      router.route(HttpMethod.POST, resourcesPath(PO_LINES)).handler(this::handlePostPOLine);
       router.route(HttpMethod.POST, resourcesPath(ADJUSTMENT)).handler(ctx -> handlePostGenericSubObj(ctx, ADJUSTMENT));
       router.route(HttpMethod.POST, resourcesPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
       router.route(HttpMethod.POST, resourcesPath(CLAIMS)).handler(ctx -> handlePostGenericSubObj(ctx, CLAIMS));
@@ -2031,8 +2032,8 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, "/item-storage/items").handler(this::handleGetItemsRecords);
       router.route(HttpMethod.GET, "/holdings-storage/holdings").handler(this::handleGetHoldingRecord);
       router.route(HttpMethod.GET, "/loan-types").handler(this::handleGetLoanType);
-      router.route(HttpMethod.GET, resourcesPath(COMPOSITE_PO_LINES)).handler(this::handleGetPoLines);
-      router.route(HttpMethod.GET, resourcePath(COMPOSITE_PO_LINES)).handler(this::handleGetPoLineById);
+      router.route(HttpMethod.GET, resourcesPath(PO_LINES)).handler(this::handleGetPoLines);
+      router.route(HttpMethod.GET, resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
       router.route(HttpMethod.GET, resourcePath(ADJUSTMENT)).handler(this::handleGetAdjustment);
       router.route(HttpMethod.GET, resourcePath(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
       router.route(HttpMethod.GET, resourcePath(CLAIMS)).handler(ctx -> handleGetGenericSubObj(ctx, CLAIMS));
@@ -2049,7 +2050,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(ctx -> handleGetGenericPieceObj(ctx, PIECES));
 
       router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
-      router.route(HttpMethod.PUT, resourcePath(COMPOSITE_PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, COMPOSITE_PO_LINES));
+      router.route(HttpMethod.PUT, resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
       router.route(HttpMethod.PUT, resourcePath(ADJUSTMENT)).handler(ctx -> handlePutGenericSubObj(ctx, ADJUSTMENT));
       router.route(HttpMethod.PUT, resourcePath(ALERTS)).handler(ctx -> handlePutGenericSubObj(ctx, ALERTS));
       router.route(HttpMethod.PUT, resourcePath(CLAIMS)).handler(ctx -> handlePutGenericSubObj(ctx, CLAIMS));
@@ -2065,7 +2066,7 @@ public class OrdersImplTest {
 
 
       router.route(HttpMethod.DELETE, resourcesPath(PURCHASE_ORDER)+"/:id").handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER));
-      router.route(HttpMethod.DELETE, resourcePath(COMPOSITE_PO_LINES)).handler(ctx -> handleDeleteGenericSubObj(ctx, COMPOSITE_PO_LINES));
+      router.route(HttpMethod.DELETE, resourcePath(PO_LINES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES));
       router.route(HttpMethod.DELETE, resourcePath(ADJUSTMENT)).handler(ctx -> handleDeleteGenericSubObj(ctx, ADJUSTMENT));
       router.route(HttpMethod.DELETE, resourcePath(ALERTS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ALERTS));
       router.route(HttpMethod.DELETE, resourcePath(CLAIMS)).handler(ctx -> handleDeleteGenericSubObj(ctx, CLAIMS));
@@ -2290,7 +2291,7 @@ public class OrdersImplTest {
           JsonArray lines = compPO.getJsonArray(COMPOSITE_PO_LINES);
           JsonObject po_lines = new JsonObject();
           if (lines == null) {
-            po_lines.put(COMPOSITE_PO_LINES, new JsonArray())
+            po_lines.put(PO_LINES, new JsonArray())
               .put("total_records", 0)
               .put("first", 0)
               .put("last", 0);
@@ -2301,7 +2302,7 @@ public class OrdersImplTest {
               replaceObjectsByIds(line, ALERTS, CLAIMS, FUND_DISTRIBUTION);
             });
 
-            po_lines.put(COMPOSITE_PO_LINES, lines)
+            po_lines.put(PO_LINES, lines)
               .put("first", lines.isEmpty() ? 0 : 1)
               .put("last", lines.size());
             if (EMPTY_CONFIG_TENANT.equals(tenant)) {
@@ -2352,7 +2353,7 @@ public class OrdersImplTest {
       String id = ctx.request().getParam(ID);
       logger.info("id: " + id);
 
-      addServerRqRsData(HttpMethod.GET, COMPOSITE_PO_LINES, new JsonObject().put(ID, id));
+      addServerRqRsData(HttpMethod.GET, PO_LINES, new JsonObject().put(ID, id));
 
       if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
         serverResponse(ctx, 500, TEXT_PLAIN, INTERNAL_SERVER_ERROR);
@@ -2364,7 +2365,7 @@ public class OrdersImplTest {
           // Attempt to find POLine in mock server memory
           Map<String, List<JsonObject>> column = serverRqRs.column(HttpMethod.POST);
           if(!column.isEmpty()) {
-            List<JsonObject> objects = new ArrayList<>(column.get(COMPOSITE_PO_LINES));
+            List<JsonObject> objects = new ArrayList<>(column.get(PO_LINES));
             Comparator<JsonObject> comparator = Comparator.comparing(o -> o.getString(ID));
             objects.sort(comparator);
             int ind = Collections.binarySearch(objects, new JsonObject().put(ID, id), comparator);
@@ -2634,7 +2635,7 @@ public class OrdersImplTest {
           .end(JsonObject.mapFrom(pol).encodePrettily());
       }
 
-      addServerRqRsData(HttpMethod.POST, COMPOSITE_PO_LINES, body);
+      addServerRqRsData(HttpMethod.POST, PO_LINES, body);
     }
 
     private void handleGetLocation(RoutingContext ctx) {

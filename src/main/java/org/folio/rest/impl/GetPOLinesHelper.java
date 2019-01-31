@@ -15,7 +15,7 @@ import javax.ws.rs.core.Response;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static org.folio.orders.utils.ResourcePathResolver.COMPOSITE_PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -23,7 +23,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 
 public class GetPOLinesHelper extends AbstractHelper {
-  public static final String GET_PO_LINES_BY_QUERY = resourcesPath(COMPOSITE_PO_LINES) + "?limit=%s&offset=%s%s&lang=%s";
+  public static final String GET_PO_LINES_BY_QUERY = resourcesPath(PO_LINES) + "?limit=%s&offset=%s%s&lang=%s";
 
   GetPOLinesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
                    Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {

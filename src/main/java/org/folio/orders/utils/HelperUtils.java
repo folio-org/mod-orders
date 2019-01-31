@@ -35,13 +35,15 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class HelperUtils {
 
+  public static final String COMPOSITE_PO_LINES = "compositePoLines";
+
   public static final String PO_NUMBER_ALREADY_EXISTS = "PO Number already exists";
   public static final String DEFAULT_POLINE_LIMIT = "1";
   private static final String MAX_POLINE_LIMIT = "500";
   public static final String OKAPI_URL = "X-Okapi-Url";
   public static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
   public static final String URL_WITH_LANG_PARAM = "%s?lang=%s";
-  public static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = resourcesPath(COMPOSITE_PO_LINES)+"?limit=%s&query=purchase_order_id==%s&lang=%s";
+  public static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = resourcesPath(PO_LINES)+"?limit=%s&query=purchase_order_id==%s&lang=%s";
   public static final String GET_PURCHASE_ORDER_BYID = resourceByIdPath(PURCHASE_ORDER)+URL_WITH_LANG_PARAM;
   public static final String GET_PURCHASE_ORDER_BYPONUMBER_QUERY = resourcesPath(PURCHASE_ORDER)+"?query=po_number==%s&lang=%s";
 
@@ -123,7 +125,7 @@ public class HelperUtils {
    */
   public static CompletableFuture<JsonObject> getPoLineById(String lineId, String lang, HttpClientInterface httpClient, Context ctx,
                                                             Map<String, String> okapiHeaders, Logger logger) {
-    String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(COMPOSITE_PO_LINES, lineId), lang);
+    String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES, lineId), lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
   }
 
@@ -134,8 +136,8 @@ public class HelperUtils {
       .thenCompose(body -> {
         List<CompletableFuture<JsonObject>> futures = new ArrayList<>();
 
-        for (int i = 0; i < body.getJsonArray(COMPOSITE_PO_LINES).size(); i++) {
-          JsonObject line = body.getJsonArray(COMPOSITE_PO_LINES).getJsonObject(i);
+        for (int i = 0; i < body.getJsonArray(PO_LINES).size(); i++) {
+          JsonObject line = body.getJsonArray(PO_LINES).getJsonObject(i);
           futures.add(deletePoLine(line, httpClient, ctx, okapiHeaders, logger));
         }
 
@@ -152,7 +154,7 @@ public class HelperUtils {
     return operateOnPoLine(HttpMethod.DELETE, line, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(poline -> {
         String polineId = poline.getId();
-        return operateOnSubObj(HttpMethod.DELETE, resourceByIdPath(COMPOSITE_PO_LINES, polineId), httpClient, ctx, okapiHeaders, logger);
+        return operateOnSubObj(HttpMethod.DELETE, resourceByIdPath(PO_LINES, polineId), httpClient, ctx, okapiHeaders, logger);
       });
   }
 
@@ -165,8 +167,8 @@ public class HelperUtils {
         List<CompositePoLine> lines = new ArrayList<>();
         List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-        for (int i = 0; i < body.getJsonArray(COMPOSITE_PO_LINES).size(); i++) {
-          JsonObject line = body.getJsonArray(COMPOSITE_PO_LINES).getJsonObject(i);
+        for (int i = 0; i < body.getJsonArray(PO_LINES).size(); i++) {
+          JsonObject line = body.getJsonArray(PO_LINES).getJsonObject(i);
           futures.add(operateOnPoLine(HttpMethod.GET, line, httpClient, ctx, okapiHeaders, logger)
             .thenAccept(lines::add));
         }
@@ -180,7 +182,8 @@ public class HelperUtils {
       })
       .exceptionally(t -> {
         logger.error("Exception gathering po_line data:", t);
-        throw new CompletionException(t);
+        future.completeExceptionally(t);
+        return null;
       });
     return future;
   }

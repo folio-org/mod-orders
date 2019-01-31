@@ -37,7 +37,7 @@ import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
-import static org.folio.orders.utils.ResourcePathResolver.COMPOSITE_PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 
@@ -122,7 +122,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     if (isNotEmpty(compPO.getCompositePoLines()) || isPoNumberChanged(poFromStorage, compPO)) {
       return getPoLines(poFromStorage.getString(ID), lang, httpClient, ctx, okapiHeaders, logger)
         .thenCompose(jsonObject -> {
-          JsonArray existedPoLinesArray = jsonObject.getJsonArray(COMPOSITE_PO_LINES);
+          JsonArray existedPoLinesArray = jsonObject.getJsonArray(PO_LINES);
           if (isNotEmpty(compPO.getCompositePoLines())) {
             return handlePoLines(compPO, existedPoLinesArray);
           } else {

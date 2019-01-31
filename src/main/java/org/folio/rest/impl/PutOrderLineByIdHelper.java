@@ -17,7 +17,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ERESOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.FUND_DISTRIBUTION;
 import static org.folio.orders.utils.ResourcePathResolver.LOCATION;
 import static org.folio.orders.utils.ResourcePathResolver.PHYSICAL;
-import static org.folio.orders.utils.ResourcePathResolver.COMPOSITE_PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.SOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_DETAIL;
@@ -133,7 +133,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    */
   public CompletableFuture<JsonObject> updateOrderLineSummary(String poLineId, JsonObject poLine) {
     logger.debug("Updating PO line...");
-    String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(COMPOSITE_PO_LINES, poLineId), lang);
+    String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES, poLineId), lang);
     return operateOnSubObj(HttpMethod.PUT, endpoint, poLine, httpClient, ctx, okapiHeaders, logger);
   }
 
