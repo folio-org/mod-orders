@@ -26,8 +26,13 @@ public class ResourcePathResolver {
   public static final String SOURCE = "source";
   public static final String VENDOR_DETAIL = "vendor_detail";
   public static final String PURCHASE_ORDER = "purchase_order";
+<<<<<<< HEAD
   public static final String PIECES = "pieces";
   public static final String RECEIVING_HISTORY = "receiving-history";
+=======
+  public static final String RECEIVING_HISTORY = "receiving-history";
+
+>>>>>>> branch 'MODORDERS-105' of https://github.com/folio-org/mod-orders.git
 
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
@@ -50,7 +55,10 @@ public class ResourcePathResolver {
     apis.put(PO_LINES, "/orders-storage/po_lines");
     apis.put(PO_NUMBER, "/orders-storage/po_number");
     apis.put(PURCHASE_ORDER, "/orders-storage/purchase_orders");
+<<<<<<< HEAD
     apis.put(PIECES, "/orders-storage/pieces");
+=======
+>>>>>>> branch 'MODORDERS-105' of https://github.com/folio-org/mod-orders.git
     apis.put(RECEIVING_HISTORY, "/orders-storage/receiving-history");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);
