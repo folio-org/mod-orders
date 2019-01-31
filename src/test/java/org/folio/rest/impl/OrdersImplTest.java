@@ -800,7 +800,7 @@ public class OrdersImplTest {
 
     verifyPoWithPoLinesUpdate(reqData, storageData);
   }
-
+  
   private void verifyPoWithPoLinesUpdate(JsonObject reqData, JsonObject storageData) {
     JsonArray poLinesFromRequest = reqData.getJsonArray(PO_LINES);
     JsonArray poLinesFromStorage = storageData.getJsonArray(PO_LINES);
@@ -1278,12 +1278,11 @@ public class OrdersImplTest {
     logger.info("=== Test Put Order By Id with PO lines and without PO lines in order from storage ===");
 
     JsonObject reqData = new JsonObject(getMockData(listedPrintMonographPath));
-
+    reqData.put("workflow_status", "Open");
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES, reqData.toString(), "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), reqData.getJsonArray(PO_LINES).size());
-
   }
 
   @Test
