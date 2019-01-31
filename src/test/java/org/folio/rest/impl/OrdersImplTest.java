@@ -1300,14 +1300,22 @@ public class OrdersImplTest {
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH_OPEN_WORKFLOW));
     String id = ordersList.getString(ID);
     
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData.toString(), "", 204);
+    CompositePurchaseOrder putResponse = verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData.toString(), "", 204).as(CompositePurchaseOrder.class);
 
-//    List<JsonObject> putResponse = MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT);
-////    //assertEquals(true, putResponse.get(0).containsKey("dateOrdered"));
-////    assertNotNull(putResponse.get(0).getValue("dateOrdered"));
+    assertNotNull(putResponse.getDateOrdered());
     
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), reqData.getJsonArray(PO_LINES).size());
+  }
+  
+  @Test
+  public void testPutOrderWorkflowStatusOpenStorageAndRequest1() throws IOException {
+    logger.info("=== Test Put Order By Id with PO lines and without PO lines in order from storage ===");
+    
+    JsonObject reqData = new JsonObject(getMockData(listedPrintSerialPath));
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + "93f612a9-9a05-4eef-aac5-435be131454b", reqData.toString(), "text/plain", 404);
+
+
   }
   
   @Test
