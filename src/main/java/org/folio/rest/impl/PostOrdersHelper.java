@@ -21,7 +21,6 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.resource.Orders.PostOrdersCompositeOrdersResponse;
 import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.joda.time.DateTime;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -46,9 +45,6 @@ public class PostOrdersHelper extends AbstractHelper {
 
   public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
-    if (compPO.getWorkflowStatus() == OPEN) {
-    	compPO.setDateOrdered(DateTime.now().toDate());
-    }
     if(null==compPO.getPoNumber()){
       return poNumberHelper.generatePoNumber()
         .thenAccept(poNumberResp -> compPO.setPoNumber(poNumberResp.mapTo(PoNumber.class).getPoNumber()))
