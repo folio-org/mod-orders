@@ -27,20 +27,8 @@ import java.util.concurrent.CompletionException;
 import javax.ws.rs.core.Response;
 
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.Adjustment;
-import org.folio.rest.jaxrs.model.Alert;
-import org.folio.rest.jaxrs.model.Claim;
-import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.Details;
-import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.FundDistribution;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Physical;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.ReportingCode;
-import org.folio.rest.jaxrs.model.Source;
-import org.folio.rest.jaxrs.model.VendorDetail;
 import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -58,7 +46,7 @@ public class PostOrderLineHelper extends AbstractHelper {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
-  public CompletableFuture<PoLine> createPoLine(PoLine compPOL) {
+  public CompletableFuture<CompositePoLine> createPoLine(CompositePoLine compPOL) {
     compPOL.setId(UUID.randomUUID().toString());
     JsonObject line = JsonObject.mapFrom(compPOL);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
@@ -97,7 +85,7 @@ public class PostOrderLineHelper extends AbstractHelper {
 
 
 
-  private CompletableFuture<Void> createAdjustment(PoLine compPOL, JsonObject line, Adjustment adjustment) {
+  private CompletableFuture<Void> createAdjustment(CompositePoLine compPOL, JsonObject line, Adjustment adjustment) {
     return createSubObjIfPresent(line, adjustment, ADJUSTMENT, resourcesPath(ADJUSTMENT))
       .thenAccept(id -> {
         if (id == null) {
@@ -114,7 +102,7 @@ public class PostOrderLineHelper extends AbstractHelper {
   }
 
 
-  private CompletableFuture<Void> createCost(PoLine compPOL, JsonObject line, Cost cost) {
+  private CompletableFuture<Void> createCost(CompositePoLine compPOL, JsonObject line, Cost cost) {
     return createSubObjIfPresent(line, cost, COST, resourcesPath(COST))
       .thenAccept(id -> {
         if (id == null) {
@@ -130,7 +118,7 @@ public class PostOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<Void> createDetails(PoLine compPOL, JsonObject line, Details details) {
+  private CompletableFuture<Void> createDetails(CompositePoLine compPOL, JsonObject line, Details details) {
     return createSubObjIfPresent(line, details, DETAILS, resourcesPath(DETAILS))
       .thenAccept(id -> {
         if (id == null) {
@@ -146,7 +134,7 @@ public class PostOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<Void> createEresource(PoLine compPOL, JsonObject line, Eresource eresource) {
+  private CompletableFuture<Void> createEresource(CompositePoLine compPOL, JsonObject line, Eresource eresource) {
     return createSubObjIfPresent(line, eresource, ERESOURCE, resourcesPath(ERESOURCE))
       .thenAccept(id -> {
         if (id == null) {
@@ -162,7 +150,7 @@ public class PostOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<Void> createLocation(PoLine compPOL, JsonObject line, Location location) {
+  private CompletableFuture<Void> createLocation(CompositePoLine compPOL, JsonObject line, Location location) {
     return createSubObjIfPresent(line, location, LOCATION, resourcesPath(LOCATION))
       .thenAccept(id -> {
         if (id == null) {
@@ -178,7 +166,7 @@ public class PostOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<Void> createPhysical(PoLine compPOL, JsonObject line, Physical physical) {
+  private CompletableFuture<Void> createPhysical(CompositePoLine compPOL, JsonObject line, Physical physical) {
     return createSubObjIfPresent(line, physical, PHYSICAL, resourcesPath(PHYSICAL))
       .thenAccept(id -> {
         if (id == null) {
@@ -194,7 +182,7 @@ public class PostOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<Void> createVendorDetail(PoLine compPOL, JsonObject line, VendorDetail vendor) {
+  private CompletableFuture<Void> createVendorDetail(CompositePoLine compPOL, JsonObject line, VendorDetail vendor) {
     return createSubObjIfPresent(line, vendor, VENDOR_DETAIL, resourcesPath(VENDOR_DETAIL))
       .thenAccept(id -> {
         if (id == null) {
@@ -210,7 +198,7 @@ public class PostOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<Void> createReportingCodes(PoLine compPOL, JsonObject line,
+  private CompletableFuture<Void> createReportingCodes(CompositePoLine compPOL, JsonObject line,
                                                        List<ReportingCode> reportingCodes) {
 
     List<String> reportingIds = new ArrayList<>();
@@ -227,7 +215,7 @@ public class PostOrderLineHelper extends AbstractHelper {
             }))
         );
 
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
       .thenAccept(t -> {
         line.put(REPORTING_CODES, reportingIds);
         compPOL.setReportingCodes(reportingCodes);
@@ -239,7 +227,7 @@ public class PostOrderLineHelper extends AbstractHelper {
 
   }
 
-  private CompletableFuture<Void> createSource(PoLine compPOL, JsonObject line, Source source) {
+  private CompletableFuture<Void> createSource(CompositePoLine compPOL, JsonObject line, Source source) {
     return createSubObjIfPresent(line, source, SOURCE, resourcesPath(SOURCE))
       .thenAccept(id -> {
         if (id == null) {
@@ -255,7 +243,7 @@ public class PostOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<Void> createClaims(PoLine compPOL, JsonObject line, List<Claim> claims) {
+  private CompletableFuture<Void> createClaims(CompositePoLine compPOL, JsonObject line, List<Claim> claims) {
 
     List<String> claimsIds = new ArrayList<>();
     List<CompletableFuture<Void>> futures = new ArrayList<>();
@@ -271,7 +259,7 @@ public class PostOrderLineHelper extends AbstractHelper {
             }))
         );
 
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
       .thenAccept(t -> {
         line.put(CLAIMS, claimsIds);
         compPOL.setClaims(claims);
@@ -285,7 +273,7 @@ public class PostOrderLineHelper extends AbstractHelper {
 
 
 
-  private CompletableFuture<Void> createAlerts(PoLine compPOL, JsonObject line, List<Alert> alerts) {
+  private CompletableFuture<Void> createAlerts(CompositePoLine compPOL, JsonObject line, List<Alert> alerts) {
 
     List<String> alertIds = new ArrayList<>();
     List<CompletableFuture<Void>> futures = new ArrayList<>();
@@ -347,7 +335,7 @@ public class PostOrderLineHelper extends AbstractHelper {
     return future;
   }
 
-  private CompletableFuture<Void> createFundDistribution(PoLine compPOL, JsonObject line, List<FundDistribution> fundDistribution) {
+  private CompletableFuture<Void> createFundDistribution(CompositePoLine compPOL, JsonObject line, List<FundDistribution> fundDistribution) {
 
     List<String> fundDistributionIds = new ArrayList<>();
     List<CompletableFuture<Void>> futures = new ArrayList<>();
