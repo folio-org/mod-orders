@@ -388,7 +388,7 @@
     {
       "permissionName": "orders.po-lines.collection.get",
       "displayName": "Orders - get collection of PO lines",
-      "description": "Create a new PO line"
+      "description": "Get collection of PO lines"
     },
     {
       "permissionName": "orders.po-lines.item.post",

@@ -9,8 +9,8 @@ documentation:
     content: <b>API for managing purchase orders</b>
 
 types:
-  composite_purchase_order: !include acq-models/composite_purchase_order.json
-  purchase_orders: !include acq-models/mod-orders-storage/schemas/purchase_order_collection.json
+  composite-purchase-order: !include acq-models/composite_purchase_order.json
+  purchase-orders: !include acq-models/mod-orders-storage/schemas/purchase_order_collection.json
   purchase_order: !include acq-models/mod-orders-storage/schemas/purchase_order.json
   composite-po-line: !include acq-models/composite_po_line.json
   po-line-collection: !include acq-models/mod-orders-storage/schemas/po_line_collection.json
@@ -43,8 +43,6 @@ resourceTypes:
   collection: !include raml-util/rtypes/collection.raml
   collection-item: !include raml-util/rtypes/item-collection.raml
   collection-get: !include raml-util/rtypes/collection-get.raml
-  # The post-empty-body.raml does not declare request body but it can be defined when this resource type is used
-  post-item: !include raml-util/rtypes/post-empty-body.raml
   post-with-200: !include rtypes/post-json-body-200.raml
 
 /orders:
@@ -54,8 +52,8 @@ resourceTypes:
       collection:
         exampleCollection: !include acq-models/mod-orders-storage/examples/purchase_order_collection.sample
         exampleItem: !include acq-models/examples/composite_purchase_order.sample
-        schemaCollection: purchase_orders
-        schemaItem: composite_purchase_order
+        schemaCollection: purchase-orders
+        schemaItem: composite-purchase-order
     is: [validate]
     get:
       is: [pageable, searchable: {description: "using CQL (indexes for purchase orders)", example: "workflow_status==\"Pending\""} ]
@@ -70,7 +68,7 @@ resourceTypes:
       type:
         collection-item:
           exampleItem: !include acq-models/examples/composite_purchase_order.sample
-          schema: composite_purchase_order
+          schema: composite-purchase-order
       is: [validate]
       get:
         description: Return a purchase order with given {id}
