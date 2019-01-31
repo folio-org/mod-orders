@@ -1,6 +1,6 @@
 package org.folio.rest.impl;
 
-import static org.folio.orders.utils.HelperUtils.getSearcheableEndpoint;
+import static org.folio.orders.utils.HelperUtils.getEndpointWithQuery;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.resource.Orders.GetOrdersReceivingHistoryResponse.respond400WithTextPlain;
@@ -33,12 +33,12 @@ public class GetReceivingHistoryHelper extends AbstractHelper{
     CompletableFuture<ReceivingHistoryCollection> future = new VertxCompletableFuture<>(ctx);
 
     try {
-      String queryParam = getSearcheableEndpoint(query, logger);
+      String queryParam = getEndpointWithQuery(query, logger);
       String endpoint = String.format(GET_RECEIVING_HISTORY_BY_QUERY, limit, offset, queryParam, lang);
       HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
         .thenAccept(jsonReceivingHistory -> future.complete(jsonReceivingHistory.mapTo(ReceivingHistoryCollection.class)))
         .exceptionally(t -> {
-          logger.error("Error getting receiving history", t);
+          logger.error("Error retrtieving receiving history", t);
           future.completeExceptionally(t.getCause());
           return null;
         });

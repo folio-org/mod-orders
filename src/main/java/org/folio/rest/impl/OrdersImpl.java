@@ -303,8 +303,10 @@ public class OrdersImpl implements Orders {
   @Validate
   public void getOrdersReceivingHistory(int offset, int limit, String query, String lang,
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
     GetReceivingHistoryHelper helper= new GetReceivingHistoryHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
+
     helper.getReceivingHistory(limit, offset, query)
     .thenAccept(receivingHistory -> {
       logger.info("Successfully retrieved receiving history: " + JsonObject.mapFrom(receivingHistory).encodePrettily());
