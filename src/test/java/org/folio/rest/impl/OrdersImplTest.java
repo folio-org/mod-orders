@@ -53,6 +53,7 @@ import java.util.stream.Stream;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.tools.utils.NetworkUtils;
@@ -88,6 +89,8 @@ import io.vertx.ext.web.handler.BodyHandler;
 @RunWith(VertxUnitRunner.class)
 public class OrdersImplTest {
 
+  private static final String BAD_REQUEST = "BadRequest";
+  private static final String ORDERS_RECEIVING_HISTORY_ENDPOINT = "/orders/receiving-history";
   private static final String INSTANCE_RECORD = "instance_record";
   private static final String HOLDINGS_RECORD = "holding_record";
   private static final String ITEM_RECORDS = "item_records";
@@ -145,6 +148,7 @@ public class OrdersImplTest {
   private static final String PO_LINE_ID_WITH_FUND_DISTRIBUTION_404_CODE = "f7223ce8-9e92-4c28-8fd9-097596053b7c";
   private static final String ORDER_ID_WITHOUT_PO_LINES = "50fb922c-3fa9-494e-a972-f2801f1b9fd1";
   private static final String ORDER_WITHOUT_WORKFLOW_STATUS = "41d56e59-46db-4d5e-a1ad-a178228913e5";
+  private static final String RECEIVING_HISTORY_PURCHASE_ORDER_ID = "0804ddec-6545-404a-b54d-a693f505681d";
 
   // API paths
   private final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
@@ -1901,7 +1905,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
-      .get("/orders/receiving-history")
+      .get(ORDERS_RECEIVING_HISTORY_ENDPOINT)
         .then()
           .statusCode(200)
           .extract()
@@ -1913,18 +1917,52 @@ public class OrdersImplTest {
   @Test
   public void testGetReceivingHistoryForPurchaseOrder() {
     logger.info("=== Test Get Receiving History - With purchase Order query ===");
+    String endpointQuery = String.format("%s?query=purchaseOrderId=%s", ORDERS_RECEIVING_HISTORY_ENDPOINT, RECEIVING_HISTORY_PURCHASE_ORDER_ID);
 
     final Response resp = RestAssured
       .with()
         .header(X_OKAPI_URL)
         .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
-      .get("/orders/receiving-history?query=purchaseOrderId="+"0804ddec-6545-404a-b54d-a693f505681d")
+      .get(endpointQuery)
         .then()
           .statusCode(200)
           .extract()
           .response();
 
     assertEquals(1, resp.getBody().as(ReceivingHistoryCollection.class).getTotalRecords().intValue());
+  }
+
+  @Test
+  public void testGetReceivingHistoryForPurchaseOrderWithError() {
+    logger.info("=== Test Get Receiving History - With purchase Order query Error===");
+    String endpointQuery = String.format("%s?query=purchaseOrderId=%s", ORDERS_RECEIVING_HISTORY_ENDPOINT, INTERNAL_SERVER_ERROR);
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
+      .get(endpointQuery)
+        .then()
+          .statusCode(500)
+          .extract()
+          .response();
+
+  }
+
+  @Test
+  public void testGetReceivingHistoryBadRequest() {
+    logger.info("=== Test Get Receiving History - With Bad Request");
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
+      .get(ORDERS_RECEIVING_HISTORY_ENDPOINT+"?query="+BAD_REQUEST)
+        .then()
+          .statusCode(400)
+          .extract()
+          .response();
+
   }
 
   private org.folio.rest.acq.model.PoLine getMockLine(String id) {
@@ -2233,9 +2271,15 @@ public class OrdersImplTest {
       String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
       try {
         JsonObject receivingHistory;
-        if (queryParam.contains("0804ddec-6545-404a-b54d-a693f505681d")) {
+        if (queryParam.contains(RECEIVING_HISTORY_PURCHASE_ORDER_ID)) {
           receivingHistory = new JsonObject(getMockData(RECEIVING_HISTORY_MOCK_DATA_PATH + "receivingHistory.json"));
-        } else {
+        } else if(queryParam.contains(INTERNAL_SERVER_ERROR)) {
+          throw new HttpException(500, "Exception in orders-storage module");
+        }
+        else if(queryParam.contains(BAD_REQUEST)) {
+          throw new HttpException(400, "QueryValidationException");
+        }
+        else {
           receivingHistory = new JsonObject();
           receivingHistory.put("receiving_history", new JsonArray());
           receivingHistory.put("total_records", 0);
@@ -2246,6 +2290,10 @@ public class OrdersImplTest {
         ctx.response()
           .setStatusCode(404)
           .end();
+      } catch (HttpException e) {
+        ctx.response()
+        .setStatusCode(e.getCode())
+        .end();
       }
     }
 
