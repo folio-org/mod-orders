@@ -32,7 +32,7 @@
     "createdDate": "2018-07-18T00:00:00.000",
     "createdByUserId": "28d102a2-d137-11e8-a8d5-f2801f1b9fd1"
   },
-  "po_lines": [
+  "compositePoLines": [
     {
       "id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
       "acquisition_method": "Purchase",

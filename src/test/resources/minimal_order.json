@@ -9,7 +9,7 @@
     "createdDate": "2010-10-08T03:53:00.000",
     "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
   },
-  "po_lines": [
+  "compositePoLines": [
     {
       "acquisition_method": "Purchase At Vendor System",
       "description": "ABCDEFGH",
