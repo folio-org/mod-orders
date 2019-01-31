@@ -65,6 +65,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.RestVerticle;
@@ -77,7 +78,6 @@ import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
 import org.folio.rest.tools.utils.NetworkUtils;
-import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -85,7 +85,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Table;
 
 import io.restassured.RestAssured;
@@ -290,7 +289,7 @@ public class OrdersImplTest {
 
 	  //Setup - store current date, month, year before setting DateOrdered
 	  Calendar cal = Calendar.getInstance();
-	  cal.setTime(DateTime.now().toDate());
+	  cal.setTime(new Date());
 	  int monthBeforeSetting = cal.get(Calendar.MONTH);
 	  int yearBeforeSetting = cal.get(Calendar.YEAR);
 	  int dateBeforeSetting = cal.get(Calendar.DATE);
@@ -387,7 +386,7 @@ public class OrdersImplTest {
 
 	  //Setup - store current date, month, year before setting DateOrdered
 	  Calendar cal = Calendar.getInstance();
-	  cal.setTime(DateTime.now().toDate());
+	  cal.setTime(new Date());
 	  int monthBeforeSetting = cal.get(Calendar.MONTH);
 	  int yearBeforeSetting = cal.get(Calendar.YEAR);
 	  int dateBeforeSetting = cal.get(Calendar.DATE);
@@ -997,7 +996,9 @@ public class OrdersImplTest {
     // MODORDERS-117 guarantee electronic resource for the second PO Line but set "create items" to false
     reqData.getPoLines().get(1).setOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE);
     reqData.getPoLines().get(1).getEresource().setCreateInventory(false);
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ID_FOR_PENDING_ORDER), JsonObject.mapFrom(reqData).toString(), "", 204);   
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ID_FOR_PENDING_ORDER), JsonObject.mapFrom(reqData).toString(), "", 204);
+
     int polCount = reqData.getPoLines().size();
 
     verifyInventoryInteraction(reqData, polCount - 1);
