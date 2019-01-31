@@ -190,6 +190,7 @@ public class OrdersImplTest {
   private static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private static final String MOCK_DATA_ROOT_PATH = "src/test/resources/";
   private static final String listedPrintMonographPath = MOCK_DATA_ROOT_PATH + "/po_listed_print_monograph.json";
+  private static final String listedPrintSerialPath = MOCK_DATA_ROOT_PATH + "/po_listed_print_serial.json";
   private static final String MINIMAL_ORDER_PATH = MOCK_DATA_ROOT_PATH + "/minimal_order.json";
   private static final String poCreationFailurePath = MOCK_DATA_ROOT_PATH + "/po_creation_failure.json";
   private static final String poLineCreationFailurePath = MOCK_DATA_ROOT_PATH + "/po_line_creation_failure.json";
@@ -798,6 +799,8 @@ public class OrdersImplTest {
 
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData.toString(), "", 204);
 
+    storageData.put("workflow_status", "Open");
+    reqData.put("workflow_status", "Open");
     verifyPoWithPoLinesUpdate(reqData, storageData);
   }
   
@@ -851,7 +854,7 @@ public class OrdersImplTest {
     assertEquals(CompositePurchaseOrder.WorkflowStatus.CLOSED.value(), storageUpdatedOrder.getWorkflowStatus().value());
 
   }
-
+  
   @Test
   public void testPutOrdersByIdWithIdMismatch() throws Exception {
     logger.info("=== Test Put Order By Id with id mismatch  ===");
@@ -1284,11 +1287,26 @@ public class OrdersImplTest {
     List<JsonObject> putResponse = MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT);
     assertEquals(true, putResponse.get(0).containsKey("dateOrdered"));
     assertNotNull(putResponse.get(0).getValue("dateOrdered"));
-    
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), reqData.getJsonArray(PO_LINES).size());
   }
 
+  @Test
+  public void testPutOrderWorkflowStatusOpenStorageAndRequest() throws IOException {
+    logger.info("=== Test Put Order By Id with PO lines and without PO lines in order from storage ===");
+
+    JsonObject reqData = new JsonObject(getMockData(listedPrintSerialPath));
+
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES, reqData.toString(), "", 204);
+
+    List<JsonObject> putResponse = MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT);
+    assertEquals(true, putResponse.get(0).containsKey("dateOrdered"));
+    assertNotNull(putResponse.get(0).getValue("dateOrdered"));
+    
+    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), reqData.getJsonArray(PO_LINES).size());
+  }
+  
   @Test
   public void testValidationOnPost() throws IOException {
     logger.info("=== Test validation Annotation on POST API ===");
