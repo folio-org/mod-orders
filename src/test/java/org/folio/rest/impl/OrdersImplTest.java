@@ -1281,6 +1281,10 @@ public class OrdersImplTest {
     reqData.put("workflow_status", "Open");
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES, reqData.toString(), "", 204);
 
+    List<JsonObject> putResponse = MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT);
+    assertEquals(true, putResponse.get(0).containsKey("dateOrdered"));
+    assertNotNull(putResponse.get(0).getValue("dateOrdered"));
+    
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), reqData.getJsonArray(PO_LINES).size());
   }
