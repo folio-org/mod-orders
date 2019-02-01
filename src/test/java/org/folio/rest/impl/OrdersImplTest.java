@@ -789,8 +789,8 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPutOrdersById() throws Exception {
-    logger.info("=== Test Put Order By Id ===");
+  public void testPutOrdersByIdWorkflowStatusOpenForStorageAndCurrentRequest() throws Exception {
+    logger.info("=== Test Put Order By Id workflow_status is Open from storage and workflow_status is Open in current request  ===");
 
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
@@ -855,7 +855,7 @@ public class OrdersImplTest {
     assertEquals(CompositePurchaseOrder.WorkflowStatus.CLOSED.value(), storageUpdatedOrder.getWorkflowStatus().value());
 
   }
-  
+
   @Test
   public void testPutOrdersByIdWithIdMismatch() throws Exception {
     logger.info("=== Test Put Order By Id with id mismatch  ===");
@@ -1278,8 +1278,8 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPutOrderByIdWithPoLinesInRequestAndNoPoLinesInStorage() throws IOException {
-    logger.info("=== Test Put Order By Id with PO lines and without PO lines in order from storage ===");
+  public void testPutOrderWorkflowStatusOpenCurrentStatusPending() throws IOException {
+    logger.info("=== Test Put Order By Id workflow_status is Open from storage and current status is Pending in request  ===");
 
     JsonObject reqData = new JsonObject(getMockData(listedPrintMonographPath));
     reqData.put("workflow_status", "Open");
@@ -1293,16 +1293,12 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPutOrderWorkflowStatusOpenStorageAndRequest() throws IOException {
-    logger.info("=== Test Put Order By Id with PO lines and without PO lines in order from storage ===");
+  public void testPutOrderWorkflowStatusOpenCurrentStatusOpen() throws IOException {
+    logger.info("=== Test Put Order By Id workflow_status is Open from storage and current status is Open in request ===");
 
     JsonObject reqData = new JsonObject(getMockData(listedPrintSerialPath));
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH_OPEN_WORKFLOW));
     String id = ordersList.getString(ID);
-    
-//    CompositePurchaseOrder putResponse = verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData.toString(), "", 204).as(CompositePurchaseOrder.class);
-//
-//    assertNotNull(putResponse.getDateOrdered());
     
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData.toString(), "", 204);
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
@@ -1310,13 +1306,11 @@ public class OrdersImplTest {
   }
   
   @Test
-  public void testPutOrderWorkflowStatusOpenStorageAndRequest1() throws IOException {
-    logger.info("=== Test Put Order By Id with PO lines and without PO lines in order from storage ===");
+  public void testPutOrderByIdWith404InvalidId() throws IOException {
+    logger.info("=== Test Put Order By Id for 404 with Invalid Id or Order not found ===");
     
     JsonObject reqData = new JsonObject(getMockData(listedPrintSerialPath));
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + "93f612a9-9a05-4eef-aac5-435be131454b", reqData.toString(), "text/plain", 404);
-
-
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + "93f612a9-9a05-4eef-aac5-435be131454b", reqData.toString(), TEXT_PLAIN, 404);
   }
   
   @Test
