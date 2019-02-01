@@ -50,6 +50,9 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -288,31 +291,15 @@ public class OrdersImplTest {
     reqData.getCompositePoLines().get(0).setOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
     // Set status to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-
-	  //Setup - store current date, month, year before setting DateOrdered
-	  Calendar cal = Calendar.getInstance();
-	  cal.setTime(new Date());
-	  int monthBeforeSetting = cal.get(Calendar.MONTH);
-	  int yearBeforeSetting = cal.get(Calendar.YEAR);
-	  int dateBeforeSetting = cal.get(Calendar.DATE);
+	  
+	  LocalDate now = LocalDate.now();
 	  
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
-    //Test - verify date, month, year after getting DateOrdered
-    Date getDateOrdered = resp.getDateOrdered();
+    LocalDate dateOrdered = resp.getDateOrdered().toInstant().atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDate();
     
-    Calendar getCal = Calendar.getInstance();
-    getCal.setTime(getDateOrdered);
-    int monthAfterSetting = getCal.get(Calendar.MONTH);
-    int yearAfterSetting = getCal.get(Calendar.YEAR);
-    int dateAfterSetting = getCal.get(Calendar.DATE);
-    
-    // Verify before and after match
-    assertNotNull(getDateOrdered);
-	  assertEquals(monthBeforeSetting, monthAfterSetting);
-	  assertEquals(yearBeforeSetting, yearAfterSetting);
-	  assertEquals(dateBeforeSetting, dateAfterSetting);
+    assertThat(dateOrdered, equalTo(now));
 	  
     logger.info(JsonObject.mapFrom(resp));
 
@@ -403,31 +390,15 @@ public class OrdersImplTest {
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     // MODORDERS-117 Setting OrderFormat to OTHER which means create nothing in inventory for the second PO Line
     reqData.getCompositePoLines().get(1).setOrderFormat(CompositePoLine.OrderFormat.OTHER);
-
-	  //Setup - store current date, month, year before setting DateOrdered
-	  Calendar cal = Calendar.getInstance();
-	  cal.setTime(new Date());
-	  int monthBeforeSetting = cal.get(Calendar.MONTH);
-	  int yearBeforeSetting = cal.get(Calendar.YEAR);
-	  int dateBeforeSetting = cal.get(Calendar.DATE);
 	  
+	  LocalDate now = LocalDate.now();
+    
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
     
-    //Test - verify date, month, year after getting DateOrdered
-    Date getDateOrdered = resp.getDateOrdered();
+    LocalDate dateOrdered = resp.getDateOrdered().toInstant().atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDate();
     
-    Calendar getCal = Calendar.getInstance();
-    getCal.setTime(getDateOrdered);
-    int monthAfterSetting = getCal.get(Calendar.MONTH);
-    int yearAfterSetting = getCal.get(Calendar.YEAR);
-    int dateAfterSetting = getCal.get(Calendar.DATE);
-    
-    // Verify before and after match
-    assertNotNull(getDateOrdered);
-	  assertEquals(monthBeforeSetting, monthAfterSetting);
-	  assertEquals(yearBeforeSetting, yearAfterSetting);
-	  assertEquals(dateBeforeSetting, dateAfterSetting);
+    assertThat(dateOrdered, equalTo(now));
     
     // Check that search of the existing instances and items was done for first PO line only
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
@@ -1276,48 +1247,6 @@ public class OrdersImplTest {
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     assertNull(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE));
   }
-
-//  @Test
-//  public void testPutOrderWorkflowStatusOpenCurrentStatusPending() throws IOException {
-//    logger.info("=== Test Put Order By Id workflow_status is Open from storage and current status is Pending in request  ===");
-//
-//    JsonObject reqData = new JsonObject(getMockData(listedPrintMonographPath));
-//    reqData.put("workflow_status", "Open");
-//    verifyPut(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES, reqData.toString(), "", 204);
-//
-//    List<JsonObject> putResponse = MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT);
-//    assertEquals(true, putResponse.get(0).containsKey("dateOrdered"));
-//    assertNotNull(putResponse.get(0).getValue("dateOrdered"));
-//    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
-//    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), reqData.getJsonArray(PO_LINES).size());
-//  }
-
-//  @Test
-//  public void testPutOrderWorkflowStatusOpenCurrentStatusOpen() throws IOException {
-//    logger.info("=== Test Put Order By Id workflow_status is Open from storage and current status is Open in request ===");
-//
-//    JsonObject reqData = new JsonObject(getMockData(listedPrintSerialPath));
-//    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH_OPEN_WORKFLOW));
-//    String id = ordersList.getString(ID);
-//    
-//    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData.toString(), "", 204);
-//    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
-//    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), reqData.getJsonArray(PO_LINES).size());
-//  }
-  
-//  @Test
-//  public void testPutOrderWithEmptyPoLine() throws IOException {
-//    logger.info("=== Test Put Order By Id with empty PoLine ===");
-//
-//    // Get Open Order
-//    CompositePurchaseOrder reqData = new JsonObject(getMockData(ordersEmptyPoLine)).mapTo(CompositePurchaseOrder.class);
-//    reqData.setId(ID_FOR_PENDING_ORDER);
-//    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-//
-//    String path = String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId());
-//
-//    verifyPut(path, JsonObject.mapFrom(reqData).toString(), TEXT_PLAIN, 500);
-//  }
 
   @Test
   public void testPutOrderByIdWith404InvalidId() throws IOException {
