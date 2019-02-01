@@ -7,8 +7,8 @@ import java.util.concurrent.CompletionStage;
 import javax.ws.rs.core.Response;
 
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.resource.Orders.GetOrdersOrderLinesByIdResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -26,8 +26,8 @@ public class GetPOLineByIdHelper extends AbstractHelper {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
-  public CompletableFuture<PoLine> getPOLineByPOLineId(String polineId) {
-    CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
+  public CompletableFuture<CompositePoLine> getPOLineByPOLineId(String polineId) {
+    CompletableFuture<CompositePoLine> future = new VertxCompletableFuture<>(ctx);
     HelperUtils.getPoLineById(polineId, lang, httpClient,ctx, okapiHeaders, logger)
       .thenCompose(this::populateCompositeLine)
       .thenAccept(future::complete)
@@ -39,7 +39,7 @@ public class GetPOLineByIdHelper extends AbstractHelper {
     return future;
   }
 
-  private CompletionStage<PoLine> populateCompositeLine(JsonObject poline) {
+  private CompletionStage<CompositePoLine> populateCompositeLine(JsonObject poline) {
     return HelperUtils.operateOnPoLine(HttpMethod.GET, poline, httpClient, ctx, okapiHeaders, logger);
   }
 

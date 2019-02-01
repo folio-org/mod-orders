@@ -125,6 +125,14 @@
           ]
         },
         {
+          "methods": ["GET"],
+          "pathPattern": "/orders/order-lines",
+          "permissionsRequired": ["orders.po-lines.collection.get"],
+          "modulePermissions": [
+            "orders-storage.po_lines.collection.get"
+          ]
+        },
+        {
           "methods": ["POST"],
           "pathPattern": "/orders/order-lines",
           "permissionsRequired": ["orders.po-lines.item.post"],
@@ -384,6 +392,11 @@
       "description": "Delete an existing order"
     },
     {
+      "permissionName": "orders.po-lines.collection.get",
+      "displayName": "Orders - get collection of PO lines",
+      "description": "Get collection of PO lines"
+    },
+    {
       "permissionName": "orders.po-lines.item.post",
       "displayName": "Orders - create a new PO line",
       "description": "Create a new PO line"
@@ -438,6 +451,7 @@
         "orders.item.get",
         "orders.item.put",
         "orders.item.delete",
+        "orders.po-lines.collection.get",
         "orders.po-lines.item.post",
         "orders.po-lines.item.get",
         "orders.po-lines.item.put",

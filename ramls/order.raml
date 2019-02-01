@@ -9,10 +9,12 @@ documentation:
     content: <b>API for managing purchase orders</b>
 
 types:
-  composite_purchase_order: !include acq-models/composite_purchase_order.json
-  purchase_orders: !include acq-models/mod-orders-storage/schemas/purchase_order_collection.json
+  composite-purchase-order: !include acq-models/composite_purchase_order.json
+  purchase-orders: !include acq-models/mod-orders-storage/schemas/purchase_order_collection.json
   purchase_order: !include acq-models/mod-orders-storage/schemas/purchase_order.json
-  po_line: !include acq-models/composite_po_line.json
+  composite-po-line: !include acq-models/composite_po_line.json
+  po-line-collection: !include acq-models/mod-orders-storage/schemas/po_line_collection.json
+  po-line: !include acq-models/mod-orders-storage/schemas/po_line.json
   checkin-collection: !include acq-models/mod-orders/schemas/checkinCollection.json
   receiving-collection: !include acq-models/mod-orders/schemas/receivingCollection.json
   receiving-results: !include acq-models/mod-orders/schemas/receivingResults.json
@@ -41,8 +43,6 @@ resourceTypes:
   collection: !include raml-util/rtypes/collection.raml
   collection-item: !include raml-util/rtypes/item-collection.raml
   collection-get: !include raml-util/rtypes/collection-get.raml
-  # The post-empty-body.raml does not declare request body but it can be defined when this resource type is used
-  post-item: !include raml-util/rtypes/post-empty-body.raml
   post-with-200: !include rtypes/post-json-body-200.raml
 
 /orders:
@@ -52,8 +52,8 @@ resourceTypes:
       collection:
         exampleCollection: !include acq-models/mod-orders-storage/examples/purchase_order_collection.sample
         exampleItem: !include acq-models/examples/composite_purchase_order.sample
-        schemaCollection: purchase_orders
-        schemaItem: composite_purchase_order
+        schemaCollection: purchase-orders
+        schemaItem: composite-purchase-order
     is: [validate]
     get:
       is: [pageable, searchable: {description: "using CQL (indexes for purchase orders)", example: "workflow_status==\"Pending\""} ]
@@ -68,7 +68,7 @@ resourceTypes:
       type:
         collection-item:
           exampleItem: !include acq-models/examples/composite_purchase_order.sample
-          schema: composite_purchase_order
+          schema: composite-purchase-order
       is: [validate]
       get:
         description: Return a purchase order with given {id}
@@ -91,20 +91,17 @@ resourceTypes:
     displayName: Purchase Order Lines
     description: Manage purchase order (PO) lines
     type:
-      # Using `post-item` resource type because at the moment only POST is required. In case GET becomes also required, the `collection` resource type should be used instead
-      post-item:
+      collection:
+        exampleCollection: !include acq-models/mod-orders-storage/examples/po_line_collection.sample
         exampleItem: !include acq-models/examples/composite_po_line.sample
-        schema: po_line
+        schemaCollection: po-line-collection
+        schemaItem: composite-po-line
+    is: [validate]
+    get:
+      is: [pageable, searchable: {description: "using CQL (indexes for PO lines)", example: "payment_status==\"Cancelled\""} ]
     post:
-      displayName: Create a new purchace order line
-      description: Post a purchase order (PO) line
-      is: [validate, auth]
-      body:
-        application/json:
-          type: po_line
-          example:
-            strict: false
-            value: !include acq-models/examples/composite_po_line.sample
+      description: Post a PO lines to corresponding PO
+      is: [auth]
     /{id}:
       displayName: Purchase Order Line
       description: Manage purchase order line (PO line) by id
@@ -115,7 +112,7 @@ resourceTypes:
       type:
         collection-item:
           exampleItem: !include acq-models/examples/composite_po_line.sample
-          schema: po_line
+          schema: composite-po-line
       is: [validate]
       get:
         description: Return a purchase order line with given {id}

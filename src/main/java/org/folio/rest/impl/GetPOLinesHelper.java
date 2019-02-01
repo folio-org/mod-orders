@@ -1,46 +1,45 @@
 package org.folio.rest.impl;
 
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
-import org.folio.rest.jaxrs.resource.Orders.GetOrdersCompositeOrdersResponse;
+import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.resource.Orders.GetOrdersOrderLinesResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import javax.ws.rs.core.Response;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 
-public class GetOrdersHelper extends AbstractHelper {
+public class GetPOLinesHelper extends AbstractHelper {
+  public static final String GET_PO_LINES_BY_QUERY = resourcesPath(PO_LINES) + "?limit=%s&offset=%s%s&lang=%s";
 
-  public static final String GET_PURCHASE_ORDERS_BY_QUERY = resourcesPath(PURCHASE_ORDER) + "?limit=%s&offset=%s%s&lang=%s";
-
-  GetOrdersHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
-                  Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
+  GetPOLinesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
+                   Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
 
-  public CompletableFuture<PurchaseOrders> getPurchaseOrders(int limit, int offset, String query) {
-    CompletableFuture<PurchaseOrders> future = new VertxCompletableFuture<>(ctx);
-
+  public CompletableFuture<PoLineCollection> getPOLines(int limit, int offset, String query) {
+    CompletableFuture<PoLineCollection> future = new VertxCompletableFuture<>(ctx);
     try {
       String queryParam = isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
-      String endpoint = String.format(GET_PURCHASE_ORDERS_BY_QUERY, limit, offset, queryParam, lang);
+      String endpoint = String.format(GET_PO_LINES_BY_QUERY, limit, offset, queryParam, lang);
       HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-        .thenAccept(jsonOrders -> future.complete(jsonOrders.mapTo(PurchaseOrders.class)))
+        .thenAccept(jsonOrders -> future.complete(jsonOrders.mapTo(PoLineCollection.class)))
         .exceptionally(t -> {
-          logger.error("Error getting orders", t);
+          logger.error("Error getting PO lines", t);
           future.completeExceptionally(t.getCause());
           return null;
         });
@@ -57,13 +56,13 @@ public class GetOrdersHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 400:
-        result = GetOrdersCompositeOrdersResponse.respond400WithTextPlain(error.getMessage());
+        result = GetOrdersOrderLinesResponse.respond400WithTextPlain(error.getMessage());
         break;
       case 401:
-        result = GetOrdersCompositeOrdersResponse.respond401WithTextPlain(error.getMessage());
+        result = GetOrdersOrderLinesResponse.respond401WithTextPlain(error.getMessage());
         break;
       default:
-        result = GetOrdersCompositeOrdersResponse.respond500WithTextPlain(error.getMessage());
+        result = GetOrdersOrderLinesResponse.respond500WithTextPlain(error.getMessage());
     }
     return result;
   }
