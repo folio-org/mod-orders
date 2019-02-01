@@ -19,10 +19,7 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.PO_NUMBER_ALREADY_EXISTS;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderByPONumber;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond204;
-import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond400WithTextPlain;
-import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond422WithApplicationJson;
-import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond500WithTextPlain;
+import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.*;
 
 public class PoNumberHelper extends AbstractHelper {
 
@@ -60,13 +57,13 @@ public class PoNumberHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 400:
-        result = respond400WithTextPlain(error.getMessage());
+        result = respond400WithApplicationJson(withErrors(error));
         break;
       case 422:
         result = respond422WithApplicationJson(withErrors(error));
         break;
       default:
-        result = respond500WithTextPlain(error.getMessage());
+        result = respond500WithApplicationJson(withErrors(error));
     }
     return result;
   }

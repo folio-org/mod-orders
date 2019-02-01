@@ -378,10 +378,11 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 
   @Override
   protected Response buildErrorResponse(int code, Error error) {
+    Errors errors = withErrors(error);
     final Response result;
     switch (code) {
       case 404:
-        result = respond404WithTextPlain(error.getMessage());
+        result = respond404WithTextPlain(errors);
         break;
       case 422:
         result = respond422WithApplicationJson(withErrors(error));
