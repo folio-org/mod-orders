@@ -98,6 +98,8 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
+import javax.ws.rs.core.Response.Status;
+
 
 @RunWith(VertxUnitRunner.class)
 public class OrdersImplTest {
@@ -166,6 +168,7 @@ public class OrdersImplTest {
   private final static String COMPOSITE_ORDERS_BY_ID_PATH = "/orders/composite-orders/%s";
   private final static String LINES_PATH = "/orders/order-lines";
   private final static String LINE_BY_ID_PATH = "/orders/order-lines/%s";
+  private static final String PONUMBER_VALIDATE_PATH = "/orders/po-number/validate";
 
   // Mock data paths
   private static final String BASE_MOCK_DATA_PATH = "mockdata/";
@@ -191,14 +194,14 @@ public class OrdersImplTest {
   /** The PO Line with minimal required content */
   private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "/minimalContent.json";
 
-  private static final String PONUMBER_VALIDATE_PATH = "/orders/po-number/validate";
-
+  private static final String QUERY_PARAM_NAME = "query";
   private static final String ID = "id";
   private static final String PURCHASE_ORDER_ID = "purchase_order_id";
   private static final String INCORRECT_LANG_PARAMETER = "'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\"";
   private static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
   private static final String EXISTING_PO_NUMBER = "oldPoNumber";
   private static final String NONEXISTING_PO_NUMBER = "newPoNumber";
+  private static final String BAD_QUERY = "unprocessableQuery";
 
   private static final Set<String> REQUIRED_PO_LINE_PROPERTIES = ImmutableSet.of(SOURCE);
 
@@ -1870,6 +1873,66 @@ public class OrdersImplTest {
   }
 
   @Test
+  public void testGetOrdersBadQuery() {
+    logger.info("=== Test Get Orders by query - unprocessable query to emulate 400 from storage ===");
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
+        .param(QUERY_PARAM_NAME, BAD_QUERY)
+      .get(COMPOSITE_ORDERS_PATH)
+        .then()
+          .statusCode(400)
+          .contentType(TEXT_PLAIN);
+  }
+
+  @Test
+  public void testGetOrdersInternalServerError() {
+    logger.info("=== Test Get Orders by query - emulating 500 from storage ===");
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
+        .param(QUERY_PARAM_NAME, ID_FOR_INTERNAL_SERVER_ERROR)
+      .get(COMPOSITE_ORDERS_PATH)
+        .then()
+          .statusCode(500)
+          .contentType(TEXT_PLAIN);
+  }
+
+  @Test
+  public void testGetOrderLinessBadQuery() {
+    logger.info("=== Test Get Order Lines by query - unprocessable query to emulate 400 from storage ===");
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
+        .param(QUERY_PARAM_NAME, BAD_QUERY)
+      .get(LINES_PATH)
+        .then()
+          .statusCode(400)
+          .contentType(TEXT_PLAIN);
+  }
+
+  @Test
+  public void testGetOrderLinesInternalServerError() {
+    logger.info("=== Test Get Order Lines by query - emulating 500 from storage ===");
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
+        .param(QUERY_PARAM_NAME, ID_FOR_INTERNAL_SERVER_ERROR)
+      .get(LINES_PATH)
+        .then()
+          .statusCode(500)
+          .contentType(TEXT_PLAIN);
+  }
+
+  @Test
   public void testGetOrderPOLinesByPoId() {
     logger.info("=== Test Get Orders lines - With empty query ===");
 
@@ -2274,50 +2337,59 @@ public class OrdersImplTest {
     }
 
     private void handleGetPoLines(RoutingContext ctx) {
-      logger.info("got: " + ctx.request().path());
-      String id = ctx.request().getParam("query").split("purchase_order_id==")[1];
-      String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
+      logger.info("handleGetPoLines got: " + ctx.request().path());
 
-      if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
-        serverResponse(ctx, 500, TEXT_PLAIN, INTERNAL_SERVER_ERROR);
+      String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+      if (queryParam.contains(BAD_QUERY)) {
+        serverResponse(ctx, 400, TEXT_PLAIN, Status.BAD_REQUEST.getReasonPhrase());
+      } else if (queryParam.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
+        serverResponse(ctx, 500, TEXT_PLAIN, Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
       } else {
-        try {
-          if (id.equals(ORDER_ID_WITH_PO_LINES)) {
-            JsonObject po_lines = new JsonObject(getMockData(POLINES_COLLECTION));
-            serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encodePrettily());
-            return;
-          }
-          JsonObject compPO = new JsonObject(getMockData(String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id)));
-          JsonArray lines = compPO.getJsonArray(COMPOSITE_PO_LINES);
-          JsonObject po_lines = new JsonObject();
-          if (lines == null) {
-            po_lines.put(PO_LINES, new JsonArray())
-              .put("total_records", 0)
-              .put("first", 0)
-              .put("last", 0);
-          } else {
-            lines.forEach(l -> {
-              JsonObject line = (JsonObject) l;
-              replaceObjectById(line, ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, SOURCE, VENDOR_DETAIL);
-              replaceObjectsByIds(line, ALERTS, CLAIMS, FUND_DISTRIBUTION);
-            });
+        String id = queryParam.split("purchase_order_id==")[1];
+        String tenant = ctx.request()
+                           .getHeader(OKAPI_HEADER_TENANT);
 
-            po_lines.put(PO_LINES, lines)
-              .put("first", lines.isEmpty() ? 0 : 1)
-              .put("last", lines.size());
-            if (EMPTY_CONFIG_TENANT.equals(tenant)) {
-              po_lines.put(TOTAL_RECORDS, Integer.parseInt(DEFAULT_POLINE_LIMIT));
-            } else {
-              po_lines.put(TOTAL_RECORDS, lines.size());
+        if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
+          serverResponse(ctx, 500, TEXT_PLAIN, INTERNAL_SERVER_ERROR);
+        } else {
+          try {
+            if (id.equals(ORDER_ID_WITH_PO_LINES)) {
+              JsonObject po_lines = new JsonObject(getMockData(POLINES_COLLECTION));
+              serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encodePrettily());
+              return;
             }
+            JsonObject compPO = new JsonObject(getMockData(String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id)));
+            JsonArray lines = compPO.getJsonArray(COMPOSITE_PO_LINES);
+            JsonObject po_lines = new JsonObject();
+            if (lines == null) {
+              po_lines.put(PO_LINES, new JsonArray())
+                      .put("total_records", 0)
+                      .put("first", 0)
+                      .put("last", 0);
+            } else {
+              lines.forEach(l -> {
+                JsonObject line = (JsonObject) l;
+                replaceObjectById(line, ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, SOURCE, VENDOR_DETAIL);
+                replaceObjectsByIds(line, ALERTS, CLAIMS, FUND_DISTRIBUTION);
+              });
+
+              po_lines.put(PO_LINES, lines)
+                      .put("first", lines.isEmpty() ? 0 : 1)
+                      .put("last", lines.size());
+              if (EMPTY_CONFIG_TENANT.equals(tenant)) {
+                po_lines.put(TOTAL_RECORDS, Integer.parseInt(DEFAULT_POLINE_LIMIT));
+              } else {
+                po_lines.put(TOTAL_RECORDS, lines.size());
+              }
+            }
+
+
+            logger.info(po_lines.encodePrettily());
+
+            serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encodePrettily());
+          } catch (IOException e) {
+            serverResponse(ctx, 404, TEXT_PLAIN, id);
           }
-
-
-          logger.info(po_lines.encodePrettily());
-
-          serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encodePrettily());
-        } catch (IOException e) {
-          serverResponse(ctx, 404, TEXT_PLAIN, id);
         }
       }
     }
@@ -2506,27 +2578,32 @@ public class OrdersImplTest {
 
     private void handleGetPurchaseOrderByQuery(RoutingContext ctx) {
 
-      JsonObject po;
-      po = new JsonObject();
       String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
-      addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
-      final String PO_NUMBER_QUERY = "po_number==";
-      switch (queryParam) {
-        case PO_NUMBER_QUERY + EXISTING_PO_NUMBER:
-          po.put(TOTAL_RECORDS, 1);
-          break;
-        case PO_NUMBER_QUERY + NONEXISTING_PO_NUMBER:
-          po.put(TOTAL_RECORDS, 0);
-          break;
-        case StringUtils.EMPTY:
-          po.put(TOTAL_RECORDS, 3);
-          break;
-        default:
-          //modify later as needed
-          po.put(TOTAL_RECORDS, 0);
+      if (queryParam.contains(BAD_QUERY)) {
+        serverResponse(ctx, 400, TEXT_PLAIN, Status.BAD_REQUEST.getReasonPhrase());
+      } else if (queryParam.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
+        serverResponse(ctx, 500, TEXT_PLAIN, Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
+      } else {
+        JsonObject po = new JsonObject();
+        addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
+        final String PO_NUMBER_QUERY = "po_number==";
+        switch (queryParam) {
+          case PO_NUMBER_QUERY + EXISTING_PO_NUMBER:
+            po.put(TOTAL_RECORDS, 1);
+            break;
+          case PO_NUMBER_QUERY + NONEXISTING_PO_NUMBER:
+            po.put(TOTAL_RECORDS, 0);
+            break;
+          case StringUtils.EMPTY:
+            po.put(TOTAL_RECORDS, 3);
+            break;
+          default:
+            //modify later as needed
+            po.put(TOTAL_RECORDS, 0);
+        }
+        addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
+        serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
       }
-      addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
-      serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
     }
 
     private void handlePostPurchaseOrder(RoutingContext ctx) {

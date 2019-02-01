@@ -12,7 +12,6 @@ import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Details;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
