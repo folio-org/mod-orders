@@ -10,7 +10,7 @@
   "total_items": 3,
   "vendor": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflow_status": "Pending",
-  "po_lines": [
+  "compositePoLines": [
     {
       "id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1",
       "acquisition_method": "Purchase",

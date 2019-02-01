@@ -14,10 +14,10 @@ import java.util.concurrent.CompletableFuture;
 import javax.ws.rs.core.Response;
 
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.resource.Orders.PostOrdersCompositeOrdersResponse;
 import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -90,7 +90,7 @@ public class PostOrdersHelper extends AbstractHelper {
         })
         .thenCompose(v -> handlePoLines(compPO))
         .thenAccept(lines -> {
-          compPO.setPoLines(lines);
+          compPO.setCompositePoLines(lines);
           compPO.setAdjustment(HelperUtils.calculateAdjustment(lines));
         })
         .thenCompose(v -> {
@@ -111,11 +111,11 @@ public class PostOrdersHelper extends AbstractHelper {
     return future;
   }
 
-  private CompletableFuture<List<PoLine>> handlePoLines(CompositePurchaseOrder compPO) {
-    List<PoLine> lines = new ArrayList<>(compPO.getPoLines().size());
+  private CompletableFuture<List<CompositePoLine>> handlePoLines(CompositePurchaseOrder compPO) {
+    List<CompositePoLine> lines = new ArrayList<>(compPO.getCompositePoLines().size());
     List<CompletableFuture<Void>> futures = new ArrayList<>();
-    for (int i = 0; i < compPO.getPoLines().size(); i++) {
-      PoLine compPOL = compPO.getPoLines().get(i);
+    for (int i = 0; i < compPO.getCompositePoLines().size(); i++) {
+      CompositePoLine compPOL = compPO.getCompositePoLines().get(i);
       compPOL.setPurchaseOrderId(compPO.getId());
       compPOL.setPoLineNumber(compPO.getPoNumber() + "-" + (i + 1));
 
