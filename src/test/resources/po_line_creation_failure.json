@@ -1,6 +1,6 @@
 {
   "po_number": "TESTDATA0123",
-  "po_lines": [
+  "compositePoLines": [
     {
       "po_line_number": "8675309-1",
       "source": { "code": "FOLIO" }
