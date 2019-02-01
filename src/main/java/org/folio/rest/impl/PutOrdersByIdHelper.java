@@ -96,9 +96,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
    */
   public CompletableFuture<Void> openOrder(CompositePurchaseOrder compPO) {
     compPO.setWorkflowStatus(OPEN);
-    if (compPO.getWorkflowStatus() == OPEN) {
-    	compPO.setDateOrdered(new Date());
-    }
+    compPO.setDateOrdered(new Date());
     return updateInventory(compPO)
       .thenCompose(this::updateOrderSummary);
   }
