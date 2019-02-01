@@ -50,9 +50,14 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -98,6 +103,8 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+
+import javax.ws.rs.core.Response.Status;
 
 
 @RunWith(VertxUnitRunner.class)
@@ -167,6 +174,7 @@ public class OrdersImplTest {
   private final static String COMPOSITE_ORDERS_BY_ID_PATH = "/orders/composite-orders/%s";
   private final static String LINES_PATH = "/orders/order-lines";
   private final static String LINE_BY_ID_PATH = "/orders/order-lines/%s";
+  private static final String PONUMBER_VALIDATE_PATH = "/orders/po-number/validate";
 
   // Mock data paths
   private static final String BASE_MOCK_DATA_PATH = "mockdata/";
@@ -183,8 +191,9 @@ public class OrdersImplTest {
   private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
   private static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private static final String MOCK_DATA_ROOT_PATH = "src/test/resources/";
-  private static final String listedPrintMonographPath = MOCK_DATA_ROOT_PATH + "/po_listed_print_monograph.json";
   private static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "/po_line_collection.json";
+  private static final String listedPrintMonographPath = MOCK_DATA_ROOT_PATH + "/po_listed_print_monograph.json";
+  private static final String listedPrintSerialPath = MOCK_DATA_ROOT_PATH + "/po_listed_print_serial.json";
   private static final String MINIMAL_ORDER_PATH = MOCK_DATA_ROOT_PATH + "/minimal_order.json";
   private static final String poCreationFailurePath = MOCK_DATA_ROOT_PATH + "/po_creation_failure.json";
   private static final String poLineCreationFailurePath = MOCK_DATA_ROOT_PATH + "/po_line_creation_failure.json";
@@ -192,14 +201,14 @@ public class OrdersImplTest {
   /** The PO Line with minimal required content */
   private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "/minimalContent.json";
 
-  private static final String PONUMBER_VALIDATE_PATH = "/orders/po-number/validate";
-
+  private static final String QUERY_PARAM_NAME = "query";
   private static final String ID = "id";
   private static final String PURCHASE_ORDER_ID = "purchase_order_id";
   private static final String INCORRECT_LANG_PARAMETER = "'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\"";
   private static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
   private static final String EXISTING_PO_NUMBER = "oldPoNumber";
   private static final String NONEXISTING_PO_NUMBER = "newPoNumber";
+  private static final String BAD_QUERY = "unprocessableQuery";
 
   private static final Set<String> REQUIRED_PO_LINE_PROPERTIES = ImmutableSet.of(SOURCE);
 
@@ -281,10 +290,15 @@ public class OrdersImplTest {
     reqData.getCompositePoLines().get(0).setOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
     // Set status to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-
+	  
+	  LocalDate now = LocalDate.now();
+	  
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
+    LocalDate dateOrdered = resp.getDateOrdered().toInstant().atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDate();
+    assertThat(dateOrdered, equalTo(now));
+	  
     logger.info(JsonObject.mapFrom(resp));
 
     String poId = resp.getId();
@@ -345,6 +359,24 @@ public class OrdersImplTest {
   }
 
   @Test
+  public void testDateOrderedIsNotSetForPendingOrder() throws Exception {
+    logger.info("=== Test Put Order By Id to change status of Order to Open - inventory interaction required only for first POL ===");
+
+    // Get Open Order
+    CompositePurchaseOrder reqData = new JsonObject(getMockData(listedPrintMonographPath)).mapTo(CompositePurchaseOrder.class);
+    // Make sure that mock po has 2 po lines
+    assertEquals(2, reqData.getCompositePoLines().size());
+    // Make sure that Order moves to Pending
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
+
+    final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    // Verify dateOrdered is not set because Workflow status is not OPEN
+    assertNull(resp.getDateOrdered());
+  }
+
+  @Test
   public void testPostOpenOrderInventoryUpdateOnlyForFirstPOL() throws Exception {
     logger.info("=== Test Put Order By Id to change status of Order to Open - inventory interaction required only for first POL ===");
 
@@ -356,10 +388,15 @@ public class OrdersImplTest {
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     // MODORDERS-117 Setting OrderFormat to OTHER which means create nothing in inventory for the second PO Line
     reqData.getCompositePoLines().get(1).setOrderFormat(CompositePoLine.OrderFormat.OTHER);
-
+	  
+	  LocalDate now = LocalDate.now();
+    
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
-
+    
+    LocalDate dateOrdered = resp.getDateOrdered().toInstant().atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDate();
+    assertThat(dateOrdered, equalTo(now));
+    
     // Check that search of the existing instances and items was done for first PO line only
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
     List<JsonObject> holdingsSearches = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
@@ -720,8 +757,8 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPutOrdersById() throws Exception {
-    logger.info("=== Test Put Order By Id ===");
+  public void testPutOrdersByIdWorkflowStatusOpenForStorageAndCurrentRequest() throws Exception {
+    logger.info("=== Test Put Order By Id workflow_status is Open from storage and workflow_status is Open in current request  ===");
 
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
@@ -731,9 +768,11 @@ public class OrdersImplTest {
 
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData.toString(), "", 204);
 
+    storageData.put("workflow_status", "Open");
+    reqData.put("workflow_status", "Open");
     verifyPoWithPoLinesUpdate(reqData, storageData);
   }
-
+  
   private void verifyPoWithPoLinesUpdate(JsonObject reqData, JsonObject storageData) {
     JsonArray poLinesFromRequest = reqData.getJsonArray(COMPOSITE_PO_LINES);
     JsonArray poLinesFromStorage = storageData.getJsonArray(COMPOSITE_PO_LINES);
@@ -1192,6 +1231,19 @@ public class OrdersImplTest {
   }
 
   @Test
+  public void testPutOrderByIdWithPoLinesInRequestAndNoPoLinesInStorage() throws IOException {
+    logger.info("=== Test Put Order By Id with PO lines and without PO lines in order from storage ===");
+
+    JsonObject reqData = new JsonObject(getMockData(listedPrintMonographPath));
+
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES, reqData.toString(), "", 204);
+
+    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), reqData.getJsonArray(COMPOSITE_PO_LINES).size());
+
+  }
+  
+  @Test
   public void testPutOrderByIdWithoutPoLinesInRequestDoesNotDeletePoLinesFromStorage() throws IOException {
     logger.info("=== Test Put Order By Id without PO lines doesn't delete lines from storage ===");
 
@@ -1207,18 +1259,13 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPutOrderByIdWithPoLinesInRequestAndNoPoLinesInStorage() throws IOException {
-    logger.info("=== Test Put Order By Id with PO lines and without PO lines in order from storage ===");
-
-    JsonObject reqData = new JsonObject(getMockData(listedPrintMonographPath));
-
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES, reqData.toString(), "", 204);
-
-    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
-    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), reqData.getJsonArray(COMPOSITE_PO_LINES).size());
-
+  public void testPutOrderByIdWith404InvalidId() throws IOException {
+    logger.info("=== Test Put Order By Id for 404 with Invalid Id or Order not found ===");
+    
+    JsonObject reqData = new JsonObject(getMockData(listedPrintSerialPath));
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + "93f612a9-9a05-4eef-aac5-435be131454b", reqData.toString(), TEXT_PLAIN, 404);
   }
-
+  
   @Test
   public void testValidationOnPost() throws IOException {
     logger.info("=== Test validation Annotation on POST API ===");
@@ -1871,6 +1918,66 @@ public class OrdersImplTest {
   }
 
   @Test
+  public void testGetOrdersBadQuery() {
+    logger.info("=== Test Get Orders by query - unprocessable query to emulate 400 from storage ===");
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
+        .param(QUERY_PARAM_NAME, BAD_QUERY)
+      .get(COMPOSITE_ORDERS_PATH)
+        .then()
+          .statusCode(400)
+          .contentType(TEXT_PLAIN);
+  }
+
+  @Test
+  public void testGetOrdersInternalServerError() {
+    logger.info("=== Test Get Orders by query - emulating 500 from storage ===");
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
+        .param(QUERY_PARAM_NAME, ID_FOR_INTERNAL_SERVER_ERROR)
+      .get(COMPOSITE_ORDERS_PATH)
+        .then()
+          .statusCode(500)
+          .contentType(TEXT_PLAIN);
+  }
+
+  @Test
+  public void testGetOrderLinessBadQuery() {
+    logger.info("=== Test Get Order Lines by query - unprocessable query to emulate 400 from storage ===");
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
+        .param(QUERY_PARAM_NAME, BAD_QUERY)
+      .get(LINES_PATH)
+        .then()
+          .statusCode(400)
+          .contentType(TEXT_PLAIN);
+  }
+
+  @Test
+  public void testGetOrderLinesInternalServerError() {
+    logger.info("=== Test Get Order Lines by query - emulating 500 from storage ===");
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
+        .param(QUERY_PARAM_NAME, ID_FOR_INTERNAL_SERVER_ERROR)
+      .get(LINES_PATH)
+        .then()
+          .statusCode(500)
+          .contentType(TEXT_PLAIN);
+  }
+
+  @Test
   public void testGetOrderPOLinesByPoId() {
     logger.info("=== Test Get Orders lines - With empty query ===");
 
@@ -2275,50 +2382,59 @@ public class OrdersImplTest {
     }
 
     private void handleGetPoLines(RoutingContext ctx) {
-      logger.info("got: " + ctx.request().path());
-      String id = ctx.request().getParam("query").split("purchase_order_id==")[1];
-      String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
+      logger.info("handleGetPoLines got: " + ctx.request().path());
 
-      if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
-        serverResponse(ctx, 500, TEXT_PLAIN, INTERNAL_SERVER_ERROR);
+      String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+      if (queryParam.contains(BAD_QUERY)) {
+        serverResponse(ctx, 400, TEXT_PLAIN, Status.BAD_REQUEST.getReasonPhrase());
+      } else if (queryParam.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
+        serverResponse(ctx, 500, TEXT_PLAIN, Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
       } else {
-        try {
-          if (id.equals(ORDER_ID_WITH_PO_LINES)) {
-            JsonObject po_lines = new JsonObject(getMockData(POLINES_COLLECTION));
-            serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encodePrettily());
-            return;
-          }
-          JsonObject compPO = new JsonObject(getMockData(String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id)));
-          JsonArray lines = compPO.getJsonArray(COMPOSITE_PO_LINES);
-          JsonObject po_lines = new JsonObject();
-          if (lines == null) {
-            po_lines.put(PO_LINES, new JsonArray())
-              .put("total_records", 0)
-              .put("first", 0)
-              .put("last", 0);
-          } else {
-            lines.forEach(l -> {
-              JsonObject line = (JsonObject) l;
-              replaceObjectById(line, ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, SOURCE, VENDOR_DETAIL);
-              replaceObjectsByIds(line, ALERTS, CLAIMS, FUND_DISTRIBUTION);
-            });
+        String id = queryParam.split("purchase_order_id==")[1];
+        String tenant = ctx.request()
+                           .getHeader(OKAPI_HEADER_TENANT);
 
-            po_lines.put(PO_LINES, lines)
-              .put("first", lines.isEmpty() ? 0 : 1)
-              .put("last", lines.size());
-            if (EMPTY_CONFIG_TENANT.equals(tenant)) {
-              po_lines.put(TOTAL_RECORDS, Integer.parseInt(DEFAULT_POLINE_LIMIT));
-            } else {
-              po_lines.put(TOTAL_RECORDS, lines.size());
+        if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
+          serverResponse(ctx, 500, TEXT_PLAIN, INTERNAL_SERVER_ERROR);
+        } else {
+          try {
+            if (id.equals(ORDER_ID_WITH_PO_LINES)) {
+              JsonObject po_lines = new JsonObject(getMockData(POLINES_COLLECTION));
+              serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encodePrettily());
+              return;
             }
+            JsonObject compPO = new JsonObject(getMockData(String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id)));
+            JsonArray lines = compPO.getJsonArray(COMPOSITE_PO_LINES);
+            JsonObject po_lines = new JsonObject();
+            if (lines == null) {
+              po_lines.put(PO_LINES, new JsonArray())
+                      .put("total_records", 0)
+                      .put("first", 0)
+                      .put("last", 0);
+            } else {
+              lines.forEach(l -> {
+                JsonObject line = (JsonObject) l;
+                replaceObjectById(line, ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, SOURCE, VENDOR_DETAIL);
+                replaceObjectsByIds(line, ALERTS, CLAIMS, FUND_DISTRIBUTION);
+              });
+
+              po_lines.put(PO_LINES, lines)
+                      .put("first", lines.isEmpty() ? 0 : 1)
+                      .put("last", lines.size());
+              if (EMPTY_CONFIG_TENANT.equals(tenant)) {
+                po_lines.put(TOTAL_RECORDS, Integer.parseInt(DEFAULT_POLINE_LIMIT));
+              } else {
+                po_lines.put(TOTAL_RECORDS, lines.size());
+              }
+            }
+
+
+            logger.info(po_lines.encodePrettily());
+
+            serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encodePrettily());
+          } catch (IOException e) {
+            serverResponse(ctx, 404, TEXT_PLAIN, id);
           }
-
-
-          logger.info(po_lines.encodePrettily());
-
-          serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encodePrettily());
-        } catch (IOException e) {
-          serverResponse(ctx, 404, TEXT_PLAIN, id);
         }
       }
     }
@@ -2507,27 +2623,32 @@ public class OrdersImplTest {
 
     private void handleGetPurchaseOrderByQuery(RoutingContext ctx) {
 
-      JsonObject po;
-      po = new JsonObject();
       String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
-      addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
-      final String PO_NUMBER_QUERY = "po_number==";
-      switch (queryParam) {
-        case PO_NUMBER_QUERY + EXISTING_PO_NUMBER:
-          po.put(TOTAL_RECORDS, 1);
-          break;
-        case PO_NUMBER_QUERY + NONEXISTING_PO_NUMBER:
-          po.put(TOTAL_RECORDS, 0);
-          break;
-        case StringUtils.EMPTY:
-          po.put(TOTAL_RECORDS, 3);
-          break;
-        default:
-          //modify later as needed
-          po.put(TOTAL_RECORDS, 0);
+      if (queryParam.contains(BAD_QUERY)) {
+        serverResponse(ctx, 400, TEXT_PLAIN, Status.BAD_REQUEST.getReasonPhrase());
+      } else if (queryParam.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
+        serverResponse(ctx, 500, TEXT_PLAIN, Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
+      } else {
+        JsonObject po = new JsonObject();
+        addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
+        final String PO_NUMBER_QUERY = "po_number==";
+        switch (queryParam) {
+          case PO_NUMBER_QUERY + EXISTING_PO_NUMBER:
+            po.put(TOTAL_RECORDS, 1);
+            break;
+          case PO_NUMBER_QUERY + NONEXISTING_PO_NUMBER:
+            po.put(TOTAL_RECORDS, 0);
+            break;
+          case StringUtils.EMPTY:
+            po.put(TOTAL_RECORDS, 3);
+            break;
+          default:
+            //modify later as needed
+            po.put(TOTAL_RECORDS, 0);
+        }
+        addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
+        serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
       }
-      addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
-      serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
     }
 
     private void handlePostPurchaseOrder(RoutingContext ctx) {
