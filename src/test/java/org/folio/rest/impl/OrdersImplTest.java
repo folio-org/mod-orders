@@ -1230,6 +1230,19 @@ public class OrdersImplTest {
   }
 
   @Test
+  public void testPutOrderByIdWithPoLinesInRequestAndNoPoLinesInStorage() throws IOException {
+    logger.info("=== Test Put Order By Id with PO lines and without PO lines in order from storage ===");
+
+    JsonObject reqData = new JsonObject(getMockData(listedPrintMonographPath));
+
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES, reqData.toString(), "", 204);
+
+    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
+    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), reqData.getJsonArray(COMPOSITE_PO_LINES).size());
+
+  }
+  
+  @Test
   public void testPutOrderByIdWithoutPoLinesInRequestDoesNotDeletePoLinesFromStorage() throws IOException {
     logger.info("=== Test Put Order By Id without PO lines doesn't delete lines from storage ===");
 
