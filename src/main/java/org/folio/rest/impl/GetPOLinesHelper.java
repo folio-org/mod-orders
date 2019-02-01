@@ -8,7 +8,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.PoLineCollection;
-import org.folio.rest.jaxrs.resource.Orders.GetOrdersCompositeOrdersResponse;
+import org.folio.rest.jaxrs.resource.Orders.GetOrdersOrderLinesResponse;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import javax.ws.rs.core.Response;
@@ -56,16 +56,13 @@ public class GetPOLinesHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 400:
-        result = GetOrdersCompositeOrdersResponse.respond400WithTextPlain(error.getMessage());
-        break;
-      case 500:
-        result = GetOrdersCompositeOrdersResponse.respond500WithTextPlain(error.getMessage());
+        result = GetOrdersOrderLinesResponse.respond400WithTextPlain(error.getMessage());
         break;
       case 401:
-        result = GetOrdersCompositeOrdersResponse.respond401WithTextPlain(error.getMessage());
+        result = GetOrdersOrderLinesResponse.respond401WithTextPlain(error.getMessage());
         break;
       default:
-        result = GetOrdersCompositeOrdersResponse.respond500WithTextPlain(error.getMessage());
+        result = GetOrdersOrderLinesResponse.respond500WithTextPlain(error.getMessage());
     }
     return result;
   }
