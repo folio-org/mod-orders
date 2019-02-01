@@ -191,6 +191,7 @@ public class OrdersImplTest {
   private static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private static final String MOCK_DATA_ROOT_PATH = "src/test/resources/";
   private static final String listedPrintMonographPath = MOCK_DATA_ROOT_PATH + "/po_listed_print_monograph.json";
+  private static final String ordersEmptyPoLine = MOCK_DATA_ROOT_PATH + "/ordersEmptyPoLine.json";
   private static final String listedPrintSerialPath = MOCK_DATA_ROOT_PATH + "/po_listed_print_serial.json";
   private static final String MINIMAL_ORDER_PATH = MOCK_DATA_ROOT_PATH + "/minimal_order.json";
   private static final String poCreationFailurePath = MOCK_DATA_ROOT_PATH + "/po_creation_failure.json";
@@ -1305,6 +1306,20 @@ public class OrdersImplTest {
     assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), reqData.getJsonArray(PO_LINES).size());
   }
   
+  @Test
+  public void testPutOrderWithEmptyPoLine() throws IOException {
+    logger.info("=== Test Put Order By Id workflow_status is Open from storage and current status is Open in request ===");
+
+    // Get Open Order
+    CompositePurchaseOrder reqData = new JsonObject(getMockData(ordersEmptyPoLine)).mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PENDING_ORDER);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    String path = String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId());
+
+    verifyPut(path, JsonObject.mapFrom(reqData).toString(), TEXT_PLAIN, 500);
+  }
+
   @Test
   public void testPutOrderByIdWith404InvalidId() throws IOException {
     logger.info("=== Test Put Order By Id for 404 with Invalid Id or Order not found ===");
