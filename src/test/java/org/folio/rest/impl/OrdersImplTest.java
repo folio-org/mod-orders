@@ -193,7 +193,6 @@ public class OrdersImplTest {
   private static final String MOCK_DATA_ROOT_PATH = "src/test/resources/";
   private static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "/po_line_collection.json";
   private static final String listedPrintMonographPath = MOCK_DATA_ROOT_PATH + "/po_listed_print_monograph.json";
-  private static final String ordersEmptyPoLine = MOCK_DATA_ROOT_PATH + "/ordersEmptyPoLine.json";
   private static final String listedPrintSerialPath = MOCK_DATA_ROOT_PATH + "/po_listed_print_serial.json";
   private static final String MINIMAL_ORDER_PATH = MOCK_DATA_ROOT_PATH + "/minimal_order.json";
   private static final String poCreationFailurePath = MOCK_DATA_ROOT_PATH + "/po_creation_failure.json";
@@ -298,7 +297,6 @@ public class OrdersImplTest {
       EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     LocalDate dateOrdered = resp.getDateOrdered().toInstant().atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDate();
-    
     assertThat(dateOrdered, equalTo(now));
 	  
     logger.info(JsonObject.mapFrom(resp));
@@ -367,7 +365,7 @@ public class OrdersImplTest {
     // Get Open Order
     CompositePurchaseOrder reqData = new JsonObject(getMockData(listedPrintMonographPath)).mapTo(CompositePurchaseOrder.class);
     // Make sure that mock po has 2 po lines
-    //assertEquals(2, reqData.getPoLines().size());
+    assertEquals(2, reqData.getCompositePoLines().size());
     // Make sure that Order moves to Pending
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
 
@@ -397,7 +395,6 @@ public class OrdersImplTest {
       EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
     
     LocalDate dateOrdered = resp.getDateOrdered().toInstant().atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDate();
-    
     assertThat(dateOrdered, equalTo(now));
     
     // Check that search of the existing instances and items was done for first PO line only
