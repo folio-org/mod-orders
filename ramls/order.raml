@@ -21,7 +21,7 @@ types:
   # Using for now mod-orders-storage schema. Once agreed what kind of extra data is required, the new schema will be defined
   receiving-history: !include acq-models/mod-orders-storage/schemas/receiving_history_collection.json
   errors: !include raml-util/schemas/errors.schema
-  po-number: !include acq-models/mod-orders-storage/schemas/po_number.json
+  po-number: !include acq-models/mod-orders/schemas/po_number.json
   UUID:
     type: string
     pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
@@ -141,7 +141,7 @@ resourceTypes:
               type: po-number
               example:
                 strict: false
-                value: !include acq-models/mod-orders-storage/examples/po_number_get.sample
+                value: !include acq-models/mod-orders/examples/po_number_get.sample
         400:
           description: "Bad request, malformed request"
           body:
@@ -162,7 +162,7 @@ resourceTypes:
             type: po-number
             example:
               strict: false
-              value: !include acq-models/mod-orders-storage/examples/po_number_get.sample
+              value: !include acq-models/mod-orders/examples/po_number_get.sample
         responses:
           204:
             description: "Valid PO Number"

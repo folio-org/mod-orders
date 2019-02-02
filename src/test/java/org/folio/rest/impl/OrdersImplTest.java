@@ -73,6 +73,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
@@ -2787,12 +2788,12 @@ public class OrdersImplTest {
           .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
           .end();
       } else {
-        PoNumber poNumber = new PoNumber();
-        poNumber.setPoNumber(PO_NUMBER_VALUE);
+        SequenceNumber seqNumber = new SequenceNumber();
+        seqNumber.setSequenceNumber(PO_NUMBER_VALUE);
         ctx.response()
           .setStatusCode(200)
           .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
-          .end(JsonObject.mapFrom(poNumber).encodePrettily());
+          .end(JsonObject.mapFrom(seqNumber).encodePrettily());
       }
     }
 
