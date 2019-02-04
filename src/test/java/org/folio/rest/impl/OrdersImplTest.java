@@ -2416,12 +2416,12 @@ public class OrdersImplTest {
         serverResponse(ctx, 200, APPLICATION_JSON, receivingHistory.encodePrettily());
       } catch (IOException e) {
         ctx.response()
-          .setStatusCode(404)
-          .end();
+           .setStatusCode(404)
+           .end();
       } catch (HttpException e) {
         ctx.response()
-        .setStatusCode(e.getCode())
-        .end();
+           .setStatusCode(e.getCode())
+           .end();
       }
     }
 
