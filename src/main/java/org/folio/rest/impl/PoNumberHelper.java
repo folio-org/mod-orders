@@ -3,10 +3,10 @@ package org.folio.rest.impl;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
 import org.folio.orders.rest.exceptions.CustomHttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -47,8 +47,9 @@ public class PoNumberHelper extends AbstractHelper {
       });
   }
 
-  public CompletableFuture<JsonObject> generatePoNumber() {
-    return HelperUtils.handleGetRequest(resourcesPath(PO_NUMBER), httpClient, ctx, okapiHeaders, logger);
+  public CompletableFuture<String> generatePoNumber() {
+    return HelperUtils.handleGetRequest(resourcesPath(PO_NUMBER), httpClient, ctx, okapiHeaders, logger)
+      .thenApply(seqNumber -> seqNumber.mapTo(SequenceNumber.class).getSequenceNumber());
   }
 
 
