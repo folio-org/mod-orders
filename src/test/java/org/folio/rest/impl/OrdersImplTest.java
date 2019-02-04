@@ -1318,7 +1318,6 @@ public class OrdersImplTest {
   @Test
   public void testValidationDelete() {
     logger.info("=== Test validation Annotation on DELETE API ===");
-
     logger.info("=== Test validation on invalid lang query parameter ===");
     RestAssured
      .with()
