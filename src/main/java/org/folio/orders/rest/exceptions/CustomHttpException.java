@@ -13,31 +13,6 @@ public class CustomHttpException extends Exception {
     this.httpCode = httpCode;
   }
 
-  public CustomHttpException(int httpCode, ErrorCodes errorCode, String message) {
-    super(message);
-    this.errorCode = errorCode;
-    this.httpCode = httpCode;
-  }
-
-  public CustomHttpException(int httpCode, ErrorCodes errorCode, Throwable cause) {
-    super(cause);
-    this.errorCode = errorCode;
-    this.httpCode = httpCode;
-  }
-
-  public CustomHttpException(int httpCode, ErrorCodes errorCode, String message, Throwable cause) {
-    super(message, cause);
-    this.errorCode = errorCode;
-    this.httpCode = httpCode;
-  }
-
-  public CustomHttpException(int httpCode, ErrorCodes errorCode, String message, Throwable cause,
-                             boolean enableSuppression, boolean writableStackTrace) {
-    super(message, cause, enableSuppression, writableStackTrace);
-    this.errorCode = errorCode;
-    this.httpCode = httpCode;
-  }
-
   public int getHttpCode() {
     return httpCode;
   }
