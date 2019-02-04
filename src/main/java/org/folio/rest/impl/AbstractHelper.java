@@ -1,9 +1,9 @@
 package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.OKAPI_URL;
 import static org.folio.orders.utils.ResourcePathResolver.ADJUSTMENT;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
 import io.vertx.core.AsyncResult;
@@ -79,8 +79,8 @@ public abstract class AbstractHelper {
     if (purchaseOrder.containsKey(ADJUSTMENT)) {
       purchaseOrder.remove(ADJUSTMENT);
     }
-    if (purchaseOrder.containsKey(PO_LINES)) {
-      purchaseOrder.remove(PO_LINES);
+    if (purchaseOrder.containsKey(COMPOSITE_PO_LINES)) {
+      purchaseOrder.remove(COMPOSITE_PO_LINES);
     }
     return purchaseOrder;
   }

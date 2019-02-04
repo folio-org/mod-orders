@@ -1,6 +1,6 @@
 {
   "po_number": "123",
-  "po_lines": [
+  "compositePoLines": [
     {
       "po_line_number": "12345-1",
       "source": { "code": "FOLIO" }

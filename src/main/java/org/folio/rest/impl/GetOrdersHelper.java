@@ -59,9 +59,6 @@ public class GetOrdersHelper extends AbstractHelper {
       case 400:
         result = GetOrdersCompositeOrdersResponse.respond400WithTextPlain(error.getMessage());
         break;
-      case 500:
-        result = GetOrdersCompositeOrdersResponse.respond500WithTextPlain(error.getMessage());
-        break;
       case 401:
         result = GetOrdersCompositeOrdersResponse.respond401WithTextPlain(error.getMessage());
         break;

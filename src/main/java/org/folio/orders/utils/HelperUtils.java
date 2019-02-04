@@ -24,9 +24,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.Adjustment;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -38,6 +38,8 @@ import io.vertx.core.logging.Logger;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class HelperUtils {
+
+  public static final String COMPOSITE_PO_LINES = "compositePoLines";
 
   public static final String PO_NUMBER_ALREADY_EXISTS = "PO Number already exists";
   public static final String DEFAULT_POLINE_LIMIT = "1";
@@ -68,9 +70,9 @@ public class HelperUtils {
     return response.getBody();
   }
 
-  public static Adjustment calculateAdjustment(List<PoLine> lines) {
+  public static Adjustment calculateAdjustment(List<CompositePoLine> lines) {
     Adjustment ret = null;
-    for (PoLine line : lines) {
+    for (CompositePoLine line : lines) {
       Adjustment a = line.getAdjustment();
       if (a != null) {
         if (ret == null) {
@@ -160,13 +162,13 @@ public class HelperUtils {
       });
   }
 
-  public static CompletableFuture<List<PoLine>> getCompositePoLines(String id, String lang, HttpClientInterface httpClient,
+  public static CompletableFuture<List<CompositePoLine>> getCompositePoLines(String id, String lang, HttpClientInterface httpClient,
                                                                     Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-    CompletableFuture<List<PoLine>> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<List<CompositePoLine>> future = new VertxCompletableFuture<>(ctx);
 
     getPoLines(id,lang, httpClient,ctx, okapiHeaders, logger)
       .thenAccept(body -> {
-        List<PoLine> lines = new ArrayList<>();
+        List<CompositePoLine> lines = new ArrayList<>();
         List<CompletableFuture<Void>> futures = new ArrayList<>();
 
         for (int i = 0; i < body.getJsonArray(PO_LINES).size(); i++) {
@@ -184,14 +186,15 @@ public class HelperUtils {
       })
       .exceptionally(t -> {
         logger.error("Exception gathering po_line data:", t);
-        throw new CompletionException(t);
+        future.completeExceptionally(t);
+        return null;
       });
     return future;
   }
 
-  public static CompletableFuture<PoLine> operateOnPoLine(HttpMethod operation, JsonObject line, HttpClientInterface httpClient,
-                                                          Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-    CompletableFuture<PoLine> future = new VertxCompletableFuture<>(ctx);
+  public static CompletableFuture<CompositePoLine> operateOnPoLine(HttpMethod operation, JsonObject line, HttpClientInterface httpClient,
+                                                                   Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+    CompletableFuture<CompositePoLine> future = new VertxCompletableFuture<>(ctx);
 
     if (logger.isDebugEnabled()) {
       logger.debug("The PO line prior to {} operation: {}", operation, line.encodePrettily());
@@ -216,7 +219,7 @@ public class HelperUtils {
         if (logger.isDebugEnabled()) {
           logger.debug("The PO line after {} operation on sub-objects: {}", operation, line.encodePrettily());
         }
-        future.complete(line.mapTo(PoLine.class));
+        future.complete(line.mapTo(CompositePoLine.class));
       })
       .exceptionally(t -> {
         logger.error("Exception resolving one or more po_line sub-object(s) on {} operation:", t, operation);
@@ -340,7 +343,7 @@ public class HelperUtils {
    * @param compPOL composite PO Line
    * @return quantity of items expected in the inventory for PO Line
    */
-  public static int calculateInventoryItemsQuantity(PoLine compPOL) {
+  public static int calculateInventoryItemsQuantity(CompositePoLine compPOL) {
     switch (compPOL.getOrderFormat()) {
       case P_E_MIX:
         return getPhysicalQuantity(compPOL) + getElectronicQuantity(compPOL);
@@ -354,13 +357,13 @@ public class HelperUtils {
     }
   }
 
-  private static int getPhysicalQuantity(PoLine compPOL) {
+  private static int getPhysicalQuantity(CompositePoLine compPOL) {
     return Optional.ofNullable(compPOL.getLocation())
                    .map(Location::getQuantityPhysical)
                    .orElse(0);
   }
 
-  private static int getElectronicQuantity(PoLine compPOL) {
+  private static int getElectronicQuantity(CompositePoLine compPOL) {
     boolean createItems = Optional.ofNullable(compPOL.getEresource())
                                   .map(Eresource::getCreateInventory)
                                   .orElse(false);

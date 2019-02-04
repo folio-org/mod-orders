@@ -25,7 +25,7 @@
     "createdDate": "2018-06-29T00:00:00.000",
     "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
   },
-  "po_lines": [
+  "compositePoLines": [
     {
       "id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1",
       "acquisition_method": "Purchase",

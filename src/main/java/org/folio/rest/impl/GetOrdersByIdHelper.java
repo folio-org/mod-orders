@@ -54,7 +54,7 @@ public class GetOrdersByIdHelper extends AbstractHelper {
 
         HelperUtils.getCompositePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
           .thenAccept(poLines -> {
-            compPO.setPoLines(poLines);
+            compPO.setCompositePoLines(poLines);
             compPO.setAdjustment(HelperUtils.calculateAdjustment(poLines));
             future.complete(compPO);
           })
