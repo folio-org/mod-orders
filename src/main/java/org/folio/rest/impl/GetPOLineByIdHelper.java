@@ -48,13 +48,13 @@ public class GetPOLineByIdHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 404:
-        result = GetOrdersOrderLinesByIdResponse.respond404WithTextPlain(error.getMessage());
+        result = GetOrdersOrderLinesByIdResponse.respond404WithApplicationJson(withErrors(error));
         break;
       case 422:
         result = GetOrdersOrderLinesByIdResponse.respond422WithApplicationJson(withErrors(error));
         break;
       default:
-        result = GetOrdersOrderLinesByIdResponse.respond500WithTextPlain(error.getMessage());
+        result = GetOrdersOrderLinesByIdResponse.respond500WithApplicationJson(withErrors(error));
     }
     return result;
   }

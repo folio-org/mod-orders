@@ -26,6 +26,7 @@ types:
     type: string
     pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
 
+
 traits:
   pageable: !include raml-util/traits/pageable.raml
   searchable: !include raml-util/traits/searchable.raml
@@ -37,35 +38,13 @@ traits:
         description: "Not authorized to perform requested action"
         body:
           application/json:
-            example:
-              strict: false
-              value: !include raml-util/examples/errors.sample
-  error-response-400:
-    responses:
-      400:
-        description: "Bad request, e.g. malformed request body or query parameter. Details of the error provided in the response."
-        body:
-          application/json:
-            type: errors
-            example:
-              strict: false
-              value: !include raml-util/examples/errors.sample
-  error-response-500:
-    responses:
-      500:
-        description: "Internal server error, e.g. due to misconfiguration. Details of the error provided in the response."
-        body:
-          application/json:
-            type: errors
-            example:
-              strict: false
-              value: !include raml-util/examples/errors.sample
+            example: "unable to create <<resourcePathName|!singularize>> -- unauthorized"
 
 resourceTypes:
-  collection: !include raml-util/rtypes/collection.raml
-  collection-item: !include raml-util/rtypes/item-collection.raml
-  collection-get: !include raml-util/rtypes/collection-get.raml
-  post-with-200: !include rtypes/post-json-body-200.raml
+  collection: !include raml-util/rtypes/collection-with-json-response.raml
+  collection-item: !include raml-util/rtypes/item-collection-with-json-response.raml
+  collection-get: !include raml-util/rtypes/collection-get-with-json-response.raml
+  post-with-200: !include rtypes/post-json-200.raml
 
 /orders:
   /composite-orders:
@@ -81,7 +60,6 @@ resourceTypes:
       is: [pageable, searchable: {description: "using CQL (indexes for purchase orders)", example: "workflow_status==\"Pending\""} ]
     post:
       description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order
-      is: [error-response-400, error-response-500, auth]
     /{id}:
       uriParameters:
         id:
@@ -95,13 +73,11 @@ resourceTypes:
       get:
         description: Return a purchase order with given {id}
       put:
-        is: [error-response-500]
         description: |
           Update a purchase order with given {id}
           - if request does not include po_lines or includes "po_lines": [] or "po_lines": null - update just purchase order summary
           - if request includes array of "po_lines" - update PO lines as per request
       delete:
-        is: [error-response-500]
         description: Delete a purchase order with given {id}
   /order-lines:
     displayName: Purchase Order Lines
@@ -117,7 +93,6 @@ resourceTypes:
       is: [pageable, searchable: {description: "using CQL (indexes for PO lines)", example: "payment_status==\"Cancelled\""} ]
     post:
       description: Post a PO lines to corresponding PO
-      is: [auth, error-response-400, error-response-500]
     /{id}:
       displayName: Purchase Order Line
       description: Manage purchase order line (PO line) by id
@@ -133,17 +108,15 @@ resourceTypes:
       get:
         description: Return a purchase order line with given {id}
       put:
-        is: [error-response-500]
         description: Update a purchase order line with given {id}
       delete:
-        is: [error-response-500]
         description: Delete a purchase order line with given {id}
   /po-number:
     displayName: Purchase Order Lines Number
     description: Manage purchase order (PO) number
     get:
       description: Get generated PO number
-      is: [validate, language, error-response-400, error-response-500]
+      is: [validate, language]
       responses:
         200:
           body:
@@ -156,7 +129,7 @@ resourceTypes:
       displayName: PO Number Validation
       post:
         description: validate if the PO Number is unique and matches the pattern specified
-        is: [validate, auth, language, error-response-400, error-response-500]
+        is: [validate, language]
         body:
           application/json:
             type: po-number
@@ -166,6 +139,20 @@ resourceTypes:
         responses:
           204:
             description: "Valid PO Number"
+          400:
+            description: "Bad request, e.g. existing PO Number. Details of the error provided in the response."
+            body:
+              application/json:
+                example:
+                  strict: false
+                  value: !include raml-util/examples/errors.sample
+          500:
+            description: "Internal server error, e.g. due to misconfiguration"
+            body:
+              application/json:
+                example:
+                  strict: false
+                  value: !include raml-util/examples/errors.sample
   /receive:
     displayName: Receive items
     description: Receive items spanning one or more PO lines
@@ -175,7 +162,7 @@ resourceTypes:
         responseSchema: receiving-results
         requestExample: !include acq-models/mod-orders/examples/receivingCollection.sample
         responseExample: !include acq-models/mod-orders/examples/receivingResults.sample
-    is: [validate, error-response-400, error-response-500]
+    is: [validate]
     post:
       description: Receive items spanning one or more PO lines
   /check-in:
@@ -189,7 +176,6 @@ resourceTypes:
         responseExample: !include acq-models/mod-orders/examples/receivingResults.sample
     is: [validate]
     post:
-      is: [error-response-400, error-response-500]
       description: Check-in items spanning one or more po_lines in this order
   /receiving-history:
     displayName: Receiving history

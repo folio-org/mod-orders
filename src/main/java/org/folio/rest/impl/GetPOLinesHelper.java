@@ -56,13 +56,13 @@ public class GetPOLinesHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 400:
-        result = GetOrdersOrderLinesResponse.respond400WithTextPlain(error.getMessage());
+        result = GetOrdersOrderLinesResponse.respond400WithApplicationJson(withErrors(error));
         break;
       case 401:
-        result = GetOrdersOrderLinesResponse.respond401WithTextPlain(error.getMessage());
+        result = GetOrdersOrderLinesResponse.respond401WithApplicationJson(withErrors(error));
         break;
       default:
-        result = GetOrdersOrderLinesResponse.respond500WithTextPlain(error.getMessage());
+        result = GetOrdersOrderLinesResponse.respond500WithApplicationJson(withErrors(error));
     }
     return result;
   }

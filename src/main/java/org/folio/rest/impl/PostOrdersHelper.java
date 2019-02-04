@@ -145,16 +145,16 @@ public class PostOrdersHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 400:
-        result = PostOrdersCompositeOrdersResponse.respond400WithTextPlain(error.getMessage());
+        result = PostOrdersCompositeOrdersResponse.respond400WithApplicationJson(withErrors(error));
         break;
       case 401:
-        result = PostOrdersCompositeOrdersResponse.respond401WithTextPlain(error.getMessage());
+        result = PostOrdersCompositeOrdersResponse.respond401WithApplicationJson(withErrors(error));
         break;
       case 422:
         result = PostOrdersCompositeOrdersResponse.respond422WithApplicationJson(withErrors(error));
         break;
       default:
-        result = PostOrdersCompositeOrdersResponse.respond500WithTextPlain(error.getMessage());
+        result = PostOrdersCompositeOrdersResponse.respond500WithApplicationJson(withErrors(error));
     }
     return result;
   }
