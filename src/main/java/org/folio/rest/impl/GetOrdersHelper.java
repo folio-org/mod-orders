@@ -19,14 +19,12 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.orders.utils.HelperUtils.getEndpointWithQuery;
 
 public class GetOrdersHelper extends AbstractHelper {
-
   public static final String GET_PURCHASE_ORDERS_BY_QUERY = resourcesPath(PURCHASE_ORDER) + "?limit=%s&offset=%s%s&lang=%s";
 
   GetOrdersHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
                   Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
-
 
   public CompletableFuture<PurchaseOrders> getPurchaseOrders(int limit, int offset, String query) {
     CompletableFuture<PurchaseOrders> future = new VertxCompletableFuture<>(ctx);
@@ -44,13 +42,8 @@ public class GetOrdersHelper extends AbstractHelper {
     } catch (Exception e) {
       future.completeExceptionally(e);
     }
-
     return future;
   }
-
-
-
-
 
   @Override
   protected Response buildErrorResponse(int code, Error error) {
