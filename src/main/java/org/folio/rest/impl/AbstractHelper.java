@@ -17,8 +17,11 @@ import io.vertx.core.logging.LoggerFactory;
 import java.util.HashMap;
 import java.util.Map;
 import javax.ws.rs.core.Response;
+
+import org.folio.orders.rest.exceptions.CustomHttpException;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.ValidationException;
+import org.folio.orders.utils.ErrorCodes;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -94,6 +97,15 @@ public abstract class AbstractHelper {
     if (t instanceof HttpException) {
       final int code = ((HttpException) t).getCode();
       result = succeededFuture(buildErrorResponse(code, new Error().withMessage(message)));
+    } else if (t instanceof CustomHttpException) {
+      final int httpCode = ((CustomHttpException) t).getHttpCode();
+      final ErrorCodes errorCode = ((CustomHttpException) t).getErrorCode();
+
+      Error error = new Error()
+        .withCode(errorCode.getCode())
+        .withMessage(errorCode.getDescription());
+
+      result = succeededFuture(buildErrorResponse(httpCode, error));
     } else if (t instanceof ValidationException) {
       result = succeededFuture(buildErrorResponse(422, ((ValidationException) t).getError()));
     } else {
