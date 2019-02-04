@@ -3,20 +3,7 @@ package org.folio.rest.impl;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
-import static org.folio.orders.utils.ResourcePathResolver.ADJUSTMENT;
-import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.CLAIMS;
-import static org.folio.orders.utils.ResourcePathResolver.COST;
-import static org.folio.orders.utils.ResourcePathResolver.DETAILS;
-import static org.folio.orders.utils.ResourcePathResolver.ERESOURCE;
-import static org.folio.orders.utils.ResourcePathResolver.FUND_DISTRIBUTION;
-import static org.folio.orders.utils.ResourcePathResolver.LOCATION;
-import static org.folio.orders.utils.ResourcePathResolver.PHYSICAL;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
-import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
-import static org.folio.orders.utils.ResourcePathResolver.SOURCE;
-import static org.folio.orders.utils.ResourcePathResolver.VENDOR_DETAIL;
+import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
@@ -72,6 +59,7 @@ import java.util.stream.Stream;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.jaxrs.model.*;
@@ -110,6 +98,8 @@ import javax.ws.rs.core.Response.Status;
 @RunWith(VertxUnitRunner.class)
 public class OrdersImplTest {
 
+  private static final String BAD_REQUEST = "BadRequest";
+  private static final String ORDERS_RECEIVING_HISTORY_ENDPOINT = "/orders/receiving-history";
   private static final String INSTANCE_RECORD = "instance_record";
   private static final String HOLDINGS_RECORD = "holding_record";
   private static final String ITEM_RECORDS = "item_records";
@@ -168,6 +158,7 @@ public class OrdersImplTest {
   private static final String ORDER_ID_WITHOUT_PO_LINES = "50fb922c-3fa9-494e-a972-f2801f1b9fd1";
   private static final String ORDER_ID_WITH_PO_LINES = "ab18897b-0e40-4f31-896b-9c9adc979a87";
   private static final String ORDER_WITHOUT_WORKFLOW_STATUS = "41d56e59-46db-4d5e-a1ad-a178228913e5";
+  private static final String RECEIVING_HISTORY_PURCHASE_ORDER_ID = "0804ddec-6545-404a-b54d-a693f505681d";
 
   // API paths
   private final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
@@ -200,6 +191,7 @@ public class OrdersImplTest {
   private static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
   /** The PO Line with minimal required content */
   private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "/minimalContent.json";
+  private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
 
   private static final String QUERY_PARAM_NAME = "query";
   private static final String ID = "id";
@@ -2033,6 +2025,74 @@ public class OrdersImplTest {
       .response();
   }
 
+  @Test
+  public void testGetReceivingHistory() {
+    logger.info("=== Test Get Receiving History - With empty query ===");
+
+    final Response resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
+      .get(ORDERS_RECEIVING_HISTORY_ENDPOINT)
+        .then()
+          .statusCode(200)
+          .extract()
+          .response();
+
+    assertEquals(0, resp.getBody().as(ReceivingHistoryCollection.class).getTotalRecords().intValue());
+  }
+
+  @Test
+  public void testGetReceivingHistoryForPurchaseOrder() {
+    logger.info("=== Test Get Receiving History - With purchase Order query ===");
+    String endpointQuery = String.format("%s?query=purchaseOrderId=%s", ORDERS_RECEIVING_HISTORY_ENDPOINT, RECEIVING_HISTORY_PURCHASE_ORDER_ID);
+
+    final Response resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
+      .get(endpointQuery)
+        .then()
+          .statusCode(200)
+          .extract()
+          .response();
+
+    assertEquals(1, resp.getBody().as(ReceivingHistoryCollection.class).getTotalRecords().intValue());
+  }
+
+  @Test
+  public void testGetReceivingHistoryForPurchaseOrderWithError() {
+    logger.info("=== Test Get Receiving History - With purchase Order query Error===");
+    String endpointQuery = String.format("%s?query=purchaseOrderId=%s", ORDERS_RECEIVING_HISTORY_ENDPOINT, INTERNAL_SERVER_ERROR);
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
+      .get(endpointQuery)
+        .then()
+          .statusCode(500)
+          .extract()
+          .response();
+
+  }
+
+  @Test
+  public void testGetReceivingHistoryBadRequest() {
+    logger.info("=== Test Get Receiving History - With Bad Request");
+
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
+      .get(ORDERS_RECEIVING_HISTORY_ENDPOINT+"?query="+BAD_REQUEST)
+        .then()
+          .statusCode(400)
+          .extract()
+          .response();
+
+  }
+
   private org.folio.rest.acq.model.PoLine getMockLine(String id) {
     return getMockAsJson(PO_LINES_MOCK_DATA_PATH, id).mapTo(org.folio.rest.acq.model.PoLine.class);
   }
@@ -2156,6 +2216,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleGetGenericSubObj(ctx, VENDOR_DETAIL));
       router.route(HttpMethod.GET, resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
       router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(ctx -> handleGetGenericPieceObj(ctx, PIECES));
+      router.route(HttpMethod.GET, resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
 
       router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
       router.route(HttpMethod.PUT, resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -2256,13 +2317,8 @@ public class OrdersImplTest {
     private void handleGetHoldingRecord(RoutingContext ctx) {
       logger.info("handleGetHoldingRecord got: " + ctx.request().path());
 
-      JsonObject instance;
+      JsonObject instance = new JsonObject().put("holdingsRecords", new JsonArray());
 
-      //if (ctx.request().query().contains("fcd64ce1-6995-48f0-840e-89ffa2288371")) {
-        instance = new JsonObject().put("holdingsRecords", new JsonArray());
-//        }else {
-//          instance = new JsonObject(getMockData(HOLDINGS_RECORDS_MOCK_DATA_PATH + "holdingRecords-1.json"));
-//        }
       addServerRqRsData(HttpMethod.GET, HOLDINGS_RECORD, instance);
       serverResponse(ctx, 200, APPLICATION_JSON, instance.encodePrettily());
     }
@@ -2335,6 +2391,37 @@ public class OrdersImplTest {
         ctx.response()
           .setStatusCode(404)
           .end();
+      }
+    }
+
+    private void handleGetReceivingHistory(RoutingContext ctx) {
+      logger.info("handleGetItemsRecords got: " + ctx.request().path());
+      String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+      try {
+        JsonObject receivingHistory;
+        if (queryParam.contains(RECEIVING_HISTORY_PURCHASE_ORDER_ID)) {
+          receivingHistory = new JsonObject(getMockData(RECEIVING_HISTORY_MOCK_DATA_PATH + "receivingHistory.json"));
+        } else if(queryParam.contains(INTERNAL_SERVER_ERROR)) {
+          throw new HttpException(500, "Exception in orders-storage module");
+        }
+        else if(queryParam.contains(BAD_REQUEST)) {
+          throw new HttpException(400, "QueryValidationException");
+        }
+        else {
+          receivingHistory = new JsonObject();
+          receivingHistory.put("receiving_history", new JsonArray());
+          receivingHistory.put("total_records", 0);
+        }
+        addServerRqRsData(HttpMethod.GET, RECEIVING_HISTORY, receivingHistory);
+        serverResponse(ctx, 200, APPLICATION_JSON, receivingHistory.encodePrettily());
+      } catch (IOException e) {
+        ctx.response()
+           .setStatusCode(404)
+           .end();
+      } catch (HttpException e) {
+        ctx.response()
+           .setStatusCode(e.getCode())
+           .end();
       }
     }
 
