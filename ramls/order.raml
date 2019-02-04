@@ -101,14 +101,6 @@ resourceTypes:
         description: Return a purchase order line with given {id}
       put:
         description: Update a purchase order line with given {id}
-        responses:
-          500:
-            body:
-              application/json:
-                type: errors
-                example:
-                  strict: false
-                  value: !include raml-util/examples/errors.sample
       delete:
         description: Delete a purchase order line with given {id}
   /po-number:
