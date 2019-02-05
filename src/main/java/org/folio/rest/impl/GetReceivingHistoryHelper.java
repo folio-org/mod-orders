@@ -3,9 +3,7 @@ package org.folio.rest.impl;
 import static org.folio.orders.utils.HelperUtils.getEndpointWithQuery;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.jaxrs.resource.Orders.GetOrdersReceivingHistoryResponse.respond400WithTextPlain;
-import static org.folio.rest.jaxrs.resource.Orders.GetOrdersReceivingHistoryResponse.respond404WithTextPlain;
-import static org.folio.rest.jaxrs.resource.Orders.GetOrdersReceivingHistoryResponse.respond500WithTextPlain;
+import static org.folio.rest.jaxrs.resource.Orders.GetOrdersReceivingHistoryResponse.*;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -54,13 +52,13 @@ public class GetReceivingHistoryHelper extends AbstractHelper{
     final Response result;
     switch (code) {
       case 400:
-        result = respond400WithTextPlain(error.getMessage());
+        result = respond400WithApplicationJson(withErrors(error));
         break;
       case 404:
-        result = respond404WithTextPlain(withErrors(error));
+        result = respond404WithApplicationJson(withErrors(error));
         break;
       default:
-        result = respond500WithTextPlain(error.getMessage());
+        result = respond500WithApplicationJson(withErrors(error));
     }
     return result;
   }
