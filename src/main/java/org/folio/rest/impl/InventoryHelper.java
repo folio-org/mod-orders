@@ -110,10 +110,22 @@ public class InventoryHelper {
    * @return future with list of item id's
    */
   public CompletableFuture<List<String>> handleItemRecords(CompositePoLine compPOL, String holdingId) {
-    int expectedCount = calculateInventoryItemsQuantity(compPOL);
+    int total = calculateInventoryItemsQuantity(compPOL);
     return searchForExistingItems(compPOL)
-      .thenCompose(existingItemIds -> createMissingItems(compPOL, holdingId, expectedCount - existingItemIds.size())
-        .thenApply(createdItemIds -> ListUtils.union(existingItemIds, createdItemIds))
+      .thenCompose(existingItemIds -> {
+          int itemsToCreateQuantity = total - existingItemIds.size();
+          return createMissingItems(compPOL, holdingId, itemsToCreateQuantity)
+            .thenApply(createdItemIds -> {
+              List<String> allItemIds = ListUtils.union(existingItemIds, createdItemIds);
+
+              // In case no items created, return an exception because nothing can be done at this stage
+              if (allItemIds.isEmpty()) {
+                throw new InventoryException(String.format("No items created for PO Line with %s id", compPOL.getId()));
+              }
+
+              return allItemIds;
+            });
+        }
       );
   }
 
@@ -282,39 +294,24 @@ public class InventoryHelper {
                    .orElseGet(Collections::emptyList);
   }
 
-  private CompletableFuture<List<String>> createMissingItems(CompositePoLine compPOL, String holdingId, int count) {
-    return (count > 0) ? createItemRecords(compPOL, holdingId, count) : completedFuture(Collections.emptyList());
-  }
-
   /**
    * Creates Items in the inventory based on the PO line data.
    *
    * @param compPOL PO line to create Instance Record for
    * @param holdingId holding id
-   * @param count expected number of items to create
+   * @param quantity expected number of items to create
    * @return id of newly created Instance Record
    */
-  private CompletableFuture<List<String>> createItemRecords(CompositePoLine compPOL, String holdingId, int count) {
-    CompletableFuture<List<String>> result = new VertxCompletableFuture<>(ctx);
-    logger.debug("Creating {} items for PO Line with '{}' id", count, compPOL.getId());
-
-    buildItemRecordJsonObject(compPOL, holdingId)
-      .thenCompose(itemData -> createItemRecords(itemData, count))
-      .thenAccept(createdItemIds -> {
-        // In case no items created, return an exception because nothing can be done at this stage
-        if (createdItemIds.isEmpty()) {
-          String message = String.format("No items created for PO Line with %s id", compPOL.getId());
-          result.completeExceptionally(new InventoryException(message));
-        }
-        result.complete(createdItemIds);
-      })
-      .exceptionally(exc -> {
-        logger.error("The issue happened creating items for PO Line with '{}' id.", exc, compPOL.getId());
-        result.completeExceptionally(exc);
-        return null;
-      });
-
-    return result;
+  private CompletableFuture<List<String>> createMissingItems(CompositePoLine compPOL, String holdingId, int quantity) {
+    if (quantity > 0) {
+      return buildItemRecordJsonObject(compPOL, holdingId)
+        .thenCompose(itemData -> {
+          logger.debug("Creating {} items for PO Line with '{}' id", quantity, compPOL.getId());
+          return createItemRecords(itemData, quantity);
+        });
+    } else {
+      return completedFuture(Collections.emptyList());
+    }
   }
 
   /**
@@ -372,7 +369,7 @@ public class InventoryHelper {
         })
         .exceptionally(throwable -> {
           future.completeExceptionally(throwable);
-          logger.error("'POST {}' request failed.", throwable, endpoint);
+          logger.error("'POST {}' request failed. Request body: {}", throwable, endpoint, recordData.encodePrettily());
           return null;
         });
     } catch (Exception e) {

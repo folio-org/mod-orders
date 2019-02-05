@@ -36,6 +36,7 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
+import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertEquals;
@@ -953,6 +954,7 @@ public class OrdersImplTest {
 
     // Get Open Order
     CompositePurchaseOrder reqData = new JsonObject(getMockData(LISTED_PRINT_MONOGRAPH_PATH)).mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PENDING_ORDER);
     // Make sure that mock PO has 2 po lines
     assertEquals(2, reqData.getCompositePoLines().size());
 
@@ -961,14 +963,74 @@ public class OrdersImplTest {
     reqData.getCompositePoLines().get(1).setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
     reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(false);
 
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ID_FOR_PENDING_ORDER), JsonObject.mapFrom(reqData).toString(), "", 204);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
 
     int polCount = reqData.getCompositePoLines().size();
 
     verifyInventoryInteraction(reqData, polCount - 1);
   }
 
+  @Test
+  public void testUpdateOrderToOpenWithPartialItemsCreation() throws Exception {
+    logger.info("=== Test Order update to Open status - Inventory items expected to be created partially ===");
+
+    CompositePurchaseOrder reqData = new JsonObject(getMockData(LISTED_PRINT_MONOGRAPH_PATH)).mapTo(CompositePurchaseOrder.class);
+    // Emulate items creation issue
+    reqData.getCompositePoLines().get(0).getDetails().getMaterialTypes().set(0, ID_FOR_INTERNAL_SERVER_ERROR);
+    // Let's have only one PO Line
+    reqData.getCompositePoLines().remove(1);
+    // Set status to Open
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    // Set specific ID to let items search to return 1 item
+    reqData.setId(ID_FOR_PENDING_ORDER);
+
+    int polCount = reqData.getCompositePoLines().size();
+    // Assert that only one PO line presents
+    assertEquals(1, polCount);
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), TEXT_PLAIN, 500);
+
+    // Verify inventory GET and POST requests for instance, holding and item records
+    verifyInventoryInteraction(false);
+
+    // All existing and created items
+    List<JsonObject> items = joinExistingAndNewItems();
+    // All created pieces
+    List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
+
+    // Assert that items quantity equals to created ieces
+    assertEquals(createdPieces.size(), items.size());
+
+    // Verify that not all expected items created
+    assertThat(items.size(), lessThan(calculateInventoryItemsQuantity(reqData.getCompositePoLines().get(0))));
+
+    // Verify that pieces created for processed items quantity
+    verifyPiecesCreated(items, createdPieces);
+  }
+
   private void verifyInventoryInteraction(CompositePurchaseOrder reqData, int createdInstancesCount) {
+    // Verify inventory GET and POST requests for instance, holding and item records
+    verifyInventoryInteraction(true);
+
+    List<JsonObject> createdInstances = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST);
+    List<JsonObject> createdHoldings = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.POST);
+    List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
+
+    assertEquals(createdInstancesCount, createdInstances.size());
+
+    // All existing and created items
+    List<JsonObject> items = joinExistingAndNewItems();
+
+    assertEquals(createdPieces.size(), items.size());
+    for (CompositePoLine pol : reqData.getCompositePoLines()) {
+      verifyInstanceCreated(createdInstances, pol);
+      verifyHoldingsCreated(createdHoldings, pol);
+      verifyItemsCreated(items, pol, calculateInventoryItemsQuantity(pol));
+      verifyPiecesCreated(items, createdPieces);
+    }
+  }
+
+  private void verifyInventoryInteraction(boolean checkItemsCreated) {
     // Check that search of the existing instances and items was done for each PO line
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
     List<JsonObject> holdingsSearches = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
@@ -992,25 +1054,17 @@ public class OrdersImplTest {
     logger.debug("--------------------------- Instances created -------------------------------\n" + new JsonArray(createdInstances).encodePrettily());
     assertNotNull(createdHoldings);
     logger.debug("--------------------------- Holdings created -------------------------------\n" + new JsonArray(createdHoldings).encodePrettily());
-    assertNotNull(createdItems);
-    logger.debug("--------------------------- Items created -------------------------------\n" + new JsonArray(createdItems).encodePrettily());
+    if (checkItemsCreated) {
+      assertNotNull(createdItems);
+      logger.debug("--------------------------- Items created -------------------------------\n" + new JsonArray(createdItems).encodePrettily());
+    }
     assertNotNull(createdPieces);
     logger.debug("--------------------------- Pieces created -------------------------------\n" + new JsonArray(createdPieces).encodePrettily());
-    assertEquals(createdInstancesCount, createdInstances.size());
-
-    List<JsonObject> items = joinExistingAndNewItems(itemsSearches, createdItems);
-    assertEquals(createdPieces.size(), items.size());
-    for (CompositePoLine pol : reqData.getCompositePoLines()) {
-      verifyInstanceCreated(createdInstances, pol);
-      verifyHoldingsCreated(createdHoldings, pol);
-      verifyItemsCreated(items, pol, calculateInventoryItemsQuantity(pol));
-      verifyPiecesCreated(items, createdPieces);
-    }
   }
 
-  private List<JsonObject> joinExistingAndNewItems(List<JsonObject> itemsSearches, List<JsonObject> createdItems) {
-    List<JsonObject> items = new ArrayList<>(createdItems);
-    itemsSearches.forEach(json -> {
+  private List<JsonObject> joinExistingAndNewItems() {
+    List<JsonObject> items = new ArrayList<>(CollectionUtils.emptyIfNull(MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.POST)));
+    MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET).forEach(json -> {
       JsonArray existingItems = json.getJsonArray("items");
       if (existingItems != null) {
         existingItems.forEach(item -> items.add((JsonObject) item));
@@ -1040,12 +1094,13 @@ public class OrdersImplTest {
   }
 
 	private void verifyPiecesCreated(List<JsonObject> inventoryItems, List<JsonObject> pieces) {
-		boolean verified = false;
+    // Collect all item id's
     List<String> itemIds = inventoryItems.stream()
-                                    .map(item -> item.getString("id"))
+                                    .map(item -> item.getString(ID))
                                     .collect(Collectors.toList());
 
     for (JsonObject pieceObj : pieces) {
+      // Make sure piece data corresponds to schema content
       Piece piece = pieceObj.mapTo(Piece.class);
 
       // Check if itemId in inventoryItems match itemId in piece record
@@ -1181,7 +1236,7 @@ public class OrdersImplTest {
     assertNotNull(createdPieces);
     assertEquals(polCount, createdInstances.size());
 
-    List<JsonObject> items = joinExistingAndNewItems(itemsSearches, createdItems);
+    List<JsonObject> items = joinExistingAndNewItems();
     assertEquals(createdPieces.size(), items.size());
 
     // Check that instance and items created successfully for first POL
