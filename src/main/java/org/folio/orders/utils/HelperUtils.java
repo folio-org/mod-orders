@@ -1,12 +1,16 @@
 package org.folio.orders.utils;
 
 import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -318,11 +322,15 @@ public class HelperUtils {
    */
   public static String encodeQuery(String query, Logger logger) {
     try {
-      return URLEncoder.encode(query, "UTF-8");
+      return URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
     } catch (UnsupportedEncodingException e) {
       logger.error("Error happened while attempting to encode '{}'", e, query);
       throw new CompletionException(e);
     }
+  }
+
+  public static String getEndpointWithQuery(String query, Logger logger) {
+    return isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
   }
 
   /**

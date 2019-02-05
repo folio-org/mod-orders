@@ -1,0 +1,23 @@
+{
+  "receiving_history":
+    [
+      {
+        "id": "5e317dc2-deeb-4429-b2a1-91e5cd0fd5f7",
+        "caption": "Tutorial Volume 10",
+        "comment": "Special Edition",
+        "dateOrdered": "2018-09-09T00:00:00.000",
+        "itemId": "1c92433e-916d-452e-ac76-5268d0ec3f66",
+        "poLineId": "c1498090-538a-4470-9525-27e4e0c74b07",
+        "poLineNumber": "268758-03",
+        "purchaseOrderId": "0804ddec-6545-404a-b54d-a693f505681d",
+        "receivedDate": "2018-10-09T00:00:00.000Z",
+        "receivingNote": "ASD FGH ABCDEFGHIJKLMNOPQ",
+        "receivingStatus": "Expected",
+        "supplement": true,
+        "title": "Kayak Fishing in the Northern Gulf Coast"
+      }
+    ],
+  "total_records": 1,
+  "first": 1,
+  "last": 1
+}

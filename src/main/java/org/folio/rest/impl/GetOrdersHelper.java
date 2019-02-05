@@ -16,13 +16,9 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.getEndpointWithQuery;
 
 public class GetOrdersHelper extends AbstractHelper {
-
   public static final String GET_PURCHASE_ORDERS_BY_QUERY = resourcesPath(PURCHASE_ORDER) + "?limit=%s&offset=%s%s&lang=%s";
 
   GetOrdersHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
@@ -30,12 +26,11 @@ public class GetOrdersHelper extends AbstractHelper {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
-
   public CompletableFuture<PurchaseOrders> getPurchaseOrders(int limit, int offset, String query) {
     CompletableFuture<PurchaseOrders> future = new VertxCompletableFuture<>(ctx);
 
     try {
-      String queryParam = isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
+      String queryParam = getEndpointWithQuery(query, logger);
       String endpoint = String.format(GET_PURCHASE_ORDERS_BY_QUERY, limit, offset, queryParam, lang);
       HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
         .thenAccept(jsonOrders -> future.complete(jsonOrders.mapTo(PurchaseOrders.class)))
@@ -47,10 +42,8 @@ public class GetOrdersHelper extends AbstractHelper {
     } catch (Exception e) {
       future.completeExceptionally(e);
     }
-
     return future;
   }
-
 
   @Override
   protected Response buildErrorResponse(int code, Error error) {

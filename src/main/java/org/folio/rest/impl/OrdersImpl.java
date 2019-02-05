@@ -226,10 +226,11 @@ public class OrdersImpl implements Orders {
     PoNumberHelper helper = new PoNumberHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
 
     helper.generatePoNumber()
-      .thenAccept(poNumberJson -> {
-        logger.info("Received PoNumber Response: " + poNumberJson.encodePrettily());
+      .thenAccept(poNumber -> {
+        logger.info("Received PoNumber Response: " + poNumber);
         httpClient.closeClient();
-        javax.ws.rs.core.Response response = GetOrdersPoNumberResponse.respond200WithApplicationJson(poNumberJson.mapTo(PoNumber.class));
+        javax.ws.rs.core.Response response
+          = GetOrdersPoNumberResponse.respond200WithApplicationJson(new PoNumber().withPoNumber(poNumber));
         AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
         asyncResultHandler.handle(result);
       }).exceptionally(helper::handleError);
@@ -279,14 +280,6 @@ public class OrdersImpl implements Orders {
     asyncResultHandler.handle(succeededFuture(Response.status(501).build()));
   }
 
-  @Override
-  @Validate
-  public void getOrdersReceivingHistory(String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-                                        Context vertxContext) {
-    // Return 501 (Not Implemented) for now
-    asyncResultHandler.handle(succeededFuture(Response.status(501).build()));
-  }
-
   private static int getPoLineLimit(JsonObject config) {
     try {
       return Integer.parseInt(config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));
@@ -316,6 +309,27 @@ public class OrdersImpl implements Orders {
         asyncResultHandler.handle(result);
       })
       .exceptionally(helper::handleError);
+  }
+
+
+  @Override
+  @Validate
+  public void getOrdersReceivingHistory(int offset, int limit, String query, String lang,
+      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+
+    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
+    GetReceivingHistoryHelper helper= new GetReceivingHistoryHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
+
+    helper.getReceivingHistory(limit, offset, query)
+    .thenAccept(receivingHistory -> {
+      logger.info("Successfully retrieved receiving history: " + JsonObject.mapFrom(receivingHistory).encodePrettily());
+      httpClient.closeClient();
+      javax.ws.rs.core.Response response = GetOrdersReceivingHistoryResponse.respond200WithApplicationJson(receivingHistory);
+      AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
+      asyncResultHandler.handle(result);
+    })
+    .exceptionally(helper::handleError);
+
   }
 
 }
