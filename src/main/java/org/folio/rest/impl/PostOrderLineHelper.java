@@ -217,7 +217,6 @@ public class PostOrderLineHelper extends AbstractHelper {
             .thenAccept(id -> {
               if (id != null) {
                 reportingObject.setId(id);
-                reportingObject.setPoLineId(compPOL.getId());
                 reportingIds.add(id);
               }
             }))
