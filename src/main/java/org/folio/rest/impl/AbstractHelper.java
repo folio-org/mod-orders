@@ -91,7 +91,7 @@ public abstract class AbstractHelper {
   protected Void handleError(Throwable throwable) {
     final Future<Response> result;
 
-    logger.error("Exception while operation on PO line", throwable.getCause());
+    logger.error("Exception encountered", throwable.getCause());
     final Throwable t = throwable.getCause();
     final String message = t.getMessage();
     if (t instanceof HttpException) {
