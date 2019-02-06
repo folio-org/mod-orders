@@ -38,6 +38,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javax.ws.rs.core.Response;
 
@@ -188,7 +189,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    */
   private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<String> itemIds) {
 		CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-		if (itemIds.isEmpty()) {
+		if (itemIds.isEmpty() && compPOL.getLocation().getQuantityElectronic() == 0 && compPOL.getLocation().getQuantityPhysical() == 0) {
 			future.complete(null);
 			return future;
 		}
@@ -199,19 +200,27 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 		handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(body -> {
         PieceCollection pieces = body.mapTo(PieceCollection.class);
-
+        
         // Extract item Id's which already associated with piece records
         List<String> existingItemIds = pieces.getPieces()
             .stream()
             .map(Piece::getItemId)
             .filter(StringUtils::isNotEmpty)
             .collect(Collectors.toList());
-
+        
+        // Create pieces for successfully created item Ids
+        if(!itemIds.isEmpty()) {
         // Create piece records for item id's which do not have piece records yet
         itemIds.stream()
                .filter(id -> !existingItemIds.contains(id))
                .forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
-
+        } 
+        else {
+        	//  Create pieces for total quantity when item records does not exists
+        	int totalQuantity = compPOL.getLocation().getQuantityElectronic() + compPOL.getLocation().getQuantityPhysical();
+        	IntStream.range(0, totalQuantity).forEach(i -> futuresList.add(createPiece(poLineId, null)));
+        }
+        
         allOf(futuresList.toArray(new CompletableFuture[0]))
           .thenAccept(v -> future.complete(null))
           .exceptionally(t -> {
@@ -239,7 +248,9 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 		// Construct Piece object
   	Piece piece = new Piece();
   	piece.setPoLineId(poLineId);
-  	piece.setItemId(itemId);
+  	// For a poLineId, do not set itemId if item record does not exist
+  	if(itemId != null)
+  		piece.setItemId(itemId);
   	piece.setReceivingStatus(Piece.ReceivingStatus.EXPECTED);
 
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
