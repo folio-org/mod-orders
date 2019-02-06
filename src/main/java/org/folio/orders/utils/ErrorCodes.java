@@ -2,8 +2,7 @@ package org.folio.orders.utils;
 
 public enum ErrorCodes {
 
-  PO_NUMBER_ALREADY_EXISTS("poNumberNotUnique", "PO Number already exists"),
-  UNDEFINED_ERROR("9999", "Undefined error");
+  PO_NUMBER_ALREADY_EXISTS("poNumberNotUnique", "PO Number already exists");
 
   private final String code;
   private final String description;
