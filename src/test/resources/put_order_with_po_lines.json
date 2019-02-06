@@ -66,12 +66,14 @@
           "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
         }
       ],
-      "location": {
-        "quantity": 1,
-        "quantity_electronic": 0,
-        "quantity_physical": 1,
-        "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
-      },
+      "locations": [
+        {
+          "quantity": 1,
+          "quantity_electronic": 0,
+          "quantity_physical": 1,
+          "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
+        }
+      ],
       "order_format": "Physical Resource",
       "owner": "LTS Acquisitions",
       "payment_status": "Awaiting Payment",
@@ -176,12 +178,14 @@
           "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3"
         }
       ],
-      "location": {
-        "quantity": 1,
-        "quantity_electronic": 0,
-        "quantity_physical": 1,
-        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3"
-      },
+      "locations": [
+        {
+          "quantity": 1,
+          "quantity_electronic": 0,
+          "quantity_physical": 1,
+          "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3"
+        }
+      ],
       "order_format": "Physical Resource",
       "owner": "LTS Acquisitions",
       "payment_status": "Awaiting Payment",
@@ -286,11 +290,13 @@
           "encumbrance": "0466cb77-0344-43c6-85eb-0a64aa2934e5"
         }
       ],
-      "location": {
-        "quantity": 2,
-        "quantity_electronic": 1,
-        "quantity_physical": 1
-      },
+      "locations": [
+        {
+          "quantity": 2,
+          "quantity_electronic": 1,
+          "quantity_physical": 1
+        }
+      ],
       "order_format": "Physical Resource",
       "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
       "payment_status": "Awaiting Payment",
@@ -417,12 +423,14 @@
           "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
         }
       ],
-      "location": {
-        "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
-        "quantity": 1,
-        "quantity_electronic": 1,
-        "quantity_physical": 0
-      },
+      "locations": [
+        {
+          "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
+          "quantity": 1,
+          "quantity_electronic": 1,
+          "quantity_physical": 0
+        }
+      ],
       "order_format": "Electronic Resource",
       "owner": "LTS E-Resources & Serials",
       "payment_status": "Awaiting Payment",

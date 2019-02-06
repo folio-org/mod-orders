@@ -3,7 +3,6 @@ package org.folio.orders.utils;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
@@ -14,12 +13,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.client.ConfigurationsClient;
@@ -47,9 +48,9 @@ public class HelperUtils {
   public static final String OKAPI_URL = "X-Okapi-Url";
   public static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
   public static final String URL_WITH_LANG_PARAM = "%s?lang=%s";
-  public static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = resourcesPath(PO_LINES)+"?limit=%s&query=purchase_order_id==%s&lang=%s";
-  public static final String GET_PURCHASE_ORDER_BYID = resourceByIdPath(PURCHASE_ORDER)+URL_WITH_LANG_PARAM;
-  public static final String GET_PURCHASE_ORDER_BYPONUMBER_QUERY = resourcesPath(PURCHASE_ORDER)+"?query=po_number==%s&lang=%s";
+  public static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = resourcesPath(PO_LINES) + "?limit=%s&query=purchase_order_id==%s&lang=%s";
+  private static final String GET_PURCHASE_ORDER_BYID = resourceByIdPath(PURCHASE_ORDER) + URL_WITH_LANG_PARAM;
+  private static final String GET_PURCHASE_ORDER_BYPONUMBER_QUERY = resourcesPath(PURCHASE_ORDER) + "?query=po_number==%s&lang=%s";
 
 
   private static final int DEFAULT_PORT = 9130;
@@ -205,13 +206,13 @@ public class HelperUtils {
     futures.add(operateOnSubObjIfPresent(operation, line, COST, httpClient, ctx, okapiHeaders, logger));
     futures.add(operateOnSubObjIfPresent(operation, line, DETAILS, httpClient, ctx, okapiHeaders, logger));
     futures.add(operateOnSubObjIfPresent(operation, line, ERESOURCE, httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, LOCATION, httpClient, ctx, okapiHeaders, logger));
     futures.add(operateOnSubObjIfPresent(operation, line, PHYSICAL, httpClient, ctx, okapiHeaders, logger));
     futures.add(operateOnSubObjIfPresent(operation, line, SOURCE, httpClient, ctx, okapiHeaders, logger));
     futures.add(operateOnSubObjIfPresent(operation, line, VENDOR_DETAIL, httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, ALERTS, httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, CLAIMS, httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, FUND_DISTRIBUTION, httpClient, ctx, okapiHeaders, logger));
+    futures.addAll(operateOnSubObjsIfPresent(operation, line, LOCATIONS, httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, REPORTING_CODES, httpClient, ctx, okapiHeaders, logger));
 
     CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
@@ -334,6 +335,7 @@ public class HelperUtils {
   }
 
   /**
+   * Calculates total items quantity for all locations.
    * The quantity is based on Order Format (please see MODORDERS-117):<br/>
    * If format equals Physical the associated quantities will result in item records<br/>
    * If format equals Other the associated quantities will NOT result in item records<br/>
@@ -344,36 +346,60 @@ public class HelperUtils {
    * @return quantity of items expected in the inventory for PO Line
    */
   public static int calculateInventoryItemsQuantity(CompositePoLine compPOL) {
+    return calculateInventoryItemsQuantity(compPOL, compPOL.getLocations());
+  }
+
+  /**
+   * Calculates items quantity for specified locations.
+   *
+   * @param compPOL composite PO Line
+   * @param locations list of locations to calculate quantity for
+   * @return quantity of items expected in the inventory for PO Line
+   * @see #calculateInventoryItemsQuantity(CompositePoLine)
+   */
+  public static int calculateInventoryItemsQuantity(CompositePoLine compPOL, List<Location> locations) {
     switch (compPOL.getOrderFormat()) {
       case P_E_MIX:
-        return getPhysicalQuantity(compPOL) + getElectronicQuantity(compPOL);
+        int quantity = getPhysicalQuantity(locations);
+        return isInventoryUpdateRequiredForEresource(compPOL) ? quantity + getElectronicQuantity(locations) : quantity;
       case PHYSICAL_RESOURCE:
-        return getPhysicalQuantity(compPOL);
+        return getPhysicalQuantity(locations);
       case ELECTRONIC_RESOURCE:
-        return getElectronicQuantity(compPOL);
+        return isInventoryUpdateRequiredForEresource(compPOL) ? getElectronicQuantity(locations) : 0;
       case OTHER:
       default:
         return 0;
     }
   }
 
-  private static int getPhysicalQuantity(CompositePoLine compPOL) {
-    return Optional.ofNullable(compPOL.getLocation())
-                   .map(Location::getQuantityPhysical)
-                   .orElse(0);
-  }
-
-  private static int getElectronicQuantity(CompositePoLine compPOL) {
-    boolean createItems = Optional.ofNullable(compPOL.getEresource())
-                                  .map(Eresource::getCreateInventory)
-                                  .orElse(false);
-    if (createItems) {
-      return Optional.ofNullable(compPOL.getLocation())
-                     .map(Location::getQuantityElectronic)
-                     .orElse(0);
+  private static int getPhysicalQuantity(List<Location> locations) {
+    if (CollectionUtils.isNotEmpty(locations)) {
+      return locations.stream()
+                      .map(Location::getQuantityPhysical)
+                      .filter(Objects::nonNull)
+                      .mapToInt(Integer::intValue)
+                      .sum();
     } else {
       return 0;
     }
+  }
+
+  private static int getElectronicQuantity(List<Location> locations) {
+    if (CollectionUtils.isNotEmpty(locations)) {
+      return locations.stream()
+                      .map(Location::getQuantityElectronic)
+                      .filter(Objects::nonNull)
+                      .mapToInt(Integer::intValue)
+                      .sum();
+    } else {
+      return 0;
+    }
+  }
+
+  private static boolean isInventoryUpdateRequiredForEresource(CompositePoLine compPOL) {
+    return Optional.ofNullable(compPOL.getEresource())
+                   .map(Eresource::getCreateInventory)
+                   .orElse(false);
   }
 
   public static CompletableFuture<JsonObject> handleGetRequest(String endpoint, HttpClientInterface

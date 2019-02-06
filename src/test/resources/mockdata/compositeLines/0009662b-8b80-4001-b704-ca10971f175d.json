@@ -81,14 +81,16 @@
       "po_line_id": "0009662b-8b80-4001-b704-ca10971f175d"
     }
   ],
-  "location": {
-    "id": "3ae6dfc3-bf0e-4bd1-90e6-22429eba278a",
-    "location_id": "d47605c3-8f2c-41a3-b3d5-0d42076f4939",
-    "po_line_id": "0009662b-8b80-4001-b704-ca10971f175d",
-    "quantity": 1,
-    "quantity_electronic": 0,
-    "quantity_physical": 1
-  },
+  "locations": [
+    {
+      "id": "3ae6dfc3-bf0e-4bd1-90e6-22429eba278a",
+      "location_id": "d47605c3-8f2c-41a3-b3d5-0d42076f4939",
+      "po_line_id": "0009662b-8b80-4001-b704-ca10971f175d",
+      "quantity": 1,
+      "quantity_electronic": 0,
+      "quantity_physical": 1
+    }
+  ],
   "order_format": "Physical Resource",
   "owner": "Acquisitions - Serials",
   "payment_status": "Pending",

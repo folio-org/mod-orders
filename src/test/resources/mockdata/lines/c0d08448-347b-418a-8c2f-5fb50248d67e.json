@@ -25,7 +25,9 @@
   "fund_distribution": [
     "d10879e8-8c2d-4850-bcb9-0ec8e2e10021"
   ],
-  "location": "a4e65e03-99a4-4b39-8e6a-ae666ac52bea",
+  "locations": [
+    "a4e65e03-99a4-4b39-8e6a-ae666ac52bea"
+  ],
   "order_format": "Physical Resource",
   "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
   "payment_status": "Awaiting Payment",

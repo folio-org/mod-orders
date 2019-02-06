@@ -17,7 +17,7 @@
   "donor" : "Some text goes here",
   "eresource" : "9934f55c-0ecd-4134-a819-aa7d8ca7877d",
   "fund_distribution" : ["8e5c3491-5d1b-4734-9a41-0ec441ff96fe", "168f8a86-d26c-406e-813f-c7527f241ac3"],
-  "location" : "b9f0b58e-56bc-41d5-a3be-1bb349b85c68",
+  "locations" : ["b9f0b58e-56bc-41d5-a3be-1bb349b85c68"],
   "order_format" : "Physical Resource",
   "owner" : "The owber is not difined",
   "payment_status" : "Awaiting Payment",

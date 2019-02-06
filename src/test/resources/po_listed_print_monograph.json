@@ -66,9 +66,9 @@
       "cost": {
         "list_price": 24.99,
         "currency": "USD",
-        "quantity_physical": 1,
+        "quantity_physical": 3,
         "quantity_electronic": 1,
-        "po_line_estimated_price": 49.98
+        "po_line_estimated_price": 99.96
       },
       "description": "ABCDEFGH",
       "details": {
@@ -102,12 +102,26 @@
           "encumbrance": "0466cb77-0344-43c6-85eb-0a64aa2934e5"
         }
       ],
-      "location": {
-        "location_id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
-        "quantity": 2,
-        "quantity_electronic": 1,
-        "quantity_physical": 1
-      },
+      "locations": [
+        {
+          "location_id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "quantity": 1,
+          "quantity_electronic": 0,
+          "quantity_physical": 1
+        },
+        {
+          "location_id": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+          "quantity": 2,
+          "quantity_electronic": 0,
+          "quantity_physical": 2
+        },
+        {
+          "location_id": "b241764c-1466-4e1d-a028-1a3684a5da87",
+          "quantity": 1,
+          "quantity_electronic": 1,
+          "quantity_physical": 0
+        }
+      ],
       "order_format": "P/E Mix",
       "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
       "payment_status": "Awaiting Payment",
@@ -201,11 +215,11 @@
         }
       ],
       "cost": {
-        "list_price": 75.22,
+        "list_price": 25.10,
         "currency": "USD",
         "quantity_physical": 0,
-        "quantity_electronic": 1,
-        "po_line_estimated_price": 75.22,
+        "quantity_electronic": 3,
+        "po_line_estimated_price": 75.30,
         "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
       },
       "description": "",
@@ -237,13 +251,22 @@
           "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
         }
       ],
-      "location": {
-        "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
-        "location_id": "b241764c-1466-4e1d-a028-1a3684a5da87",
-        "quantity": 1,
-        "quantity_electronic": 1,
-        "quantity_physical": 0
-      },
+      "locations": [
+        {
+          "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
+          "location_id": "b241764c-1466-4e1d-a028-1a3684a5da87",
+          "quantity": 2,
+          "quantity_electronic": 2,
+          "quantity_physical": 0
+        },
+        {
+          "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
+          "location_id": "758258bc-ecc1-41b8-abca-f7b610822ffd",
+          "quantity": 1,
+          "quantity_electronic": 1,
+          "quantity_physical": 0
+        }
+      ],
       "order_format": "Electronic Resource",
       "owner": "LTS E-Resources & Serials",
       "payment_status": "Awaiting Payment",

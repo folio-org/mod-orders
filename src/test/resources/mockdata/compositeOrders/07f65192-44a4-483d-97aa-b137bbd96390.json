@@ -116,14 +116,16 @@
           "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1"
         }
       ],
-      "location": {
-        "id": "07c5d9ea-cabe-11e8-a8d5-f2801f1b9f04",
-        "location_id": "9cc5d9ea-cabe-11e8-a8d5-f2901f1b9fd1",
-        "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
-        "quantity": 1,
-        "quantity_electronic": 1,
-        "quantity_physical": 0
-      },
+      "locations": [
+        {
+          "id": "07c5d9ea-cabe-11e8-a8d5-f2801f1b9f04",
+          "location_id": "9cc5d9ea-cabe-11e8-a8d5-f2901f1b9fd1",
+          "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
+          "quantity": 1,
+          "quantity_electronic": 1,
+          "quantity_physical": 0
+        }
+      ],
       "order_format": "Electronic Resource",
       "owner": "Technical Services Department",
       "payment_status": "Awaiting Payment",

@@ -15,7 +15,7 @@ import static org.folio.orders.utils.ResourcePathResolver.COST;
 import static org.folio.orders.utils.ResourcePathResolver.DETAILS;
 import static org.folio.orders.utils.ResourcePathResolver.ERESOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.FUND_DISTRIBUTION;
-import static org.folio.orders.utils.ResourcePathResolver.LOCATION;
+import static org.folio.orders.utils.ResourcePathResolver.LOCATIONS;
 import static org.folio.orders.utils.ResourcePathResolver.PHYSICAL;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
@@ -167,8 +167,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     return inventoryHelper.handleInstanceRecord(compPOL)
       .thenCompose(withInstId -> getPoLineById(compPOL.getId(), lang, httpClient, ctx, okapiHeaders, logger))
       .thenCompose(jsonObj -> updateOrderLine(compPOL, jsonObj))
-      .thenCompose(v -> inventoryHelper.getOrCreateHoldingsRecord(compPOL))
-      .thenCompose(holdingsId -> inventoryHelper.handleItemRecords(compPOL, holdingsId))
+      .thenCompose(holdingsId -> inventoryHelper.handleItemRecords(compPOL))
       .thenCompose(itemIds -> {
         // Temporal check. The idea is to create piece records for successfully created items and then throw exception
         if (itemIds.size() != expectedItemsQuantity) {
@@ -265,13 +264,13 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     futures.add(handleSubObjOperation(COST, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(DETAILS, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(ERESOURCE, updatedLineJson, lineFromStorage));
-    futures.add(handleSubObjOperation(LOCATION, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(PHYSICAL, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(SOURCE, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(VENDOR_DETAIL, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjsOperation(CLAIMS, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjsOperation(FUND_DISTRIBUTION, updatedLineJson, lineFromStorage));
+    futures.add(handleSubObjsOperation(LOCATIONS, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage));
 
     // Once all operations completed, return updated PO Line with new sub-object id's as json object

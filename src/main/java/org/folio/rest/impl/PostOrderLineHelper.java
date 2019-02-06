@@ -2,30 +2,23 @@ package org.folio.rest.impl;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
-import static org.folio.orders.utils.ResourcePathResolver.ADJUSTMENT;
-import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.CLAIMS;
-import static org.folio.orders.utils.ResourcePathResolver.COST;
-import static org.folio.orders.utils.ResourcePathResolver.DETAILS;
-import static org.folio.orders.utils.ResourcePathResolver.ERESOURCE;
-import static org.folio.orders.utils.ResourcePathResolver.FUND_DISTRIBUTION;
-import static org.folio.orders.utils.ResourcePathResolver.LOCATION;
-import static org.folio.orders.utils.ResourcePathResolver.PHYSICAL;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
-import static org.folio.orders.utils.ResourcePathResolver.SOURCE;
-import static org.folio.orders.utils.ResourcePathResolver.VENDOR_DETAIL;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.orders.utils.ResourcePathResolver.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
@@ -55,16 +48,16 @@ public class PostOrderLineHelper extends AbstractHelper {
     subObjFuts.add(createCost(compPOL, line, compPOL.getCost()));
     subObjFuts.add(createDetails(compPOL, line, compPOL.getDetails()));
     subObjFuts.add(createEresource(compPOL, line, compPOL.getEresource()));
-    subObjFuts.add(createLocation(compPOL, line, compPOL.getLocation()));
     subObjFuts.add(createPhysical(compPOL, line, compPOL.getPhysical()));
     subObjFuts.add(createVendorDetail(compPOL, line, compPOL.getVendorDetail()));
     subObjFuts.add(createAlerts(compPOL, line, compPOL.getAlerts()));
     subObjFuts.add(createClaims(compPOL, line, compPOL.getClaims()));
     subObjFuts.add(createSource(compPOL, line, compPOL.getSource()));
+    subObjFuts.add(createLocations(compPOL, line));
     subObjFuts.add(createReportingCodes(compPOL, line, compPOL.getReportingCodes()));
     subObjFuts.add(createFundDistribution(compPOL, line, compPOL.getFundDistribution()));
 
-    return CompletableFuture.allOf(subObjFuts.toArray(new CompletableFuture[subObjFuts.size()]))
+    return CompletableFuture.allOf(subObjFuts.toArray(new CompletableFuture[0]))
       .thenCompose(v -> {
         try {
           Buffer polBuf = JsonObject.mapFrom(line).toBuffer();
@@ -150,20 +143,54 @@ public class PostOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<Void> createLocation(CompositePoLine compPOL, JsonObject line, Location location) {
-    return createSubObjIfPresent(line, location, LOCATION, resourcesPath(LOCATION))
-      .thenAccept(id -> {
-        if (id == null) {
-          line.remove(LOCATION);
-          compPOL.setLocation(null);
+  private CompletableFuture<Void> createLocations(CompositePoLine compPOL, JsonObject line) {
+    List<Location> locations = compPOL.getLocations();
+    if (CollectionUtils.isNotEmpty(locations)) {
+      List<CompletableFuture<String>> futures = new ArrayList<>();
+      Iterator<Location> iterator = locations.iterator();
+      while (iterator.hasNext()) {
+        Location location = iterator.next();
+        futures.add(createSubObjIfPresent(line, location, LOCATIONS, resourcesPath(LOCATIONS))
+          .thenApply(id -> {
+            if (StringUtils.isEmpty(id)) {
+              iterator.remove();
+            } else {
+              location.setId(id);
+              location.setPoLineId(compPOL.getId());
+            }
+            return id;
+        }));
+      }
+
+    return extractIdsOnSuccess(futures)
+      .thenAccept(ids -> {
+        if (CollectionUtils.isEmpty(ids)) {
+          line.remove(LOCATIONS);
+          compPOL.setLocations(Collections.emptyList());
         } else {
-          compPOL.getLocation().setId(id);
+          line.put(LOCATIONS, ids);
         }
       })
       .exceptionally(t -> {
-        logger.error("failed to create Location", t);
+        logger.error("Failed to create Locations", t);
         throw new CompletionException(t.getCause());
       });
+    } else {
+      line.remove(LOCATIONS);
+    }
+
+    return completedFuture(null);
+  }
+
+  private CompletableFuture<List<String>> extractIdsOnSuccess(List<CompletableFuture<String>> futures) {
+    return CompletableFuture
+      .allOf(futures.toArray(new CompletableFuture[0]))
+      .thenApply(v -> futures
+        .stream()
+        .map(CompletableFuture::join)
+        .filter(Objects::nonNull)
+        .collect(Collectors.toList())
+      );
   }
 
   private CompletableFuture<Void> createPhysical(CompositePoLine compPOL, JsonObject line, Physical physical) {
