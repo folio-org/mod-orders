@@ -41,6 +41,7 @@ import java.util.stream.Collectors;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
@@ -169,13 +170,18 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenCompose(v -> inventoryHelper.getOrCreateHoldingsRecord(compPOL))
       .thenCompose(holdingsId -> inventoryHelper.handleItemRecords(compPOL, holdingsId))
       .thenCompose(itemIds -> {
-        // Temporal check. The idea is to create piece records for successfully created items and then throw exception
-        if (itemIds.size() != expectedItemsQuantity) {
-          throw new IllegalStateException("Expected items quantity does not correspond to created items");
-        }
-        return completedFuture(itemIds);
-      })
-      .thenCompose(itemIds -> createPieces(compPOL, itemIds));
+        int itemsSize = itemIds.size();
+
+        // Create piece records for successfully created items
+        return createPieces(compPOL, itemIds)
+          .thenAccept(v -> {
+            if (itemsSize != expectedItemsQuantity) {
+              String message = String.format("The issue happened creating items for PO Line with '%s' id. Expected %d but %d created",
+                compPOL.getId(), expectedItemsQuantity, itemsSize);
+              throw new InventoryException(message);
+            }
+          });
+      });
   }
 
   /**
