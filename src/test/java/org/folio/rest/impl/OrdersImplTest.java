@@ -184,6 +184,7 @@ public class OrdersImplTest {
   private static final String MOCK_DATA_ROOT_PATH = "src/test/resources/";
   private static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "/po_line_collection.json";
   private static final String listedPrintMonographPath = MOCK_DATA_ROOT_PATH + "/po_listed_print_monograph.json";
+  private static final String pieceRecordTestPath = MOCK_DATA_ROOT_PATH + "/piece_record_test.json";
   private static final String listedPrintSerialPath = MOCK_DATA_ROOT_PATH + "/po_listed_print_serial.json";
   private static final String MINIMAL_ORDER_PATH = MOCK_DATA_ROOT_PATH + "/minimal_order.json";
   private static final String poCreationFailurePath = MOCK_DATA_ROOT_PATH + "/po_creation_failure.json";
@@ -965,6 +966,32 @@ public class OrdersImplTest {
     ctx.assertEquals(LINES_LIMIT_ERROR_CODE, errors.getErrors().get(0).getCode());
   }
 
+  @Test
+  public void testPutOrdersByIdToCreatePieceWhenNoItemRecordsExists() throws Exception {
+    logger.info("=== Test Put Order By Id to create piece when no item record exists ===");
+
+    // Get Open Order
+    CompositePurchaseOrder reqData = new JsonObject(getMockData(pieceRecordTestPath)).mapTo(CompositePurchaseOrder.class);
+    // Make sure that mock PO has 1 po lines
+    assertEquals(1, reqData.getCompositePoLines().size());
+
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    // MODORDERS-117 guarantee electronic resource for the second PO Line but set "create items" to false
+    reqData.getCompositePoLines().get(0).setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
+    reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(false);
+
+//    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, "45b5e676-c86e-4cc5-9453-e426333e6b89"), JsonObject.mapFrom(reqData).toString(), "", 204);
+
+//    int polCount = reqData.getCompositePoLines().size();
+//
+//    verifyPieceCreation(reqData, polCount - 1);
+  }
+  
+  private void verifyPieceCreation(CompositePurchaseOrder reqData, int createdInstancesCount) {
+    List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
+    List<JsonObject> piecesSearches = MockServer.serverRqRs.get(PIECES, HttpMethod.GET);
+    assertNotNull(piecesSearches);
+  }
   @Test
   public void testPutOrdersByIdToChangeStatusToOpen() throws Exception {
     logger.info("=== Test Put Order By Id to change status of Order to Open ===");

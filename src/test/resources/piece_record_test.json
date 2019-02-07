@@ -1,0 +1,61 @@
+{
+  "notes" : [ "cmcnally test 2", "another note" ],
+  "po_number" : "CAM001",
+  "order_type" : "One-Time",
+  "vendor" : "aa453127-f07c-4389-adb2-e57f5d04e243",
+  "workflow_status" : "Open",
+  "compositePoLines" : [ {
+    "id" : "be7d770f-9f73-40fd-b598-f60f1d537af6",
+    "acquisition_method" : "Purchase",
+    "alerts" : [ ],
+    "claims" : [ ],
+    "contributors" : [ {
+      "contributor" : "Somebody"
+    } ],
+    "cost" : {
+      "id" : "923c4ebd-650a-4ca2-8a41-3801fab34707",
+      "list_price" : 10.99,
+      "currency" : "USD",
+      "quantity_electronic" : 1,
+      "po_line_id" : "be7d770f-9f73-40fd-b598-f60f1d537af6"
+    },
+    "details" : {
+      "id" : "da32498a-c2dc-4714-8972-44ae4d05001a",
+      "product_ids" : [ {
+        "product_id" : "9871234567890",
+        "product_id_type" : "ISBN"
+      } ],
+      "material_types" : [ "615b8413-82d5-4203-aa6e-e37984cb5ac3" ],
+      "po_line_id" : "be7d770f-9f73-40fd-b598-f60f1d537af6"
+    },
+    "eresource" : {
+      "id" : "bd74c34f-efe9-4b66-aeff-fa1b18368b1a",
+      "access_provider" : "b1cd7744-fbb1-4014-a159-252c3de89ef9",
+      "po_line_id" : "be7d770f-9f73-40fd-b598-f60f1d537af6"
+    },
+    "fund_distribution" : [ ],
+    "location" : {
+      "location_id" : "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "po_line_id" : "be7d770f-9f73-40fd-b598-f60f1d537af6",
+      "quantity" : 1,
+      "quantity_electronic" : 1,
+      "quantity_physical" : 0
+    },
+    "order_format" : "Electronic Resource",
+    "po_line_number" : "CAM001-1",
+    "purchase_order_id" : "45b5e676-c86e-4cc5-9453-e426333e6b89",
+    "reporting_codes" : [ ],
+    "source" : {
+      "id" : "33526773-d198-4cc4-9da7-8456ddec4a78",
+      "code" : "FOLIO"
+    },
+    "tags" : [ ],
+    "title" : "Foo Bar BaZ",
+    "vendor_detail" : {
+      "id" : "37943d37-a8d9-4d4e-931b-59182d8d1f8c",
+      "instructions" : "",
+      "po_line_id" : "be7d770f-9f73-40fd-b598-f60f1d537af6"
+    }
+  }
+ ]
+}
