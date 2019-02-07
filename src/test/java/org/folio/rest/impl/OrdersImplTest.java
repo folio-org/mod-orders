@@ -174,7 +174,6 @@ public class OrdersImplTest {
   private static final String INSTANCE_IDENTIFIERS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
   private static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
   private static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
-  private static final String HOLDINGS_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "holdingsRecords/";
   private static final String ITEMS_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/";
   private static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
   private static final String COMP_ORDER_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/";
@@ -1006,7 +1005,7 @@ public class OrdersImplTest {
     // Assert that only one PO line presents
     assertEquals(1, polCount);
 
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), TEXT_PLAIN, 500);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), APPLICATION_JSON, 500);
 
     // Verify inventory GET and POST requests for instance, holding and item records
     verifyInventoryInteraction(false);
