@@ -14,11 +14,13 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import javax.ws.rs.core.Response;
 
-import org.folio.orders.rest.exceptions.CustomHttpException;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.orders.utils.ErrorCodes;
@@ -97,15 +99,6 @@ public abstract class AbstractHelper {
     if (t instanceof HttpException) {
       final int code = ((HttpException) t).getCode();
       result = succeededFuture(buildErrorResponse(code, new Error().withMessage(message)));
-    } else if (t instanceof CustomHttpException) {
-      final int httpCode = ((CustomHttpException) t).getHttpCode();
-      final ErrorCodes errorCode = ((CustomHttpException) t).getErrorCode();
-
-      Error error = new Error()
-        .withCode(errorCode.getCode())
-        .withMessage(errorCode.getDescription());
-
-      result = succeededFuture(buildErrorResponse(httpCode, error));
     } else if (t instanceof ValidationException) {
       result = succeededFuture(buildErrorResponse(422, ((ValidationException) t).getError()));
     } else {
@@ -122,6 +115,12 @@ public abstract class AbstractHelper {
     Errors errors = new Errors();
     errors.getErrors().add(error);
     return errors;
+  }
+
+  protected List<ErrorCodes> withErrorCode(ErrorCodes errorCode) {
+    List<ErrorCodes> errorCodes = new ArrayList<>();
+    errorCodes.add(errorCode);
+    return errorCodes;
   }
 
   abstract Response buildErrorResponse(int code, Error error);

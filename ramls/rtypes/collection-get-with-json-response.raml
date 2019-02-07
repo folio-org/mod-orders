@@ -22,6 +22,9 @@
               example:
                 strict: false
                 value: !include ../raml-util/examples/errors.sample
+            text/plain:
+              example: |
+                "unable to list <<resourcePathName>> -- malformed parameter 'query', syntax error at column 6"
         401:
           description: "Not authorized to perform requested action"
           body:
@@ -29,6 +32,9 @@
               example:
                 strict: false
                 value: !include ../raml-util/examples/errors.sample
+            text/plain:
+              example: |
+                "unable to list <<resourcePathName>> -- unauthorized"
         404:
           description: "Item with a given ID not found"
           body:
@@ -36,6 +42,9 @@
               example:
                 strict: false
                 value: !include ../raml-util/examples/errors.sample
+            text/plain:
+              example: |
+                "<<resourcePathName|!singularize>> not found"
         500:
           description: "Internal server error, e.g. due to misconfiguration"
           body:
@@ -43,3 +52,5 @@
               example:
                 strict: false
                 value: !include ../raml-util/examples/errors.sample
+            text/plain:
+              example: "internal server error, contact administrator"

@@ -28,7 +28,6 @@ import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdRespon
 import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.respond404WithApplicationJson;
 import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.respond422WithApplicationJson;
 import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.respond500WithApplicationJson;
-import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.respond500WithApplicationJson;
 
 import java.util.ArrayList;
 import java.util.Collections;

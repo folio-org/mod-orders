@@ -3,7 +3,7 @@ package org.folio.rest.impl;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
-import org.folio.orders.rest.exceptions.CustomHttpException;
+import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.SequenceNumber;
@@ -42,7 +42,7 @@ public class PoNumberHelper extends AbstractHelper {
       .thenAccept(po -> {
          if (po.getInteger("total_records") != 0) {
            logger.error("Exception validating PO Number existence");
-           throw new CompletionException(new CustomHttpException(400, ErrorCodes.PO_NUMBER_ALREADY_EXISTS));
+           throw new CompletionException(new HttpException(400, withErrorCode(ErrorCodes.PO_NUMBER_ALREADY_EXISTS)));
          }
       });
   }
