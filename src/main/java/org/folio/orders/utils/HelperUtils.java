@@ -11,6 +11,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -19,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -400,6 +402,21 @@ public class HelperUtils {
     return Optional.ofNullable(compPOL.getEresource())
                    .map(Eresource::getCreateInventory)
                    .orElse(false);
+  }
+
+  /**
+   * Groups all PO Line's locations by location id
+   * @param compPOL PO line with locations to group
+   * @return map of grouped locations where key is location id and value is list of locations with the same id
+   */
+  public static Map<String, List<Location>> groupLocationsById(CompositePoLine compPOL) {
+    if (CollectionUtils.isEmpty(compPOL.getLocations())) {
+      return Collections.emptyMap();
+    }
+
+    return compPOL.getLocations()
+                  .stream()
+                  .collect(Collectors.groupingBy(Location::getLocationId));
   }
 
   public static CompletableFuture<JsonObject> handleGetRequest(String endpoint, HttpClientInterface

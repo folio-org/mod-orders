@@ -7,13 +7,11 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Details;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -27,7 +25,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
-import java.util.stream.Collectors;
 
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -37,6 +34,7 @@ import static java.util.stream.Collectors.toMap;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
 import static org.folio.rest.impl.AbstractHelper.ID;
@@ -116,13 +114,17 @@ public class InventoryHelper {
 
     // Group all locations by location id because the holding should be unique for different locations
     groupLocationsById(compPOL)
-      .forEach((locationId, locations) ->
-        itemsPerHolding.add(
-          // Search for or create a new holding and then create items for this holding
-          getOrCreateHoldingsRecord(compPOL, locationId)
-            .thenCompose(holdingId -> handleItemRecords(compPOL, holdingId, locations))
-        )
-      );
+      .forEach((locationId, locations) -> {
+        int expectedQuantity = calculateInventoryItemsQuantity(compPOL, locations);
+        // For some cases items might not be created e.g. Electronic resource with create inventory set to false
+        if (expectedQuantity > 0) {
+          itemsPerHolding.add(
+            // Search for or create a new holding and then create items for this holding
+            getOrCreateHoldingsRecord(compPOL, locationId)
+              .thenCompose(holdingId -> handleItemRecords(compPOL, holdingId, expectedQuantity))
+          );
+        }
+      });
 
     // Wait for all requests completion and collect all items id's. In case any failed, complete resulting future with the exception
     allOf(itemsPerHolding.toArray(new CompletableFuture[0]))
@@ -142,21 +144,6 @@ public class InventoryHelper {
       });
 
     return result;
-  }
-
-  /**
-   * Groups all PO Line's locations by location id
-   * @param compPOL PO line with locations to group
-   * @return map of grouped locations where key is location id and value is list of locations with the same id
-   */
-  private Map<String, List<Location>> groupLocationsById(CompositePoLine compPOL) {
-    if (CollectionUtils.isEmpty(compPOL.getLocations())) {
-      return Collections.emptyMap();
-    }
-
-    return compPOL.getLocations()
-                  .stream()
-                  .collect(Collectors.groupingBy(Location::getLocationId));
   }
 
   private CompletableFuture<String> getOrCreateHoldingsRecord(CompositePoLine compPOL, String locationId) {
@@ -187,17 +174,26 @@ public class InventoryHelper {
    *
    * @param compPOL   PO line to retrieve/create Item Records for
    * @param holdingId holding uuid from the inventory
+   * @param expectedQuantity expected items quantity for the holding
    * @return future with list of item id's
    */
-  private CompletableFuture<List<String>> handleItemRecords(CompositePoLine compPOL, String holdingId, List<Location> locations) {
-    int expectedQuantity = calculateInventoryItemsQuantity(compPOL, locations);
+  private CompletableFuture<List<String>> handleItemRecords(CompositePoLine compPOL, String holdingId, int expectedQuantity) {
     // Search for already existing items
     return searchForExistingItems(compPOL, holdingId, expectedQuantity)
       .thenCompose(existingItemIds -> {
         // Create only missing items
         int remainingItemsQuantity = expectedQuantity - existingItemIds.size();
         return createMissingItems(compPOL, holdingId, remainingItemsQuantity)
-            .thenApply(createdItemIds -> ListUtils.union(existingItemIds, createdItemIds));
+          .thenApply(createdItemIds -> {
+            List<String> allItemIds = ListUtils.union(existingItemIds, createdItemIds);
+
+            // In case no items created, return an exception because nothing can be done at this stage
+            if (allItemIds.isEmpty()) {
+              throw new InventoryException(String.format("No items created for PO Line with %s id", compPOL.getId()));
+            }
+
+            return allItemIds;
+          });
         }
       );
   }
@@ -369,42 +365,24 @@ public class InventoryHelper {
                    .orElseGet(Collections::emptyList);
   }
 
-  private CompletableFuture<List<String>> createMissingItems(CompositePoLine compPOL, String holdingId, int count) {
-    return (count > 0) ? createItemRecords(compPOL, holdingId, count) : completedFuture(Collections.emptyList());
-  }
-
   /**
    * Creates Items in the inventory based on the PO line data.
    *
    * @param compPOL PO line to create Instance Record for
    * @param holdingId holding id
-   * @param count expected number of items to create
+   * @param quantity expected number of items to create
    * @return id of newly created Instance Record
    */
-  private CompletableFuture<List<String>> createItemRecords(CompositePoLine compPOL, String holdingId, int count) {
-    CompletableFuture<List<String>> result = new VertxCompletableFuture<>(ctx);
-    logger.debug("Creating {} items for PO Line with '{}' id", count, compPOL.getId());
-
-    buildItemRecordJsonObject(compPOL, holdingId)
-      .thenCompose(itemData -> createItemRecords(itemData, count))
-      .thenAccept(createdItemIds -> {
-        // In case no items created at all, throw an exception because nothing can be done at this stage
-        if (createdItemIds.isEmpty()) {
-          throw new InventoryException(String.format("No items created for PO Line with %s id", compPOL.getId()));
-        } else if (count != createdItemIds.size()) {
-          // Just logging the error. The logic should try to create piece records for successfully created items
-          logger.error("The issue happened creating items for PO Line with '{}' id. Expected {} but {} created",
-            compPOL.getId(), count, createdItemIds.size());
-        }
-        result.complete(createdItemIds);
-      })
-      .exceptionally(exc -> {
-        logger.error("The issue happened creating items for PO Line with '{}' id.", exc, compPOL.getId());
-        result.completeExceptionally(exc);
-        return null;
-      });
-
-    return result;
+  private CompletableFuture<List<String>> createMissingItems(CompositePoLine compPOL, String holdingId, int quantity) {
+    if (quantity > 0) {
+      return buildItemRecordJsonObject(compPOL, holdingId)
+        .thenCompose(itemData -> {
+          logger.debug("Creating {} items for PO Line with '{}' id", quantity, compPOL.getId());
+          return createItemRecords(itemData, quantity);
+        });
+    } else {
+      return completedFuture(Collections.emptyList());
+    }
   }
 
   /**
@@ -462,7 +440,7 @@ public class InventoryHelper {
         })
         .exceptionally(throwable -> {
           future.completeExceptionally(throwable);
-          logger.error("'POST {}' request failed.", throwable, endpoint);
+          logger.error("'POST {}' request failed. Request body: {}", throwable, endpoint, recordData.encodePrettily());
           return null;
         });
     } catch (Exception e) {
@@ -503,8 +481,7 @@ public class InventoryHelper {
         itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ITEM_STATUS_ON_ORDER));
         itemRecord.put(ITEM_MATERIAL_TYPE_ID, materialTypeId);
         itemRecord.put(ITEM_PERMANENT_LOAN_TYPE_ID, loanTypeId);
-        // TODO uncomment once MODINVSTOR-245 merged to master
-        //itemRecord.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
+        itemRecord.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
         return itemRecord;
       });
   }

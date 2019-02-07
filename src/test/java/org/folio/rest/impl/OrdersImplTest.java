@@ -3,9 +3,8 @@ package org.folio.rest.impl;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
+import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.ResourcePathResolver.*;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
@@ -23,6 +22,7 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
+import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertEquals;
@@ -996,6 +996,44 @@ public class OrdersImplTest {
     verifyInventoryInteraction(reqData, polCount - 1);
   }
 
+  @Test
+  public void testUpdateOrderToOpenWithPartialItemsCreation() throws Exception {
+    logger.info("=== Test Order update to Open status - Inventory items expected to be created partially ===");
+
+    CompositePurchaseOrder reqData = new JsonObject(getMockData(LISTED_PRINT_MONOGRAPH_PATH)).mapTo(CompositePurchaseOrder.class);
+    // Emulate items creation issue
+    reqData.getCompositePoLines().get(0).getDetails().getMaterialTypes().set(0, ID_FOR_INTERNAL_SERVER_ERROR);
+    // Let's have only one PO Line
+    reqData.getCompositePoLines().remove(1);
+    // Set status to Open
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    // Set specific ID to let items search to return 1 item
+    reqData.setId(ID_FOR_PENDING_ORDER);
+
+    int polCount = reqData.getCompositePoLines().size();
+    // Assert that only one PO line presents
+    assertEquals(1, polCount);
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), TEXT_PLAIN, 500);
+
+    // Verify inventory GET and POST requests for instance, holding and item records
+    verifyInventoryInteraction(false);
+
+    // All existing and created items
+    List<JsonObject> items = joinExistingAndNewItems();
+    // All created pieces
+    List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
+
+    // Assert that items quantity equals to created ieces
+    assertEquals(createdPieces.size(), items.size());
+
+    // Verify that not all expected items created
+    assertThat(items.size(), lessThan(calculateInventoryItemsQuantity(reqData.getCompositePoLines().get(0))));
+
+    // Verify that pieces created for processed items quantity
+    verifyPiecesCreated(items, createdPieces);
+  }
+
   private void verifyInstanceLinksForUpdatedOrder(CompositePurchaseOrder reqData) {
     List<JsonObject> polUpdates = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
     assertNotNull(polUpdates);
@@ -1120,25 +1158,27 @@ public class OrdersImplTest {
 	}
 
   private void verifyHoldingsCreated(List<JsonObject> holdings, CompositePoLine pol) {
-    Set<String> locationIds = pol.getLocations()
-                                 .stream()
-                                 .map(Location::getLocationId)
-                                 .filter(Objects::nonNull)
-                                 .collect(Collectors.toSet());
+    Map<String, List<Location>> groupedLocations = groupLocationsById(pol);
 
-    long holdingsQuantity = 0;
+    long actualQty = 0;
     for (JsonObject holding : holdings) {
-      if (locationIds.contains(holding.getString(HOLDING_PERMANENT_LOCATION_ID))
+      if (groupedLocations.keySet().contains(holding.getString(HOLDING_PERMANENT_LOCATION_ID))
         && StringUtils.equals(pol.getInstanceId(), holding.getString(HOLDING_INSTANCE_ID))) {
-        holdingsQuantity++;
+        actualQty++;
       }
     }
 
     int itemsQuantity = calculateInventoryItemsQuantity(pol);
     if (itemsQuantity == 0) {
-      assertEquals("No holdings expected", 0, holdingsQuantity);
+      assertEquals("No holdings expected", 0, actualQty);
     } else {
-      assertEquals("Quantity of holdings does not match to PO line's unique locations", locationIds.size(), holdingsQuantity);
+      long expectedQty = groupedLocations
+        .values()
+        .stream()
+        .mapToInt(locations -> calculateInventoryItemsQuantity(pol, locations))
+        .filter(qty -> qty > 0)
+        .count();
+      assertEquals("Quantity of holdings does not match to expected", expectedQty, actualQty);
     }
   }
 
@@ -1146,9 +1186,7 @@ public class OrdersImplTest {
     int actualQuantity = 0;
 
     for (JsonObject item : inventoryItems) {
-      // TODO uncomment once MODINVSTOR-245 merged to master
-      //if (pol.getId().equals(item.getString("purchaseOrderLineIdentifier"))) {
-      if (pol.getDetails().getMaterialTypes().contains(item.getString("materialTypeId"))) {
+      if (pol.getId().equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER))) {
         verifyItemRecordRequest(item, pol);
         actualQuantity++;
       }
@@ -1173,8 +1211,7 @@ public class OrdersImplTest {
   }
 
   private void verifyItemRecordRequest(JsonObject item, CompositePoLine line) {
-    // TODO uncomment once MODINVSTOR-245 merged to master
-    //assertThat(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER), not(isEmptyOrNullString()));
+    assertThat(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER), not(isEmptyOrNullString()));
     assertThat(line.getDetails().getMaterialTypes(), hasItem(item.getString(ITEM_MATERIAL_TYPE_ID)));
     assertThat(item.getString(ITEM_HOLDINGS_RECORD_ID), not(isEmptyOrNullString()));
     assertThat(item.getString(ITEM_PERMANENT_LOAN_TYPE_ID), not(isEmptyOrNullString()));
