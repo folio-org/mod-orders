@@ -38,11 +38,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
@@ -171,13 +171,18 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenCompose(v -> inventoryHelper.getOrCreateHoldingsRecord(compPOL))
       .thenCompose(holdingsId -> inventoryHelper.handleItemRecords(compPOL, holdingsId))
       .thenCompose(itemIds -> {
-        // Temporal check. The idea is to create piece records for successfully created items and then throw exception
-        if (itemIds.size() != expectedItemsQuantity) {
-          throw new IllegalStateException("Expected items quantity does not correspond to created items");
-        }
-        return completedFuture(itemIds);
-      })
-      .thenCompose(itemIds -> createPieces(compPOL, itemIds));
+        int itemsSize = itemIds.size();
+
+        // Create piece records for successfully created items
+        return createPieces(compPOL, itemIds)
+          .thenAccept(v -> {
+            if (itemsSize != expectedItemsQuantity) {
+              String message = String.format("The issue happened creating items for PO Line with '%s' id. Expected %d but %d created",
+                compPOL.getId(), expectedItemsQuantity, itemsSize);
+              throw new InventoryException(message);
+            }
+          });
+      });
   }
 
   /**
@@ -200,27 +205,19 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 		handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(body -> {
         PieceCollection pieces = body.mapTo(PieceCollection.class);
-        
+
         // Extract item Id's which already associated with piece records
         List<String> existingItemIds = pieces.getPieces()
             .stream()
             .map(Piece::getItemId)
             .filter(StringUtils::isNotEmpty)
             .collect(Collectors.toList());
-        
-        // Create pieces for successfully created item Ids
 
         // Create piece records for item id's which do not have piece records yet
         itemIds.stream()
                .filter(id -> !existingItemIds.contains(id))
                .forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
 
-        // Create pieces for total quantity when item record does not exists
-	    	int totalQuantity = compPOL.getCost().getQuantityElectronic() + compPOL.getCost().getQuantityPhysical();
-	    	int diff = Math.abs(totalQuantity - calculateInventoryItemsQuantity(compPOL));
-	    	IntStream.range(0, diff).forEach(i -> futuresList.add(createPiece(poLineId, null)));
-        
-        
         allOf(futuresList.toArray(new CompletableFuture[0]))
           .thenAccept(v -> future.complete(null))
           .exceptionally(t -> {
@@ -248,9 +245,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 		// Construct Piece object
   	Piece piece = new Piece();
   	piece.setPoLineId(poLineId);
-  	// For a poLineId, do not set itemId if item record does not exist
-  	if(itemId != null)
-  		piece.setItemId(itemId);
+  	piece.setItemId(itemId);
   	piece.setReceivingStatus(Piece.ReceivingStatus.EXPECTED);
 
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
