@@ -967,32 +967,6 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPutOrdersByIdToCreatePieceWhenNoItemRecordsExists() throws Exception {
-    logger.info("=== Test Put Order By Id to create piece when no item record exists ===");
-
-    // Get Open Order
-    CompositePurchaseOrder reqData = new JsonObject(getMockData(pieceRecordTestPath)).mapTo(CompositePurchaseOrder.class);
-    // Make sure that mock PO has 1 po lines
-    assertEquals(1, reqData.getCompositePoLines().size());
-
-    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    // MODORDERS-117 guarantee electronic resource for the second PO Line but set "create items" to false
-    reqData.getCompositePoLines().get(0).setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
-    reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(false);
-
-//    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, "45b5e676-c86e-4cc5-9453-e426333e6b89"), JsonObject.mapFrom(reqData).toString(), "", 204);
-
-//    int polCount = reqData.getCompositePoLines().size();
-//
-//    verifyPieceCreation(reqData, polCount - 1);
-  }
-  
-  private void verifyPieceCreation(CompositePurchaseOrder reqData, int createdInstancesCount) {
-    List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
-    List<JsonObject> piecesSearches = MockServer.serverRqRs.get(PIECES, HttpMethod.GET);
-    assertNotNull(piecesSearches);
-  }
-  @Test
   public void testPutOrdersByIdToChangeStatusToOpen() throws Exception {
     logger.info("=== Test Put Order By Id to change status of Order to Open ===");
 
@@ -1029,6 +1003,7 @@ public class OrdersImplTest {
     List<JsonObject> createdHoldings = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.POST);
     List<JsonObject> createdItems = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.POST);
     List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
+    logger.debug("------------------- pieces size, items size --------------------\n" + createdPieces.size() + "  " +  createdItems.size());
     assertNotNull(createdInstances);
     assertNotNull(createdHoldings);
     assertNotNull(createdItems);
@@ -1036,8 +1011,20 @@ public class OrdersImplTest {
     assertNotNull(createdPieces);
     logger.debug("--------------------------- Pieces created -------------------------------\n" + createdPieces.toString());
     assertEquals(createdInstancesCount, createdInstances.size());
-    assertEquals(createdPieces.size(), createdItems.size());
+    
+    int totalQuantity0 = reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic() + reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical();
+    logger.debug("------------------- totalQuantity0 --------------------\n" + totalQuantity0);
+    int expectedItemsQuantity0 = calculateInventoryItemsQuantity(reqData.getCompositePoLines().get(0));
+    logger.debug("------------------- expectedItemsQuantity0 --------------------\n" + expectedItemsQuantity0);
+    //int remainingPiecesToCreate = Math.abs(expectedItemsQuantity0 - totalQuantity0);
+    //logger.debug("------------------- diff0 --------------------\n" + remainingPiecesToCreate);
+    assertEquals(totalQuantity0, createdPieces.size());
+    assertEquals(expectedItemsQuantity0, createdPieces.size());
 
+    //int totalQuantity1 = reqData.getCompositePoLines().get(1).getCost().getQuantityElectronic() + reqData.getCompositePoLines().get(1).getCost().getQuantityPhysical();
+    //int expectedItemsQuantity1 = calculateInventoryItemsQuantity(reqData.getCompositePoLines().get(1));
+    //int diff1 = Math.abs(expectedItemsQuantity1 - totalQuantity1); 
+    
     List<JsonObject> items = joinExistingAndNewItems(itemsSearches, createdItems);
     for (CompositePoLine pol : reqData.getCompositePoLines()) {
       verifyInstanceCreated(createdInstances, pol);
