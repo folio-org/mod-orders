@@ -1,6 +1,7 @@
 package org.folio.orders.utils;
 
 import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.ResourcePathResolver.*;
@@ -11,6 +12,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +30,9 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -334,6 +338,110 @@ public class HelperUtils {
 
   public static String getEndpointWithQuery(String query, Logger logger) {
     return isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
+  }
+
+  public static List<ErrorCodes> validateOrder(CompositePurchaseOrder compositeOrder) {
+    if (CollectionUtils.isEmpty(compositeOrder.getCompositePoLines())) {
+      return Collections.emptyList();
+    }
+
+    return compositeOrder.getCompositePoLines()
+                         .stream()
+                         .map(HelperUtils::validatePoLine)
+                         .flatMap(Collection::stream)
+                         .collect(Collectors.toList());
+  }
+
+  public static List<ErrorCodes> validatePoLine(CompositePoLine compPOL) {
+    CompositePoLine.OrderFormat orderFormat = compPOL.getOrderFormat();
+    if (orderFormat == CompositePoLine.OrderFormat.P_E_MIX) {
+      return validatePoLineWithMixedFormat(compPOL);
+    } else if (orderFormat == CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE) {
+      return validatePoLineWithElectronicFormat(compPOL);
+    } else if (orderFormat == CompositePoLine.OrderFormat.PHYSICAL_RESOURCE) {
+      return validatePoLineWithPhysicalFormat(compPOL);
+    } else if (orderFormat == CompositePoLine.OrderFormat.OTHER) {
+      return validatePoLineWithOtherFormat(compPOL);
+    }
+
+    return Collections.emptyList();
+  }
+
+  private static List<ErrorCodes> validatePoLineWithMixedFormat(CompositePoLine compPOL) {
+    int costPhysicalQuantity = defaultIfNull(compPOL.getCost().getQuantityPhysical(), 0);
+    int costElectronicQuantity = defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0);
+    int locPhysicalQuantity = getPhysicalQuantity(compPOL.getLocations());
+    int locElectronicQuantity = getElectronicQuantity(compPOL.getLocations());
+
+    List<ErrorCodes> errors = new ArrayList<>();
+    // The quantity of the physical and electronic resources in the cost must be specified
+    if (costPhysicalQuantity + costElectronicQuantity == 0) {
+      errors.add(ErrorCodes.ZERO_COST_QTY);
+    } else if (costPhysicalQuantity == 0) {
+      errors.add(ErrorCodes.ZERO_COST_PHYSICAL_QTY);
+    } else if (costElectronicQuantity == 0) {
+      errors.add(ErrorCodes.ZERO_COST_ELECTRONIC_QTY);
+    }
+    // The total quantity of the physical resources of all locations must not exceed specified in the cost
+    if (locPhysicalQuantity > costPhysicalQuantity) {
+      errors.add(ErrorCodes.PHYSICAL_LOC_QTY_EXCEEDS_COST);
+    }
+    // The total quantity of the electronic resources of all locations must not exceed specified in the cost
+    if (locElectronicQuantity > costElectronicQuantity) {
+      errors.add(ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST);
+    }
+
+    return errors;
+  }
+
+  private static List<ErrorCodes> validatePoLineWithPhysicalFormat(CompositePoLine compPOL) {
+    List<ErrorCodes> errors = new ArrayList<>();
+
+    int costPhysicalQuantity = defaultIfNull(compPOL.getCost().getQuantityPhysical(), 0);
+    // The quantity of the physical resources in the cost must be specified
+    if (costPhysicalQuantity == 0) {
+      errors.add(ErrorCodes.ZERO_COST_PHYSICAL_QTY);
+    }
+    // The quantity of the electronic resources in the cost must not be specified
+    if (defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0) > 0) {
+      errors.add(ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY);
+    }
+    // The total quantity of the physical resources of all locations must not exceed specified in the cost
+    if (getPhysicalQuantity(compPOL.getLocations()) > costPhysicalQuantity) {
+      errors.add(ErrorCodes.PHYSICAL_LOC_QTY_EXCEEDS_COST);
+    }
+
+    return errors;
+  }
+
+  private static List<ErrorCodes> validatePoLineWithElectronicFormat(CompositePoLine compPOL) {
+    List<ErrorCodes> errors = new ArrayList<>();
+
+    int costElectronicQuantity = defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0);
+    // The quantity of the electronic resources in the cost must be specified
+    if (costElectronicQuantity == 0) {
+      errors.add(ErrorCodes.ZERO_COST_ELECTRONIC_QTY);
+    }
+    // The quantity of the physical resources in the cost must not be specified
+    if (defaultIfNull(compPOL.getCost().getQuantityPhysical(), 0) > 0) {
+      errors.add(ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY);
+    }
+    // The total quantity of the electronic resources of all locations must not exceed specified in the cost
+    if (getElectronicQuantity(compPOL.getLocations()) > costElectronicQuantity) {
+      errors.add(ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST);
+    }
+
+    return errors;
+  }
+
+  private static List<ErrorCodes> validatePoLineWithOtherFormat(CompositePoLine compPOL) {
+    return validatePoLineWithPhysicalFormat(compPOL);
+  }
+
+  public static Errors convertErrorCodesToErrors(List<ErrorCodes> errorCodes) {
+    return new Errors().withErrors(errorCodes.stream()
+                                             .map(ErrorCodes::toError)
+                                             .collect(Collectors.toList()));
   }
 
   /**

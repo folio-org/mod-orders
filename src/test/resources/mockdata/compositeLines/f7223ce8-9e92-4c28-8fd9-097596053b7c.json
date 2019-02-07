@@ -38,7 +38,6 @@
     "list_price" : 24.99,
     "currency" : "USD",
     "quantity_physical" : 1,
-    "quantity_electronic" : 1,
     "po_line_estimated_price" : 49.98,
     "po_line_id" : "f7223ce8-9e92-4c28-8fd9-097596053b7c"
   },
@@ -83,8 +82,6 @@
       "id" : "b9f0b58e-56bc-41d5-a3be-1bb349b85c68",
       "location_id" : "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
       "po_line_id" : "f7223ce8-9e92-4c28-8fd9-097596053b7c",
-      "quantity" : 2,
-      "quantity_electronic" : 1,
       "quantity_physical" : 1
     }
   ],

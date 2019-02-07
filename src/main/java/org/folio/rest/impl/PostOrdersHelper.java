@@ -133,12 +133,6 @@ public class PostOrdersHelper extends AbstractHelper {
     return future;
   }
 
-  public CompletableFuture<CompositePurchaseOrder> updateInventory(CompositePurchaseOrder compPO) {
-    CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
-    future.complete(compPO);
-    return future;
-  }
-
   @Override
   Response buildErrorResponse(int code, Error error) {
     final Response result;

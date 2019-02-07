@@ -43,9 +43,9 @@ public class InventoryHelper {
 
   static final String INSTANCE_SOURCE = "source";
   static final String INSTANCE_TITLE = "title";
-  private static final String INSTANCE_EDITIONS = "editions";
+  static final String INSTANCE_EDITIONS = "editions";
   static final String INSTANCE_STATUS_ID = "statusId";
-  static final String INSTANCE_INSTANCE_TYPE_ID = "instanceTypeId";
+  static final String INSTANCE_TYPE_ID = "instanceTypeId";
   static final String INSTANCE_PUBLISHER = "publisher";
   static final String INSTANCE_DATE_OF_PUBLICATION = "dateOfPublication";
   static final String INSTANCE_PUBLICATION = "publication";
@@ -109,7 +109,6 @@ public class InventoryHelper {
    * @return future with list of item id's
    */
   public CompletableFuture<List<String>> handleItemRecords(CompositePoLine compPOL) {
-    CompletableFuture<List<String>> result = new VertxCompletableFuture<>(ctx);
     List<CompletableFuture<List<String>>> itemsPerHolding = new ArrayList<>();
 
     // Group all locations by location id because the holding should be unique for different locations
@@ -126,24 +125,24 @@ public class InventoryHelper {
         }
       });
 
-    // Wait for all requests completion and collect all items id's. In case any failed, complete resulting future with the exception
-    allOf(itemsPerHolding.toArray(new CompletableFuture[0]))
-      .thenAccept(v -> {
-        List<String> allIds = itemsPerHolding
-          .stream()
-          // The CompletableFuture::join can be used safely because the `allOf` is used
-          .map(CompletableFuture::join)
-          .flatMap(List::stream)
-          .collect(toList());
+    return collectResultsOnSuccess(itemsPerHolding);
+  }
 
-        result.complete(allIds);
-      })
-      .exceptionally(exc -> {
-        result.completeExceptionally(exc);
-        return null;
-      });
-
-    return result;
+  /**
+   * Wait for all requests completion and collect all resulting objects In case any failed, complete resulting future with the exception
+   * @param futures list of futures and each produces list of resulting objects on completion
+   * @param <T> resulting type
+   * @return resulting objects
+   */
+  private <T> CompletableFuture<List<T>> collectResultsOnSuccess(List<CompletableFuture<List<T>>> futures) {
+    return VertxCompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+      .thenApply(v -> futures
+        .stream()
+        // The CompletableFuture::join can be used safely because the `allOf` is used
+        .map(CompletableFuture::join)
+        .flatMap(List::stream)
+        .collect(toList())
+      );
   }
 
   private CompletableFuture<String> getOrCreateHoldingsRecord(CompositePoLine compPOL, String locationId) {
@@ -306,7 +305,7 @@ public class InventoryHelper {
       instance.put(INSTANCE_EDITIONS, new JsonArray(singletonList(compPOL.getEdition())));
     }
     instance.put(INSTANCE_STATUS_ID, lookupObj.getJsonArray("instanceStatuses").getJsonObject(0).getString(ID));
-    instance.put(INSTANCE_INSTANCE_TYPE_ID, lookupObj.getJsonArray("instanceTypes").getJsonObject(0).getString(ID));
+    instance.put(INSTANCE_TYPE_ID, lookupObj.getJsonArray("instanceTypes").getJsonObject(0).getString(ID));
 
     if (compPOL.getPublisher() != null || compPOL.getPublicationDate() != null) {
       JsonObject publication = new JsonObject();

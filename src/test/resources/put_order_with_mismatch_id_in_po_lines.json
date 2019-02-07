@@ -257,8 +257,7 @@
       "cost": {
         "list_price": 24.99,
         "currency": "USD",
-        "quantity_physical": 1,
-        "quantity_electronic": 1,
+        "quantity_physical": 2,
         "po_line_estimated_price": 49.98
       },
       "description": "ABCDEFGH",
@@ -293,8 +292,8 @@
       "locations": [
         {
           "quantity": 2,
-          "quantity_electronic": 1,
-          "quantity_physical": 1
+          "quantity_electronic": 0,
+          "quantity_physical": 2
         }
       ],
       "order_format": "Physical Resource",

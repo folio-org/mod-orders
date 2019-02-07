@@ -116,7 +116,7 @@
           "quantity_physical": 1
         }
       ],
-      "order_format": "Physical Resource",
+      "order_format": "P/E Mix",
       "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
       "payment_status": "Awaiting Payment",
       "physical": {
