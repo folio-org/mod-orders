@@ -5,6 +5,7 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.completedFuture;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
@@ -327,11 +328,9 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> handleSubObjsOperation(String prop, JsonObject updatedLine, JsonObject lineFromStorage) {
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    List<CompletableFuture<String>> futures = new ArrayList<>();
     JsonArray idsInStorage = lineFromStorage.getJsonArray(prop);
     JsonArray jsonObjects = updatedLine.getJsonArray(prop);
-
-    JsonArray newIds = new JsonArray();
 
     // Handle updated sub-objects content
     if (jsonObjects != null && !jsonObjects.isEmpty()) {
@@ -344,8 +343,10 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
           String id = idsInStorage.remove(subObj.getString(ID)) ? subObj.getString(ID) : null;
 
           futures.add(handleSubObjOperation(prop, subObj, id)
-            .thenAccept(newIds::add)
-            .exceptionally(throwable -> addProcessingError(throwable, prop, id))
+            .exceptionally(throwable -> {
+              addProcessingError(throwable, prop, id);
+              return null;
+            })
           );
         }
       }
@@ -356,19 +357,17 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       String id = idsInStorage.getString(i);
       if (id != null) {
         futures.add(handleSubObjOperation(prop, null, id)
-          .thenAccept(s -> {
-          })
           .exceptionally(throwable -> {
+            addProcessingError(throwable, prop, id);
             // In case the object is not deleted, still keep reference to old id
-            newIds.add(id);
-            return addProcessingError(throwable, prop, id);
+            return id;
           })
         );
       }
     }
 
-    return allOf(futures.toArray(new CompletableFuture[0]))
-      .thenAccept(v -> updatedLine.put(prop, newIds));
+    return collectResultsOnSuccess(futures)
+      .thenAccept(newIds -> updatedLine.put(prop, newIds));
   }
 
   private Void addProcessingError(Throwable exc, String propName, String propId) {

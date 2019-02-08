@@ -5,6 +5,7 @@ import org.folio.rest.jaxrs.model.Error;
 public enum ErrorCodes {
 
   PO_NUMBER_ALREADY_EXISTS("poNumberNotUnique", "PO Number already exists"),
+  MISSING_ORDER_ID_IN_POL("orderIdRequired", "Purchase order id is missing in PoLine object"),
   ZERO_COST_QTY("zeroCostQty", "Physical and electronic cost quantity must be specified"),
   ZERO_COST_PHYSICAL_QTY("zeroCostQtyPhysical", "Physical cost quantity must be specified"),
   ZERO_COST_ELECTRONIC_QTY("zeroCostQtyElectronic", "Electronic cost quantity must be specified"),

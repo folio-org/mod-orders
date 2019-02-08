@@ -165,13 +165,11 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     }
 
     return compositePoLines
-      .thenCompose(poLines -> {
-        List<CompletableFuture<Void>> futures = poLines.stream()
-          .map(putLineHelper::updateInventory)
-          .collect(toList());
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-          .thenApply(v -> compPO);
-      });
+      .thenCompose(poLines ->
+        CompletableFuture.allOf(poLines.stream()
+                                       .map(putLineHelper::updateInventory)
+                                       .toArray(CompletableFuture[]::new)))
+      .thenApply(v -> compPO);
   }
 
   private CompletableFuture<Void> handlePoLines(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {

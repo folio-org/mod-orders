@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -33,6 +32,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
@@ -125,21 +125,8 @@ public class InventoryHelper {
         }
       });
 
-    return collectResultsOnSuccess(itemsPerHolding);
-  }
-
-  /**
-   * Wait for all requests completion and collect all resulting objects In case any failed, complete resulting future with the exception
-   * @param futures list of futures and each produces list of resulting objects on completion
-   * @param <T> resulting type
-   * @return resulting objects
-   */
-  private <T> CompletableFuture<List<T>> collectResultsOnSuccess(List<CompletableFuture<List<T>>> futures) {
-    return VertxCompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-      .thenApply(v -> futures
-        .stream()
-        // The CompletableFuture::join can be used safely because the `allOf` is used
-        .map(CompletableFuture::join)
+    return collectResultsOnSuccess(itemsPerHolding)
+      .thenApply(results -> results.stream()
         .flatMap(List::stream)
         .collect(toList())
       );
@@ -396,13 +383,7 @@ public class InventoryHelper {
       futures.add(createItemInInventory(itemRecord));
     }
 
-    return allOf(futures.toArray(new CompletableFuture[0]))
-      .thenApply(v -> futures.stream()
-                             .map(CompletableFuture::join)
-                             // In case item creation failed, null is returned as a result instead of id
-                             .filter(Objects::nonNull)
-                             .collect(toList())
-      );
+    return collectResultsOnSuccess(futures);
   }
 
   /**

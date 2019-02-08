@@ -1,6 +1,7 @@
 package org.folio.rest.impl;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 
@@ -9,11 +10,9 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
@@ -44,18 +43,18 @@ public class PostOrderLineHelper extends AbstractHelper {
     JsonObject line = JsonObject.mapFrom(compPOL);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
 
-    subObjFuts.add(createAdjustment(compPOL, line, compPOL.getAdjustment()));
-    subObjFuts.add(createCost(compPOL, line, compPOL.getCost()));
-    subObjFuts.add(createDetails(compPOL, line, compPOL.getDetails()));
-    subObjFuts.add(createEresource(compPOL, line, compPOL.getEresource()));
-    subObjFuts.add(createPhysical(compPOL, line, compPOL.getPhysical()));
-    subObjFuts.add(createVendorDetail(compPOL, line, compPOL.getVendorDetail()));
-    subObjFuts.add(createAlerts(compPOL, line, compPOL.getAlerts()));
-    subObjFuts.add(createClaims(compPOL, line, compPOL.getClaims()));
-    subObjFuts.add(createSource(compPOL, line, compPOL.getSource()));
+    subObjFuts.add(createAdjustment(compPOL, line));
+    subObjFuts.add(createCost(compPOL, line));
+    subObjFuts.add(createDetails(compPOL, line));
+    subObjFuts.add(createEresource(compPOL, line));
+    subObjFuts.add(createPhysical(compPOL, line));
+    subObjFuts.add(createVendorDetail(compPOL, line));
+    subObjFuts.add(createAlerts(compPOL, line));
+    subObjFuts.add(createClaims(compPOL, line));
+    subObjFuts.add(createSource(compPOL, line));
     subObjFuts.add(createLocations(compPOL, line));
-    subObjFuts.add(createReportingCodes(compPOL, line, compPOL.getReportingCodes()));
-    subObjFuts.add(createFundDistribution(compPOL, line, compPOL.getFundDistribution()));
+    subObjFuts.add(createReportingCodes(compPOL, line));
+    subObjFuts.add(createFundDistribution(compPOL, line));
 
     return CompletableFuture.allOf(subObjFuts.toArray(new CompletableFuture[0]))
       .thenCompose(v -> {
@@ -78,8 +77,8 @@ public class PostOrderLineHelper extends AbstractHelper {
 
 
 
-  private CompletableFuture<Void> createAdjustment(CompositePoLine compPOL, JsonObject line, Adjustment adjustment) {
-    return createSubObjIfPresent(line, adjustment, ADJUSTMENT, resourcesPath(ADJUSTMENT))
+  private CompletableFuture<Void> createAdjustment(CompositePoLine compPOL, JsonObject line) {
+    return createSubObjIfPresent(line, compPOL.getAdjustment(), ADJUSTMENT, resourcesPath(ADJUSTMENT))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(ADJUSTMENT);
@@ -96,8 +95,8 @@ public class PostOrderLineHelper extends AbstractHelper {
   }
 
 
-  private CompletableFuture<Void> createCost(CompositePoLine compPOL, JsonObject line, Cost cost) {
-    return createSubObjIfPresent(line, cost, COST, resourcesPath(COST))
+  private CompletableFuture<Void> createCost(CompositePoLine compPOL, JsonObject line) {
+    return createSubObjIfPresent(line, compPOL.getCost(), COST, resourcesPath(COST))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(COST);
@@ -113,8 +112,8 @@ public class PostOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<Void> createDetails(CompositePoLine compPOL, JsonObject line, Details details) {
-    return createSubObjIfPresent(line, details, DETAILS, resourcesPath(DETAILS))
+  private CompletableFuture<Void> createDetails(CompositePoLine compPOL, JsonObject line) {
+    return createSubObjIfPresent(line, compPOL.getDetails(), DETAILS, resourcesPath(DETAILS))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(DETAILS);
@@ -130,8 +129,8 @@ public class PostOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<Void> createEresource(CompositePoLine compPOL, JsonObject line, Eresource eresource) {
-    return createSubObjIfPresent(line, eresource, ERESOURCE, resourcesPath(ERESOURCE))
+  private CompletableFuture<Void> createEresource(CompositePoLine compPOL, JsonObject line) {
+    return createSubObjIfPresent(line, compPOL.getEresource(), ERESOURCE, resourcesPath(ERESOURCE))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(ERESOURCE);
@@ -166,7 +165,7 @@ public class PostOrderLineHelper extends AbstractHelper {
         }));
       }
 
-    return extractIdsOnSuccess(futures)
+    return collectResultsOnSuccess(futures)
       .thenAccept(ids -> {
         if (CollectionUtils.isEmpty(ids)) {
           line.remove(LOCATIONS);
@@ -186,19 +185,8 @@ public class PostOrderLineHelper extends AbstractHelper {
     return completedFuture(null);
   }
 
-  private CompletableFuture<List<String>> extractIdsOnSuccess(List<CompletableFuture<String>> futures) {
-    return CompletableFuture
-      .allOf(futures.toArray(new CompletableFuture[0]))
-      .thenApply(v -> futures
-        .stream()
-        .map(CompletableFuture::join)
-        .filter(Objects::nonNull)
-        .collect(Collectors.toList())
-      );
-  }
-
-  private CompletableFuture<Void> createPhysical(CompositePoLine compPOL, JsonObject line, Physical physical) {
-    return createSubObjIfPresent(line, physical, PHYSICAL, resourcesPath(PHYSICAL))
+  private CompletableFuture<Void> createPhysical(CompositePoLine compPOL, JsonObject line) {
+    return createSubObjIfPresent(line, compPOL.getPhysical(), PHYSICAL, resourcesPath(PHYSICAL))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(PHYSICAL);
@@ -214,8 +202,8 @@ public class PostOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<Void> createVendorDetail(CompositePoLine compPOL, JsonObject line, VendorDetail vendor) {
-    return createSubObjIfPresent(line, vendor, VENDOR_DETAIL, resourcesPath(VENDOR_DETAIL))
+  private CompletableFuture<Void> createVendorDetail(CompositePoLine compPOL, JsonObject line) {
+    return createSubObjIfPresent(line, compPOL.getVendorDetail(), VENDOR_DETAIL, resourcesPath(VENDOR_DETAIL))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(VENDOR_DETAIL);
@@ -231,37 +219,31 @@ public class PostOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<Void> createReportingCodes(CompositePoLine compPOL, JsonObject line,
-                                                       List<ReportingCode> reportingCodes) {
+  private CompletableFuture<Void> createReportingCodes(CompositePoLine compPOL, JsonObject line) {
+    List<CompletableFuture<String>> futures = new ArrayList<>();
 
-    List<String> reportingIds = new ArrayList<>();
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
-    if(null!=reportingCodes)
+    List<ReportingCode> reportingCodes = compPOL.getReportingCodes();
+    if (null != reportingCodes)
       reportingCodes
         .forEach(reportingObject ->
           futures.add(createSubObjIfPresent(line, reportingObject, REPORTING_CODES, resourcesPath(REPORTING_CODES))
-            .thenAccept(id -> {
-              if (id != null) {
+            .thenApply(id -> {
+              if (id != null)
                 reportingObject.setId(id);
-                reportingIds.add(id);
-              }
+              return id;
             }))
         );
 
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-      .thenAccept(t -> {
-        line.put(REPORTING_CODES, reportingIds);
-        compPOL.setReportingCodes(reportingCodes);
-      })
+    return collectResultsOnSuccess(futures)
+      .thenAccept(reportingIds -> line.put(REPORTING_CODES, reportingIds))
       .exceptionally(t -> {
         logger.error("failed to create Reporting Codes", t);
         throw new CompletionException(t.getCause());
       });
-
   }
 
-  private CompletableFuture<Void> createSource(CompositePoLine compPOL, JsonObject line, Source source) {
-    return createSubObjIfPresent(line, source, SOURCE, resourcesPath(SOURCE))
+  private CompletableFuture<Void> createSource(CompositePoLine compPOL, JsonObject line) {
+    return createSubObjIfPresent(line, compPOL.getSource(), SOURCE, resourcesPath(SOURCE))
       .thenAccept(id -> {
         if (id == null) {
           line.remove(SOURCE);
@@ -276,28 +258,25 @@ public class PostOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<Void> createClaims(CompositePoLine compPOL, JsonObject line, List<Claim> claims) {
+  private CompletableFuture<Void> createClaims(CompositePoLine compPOL, JsonObject line) {
+    List<CompletableFuture<String>> futures = new ArrayList<>();
 
-    List<String> claimsIds = new ArrayList<>();
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    List<Claim> claims = compPOL.getClaims();
     if(null!=claims)
       claims
         .forEach(claimObject ->
           futures.add(createSubObjIfPresent(line, claimObject, CLAIMS, resourcesPath(CLAIMS))
-            .thenAccept(id -> {
+            .thenApply(id -> {
               if (id != null) {
                 claimObject.setId(id);
                 claimObject.setPoLineId(compPOL.getId());
-                claimsIds.add(id);
               }
+              return id;
             }))
         );
 
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-      .thenAccept(t -> {
-        line.put(CLAIMS, claimsIds);
-        compPOL.setClaims(claims);
-      })
+    return collectResultsOnSuccess(futures)
+      .thenAccept(ids -> line.put(CLAIMS, ids))
       .exceptionally(t -> {
         logger.error("failed to create Claims", t);
         throw new CompletionException(t.getCause());
@@ -305,29 +284,24 @@ public class PostOrderLineHelper extends AbstractHelper {
 
   }
 
+  private CompletableFuture<Void> createAlerts(CompositePoLine compPOL, JsonObject line) {
+    List<CompletableFuture<String>> futures = new ArrayList<>();
 
-
-  private CompletableFuture<Void> createAlerts(CompositePoLine compPOL, JsonObject line, List<Alert> alerts) {
-
-    List<String> alertIds = new ArrayList<>();
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
-    if(null!=alerts)
+    List<Alert> alerts = compPOL.getAlerts();
+    if (null != alerts)
       alerts.forEach(alertObject ->
         futures.add(createSubObjIfPresent(line, alertObject, ALERTS, resourcesPath(ALERTS))
-          .thenAccept(id -> {
+          .thenApply(id -> {
             if (id != null) {
               alertObject.setId(id);
               alertObject.setPoLineId(compPOL.getId());
-              alertIds.add(id);
             }
+            return id;
           }))
       );
 
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-      .thenAccept(t -> {
-        line.put(ALERTS, alertIds);
-        compPOL.setAlerts(alerts);
-      })
+    return collectResultsOnSuccess(futures)
+      .thenAccept(ids -> line.put(ALERTS, ids))
       .exceptionally(t -> {
         logger.error("failed to create Alerts", t);
         throw new CompletionException(t.getCause());
@@ -370,28 +344,25 @@ public class PostOrderLineHelper extends AbstractHelper {
     return future;
   }
 
-  private CompletableFuture<Void> createFundDistribution(CompositePoLine compPOL, JsonObject line, List<FundDistribution> fundDistribution) {
+  private CompletableFuture<Void> createFundDistribution(CompositePoLine compPOL, JsonObject line) {
+    List<CompletableFuture<String>> futures = new ArrayList<>();
 
-    List<String> fundDistributionIds = new ArrayList<>();
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    List<FundDistribution> fundDistribution = compPOL.getFundDistribution();
     if (null != fundDistribution)
       fundDistribution
         .forEach(fundObject ->
           futures.add(createSubObjIfPresent(line, fundObject, FUND_DISTRIBUTION, resourcesPath(FUND_DISTRIBUTION))
-            .thenAccept(id -> {
+            .thenApply(id -> {
               if (id != null) {
                 fundObject.setId(id);
                 fundObject.setPoLineId(compPOL.getId());
-                fundDistributionIds.add(id);
               }
+              return id;
             }))
         );
 
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-      .thenAccept(t -> {
-        line.put(FUND_DISTRIBUTION, fundDistributionIds);
-        compPOL.setFundDistribution(fundDistribution);
-      })
+    return collectResultsOnSuccess(futures)
+      .thenAccept(fundDistributionIds -> line.put(FUND_DISTRIBUTION, fundDistributionIds))
       .exceptionally(t -> {
         logger.error("failed to create FundDistribution", t);
         throw new CompletionException(t.getCause());

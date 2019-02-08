@@ -1,6 +1,7 @@
 package org.folio.orders.utils;
 
 import static java.util.Objects.nonNull;
+import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
@@ -12,7 +13,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -175,17 +175,15 @@ public class HelperUtils {
 
     getPoLines(id,lang, httpClient,ctx, okapiHeaders, logger)
       .thenAccept(body -> {
-        List<CompositePoLine> lines = new ArrayList<>();
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        List<CompletableFuture<CompositePoLine>> futures = new ArrayList<>();
 
         for (int i = 0; i < body.getJsonArray(PO_LINES).size(); i++) {
           JsonObject line = body.getJsonArray(PO_LINES).getJsonObject(i);
-          futures.add(operateOnPoLine(HttpMethod.GET, line, httpClient, ctx, okapiHeaders, logger)
-            .thenAccept(lines::add));
+          futures.add(operateOnPoLine(HttpMethod.GET, line, httpClient, ctx, okapiHeaders, logger));
         }
 
-        VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]))
-          .thenAccept(v -> future.complete(lines))
+        collectResultsOnSuccess(futures)
+          .thenAccept(future::complete)
           .exceptionally(t -> {
             future.completeExceptionally(t.getCause());
             return null;
@@ -345,11 +343,11 @@ public class HelperUtils {
       return Collections.emptyList();
     }
 
-    return compositeOrder.getCompositePoLines()
-                         .stream()
-                         .map(HelperUtils::validatePoLine)
-                         .flatMap(Collection::stream)
-                         .collect(Collectors.toList());
+    List<ErrorCodes> errors = new ArrayList<>();
+    for (CompositePoLine compositePoLine : compositeOrder.getCompositePoLines()) {
+      errors.addAll(validatePoLine(compositePoLine));
+    }
+    return errors;
   }
 
   public static List<ErrorCodes> validatePoLine(CompositePoLine compPOL) {
@@ -525,6 +523,23 @@ public class HelperUtils {
     return compPOL.getLocations()
                   .stream()
                   .collect(Collectors.groupingBy(Location::getLocationId));
+  }
+
+  /**
+   * Wait for all requests completion and collect all resulting objects. In case any failed, complete resulting future with the exception
+   * @param futures list of futures and each produces resulting object on completion
+   * @param <T> resulting type
+   * @return resulting objects
+   */
+  public static <T> CompletableFuture<List<T>> collectResultsOnSuccess(List<CompletableFuture<T>> futures) {
+    return VertxCompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+       .thenApply(v -> futures
+         .stream()
+         // The CompletableFuture::join can be safely used because the `allOf` guaranties success at this step
+         .map(CompletableFuture::join)
+         .filter(Objects::nonNull)
+         .collect(toList())
+       );
   }
 
   public static CompletableFuture<JsonObject> handleGetRequest(String endpoint, HttpClientInterface
