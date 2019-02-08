@@ -38,6 +38,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javax.ws.rs.core.Response;
 
@@ -217,6 +218,11 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
         itemIds.stream()
                .filter(id -> !existingItemIds.contains(id))
                .forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
+
+        // Create pieces for total quantity when item record does not exists
+        int totalQuantity = compPOL.getCost().getQuantityElectronic() + compPOL.getCost().getQuantityPhysical();
+        int diff = Math.abs(totalQuantity - calculateInventoryItemsQuantity(compPOL));
+        IntStream.range(0, diff).forEach(i -> futuresList.add(createPiece(poLineId, null)));
 
         allOf(futuresList.toArray(new CompletableFuture[0]))
           .thenAccept(v -> future.complete(null))
