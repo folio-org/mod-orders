@@ -40,13 +40,13 @@ class DeleteOrderLineByIdHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 404:
-        result = DeleteOrdersOrderLinesByIdResponse.respond404WithTextPlain(error.getMessage());
+        result = DeleteOrdersOrderLinesByIdResponse.respond404WithApplicationJson(withErrors(error));
         break;
       case 422:
         result = DeleteOrdersOrderLinesByIdResponse.respond422WithApplicationJson(withErrors(error));
         break;
       default:
-        result = DeleteOrdersOrderLinesByIdResponse.respond500WithTextPlain(error.getMessage());
+        result = DeleteOrdersOrderLinesByIdResponse.respond500WithApplicationJson(withErrors(error));
     }
     return result;
   }

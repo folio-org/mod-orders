@@ -4,6 +4,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.jaxrs.model.Error;
@@ -16,13 +17,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import static io.vertx.core.Future.succeededFuture;
-import static org.folio.orders.utils.HelperUtils.PO_NUMBER_ALREADY_EXISTS;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderByPONumber;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond204;
-import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond400WithTextPlain;
-import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond422WithApplicationJson;
-import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.respond500WithTextPlain;
+import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.*;
 
 public class PoNumberHelper extends AbstractHelper {
 
@@ -45,7 +42,7 @@ public class PoNumberHelper extends AbstractHelper {
       .thenAccept(po -> {
          if (po.getInteger("total_records") != 0) {
            logger.error("Exception validating PO Number existence");
-           throw new CompletionException(new HttpException(400, PO_NUMBER_ALREADY_EXISTS));
+           throw new CompletionException(new HttpException(400, withErrorCode(ErrorCodes.PO_NUMBER_ALREADY_EXISTS)));
          }
       });
   }
@@ -61,13 +58,13 @@ public class PoNumberHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 400:
-        result = respond400WithTextPlain(error.getMessage());
+        result = respond400WithApplicationJson(withErrors(error));
         break;
       case 422:
         result = respond422WithApplicationJson(withErrors(error));
         break;
       default:
-        result = respond500WithTextPlain(error.getMessage());
+        result = respond500WithApplicationJson(withErrors(error));
     }
     return result;
   }

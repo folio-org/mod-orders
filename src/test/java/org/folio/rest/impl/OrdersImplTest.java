@@ -129,7 +129,6 @@ public class OrdersImplTest {
   private static final Logger logger = LoggerFactory.getLogger(OrdersImplTest.class);
 
   private static final String APPLICATION_JSON = "application/json";
-  private static final String TEXT_PLAIN = "text/plain";
 
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();
@@ -186,7 +185,6 @@ public class OrdersImplTest {
   private static final String INSTANCE_IDENTIFIERS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
   private static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
   private static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
-  private static final String HOLDINGS_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "holdingsRecords/";
   private static final String ITEMS_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/";
   private static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
   private static final String COMP_ORDER_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/";
@@ -580,7 +578,7 @@ public class OrdersImplTest {
     String body= request.toString();
 
      verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
-      NON_EXIST_CONFIG_X_OKAPI_TENANT, TEXT_PLAIN, 400);
+      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 400);
 
   }
 
@@ -643,10 +641,10 @@ public class OrdersImplTest {
 
     String body = getMockDraftOrder().toString();
 
-    final String error = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
-      INVALID_CONFIG_X_OKAPI_TENANT, TEXT_PLAIN, 500).body().print();
+    final Errors error = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
+      INVALID_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 500).body().as(Errors.class);
 
-    ctx.assertEquals(error, "Invalid limit value in configuration.");
+    ctx.assertEquals(error.getErrors().get(0).getMessage(), "Invalid limit value in configuration.");
   }
 
   @Test
@@ -720,12 +718,12 @@ public class OrdersImplTest {
         .body(body)
       .post(COMPOSITE_ORDERS_PATH)
         .then()
-          .contentType(TEXT_PLAIN)
+          .contentType(APPLICATION_JSON)
           .statusCode(500)
             .extract()
               .response();
 
-    String respBody = resp.getBody().asString();
+    String respBody = resp.getBody().as(Errors.class).getErrors().get(0).getMessage();
     logger.info(respBody);
 
     assertEquals("Access requires permission: foo.bar.baz", respBody);
@@ -819,12 +817,12 @@ public class OrdersImplTest {
         .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
       .get(COMPOSITE_ORDERS_PATH + "/" + id)
         .then()
-          .contentType(TEXT_PLAIN)
+          .contentType(APPLICATION_JSON)
           .statusCode(404)
           .extract()
             .response();
 
-    String actual = resp.getBody().asString();
+    String actual = resp.getBody().as(Errors.class).getErrors().get(0).getMessage();
     logger.info(actual);
 
     assertEquals(id, actual);
@@ -850,13 +848,13 @@ public class OrdersImplTest {
   @Test
   public void testDeleteByIdNoOrderFound() {
     logger.info("=== Test Delete Order By Id - Not Found ===");
-    verifyDeleteResponse(COMPOSITE_ORDERS_PATH + "/" + ID_DOES_NOT_EXIST, TEXT_PLAIN, 404);
+    verifyDeleteResponse(COMPOSITE_ORDERS_PATH + "/" + ID_DOES_NOT_EXIST, APPLICATION_JSON, 404);
   }
 
   @Test
   public void testDeleteById500Error() {
     logger.info("=== Test Delete Order By Id - Storage Internal Server Error ===");
-    verifyDeleteResponse(COMPOSITE_ORDERS_PATH + "/" + ID_FOR_INTERNAL_SERVER_ERROR, TEXT_PLAIN, 500);
+    verifyDeleteResponse(COMPOSITE_ORDERS_PATH + "/" + ID_FOR_INTERNAL_SERVER_ERROR, APPLICATION_JSON, 500);
   }
 
   @Test
@@ -1029,7 +1027,7 @@ public class OrdersImplTest {
     request.put("po_number", EXISTING_PO_NUMBER);
     String body= request.toString();
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, body, TEXT_PLAIN, 400);
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, body, APPLICATION_JSON, 400);
 
   }
 
@@ -1127,7 +1125,7 @@ public class OrdersImplTest {
     // Assert that only one PO line presents
     assertEquals(1, polCount);
 
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), TEXT_PLAIN, 500);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), APPLICATION_JSON, 500);
 
     // Verify inventory GET and POST requests for instance, holding and item records
     verifyInventoryInteraction(false);
@@ -1380,7 +1378,7 @@ public class OrdersImplTest {
     /*==============  Assert result ==============*/
 
     // Server Error expected as a result because not all items created
-    verifyPut(path, JsonObject.mapFrom(reqData).toString(), TEXT_PLAIN, 500);
+    verifyPut(path, JsonObject.mapFrom(reqData).toString(), APPLICATION_JSON, 500);
 
     // Check that search of the existing instances and items was done for each PO line
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
@@ -1453,7 +1451,7 @@ public class OrdersImplTest {
     logger.info("=== Test Put Order By Id for 404 with Invalid Id or Order not found ===");
 
     JsonObject reqData = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + "93f612a9-9a05-4eef-aac5-435be131454b", reqData.toString(), TEXT_PLAIN, 404);
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + "93f612a9-9a05-4eef-aac5-435be131454b", reqData.toString(), APPLICATION_JSON, 404);
   }
 
   @Test
@@ -1601,9 +1599,9 @@ public class OrdersImplTest {
     logger.info("=== Test Delete Order Line By Id - Not Found ===");
 
     String url = String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST);
-    Response actual = verifyDeleteResponse(url, TEXT_PLAIN, 404);
+    Response actual = verifyDeleteResponse(url, APPLICATION_JSON, 404);
 
-    assertEquals(ID_DOES_NOT_EXIST, actual.asString());
+    assertEquals(ID_DOES_NOT_EXIST, actual.as(Errors.class).getErrors().get(0).getMessage());
   }
 
   @Test
@@ -1611,7 +1609,7 @@ public class OrdersImplTest {
     logger.info("=== Test Delete Order Line By Id - 500 From Storage On Get PO Line ===");
 
     String url = String.format(LINE_BY_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR);
-    Response actual = verifyDeleteResponse(url, TEXT_PLAIN, 500);
+    Response actual = verifyDeleteResponse(url, APPLICATION_JSON, 500);
 
     assertNotNull(actual.asString());
   }
@@ -1621,7 +1619,7 @@ public class OrdersImplTest {
     logger.info("=== Test Delete Order Line By Id - 500 From Storage On Sub-Object deletion ===");
 
     String url = String.format(LINE_BY_ID_PATH, PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE);
-    Response actual = verifyDeleteResponse(url, TEXT_PLAIN, 500);
+    Response actual = verifyDeleteResponse(url, APPLICATION_JSON, 500);
 
     assertNotNull(actual.asString());
   }
@@ -1695,7 +1693,7 @@ public class OrdersImplTest {
           .extract()
           .response();
 
-    assertEquals(lineId, resp.getBody().asString());
+    assertEquals(lineId, resp.getBody().as(Errors.class).getErrors().get(0).getMessage());
   }
 
   @Test
@@ -1712,7 +1710,7 @@ public class OrdersImplTest {
           .extract()
           .response();
 
-    assertEquals("Internal Server Error", resp.getBody().print());
+    assertEquals("Internal Server Error", resp.getBody().as(Errors.class).getErrors().get(0).getMessage());
   }
 
   @Test
@@ -1976,7 +1974,7 @@ public class OrdersImplTest {
       .put(url)
         .then()
           .statusCode(500)
-          .contentType(TEXT_PLAIN);
+          .contentType(APPLICATION_JSON);
 
 
     // Verify that no calls reached mock server
@@ -1991,9 +1989,9 @@ public class OrdersImplTest {
     String url = String.format(LINE_BY_ID_PATH, lineId);
     String body = getPoLineWithMinContentAndIds(lineId, PO_ID);
 
-    Response actual = verifyPut(url, body, TEXT_PLAIN, 404);
+    Response actual = verifyPut(url, body, APPLICATION_JSON, 404);
 
-    assertEquals(lineId, actual.asString());
+    assertEquals(lineId, actual.as(Errors.class).getErrors().get(0).getMessage());
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
     assertEquals(1, column.size());
@@ -2050,7 +2048,7 @@ public class OrdersImplTest {
     String url = String.format(LINE_BY_ID_PATH, lineId);
     String body = getPoLineWithMinContentAndIds(lineId, PO_ID);
 
-    Response actual = verifyPut(url, body, TEXT_PLAIN, 500);
+    Response actual = verifyPut(url, body, APPLICATION_JSON, 500);
 
     assertNotNull(actual.asString());
 
@@ -2125,7 +2123,7 @@ public class OrdersImplTest {
   {
     JsonObject poNumber=new JsonObject();
     poNumber.put("poNumber", EXISTING_PO_NUMBER);
-    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, TEXT_PLAIN, 400);
+    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 400);
   }
 
 
@@ -2174,7 +2172,7 @@ public class OrdersImplTest {
       .get(COMPOSITE_ORDERS_PATH)
         .then()
           .statusCode(400)
-          .contentType(TEXT_PLAIN);
+          .contentType(APPLICATION_JSON);
   }
 
   @Test
@@ -2189,7 +2187,7 @@ public class OrdersImplTest {
       .get(COMPOSITE_ORDERS_PATH)
         .then()
           .statusCode(500)
-          .contentType(TEXT_PLAIN);
+          .contentType(APPLICATION_JSON);
   }
 
   @Test
@@ -2204,7 +2202,7 @@ public class OrdersImplTest {
       .get(LINES_PATH)
         .then()
           .statusCode(400)
-          .contentType(TEXT_PLAIN);
+          .contentType(APPLICATION_JSON);
   }
 
   @Test
@@ -2219,7 +2217,7 @@ public class OrdersImplTest {
       .get(LINES_PATH)
         .then()
           .statusCode(500)
-          .contentType(TEXT_PLAIN);
+          .contentType(APPLICATION_JSON);
   }
 
   @Test
@@ -2537,7 +2535,7 @@ public class OrdersImplTest {
       logger.info("handlePostItemRecord got: " + bodyAsString);
 
       if (bodyAsString.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
-        serverResponse(ctx, 500, TEXT_PLAIN, INTERNAL_SERVER_ERROR);
+        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
       } else {
         JsonObject bodyAsJson = ctx.getBodyAsJson();
         bodyAsJson.put(ID, UUID.randomUUID().toString());
@@ -2689,7 +2687,7 @@ public class OrdersImplTest {
         String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT) ;
         serverResponse(ctx, 200, APPLICATION_JSON, getMockData(String.format(CONFIG_MOCK_PATH, tenant)));
       } catch (IOException e) {
-        serverResponse(ctx, 500, TEXT_PLAIN, INTERNAL_SERVER_ERROR);
+        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
       }
 
     }
@@ -2700,11 +2698,11 @@ public class OrdersImplTest {
       addServerRqRsData(HttpMethod.DELETE, subObj, new JsonObject().put(ID, id));
 
       if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
-        serverResponse(ctx, 500, TEXT_PLAIN, INTERNAL_SERVER_ERROR);
+        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
       } else {
         ctx.response()
            .setStatusCode(204)
-           .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
+           .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
            .end();
       }
     }
@@ -2728,9 +2726,9 @@ public class OrdersImplTest {
 
       String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
       if (queryParam.contains(BAD_QUERY)) {
-        serverResponse(ctx, 400, TEXT_PLAIN, Status.BAD_REQUEST.getReasonPhrase());
+        serverResponse(ctx, 400, APPLICATION_JSON, Status.BAD_REQUEST.getReasonPhrase());
       } else if (queryParam.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
-        serverResponse(ctx, 500, TEXT_PLAIN, Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
+        serverResponse(ctx, 500, APPLICATION_JSON, Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
       } else {
         String id = queryParam.split("purchase_order_id==")[1];
         String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
@@ -2756,7 +2754,7 @@ public class OrdersImplTest {
 
           serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encode());
         } catch (IOException e) {
-          serverResponse(ctx, 404, TEXT_PLAIN, id);
+          serverResponse(ctx, 404, APPLICATION_JSON, id);
         }
       }
     }
@@ -2832,7 +2830,7 @@ public class OrdersImplTest {
       addServerRqRsData(HttpMethod.GET, PO_LINES, new JsonObject().put(ID, id));
 
       if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
-        serverResponse(ctx, 500, TEXT_PLAIN, INTERNAL_SERVER_ERROR);
+        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
       } else {
         try {
 
@@ -2857,7 +2855,7 @@ public class OrdersImplTest {
 
           serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
         } catch (IOException e) {
-          serverResponse(ctx, 404, TEXT_PLAIN, id);
+          serverResponse(ctx, 404, APPLICATION_JSON, id);
         }
       }
     }
@@ -2878,9 +2876,9 @@ public class OrdersImplTest {
       addServerRqRsData(HttpMethod.GET, subObj, data);
 
       if (ID_DOES_NOT_EXIST.equals(id)) {
-        serverResponse(ctx, 404, TEXT_PLAIN, id);
+        serverResponse(ctx, 404, APPLICATION_JSON, id);
       } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
-        serverResponse(ctx, 500, TEXT_PLAIN, INTERNAL_SERVER_ERROR);
+        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
       } else {
         ctx.response()
            .setStatusCode(200)
@@ -2914,12 +2912,12 @@ public class OrdersImplTest {
       addServerRqRsData(HttpMethod.PUT, subObj, body);
 
       if (ID_DOES_NOT_EXIST.equals(id)) {
-        serverResponse(ctx, 404, TEXT_PLAIN, id);
+        serverResponse(ctx, 404, APPLICATION_JSON, id);
       } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
-        serverResponse(ctx, 500, TEXT_PLAIN, INTERNAL_SERVER_ERROR);
+        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
       } else {
         ctx.response()
-           .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
+           .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
            .end();
       }
     }
@@ -2991,9 +2989,9 @@ public class OrdersImplTest {
 
       String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
       if (queryParam.contains(BAD_QUERY)) {
-        serverResponse(ctx, 400, TEXT_PLAIN, Status.BAD_REQUEST.getReasonPhrase());
+        serverResponse(ctx, 400, APPLICATION_JSON, Status.BAD_REQUEST.getReasonPhrase());
       } else if (queryParam.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
-        serverResponse(ctx, 500, TEXT_PLAIN, Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
+        serverResponse(ctx, 500, APPLICATION_JSON, Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
       } else {
         JsonObject po = new JsonObject();
         addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
@@ -3037,7 +3035,7 @@ public class OrdersImplTest {
 
       int status = 201;
       String respBody = "";
-      String contentType = TEXT_PLAIN;
+      String contentType = APPLICATION_JSON;
 
       if (echoStatus != null) {
         try {
@@ -3114,7 +3112,7 @@ public class OrdersImplTest {
       if (ID_FOR_INTERNAL_SERVER_ERROR.equals(pol.getPurchaseOrderId())) {
         ctx.response()
           .setStatusCode(500)
-          .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
+          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
           .end();
       } else {
         ctx.response()
@@ -3151,14 +3149,14 @@ public class OrdersImplTest {
       if(PO_NUMBER_ERROR_TENANT.equals(ctx.request().getHeader(OKAPI_HEADER_TENANT))) {
         ctx.response()
           .setStatusCode(500)
-          .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
+          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
           .end();
       } else {
         SequenceNumber seqNumber = new SequenceNumber();
         seqNumber.setSequenceNumber(PO_NUMBER_VALUE);
         ctx.response()
           .setStatusCode(200)
-          .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
+          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
           .end(JsonObject.mapFrom(seqNumber).encodePrettily());
       }
     }

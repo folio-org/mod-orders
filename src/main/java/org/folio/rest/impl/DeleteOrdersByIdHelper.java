@@ -10,8 +10,8 @@ import javax.ws.rs.core.Response;
 
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.Error;
-import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersCompositeOrdersByIdResponse.respond404WithTextPlain;
-import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersCompositeOrdersByIdResponse.respond500WithTextPlain;
+import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersCompositeOrdersByIdResponse.respond404WithApplicationJson;
+import static org.folio.rest.jaxrs.resource.Orders.DeleteOrdersCompositeOrdersByIdResponse.respond500WithApplicationJson;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -54,8 +54,8 @@ public class DeleteOrdersByIdHelper extends AbstractHelper {
   @Override
   Response buildErrorResponse(int code, Error error) {
     if (code == 404) {
-      return respond404WithTextPlain(error.getMessage());
+      return respond404WithApplicationJson(withErrors(error));
     }
-    return respond500WithTextPlain(error.getMessage());
+    return respond500WithApplicationJson(withErrors(error));
   }
 }

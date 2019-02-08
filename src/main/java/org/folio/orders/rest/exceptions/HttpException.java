@@ -1,5 +1,9 @@
 package org.folio.orders.rest.exceptions;
 
+import org.folio.orders.utils.ErrorCodes;
+
+import java.util.List;
+
 public class HttpException extends Exception {
   private static final long serialVersionUID = 8109197948434861504L;
 
@@ -11,6 +15,11 @@ public class HttpException extends Exception {
 
   public HttpException(int code, String message) {
     super(message);
+    this.code = code;
+  }
+
+  public HttpException(int code, List<ErrorCodes> errCodes) {
+    super(errCodes.get(0).getDescription());
     this.code = code;
   }
 

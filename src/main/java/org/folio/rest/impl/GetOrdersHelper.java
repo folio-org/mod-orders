@@ -50,13 +50,13 @@ public class GetOrdersHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 400:
-        result = GetOrdersCompositeOrdersResponse.respond400WithTextPlain(error.getMessage());
+        result = GetOrdersCompositeOrdersResponse.respond400WithApplicationJson(withErrors(error));
         break;
       case 401:
-        result = GetOrdersCompositeOrdersResponse.respond401WithTextPlain(error.getMessage());
+        result = GetOrdersCompositeOrdersResponse.respond401WithApplicationJson(withErrors(error));
         break;
       default:
-        result = GetOrdersCompositeOrdersResponse.respond500WithTextPlain(error.getMessage());
+        result = GetOrdersCompositeOrdersResponse.respond500WithApplicationJson(withErrors(error));
     }
     return result;
   }

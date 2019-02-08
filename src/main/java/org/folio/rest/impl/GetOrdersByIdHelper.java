@@ -76,9 +76,9 @@ public class GetOrdersByIdHelper extends AbstractHelper {
   @Override
   Response buildErrorResponse(int code, Error error) {
     if (code == 404) {
-       return GetOrdersCompositeOrdersByIdResponse.respond404WithTextPlain(error.getMessage());
+       return GetOrdersCompositeOrdersByIdResponse.respond404WithApplicationJson(withErrors(error));
     }
-    return GetOrdersCompositeOrdersByIdResponse.respond500WithTextPlain(error.getMessage());
+    return GetOrdersCompositeOrdersByIdResponse.respond500WithApplicationJson(withErrors(error));
   }
 
 }
