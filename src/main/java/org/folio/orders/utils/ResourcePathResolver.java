@@ -20,7 +20,7 @@ public class ResourcePathResolver {
   public static final String DETAILS = "details";
   public static final String ERESOURCE = "eresource";
   public static final String FUND_DISTRIBUTION = "fund_distribution";
-  public static final String LOCATION = "location";
+  public static final String LOCATIONS = "locations";
   public static final String PHYSICAL = "physical";
   public static final String REPORTING_CODES = "reporting_codes";
   public static final String SOURCE = "source";
@@ -42,7 +42,7 @@ public class ResourcePathResolver {
     apis.put(DETAILS, "/orders-storage/details");
     apis.put(ERESOURCE, "/orders-storage/eresources");
     apis.put(FUND_DISTRIBUTION, "/orders-storage/fund_distributions");
-    apis.put(LOCATION, "/orders-storage/locations");
+    apis.put(LOCATIONS, "/orders-storage/locations");
     apis.put(PHYSICAL, "/orders-storage/physicals");
     apis.put(REPORTING_CODES, "/orders-storage/reporting_codes");
     apis.put(SOURCE, "/orders-storage/sources");

@@ -5,6 +5,7 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.completedFuture;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
@@ -15,7 +16,7 @@ import static org.folio.orders.utils.ResourcePathResolver.COST;
 import static org.folio.orders.utils.ResourcePathResolver.DETAILS;
 import static org.folio.orders.utils.ResourcePathResolver.ERESOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.FUND_DISTRIBUTION;
-import static org.folio.orders.utils.ResourcePathResolver.LOCATION;
+import static org.folio.orders.utils.ResourcePathResolver.LOCATIONS;
 import static org.folio.orders.utils.ResourcePathResolver.PHYSICAL;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
@@ -34,7 +35,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
@@ -44,6 +44,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.ErrorCodes;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -83,7 +84,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
   public void updateOrderLine(CompositePoLine compOrderLine) {
-    getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(),compOrderLine.getId())
+    getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
       .thenCompose(lineFromStorage -> {
         // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line update
         compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
@@ -167,8 +168,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     return inventoryHelper.handleInstanceRecord(compPOL)
       .thenCompose(withInstId -> getPoLineById(compPOL.getId(), lang, httpClient, ctx, okapiHeaders, logger))
       .thenCompose(jsonObj -> updateOrderLine(compPOL, jsonObj))
-      .thenCompose(v -> inventoryHelper.getOrCreateHoldingsRecord(compPOL))
-      .thenCompose(holdingsId -> inventoryHelper.handleItemRecords(compPOL, holdingsId))
+      .thenCompose(holdingsId -> inventoryHelper.handleItemRecords(compPOL))
       .thenCompose(itemIds -> {
         int itemsSize = itemIds.size();
 
@@ -270,13 +270,13 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     futures.add(handleSubObjOperation(COST, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(DETAILS, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(ERESOURCE, updatedLineJson, lineFromStorage));
-    futures.add(handleSubObjOperation(LOCATION, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(PHYSICAL, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(SOURCE, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjOperation(VENDOR_DETAIL, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjsOperation(CLAIMS, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjsOperation(FUND_DISTRIBUTION, updatedLineJson, lineFromStorage));
+    futures.add(handleSubObjsOperation(LOCATIONS, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage));
 
     // Once all operations completed, return updated PO Line with new sub-object id's as json object
@@ -327,11 +327,9 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> handleSubObjsOperation(String prop, JsonObject updatedLine, JsonObject lineFromStorage) {
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    List<CompletableFuture<String>> futures = new ArrayList<>();
     JsonArray idsInStorage = lineFromStorage.getJsonArray(prop);
     JsonArray jsonObjects = updatedLine.getJsonArray(prop);
-
-    JsonArray newIds = new JsonArray();
 
     // Handle updated sub-objects content
     if (jsonObjects != null && !jsonObjects.isEmpty()) {
@@ -344,8 +342,10 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
           String id = idsInStorage.remove(subObj.getString(ID)) ? subObj.getString(ID) : null;
 
           futures.add(handleSubObjOperation(prop, subObj, id)
-            .thenAccept(newIds::add)
-            .exceptionally(throwable -> addProcessingError(throwable, prop, id))
+            .exceptionally(throwable -> {
+              addProcessingError(throwable, prop, id);
+              return null;
+            })
           );
         }
       }
@@ -356,19 +356,17 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       String id = idsInStorage.getString(i);
       if (id != null) {
         futures.add(handleSubObjOperation(prop, null, id)
-          .thenAccept(s -> {
-          })
           .exceptionally(throwable -> {
+            addProcessingError(throwable, prop, id);
             // In case the object is not deleted, still keep reference to old id
-            newIds.add(id);
-            return addProcessingError(throwable, prop, id);
+            return id;
           })
         );
       }
     }
 
-    return allOf(futures.toArray(new CompletableFuture[0]))
-      .thenAccept(v -> updatedLine.put(prop, newIds));
+    return collectResultsOnSuccess(futures)
+      .thenAccept(newIds -> updatedLine.put(prop, newIds));
   }
 
   private Void addProcessingError(Throwable exc, String propName, String propId) {
@@ -421,8 +419,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    */
   private void validateOrderId(String orderId, JsonObject line) {
     if (!StringUtils.equals(orderId, line.getString("purchase_order_id"))) {
-      String msg = String.format("The PO line with id=%s does not belong to order with id=%s", line.getString("id"), orderId);
-      throw new CompletionException(new ValidationException(msg, ID_MISMATCH_ERROR_CODE));
+      throw new ValidationException(ErrorCodes.INCORRECT_ORDER_ID_IN_POL);
     }
   }
 }

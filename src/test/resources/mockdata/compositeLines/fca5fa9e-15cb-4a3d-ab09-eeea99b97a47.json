@@ -81,14 +81,16 @@
       "po_line_id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47"
     }
   ],
-  "location": {
-    "id": "8654ba03-310f-4455-8fa0-ebaff272b158",
-    "location_id": "07c5d9ea-cabe-11e8-a8d5-f2901f1b9fd1",
-    "quantity": 1,
-    "quantity_electronic": 0,
-    "quantity_physical": 1,
-    "po_line_id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47"
-  },
+  "locations": [
+    {
+      "id": "8654ba03-310f-4455-8fa0-ebaff272b158",
+      "location_id": "07c5d9ea-cabe-11e8-a8d5-f2901f1b9fd1",
+      "quantity": 1,
+      "quantity_electronic": 0,
+      "quantity_physical": 1,
+      "po_line_id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47"
+    }
+  ],
   "order_format": "Physical Resource",
   "owner": "LTS Acquisitions",
   "payment_status": "Awaiting Payment",

@@ -1,5 +1,6 @@
 package org.folio.orders.rest.exceptions;
 
+import org.folio.orders.utils.ErrorCodes;
 import org.folio.rest.jaxrs.model.Error;
 
 public class ValidationException extends IllegalStateException {
@@ -11,6 +12,11 @@ public class ValidationException extends IllegalStateException {
   public ValidationException(String message, String errorCode) {
     super(message);
     this.errorCode = errorCode;
+  }
+
+  public ValidationException(ErrorCodes errorCodes) {
+    super(errorCodes.getDescription());
+    this.errorCode = errorCodes.getCode();
   }
 
   public ValidationException(String message) {

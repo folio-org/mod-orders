@@ -106,13 +106,15 @@
       "fund_distribution": [
         "d10879e8-8c2d-4850-bcb9-0ec8e2e10021"
       ],
-      "location": {
-        "id": "a4e65e03-99a4-4b39-8e6a-ae666ac52bea",
-        "location_id": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
-        "quantity": 2,
-        "quantity_electronic": 1,
-        "quantity_physical": 1
-      },
+      "locations": [
+        {
+          "id": "a4e65e03-99a4-4b39-8e6a-ae666ac52bea",
+          "location_id": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "quantity": 2,
+          "quantity_electronic": 1,
+          "quantity_physical": 1
+        }
+      ],
       "order_format": "Physical Resource",
       "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
       "payment_status": "Awaiting Payment",

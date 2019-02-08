@@ -81,14 +81,16 @@
       "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
     }
   ],
-  "location": {
-    "id": "96a07b68-3cb5-4452-b957-f55479005e69",
-    "location_id": "df86a175-cafe-4c4a-b968-41d955c5cda8",
-    "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
-    "quantity": 1,
-    "quantity_electronic": 1,
-    "quantity_physical": 0
-  },
+  "locations": [
+    {
+      "id": "96a07b68-3cb5-4452-b957-f55479005e69",
+      "location_id": "df86a175-cafe-4c4a-b968-41d955c5cda8",
+      "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
+      "quantity": 1,
+      "quantity_electronic": 1,
+      "quantity_physical": 0
+    }
+  ],
   "order_format": "Electronic Resource",
   "owner": "LTS E-Resources & Serials",
   "payment_status": "Awaiting Payment",

@@ -1,17 +1,24 @@
 package org.folio.rest.impl;
 
+import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST;
+import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
+import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
+import static org.folio.orders.utils.ErrorCodes.PHYSICAL_LOC_QTY_EXCEEDS_COST;
+import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
+import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
+import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
+import static org.folio.orders.utils.ErrorCodes.ZERO_COST_QTY;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
+import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.AbstractHelper.PO_LINE_NUMBER;
 import static org.folio.rest.impl.AbstractHelper.PO_NUMBER;
-import static org.folio.rest.impl.InventoryHelper.ON_ORDER_ITEM_STATUS;
-import static org.folio.rest.impl.OrdersImpl.LINES_LIMIT_ERROR_CODE;
-import static org.folio.rest.impl.OrdersImpl.OVER_LIMIT_ERROR_MESSAGE;
+import static org.folio.rest.impl.InventoryHelper.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
@@ -65,6 +72,7 @@ import org.folio.rest.acq.model.PoLineCollection;
 import org.folio.rest.acq.model.ReceivingHistoryCollection;
 import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -149,7 +157,7 @@ public class OrdersImplTest {
   private static final String ID_BAD_FORMAT = "123-45-678-90-abc";
   private static final String ID_DOES_NOT_EXIST = "d25498e7-3ae6-45fe-9612-ec99e2700d2f";
   private static final String ID_FOR_INTERNAL_SERVER_ERROR = "168f8a86-d26c-406e-813f-c7527f241ac3";
-  private static final String ID_FOR_PENDING_ORDER = "00000000-1111-2222-8888-999999999999";
+  private static final String ID_FOR_PRINT_MONOGRAPH_ORDER = "00000000-1111-2222-8888-999999999999";
   private static final String PO_ID_FOR_FAILURE_CASE = "bad500aa-aaaa-500a-aaaa-aaaaaaaaaaaa";
   private static final String PO_LINE_ID_FOR_SUCCESS_CASE = "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47";
   private static final String ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE = "c0d08448-347b-418a-8c2f-5fb50248d67e";
@@ -184,7 +192,7 @@ public class OrdersImplTest {
   private static final String MOCK_DATA_ROOT_PATH = "src/test/resources/";
   private static final String LISTED_PRINT_MONOGRAPH_PATH = MOCK_DATA_ROOT_PATH + "/po_listed_print_monograph.json";
   private static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "/po_line_collection.json";
-  private static final String listedPrintSerialPath = MOCK_DATA_ROOT_PATH + "/po_listed_print_serial.json";
+  private static final String LISTED_PRINT_SERIAL_PATH = MOCK_DATA_ROOT_PATH + "/po_listed_print_serial.json";
   private static final String MINIMAL_ORDER_PATH = MOCK_DATA_ROOT_PATH + "/minimal_order.json";
   private static final String poCreationFailurePath = MOCK_DATA_ROOT_PATH + "/po_creation_failure.json";
   private static final String poLineCreationFailurePath = MOCK_DATA_ROOT_PATH + "/po_line_creation_failure.json";
@@ -266,20 +274,119 @@ public class OrdersImplTest {
       assertTrue(polNumber.startsWith(poNumber));
       assertNotNull(line.getCost().getId());
       assertNotNull(line.getDetails().getId());
-      assertNotNull(line.getLocation().getId());
       assertNull(line.getInstanceId());
+
+      line.getLocations()
+          .forEach(location -> assertNotNull(location.getId()));
     }
+  }
+
+  @Test
+  public void testPostOrderWithIncorrectQuantities() throws Exception {
+    logger.info("=== Test Order creation - Quantity validation fails ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    // Assert that there are 2 lines
+    assertEquals(2, reqData.getCompositePoLines().size());
+
+    // Set incorrect quantities for the first PO Line
+    CompositePoLine firstPoLine = reqData.getCompositePoLines().get(0);
+    firstPoLine.setOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
+    firstPoLine.getCost().setQuantityPhysical(1);
+    firstPoLine.getCost().setQuantityElectronic(0);
+    firstPoLine.getLocations().forEach(location -> {
+      location.setQuantityElectronic(1);
+      location.setQuantityPhysical(2);
+    });
+
+    // Set incorrect quantities for the second PO Line
+    CompositePoLine secondPoLine = reqData.getCompositePoLines().get(1);
+    secondPoLine.setOrderFormat(CompositePoLine.OrderFormat.OTHER);
+    secondPoLine.getCost().setQuantityPhysical(0);
+    secondPoLine.getCost().setQuantityElectronic(1);
+    secondPoLine.getLocations().forEach(location -> {
+      location.setQuantityElectronic(0);
+      location.setQuantityPhysical(1);
+    });
+
+    final Errors response = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encode(),
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(response.getErrors(), hasSize(6));
+    Set<String> errorCodes = response.getErrors()
+                                     .stream()
+                                     .map(Error::getCode)
+                                     .collect(Collectors.toSet());
+
+    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode(),
+                                              ZERO_COST_ELECTRONIC_QTY.getCode(),
+                                              NON_ZERO_COST_ELECTRONIC_QTY.getCode(),
+                                              ELECTRONIC_LOC_QTY_EXCEEDS_COST.getCode(),
+                                              PHYSICAL_LOC_QTY_EXCEEDS_COST.getCode()));
+
+    // Check that no any calls made by the business logic to other services
+    assertTrue(MockServer.serverRqRs.isEmpty());
+  }
+
+  @Test
+  public void testPutOrderWithIncorrectQuantities() throws Exception {
+    logger.info("=== Test Order update - Quantity validation fails for the first PO Line ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+
+    // Set incorrect quantities for the first PO Line
+    CompositePoLine firstPoLine = reqData.getCompositePoLines().get(0);
+    firstPoLine.setOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
+    firstPoLine.getCost().setQuantityPhysical(0);
+    firstPoLine.getCost().setQuantityElectronic(0);
+    firstPoLine.getLocations().forEach(location -> {
+      location.setQuantityElectronic(1);
+      location.setQuantityPhysical(1);
+    });
+
+    final Errors response = verifyPut(COMPOSITE_ORDERS_PATH + "/" + reqData.getId(), JsonObject.mapFrom(reqData).encode(),
+      APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(response.getErrors(), hasSize(3));
+    Set<String> errorCodes = response.getErrors()
+                                     .stream()
+                                     .map(Error::getCode)
+                                     .collect(Collectors.toSet());
+
+    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_QTY.getCode(),
+                                              ELECTRONIC_LOC_QTY_EXCEEDS_COST.getCode(),
+                                              PHYSICAL_LOC_QTY_EXCEEDS_COST.getCode()));
+
+    // Check that no any calls made by the business logic to other services
+    assertTrue(MockServer.serverRqRs.isEmpty());
   }
 
   @Test
   public void testListedPrintMonographInOpenStatus() throws Exception {
     logger.info("=== Test Listed Print Monograph in Open status ===");
 
-    CompositePurchaseOrder reqData = new JsonObject(getMockData(LISTED_PRINT_MONOGRAPH_PATH)).mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    CompositePoLine firstPoLine = reqData.getCompositePoLines().get(0);
     // remove productId from PO line to test scenario when it's not provided so there is no check for existing instance but new one will be created
-    reqData.getCompositePoLines().get(0).getDetails().getProductIds().clear();
+    firstPoLine.getDetails().getProductIds().clear();
     // MODORDERS-117 only physical quantity will be used
-    reqData.getCompositePoLines().get(0).setOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
+    firstPoLine.setOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
+    // Set locations quantities
+    int totalQty = 0;
+    for (int i = 0; i < firstPoLine.getLocations().size(); i++) {
+      Location location = firstPoLine.getLocations().get(i);
+      int quantityPhysical = i * (i + 1);
+
+      location.setQuantityElectronic(0);
+      location.setQuantityPhysical(quantityPhysical);
+      totalQty += quantityPhysical;
+    }
+    // Set cost quantities
+    firstPoLine.getCost().setQuantityPhysical(totalQty);
+    firstPoLine.getCost().setQuantityElectronic(0);
+
     // Set status to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
@@ -311,24 +418,17 @@ public class OrdersImplTest {
       assertTrue(polNumber.startsWith(poNumber));
       assertNotNull(line.getCost().getId());
       assertNotNull(line.getDetails().getId());
-      assertNotNull(line.getLocation().getId());
       assertNotNull(line.getInstanceId());
+
+      line.getLocations().forEach(location -> assertNotNull(location.getId()));
     }
 
     int polCount = resp.getCompositePoLines().size();
 
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
-    List<JsonObject> holdingsSearches = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
-    List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
-
     assertNotNull(instancesSearches);
-    assertNotNull(holdingsSearches);
-    assertNotNull(itemsSearches);
-
     // Check that search for existing instances was done not for all PO lines
     assertEquals(polCount - 1, instancesSearches.size());
-    // Check that search for existing items was done for each PO lines
-    assertEquals(polCount, itemsSearches.size());
 
     verifyInventoryInteraction(resp, polCount);
   }
@@ -337,7 +437,7 @@ public class OrdersImplTest {
   public void testOrderWithPoLinesWithoutSource() throws Exception {
     logger.info("=== Test Listed Print Monograph with POL without source ===");
 
-    CompositePurchaseOrder reqData = new JsonObject(getMockData(LISTED_PRINT_MONOGRAPH_PATH)).mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     // Assert that there are 2 lines
     assertEquals(2, reqData.getCompositePoLines().size());
     // remove source to verify validation for first POL
@@ -352,10 +452,10 @@ public class OrdersImplTest {
 
   @Test
   public void testDateOrderedIsNotSetForPendingOrder() throws Exception {
-    logger.info("=== Test Put Order By Id to change status of Order to Open - inventory interaction required only for first POL ===");
+    logger.info("=== Test POST Order By Id to change status of Order to Open - Date Ordered is empty ===");
 
     // Get Open Order
-    CompositePurchaseOrder reqData = new JsonObject(getMockData(LISTED_PRINT_MONOGRAPH_PATH)).mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     // Make sure that mock po has 2 po lines
     assertEquals(2, reqData.getCompositePoLines().size());
     // Make sure that Order moves to Pending
@@ -370,16 +470,34 @@ public class OrdersImplTest {
 
   @Test
   public void testPostOpenOrderInventoryUpdateOnlyForFirstPOL() throws Exception {
-    logger.info("=== Test Put Order By Id to change status of Order to Open - inventory interaction required only for first POL ===");
+    logger.info("=== Test POST Order By Id to change status of Order to Open - inventory interaction required only for first POL ===");
 
     // Get Open Order
-    CompositePurchaseOrder reqData = new JsonObject(getMockData(LISTED_PRINT_MONOGRAPH_PATH)).mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     // Make sure that mock po has 2 po lines
     assertEquals(2, reqData.getCompositePoLines().size());
+    // Make sure that mock po has the first PO line with 3 locations
+    assertEquals(3, reqData.getCompositePoLines().get(0).getLocations().size());
+
     // Make sure that Order moves to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    // Set the same location id for all locations of the first PO Line to confirm that only one holding created
+    String locationId = reqData.getCompositePoLines().get(0).getLocations().get(0).getLocationId();
+    reqData.getCompositePoLines().get(0).getLocations().forEach(location -> location.setLocationId(locationId));
+
+    // Prepare second POL
+    CompositePoLine secondPol = reqData.getCompositePoLines().get(1);
+    List<Location> secondPolLocations = secondPol.getLocations();
     // MODORDERS-117 Setting OrderFormat to OTHER which means create nothing in inventory for the second PO Line
-    reqData.getCompositePoLines().get(1).setOrderFormat(CompositePoLine.OrderFormat.OTHER);
+    secondPol.setOrderFormat(CompositePoLine.OrderFormat.OTHER);
+    // Specify correct quantities for OTHER format
+    secondPol.getCost().setQuantityElectronic(0);
+    secondPol.getCost().setQuantityPhysical(secondPolLocations.size());
+    secondPolLocations.forEach(location -> {
+      location.setQuantityElectronic(0);
+      location.setQuantityPhysical(1);
+    });
 
 	  LocalDate now = LocalDate.now();
 
@@ -510,7 +628,7 @@ public class OrdersImplTest {
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     ctx.assertFalse(errors.getErrors().isEmpty());
-    ctx.assertEquals(String.format(OVER_LIMIT_ERROR_MESSAGE, 1), errors.getErrors().get(0).getMessage());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getCode(), errors.getErrors().get(0).getCode());
   }
 
 
@@ -538,8 +656,8 @@ public class OrdersImplTest {
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     ctx.assertFalse(errors.getErrors().isEmpty());
-    ctx.assertEquals(String.format(OVER_LIMIT_ERROR_MESSAGE, DEFAULT_POLINE_LIMIT), errors.getErrors().get(0).getMessage());
-    ctx.assertEquals(LINES_LIMIT_ERROR_CODE, errors.getErrors().get(0).getCode());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getDescription(), errors.getErrors().get(0).getMessage());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getCode(), errors.getErrors().get(0).getCode());
   }
 
 
@@ -554,8 +672,8 @@ public class OrdersImplTest {
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     ctx.assertFalse(errors.getErrors().isEmpty());
-    ctx.assertEquals(String.format(OVER_LIMIT_ERROR_MESSAGE, 1), errors.getErrors().get(0).getMessage());
-    ctx.assertEquals(LINES_LIMIT_ERROR_CODE, errors.getErrors().get(0).getCode());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getDescription(), errors.getErrors().get(0).getMessage());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getCode(), errors.getErrors().get(0).getCode());
   }
 
 
@@ -754,7 +872,6 @@ public class OrdersImplTest {
 
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
-    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_PO_LINES_JSON));
     JsonObject storageData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id);
 
@@ -856,7 +973,6 @@ public class OrdersImplTest {
     logger.info("=== Test Put Order By Id without POLines, with new PO number  ===");
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
-    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
     JsonObject storageData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id);
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_PO_LINES_JSON));
     String newPoNumber = reqData.getString(PO_NUMBER) + "A";
@@ -935,8 +1051,8 @@ public class OrdersImplTest {
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     ctx.assertFalse(errors.getErrors().isEmpty());
-    ctx.assertEquals(String.format(OVER_LIMIT_ERROR_MESSAGE, 1), errors.getErrors().get(0).getMessage());
-    ctx.assertEquals(LINES_LIMIT_ERROR_CODE, errors.getErrors().get(0).getCode());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getDescription(), errors.getErrors().get(0).getMessage());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getCode(), errors.getErrors().get(0).getCode());
   }
 
   @Test
@@ -961,8 +1077,8 @@ public class OrdersImplTest {
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     ctx.assertFalse(errors.getErrors().isEmpty());
-    ctx.assertEquals(String.format(OVER_LIMIT_ERROR_MESSAGE, 1), errors.getErrors().get(0).getMessage());
-    ctx.assertEquals(LINES_LIMIT_ERROR_CODE, errors.getErrors().get(0).getCode());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getDescription(), errors.getErrors().get(0).getMessage());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getCode(), errors.getErrors().get(0).getCode());
   }
 
   @Test
@@ -970,8 +1086,8 @@ public class OrdersImplTest {
     logger.info("=== Test Put Order By Id to change status of Order to Open ===");
 
     // Get Open Order
-    CompositePurchaseOrder reqData = new JsonObject(getMockData(LISTED_PRINT_MONOGRAPH_PATH)).mapTo(CompositePurchaseOrder.class);
-    reqData.setId(ID_FOR_PENDING_ORDER);
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     // Make sure that mock PO has 2 po lines
     assertEquals(2, reqData.getCompositePoLines().size());
 
@@ -984,6 +1100,7 @@ public class OrdersImplTest {
 
     int polCount = reqData.getCompositePoLines().size();
 
+    verifyInstanceLinksForUpdatedOrder(reqData);
     verifyInventoryInteraction(reqData, polCount - 1);
   }
 
@@ -991,7 +1108,7 @@ public class OrdersImplTest {
   public void testUpdateOrderToOpenWithPartialItemsCreation() throws Exception {
     logger.info("=== Test Order update to Open status - Inventory items expected to be created partially ===");
 
-    CompositePurchaseOrder reqData = new JsonObject(getMockData(LISTED_PRINT_MONOGRAPH_PATH)).mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     // Emulate items creation issue
     reqData.getCompositePoLines().get(0).getDetails().getMaterialTypes().set(0, ID_FOR_INTERNAL_SERVER_ERROR);
     // Let's have only one PO Line
@@ -999,7 +1116,7 @@ public class OrdersImplTest {
     // Set status to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     // Set specific ID to let items search to return 1 item
-    reqData.setId(ID_FOR_PENDING_ORDER);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
 
     int polCount = reqData.getCompositePoLines().size();
     // Assert that only one PO line presents
@@ -1023,6 +1140,28 @@ public class OrdersImplTest {
 
     // Verify that pieces created for processed items quantity
     verifyPiecesCreated(items, createdPieces);
+  }
+
+  private void verifyInstanceLinksForUpdatedOrder(CompositePurchaseOrder reqData) {
+    List<JsonObject> polUpdates = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
+    assertNotNull(polUpdates);
+    for (CompositePoLine compLine : reqData.getCompositePoLines()) {
+      int itemsQuantity = calculateInventoryItemsQuantity(compLine);
+      if (itemsQuantity > 0) {
+        boolean instanceLinked = false;
+        for (JsonObject jsonObj : polUpdates) {
+          PoLine line = jsonObj.mapTo(PoLine.class);
+          if (StringUtils.equals(line.getId(), compLine.getId()) && StringUtils.isNotEmpty(line.getInstanceId())) {
+            instanceLinked = true;
+            // Populate instance id in the req data for further validation
+            compLine.setInstanceId(line.getInstanceId());
+            break;
+          }
+        }
+
+        assertTrue("The PO Line must contain instance id", instanceLinked);
+      }
+    }
   }
 
   private void verifyInventoryInteraction(CompositePurchaseOrder reqData, int createdInstancesCount) {
@@ -1127,22 +1266,27 @@ public class OrdersImplTest {
 	}
 
   private void verifyHoldingsCreated(List<JsonObject> holdings, CompositePoLine pol) {
-    boolean verified = false;
+    Map<String, List<Location>> groupedLocations = groupLocationsById(pol);
+
+    long actualQty = 0;
     for (JsonObject holding : holdings) {
-      if (StringUtils.isNotEmpty(pol.getLocation().getLocationId())
-          && pol.getLocation().getLocationId().equals(holding.getString("permanentLocationId"))) {
-        verified = true;
-        break;
+      if (groupedLocations.keySet().contains(holding.getString(HOLDING_PERMANENT_LOCATION_ID))
+        && StringUtils.equals(pol.getInstanceId(), holding.getString(HOLDING_INSTANCE_ID))) {
+        actualQty++;
       }
     }
 
-    int expectedItemsQuantity = calculateInventoryItemsQuantity(pol);
-    if (!verified && expectedItemsQuantity > 0) {
-      fail("No matching holdings record for POL: " + JsonObject.mapFrom(pol).encodePrettily());
-    }
-
-    if (!verified && StringUtils.isNotEmpty(pol.getInstanceId())) {
-      fail("Holdings Record could not be found for POL: " + JsonObject.mapFrom(pol).encodePrettily());
+    int itemsQuantity = calculateInventoryItemsQuantity(pol);
+    if (itemsQuantity == 0) {
+      assertEquals("No holdings expected", 0, actualQty);
+    } else {
+      long expectedQty = groupedLocations
+        .values()
+        .stream()
+        .mapToInt(locations -> calculateInventoryItemsQuantity(pol, locations))
+        .filter(qty -> qty > 0)
+        .count();
+      assertEquals("Quantity of holdings does not match to expected", expectedQty, actualQty);
     }
   }
 
@@ -1150,7 +1294,7 @@ public class OrdersImplTest {
     int actualQuantity = 0;
 
     for (JsonObject item : inventoryItems) {
-      if (pol.getId().equals(item.getString("purchaseOrderLineIdentifier"))) {
+      if (pol.getId().equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER))) {
         verifyItemRecordRequest(item, pol);
         actualQuantity++;
       }
@@ -1162,25 +1306,25 @@ public class OrdersImplTest {
   }
 
   private void verifyInstanceRecordRequest(JsonObject instance, CompositePoLine line) {
-    assertThat(instance.getString("title"), equalTo(line.getTitle()));
-    assertThat(instance.getString("source"), equalTo(line.getSource().getCode()));
-    assertThat(instance.getString("statusId"), equalTo("daf2681c-25af-4202-a3fa-e58fdf806183"));
-    assertThat(instance.getString("instanceTypeId"), equalTo("30fffe0e-e985-4144-b2e2-1e8179bdb41f"));
-    assertThat(instance.getJsonArray("publication").getJsonObject(0).getString("publisher"), equalTo(line.getPublisher()));
-    assertThat(instance.getJsonArray("publication").getJsonObject(0).getString("dateOfPublication"), equalTo(line.getPublicationDate()));
+    assertThat(instance.getString(INSTANCE_TITLE), equalTo(line.getTitle()));
+    assertThat(instance.getString(INSTANCE_SOURCE), equalTo(line.getSource().getCode()));
+    assertThat(instance.getString(INSTANCE_STATUS_ID), equalTo("daf2681c-25af-4202-a3fa-e58fdf806183"));
+    assertThat(instance.getString(INSTANCE_TYPE_ID), equalTo("30fffe0e-e985-4144-b2e2-1e8179bdb41f"));
+    assertThat(instance.getJsonArray(INSTANCE_PUBLICATION).getJsonObject(0).getString(INSTANCE_PUBLISHER), equalTo(line.getPublisher()));
+    assertThat(instance.getJsonArray(INSTANCE_PUBLICATION).getJsonObject(0).getString(INSTANCE_DATE_OF_PUBLICATION), equalTo(line.getPublicationDate()));
     if (line.getDetails().getProductIds().size() > 0) {
-      assertThat(instance.getJsonArray("identifiers").getJsonObject(0).getString("identifierTypeId"), equalTo("8261054f-be78-422d-bd51-4ed9f33c3422"));
-      assertThat(instance.getJsonArray("identifiers").getJsonObject(0).getString("value"), equalTo(line.getDetails().getProductIds().get(0).getProductId()));
+      assertThat(instance.getJsonArray(INSTANCE_IDENTIFIERS).getJsonObject(0).getString(INSTANCE_IDENTIFIER_TYPE_ID), equalTo("8261054f-be78-422d-bd51-4ed9f33c3422"));
+      assertThat(instance.getJsonArray(INSTANCE_IDENTIFIERS).getJsonObject(0).getString(INSTANCE_IDENTIFIER_TYPE_VALUE), equalTo(line.getDetails().getProductIds().get(0).getProductId()));
     }
   }
 
   private void verifyItemRecordRequest(JsonObject item, CompositePoLine line) {
-    assertThat(item.getString("purchaseOrderLineIdentifier"), not(isEmptyOrNullString()));
-    assertThat(line.getDetails().getMaterialTypes(), hasItem(item.getString("materialTypeId")));
-    assertThat(item.getString("holdingsRecordId"), not(isEmptyOrNullString()));
-    assertThat(item.getString("permanentLoanTypeId"), not(isEmptyOrNullString()));
-    assertThat(item.getJsonObject("status"), notNullValue());
-    assertThat(item.getJsonObject("status").getString("name"), equalTo(ON_ORDER_ITEM_STATUS));
+    assertThat(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER), not(isEmptyOrNullString()));
+    assertThat(line.getDetails().getMaterialTypes(), hasItem(item.getString(ITEM_MATERIAL_TYPE_ID)));
+    assertThat(item.getString(ITEM_HOLDINGS_RECORD_ID), not(isEmptyOrNullString()));
+    assertThat(item.getString(ITEM_PERMANENT_LOAN_TYPE_ID), not(isEmptyOrNullString()));
+    assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
+    assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_ON_ORDER));
   }
 
   @Test
@@ -1211,8 +1355,8 @@ public class OrdersImplTest {
     /*==============  Preparation ==============*/
 
     // Get Open Order
-    CompositePurchaseOrder reqData = new JsonObject(getMockData(LISTED_PRINT_MONOGRAPH_PATH)).mapTo(CompositePurchaseOrder.class);
-    reqData.setId(ID_FOR_PENDING_ORDER);
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
     int polCount = reqData.getCompositePoLines().size();
@@ -1241,7 +1385,6 @@ public class OrdersImplTest {
     ctx.assertNotNull(itemsSearches);
     ctx.assertNotNull(piecesSearches);
     assertEquals(polCount, instancesSearches.size());
-    assertEquals(polCount, itemsSearches.size());
 
     // Check that 2 new instances created and items created successfully only for first POL
     List<JsonObject> createdInstances = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST);
@@ -1255,6 +1398,8 @@ public class OrdersImplTest {
 
     List<JsonObject> items = joinExistingAndNewItems();
     assertEquals(createdPieces.size(), items.size());
+
+    verifyInstanceLinksForUpdatedOrder(reqData);
 
     // Check that instance and items created successfully for first POL
     CompositePoLine firstPol = reqData.getCompositePoLines().get(0);
@@ -1271,10 +1416,10 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPutOrderByIdWithPoLinesInRequestAndNoPoLinesInStorage() throws IOException {
+  public void testPutOrderByIdWithPoLinesInRequestAndNoPoLinesInStorage() throws Exception {
     logger.info("=== Test Put Order By Id with PO lines and without PO lines in order from storage ===");
 
-    JsonObject reqData = new JsonObject(getMockData(LISTED_PRINT_MONOGRAPH_PATH));
+    JsonObject reqData = getMockDraftOrder();
 
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES, reqData.toString(), "", 204);
 
@@ -1302,7 +1447,7 @@ public class OrdersImplTest {
   public void testPutOrderByIdWith404InvalidId() throws IOException {
     logger.info("=== Test Put Order By Id for 404 with Invalid Id or Order not found ===");
 
-    JsonObject reqData = new JsonObject(getMockData(listedPrintSerialPath));
+    JsonObject reqData = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + "93f612a9-9a05-4eef-aac5-435be131454b", reqData.toString(), APPLICATION_JSON, 404);
   }
 
@@ -1566,8 +1711,8 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPostOrdersLinesById(TestContext ctx) {
-    logger.info("=== Test Post Order Lines By Id (expected flow) ===");
+  public void testPostOrderLine(TestContext ctx) {
+    logger.info("=== Test Post Order Line (expected flow) ===");
 
     JsonObject reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
 
@@ -1586,6 +1731,61 @@ public class OrdersImplTest {
     }
 
     ctx.assertEquals(1, poLinesIds.size());
+  }
+
+  @Test
+  public void testPostOrdersLinePhysicalFormatIncorrectQuantity() {
+    logger.info("=== Test Post Physical Order Line - incorrect quantity ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+
+    // Set incorrect cost and location quantities
+    reqData.setOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
+    reqData.getCost().setQuantityPhysical(0);
+    reqData.getCost().setQuantityElectronic(1);
+    reqData.getLocations().get(0).setQuantityPhysical(1);
+
+    final Errors response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(response.getErrors(), hasSize(3));
+    List<String> errorCodes = response.getErrors()
+                                      .stream()
+                                      .map(Error::getCode)
+                                      .collect(Collectors.toList());
+
+    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode(), NON_ZERO_COST_ELECTRONIC_QTY.getCode(), PHYSICAL_LOC_QTY_EXCEEDS_COST.getCode()));
+
+    // Check that no any calls made by the business logic to other services
+    assertTrue(MockServer.serverRqRs.isEmpty());
+  }
+
+  @Test
+  public void testPutOrderLineElectronicFormatIncorrectQuantity() {
+    logger.info("=== Test Put Electronic Order Line - incorrect quantity ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+    reqData.setId(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
+
+    // Set incorrect cost and location quantities
+    reqData.setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
+    reqData.getCost().setQuantityPhysical(1);
+    reqData.getCost().setQuantityElectronic(0);
+    reqData.getLocations().get(0).setQuantityElectronic(1);
+
+    final Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encodePrettily(),
+      APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(response.getErrors(), hasSize(3));
+    List<String> errorCodes = response.getErrors()
+                                      .stream()
+                                      .map(Error::getCode)
+                                      .collect(Collectors.toList());
+
+    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_ELECTRONIC_QTY.getCode(), NON_ZERO_COST_PHYSICAL_QTY.getCode(), ELECTRONIC_LOC_QTY_EXCEEDS_COST.getCode()));
+
+    // Check that no any calls made by the business logic to other services
+    assertTrue(MockServer.serverRqRs.isEmpty());
   }
 
   @Test
@@ -1680,7 +1880,7 @@ public class OrdersImplTest {
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
     assertEquals(10, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, VENDOR_DETAIL, CLAIMS, FUND_DISTRIBUTION, PO_LINES));
+    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATIONS, PHYSICAL, VENDOR_DETAIL, CLAIMS, FUND_DISTRIBUTION, PO_LINES));
   }
 
   @Test
@@ -1707,7 +1907,7 @@ public class OrdersImplTest {
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
     assertEquals(8, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, VENDOR_DETAIL, PO_LINES));
+    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATIONS, PHYSICAL, VENDOR_DETAIL, PO_LINES));
 
     List<JsonObject> jsonObjects = column.get(PO_LINES);
     assertThat(jsonObjects, hasSize(1));
@@ -1743,7 +1943,7 @@ public class OrdersImplTest {
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
     assertEquals(13, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, ALERTS, CLAIMS, COST, DETAILS, ERESOURCE, FUND_DISTRIBUTION, LOCATION, PHYSICAL, REPORTING_CODES, SOURCE, VENDOR_DETAIL, PO_LINES));
+    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, ALERTS, CLAIMS, COST, DETAILS, ERESOURCE, FUND_DISTRIBUTION, LOCATIONS, PHYSICAL, REPORTING_CODES, SOURCE, VENDOR_DETAIL, PO_LINES));
 
     List<JsonObject> jsonObjects = column.get(PO_LINES);
     assertThat(jsonObjects, hasSize(1));
@@ -1886,7 +2086,7 @@ public class OrdersImplTest {
     assertTrue(column.isEmpty());
 
     column = MockServer.serverRqRs.column(HttpMethod.DELETE);
-    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, VENDOR_DETAIL));
+    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATIONS, PHYSICAL, VENDOR_DETAIL));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
     assertThat(column.keySet(), containsInAnyOrder(PO_LINES, SOURCE));
@@ -2179,6 +2379,7 @@ public class OrdersImplTest {
   }
 
   public static String getMockData(String path) throws IOException {
+    logger.info("Using mock datafile: {}", path);
     try (InputStream resourceAsStream = OrdersImplTest.class.getClassLoader().getResourceAsStream(path)) {
       if (resourceAsStream != null) {
         return IOUtils.toString(resourceAsStream, StandardCharsets.UTF_8);
@@ -2233,7 +2434,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.POST, resourcesPath(DETAILS)).handler(ctx -> handlePostGenericSubObj(ctx, DETAILS));
       router.route(HttpMethod.POST, resourcesPath(ERESOURCE)).handler(ctx -> handlePostGenericSubObj(ctx, ERESOURCE));
       router.route(HttpMethod.POST, resourcesPath(FUND_DISTRIBUTION)).handler(ctx -> handlePostGenericSubObj(ctx, FUND_DISTRIBUTION));
-      router.route(HttpMethod.POST, resourcesPath(LOCATION)).handler(ctx -> handlePostGenericSubObj(ctx, LOCATION));
+      router.route(HttpMethod.POST, resourcesPath(LOCATIONS)).handler(ctx -> handlePostGenericSubObj(ctx, LOCATIONS));
       router.route(HttpMethod.POST, resourcesPath(PHYSICAL)).handler(ctx -> handlePostGenericSubObj(ctx, PHYSICAL));
       router.route(HttpMethod.POST, resourcesPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
       router.route(HttpMethod.POST, resourcesPath(SOURCE)).handler(ctx -> handlePostGenericSubObj(ctx, SOURCE));
@@ -2258,13 +2459,13 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, resourcePath(DETAILS)).handler(ctx -> handleGetGenericSubObj(ctx, DETAILS));
       router.route(HttpMethod.GET, resourcePath(ERESOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, ERESOURCE));
       router.route(HttpMethod.GET, resourcePath(FUND_DISTRIBUTION)).handler(ctx -> handleGetGenericSubObj(ctx, FUND_DISTRIBUTION));
-      router.route(HttpMethod.GET, resourcePath(LOCATION)).handler(this::handleGetLocation);
+      router.route(HttpMethod.GET, resourcePath(LOCATIONS)).handler(this::handleGetLocation);
       router.route(HttpMethod.GET, resourcePath(PHYSICAL)).handler(ctx -> handleGetGenericSubObj(ctx, PHYSICAL));
       router.route(HttpMethod.GET, resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
       router.route(HttpMethod.GET, resourcePath(SOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.GET, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleGetGenericSubObj(ctx, VENDOR_DETAIL));
       router.route(HttpMethod.GET, resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
-      router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(ctx -> handleGetGenericPieceObj(ctx, PIECES));
+      router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(ctx -> handleGetGenericPieceObj(ctx));
       router.route(HttpMethod.GET, resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
 
       router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
@@ -2276,7 +2477,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.PUT, resourcePath(DETAILS)).handler(ctx -> handlePutGenericSubObj(ctx, DETAILS));
       router.route(HttpMethod.PUT, resourcePath(ERESOURCE)).handler(ctx -> handlePutGenericSubObj(ctx, ERESOURCE));
       router.route(HttpMethod.PUT, resourcePath(FUND_DISTRIBUTION)).handler(ctx -> handlePutGenericSubObj(ctx, FUND_DISTRIBUTION));
-      router.route(HttpMethod.PUT, resourcePath(LOCATION)).handler(ctx -> handlePutGenericSubObj(ctx, LOCATION));
+      router.route(HttpMethod.PUT, resourcePath(LOCATIONS)).handler(ctx -> handlePutGenericSubObj(ctx, LOCATIONS));
       router.route(HttpMethod.PUT, resourcePath(PHYSICAL)).handler(ctx -> handlePutGenericSubObj(ctx, PHYSICAL));
       router.route(HttpMethod.PUT, resourcePath(REPORTING_CODES)).handler(ctx -> handlePutGenericSubObj(ctx, REPORTING_CODES));
       router.route(HttpMethod.PUT, resourcePath(SOURCE)).handler(ctx -> handlePutGenericSubObj(ctx, SOURCE));
@@ -2291,7 +2492,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.DELETE, resourcePath(COST)).handler(ctx -> handleDeleteGenericSubObj(ctx, COST));
       router.route(HttpMethod.DELETE, resourcePath(DETAILS)).handler(ctx -> handleDeleteGenericSubObj(ctx, DETAILS));
       router.route(HttpMethod.DELETE, resourcePath(ERESOURCE)).handler(ctx -> handleDeleteGenericSubObj(ctx, ERESOURCE));
-      router.route(HttpMethod.DELETE, resourcePath(LOCATION)).handler(ctx -> handleDeleteGenericSubObj(ctx, LOCATION));
+      router.route(HttpMethod.DELETE, resourcePath(LOCATIONS)).handler(ctx -> handleDeleteGenericSubObj(ctx, LOCATIONS));
       router.route(HttpMethod.DELETE, resourcePath(PHYSICAL)).handler(ctx -> handleDeleteGenericSubObj(ctx, PHYSICAL));
       router.route(HttpMethod.DELETE, resourcePath(REPORTING_CODES)).handler(ctx -> handleDeleteGenericSubObj(ctx, REPORTING_CODES));
       router.route(HttpMethod.DELETE, resourcePath(SOURCE)).handler(ctx -> handleDeleteGenericSubObj(ctx, SOURCE));
@@ -2535,7 +2736,7 @@ public class OrdersImplTest {
             po_lines = new JsonObject(getMockData(POLINES_COLLECTION));
           } else {
             String filePath;
-            if (ID_FOR_PENDING_ORDER.equals(id)) {
+            if (ID_FOR_PRINT_MONOGRAPH_ORDER.equals(id)) {
               filePath = LISTED_PRINT_MONOGRAPH_PATH;
             } else {
               filePath = String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id);
@@ -2567,8 +2768,8 @@ public class OrdersImplTest {
           .stream()
           .map(l -> (JsonObject) l)
           .map(line -> {
-            replaceObjectById(line, ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATION, PHYSICAL, SOURCE, VENDOR_DETAIL);
-            replaceObjectsByIds(line, ALERTS, CLAIMS, FUND_DISTRIBUTION, REPORTING_CODES);
+            replaceObjectById(line, ADJUSTMENT, COST, DETAILS, ERESOURCE, PHYSICAL, SOURCE, VENDOR_DETAIL);
+            replaceObjectsByIds(line, ALERTS, CLAIMS, FUND_DISTRIBUTION, LOCATIONS, REPORTING_CODES);
             return line.mapTo(org.folio.rest.acq.model.PoLine.class);
           })
           .collect(Collectors.toList());
@@ -2683,14 +2884,14 @@ public class OrdersImplTest {
       }
     }
 
-    private void handleGetGenericPieceObj(RoutingContext ctx, String subObj) {
+    private void handleGetGenericPieceObj(RoutingContext ctx) {
       logger.info("got: " + ctx.request().path());
       String id = ctx.request().getParam("query").split("poLineId=")[1];
       logger.info("id: " + id);
 
       JsonArray pieces = new JsonArray();
       JsonObject data = new JsonObject().put("pieces", pieces).put("total_records", 0);
-      addServerRqRsData(HttpMethod.GET, subObj, data);
+      addServerRqRsData(HttpMethod.GET, OrdersImplTest.PIECES, data);
 
       ctx.response()
         .setStatusCode(200)
@@ -2758,7 +2959,7 @@ public class OrdersImplTest {
 
       try {
         String filePath;
-        if (ID_FOR_PENDING_ORDER.equals(id)) {
+        if (ID_FOR_PRINT_MONOGRAPH_ORDER.equals(id)) {
           filePath = LISTED_PRINT_MONOGRAPH_PATH;
         } else {
           filePath = String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id);
@@ -2877,7 +3078,7 @@ public class OrdersImplTest {
           return org.folio.rest.acq.model.Eresource.class;
         case FUND_DISTRIBUTION:
           return org.folio.rest.acq.model.FundDistribution.class;
-        case LOCATION:
+        case LOCATIONS:
           return org.folio.rest.acq.model.Location.class;
         case PHYSICAL:
           return org.folio.rest.acq.model.Physical.class;
@@ -2925,7 +3126,7 @@ public class OrdersImplTest {
       String id = ctx.request().getParam(ID);
       logger.info("id: " + id);
 
-      addServerRqRsData(HttpMethod.GET, LOCATION, new JsonObject().put(ID, id));
+      addServerRqRsData(HttpMethod.GET, LOCATIONS, new JsonObject().put(ID, id));
 
       Location location = new Location();
       location.setId(id);

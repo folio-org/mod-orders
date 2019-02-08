@@ -17,7 +17,7 @@
   "donor" : "ABCDEFGHIJKLM",
   "eresource" : "88662ff3-632e-4ee3-80fa-05a41c9ba306",
   "fund_distribution" : [ ],
-  "location" : "3ae6dfc3-bf0e-4bd1-90e6-22429eba278a",
+  "locations" : ["3ae6dfc3-bf0e-4bd1-90e6-22429eba278a"],
   "order_format" : "Physical Resource",
   "owner" : "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
   "payment_status" : "Awaiting Payment",

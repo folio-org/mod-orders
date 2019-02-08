@@ -34,12 +34,14 @@ public class PostOrdersHelper extends AbstractHelper {
 
 
   private final PutOrdersByIdHelper putOrderHelper;
+  private final PostOrderLineHelper postOrderLineHelper;
 
   public PostOrdersHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
       Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context ctx, String lang) {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
     this.putOrderHelper = new PutOrdersByIdHelper(okapiHeaders, asyncResultHandler, ctx, lang);
     poNumberHelper = new PoNumberHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
+    postOrderLineHelper = new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
 
   public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO) {
@@ -111,29 +113,19 @@ public class PostOrdersHelper extends AbstractHelper {
   }
 
   private CompletableFuture<List<CompositePoLine>> handlePoLines(CompositePurchaseOrder compPO) {
-    List<CompositePoLine> lines = new ArrayList<>(compPO.getCompositePoLines().size());
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    List<CompletableFuture<CompositePoLine>> futures = new ArrayList<>(compPO.getCompositePoLines().size());
     for (int i = 0; i < compPO.getCompositePoLines().size(); i++) {
       CompositePoLine compPOL = compPO.getCompositePoLines().get(i);
       compPOL.setPurchaseOrderId(compPO.getId());
       compPOL.setPoLineNumber(compPO.getPoNumber() + "-" + (i + 1));
 
-      futures.add(new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang)
-        .createPoLine(compPOL)
-        .thenAccept(lines::add));
+      futures.add(postOrderLineHelper.createPoLine(compPOL));
     }
 
-    return VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]))
-      .thenApply(v -> lines);
+    return HelperUtils.collectResultsOnSuccess(futures);
   }
 
   public CompletableFuture<CompositePurchaseOrder> applyFunds(CompositePurchaseOrder compPO) {
-    CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
-    future.complete(compPO);
-    return future;
-  }
-
-  public CompletableFuture<CompositePurchaseOrder> updateInventory(CompositePurchaseOrder compPO) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
     future.complete(compPO);
     return future;
