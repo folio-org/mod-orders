@@ -219,7 +219,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
                .filter(id -> !existingItemIds.contains(id))
                .forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
 
-        // Create pieces for total quantity when item record does not exists
+        // Create pieces when item record does not exists
         int totalQuantity = compPOL.getCost().getQuantityElectronic() + compPOL.getCost().getQuantityPhysical();
         int diff = Math.abs(totalQuantity - calculateInventoryItemsQuantity(compPOL));
         IntStream.range(0, diff).forEach(i -> futuresList.add(createPiece(poLineId, null)));
