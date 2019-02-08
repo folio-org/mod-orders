@@ -228,17 +228,17 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 400:
-        result = PutOrdersCompositeOrdersByIdResponse.respond400WithTextPlain(error.getMessage());
+        result = PutOrdersCompositeOrdersByIdResponse.respond400WithApplicationJson(withErrors(error));
         break;
       case 404:
-        result = PutOrdersCompositeOrdersByIdResponse.respond404WithTextPlain(error.getMessage());
+        result = PutOrdersCompositeOrdersByIdResponse.respond404WithApplicationJson(withErrors(error));
         break;
       case 422:
         result = PutOrdersCompositeOrdersByIdResponse.respond422WithApplicationJson(withErrors(error));
         break;
       default:
         if (putLineHelper.getProcessingErrors().isEmpty()) {
-          result = PutOrdersCompositeOrdersByIdResponse.respond500WithTextPlain(error.getMessage());
+          result = PutOrdersCompositeOrdersByIdResponse.respond500WithApplicationJson(withErrors(error));
         } else {
           Errors processingErrors = new Errors();
           processingErrors.getErrors().addAll(putLineHelper.getProcessingErrors());

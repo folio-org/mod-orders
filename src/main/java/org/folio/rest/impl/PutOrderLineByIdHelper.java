@@ -25,10 +25,9 @@ import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.respond204;
-import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.respond404WithTextPlain;
+import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.respond404WithApplicationJson;
 import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.respond422WithApplicationJson;
 import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.respond500WithApplicationJson;
-import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.respond500WithTextPlain;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -387,14 +386,14 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 404:
-        result = respond404WithTextPlain(error.getMessage());
+        result = respond404WithApplicationJson(withErrors(error));
         break;
       case 422:
         result = respond422WithApplicationJson(withErrors(error));
         break;
       default:
         if (getProcessingErrors().isEmpty()) {
-          result = respond500WithTextPlain(error.getMessage());
+          result = respond500WithApplicationJson(withErrors(error));
         } else {
           processingErrors.getErrors().add(error);
           result = respond500WithApplicationJson(processingErrors);

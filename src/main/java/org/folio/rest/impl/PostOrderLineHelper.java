@@ -379,16 +379,16 @@ public class PostOrderLineHelper extends AbstractHelper {
     final Response result;
     switch (code) {
       case 400:
-        result = Orders.PostOrdersOrderLinesResponse.respond400WithTextPlain(error.getMessage());
+        result = Orders.PostOrdersOrderLinesResponse.respond400WithApplicationJson(withErrors(error));
         break;
       case 401:
-        result = Orders.PostOrdersOrderLinesResponse.respond401WithTextPlain(error.getMessage());
+        result = Orders.PostOrdersOrderLinesResponse.respond401WithApplicationJson(withErrors(error));
         break;
       case 422:
         result = Orders.PostOrdersOrderLinesResponse.respond422WithApplicationJson(withErrors(error));
         break;
       default:
-        result = Orders.PostOrdersOrderLinesResponse.respond500WithTextPlain(error.getMessage());
+        result = Orders.PostOrdersOrderLinesResponse.respond500WithApplicationJson(withErrors(error));
     }
     return result;
   }
