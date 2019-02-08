@@ -35,7 +35,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
@@ -45,6 +44,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.ErrorCodes;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -84,7 +84,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
   public void updateOrderLine(CompositePoLine compOrderLine) {
-    getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(),compOrderLine.getId())
+    getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
       .thenCompose(lineFromStorage -> {
         // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line update
         compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
@@ -419,8 +419,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    */
   private void validateOrderId(String orderId, JsonObject line) {
     if (!StringUtils.equals(orderId, line.getString("purchase_order_id"))) {
-      String msg = String.format("The PO line with id=%s does not belong to order with id=%s", line.getString("id"), orderId);
-      throw new CompletionException(new ValidationException(msg, ID_MISMATCH_ERROR_CODE));
+      throw new ValidationException(ErrorCodes.INCORRECT_ORDER_ID_IN_POL);
     }
   }
 }

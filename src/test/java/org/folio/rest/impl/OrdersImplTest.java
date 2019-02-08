@@ -4,6 +4,7 @@ import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.PHYSICAL_LOC_QTY_EXCEEDS_COST;
+import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_QTY;
@@ -18,13 +19,9 @@ import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.AbstractHelper.PO_LINE_NUMBER;
 import static org.folio.rest.impl.AbstractHelper.PO_NUMBER;
 import static org.folio.rest.impl.InventoryHelper.*;
-import static org.folio.rest.impl.OrdersImpl.LINES_LIMIT_ERROR_CODE;
-import static org.folio.rest.impl.OrdersImpl.OVER_LIMIT_ERROR_MESSAGE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasKey;
@@ -631,7 +628,7 @@ public class OrdersImplTest {
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     ctx.assertFalse(errors.getErrors().isEmpty());
-    ctx.assertEquals(String.format(OVER_LIMIT_ERROR_MESSAGE, 1), errors.getErrors().get(0).getMessage());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getCode(), errors.getErrors().get(0).getCode());
   }
 
 
@@ -659,8 +656,8 @@ public class OrdersImplTest {
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     ctx.assertFalse(errors.getErrors().isEmpty());
-    ctx.assertEquals(String.format(OVER_LIMIT_ERROR_MESSAGE, DEFAULT_POLINE_LIMIT), errors.getErrors().get(0).getMessage());
-    ctx.assertEquals(LINES_LIMIT_ERROR_CODE, errors.getErrors().get(0).getCode());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getDescription(), errors.getErrors().get(0).getMessage());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getCode(), errors.getErrors().get(0).getCode());
   }
 
 
@@ -675,8 +672,8 @@ public class OrdersImplTest {
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     ctx.assertFalse(errors.getErrors().isEmpty());
-    ctx.assertEquals(String.format(OVER_LIMIT_ERROR_MESSAGE, 1), errors.getErrors().get(0).getMessage());
-    ctx.assertEquals(LINES_LIMIT_ERROR_CODE, errors.getErrors().get(0).getCode());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getDescription(), errors.getErrors().get(0).getMessage());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getCode(), errors.getErrors().get(0).getCode());
   }
 
 
@@ -1054,8 +1051,8 @@ public class OrdersImplTest {
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     ctx.assertFalse(errors.getErrors().isEmpty());
-    ctx.assertEquals(String.format(OVER_LIMIT_ERROR_MESSAGE, 1), errors.getErrors().get(0).getMessage());
-    ctx.assertEquals(LINES_LIMIT_ERROR_CODE, errors.getErrors().get(0).getCode());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getDescription(), errors.getErrors().get(0).getMessage());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getCode(), errors.getErrors().get(0).getCode());
   }
 
   @Test
@@ -1080,8 +1077,8 @@ public class OrdersImplTest {
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     ctx.assertFalse(errors.getErrors().isEmpty());
-    ctx.assertEquals(String.format(OVER_LIMIT_ERROR_MESSAGE, 1), errors.getErrors().get(0).getMessage());
-    ctx.assertEquals(LINES_LIMIT_ERROR_CODE, errors.getErrors().get(0).getCode());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getDescription(), errors.getErrors().get(0).getMessage());
+    ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getCode(), errors.getErrors().get(0).getCode());
   }
 
   @Test
@@ -2468,7 +2465,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, resourcePath(SOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.GET, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleGetGenericSubObj(ctx, VENDOR_DETAIL));
       router.route(HttpMethod.GET, resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
-      router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(ctx -> handleGetGenericPieceObj(ctx, PIECES));
+      router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(ctx -> handleGetGenericPieceObj(ctx));
       router.route(HttpMethod.GET, resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
 
       router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
@@ -2887,14 +2884,14 @@ public class OrdersImplTest {
       }
     }
 
-    private void handleGetGenericPieceObj(RoutingContext ctx, String subObj) {
+    private void handleGetGenericPieceObj(RoutingContext ctx) {
       logger.info("got: " + ctx.request().path());
       String id = ctx.request().getParam("query").split("poLineId=")[1];
       logger.info("id: " + id);
 
       JsonArray pieces = new JsonArray();
       JsonObject data = new JsonObject().put("pieces", pieces).put("total_records", 0);
-      addServerRqRsData(HttpMethod.GET, subObj, data);
+      addServerRqRsData(HttpMethod.GET, OrdersImplTest.PIECES, data);
 
       ctx.response()
         .setStatusCode(200)

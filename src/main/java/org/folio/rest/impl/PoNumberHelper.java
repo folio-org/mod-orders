@@ -42,7 +42,7 @@ public class PoNumberHelper extends AbstractHelper {
       .thenAccept(po -> {
          if (po.getInteger("total_records") != 0) {
            logger.error("Exception validating PO Number existence");
-           throw new CompletionException(new HttpException(400, withErrorCode(ErrorCodes.PO_NUMBER_ALREADY_EXISTS)));
+           throw new CompletionException(new HttpException(400, ErrorCodes.PO_NUMBER_ALREADY_EXISTS));
          }
       });
   }
