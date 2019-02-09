@@ -162,6 +162,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   public CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
     // Check if any item should be created
     int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
+    boolean isCreatePieces = true;
     if (expectedItemsQuantity == 0) {
       logger.debug("PO Line with '{}' id does not require inventory updates", compPOL.getId());
       return completedFuture(null);
@@ -175,7 +176,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
         int itemsSize = itemIds.size();
 
         // Create piece records for successfully created items
-        return createPieces(compPOL, itemIds)
+        return createPieces(compPOL, itemIds, isCreatePieces)
           .thenAccept(v -> {
             if (itemsSize != expectedItemsQuantity) {
               String message = String.format("The issue happened creating items for PO Line with '%s' id. Expected %d but %d created",
@@ -193,9 +194,9 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    * @param itemIds List of item id
    * @return CompletableFuture with newly created Pieces associated with PO line.
    */
-  private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<String> itemIds) {
+  private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<String> itemIds, boolean isCreatePieces) {
 		CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-		if (itemIds.isEmpty()) {
+		if (itemIds.isEmpty() || !isCreatePieces) {
 			future.complete(null);
 			return future;
 		}
@@ -220,7 +221,9 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
                .forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
 
         // Create pieces when item record does not exists
-        int totalQuantity = compPOL.getCost().getQuantityElectronic() + compPOL.getCost().getQuantityPhysical();
+        int eQuantity = compPOL.getCost().getQuantityElectronic()!=null ? compPOL.getCost().getQuantityElectronic() : 0;
+        int physicalQuantity = compPOL.getCost().getQuantityPhysical()!=null ? compPOL.getCost().getQuantityPhysical() : 0;
+        int totalQuantity = eQuantity + physicalQuantity;
         int diff = Math.abs(totalQuantity - calculateInventoryItemsQuantity(compPOL));
         IntStream.range(0, diff).forEach(i -> futuresList.add(createPiece(poLineId, null)));
 

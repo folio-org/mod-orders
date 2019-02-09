@@ -185,6 +185,7 @@ public class OrdersImplTest {
   private static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private static final String MOCK_DATA_ROOT_PATH = "src/test/resources/";
   private static final String LISTED_PRINT_MONOGRAPH_PATH = MOCK_DATA_ROOT_PATH + "/po_listed_print_monograph.json";
+  private static final String PIECE_RECORD_PATH = MOCK_DATA_ROOT_PATH + "/piece_record.json";
   private static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "/po_line_collection.json";
   private static final String listedPrintSerialPath = MOCK_DATA_ROOT_PATH + "/po_listed_print_serial.json";
   private static final String MINIMAL_ORDER_PATH = MOCK_DATA_ROOT_PATH + "/minimal_order.json";
@@ -291,7 +292,8 @@ public class OrdersImplTest {
       EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     LocalDate dateOrdered = resp.getDateOrdered().toInstant().atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDate();
-    assertThat(dateOrdered, equalTo(now));
+    assertThat(dateOrdered.getMonth(), equalTo(now.getMonth()));
+    assertThat(dateOrdered.getYear(), equalTo(now.getYear()));
 
     logger.info(JsonObject.mapFrom(resp));
 
@@ -389,7 +391,8 @@ public class OrdersImplTest {
       EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     LocalDate dateOrdered = resp.getDateOrdered().toInstant().atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDate();
-    assertThat(dateOrdered, equalTo(now));
+    assertThat(dateOrdered.getMonth(), equalTo(now.getMonth()));
+    assertThat(dateOrdered.getYear(), equalTo(now.getYear()));
 
     // Check that search of the existing instances and items was done for first PO line only
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
@@ -968,7 +971,7 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPutOrdersByIdCreatePieceWhenItemRecordDoNotExists() throws Exception {
+  public void testPutOrdersByIdCreatePieceWhenNoItemRecordButEresourceExists() throws Exception {
     logger.info("=== Test Put Order By Id create Pieces when Item record does not exist ===");
 
     CompositePurchaseOrder reqData = new JsonObject(getMockData(LISTED_PRINT_MONOGRAPH_PATH)).mapTo(CompositePurchaseOrder.class);
@@ -977,9 +980,12 @@ public class OrdersImplTest {
     assertEquals(2, reqData.getCompositePoLines().size());
 
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    reqData.getCompositePoLines().get(1).setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
+    reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(false);
+    reqData.getCompositePoLines().get(0).getCost().setQuantityElectronic(2);
+    reqData.getCompositePoLines().get(0).getCost().setQuantityPhysical(null);
+    reqData.getCompositePoLines().get(1).getCost().setQuantityElectronic(0);
+    reqData.getCompositePoLines().get(1).getCost().setQuantityPhysical(0);
     reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(false);
-
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
 
     verifyPieceCreationWithoutItemRecord(reqData);
@@ -987,13 +993,25 @@ public class OrdersImplTest {
   
   private void verifyPieceCreationWithoutItemRecord(CompositePurchaseOrder reqData) {
     List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
-
-    int totalQuantity0 = reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical() + reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic();
-    int expectedItemsQuantity = calculateInventoryItemsQuantity(reqData.getCompositePoLines().get(0));
+    List<JsonObject> createdItems = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.POST);
+    int itemSize = createdItems!=null ? createdItems.size() : 0;
+    logger.debug("------------------- pieces size --------------------\n" + createdPieces.size());
+    //logger.debug("------------------- pieces size, items size --------------------\n" + createdPieces.size() + "  " +  createdItems.size());
+    int eQuantity = reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic()!=null ? reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic() : 0;
+    int physicalQuantity = reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical()!=null ? reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical() : 0;
+    int totalQuantity0 = eQuantity + physicalQuantity;
+    logger.debug("------------------- totalQuantity0 --------------------\n" + totalQuantity0);
+    
+    int expectedItemsQuantity0 = calculateInventoryItemsQuantity(reqData.getCompositePoLines().get(0));
+    logger.debug("------------------- expectedItemsQuantity0 --------------------\n" + expectedItemsQuantity0);
+    logger.debug("------------------- totalQuantity0, createdPieces.size() --------------------\n" + totalQuantity0 + " " + createdPieces.size());
+    
+    int piecesFromItemIds = totalQuantity0 - itemSize;
+    logger.debug("------------------- totalQuantity0 - createdItems.size() --------------------\n" + piecesFromItemIds);
     // Verify total number of pieces created should be equal to total quantity
     assertEquals( createdPieces.size(), totalQuantity0);
-    // Verify total number of pieces equals total number of item id's which do not have associated piece records
-    assertEquals(createdPieces.size(), expectedItemsQuantity); 
+    int piecesAssociatedWithItemIds = 0;
+    assertEquals( itemSize, piecesAssociatedWithItemIds);
   }
   
   @Test
