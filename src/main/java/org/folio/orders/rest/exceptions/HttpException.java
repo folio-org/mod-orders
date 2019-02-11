@@ -43,7 +43,6 @@ public class HttpException extends Exception {
     super(message, cause, enableSuppression, writableStackTrace);
     this.code = code;
     this.errorCode = GENERIC_ERROR_CODE;
-
   }
 
   public int getCode() {
