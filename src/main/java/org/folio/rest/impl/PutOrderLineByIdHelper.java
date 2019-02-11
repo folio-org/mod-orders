@@ -162,15 +162,15 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   public CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
     // Check if any item should be created
     int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
-    
     if (expectedItemsQuantity == 0) {
+    	// Create pieces if items does not exists
     	return createPieces(compPOL, null)
     	.thenRun( () -> {
-    		 logger.info("PO Line with '{}' id does not require inventory updates", compPOL.getId());
-    		 completedFuture(null);
-    	}); 
-      
+    		logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId());
+    		completedFuture(null);
+      });
     }
+
     return inventoryHelper.handleInstanceRecord(compPOL)
       .thenCompose(withInstId -> getPoLineById(compPOL.getId(), lang, httpClient, ctx, okapiHeaders, logger))
       .thenCompose(jsonObj -> updateOrderLine(compPOL, jsonObj))
@@ -200,7 +200,6 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    */
   private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<String> itemIds) {
 		CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-
 		List<CompletableFuture<Void>> futuresList = new ArrayList<>();
 		String poLineId = compPOL.getId();
 		String endpoint = String.format(PIECES_ENDPOINT, poLineId);
@@ -223,7 +222,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 	               .forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
         }
         
-        // Create pieces when item record does not exists
+        // Calculate total quantity and create pieces when item record does not exists
         int eQuantity = compPOL.getCost().getQuantityElectronic()!=null ? compPOL.getCost().getQuantityElectronic() : 0;
         int physicalQuantity = compPOL.getCost().getQuantityPhysical()!=null ? compPOL.getCost().getQuantityPhysical() : 0;
         int totalQuantity = eQuantity + physicalQuantity;
@@ -257,7 +256,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 		// Construct Piece object
   	Piece piece = new Piece();
   	piece.setPoLineId(poLineId);
-  	piece.setItemId(itemId);
+  	if(itemId!=null)
+  		piece.setItemId(itemId);
   	piece.setReceivingStatus(Piece.ReceivingStatus.EXPECTED);
 
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
