@@ -396,7 +396,8 @@ public class OrdersImplTest {
       EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     LocalDate dateOrdered = resp.getDateOrdered().toInstant().atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDate();
-    assertThat(dateOrdered, equalTo(now));
+    assertThat(dateOrdered.getMonth(), equalTo(now.getMonth()));
+    assertThat(dateOrdered.getYear(), equalTo(now.getYear()));
 
     logger.info(JsonObject.mapFrom(resp));
 
@@ -505,7 +506,8 @@ public class OrdersImplTest {
       EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     LocalDate dateOrdered = resp.getDateOrdered().toInstant().atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDate();
-    assertThat(dateOrdered, equalTo(now));
+    assertThat(dateOrdered.getMonth(), equalTo(now.getMonth()));
+    assertThat(dateOrdered.getYear(), equalTo(now.getYear()));
 
     // Check that search of the existing instances and items was done for first PO line only
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
@@ -521,6 +523,31 @@ public class OrdersImplTest {
     verifyInventoryInteraction(resp, 1);
   }
 
+  @Test
+  public void testPutOrdersByIdTotalPiecesEqualsTotalQuantityWhenCreateInventoryIsFalse() throws Exception {
+    logger.info("=== Test Put Order By Id create Pieces when Item record does not exist ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    // Make sure that mock PO has 2 po lines
+    assertEquals(2, reqData.getCompositePoLines().size());
+
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(false);
+    reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(false);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
+
+    List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
+    int piecesSize = createdPieces!=null ? createdPieces.size() : 0;
+    int eQuantity0 = reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic()!=null ? reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic() : 0;
+    int physicalQuantity0 = reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical()!=null ? reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical() : 0;
+    int eQuantity1 = reqData.getCompositePoLines().get(1).getCost().getQuantityElectronic()!=null ? reqData.getCompositePoLines().get(1).getCost().getQuantityElectronic() : 0;
+    int physicalQuantity1 = reqData.getCompositePoLines().get(1).getCost().getQuantityPhysical()!=null ? reqData.getCompositePoLines().get(1).getCost().getQuantityPhysical() : 0;
+    int totalQuantity = eQuantity0 + physicalQuantity0 + eQuantity1 + physicalQuantity1;
+    // Verify total number of pieces created should be equal to total quantity
+    assertEquals( piecesSize, totalQuantity);
+  }
+   
   @Test
   public void testPlaceOrderMinimal() throws Exception {
     logger.info("=== Test Placement of minimal order ===");
