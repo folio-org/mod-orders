@@ -283,6 +283,8 @@ public class OrdersImplTest {
     reqData.getCompositePoLines().get(0).getDetails().getProductIds().clear();
     // MODORDERS-117 only physical quantity will be used
     reqData.getCompositePoLines().get(0).setOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
+//    reqData.getCompositePoLines().get(1).getCost().setQuantityElectronic(0);
+//    reqData.getCompositePoLines().get(1).getCost().setQuantityPhysical(0);
     // Set status to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
@@ -995,7 +997,8 @@ public class OrdersImplTest {
     List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
     List<JsonObject> createdItems = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.POST);
     int itemSize = createdItems!=null ? createdItems.size() : 0;
-    logger.debug("------------------- pieces size --------------------\n" + createdPieces.size());
+    int piecesSize = createdPieces!=null ? createdPieces.size() : 0;
+    logger.debug("------------------- pieces size --------------------\n" + piecesSize);
     //logger.debug("------------------- pieces size, items size --------------------\n" + createdPieces.size() + "  " +  createdItems.size());
     int eQuantity = reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic()!=null ? reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic() : 0;
     int physicalQuantity = reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical()!=null ? reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical() : 0;
@@ -1004,12 +1007,12 @@ public class OrdersImplTest {
     
     int expectedItemsQuantity0 = calculateInventoryItemsQuantity(reqData.getCompositePoLines().get(0));
     logger.debug("------------------- expectedItemsQuantity0 --------------------\n" + expectedItemsQuantity0);
-    logger.debug("------------------- totalQuantity0, createdPieces.size() --------------------\n" + totalQuantity0 + " " + createdPieces.size());
+    logger.debug("------------------- totalQuantity0, createdPieces.size() --------------------\n" + totalQuantity0 + " " + piecesSize);
     
     int piecesFromItemIds = totalQuantity0 - itemSize;
     logger.debug("------------------- totalQuantity0 - createdItems.size() --------------------\n" + piecesFromItemIds);
     // Verify total number of pieces created should be equal to total quantity
-    assertEquals( createdPieces.size(), totalQuantity0);
+    assertEquals( piecesSize, totalQuantity0);
     int piecesAssociatedWithItemIds = 0;
     assertEquals( itemSize, piecesAssociatedWithItemIds);
   }
@@ -1027,6 +1030,7 @@ public class OrdersImplTest {
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     // MODORDERS-117 guarantee electronic resource for the second PO Line but set "create items" to false
     reqData.getCompositePoLines().get(1).setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
+    //reqData.getCompositePoLines().get(1).getCost().setQuantityElectronic(2);
     reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(false);
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
@@ -1087,7 +1091,18 @@ public class OrdersImplTest {
     // All existing and created items
     List<JsonObject> items = joinExistingAndNewItems();
 
-    //assertEquals(createdPieces.size(), items.size());
+    int eQuantity = reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic()!=null ? reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic() : 0;
+    int physicalQuantity = reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical()!=null ? reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical() : 0;
+    
+    int eQuantity1 = reqData.getCompositePoLines().get(1).getCost().getQuantityElectronic()!=null ? reqData.getCompositePoLines().get(1).getCost().getQuantityElectronic() : 0;
+    int physicalQuantity1 = reqData.getCompositePoLines().get(1).getCost().getQuantityPhysical()!=null ? reqData.getCompositePoLines().get(1).getCost().getQuantityPhysical() : 0;
+//    
+//    CompositePoLine poline0 = reqData.getCompositePoLines().get(0);
+//    //calculateInventoryItemsQuantity(poline0);
+//    logger.debug("--------------------------- eQuantity, physicalQuantity, createdPieces.size() -------------------------------\n" + eQuantity + " " + physicalQuantity + " " + createdPieces.size());
+    int totalQuantity0 = eQuantity + physicalQuantity + eQuantity1 + physicalQuantity1;
+    
+    assertEquals(createdPieces.size(), totalQuantity0);
     for (CompositePoLine pol : reqData.getCompositePoLines()) {
       verifyInstanceCreated(createdInstances, pol);
       verifyHoldingsCreated(createdHoldings, pol);
@@ -1168,9 +1183,10 @@ public class OrdersImplTest {
     for (JsonObject pieceObj : pieces) {
       // Make sure piece data corresponds to schema content
       Piece piece = pieceObj.mapTo(Piece.class);
-
+      
       // Check if itemId in inventoryItems match itemId in piece record
-      // assertThat(itemIds, hasItem(piece.getItemId()));
+      if(piece.getItemId()!=null)
+        assertThat(itemIds, hasItem(piece.getItemId()));
       assertThat(piece.getReceivingStatus(), equalTo(Piece.ReceivingStatus.EXPECTED));
     }
 	}

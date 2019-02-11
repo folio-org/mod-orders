@@ -162,10 +162,14 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   public CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
     // Check if any item should be created
     int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
-    boolean isCreatePieces = true;
+    
     if (expectedItemsQuantity == 0) {
-      logger.debug("PO Line with '{}' id does not require inventory updates", compPOL.getId());
-      return completedFuture(null);
+    	return createPieces(compPOL, null)
+    	.thenRun( () -> {
+    		 logger.info("PO Line with '{}' id does not require inventory updates", compPOL.getId());
+    		 completedFuture(null);
+    	}); 
+      
     }
     return inventoryHelper.handleInstanceRecord(compPOL)
       .thenCompose(withInstId -> getPoLineById(compPOL.getId(), lang, httpClient, ctx, okapiHeaders, logger))
@@ -176,7 +180,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
         int itemsSize = itemIds.size();
 
         // Create piece records for successfully created items
-        return createPieces(compPOL, itemIds, isCreatePieces)
+        return createPieces(compPOL, itemIds)
           .thenAccept(v -> {
             if (itemsSize != expectedItemsQuantity) {
               String message = String.format("The issue happened creating items for PO Line with '%s' id. Expected %d but %d created",
@@ -194,12 +198,9 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    * @param itemIds List of item id
    * @return CompletableFuture with newly created Pieces associated with PO line.
    */
-  private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<String> itemIds, boolean isCreatePieces) {
+  private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<String> itemIds) {
 		CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-		if (itemIds.isEmpty() || !isCreatePieces) {
-			future.complete(null);
-			return future;
-		}
+
 		List<CompletableFuture<Void>> futuresList = new ArrayList<>();
 		String poLineId = compPOL.getId();
 		String endpoint = String.format(PIECES_ENDPOINT, poLineId);
@@ -216,10 +217,12 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
             .collect(Collectors.toList());
 
         // Create piece records for item id's which do not have piece records yet
-        itemIds.stream()
-               .filter(id -> !existingItemIds.contains(id))
-               .forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
-
+        if(itemIds!=null) {
+	        itemIds.stream()
+	               .filter(id -> !existingItemIds.contains(id))
+	               .forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
+        }
+        
         // Create pieces when item record does not exists
         int eQuantity = compPOL.getCost().getQuantityElectronic()!=null ? compPOL.getCost().getQuantityElectronic() : 0;
         int physicalQuantity = compPOL.getCost().getQuantityPhysical()!=null ? compPOL.getCost().getQuantityPhysical() : 0;
