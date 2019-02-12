@@ -5,6 +5,7 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.completedFuture;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
+import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
@@ -221,10 +222,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
         }
         
         // Calculate total quantity and create pieces when item record does not exists
-        int eQuantity = compPOL.getCost().getQuantityElectronic()!=null ? compPOL.getCost().getQuantityElectronic() : 0;
-        int physicalQuantity = compPOL.getCost().getQuantityPhysical()!=null ? compPOL.getCost().getQuantityPhysical() : 0;
-        int totalQuantity = eQuantity + physicalQuantity;
-        int diff = Math.abs(totalQuantity - calculateInventoryItemsQuantity(compPOL));
+        int diff = Math.abs(calculateTotalQuantity(compPOL) - calculateInventoryItemsQuantity(compPOL));
         IntStream.range(0, diff).forEach(i -> futuresList.add(createPiece(poLineId, null)));
         
         allOf(futuresList.toArray(new CompletableFuture[0]))
@@ -243,7 +241,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 		return future;
   }
 
-  /**
+	/**
    * Construct Piece object associated with PO Line and create in the storage
    *
    * @param poLineId PO line identifier

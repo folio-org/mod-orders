@@ -443,6 +443,18 @@ public class HelperUtils {
   }
 
   /**
+   * Calculates total quantity based of cost for electronic and physical resources
+   *
+   * @param compPOL composite PO Line
+   * @return total quantity for PO Line
+   */
+  public static int calculateTotalQuantity(CompositePoLine compPOL) {
+  	int eQuantity = compPOL.getCost().getQuantityElectronic()!=null ? compPOL.getCost().getQuantityElectronic() : 0;
+    int physicalQuantity = compPOL.getCost().getQuantityPhysical()!=null ? compPOL.getCost().getQuantityPhysical() : 0;
+    return eQuantity + physicalQuantity;
+  }
+  
+  /**
    * Calculates total items quantity for all locations.
    * The quantity is based on Order Format (please see MODORDERS-117):<br/>
    * If format equals Physical the associated quantities will result in item records<br/>
