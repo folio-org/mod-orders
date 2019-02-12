@@ -207,6 +207,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenAccept(body -> {
         PieceCollection pieces = body.mapTo(PieceCollection.class);
 
+        if(itemIds!=null) {
         // Extract item Id's which already associated with piece records
         List<String> existingItemIds = pieces.getPieces()
             .stream()
@@ -215,16 +216,17 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
             .collect(Collectors.toList());
 
         // Create piece records for item id's which do not have piece records yet
-        if(itemIds!=null) {
+        
 	        itemIds.stream()
 	               .filter(id -> !existingItemIds.contains(id))
 	               .forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
         }
-        
+        else {
         // Calculate total quantity and create pieces when item record does not exists
-        int diff = Math.abs(calculateTotalQuantity(compPOL) - calculateInventoryItemsQuantity(compPOL));
-        IntStream.range(0, diff).forEach(i -> futuresList.add(createPiece(poLineId, null)));
-        
+        //int diff = Math.abs(calculateTotalQuantity(compPOL) - calculateInventoryItemsQuantity(compPOL));
+        	logger.debug("------------------- calculateTotalQuantity(compPOL) --------------------\n" + calculateTotalQuantity(compPOL));
+        IntStream.range(0, calculateTotalQuantity(compPOL)).forEach(i -> futuresList.add(createPiece(poLineId, null)));
+        }
         allOf(futuresList.toArray(new CompletableFuture[0]))
           .thenAccept(v -> future.complete(null))
           .exceptionally(t -> {
