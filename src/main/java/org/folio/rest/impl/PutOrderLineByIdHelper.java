@@ -166,8 +166,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     	// Create pieces if items does not exists
     	return createPieces(compPOL, null)
     	.thenRun(() -> {
-    		logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId());
-    		completedFuture(null);
+    		logger.info("Created pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId());
     	});
     }
     
