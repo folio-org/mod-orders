@@ -208,24 +208,21 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
         PieceCollection pieces = body.mapTo(PieceCollection.class);
 
         if(itemIds!=null) {
-        // Extract item Id's which already associated with piece records
-        List<String> existingItemIds = pieces.getPieces()
-            .stream()
-            .map(Piece::getItemId)
-            .filter(StringUtils::isNotEmpty)
-            .collect(Collectors.toList());
+          // Extract item Id's which are already associated with piece records
+          List<String> existingItemIds = pieces.getPieces()
+																	             .stream()
+																	             .map(Piece::getItemId)
+																	             .filter(StringUtils::isNotEmpty)
+																	             .collect(Collectors.toList());
 
-        // Create piece records for item id's which do not have piece records yet
-        
+          // Create piece records for item id's which do not have piece records yet     
 	        itemIds.stream()
 	               .filter(id -> !existingItemIds.contains(id))
 	               .forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
         }
         else {
-        // Calculate total quantity and create pieces when item record does not exists
-        //int diff = Math.abs(calculateTotalQuantity(compPOL) - calculateInventoryItemsQuantity(compPOL));
-        	logger.debug("------------------- calculateTotalQuantity(compPOL) --------------------\n" + calculateTotalQuantity(compPOL));
-        IntStream.range(0, calculateTotalQuantity(compPOL)).forEach(i -> futuresList.add(createPiece(poLineId, null)));
+          // Create pieces on the basis of the total quantity of resources
+          IntStream.range(0, calculateTotalQuantity(compPOL)).forEach(i -> futuresList.add(createPiece(poLineId, null)));
         }
         allOf(futuresList.toArray(new CompletableFuture[0]))
           .thenAccept(v -> future.complete(null))

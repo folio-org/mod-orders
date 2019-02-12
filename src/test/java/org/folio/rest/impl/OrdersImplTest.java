@@ -537,18 +537,21 @@ public class OrdersImplTest {
 
     List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
     int piecesSize = createdPieces!=null ? createdPieces.size() : 0;
-
-
     // Verify total number of pieces created should be equal to total quantity
     assertEquals( piecesSize, calculateTotalQuantity(reqData));
   }
    
+  // Calculate total quantity of resources based of the cost
   private int calculateTotalQuantity(CompositePurchaseOrder reqData) {
-    int eQuantity0 = reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic()!=null ? reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic() : 0;
-    int physicalQuantity0 = reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical()!=null ? reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical() : 0;
-    int eQuantity1 = reqData.getCompositePoLines().get(1).getCost().getQuantityElectronic()!=null ? reqData.getCompositePoLines().get(1).getCost().getQuantityElectronic() : 0;
-    int physicalQuantity1 = reqData.getCompositePoLines().get(1).getCost().getQuantityPhysical()!=null ? reqData.getCompositePoLines().get(1).getCost().getQuantityPhysical() : 0;
-    return eQuantity0 + physicalQuantity0 + eQuantity1 + physicalQuantity1;
+		int eQuantity0 = reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic() != null
+		    ? reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic() : 0;
+		int physicalQuantity0 = reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical() != null
+		    ? reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical() : 0;
+		int eQuantity1 = reqData.getCompositePoLines().get(1).getCost().getQuantityElectronic() != null
+		    ? reqData.getCompositePoLines().get(1).getCost().getQuantityElectronic() : 0;
+		int physicalQuantity1 = reqData.getCompositePoLines().get(1).getCost().getQuantityPhysical() != null
+		    ? reqData.getCompositePoLines().get(1).getCost().getQuantityPhysical() : 0;
+		return eQuantity0 + physicalQuantity0 + eQuantity1 + physicalQuantity1;
   }
   
   @Test
@@ -1206,14 +1209,6 @@ public class OrdersImplTest {
 
     // All existing and created items
     List<JsonObject> items = joinExistingAndNewItems();
-
-//    int eQuantity0 = reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic()!=null ? reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic() : 0;
-//    int physicalQuantity0 = reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical()!=null ? reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical() : 0;
-//    int eQuantity1 = reqData.getCompositePoLines().get(1).getCost().getQuantityElectronic()!=null ? reqData.getCompositePoLines().get(1).getCost().getQuantityElectronic() : 0;
-//    int physicalQuantity1 = reqData.getCompositePoLines().get(1).getCost().getQuantityPhysical()!=null ? reqData.getCompositePoLines().get(1).getCost().getQuantityPhysical() : 0;
-//
-//    int totalQuantity0 = eQuantity0 + physicalQuantity0 + eQuantity1 + physicalQuantity1;
-
     assertEquals(createdPieces.size(), calculateTotalQuantity(reqData));
 
     for (CompositePoLine pol : reqData.getCompositePoLines()) {
