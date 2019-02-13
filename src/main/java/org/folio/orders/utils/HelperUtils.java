@@ -31,6 +31,7 @@ import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
@@ -445,12 +446,12 @@ public class HelperUtils {
   /**
    * Calculates total quantity based of cost for electronic and physical resources
    *
-   * @param compPOL composite PO Line
+   * @param cost Cost associated with PO Line
    * @return total quantity for PO Line
    */
-  public static int calculateTotalQuantity(CompositePoLine compPOL) {
-  	int eQuantity = compPOL.getCost().getQuantityElectronic()!=null ? compPOL.getCost().getQuantityElectronic() : 0;
-    int physicalQuantity = compPOL.getCost().getQuantityPhysical()!=null ? compPOL.getCost().getQuantityPhysical() : 0;
+  public static int calculateTotalQuantity(Cost cost) {
+  	int eQuantity = cost.getQuantityElectronic()!=null ? cost.getQuantityElectronic() : 0;
+    int physicalQuantity = cost.getQuantityPhysical()!=null ? cost.getQuantityPhysical() : 0;
     return eQuantity + physicalQuantity;
   }
   

@@ -223,7 +223,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
         else {
           // Create pieces on the basis of the total quantity of resources
         	int existingPieces = pieces.getPieces().size();
-        	int remainingPiecesToCreate = Math.abs(calculateTotalQuantity(compPOL) - existingPieces);
+        	int remainingPiecesToCreate = Math.abs(calculateTotalQuantity(compPOL.getCost()) - existingPieces);
           IntStream.range(0, remainingPiecesToCreate).forEach(i -> futuresList.add(createPiece(poLineId, null)));
         }
         allOf(futuresList.toArray(new CompletableFuture[0]))

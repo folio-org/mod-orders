@@ -66,12 +66,14 @@ import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PoLineCollection;
 import org.folio.rest.acq.model.ReceivingHistoryCollection;
 import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
@@ -191,6 +193,7 @@ public class OrdersImplTest {
   private static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private static final String MOCK_DATA_ROOT_PATH = "src/test/resources/";
   private static final String LISTED_PRINT_MONOGRAPH_PATH = MOCK_DATA_ROOT_PATH + "/po_listed_print_monograph.json";
+  private static final String PE_MIX_PATH = MOCK_DATA_ROOT_PATH + "/po_listed_print_monograph_pe_mix.json";
   private static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "/po_line_collection.json";
   private static final String LISTED_PRINT_SERIAL_PATH = MOCK_DATA_ROOT_PATH + "/po_listed_print_serial.json";
   private static final String MINIMAL_ORDER_PATH = MOCK_DATA_ROOT_PATH + "/minimal_order.json";
@@ -524,6 +527,34 @@ public class OrdersImplTest {
   }
 
   @Test
+  public void testPutOrdersByIdPEMixFormat() throws Exception {
+    logger.info("=== Test Put Order By Id create Pieces with P/E Mix format ===");
+    JsonObject order = new JsonObject(getMockData(PE_MIX_PATH));
+    order.put("workflow_status", "Pending");
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    // Make sure that mock PO has 1 po lines
+    assertEquals(1, reqData.getCompositePoLines().size());
+
+    reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(false);
+    reqData.getCompositePoLines().get(0).getCost().setQuantityPhysical(3);
+    reqData.getCompositePoLines().get(0).getCost().setQuantityElectronic(2);
+    reqData.getCompositePoLines().get(0).setOrderFormat(OrderFormat.P_E_MIX);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
+
+    List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
+    List<JsonObject> createdItems = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.POST);
+    int piecesSize = createdPieces!=null ? createdPieces.size() : 0;
+    int itemSize = createdItems!=null ? createdItems.size() : 0;
+    logger.debug("------------------- piecesSize, itemSize --------------------\n" + piecesSize + " " + itemSize);
+    // Verify total number of pieces created should be equal to total quantity
+    int totalQuantity = HelperUtils.calculateTotalQuantity(reqData.getCompositePoLines().get(0).getCost());
+    assertEquals( piecesSize, totalQuantity);
+  }
+  
+  @Test
   public void testPutOrdersByIdTotalPiecesEqualsTotalQuantityWhenCreateInventoryIsFalse() throws Exception {
     logger.info("=== Test Put Order By Id create Pieces when Item record does not exist ===");
 
@@ -532,26 +563,15 @@ public class OrdersImplTest {
     // Make sure that mock PO has 2 po lines
     assertEquals(2, reqData.getCompositePoLines().size());
 
+    reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(false);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
 
     List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
     int piecesSize = createdPieces!=null ? createdPieces.size() : 0;
     // Verify total number of pieces created should be equal to total quantity
-    assertEquals( piecesSize, calculateTotalQuantity(reqData));
-  }
-   
-  // Calculate total quantity of resources based of the cost
-  private int calculateTotalQuantity(CompositePurchaseOrder reqData) {
-		int eQuantity0 = reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic() != null
-		    ? reqData.getCompositePoLines().get(0).getCost().getQuantityElectronic() : 0;
-		int physicalQuantity0 = reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical() != null
-		    ? reqData.getCompositePoLines().get(0).getCost().getQuantityPhysical() : 0;
-		int eQuantity1 = reqData.getCompositePoLines().get(1).getCost().getQuantityElectronic() != null
-		    ? reqData.getCompositePoLines().get(1).getCost().getQuantityElectronic() : 0;
-		int physicalQuantity1 = reqData.getCompositePoLines().get(1).getCost().getQuantityPhysical() != null
-		    ? reqData.getCompositePoLines().get(1).getCost().getQuantityPhysical() : 0;
-		return eQuantity0 + physicalQuantity0 + eQuantity1 + physicalQuantity1;
+    int totalQuantity = HelperUtils.calculateTotalQuantity(reqData.getCompositePoLines().get(0).getCost()) + HelperUtils.calculateTotalQuantity(reqData.getCompositePoLines().get(1).getCost());
+    assertEquals( piecesSize, totalQuantity);
   }
   
   @Test
@@ -1209,7 +1229,8 @@ public class OrdersImplTest {
 
     // All existing and created items
     List<JsonObject> items = joinExistingAndNewItems();
-    assertEquals(createdPieces.size(), calculateTotalQuantity(reqData));
+    int totalQuantity = HelperUtils.calculateTotalQuantity(reqData.getCompositePoLines().get(0).getCost()) + HelperUtils.calculateTotalQuantity(reqData.getCompositePoLines().get(1).getCost());
+    assertEquals(createdPieces.size(), totalQuantity);
 
     for (CompositePoLine pol : reqData.getCompositePoLines()) {
       verifyInstanceCreated(createdInstances, pol);
