@@ -93,8 +93,9 @@ public abstract class AbstractHelper {
     final Throwable t = throwable.getCause();
     final String message = t.getMessage();
     if (t instanceof HttpException) {
-      final int code = ((HttpException) t).getCode();
-      result = succeededFuture(buildErrorResponse(code, new Error().withMessage(message)));
+      final int httpCode = ((HttpException) t).getCode();
+      final String errorCode = ((HttpException) t).getErrorCode();
+      result = succeededFuture(buildErrorResponse(httpCode, new Error().withMessage(message).withCode(errorCode)));
     } else if (t instanceof ValidationException) {
       result = succeededFuture(buildErrorResponse(422, ((ValidationException) t).getError()));
     } else {
