@@ -1186,7 +1186,7 @@ public class OrdersImplTest {
     List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
 
     // Assert that items quantity equals to created ieces
-    assertEquals(createdPieces.size(), items.size());
+    assertEquals(createdPieces.size(), HelperUtils.calculateTotalQuantity(reqData.getCompositePoLines().get(0).getCost()));
 
     // Verify that not all expected items created
     assertThat(items.size(), lessThan(calculateInventoryItemsQuantity(reqData.getCompositePoLines().get(0))));

@@ -108,9 +108,9 @@
         {
           "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
           "location_id": "758258bc-ecc1-41b8-abca-f7b610822ffd",
-          "quantity": 0,
+          "quantity": 3,
           "quantity_electronic": 0,
-          "quantity_physical": 0
+          "quantity_physical": 3
         }
       ],
       "order_format": "P/E Mix",

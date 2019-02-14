@@ -202,30 +202,41 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 		List<CompletableFuture<Void>> futuresList = new ArrayList<>();
 		String poLineId = compPOL.getId();
 		String endpoint = String.format(PIECES_ENDPOINT, poLineId);
-
+		
 		handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(body -> {
         PieceCollection pieces = body.mapTo(PieceCollection.class);
-
+        int remainingPiecesToCreate = 0;
+        
         if(itemIds!=null) {
-          // Extract item Id's which are already associated with piece records
+          // 1. Get list of item Id's which are already associated with piece records
           List<String> existingItemIds = pieces.getPieces()
 																	             .stream()
 																	             .map(Piece::getItemId)
 																	             .filter(StringUtils::isNotEmpty)
 																	             .collect(Collectors.toList());
 
-          // Create piece records for item id's which do not have piece records yet     
-	        itemIds.stream()
-	               .filter(id -> !existingItemIds.contains(id))
-	               .forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
+          // 2. Get list of item id's which do not have piece records yet
+          List<String> piecesForPhysicalResources = itemIds.stream()
+          .filter(id -> !existingItemIds.contains(id)).collect(Collectors.toList());
+
+          // 3. Create piece records     
+          piecesForPhysicalResources.stream().forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));  
+	        
+	        // 4. Calculate count for remaining pieces to create when Physical and Electronic resources exists
+	        // Scenario: PO Line of "P/E Mix" format with 3 Physical resources and 2 Electronic resources with `create_inventory` set to `false`.
+	        // Create 2 piece records for Electronic resources
+	        remainingPiecesToCreate = Math.abs(calculateTotalQuantity(compPOL.getCost()) - piecesForPhysicalResources.size());   
         }
         else {
-          // Create pieces on the basis of the total quantity of resources
+          // Calculate count for remaining pieces to create on the basis of the total quantity of resources(Physical and Electronic) 
         	int existingPieces = pieces.getPieces().size();
-        	int remainingPiecesToCreate = Math.abs(calculateTotalQuantity(compPOL.getCost()) - existingPieces);
-          IntStream.range(0, remainingPiecesToCreate).forEach(i -> futuresList.add(createPiece(poLineId, null)));
+        	remainingPiecesToCreate = Math.abs(calculateTotalQuantity(compPOL.getCost()) - existingPieces);
         }
+        
+        // Create pieces for Electronic resources
+        IntStream.range(0, remainingPiecesToCreate).forEach(i -> futuresList.add(createPiece(poLineId, null)));
+        
         allOf(futuresList.toArray(new CompletableFuture[0]))
           .thenAccept(v -> future.complete(null))
           .exceptionally(t -> {
@@ -242,7 +253,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 		return future;
   }
 
-	/**
+	 /**
    * Construct Piece object associated with PO Line and create in the storage
    *
    * @param poLineId PO line identifier
