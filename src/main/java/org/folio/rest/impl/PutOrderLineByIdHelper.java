@@ -207,7 +207,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenAccept(body -> {
         PieceCollection pieces = body.mapTo(PieceCollection.class);
         int remainingPiecesToCreate = 0;
-        int existingPieces = 0;
+        int existingPieces = pieces.getPieces().size();
         
         if(itemIds!=null) {
           // 1. Get list of item Id's which are already associated with piece records
@@ -227,12 +227,10 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 	        // 4. Calculate count for remaining pieces to create when Physical and Electronic resources exists
 	        // Scenario: PO Line of "P/E Mix" format with 3 Physical resources and 2 Electronic resources with `create_inventory` set to `false`.
 	        // Create 2 piece records for Electronic resources
-          existingPieces = pieces.getPieces().size();
 	        remainingPiecesToCreate = Math.abs(calculateTotalQuantity(compPOL.getCost()) - piecesForPhysicalResources.size() - existingPieces);   
         }
         else {
           // Calculate count for remaining pieces to create on the basis of the total quantity of resources(Physical and Electronic) 
-        	existingPieces = pieces.getPieces().size();
         	remainingPiecesToCreate = Math.abs(calculateTotalQuantity(compPOL.getCost()) - existingPieces);
         }
         
