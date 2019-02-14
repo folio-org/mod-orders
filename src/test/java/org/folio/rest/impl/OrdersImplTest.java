@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
@@ -197,7 +198,7 @@ public class OrdersImplTest {
   private static final String poLineCreationFailurePath = MOCK_DATA_ROOT_PATH + "/po_line_creation_failure.json";
   private static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
   /** The PO Line with minimal required content */
-  private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "/minimalContent.json";
+  private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "minimalContent.json";
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
 
   private static final String QUERY_PARAM_NAME = "query";
@@ -844,7 +845,7 @@ public class OrdersImplTest {
   @Test
   public void testDeleteByIdNoOrderFound() {
     logger.info("=== Test Delete Order By Id - Not Found ===");
-    verifyDeleteResponse(COMPOSITE_ORDERS_PATH + "/" + ID_DOES_NOT_EXIST, APPLICATION_JSON, 404);
+    verifyDeleteResponse(COMPOSITE_ORDERS_PATH + "/" + ID_DOES_NOT_EXIST, "", 204);
   }
 
   @Test
@@ -1803,6 +1804,18 @@ public class OrdersImplTest {
   }
 
   @Test
+  public void testPostOrdersLinesByIdPoLineWithNonExistPurchaseOrder(TestContext ctx) {
+    logger.info("=== Test Post Order Lines By Id (empty id in body) ===");
+    JsonObject reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, PO_LINE_ID_FOR_SUCCESS_CASE);
+    reqData.put("purchase_order_id", ID_DOES_NOT_EXIST);
+
+    Errors resp = verifyPostResponse(LINES_PATH, reqData.encodePrettily(),
+      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 400).as(Errors.class);
+
+    ctx.assertEquals(1, resp.getErrors().size());
+  }
+
+  @Test
   public void testValidationOnPutLineWithoutBody() {
     logger.info("=== Test validation on PUT line with no body ===");
     RestAssured
@@ -2124,7 +2137,7 @@ public class OrdersImplTest {
         .body(body)
       .post(LINES_PATH)
         .then()
-          .statusCode(500);
+          .statusCode(400);
   }
 
   private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {
@@ -2729,8 +2742,9 @@ public class OrdersImplTest {
       String id = ctx.request().getParam(ID);
 
       addServerRqRsData(HttpMethod.DELETE, subObj, new JsonObject().put(ID, id));
-
-      if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
+      if (ID_DOES_NOT_EXIST.equals(id)) {
+        serverResponse(ctx, 404, TEXT_PLAIN, id);
+      } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
         serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
       } else {
         ctx.response()
@@ -2787,7 +2801,9 @@ public class OrdersImplTest {
 
           serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encode());
         } catch (IOException e) {
-          serverResponse(ctx, 404, APPLICATION_JSON, id);
+          PoLineCollection poLineCollection = new PoLineCollection();
+          poLineCollection.setTotalRecords(0);
+          serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(poLineCollection).encodePrettily());
         }
       }
     }

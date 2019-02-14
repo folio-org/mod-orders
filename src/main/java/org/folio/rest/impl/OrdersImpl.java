@@ -20,7 +20,7 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.rest.exceptions.ValidationException;
+import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.*;
@@ -157,7 +157,7 @@ public class OrdersImpl implements Orders {
               poLine.setPurchaseOrderId(orderId);
             }
             if (!orderId.equals(poLine.getPurchaseOrderId())) {
-              throw new ValidationException(ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE);
+              throw new HttpException(422, ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE);
             }
           });
           putHelper.updateOrder(orderId, compPO);
@@ -210,7 +210,7 @@ public class OrdersImpl implements Orders {
                 )
                 .exceptionally(helper::handleError);
             } else {
-              throw new ValidationException(ErrorCodes.POL_LINES_LIMIT_EXCEEDED);
+              throw new HttpException(422, ErrorCodes.POL_LINES_LIMIT_EXCEEDED);
             }
           }).exceptionally(helper::handleError);
       }).exceptionally(helper::handleError);
@@ -325,7 +325,7 @@ public class OrdersImpl implements Orders {
   private void validatePoLinesQuantity(CompositePurchaseOrder compPO, JsonObject config) {
     int limit = getPoLineLimit(config);
     if (compPO.getCompositePoLines().size() > limit) {
-      throw new ValidationException(ErrorCodes.POL_LINES_LIMIT_EXCEEDED);
+      throw new HttpException(422, ErrorCodes.POL_LINES_LIMIT_EXCEEDED);
     }
   }
 

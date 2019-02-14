@@ -43,7 +43,6 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.InventoryException;
-import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.rest.acq.model.Piece;
@@ -420,7 +419,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    */
   private void validateOrderId(String orderId, JsonObject line) {
     if (!StringUtils.equals(orderId, line.getString("purchase_order_id"))) {
-      throw new ValidationException(ErrorCodes.INCORRECT_ORDER_ID_IN_POL);
+      throw new HttpException(422, ErrorCodes.INCORRECT_ORDER_ID_IN_POL);
     }
   }
 }

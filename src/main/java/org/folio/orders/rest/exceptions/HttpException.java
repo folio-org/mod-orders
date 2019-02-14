@@ -2,7 +2,7 @@ package org.folio.orders.rest.exceptions;
 
 import org.folio.orders.utils.ErrorCodes;
 
-public class HttpException extends Exception {
+public class HttpException extends RuntimeException {
   private static final long serialVersionUID = 8109197948434861504L;
 
   private static final String GENERIC_ERROR_CODE = "genericError";
