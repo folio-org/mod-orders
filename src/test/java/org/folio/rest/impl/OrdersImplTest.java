@@ -16,8 +16,6 @@ import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
-import static org.folio.rest.impl.AbstractHelper.PO_LINE_NUMBER;
-import static org.folio.rest.impl.AbstractHelper.PO_NUMBER;
 import static org.folio.rest.impl.InventoryHelper.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -118,6 +116,7 @@ public class OrdersImplTest {
   private static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
   private static final String ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON = "put_order_with_mismatch_id_in_po_lines.json";
   private static final String PO_NUMBER_VALUE = "228D126";
+  private static final String PO_LINE_NUMBER_VALUE = "1";
 
   static {
     System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, "io.vertx.core.logging.Log4j2LogDelegateFactory");
@@ -1420,12 +1419,14 @@ public class OrdersImplTest {
     logger.info("=== Test Put Order By Id with PO lines and without PO lines in order from storage ===");
 
     JsonObject reqData = getMockDraftOrder();
+    String poNumber = reqData.getString(PO_NUMBER);
 
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES, reqData.toString(), "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
-    assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST).size(), reqData.getJsonArray(COMPOSITE_PO_LINES).size());
-
+    List<JsonObject> createdPoLines = MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST);
+    assertEquals(createdPoLines.size(), reqData.getJsonArray(COMPOSITE_PO_LINES).size());
+    createdPoLines.forEach(poLine -> assertEquals(poNumber + "-" + PO_LINE_NUMBER_VALUE, poLine.getString(PO_LINE_NUMBER)));
   }
 
   @Test
@@ -1715,6 +1716,7 @@ public class OrdersImplTest {
     logger.info("=== Test Post Order Line (expected flow) ===");
 
     JsonObject reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
+    JsonObject purchaseOrderOwner = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, reqData.getString("purchase_order_id"));
 
     final CompositePoLine response = verifyPostResponse(LINES_PATH, reqData.encodePrettily(),
       EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePoLine.class);
@@ -1730,6 +1732,8 @@ public class OrdersImplTest {
       }
     }
 
+    String expectedPoLineNumber = purchaseOrderOwner.getString(PO_NUMBER) + "-" + PO_LINE_NUMBER_VALUE;
+    assertEquals(expectedPoLineNumber, response.getPoLineNumber());
     ctx.assertEquals(1, poLinesIds.size());
   }
 
@@ -2108,6 +2112,21 @@ public class OrdersImplTest {
     });
   }
 
+  @Test
+  public void testCreatePoLineWithGetPoLineNumberError() throws IOException {
+    logger.info("=== Test Get PO Line Number (generate po_number) - fail ===");
+    String body = getMockData(String.format("%s%s.json", COMP_PO_LINES_MOCK_DATA_PATH, PO_LINE_ID_FOR_SUCCESS_CASE));
+    RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(PO_NUMBER_ERROR_X_OKAPI_TENANT)
+        .contentType(APPLICATION_JSON)
+        .body(body)
+      .post(LINES_PATH)
+        .then()
+          .statusCode(500);
+  }
+
   private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {
     CompositePoLine poLine = new JsonObject(getMockData(PO_LINE_MIN_CONTENT_PATH)).mapTo(CompositePoLine.class);
     poLine.setId(lineId);
@@ -2465,8 +2484,9 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, resourcePath(SOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.GET, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleGetGenericSubObj(ctx, VENDOR_DETAIL));
       router.route(HttpMethod.GET, resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
-      router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(ctx -> handleGetGenericPieceObj(ctx));
+      router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(this::handleGetGenericPieceObj);
       router.route(HttpMethod.GET, resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
+      router.route(HttpMethod.GET, resourcesPath(PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
 
       router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
       router.route(HttpMethod.PUT, resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -2501,6 +2521,22 @@ public class OrdersImplTest {
 
       router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
       return router;
+    }
+
+    private void handleGetPoLineNumber(RoutingContext ctx) {
+      if(PO_NUMBER_ERROR_TENANT.equals(ctx.request().getHeader(OKAPI_HEADER_TENANT))) {
+        ctx.response()
+          .setStatusCode(500)
+          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+          .end();
+      } else {
+        SequenceNumber seqNumber = new SequenceNumber();
+        seqNumber.setSequenceNumber(PO_LINE_NUMBER_VALUE);
+        ctx.response()
+          .setStatusCode(200)
+          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+          .end(JsonObject.mapFrom(seqNumber).encodePrettily());
+      }
     }
 
     private void handlePostInstanceRecord(RoutingContext ctx) {
@@ -3014,9 +3050,10 @@ public class OrdersImplTest {
 
     private void handlePostPurchaseOrder(RoutingContext ctx) {
       logger.info("got: " + ctx.getBodyAsString());
+      String id = UUID.randomUUID().toString();
       JsonObject body = ctx.getBodyAsJson();
+      body.put(ID, id);
       org.folio.rest.acq.model.PurchaseOrder po = body.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
-      po.setId(UUID.randomUUID().toString());
       addServerRqRsData(HttpMethod.POST, PURCHASE_ORDER, body);
 
       ctx.response()

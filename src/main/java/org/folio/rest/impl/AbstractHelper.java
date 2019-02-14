@@ -29,9 +29,7 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
 
 public abstract class AbstractHelper {
-  public static final String PO_LINE_NUMBER = "po_line_number";
   public static final String ID = "id";
-  public static final String PO_NUMBER = "po_number";
 
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 

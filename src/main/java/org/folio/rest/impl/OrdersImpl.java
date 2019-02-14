@@ -5,10 +5,12 @@ import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.GET_ALL_POLINES_QUERY_WITH_LIMIT;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.orders.utils.HelperUtils.convertErrorCodesToErrors;
+import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.loadConfiguration;
 import static org.folio.orders.utils.HelperUtils.validateOrder;
 import static org.folio.orders.utils.HelperUtils.validatePoLine;
+import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -192,14 +194,20 @@ public class OrdersImpl implements Orders {
           .thenAccept(entries -> {
             int limit = getPoLineLimit(config);
             if (entries.getInteger("total_records") < limit) {
-              helper.createPoLine(poLine)
-                .thenAccept(pol -> {
-                  logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
-                  httpClient.closeClient();
-                  Response response = PostOrdersOrderLinesResponse.respond201WithApplicationJson
-                    (poLine, PostOrdersOrderLinesResponse.headersFor201().withLocation(String.format(ORDER_LINE_LOCATION_PREFIX, pol.getId())));
-                  asyncResultHandler.handle(succeededFuture(response));
-                })
+              getPurchaseOrderById(poLine.getPurchaseOrderId(), lang, httpClient, vertxContext, okapiHeaders, logger)
+                .thenCompose( purchaseOrder -> {
+                  poLine.setPoLineNumber(purchaseOrder.getString(PO_NUMBER));
+                  return helper.createPoLine(poLine)
+                    .thenAccept(pol -> {
+                      logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
+                      httpClient.closeClient();
+                      Response response = PostOrdersOrderLinesResponse.respond201WithApplicationJson
+                        (poLine, PostOrdersOrderLinesResponse.headersFor201().withLocation(String.format(ORDER_LINE_LOCATION_PREFIX, pol.getId())));
+                      asyncResultHandler.handle(succeededFuture(response));
+
+                    });
+                  }
+                )
                 .exceptionally(helper::handleError);
             } else {
               throw new ValidationException(ErrorCodes.POL_LINES_LIMIT_EXCEEDED);

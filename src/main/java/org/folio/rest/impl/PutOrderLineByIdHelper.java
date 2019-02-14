@@ -19,6 +19,7 @@ import static org.folio.orders.utils.ResourcePathResolver.FUND_DISTRIBUTION;
 import static org.folio.orders.utils.ResourcePathResolver.LOCATIONS;
 import static org.folio.orders.utils.ResourcePathResolver.PHYSICAL;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.SOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_DETAIL;
