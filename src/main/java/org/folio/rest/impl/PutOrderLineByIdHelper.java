@@ -169,11 +169,11 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenCompose(withInstId -> getPoLineById(compPOL.getId(), lang, httpClient, ctx, okapiHeaders, logger))
       .thenCompose(jsonObj -> updateOrderLine(compPOL, jsonObj))
       .thenCompose(holdingsId -> inventoryHelper.handleItemRecords(compPOL))
-      .thenCompose(itemIds -> {
-        int itemsSize = itemIds.size();
+      .thenCompose(pieces -> {
+        int itemsSize = pieces.size();
 
         // Create piece records for successfully created items
-        return createPieces(compPOL, itemIds)
+        return createPieces(compPOL, pieces)
           .thenAccept(v -> {
             if (itemsSize != expectedItemsQuantity) {
               String message = String.format("The issue happened creating items for PO Line with '%s' id. Expected %d but %d created",
@@ -188,12 +188,12 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    * Creates Piece records corresponding to each item record associated with PO Line
    *
    * @param compPOL Composite PO line to update Inventory for
-   * @param itemIds List of item id
-   * @return CompletableFuture with newly created Pieces associated with PO line.
+   * @param pieceList List of pieces associated with PO Line
+   * @return CompletableFuture.
    */
-  private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<String> itemIds) {
+  private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<Piece> pieceList) {
 		CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-		if (itemIds.isEmpty()) {
+		if (pieceList.isEmpty()) {
 			future.complete(null);
 			return future;
 		}
@@ -213,9 +213,9 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
             .collect(Collectors.toList());
 
         // Create piece records for item id's which do not have piece records yet
-        itemIds.stream()
-               .filter(id -> !existingItemIds.contains(id))
-               .forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
+        pieceList.stream()
+               .filter(piece -> !existingItemIds.contains(piece.getItemId()))
+               .forEach(piece -> futuresList.add(createPiece(piece)));
 
         allOf(futuresList.toArray(new CompletableFuture[0]))
           .thenAccept(v -> future.complete(null))
@@ -234,19 +234,12 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   }
 
   /**
-   * Construct Piece object associated with PO Line and create in the storage
+   * Create Piece associated with PO Line in the storage
    *
-   * @param poLineId PO line identifier
-   * @param itemId itemId that was created for PO Line
-   * @return CompletableFuture with new Piece record.
+   * @param piece associated with PO Line
+   * @return CompletableFuture
    */
-  private CompletableFuture<Void> createPiece(String poLineId, String itemId) {
-		// Construct Piece object
-  	Piece piece = new Piece();
-  	piece.setPoLineId(poLineId);
-  	piece.setItemId(itemId);
-  	piece.setReceivingStatus(Piece.ReceivingStatus.EXPECTED);
-
+  private CompletableFuture<Void> createPiece(Piece piece) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
     JsonObject pieceObj = JsonObject.mapFrom(piece);

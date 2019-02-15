@@ -10,6 +10,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.collections4.ListUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
+import org.folio.rest.acq.model.Piece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.ProductId;
@@ -103,14 +104,14 @@ public class InventoryHelper {
   }
 
   /**
-   * Returns list of item id's corresponding to given PO line.
+   * Returns list of pieces with populated item and location id's corresponding to given PO line.
    * Items are either retrieved from Inventory or new ones are created if no corresponding item records exist yet.
    *
    * @param compPOL   PO line to retrieve/create Item Records for. At this step PO Line must contain instance Id
-   * @return future with list of item id's
+   * @return future with list of pieces with item and location id's
    */
-  public CompletableFuture<List<String>> handleItemRecords(CompositePoLine compPOL) {
-    List<CompletableFuture<List<String>>> itemsPerHolding = new ArrayList<>();
+  public CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL) {
+    List<CompletableFuture<List<Piece>>> itemsPerHolding = new ArrayList<>();
 
     // Group all locations by location id because the holding should be unique for different locations
     groupLocationsById(compPOL)
@@ -122,6 +123,7 @@ public class InventoryHelper {
             // Search for or create a new holding and then create items for this holding
             getOrCreateHoldingsRecord(compPOL, locationId)
               .thenCompose(holdingId -> handleItemRecords(compPOL, holdingId, expectedQuantity))
+              .thenApply(itemIds -> constructPieces(itemIds, compPOL.getId(), locationId))
           );
         }
       });
@@ -131,6 +133,20 @@ public class InventoryHelper {
         .flatMap(List::stream)
         .collect(toList())
       );
+  }
+
+  private List<Piece> constructPieces(List<String> itemIds, String poLineId, String locationId) {
+    return itemIds.stream()
+      .map(itemId -> constructPiece(locationId, poLineId, itemId))
+      .collect(toList());
+  }
+
+  private Piece constructPiece(String locationId, String poLineId, String itemId) {
+    Piece piece = new Piece();
+    piece.setItemId(itemId);
+    piece.setPoLineId(poLineId);
+    piece.setLocationId(locationId);
+    return piece;
   }
 
   private CompletableFuture<String> getOrCreateHoldingsRecord(CompositePoLine compPOL, String locationId) {

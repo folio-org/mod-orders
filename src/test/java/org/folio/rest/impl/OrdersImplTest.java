@@ -1132,14 +1132,14 @@ public class OrdersImplTest {
     // All created pieces
     List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
 
-    // Assert that items quantity equals to created ieces
+    // Assert that items quantity equals to created pieces
     assertEquals(createdPieces.size(), items.size());
 
     // Verify that not all expected items created
     assertThat(items.size(), lessThan(calculateInventoryItemsQuantity(reqData.getCompositePoLines().get(0))));
 
     // Verify that pieces created for processed items quantity
-    verifyPiecesCreated(items, createdPieces);
+    verifyPiecesCreated(items, reqData.getCompositePoLines().subList(0, 1), createdPieces);
   }
 
   private void verifyInstanceLinksForUpdatedOrder(CompositePurchaseOrder reqData) {
@@ -1182,7 +1182,7 @@ public class OrdersImplTest {
       verifyInstanceCreated(createdInstances, pol);
       verifyHoldingsCreated(createdHoldings, pol);
       verifyItemsCreated(items, pol, calculateInventoryItemsQuantity(pol));
-      verifyPiecesCreated(items, createdPieces);
+      verifyPiecesCreated(items, reqData.getCompositePoLines(), createdPieces);
     }
   }
 
@@ -1249,11 +1249,17 @@ public class OrdersImplTest {
     }
   }
 
-	private void verifyPiecesCreated(List<JsonObject> inventoryItems, List<JsonObject> pieces) {
+	private void verifyPiecesCreated(List<JsonObject> inventoryItems, List<CompositePoLine> compositePoLines, List<JsonObject> pieces) {
     // Collect all item id's
     List<String> itemIds = inventoryItems.stream()
                                     .map(item -> item.getString(ID))
                                     .collect(Collectors.toList());
+
+    List<String> locationIds = compositePoLines.stream()
+      .flatMap(compositePoLine -> compositePoLine.getLocations().stream())
+      .map(location -> location.getLocationId())
+      .distinct()
+      .collect(Collectors.toList());
 
     for (JsonObject pieceObj : pieces) {
       // Make sure piece data corresponds to schema content
@@ -1261,6 +1267,7 @@ public class OrdersImplTest {
 
       // Check if itemId in inventoryItems match itemId in piece record
       assertThat(itemIds, hasItem(piece.getItemId()));
+      assertThat(locationIds, hasItem(piece.getLocationId()));
       assertThat(piece.getReceivingStatus(), equalTo(Piece.ReceivingStatus.EXPECTED));
     }
 	}
@@ -1367,6 +1374,7 @@ public class OrdersImplTest {
       assertTrue(calculateInventoryItemsQuantity(pol) > 0);
     }
 
+
     // Set material type id to one which emulates item creation failure
     reqData.getCompositePoLines().get(1).getDetails().getMaterialTypes().set(0, ID_FOR_INTERNAL_SERVER_ERROR);
 
@@ -1406,7 +1414,7 @@ public class OrdersImplTest {
     verifyInstanceCreated(createdInstances, firstPol);
     verifyHoldingsCreated(createdHoldings, firstPol);
     verifyItemsCreated(items, firstPol, calculateInventoryItemsQuantity(firstPol));
-    verifyPiecesCreated(items, createdPieces);
+    verifyPiecesCreated(items, reqData.getCompositePoLines().subList(0, 1), createdPieces);
 
     // Check that instance created successfully for second POL but no items created (but expected)
     CompositePoLine secondPol = reqData.getCompositePoLines().get(1);
