@@ -210,8 +210,7 @@ public class OrdersImplTest {
   private static final String NONEXISTING_PO_NUMBER = "newPoNumber";
   private static final String BAD_QUERY = "unprocessableQuery";
 
-  private static final Set<String> REQUIRED_PO_LINE_PROPERTIES = ImmutableSet.of(SOURCE);
-
+  private static final Set<String> REQUIRED_OR_DEFAULT_PO_LINE_PROPERTIES = ImmutableSet.of(SOURCE, RECEIPT_STATUS);
   private static Vertx vertx;
   private static MockServer mockServer;
 
@@ -2100,7 +2099,7 @@ public class OrdersImplTest {
     lineWithIds.stream().forEach(entry -> {
       Object value = entry.getValue();
       // Required properties
-      if (REQUIRED_PO_LINE_PROPERTIES.contains(entry.getKey())) {
+      if (REQUIRED_OR_DEFAULT_PO_LINE_PROPERTIES.contains(entry.getKey())) {
         assertThat(value, is(notNullValue()));
       } else {
         assertTrue(Objects.isNull(value) || (value instanceof Iterable && !((Iterable) value).iterator().hasNext()));
@@ -2116,7 +2115,7 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPoNumberValidatewithExistingPONumber()
+  public void testPoNumberValidateWithExistingPONumber()
   {
     JsonObject poNumber=new JsonObject();
     poNumber.put("poNumber", EXISTING_PO_NUMBER);
@@ -2125,7 +2124,7 @@ public class OrdersImplTest {
 
 
   @Test
-  public void testPoNumberValidatewithUniquePONumber()
+  public void testPoNumberValidateWithUniquePONumber()
   {
     JsonObject poNumber=new JsonObject();
     poNumber.put("poNumber", NONEXISTING_PO_NUMBER);
@@ -2133,7 +2132,7 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPoNumberValidatewithInvalidPattern()
+  public void testPoNumberValidateWithInvalidPattern()
   {
     JsonObject poNumber=new JsonObject();
     poNumber.put("poNumber", "11");

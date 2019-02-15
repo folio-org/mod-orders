@@ -97,8 +97,23 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   public CompletableFuture<Void> openOrder(CompositePurchaseOrder compPO) {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
-    return updateInventory(compPO)
-      .thenCompose(this::updateOrderSummary);
+
+    CompletableFuture<List<CompositePoLine>> compositePoLines;
+    if (isEmpty(compPO.getCompositePoLines())) {
+      compositePoLines = HelperUtils.getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger);
+      compositePoLines.thenAccept(compPO::setCompositePoLines);
+    } else {
+      compositePoLines = completedFuture(compPO.getCompositePoLines());
+    }
+
+    compPO.getCompositePoLines().forEach(poLine -> poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED));
+
+    return compositePoLines
+      .thenCompose(poLines ->
+        CompletableFuture.allOf(poLines.stream()
+          .map(putLineHelper::updateInventory)
+          .toArray(CompletableFuture[]::new)))
+      .thenAccept(cPO -> updateOrder(compPO.getId(), compPO));
   }
 
   private CompletionStage<JsonObject> validatePoNumber(CompositePurchaseOrder compPO, JsonObject poFromStorage) {
@@ -154,22 +169,6 @@ public class PutOrdersByIdHelper extends AbstractHelper {
       .toArray(CompletableFuture[]::new);
 
     return VertxCompletableFuture.allOf(ctx, futures);
-  }
-
-  public CompletableFuture<CompositePurchaseOrder> updateInventory(CompositePurchaseOrder compPO) {
-    CompletableFuture<List<CompositePoLine>> compositePoLines;
-    if (isEmpty(compPO.getCompositePoLines())) {
-      compositePoLines = HelperUtils.getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger);
-    } else {
-      compositePoLines = completedFuture(compPO.getCompositePoLines());
-    }
-
-    return compositePoLines
-      .thenCompose(poLines ->
-        CompletableFuture.allOf(poLines.stream()
-                                       .map(putLineHelper::updateInventory)
-                                       .toArray(CompletableFuture[]::new)))
-      .thenApply(v -> compPO);
   }
 
   private CompletableFuture<Void> handlePoLines(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {

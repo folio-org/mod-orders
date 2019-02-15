@@ -160,11 +160,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    */
   public CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
     // Check if any item should be created
-    int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
-    if (expectedItemsQuantity == 0) {
-      logger.debug("PO Line with '{}' id does not require inventory updates", compPOL.getId());
-      return completedFuture(null);
-    }
+    if (isNotNeededInventoryUpdate(compPOL)) return completedFuture(null);
+
     return inventoryHelper.handleInstanceRecord(compPOL)
       .thenCompose(withInstId -> getPoLineById(compPOL.getId(), lang, httpClient, ctx, okapiHeaders, logger))
       .thenCompose(jsonObj -> updateOrderLine(compPOL, jsonObj))
@@ -175,6 +172,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
         // Create piece records for successfully created items
         return createPieces(compPOL, itemIds)
           .thenAccept(v -> {
+            int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
             if (itemsSize != expectedItemsQuantity) {
               String message = String.format("The issue happened creating items for PO Line with '%s' id. Expected %d but %d created",
                 compPOL.getId(), expectedItemsQuantity, itemsSize);
@@ -182,6 +180,15 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
             }
           });
       });
+  }
+
+  private boolean isNotNeededInventoryUpdate(CompositePoLine compPOL) {
+    if (calculateInventoryItemsQuantity(compPOL) == 0
+      || (compPOL.getReceiptStatus() == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED)) {
+      logger.debug("PO Line with '{}' id does not require inventory updates", compPOL.getId());
+      return true;
+    }
+    return false;
   }
 
   /**

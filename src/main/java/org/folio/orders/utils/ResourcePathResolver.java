@@ -28,6 +28,7 @@ public class ResourcePathResolver {
   public static final String PURCHASE_ORDER = "purchase_order";
   public static final String PIECES = "pieces";
   public static final String RECEIVING_HISTORY = "receiving-history";
+  public static final String RECEIPT_STATUS = "receipt_status";
 
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
