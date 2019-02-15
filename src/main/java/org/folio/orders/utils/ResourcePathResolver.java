@@ -12,6 +12,7 @@ public class ResourcePathResolver {
 
   public static final String PO_LINES = "po_lines";
   public static final String PO_NUMBER = "po_number";
+  public static final String PO_LINE_NUMBER = "po_line_number";
 
   public static final String ADJUSTMENT = "adjustment";
   public static final String ALERTS = "alerts";
@@ -52,6 +53,7 @@ public class ResourcePathResolver {
     apis.put(PURCHASE_ORDER, "/orders-storage/purchase_orders");
     apis.put(PIECES, "/orders-storage/pieces");
     apis.put(RECEIVING_HISTORY, "/orders-storage/receiving-history");
+    apis.put(PO_LINE_NUMBER, "/orders-storage/po-line-number");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);
     SUB_OBJECT_ITEM_APIS = Collections.unmodifiableMap(

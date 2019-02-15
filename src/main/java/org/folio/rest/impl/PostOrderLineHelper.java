@@ -2,6 +2,8 @@ package org.folio.rest.impl;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 
@@ -34,6 +36,8 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PostOrderLineHelper extends AbstractHelper {
 
+  public static final String PO_LINE_URL_WITH_PARAM = "%s?purchaseOrderId=%s";
+
   PostOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
     super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
   }
@@ -57,6 +61,11 @@ public class PostOrderLineHelper extends AbstractHelper {
     subObjFuts.add(createFundDistribution(compPOL, line));
 
     return CompletableFuture.allOf(subObjFuts.toArray(new CompletableFuture[0]))
+      .thenCompose(v -> handleGetRequest(getPoLineNumberEndpoint(compPOL.getPurchaseOrderId()), httpClient, ctx, okapiHeaders, logger)
+      .thenAccept(poLoneNumber -> {
+        String poLineNumberSuffix = poLoneNumber.getString("sequenceNumber");
+        addSuffixToPoLineNumber(line, poLineNumberSuffix);
+      }))
       .thenCompose(v -> {
         try {
           Buffer polBuf = JsonObject.mapFrom(line).toBuffer();
@@ -66,6 +75,7 @@ public class PostOrderLineHelper extends AbstractHelper {
               logger.info("response from /po_line: " + body.encodePrettily());
 
               compPOL.setId(body.getString(ID));
+              compPOL.setPoLineNumber(body.getString(PO_LINE_NUMBER));
               return compPOL;
             });
         } catch (Exception e) {
@@ -75,6 +85,14 @@ public class PostOrderLineHelper extends AbstractHelper {
       });
   }
 
+  private String getPoLineNumberEndpoint(String id) {
+    return String.format(PO_LINE_URL_WITH_PARAM, resourcesPath(PO_LINE_NUMBER), id);
+  }
+
+  private void addSuffixToPoLineNumber(JsonObject line, String poLineNumberSuffix) {
+    String purchaseOrderNumber = line.getString(PO_LINE_NUMBER);
+    line.put(PO_LINE_NUMBER, purchaseOrderNumber + "-" + poLineNumberSuffix);
+  }
 
 
   private CompletableFuture<Void> createAdjustment(CompositePoLine compPOL, JsonObject line) {
@@ -367,7 +385,6 @@ public class PostOrderLineHelper extends AbstractHelper {
         logger.error("failed to create FundDistribution", t);
         throw new CompletionException(t.getCause());
       });
-
   }
 
 
@@ -380,6 +397,9 @@ public class PostOrderLineHelper extends AbstractHelper {
         break;
       case 401:
         result = Orders.PostOrdersOrderLinesResponse.respond401WithApplicationJson(withErrors(error));
+        break;
+      case 404:
+        result = Orders.PostOrdersOrderLinesResponse.respond400WithApplicationJson(withErrors(error));
         break;
       case 422:
         result = Orders.PostOrdersOrderLinesResponse.respond422WithApplicationJson(withErrors(error));

@@ -8,8 +8,8 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.collections4.ListUtils;
+import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
-import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.ProductId;
@@ -31,6 +31,7 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
+import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
@@ -204,7 +205,7 @@ public class InventoryHelper {
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(productTypes -> {
         if (productTypes.getJsonArray(IDENTIFIER_TYPES).size() != compPOL.getDetails().getProductIds().size()) {
-          throw new ValidationException("Invalid product type(s) is specified for the PO line with id " + compPOL.getId());
+          throw new HttpException(422, "Invalid product type(s) is specified for the PO line with id " + compPOL.getId());
         }
         return productTypes;
       })
@@ -471,7 +472,7 @@ public class InventoryHelper {
                    .map(Details::getMaterialTypes)
                    .flatMap(ids -> ids.stream().findFirst())
                    .orElseThrow(() -> new CompletionException(
-                     new ValidationException("The Material Type is required but not available in PO line", "materialTypeRequired")));
+                     new HttpException(422, MISSING_MATERIAL_TYPE)));
   }
 
   private String extractId(JsonObject json) {

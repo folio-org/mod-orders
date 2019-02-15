@@ -6,10 +6,10 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.P
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
@@ -46,7 +46,7 @@ public class PostOrdersHelper extends AbstractHelper {
 
   public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
-    if(null==compPO.getPoNumber()){
+    if (null == compPO.getPoNumber()){
       return poNumberHelper.generatePoNumber()
         .thenAccept(compPO::setPoNumber)
         .thenCompose(rVoid -> createPOandPOLines(compPO));
@@ -88,6 +88,7 @@ public class PostOrdersHelper extends AbstractHelper {
           CompositePurchaseOrder po = poBody.mapTo(CompositePurchaseOrder.class);
           String poId = po.getId();
           compPO.setId(poId);
+          compPO.getCompositePoLines().forEach(compositePoLine -> compositePoLine.setPoLineNumber(compPO.getPoNumber()));
         })
         .thenCompose(v -> handlePoLines(compPO))
         .thenAccept(lines -> {
@@ -113,15 +114,13 @@ public class PostOrdersHelper extends AbstractHelper {
   }
 
   private CompletableFuture<List<CompositePoLine>> handlePoLines(CompositePurchaseOrder compPO) {
-    List<CompletableFuture<CompositePoLine>> futures = new ArrayList<>(compPO.getCompositePoLines().size());
-    for (int i = 0; i < compPO.getCompositePoLines().size(); i++) {
-      CompositePoLine compPOL = compPO.getCompositePoLines().get(i);
-      compPOL.setPurchaseOrderId(compPO.getId());
-      compPOL.setPoLineNumber(compPO.getPoNumber() + "-" + (i + 1));
-
-      futures.add(postOrderLineHelper.createPoLine(compPOL));
-    }
-
+    List<CompletableFuture<CompositePoLine>> futures = compPO.getCompositePoLines()
+      .stream()
+      .map(compositePoLine -> {
+        compositePoLine.setPurchaseOrderId(compPO.getId());
+        return postOrderLineHelper.createPoLine(compositePoLine);
+      })
+      .collect(Collectors.toList());
     return HelperUtils.collectResultsOnSuccess(futures);
   }
 

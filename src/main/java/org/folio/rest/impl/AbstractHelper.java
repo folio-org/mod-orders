@@ -20,7 +20,6 @@ import java.util.Map;
 import javax.ws.rs.core.Response;
 
 import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.rest.exceptions.ValidationException;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -29,9 +28,7 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
 
 public abstract class AbstractHelper {
-  public static final String PO_LINE_NUMBER = "po_line_number";
   public static final String ID = "id";
-  public static final String PO_NUMBER = "po_number";
 
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -93,11 +90,9 @@ public abstract class AbstractHelper {
     final Throwable t = throwable.getCause();
     final String message = t.getMessage();
     if (t instanceof HttpException) {
-      final int httpCode = ((HttpException) t).getCode();
+      final int code = ((HttpException) t).getCode();
       final String errorCode = ((HttpException) t).getErrorCode();
-      result = succeededFuture(buildErrorResponse(httpCode, new Error().withMessage(message).withCode(errorCode)));
-    } else if (t instanceof ValidationException) {
-      result = succeededFuture(buildErrorResponse(422, ((ValidationException) t).getError()));
+      result = succeededFuture(buildErrorResponse(code, new Error().withMessage(message).withCode(errorCode)));
     } else {
       result = succeededFuture(buildErrorResponse(-1, new Error().withMessage(message)));
     }
