@@ -48,7 +48,6 @@ public class HelperUtils {
 
   public static final String COMPOSITE_PO_LINES = "compositePoLines";
 
-  public static final String PO_NUMBER_ALREADY_EXISTS = "PO Number already exists";
   public static final String DEFAULT_POLINE_LIMIT = "1";
   private static final String MAX_POLINE_LIMIT = "500";
   public static final String OKAPI_URL = "X-Okapi-Url";
