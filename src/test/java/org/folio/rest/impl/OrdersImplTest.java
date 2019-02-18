@@ -1104,6 +1104,19 @@ public class OrdersImplTest {
   }
 
   @Test
+  public void testPutOrdersByIdToChangeStatusToOpenWithEmptyPoLines() throws Exception {
+    logger.info("=== Test Put (WithEmptyPoLines) Order By Id to change status of Order to Open ===");
+
+    // Get Open Order
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.getCompositePoLines().clear();
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
+  }
+
+  @Test
   public void testUpdateOrderToOpenWithPartialItemsCreation() throws Exception {
     logger.info("=== Test Order update to Open status - Inventory items expected to be created partially ===");
 
