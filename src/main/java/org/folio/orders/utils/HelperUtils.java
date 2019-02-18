@@ -293,6 +293,14 @@ public class HelperUtils {
             return new JsonObject();
           }
 
+          /*
+           * Ignoring not found error from storage because after MODORDSTOR-52 changes mod-orders-storage returns 404 instead of 204
+           * when we try to delete the record which is not in the database.
+           */
+          if (code == 404 && operation == HttpMethod.DELETE) {
+            return null;
+          }
+
           return verifyAndExtractBody(response);
         })
         .thenAccept(json -> {

@@ -18,6 +18,7 @@ import java.util.concurrent.CompletionException;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderByPONumber;
+import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.resource.Orders.PostOrdersPoNumberValidateResponse.*;
 

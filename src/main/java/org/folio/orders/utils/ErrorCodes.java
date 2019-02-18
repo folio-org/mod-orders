@@ -10,6 +10,7 @@ public enum ErrorCodes {
   MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE("idMismatch", "Mismatch between id in path and PoLine"),
   INCORRECT_ORDER_ID_IN_POL("orderIdMismatch", "Mismatch between order id in the request and storage"),
   POL_LINES_LIMIT_EXCEEDED("polLimitExceeded", "Your FOLIO system is configured to limit the number of PO Lines on each order"),
+  MISSING_MATERIAL_TYPE("materialTypeRequired", "The Material Type is required but not available in PO line"),
   ZERO_COST_QTY("zeroCostQty", "Physical and electronic cost quantity must be specified"),
   ZERO_COST_PHYSICAL_QTY("zeroCostQtyPhysical", "Physical cost quantity must be specified"),
   ZERO_COST_ELECTRONIC_QTY("zeroCostQtyElectronic", "Electronic cost quantity must be specified"),

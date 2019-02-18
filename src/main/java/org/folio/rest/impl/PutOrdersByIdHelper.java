@@ -36,6 +36,8 @@ import static org.folio.orders.utils.HelperUtils.deletePoLine;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
+import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
@@ -206,7 +208,10 @@ public class PutOrdersByIdHelper extends AbstractHelper {
       poLinesFromStorage.stream()
         .map(o -> ((JsonObject) o).getString(ID))
         .noneMatch(s -> StringUtils.equals(s, poLine.getId()))
-    ).map(postOrderLineHelper::createPoLine)
+    ).map(compPOL -> {
+      compPOL.setPoLineNumber(compOrder.getPoNumber());
+      return postOrderLineHelper.createPoLine(compPOL);
+    })
       .collect(toList());
   }
 
