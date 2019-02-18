@@ -2464,7 +2464,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, resourcePath(SOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, SOURCE));
       router.route(HttpMethod.GET, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleGetGenericSubObj(ctx, VENDOR_DETAIL));
       router.route(HttpMethod.GET, resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
-      router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(ctx -> handleGetGenericPieceObj(ctx));
+      router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(this::handleGetGenericPieceObj);
       router.route(HttpMethod.GET, resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
 
       router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
