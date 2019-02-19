@@ -31,6 +31,7 @@ import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
@@ -449,6 +450,18 @@ public class HelperUtils {
                                              .collect(Collectors.toList()));
   }
 
+  /**
+   * Calculates total quantity based of cost for electronic and physical resources
+   *
+   * @param cost Cost associated with PO Line
+   * @return total quantity for PO Line
+   */
+  public static int calculateTotalQuantity(Cost cost) {
+  	int eQuantity = cost.getQuantityElectronic()!=null ? cost.getQuantityElectronic() : 0;
+    int physicalQuantity = cost.getQuantityPhysical()!=null ? cost.getQuantityPhysical() : 0;
+    return eQuantity + physicalQuantity;
+  }
+  
   /**
    * Calculates total items quantity for all locations.
    * The quantity is based on Order Format (please see MODORDERS-117):<br/>
