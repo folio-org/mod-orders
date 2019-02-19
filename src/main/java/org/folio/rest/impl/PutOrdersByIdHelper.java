@@ -104,10 +104,9 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     CompletableFuture<List<CompositePoLine>> compositePoLines;
     if (isEmpty(compPO.getCompositePoLines())) {
       compositePoLines = HelperUtils.getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
-        .thenApply(pols -> pols.stream().map(poline -> {
+        .thenApply(pols -> pols.stream().peek(poline -> {
           poline.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
           compPO.getCompositePoLines().add(poline);
-          return poline;
         }).collect(Collectors.toList()));
     } else {
       compositePoLines = completedFuture(compPO.getCompositePoLines());
