@@ -5,6 +5,7 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.completedFuture;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
+import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
@@ -38,6 +39,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javax.ws.rs.core.Response;
 
@@ -162,9 +164,13 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     // Check if any item should be created
     int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
     if (expectedItemsQuantity == 0) {
-      logger.debug("PO Line with '{}' id does not require inventory updates", compPOL.getId());
-      return completedFuture(null);
+    	// Create pieces if items does not exists
+    	return createPieces(compPOL, null)
+    	.thenRun(() ->
+    		logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId())
+    	);
     }
+
     return inventoryHelper.handleInstanceRecord(compPOL)
       .thenCompose(withInstId -> getPoLineById(compPOL.getId(), lang, httpClient, ctx, okapiHeaders, logger))
       .thenCompose(jsonObj -> updateOrderLine(compPOL, jsonObj))
@@ -193,10 +199,6 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    */
   private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<Piece> pieceList) {
 		CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-		if (pieceList.isEmpty()) {
-			future.complete(null);
-			return future;
-		}
 		List<CompletableFuture<Void>> futuresList = new ArrayList<>();
 		String poLineId = compPOL.getId();
 		String endpoint = String.format(PIECES_ENDPOINT, poLineId);
@@ -204,18 +206,40 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 		handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(body -> {
         PieceCollection pieces = body.mapTo(PieceCollection.class);
+        int remainingPiecesToCreate = 0;
+        int existingPieces = pieces.getPieces().size();
 
-        // Extract item Id's which already associated with piece records
-        List<String> existingItemIds = pieces.getPieces()
-            .stream()
-            .map(Piece::getItemId)
-            .filter(StringUtils::isNotEmpty)
-            .collect(Collectors.toList());
+        if(pieces!=null) {
+          // 1. Get list of item Id's which are already associated with piece records
+          List<String> existingItemIds = pieces.getPieces()
+																	             .stream()
+																	             .map(Piece::getItemId)
+																	             .filter(StringUtils::isNotEmpty)
+																	             .collect(Collectors.toList());
 
+          // 2. Get list of item id's which do not have piece records yet
+          List<String> piecesForPhysicalResources = itemIds.stream()
+          .filter(id -> !existingItemIds.contains(id)).collect(Collectors.toList());
         // Create piece records for item id's which do not have piece records yet
         pieceList.stream()
                .filter(piece -> !existingItemIds.contains(piece.getItemId()))
                .forEach(piece -> futuresList.add(createPiece(piece)));
+
+          // 3. Create piece records
+          piecesForPhysicalResources.stream().forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
+
+	        // 4. Calculate count for remaining pieces to create when Physical and Electronic resources exists
+	        // Scenario: PO Line of "P/E Mix" format with 3 Physical resources and 2 Electronic resources with `create_inventory` set to `false`.
+	        // Create 2 piece records for Electronic resources
+	        remainingPiecesToCreate = Math.abs(calculateTotalQuantity(compPOL.getCost()) - piecesForPhysicalResources.size() - existingPieces);
+        }
+        else {
+          // Calculate count for remaining pieces to create on the basis of the total quantity of resources(Physical and Electronic)
+        	remainingPiecesToCreate = Math.abs(calculateTotalQuantity(compPOL.getCost()) - existingPieces);
+        }
+
+        // Create pieces for Electronic resources
+        IntStream.range(0, remainingPiecesToCreate).forEach(i -> futuresList.add(createPiece(poLineId, null)));
 
         allOf(futuresList.toArray(new CompletableFuture[0]))
           .thenAccept(v -> future.complete(null))
