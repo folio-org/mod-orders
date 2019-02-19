@@ -970,7 +970,7 @@ public class OrdersImplTest {
 
     List<JsonObject> orderRetrievals = MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET);
     assertNotNull(orderRetrievals);
-    assertEquals(1, orderRetrievals.size());
+    assertEquals(2, orderRetrievals.size());
     PurchaseOrder storageOrderBeforeUpdate = orderRetrievals.get(0).mapTo(PurchaseOrder.class);
     // Assert default status is Pending
     assertEquals(PurchaseOrder.WorkflowStatus.PENDING, storageOrderBeforeUpdate.getWorkflowStatus());

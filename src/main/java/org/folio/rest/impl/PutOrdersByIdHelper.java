@@ -70,23 +70,21 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     compPO.setId(orderId);
     getPurchaseOrderById(orderId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(poFromStorage -> validatePoNumber(compPO, poFromStorage))
-      .thenCompose(poFromStorage -> updatePoLines(poFromStorage, compPO).thenApply(v -> poFromStorage))
-      .thenAccept(poFromStorage -> {
-        CompletableFuture<Void> updatedPoFuture;
+      .thenCompose(poFromStorage -> {
         if (isTransitionToOpen(compPO, poFromStorage)) {
-          updatedPoFuture = openOrder(compPO);
+          return openOrder(compPO);
         } else {
-          updatedPoFuture = updateOrderSummary(compPO);
+          return updateOrderSummary(compPO);
         }
-        updatedPoFuture
-          .thenAccept(v -> {
-            logger.info("Successfully Updated Order: " + JsonObject.mapFrom(compPO).encodePrettily());
-            httpClient.closeClient();
-            javax.ws.rs.core.Response response = PutOrdersCompositeOrdersByIdResponse.respond204();
-            AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
-            asyncResultHandler.handle(result);
-          })
-        .exceptionally(this::handleError);
+      })
+      .thenCompose(v -> getPurchaseOrderById(orderId, lang, httpClient, ctx, okapiHeaders, logger))
+      .thenCompose(poFromStorage -> updatePoLines(poFromStorage, compPO))
+      .thenAccept(v -> {
+        logger.info("Successfully Updated Order: " + JsonObject.mapFrom(compPO).encodePrettily());
+        httpClient.closeClient();
+        javax.ws.rs.core.Response response = PutOrdersCompositeOrdersByIdResponse.respond204();
+        AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
+        asyncResultHandler.handle(result);
       })
       .exceptionally(this::handleError);
   }
