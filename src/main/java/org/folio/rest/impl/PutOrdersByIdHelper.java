@@ -27,7 +27,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
@@ -115,8 +114,9 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     }
 
     return compositePoLines
-      .thenApply(poLines -> poLines.stream().peek(poline -> {
-        poline.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
+      .thenApply(poLines -> poLines.stream().map(poline -> {
+         poline.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
+         return poline;
       }))
       .thenCompose(poLines -> CompletableFuture.allOf(poLines
         .map(putLineHelper::updateInventory).toArray(CompletableFuture[]::new)))

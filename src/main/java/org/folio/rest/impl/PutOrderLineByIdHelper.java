@@ -193,15 +193,6 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       });
   }
 
-  private boolean isNotNeededInventoryUpdate(CompositePoLine compPOL) {
-    if (calculateInventoryItemsQuantity(compPOL) == 0
-      || (compPOL.getReceiptStatus() == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED)) {
-      logger.debug("PO Line with '{}' id does not require inventory updates", compPOL.getId());
-      return true;
-    }
-    return false;
-  }
-
   /**
    * Creates Piece records corresponding to each item record associated with PO Line
    *
