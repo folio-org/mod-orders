@@ -1185,8 +1185,11 @@ public class OrdersImplTest {
     // All created pieces
     List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
 
-    // Assert that items quantity equals to created ieces
-    assertEquals(createdPieces.size(), HelperUtils.calculateTotalQuantity(reqData.getCompositePoLines().get(0).getCost()));
+    CompositePoLine poLine = reqData.getCompositePoLines().get(0);
+    int expectedPiecesQuantity = items.size() + HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation(poLine, poLine.getLocations());
+
+    // Assert that items quantity equals to created pieces
+    assertEquals(expectedPiecesQuantity, createdPieces.size());
 
     // Verify that not all expected items created
     assertThat(items.size(), lessThan(calculateInventoryItemsQuantity(reqData.getCompositePoLines().get(0))));
@@ -1230,7 +1233,7 @@ public class OrdersImplTest {
     // All existing and created items
     List<JsonObject> items = joinExistingAndNewItems();
     int totalQuantity = HelperUtils.calculateTotalQuantity(reqData.getCompositePoLines().get(0).getCost()) + HelperUtils.calculateTotalQuantity(reqData.getCompositePoLines().get(1).getCost());
-    assertEquals(createdPieces.size(), totalQuantity);
+    assertEquals(totalQuantity, createdPieces.size());
 
     for (CompositePoLine pol : reqData.getCompositePoLines()) {
       verifyInstanceCreated(createdInstances, pol);
@@ -1409,6 +1412,7 @@ public class OrdersImplTest {
     ctx.assertNull(MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET));
     ctx.assertNull(MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET));
   }
+
 
   @Test
   public void testPutOrdersByIdToChangeStatusToOpenButWithErrorCreatingItemsForSecondPOL(TestContext ctx) throws Exception {
@@ -2875,8 +2879,6 @@ public class OrdersImplTest {
       PoLineCollection result = new PoLineCollection();
       if (lines == null || lines.isEmpty()) {
         result.setTotalRecords(0);
-        result.setFirst(0);
-        result.setLast(0);
       } else {
         // Transform composite PO Lines to storage representation
         List<org.folio.rest.acq.model.PoLine> poLines = lines
@@ -2897,8 +2899,7 @@ public class OrdersImplTest {
         }
 
         result.setPoLines(poLines);
-        result.setFirst(1);
-        result.setLast(lines.size());
+
         if (EMPTY_CONFIG_TENANT.equals(tenant)) {
           result.setTotalRecords(Integer.parseInt(DEFAULT_POLINE_LIMIT));
         } else {

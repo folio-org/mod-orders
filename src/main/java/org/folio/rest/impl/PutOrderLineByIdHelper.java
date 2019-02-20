@@ -5,9 +5,12 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.completedFuture;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
+import static org.folio.orders.utils.HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.constructPiece;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
+import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
 import static org.folio.orders.utils.ResourcePathResolver.ADJUSTMENT;
@@ -39,7 +42,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import javax.ws.rs.core.Response;
 
@@ -52,6 +54,7 @@ import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -68,7 +71,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   private final InventoryHelper inventoryHelper;
   private final Errors processingErrors = new Errors();
 
-  private static final String PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId=%s";
+  private static final String PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId=%s&lang=%s";
 
   public PutOrderLineByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
                                 Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
@@ -164,8 +167,9 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     // Check if any item should be created
     int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
     if (expectedItemsQuantity == 0) {
+      calculateTotalQuantity(compPOL.getCost());
     	// Create pieces if items does not exists
-    	return createPieces(compPOL, null)
+    	return createMissingPieces(compPOL, Collections.emptyList())
     	.thenRun(() ->
     		logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId())
     	);
@@ -175,86 +179,83 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenCompose(withInstId -> getPoLineById(compPOL.getId(), lang, httpClient, ctx, okapiHeaders, logger))
       .thenCompose(jsonObj -> updateOrderLine(compPOL, jsonObj))
       .thenCompose(holdingsId -> inventoryHelper.handleItemRecords(compPOL))
-      .thenCompose(pieces -> {
-        int itemsSize = pieces.size();
+      .thenCompose(piecesWithItemId -> createMissingPieces(compPOL, piecesWithItemId));
 
-        // Create piece records for successfully created items
-        return createPieces(compPOL, pieces)
-          .thenAccept(v -> {
-            if (itemsSize != expectedItemsQuantity) {
-              String message = String.format("The issue happened creating items for PO Line with '%s' id. Expected %d but %d created",
-                compPOL.getId(), expectedItemsQuantity, itemsSize);
-              throw new InventoryException(message);
-            }
-          });
-      });
   }
 
   /**
-   * Creates Piece records corresponding to each item record associated with PO Line
+   * Creates pieces that are not yet in storage
    *
-   * @param compPOL Composite PO line to update Inventory for
-   * @param pieceList List of pieces associated with PO Line
-   * @return CompletableFuture.
+   * @param compPOL PO line to create Pieces Records for
+   * @param expectedPiecesWithItem expected Pieces to create with created associated Items records
+   * @return void future
    */
-  private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<Piece> pieceList) {
-		CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-		List<CompletableFuture<Void>> futuresList = new ArrayList<>();
-		String poLineId = compPOL.getId();
-		String endpoint = String.format(PIECES_ENDPOINT, poLineId);
+  private CompletableFuture<Void> createMissingPieces(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem) {
+    int itemsSize = expectedPiecesWithItem.size();
+    return searchForExistingPieces(compPOL)
+      .thenCompose(existingPieces -> {
+        List<Piece> piecesToCreate = new ArrayList<>();
+        groupLocationsById(compPOL)
+          .forEach((locationId, locations) -> {
+              List<Piece> filteredExistingPieces = filterByLocationId(existingPieces, locationId);
+              List<Piece> filteredExpectedPiecesWithItem = filterByLocationId(expectedPiecesWithItem, locationId);
+              piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
+              piecesToCreate.addAll(constructMissingPiecesWithoutItem(compPOL, filteredExistingPieces, locations));
+            });
 
-		handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenAccept(body -> {
-        PieceCollection pieces = body.mapTo(PieceCollection.class);
-        int remainingPiecesToCreate = 0;
-        int existingPieces = pieces.getPieces().size();
-
-        if(pieces!=null) {
-          // 1. Get list of item Id's which are already associated with piece records
-          List<String> existingItemIds = pieces.getPieces()
-																	             .stream()
-																	             .map(Piece::getItemId)
-																	             .filter(StringUtils::isNotEmpty)
-																	             .collect(Collectors.toList());
-
-          // 2. Get list of item id's which do not have piece records yet
-          List<String> piecesForPhysicalResources = itemIds.stream()
-          .filter(id -> !existingItemIds.contains(id)).collect(Collectors.toList());
-        // Create piece records for item id's which do not have piece records yet
-        pieceList.stream()
-               .filter(piece -> !existingItemIds.contains(piece.getItemId()))
-               .forEach(piece -> futuresList.add(createPiece(piece)));
-
-          // 3. Create piece records
-          piecesForPhysicalResources.stream().forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
-
-	        // 4. Calculate count for remaining pieces to create when Physical and Electronic resources exists
-	        // Scenario: PO Line of "P/E Mix" format with 3 Physical resources and 2 Electronic resources with `create_inventory` set to `false`.
-	        // Create 2 piece records for Electronic resources
-	        remainingPiecesToCreate = Math.abs(calculateTotalQuantity(compPOL.getCost()) - piecesForPhysicalResources.size() - existingPieces);
-        }
-        else {
-          // Calculate count for remaining pieces to create on the basis of the total quantity of resources(Physical and Electronic)
-        	remainingPiecesToCreate = Math.abs(calculateTotalQuantity(compPOL.getCost()) - existingPieces);
-        }
-
-        // Create pieces for Electronic resources
-        IntStream.range(0, remainingPiecesToCreate).forEach(i -> futuresList.add(createPiece(poLineId, null)));
-
-        allOf(futuresList.toArray(new CompletableFuture[0]))
-          .thenAccept(v -> future.complete(null))
-          .exceptionally(t -> {
-            logger.error("One or more piece record failed to be created for PO Line with '{}' id", poLineId);
-            future.completeExceptionally(t);
-            return null;
-          });
+        return allOf(piecesToCreate.stream().map(this::createPiece).toArray(CompletableFuture[]::new));
       })
-      .exceptionally(t -> {
-        future.completeExceptionally(t);
-        return null;
-      });
+      .thenAccept(v -> validateItemsCreation(compPOL, itemsSize));
+  }
 
-		return future;
+  private CompletableFuture<List<Piece>> searchForExistingPieces(CompositePoLine compPOL) {
+    String endpoint = String.format(PIECES_ENDPOINT, compPOL.getId(), lang);
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(body -> {
+        PieceCollection existedPieces = body.mapTo(PieceCollection.class);
+        logger.debug("{} existing pieces found out for PO Line with '{}' id", existedPieces.getTotalRecords(), compPOL.getId());
+        return existedPieces.getPieces();
+      });
+  }
+
+  private List<Piece> filterByLocationId(List<Piece> pieces, String locationId) {
+    return pieces.stream()
+      .filter(piece -> locationId.equals(piece.getLocationId()))
+      .collect(Collectors.toList());
+  }
+
+  private List<Piece> collectMissingPiecesWithItem(List<Piece> piecesWithItem, List<Piece> existingPieces) {
+    return piecesWithItem.stream()
+      .filter(pieceWithItem -> existingPieces.stream()
+        .noneMatch(existingPiece -> pieceWithItem.getItemId().equals(existingPiece.getItemId())))
+      .collect(Collectors.toList());
+  }
+
+  private List<Piece> constructMissingPiecesWithoutItem(CompositePoLine compPOL, List<Piece> existingPieces, List<Location> locations) {
+    List<Piece> pieces = new ArrayList<>();
+    String locationId = locations.get(0).getLocationId();
+    int expectedQuantityOfPiecesWithoutItem = calculateExpectedQuantityOfPiecesWithoutItemCreation(compPOL, locations);
+    int existingQuantityOfPiecesWithoutItem = calculateQuantityExistingPiecesWithoutItem(existingPieces);
+    int remainingPiecesQuantity = expectedQuantityOfPiecesWithoutItem - existingQuantityOfPiecesWithoutItem;
+    for (int i = 0; i < remainingPiecesQuantity; i++) {
+      pieces.add(constructPiece(locationId, compPOL.getId(), null));
+    }
+    return pieces;
+  }
+
+  private int calculateQuantityExistingPiecesWithoutItem(List<Piece> pieces) {
+    return Math.toIntExact(pieces.stream()
+      .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
+      .count());
+  }
+
+  private void validateItemsCreation(CompositePoLine compPOL, int itemsSize) {
+    int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
+    if (itemsSize != expectedItemsQuantity) {
+      String message = String.format("The issue happened creating items for PO Line with '%s' id. Expected %d but %d created",
+        compPOL.getId(), expectedItemsQuantity, itemsSize);
+      throw new InventoryException(message);
+    }
   }
 
   /**

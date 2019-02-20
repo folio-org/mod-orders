@@ -35,6 +35,7 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.constructPieces;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
@@ -133,20 +134,6 @@ public class InventoryHelper {
         .flatMap(List::stream)
         .collect(toList())
       );
-  }
-
-  private List<Piece> constructPieces(List<String> itemIds, String poLineId, String locationId) {
-    return itemIds.stream()
-      .map(itemId -> constructPiece(locationId, poLineId, itemId))
-      .collect(toList());
-  }
-
-  private Piece constructPiece(String locationId, String poLineId, String itemId) {
-    Piece piece = new Piece();
-    piece.setItemId(itemId);
-    piece.setPoLineId(poLineId);
-    piece.setLocationId(locationId);
-    return piece;
   }
 
   private CompletableFuture<String> getOrCreateHoldingsRecord(CompositePoLine compPOL, String locationId) {
