@@ -98,16 +98,19 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   public CompletableFuture<Void> openOrder(CompositePurchaseOrder compPO) {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
-    return updateInventory(compPO)
+    return updateOpenedCompositePO(compPO)
       .thenCompose(this::updateOrderSummary);
   }
 
-  public CompletableFuture<CompositePurchaseOrder> updateInventory(CompositePurchaseOrder compPO) {
+  public CompletableFuture<CompositePurchaseOrder> updateOpenedCompositePO(CompositePurchaseOrder compPO) {
     CompletableFuture<List<CompositePoLine>> compositePoLines;
     if (isEmpty(compPO.getCompositePoLines())) {
-      compositePoLines = HelperUtils.getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger);
+      compositePoLines = HelperUtils.getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
+        .thenApply(polines -> {
+          polines.forEach(line -> compPO.getCompositePoLines().add(line));
+          return polines;
+        });
     } else {
-      compPO.getCompositePoLines().forEach(poLine -> poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT));
       compositePoLines = completedFuture(compPO.getCompositePoLines());
     }
 
@@ -115,7 +118,8 @@ public class PutOrdersByIdHelper extends AbstractHelper {
       .thenApply(poLines -> poLines.stream().peek(poline -> {
         poline.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
       }))
-      .thenCompose(poLines -> CompletableFuture.allOf(poLines.map(putLineHelper::updateInventory).toArray(CompletableFuture[]::new)))
+      .thenCompose(poLines -> CompletableFuture.allOf(poLines
+        .map(putLineHelper::updateInventory).toArray(CompletableFuture[]::new)))
       .thenApply(v -> compPO);
   }
 

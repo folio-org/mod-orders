@@ -1176,8 +1176,7 @@ public class OrdersImplTest {
     List<JsonObject> polUpdates = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
     assertNotNull(polUpdates);
     for (JsonObject jsonObj : polUpdates) {
-      PoLine line = jsonObj.mapTo(PoLine.class);
-      assertTrue(line.getReceiptStatus().equals(expectedStatus));
+      assertTrue(jsonObj.getString(RECEIPT_STATUS).equals(expectedStatus));
     }
   }
 
