@@ -162,6 +162,9 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    */
   public CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
     // Check if any item should be created
+    if (compPOL.getReceiptStatus() == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED) {
+      return completedFuture(null);
+    }
     int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
     if (expectedItemsQuantity == 0) {
     	// Create pieces if items does not exists

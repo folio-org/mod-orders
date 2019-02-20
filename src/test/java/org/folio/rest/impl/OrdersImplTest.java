@@ -1154,6 +1154,7 @@ public class OrdersImplTest {
 
     verifyInstanceLinksForUpdatedOrder(reqData);
     verifyInventoryInteraction(reqData, polCount - 1);
+    verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value());
   }
 
   @Test
@@ -1167,6 +1168,17 @@ public class OrdersImplTest {
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
+
+    verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value());
+  }
+
+  private void verifyReceiptStatusChangedTo(String expectedStatus) {
+    List<JsonObject> polUpdates = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
+    assertNotNull(polUpdates);
+    for (JsonObject jsonObj : polUpdates) {
+      PoLine line = jsonObj.mapTo(PoLine.class);
+      assertTrue(line.getReceiptStatus().equals(expectedStatus));
+    }
   }
 
   @Test

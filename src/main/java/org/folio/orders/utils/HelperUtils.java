@@ -1,5 +1,6 @@
 package org.folio.orders.utils;
 
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
@@ -457,6 +458,7 @@ public class HelperUtils {
    * @return total quantity for PO Line
    */
   public static int calculateTotalQuantity(Cost cost) {
+    if (isNull(cost)) return 0;
   	int eQuantity = cost.getQuantityElectronic()!=null ? cost.getQuantityElectronic() : 0;
     int physicalQuantity = cost.getQuantityPhysical()!=null ? cost.getQuantityPhysical() : 0;
     return eQuantity + physicalQuantity;

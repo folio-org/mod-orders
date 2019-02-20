@@ -54,7 +54,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   private final PoNumberHelper poNumberHelper;
 
   PutOrdersByIdHelper(Map<String, String> okapiHeaders,
-                             Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
+                      Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
     super(getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx, lang);
     setDefaultHeaders(httpClient);
     putLineHelper = new PutOrderLineByIdHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
@@ -98,26 +98,25 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   public CompletableFuture<Void> openOrder(CompositePurchaseOrder compPO) {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
+    return updateInventory(compPO)
+      .thenCompose(this::updateOrderSummary);
+  }
 
+  public CompletableFuture<CompositePurchaseOrder> updateInventory(CompositePurchaseOrder compPO) {
     CompletableFuture<List<CompositePoLine>> compositePoLines;
     if (isEmpty(compPO.getCompositePoLines())) {
-      compositePoLines = HelperUtils.getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
-        .thenApply(pols -> pols.stream().peek(poline -> {
-          poline.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
-          compPO.getCompositePoLines().add(poline);
-        }).collect(Collectors.toList()));
+      compositePoLines = HelperUtils.getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger);
     } else {
+      compPO.getCompositePoLines().forEach(poLine -> poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT));
       compositePoLines = completedFuture(compPO.getCompositePoLines());
     }
 
-    compPO.getCompositePoLines().forEach(poLine -> poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT));
-
     return compositePoLines
-      .thenCompose(poLines ->
-        CompletableFuture.allOf(poLines.stream()
-          .map(putLineHelper::updateInventory)
-          .toArray(CompletableFuture[]::new)))
-      .thenAccept(cPO -> updateOrderSummary(compPO));
+      .thenApply(poLines -> poLines.stream().peek(poline -> {
+        poline.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
+      }))
+      .thenCompose(poLines -> CompletableFuture.allOf(poLines.map(putLineHelper::updateInventory).toArray(CompletableFuture[]::new)))
+      .thenApply(v -> compPO);
   }
 
   private CompletionStage<JsonObject> validatePoNumber(CompositePurchaseOrder compPO, JsonObject poFromStorage) {
