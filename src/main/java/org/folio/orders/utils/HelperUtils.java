@@ -34,7 +34,6 @@ import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
@@ -52,7 +51,6 @@ public class HelperUtils {
 
   public static final String COMPOSITE_PO_LINES = "compositePoLines";
 
-  public static final String PO_NUMBER_ALREADY_EXISTS = "PO Number already exists";
   public static final String DEFAULT_POLINE_LIMIT = "1";
   private static final String MAX_POLINE_LIMIT = "500";
   public static final String OKAPI_URL = "X-Okapi-Url";
@@ -453,18 +451,6 @@ public class HelperUtils {
                                              .map(ErrorCodes::toError)
                                              .collect(Collectors.toList()));
   }
-
-  /**
-   * Calculates total quantity based of cost for electronic and physical resources
-   *
-   * @param cost Cost associated with PO Line
-   * @return total quantity for PO Line
-   */
-  public static int calculateTotalQuantity(Cost cost) {
-  	int eQuantity = cost.getQuantityElectronic()!= null ? cost.getQuantityElectronic() : 0;
-    int physicalQuantity = cost.getQuantityPhysical()!= null ? cost.getQuantityPhysical() : 0;
-    return eQuantity + physicalQuantity;
-  }
   
   /**
    * Calculates total items quantity for all locations.
@@ -518,7 +504,6 @@ public class HelperUtils {
     }
   }
 
-
   public static List<Piece> constructPieces(List<String> itemIds, String poLineId, String locationId) {
     return itemIds.stream()
       .map(itemId -> constructPiece(locationId, poLineId, itemId))
@@ -532,7 +517,6 @@ public class HelperUtils {
     piece.setLocationId(locationId);
     return piece;
   }
-
 
   private static int getPhysicalQuantity(List<Location> locations) {
     if (CollectionUtils.isNotEmpty(locations)) {

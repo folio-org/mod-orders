@@ -546,12 +546,11 @@ public class OrdersImplTest {
 
     List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
     List<JsonObject> createdItems = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.POST);
-    int piecesSize = createdPieces!=null ? createdPieces.size() : 0;
-    int itemSize = createdItems!=null ? createdItems.size() : 0;
+    int piecesSize = createdPieces != null ? createdPieces.size() : 0;
+    int itemSize = createdItems != null ? createdItems.size() : 0;
     logger.debug("------------------- piecesSize, itemSize --------------------\n" + piecesSize + " " + itemSize);
     // Verify total number of pieces created should be equal to total quantity
-    int totalQuantity = HelperUtils.calculateTotalQuantity(reqData.getCompositePoLines().get(0).getCost());
-    assertEquals( piecesSize, totalQuantity);
+    verifyPiecesCreated(createdItems, reqData.getCompositePoLines(), createdPieces);
   }
 
   @Test
@@ -566,12 +565,10 @@ public class OrdersImplTest {
     reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(false);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
-
+    List<JsonObject> items = joinExistingAndNewItems();
     List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
-    int piecesSize = createdPieces!=null ? createdPieces.size() : 0;
-    // Verify total number of pieces created should be equal to total quantity
-    int totalQuantity = HelperUtils.calculateTotalQuantity(reqData.getCompositePoLines().get(0).getCost()) + HelperUtils.calculateTotalQuantity(reqData.getCompositePoLines().get(1).getCost());
-    assertEquals( piecesSize, totalQuantity);
+
+    verifyPiecesCreated(items, reqData.getCompositePoLines(), createdPieces);
   }
 
   @Test
@@ -1185,12 +1182,6 @@ public class OrdersImplTest {
     // All created pieces
     List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
 
-    CompositePoLine poLine = reqData.getCompositePoLines().get(0);
-    int expectedPiecesQuantity = items.size() + HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation(poLine, poLine.getLocations());
-
-    // Assert that items quantity equals to created pieces
-    assertEquals(expectedPiecesQuantity, createdPieces.size());
-
     // Verify that not all expected items created
     assertThat(items.size(), lessThan(calculateInventoryItemsQuantity(reqData.getCompositePoLines().get(0))));
 
@@ -1232,8 +1223,6 @@ public class OrdersImplTest {
 
     // All existing and created items
     List<JsonObject> items = joinExistingAndNewItems();
-    int totalQuantity = HelperUtils.calculateTotalQuantity(reqData.getCompositePoLines().get(0).getCost()) + HelperUtils.calculateTotalQuantity(reqData.getCompositePoLines().get(1).getCost());
-    assertEquals(totalQuantity, createdPieces.size());
 
     for (CompositePoLine pol : reqData.getCompositePoLines()) {
       verifyInstanceCreated(createdInstances, pol);
@@ -1311,6 +1300,13 @@ public class OrdersImplTest {
     List<String> itemIds = inventoryItems.stream()
                                     .map(item -> item.getString(ID))
                                     .collect(Collectors.toList());
+
+    // Verify quantity of created pieces
+    int expectedPiecesQuantity = itemIds.size();
+    for (CompositePoLine poLine : compositePoLines) {
+      expectedPiecesQuantity += HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation(poLine, poLine.getLocations());
+    }
+    assertEquals(expectedPiecesQuantity, pieces.size());
 
     List<String> locationIds = compositePoLines.stream()
       .flatMap(compositePoLine -> compositePoLine.getLocations().stream())
@@ -1464,7 +1460,6 @@ public class OrdersImplTest {
     assertEquals(polCount, createdInstances.size());
 
     List<JsonObject> items = joinExistingAndNewItems();
-    assertEquals(createdPieces.size(), items.size());
 
     verifyInstanceLinksForUpdatedOrder(reqData);
 

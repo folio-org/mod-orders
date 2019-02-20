@@ -6,7 +6,6 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.comple
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation;
-import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.constructPiece;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
@@ -161,13 +160,12 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    * Creates Inventory records associated with given PO line and updates PO line with corresponding links.
    *
    * @param compPOL Composite PO line to update Inventory for
-   * @return CompletableFuture with updated PO line.
+   * @return CompletableFuture with void.
    */
   public CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
     // Check if any item should be created
     int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
     if (expectedItemsQuantity == 0) {
-      calculateTotalQuantity(compPOL.getCost());
     	// Create pieces if items does not exists
     	return createMissingPieces(compPOL, Collections.emptyList())
     	.thenRun(() ->
@@ -180,7 +178,6 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenCompose(jsonObj -> updateOrderLine(compPOL, jsonObj))
       .thenCompose(holdingsId -> inventoryHelper.handleItemRecords(compPOL))
       .thenCompose(piecesWithItemId -> createMissingPieces(compPOL, piecesWithItemId));
-
   }
 
   /**
