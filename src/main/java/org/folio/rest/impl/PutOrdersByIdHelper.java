@@ -90,29 +90,23 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   public CompletableFuture<Void> openOrder(CompositePurchaseOrder compPO) {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
-    return updateOpenedCompositePO(compPO)
+    return updateInventory(compPO)
       .thenCompose(this::updateOrderSummary);
   }
 
-  public CompletableFuture<CompositePurchaseOrder> updateOpenedCompositePO(CompositePurchaseOrder compPO) {
+  public CompletableFuture<CompositePurchaseOrder> updateInventory(CompositePurchaseOrder compPO) {
     CompletableFuture<List<CompositePoLine>> compositePoLines;
     if (isEmpty(compPO.getCompositePoLines())) {
-      compositePoLines = HelperUtils.getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
-        .thenApply(polines -> {
-          polines.forEach(line -> compPO.getCompositePoLines().add(line));
-          return polines;
-        });
+      compositePoLines = HelperUtils.getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger);
     } else {
       compositePoLines = completedFuture(compPO.getCompositePoLines());
     }
 
     return compositePoLines
-      .thenApply(poLines -> poLines.stream().map(poline -> {
-        poline.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
-        return poline;
-      }))
-      .thenCompose(poLines -> CompletableFuture.allOf(poLines
-        .map(putLineHelper::updateInventory).toArray(CompletableFuture[]::new)))
+      .thenCompose(poLines ->
+        CompletableFuture.allOf(poLines.stream()
+          .map(putLineHelper::updateInventory)
+          .toArray(CompletableFuture[]::new)))
       .thenApply(v -> compPO);
   }
 
@@ -144,14 +138,14 @@ public class PutOrdersByIdHelper extends AbstractHelper {
         } else if (isPoNumberChanged(poFromStorage, compPO)) {
           return updatePoLinesNumber(compPO, existedPoLinesArray);
         } else if (isEmpty(compPO.getCompositePoLines()) && (existedPoLinesArray != null)) {
-          return getVoidCompletionStage(poFromStorage, compPO, existedPoLinesArray);
+          return updateOrderWithEmptyPoLinesInRequest(poFromStorage, compPO, existedPoLinesArray);
         } else {
           return completedFuture(null);
         }
       });
   }
 
-  private CompletionStage<Void> getVoidCompletionStage(JsonObject poFromStorage, CompositePurchaseOrder compPO, JsonArray existedPoLinesArray) {
+  private CompletionStage<Void> updateOrderWithEmptyPoLinesInRequest(JsonObject poFromStorage, CompositePurchaseOrder compPO, JsonArray existedPoLinesArray) {
     CompletableFuture<JsonArray> compositePoLines = completedFuture(existedPoLinesArray);
     return compositePoLines.
       thenCompose(poLines -> CompletableFuture.allOf(poLines.stream().map(poline ->
