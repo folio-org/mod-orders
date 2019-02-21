@@ -236,9 +236,10 @@
           "modulePermissions": [
             "orders-storage.pieces.collection.get",
             "orders-storage.pieces.item.put",
+            "orders-storage.po_lines.collection.get",
             "orders-storage.po_lines.item.put",
-            "inventory-storage.items.collection.get",
-            "inventory-storage.items.item.put"
+            "inventory.items.collection.get",
+            "inventory.items.item.put"
           ]
         },
         {
@@ -260,8 +261,7 @@
           "pathPattern": "/orders/receiving-history",
           "permissionsRequired": ["orders.receiving-history.collection.get"],
           "modulePermissions": [
-            "orders-storage.receiving-history.collection.get",
-            "inventory.items.item.get"
+            "orders-storage.receiving-history.collection.get"
           ]
         }
       ]
@@ -358,7 +358,7 @@
     },
     {
       "id": "item-storage",
-      "version": "7.2"
+      "version": "7.3"
     },
     {
       "id": "loan-types",

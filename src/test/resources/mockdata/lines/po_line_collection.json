@@ -31,7 +31,9 @@
       "fund_distribution": [
         "d10879e8-8c2d-4850-bcb9-0ec8e2e10021"
       ],
-      "locations": ["a4e65e03-99a4-4b39-8e6a-ae666ac52bea"],
+      "locations": [
+        "a4e65e03-99a4-4b39-8e6a-ae666ac52bea"
+      ],
       "order_format": "Physical Resource",
       "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
       "payment_status": "Awaiting Payment",
@@ -40,7 +42,7 @@
       "po_line_number": "268758-03",
       "publication_date": "2017",
       "publisher": "Schiffer Publishing",
-      "purchase_order_id": "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
+      "purchase_order_id": "ab18897b-0e40-4f31-896b-9c9adc979a87",
       "receipt_date": "2018-10-09T00:00:00.000Z",
       "receipt_status": "Awaiting Receipt",
       "reporting_codes": [
@@ -107,7 +109,7 @@
       "po_line_number": "268758-03",
       "publication_date": "2017",
       "publisher": "Schiffer Publishing",
-      "purchase_order_id": "d79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB3bb",
+      "purchase_order_id": "ab18897b-0e40-4f31-896b-9c9adc979a87",
       "receipt_date": "2018-10-09T00:00:00.000Z",
       "receipt_status": "Awaiting Receipt",
       "reporting_codes": [
@@ -131,9 +133,84 @@
         "createdDate": "2018-07-19T00:00:00.000+0000",
         "createdByUserId": "28d1057c-d137-11e8-a8d5-f2801f1b9fd1"
       }
+    },
+    {
+      "id": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "instance_id": "b252d8f4-e14f-4f27-9f11-876b1f8ed13a",
+      "acquisition_method": "Purchase At Vendor System",
+      "alerts": [],
+      "cancellation_restriction": false,
+      "claims": [],
+      "collection": false,
+      "contributors": [],
+      "cost": "bb4e98be-e787-4193-a97a-9496341cf2c1",
+      "description": "25 physical resources for 2 locations",
+      "details": "92656b58-2528-46f4-b8ff-8fa976051a6d",
+      "fund_distribution": [],
+      "locations": [
+        "a24c922c-a224-4620-97e6-05b4468f8f27",
+        "f527db3a-fb25-40e8-a027-93775ca8b2eb"
+      ],
+      "order_format": "Physical Resource",
+      "payment_status": "Fully Paid",
+      "physical": "0ae68bf4-48e6-47d8-8846-297fae67f88e",
+      "po_line_description": "Harry Potter (Book 1)",
+      "po_line_number": "2LINES1PHYS1EL-1",
+      "publication_date": "1998",
+      "publisher": "Scholastic",
+      "purchase_order_id": "555a155e-8bb7-4670-ace4-463fc70c2a75",
+      "receipt_status": "Awaiting Receipt",
+      "reporting_codes": [],
+      "requester": "Leo Bulero",
+      "rush": true,
+      "source": "2306a19c-b675-4c87-88a1-0a1079c65117",
+      "tags": [],
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:43.854+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:44.418+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      }
+    },
+    {
+      "id": "daa9cfd1-b330-4b65-8c2a-3663aaae5130",
+      "acquisition_method": "Purchase At Vendor System",
+      "alerts": [],
+      "cancellation_restriction": false,
+      "claims": [],
+      "collection": false,
+      "contributors": [],
+      "cost": "2a030c58-7a30-4c4f-abca-2bc8dd799bf3",
+      "description": "10 electronic resources for 1 location",
+      "details": "007e607d-7617-4bc3-9f6d-563519b3d401",
+      "eresource": "22837acf-46fb-471b-ac7f-6b68f14155f2",
+      "fund_distribution": [],
+      "locations": [
+        "642a281d-8d8e-4d4b-8d3a-0905074b1f73"
+      ],
+      "order_format": "Electronic Resource",
+      "payment_status": "Fully Paid",
+      "physical": "53349162-6c44-4438-b651-3057b598140d",
+      "po_line_description": "Harry Potter (Book 2)",
+      "po_line_number": "2LINES1PHYS1EL-2",
+      "publication_date": "2000",
+      "publisher": "Scholastic Paperbacks",
+      "purchase_order_id": "555a155e-8bb7-4670-ace4-463fc70c2a75",
+      "receipt_status": "Awaiting Receipt",
+      "reporting_codes": [],
+      "requester": "Leo Bulero",
+      "rush": true,
+      "source": "ef5e635c-0af9-46bf-ba16-1e417028a1bb",
+      "tags": [],
+      "title": "Harry Potter and the Chamber of Secrets",
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:43.877+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:43.877+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      }
     }
   ],
-  "total_records": 2,
-  "first": 1,
-  "last": 2
+  "total_records": 4
 }

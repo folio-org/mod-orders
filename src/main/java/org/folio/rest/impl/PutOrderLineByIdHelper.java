@@ -68,7 +68,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   private final InventoryHelper inventoryHelper;
   private final Errors processingErrors = new Errors();
 
-  private static final String PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId=%s";
+  private static final String PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId==%s";
 
   public PutOrderLineByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
                                 Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
@@ -222,7 +222,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
           .filter(id -> !existingItemIds.contains(id)).collect(Collectors.toList());
 
           // 3. Create piece records     
-          piecesForPhysicalResources.stream().forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));  
+          piecesForPhysicalResources.forEach(itemId -> futuresList.add(createPiece(poLineId, itemId)));
 	        
 	        // 4. Calculate count for remaining pieces to create when Physical and Electronic resources exists
 	        // Scenario: PO Line of "P/E Mix" format with 3 Physical resources and 2 Electronic resources with `create_inventory` set to `false`.

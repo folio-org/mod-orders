@@ -1,6 +1,7 @@
 package org.folio.orders.utils;
 
 import static java.util.Objects.nonNull;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -49,7 +50,6 @@ public class HelperUtils {
 
   public static final String COMPOSITE_PO_LINES = "compositePoLines";
 
-  public static final String PO_NUMBER_ALREADY_EXISTS = "PO Number already exists";
   public static final String DEFAULT_POLINE_LIMIT = "1";
   private static final String MAX_POLINE_LIMIT = "500";
   public static final String OKAPI_URL = "X-Okapi-Url";
@@ -392,6 +392,8 @@ public class HelperUtils {
     // The total quantity of the physical resources of all locations must not exceed specified in the cost
     if (locPhysicalQuantity > costPhysicalQuantity) {
       errors.add(ErrorCodes.PHYSICAL_LOC_QTY_EXCEEDS_COST);
+    } else if (locPhysicalQuantity < costPhysicalQuantity) {
+      errors.add(ErrorCodes.PHYSICAL_COST_QTY_EXCEEDS_LOC);
     }
     // The total quantity of the electronic resources of all locations must not exceed specified in the cost
     if (locElectronicQuantity > costElectronicQuantity) {
@@ -414,8 +416,11 @@ public class HelperUtils {
       errors.add(ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY);
     }
     // The total quantity of the physical resources of all locations must not exceed specified in the cost
-    if (getPhysicalQuantity(compPOL.getLocations()) > costPhysicalQuantity) {
+    int locationsPhysicalQuantity = getPhysicalQuantity(compPOL.getLocations());
+    if (locationsPhysicalQuantity > costPhysicalQuantity) {
       errors.add(ErrorCodes.PHYSICAL_LOC_QTY_EXCEEDS_COST);
+    } else if (locationsPhysicalQuantity < costPhysicalQuantity) {
+      errors.add(ErrorCodes.PHYSICAL_COST_QTY_EXCEEDS_LOC);
     }
 
     return errors;
@@ -563,6 +568,17 @@ public class HelperUtils {
        );
   }
 
+  /**
+   * Transform piece id's to CQL query
+   * @param ids list of piece id's
+   * @return String representing CQL query to get piece records by id's
+   */
+  public static String convertIdsToCqlQuery(List<String> ids) {
+    return ids.stream()
+              .map(id -> "id==" + id)
+              .collect(joining(" or "));
+  }
+
   public static CompletableFuture<JsonObject> handleGetRequest(String endpoint, HttpClientInterface
     httpClient, Context ctx, Map<String, String> okapiHeaders,
                                        Logger logger) {
@@ -591,6 +607,38 @@ public class HelperUtils {
       logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, e, HttpMethod.GET, endpoint);
       future.completeExceptionally(e);
     }
+    return future;
+  }
+
+  /**
+   * A common method to update an entry in the storage
+   *
+   * @param recordData json to use for update operation
+   * @param endpoint endpoint
+   */
+  public static CompletableFuture<Void> handlePutRequest(String endpoint, JsonObject recordData, HttpClientInterface httpClient,
+                                                         Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+    try {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Sending 'PUT {}' with body: {}", endpoint, recordData.encodePrettily());
+      }
+      httpClient
+        .request(HttpMethod.PUT, recordData.toBuffer(), endpoint, okapiHeaders)
+        .thenApply(HelperUtils::verifyAndExtractBody)
+        .thenAccept(response -> {
+          logger.debug("'PUT {}' request successfully processed", endpoint);
+          future.complete(null);
+        })
+        .exceptionally(e -> {
+          future.completeExceptionally(e);
+          logger.error("'PUT {}' request failed. Request body: {}", e, endpoint, recordData.encodePrettily());
+          return null;
+        });
+    } catch (Exception e) {
+      future.completeExceptionally(e);
+    }
+
     return future;
   }
 

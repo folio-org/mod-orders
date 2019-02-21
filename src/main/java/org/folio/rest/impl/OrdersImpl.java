@@ -302,8 +302,9 @@ public class OrdersImpl implements Orders {
   @Validate
   public void postOrdersReceive(String lang, ReceivingCollection entity, Map<String, String> okapiHeaders,
                                 Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    // Return 501 (Not Implemented) for now
-    asyncResultHandler.handle(succeededFuture(Response.status(501).build()));
+    logger.info("Receiving {} items", entity.getTotalRecords());
+    new ReceivingHelper(entity, okapiHeaders, asyncResultHandler, vertxContext, lang)
+      .receiveItems(entity);
   }
 
   @Override
