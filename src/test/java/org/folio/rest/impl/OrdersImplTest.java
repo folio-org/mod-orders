@@ -826,8 +826,8 @@ public class OrdersImplTest {
 
     assertEquals(id, resp.getId());
     assertEquals(1, resp.getCompositePoLines().size());
-    // The source set in file to ID_DOES_NOT_EXIST constant value
-    assertNull(resp.getCompositePoLines().get(0).getSource());
+    // The source is required field now
+    assertNotNull(resp.getCompositePoLines().get(0).getSource());
   }
 
   @Test
@@ -970,7 +970,7 @@ public class OrdersImplTest {
 
     List<JsonObject> orderRetrievals = MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET);
     assertNotNull(orderRetrievals);
-    assertEquals(2, orderRetrievals.size());
+    assertEquals(1, orderRetrievals.size());
     PurchaseOrder storageOrderBeforeUpdate = orderRetrievals.get(0).mapTo(PurchaseOrder.class);
     // Assert default status is Pending
     assertEquals(PurchaseOrder.WorkflowStatus.PENDING, storageOrderBeforeUpdate.getWorkflowStatus());
@@ -1965,8 +1965,8 @@ public class OrdersImplTest {
     assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
-    assertEquals(2, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(REPORTING_CODES, SOURCE));
+    assertEquals(1, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(REPORTING_CODES));
     assertThat(column.get(REPORTING_CODES), hasSize(3));
 
     column = MockServer.serverRqRs.column(HttpMethod.DELETE);
@@ -1974,8 +1974,8 @@ public class OrdersImplTest {
     assertThat(column.keySet(), containsInAnyOrder(CLAIMS));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
-    assertEquals(10, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATIONS, PHYSICAL, VENDOR_DETAIL, CLAIMS, FUND_DISTRIBUTION, PO_LINES));
+    assertEquals(11, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATIONS, PHYSICAL, VENDOR_DETAIL, CLAIMS, FUND_DISTRIBUTION, PO_LINES, SOURCE));
   }
 
   @Test
@@ -2566,13 +2566,13 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, resourcePath(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
       router.route(HttpMethod.GET, resourcePath(CLAIMS)).handler(ctx -> handleGetGenericSubObj(ctx, CLAIMS));
       router.route(HttpMethod.GET, resourcePath(COST)).handler(ctx -> handleGetGenericSubObj(ctx, COST));
-      router.route(HttpMethod.GET, resourcePath(DETAILS)).handler(ctx -> handleGetGenericSubObj(ctx, DETAILS));
+      router.route(HttpMethod.GET, resourcePath(DETAILS)).handler(this::handleGetDetails);
       router.route(HttpMethod.GET, resourcePath(ERESOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, ERESOURCE));
       router.route(HttpMethod.GET, resourcePath(FUND_DISTRIBUTION)).handler(ctx -> handleGetGenericSubObj(ctx, FUND_DISTRIBUTION));
       router.route(HttpMethod.GET, resourcePath(LOCATIONS)).handler(this::handleGetLocation);
       router.route(HttpMethod.GET, resourcePath(PHYSICAL)).handler(ctx -> handleGetGenericSubObj(ctx, PHYSICAL));
       router.route(HttpMethod.GET, resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
-      router.route(HttpMethod.GET, resourcePath(SOURCE)).handler(ctx -> handleGetGenericSubObj(ctx, SOURCE));
+      router.route(HttpMethod.GET, resourcePath(SOURCE)).handler(this::handleGetSource);
       router.route(HttpMethod.GET, resourcePath(VENDOR_DETAIL)).handler(ctx -> handleGetGenericSubObj(ctx, VENDOR_DETAIL));
       router.route(HttpMethod.GET, resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
       router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(this::handleGetGenericPieceObj);
@@ -3271,6 +3271,44 @@ public class OrdersImplTest {
         .setStatusCode(200)
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
         .end(JsonObject.mapFrom(location).encodePrettily());
+    }
+
+    private void handleGetSource(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+      String id = ctx.request().getParam(ID);
+      logger.info("id: " + id);
+
+      addServerRqRsData(HttpMethod.GET, LOCATIONS, new JsonObject().put(ID, id));
+
+      Source source = new Source();
+      source.setId(id);
+      source.setCode("SOME_CODE");
+      source.setDescription("some description");
+
+      ctx.response()
+        .setStatusCode(200)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .end(JsonObject.mapFrom(source).encodePrettily());
+    }
+
+    private void handleGetDetails(RoutingContext ctx) {
+      logger.info("got: " + ctx.request().path());
+      String id = ctx.request().getParam(ID);
+      logger.info("id: " + id);
+
+      addServerRqRsData(HttpMethod.GET, LOCATIONS, new JsonObject().put(ID, id));
+
+      List<String> materialTypes = new ArrayList<>();
+      materialTypes.add("example_of_material_type");
+      Details details = new Details();
+      details.setId(id);
+      details.setMaterialTypes(materialTypes);
+
+
+      ctx.response()
+        .setStatusCode(200)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .end(JsonObject.mapFrom(details).encodePrettily());
     }
 
     private void handleGetPoNumber(RoutingContext ctx) {

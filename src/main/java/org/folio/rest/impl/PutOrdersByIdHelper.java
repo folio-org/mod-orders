@@ -10,11 +10,9 @@ import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.resource.Orders.PutOrdersCompositeOrdersByIdResponse;
 
 import javax.ws.rs.core.Response;
@@ -32,17 +30,10 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.folio.orders.utils.HelperUtils.deletePoLine;
-import static org.folio.orders.utils.HelperUtils.getPoLines;
-import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
-import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
-import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
+import static org.folio.orders.utils.HelperUtils.*;
+import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 
 public class PutOrdersByIdHelper extends AbstractHelper {
 
@@ -69,21 +60,23 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     compPO.setId(orderId);
     getPurchaseOrderById(orderId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(poFromStorage -> validatePoNumber(compPO, poFromStorage))
-      .thenCompose(poFromStorage -> {
+      .thenCompose(poFromStorage -> updatePoLines(poFromStorage, compPO).thenApply(v -> poFromStorage))
+      .thenAccept(poFromStorage -> {
+        CompletableFuture<Void> updatedPoFuture;
         if (isTransitionToOpen(compPO, poFromStorage)) {
-          return openOrder(compPO);
+          updatedPoFuture = openOrder(compPO);
         } else {
-          return updateOrderSummary(compPO);
+          updatedPoFuture = updateOrderSummary(compPO);
         }
-      })
-      .thenCompose(v -> getPurchaseOrderById(orderId, lang, httpClient, ctx, okapiHeaders, logger))
-      .thenCompose(poFromStorage -> updatePoLines(poFromStorage, compPO))
-      .thenAccept(v -> {
-        logger.info("Successfully Updated Order: " + JsonObject.mapFrom(compPO).encodePrettily());
-        httpClient.closeClient();
-        javax.ws.rs.core.Response response = PutOrdersCompositeOrdersByIdResponse.respond204();
-        AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
-        asyncResultHandler.handle(result);
+        updatedPoFuture
+          .thenAccept(v -> {
+            logger.info("Successfully Updated Order: " + JsonObject.mapFrom(compPO).encodePrettily());
+            httpClient.closeClient();
+            javax.ws.rs.core.Response response = PutOrdersCompositeOrdersByIdResponse.respond204();
+            AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
+            asyncResultHandler.handle(result);
+          })
+          .exceptionally(this::handleError);
       })
       .exceptionally(this::handleError);
   }
@@ -115,8 +108,8 @@ public class PutOrdersByIdHelper extends AbstractHelper {
 
     return compositePoLines
       .thenApply(poLines -> poLines.stream().map(poline -> {
-         poline.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
-         return poline;
+        poline.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
+        return poline;
       }))
       .thenCompose(poLines -> CompletableFuture.allOf(poLines
         .map(putLineHelper::updateInventory).toArray(CompletableFuture[]::new)))
@@ -143,26 +136,40 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> updatePoLines(JsonObject poFromStorage, CompositePurchaseOrder compPO) {
-    if (isNotEmpty(compPO.getCompositePoLines()) || isPoNumberChanged(poFromStorage, compPO)) {
-      return getPoLines(poFromStorage.getString(ID), lang, httpClient, ctx, okapiHeaders, logger)
-        .thenCompose(jsonObject -> {
-          JsonArray existedPoLinesArray = jsonObject.getJsonArray(PO_LINES);
-          if (isNotEmpty(compPO.getCompositePoLines())) {
-            return handlePoLines(compPO, existedPoLinesArray);
-          } else {
-            return updatePoLinesNumber(compPO, existedPoLinesArray);
-          }
-        });
-    } else {
-      return completedFuture(null);
-    }
+    return getPoLines(poFromStorage.getString(ID), lang, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(polinesFromStorage -> {
+        JsonArray existedPoLinesArray = polinesFromStorage.getJsonArray(PO_LINES);
+        if (isNotEmpty(compPO.getCompositePoLines())) {
+          return handlePoLines(compPO, poFromStorage, existedPoLinesArray);
+        } else if (isPoNumberChanged(poFromStorage, compPO)) {
+          return updatePoLinesNumber(compPO, existedPoLinesArray);
+        } else if (isEmpty(compPO.getCompositePoLines()) && (existedPoLinesArray != null)) {
+          return getVoidCompletionStage(poFromStorage, compPO, existedPoLinesArray);
+        } else {
+          return completedFuture(null);
+        }
+      });
+  }
+
+  private CompletionStage<Void> getVoidCompletionStage(JsonObject poFromStorage, CompositePurchaseOrder compPO, JsonArray existedPoLinesArray) {
+    CompletableFuture<JsonArray> compositePoLines = completedFuture(existedPoLinesArray);
+    return compositePoLines.
+      thenCompose(poLines -> CompletableFuture.allOf(poLines.stream().map(poline ->
+      {
+        GetPOLineByIdHelper getPOLineByIdHelper = new GetPOLineByIdHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
+        return getPOLineByIdHelper.getPOLineByPOLineId(((JsonObject) poline).getString(ID))
+          .thenAccept(compPOLine -> compPO.getCompositePoLines().add(compPOLine));
+      })
+        .toArray(CompletableFuture[]::new)))
+      .thenAccept(v -> handlePoLines(compPO, poFromStorage, existedPoLinesArray));
   }
 
   private CompletableFuture<Void> updateOrderSummary(CompositePurchaseOrder compPO) {
     logger.debug("Updating order...");
     JsonObject purchaseOrder = convertToPurchaseOrder(compPO);
     return operateOnSubObj(HttpMethod.PUT, resourceByIdPath(PURCHASE_ORDER, compPO.getId()), purchaseOrder, httpClient, ctx, okapiHeaders, logger)
-      .thenAccept(json -> {});
+      .thenAccept(json -> {
+      });
   }
 
   private CompletableFuture<Void> updatePoLinesNumber(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
@@ -178,20 +185,20 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     return VertxCompletableFuture.allOf(ctx, futures);
   }
 
-  private CompletableFuture<Void> handlePoLines(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
+  private CompletableFuture<Void> handlePoLines(CompositePurchaseOrder compOrder, JsonObject poFromStorage, JsonArray poLinesFromStorage) {
     List<CompletableFuture<?>> futures = new ArrayList<>();
     if (poLinesFromStorage.isEmpty()) {
-      futures.addAll(processPoLinesCreation(compOrder, poLinesFromStorage));
+      futures.addAll(processPoLinesCreation(compOrder, poFromStorage, poLinesFromStorage));
     } else {
-      futures.addAll(processPoLinesCreation(compOrder, poLinesFromStorage));
-      futures.addAll(processPoLinesUpdate(compOrder, poLinesFromStorage));
+      futures.addAll(processPoLinesCreation(compOrder, poFromStorage, poLinesFromStorage));
+      futures.addAll(processPoLinesUpdate(compOrder, poFromStorage,  poLinesFromStorage));
       // The remaining unprocessed PoLines should be removed
       poLinesFromStorage.stream().forEach(poLine -> futures.add(deletePoLine((JsonObject) poLine, httpClient, ctx, okapiHeaders, logger)));
     }
     return VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]));
   }
 
-  private List<CompletableFuture<?>> processPoLinesUpdate(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
+  private List<CompletableFuture<?>> processPoLinesUpdate(CompositePurchaseOrder compOrder, JsonObject poFromStorage, JsonArray poLinesFromStorage) {
     List<CompletableFuture<?>> futures = new ArrayList<>();
     Iterator<Object> iterator = poLinesFromStorage.iterator();
     while (iterator.hasNext()) {
@@ -199,6 +206,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
       for (CompositePoLine line : compOrder.getCompositePoLines()) {
         if (StringUtils.equals(lineFromStorage.getString(ID), line.getId())) {
           line.setPoLineNumber(buildNewPoLineNumber(lineFromStorage, compOrder.getPoNumber()));
+          processReceiptStatusUpdate(compOrder, poFromStorage, line);
           futures.add(putLineHelper.updateOrderLine(line, lineFromStorage));
           iterator.remove();
           break;
@@ -208,16 +216,23 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     return futures;
   }
 
-  private List<CompletableFuture<?>> processPoLinesCreation(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
-    return  compOrder.getCompositePoLines().stream().filter(poLine ->
+  private List<CompletableFuture<?>> processPoLinesCreation(CompositePurchaseOrder compOrder, JsonObject poFromStorage, JsonArray poLinesFromStorage) {
+    return compOrder.getCompositePoLines().stream().filter(poLine ->
       poLinesFromStorage.stream()
         .map(o -> ((JsonObject) o).getString(ID))
         .noneMatch(s -> StringUtils.equals(s, poLine.getId()))
     ).map(compPOL -> {
       compPOL.setPoLineNumber(compOrder.getPoNumber());
+      processReceiptStatusUpdate(compOrder, poFromStorage, compPOL);
       return postOrderLineHelper.createPoLine(compPOL);
     })
       .collect(toList());
+  }
+
+  private void processReceiptStatusUpdate(CompositePurchaseOrder compOrder, JsonObject poFromStorage, CompositePoLine compPOL) {
+      if (isTransitionToOpen(compOrder, poFromStorage)) {
+        compPOL.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
+      }
   }
 
   private String buildNewPoLineNumber(JsonObject poLineFromStorage, String poNumber) {
