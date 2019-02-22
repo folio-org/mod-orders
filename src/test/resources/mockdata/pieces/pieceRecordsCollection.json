@@ -225,7 +225,7 @@
       "receivingStatus": "Expected"
     },
     {
-      "id": "168f8a86-d26c-406e-813f-c7527f241ac3",
+      "id": "de647d4a-cc53-440d-be2b-da12559ba51c",
       "itemId": "248ed3cf-cd2f-4f95-93b7-e09c8c1dc6eb",
       "poLineId": "cf447221-29b9-481e-947c-9ad545f22888",
       "receivingStatus": "Expected"
@@ -253,7 +253,14 @@
       "itemId": "c0ac82e3-e53f-48d1-a435-86d965250e47",
       "poLineId": "cf447221-29b9-481e-947c-9ad545f22888",
       "receivingStatus": "Received"
+    },
+    {
+      "id": "46dd0dad-9f35-431f-8f40-556bc389e628",
+      "comment": "Expected error itemNotRetrieved",
+      "itemId": "168f8a86-d26c-406e-813f-c7527f241ac3",
+      "poLineId": "826eb2fd-7c0b-4d59-a55c-7d25195adc62",
+      "receivingStatus": "Expected"
     }
   ],
-  "total_records": 44
+  "total_records": 45
 }

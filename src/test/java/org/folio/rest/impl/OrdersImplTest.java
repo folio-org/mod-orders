@@ -2545,6 +2545,84 @@ public class OrdersImplTest {
       PIECE_UPDATE_FAILED.getCode()));
   }
 
+  @Test
+  public void testPostReceivingWithErrorSearchingForPiece() {
+    logger.info("=== Test POST Receiving - Receive resources with error searching for piece");
+
+    ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-500-error-for-pieces-lookup.json").mapTo(ReceivingCollection.class);
+
+    ReceivingResults results = verifyPostResponse(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 200).as(ReceivingResults.class);
+
+    assertThat(results.getTotalRecords(), is(1));
+    assertThat(results.getReceivingResults(), hasSize(1));
+
+    ReceivingResult receivingResult = results.getReceivingResults().get(0);
+      assertThat(receivingResult.getPoLineId(), not(isEmptyString()));
+      assertThat(receivingResult.getProcessedSuccessfully(), is(0));
+      assertThat(receivingResult.getProcessedWithError(), is(1));
+
+      for (ReceivingItemResult receivingItemResult : receivingResult.getReceivingItemResults()) {
+        assertThat(receivingItemResult.getPieceId(), not(isEmptyString()));
+        assertThat(receivingItemResult.getProcessingStatus(), not(nullValue()));
+        assertThat(receivingItemResult.getProcessingStatus().getType(), is(ProcessingStatus.Type.FAILURE));
+        assertThat(receivingItemResult.getProcessingStatus().getError().getCode(), is(PIECE_NOT_RETRIEVED.getCode()));
+    }
+
+    List<JsonObject> pieceSearches = MockServer.serverRqRs.get(PIECES, HttpMethod.GET);
+    List<JsonObject> pieceUpdates = MockServer.serverRqRs.get(PIECES, HttpMethod.PUT);
+    List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
+    List<JsonObject> itemUpdates = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.PUT);
+    List<JsonObject> polSearches = MockServer.serverRqRs.get(PO_LINES, HttpMethod.GET);
+    List<JsonObject> polUpdates = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
+
+    assertThat(pieceSearches, not(nullValue()));
+    assertThat(pieceUpdates, is(nullValue()));
+    assertThat(itemsSearches, is(nullValue()));
+    assertThat(itemUpdates, is(nullValue()));
+    assertThat(polSearches, is(nullValue()));
+    assertThat(polUpdates, is(nullValue()));
+  }
+
+  @Test
+  public void testPostReceivingWithErrorSearchingForItem() {
+    logger.info("=== Test POST Receiving - Receive resources with error searching for item");
+
+    ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-500-error-for-items-lookup.json").mapTo(ReceivingCollection.class);
+
+    ReceivingResults results = verifyPostResponse(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 200).as(ReceivingResults.class);
+
+    assertThat(results.getTotalRecords(), is(1));
+    assertThat(results.getReceivingResults(), hasSize(1));
+
+    ReceivingResult receivingResult = results.getReceivingResults().get(0);
+      assertThat(receivingResult.getPoLineId(), not(isEmptyString()));
+      assertThat(receivingResult.getProcessedSuccessfully(), is(0));
+      assertThat(receivingResult.getProcessedWithError(), is(1));
+
+      for (ReceivingItemResult receivingItemResult : receivingResult.getReceivingItemResults()) {
+        assertThat(receivingItemResult.getPieceId(), not(isEmptyString()));
+        assertThat(receivingItemResult.getProcessingStatus(), not(nullValue()));
+        assertThat(receivingItemResult.getProcessingStatus().getType(), is(ProcessingStatus.Type.FAILURE));
+        assertThat(receivingItemResult.getProcessingStatus().getError().getCode(), is(ITEM_NOT_RETRIEVED.getCode()));
+    }
+
+    List<JsonObject> pieceSearches = MockServer.serverRqRs.get(PIECES, HttpMethod.GET);
+    List<JsonObject> pieceUpdates = MockServer.serverRqRs.get(PIECES, HttpMethod.PUT);
+    List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
+    List<JsonObject> itemUpdates = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.PUT);
+    List<JsonObject> polSearches = MockServer.serverRqRs.get(PO_LINES, HttpMethod.GET);
+    List<JsonObject> polUpdates = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
+
+    assertThat(pieceSearches, not(nullValue()));
+    assertThat(itemsSearches, not(nullValue()));
+    assertThat(pieceUpdates, is(nullValue()));
+    assertThat(itemUpdates, is(nullValue()));
+    assertThat(polSearches, is(nullValue()));
+    assertThat(polUpdates, is(nullValue()));
+  }
+
   private Map<String, Set<String>> verifyReceivingSuccessRs(ReceivingResults results) {
     Map<String, Set<String>> pieceIdsByPol = new HashMap<>();
     for (ReceivingResult receivingResult : results.getReceivingResults()) {
@@ -2843,30 +2921,35 @@ public class OrdersImplTest {
 
       String query = ctx.request().getParam("query");
 
-      try {
-        JsonObject items = new JsonObject(getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
-        JsonArray jsonArray = items.getJsonArray(ITEMS);
+      if (query.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
+        addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, new JsonObject());
+        serverResponse(ctx, 500, APPLICATION_JSON, Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
+      } else {
+        try {
+          JsonObject items = new JsonObject(getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
+          JsonArray jsonArray = items.getJsonArray(ITEMS);
 
-        if (query.contains("id==")) {
-          List<String> itemIds = extractIdsFromQuery(query);
-          final Iterator iterator = jsonArray.iterator();
-          while (iterator.hasNext()) {
-            JsonObject item = (JsonObject) iterator.next();
-            if (!itemIds.contains(item.getString(ID))) {
-              iterator.remove();
+          if (query.startsWith("id==")) {
+            List<String> itemIds = extractIdsFromQuery(query);
+            final Iterator iterator = jsonArray.iterator();
+            while (iterator.hasNext()) {
+              JsonObject item = (JsonObject) iterator.next();
+              if (!itemIds.contains(item.getString(ID))) {
+                iterator.remove();
+              }
             }
           }
+
+          items.put("totalRecords", jsonArray.size());
+          addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
+
+          ctx.response()
+             .setStatusCode(200)
+             .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+             .end(items.encodePrettily());
+        } catch (Exception e) {
+          serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
         }
-
-        items.put("totalRecords", jsonArray.size());
-        addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
-
-        ctx.response()
-           .setStatusCode(200)
-           .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-           .end(items.encodePrettily());
-      } catch (Exception e) {
-        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
       }
     }
 
@@ -3184,57 +3267,64 @@ public class OrdersImplTest {
     private void handleGetPieces(RoutingContext ctx) {
       logger.info("handleGetPieces got: " + ctx.request().path());
       String query = ctx.request().getParam("query");
+      if (query.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
+        addServerRqRsData(HttpMethod.GET, PIECES, new JsonObject());
+        serverResponse(ctx, 500, APPLICATION_JSON, Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
+      } else {
+        PieceCollection pieces;
+        try {
+          if (query.contains("poLineId==")) {
+            List<String> conditions = StreamEx
+              .split(query, " or ")
+              .flatMap(s -> StreamEx.split(s, " and "))
+              .toList();
 
-      PieceCollection pieces;
-      try {
-        if (query.contains("poLineId==")) {
-          List<String> conditions = StreamEx
-            .split(query, " or ")
-            .flatMap(s -> StreamEx.split(s, " and "))
-            .toList();
+            String polId = StringUtils.EMPTY;
+            String status = StringUtils.EMPTY;
+            for (String condition : conditions) {
+              if (condition.startsWith("poLineId")) {
+                polId = condition.split("poLineId==")[1];
+              } else if (condition.startsWith("receivingStatus")) {
+                status = condition.split("receivingStatus==")[1];
+              }
+            }
+            logger.info("poLineId: " + polId);
+            logger.info("receivingStatus: " + status);
 
-          String polId = StringUtils.EMPTY;
-          String status = StringUtils.EMPTY;
-          for (String condition : conditions) {
-            if (condition.startsWith("poLineId")) {
-              polId = condition.split("poLineId==")[1];
-            } else if (condition.startsWith("receivingStatus")) {
-              status = condition.split("receivingStatus==")[1];
+            String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", polId);
+            pieces = new JsonObject(getMockData(path)).mapTo(PieceCollection.class);
+
+            // Filter piece records by receiving status
+            if (StringUtils.isNotEmpty(status)) {
+              Piece.ReceivingStatus receivingStatus = Piece.ReceivingStatus.fromValue(status);
+              pieces.getPieces()
+                    .removeIf(piece -> receivingStatus != piece.getReceivingStatus());
+            }
+          } else {
+            pieces = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecordsCollection.json")).mapTo(PieceCollection.class);
+
+            if (query.contains("id==")) {
+              List<String> pieceIds = extractIdsFromQuery(query);
+              pieces.getPieces()
+                    .removeIf(piece -> !pieceIds.contains(piece.getId()));
             }
           }
-          logger.info("poLineId: " + polId);
-          logger.info("receivingStatus: " + status);
 
-          String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", polId);
-          pieces = new JsonObject(getMockData(path)).mapTo(PieceCollection.class);
+          pieces.setTotalRecords(pieces.getPieces()
+                                       .size());
 
-          // Filter piece records by receiving status
-          if (StringUtils.isNotEmpty(status)) {
-            Piece.ReceivingStatus receivingStatus = Piece.ReceivingStatus.fromValue(status);
-            pieces.getPieces().removeIf(piece -> receivingStatus != piece.getReceivingStatus());
-          }
-        } else {
-          pieces = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecordsCollection.json")).mapTo(PieceCollection.class);
-
-          if (query.contains("id==")) {
-            List<String> pieceIds = extractIdsFromQuery(query);
-            pieces.getPieces().removeIf(piece -> !pieceIds.contains(piece.getId()));
-          }
+        } catch (Exception e) {
+          pieces = new PieceCollection();
         }
 
-        pieces.setTotalRecords(pieces.getPieces().size());
+        JsonObject data = JsonObject.mapFrom(pieces);
+        addServerRqRsData(HttpMethod.GET, PIECES, data);
 
-      } catch (Exception e) {
-        pieces = new PieceCollection();
+        ctx.response()
+           .setStatusCode(200)
+           .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+           .end(data.encodePrettily());
       }
-
-      JsonObject data = JsonObject.mapFrom(pieces);
-      addServerRqRsData(HttpMethod.GET, PIECES, data);
-
-      ctx.response()
-         .setStatusCode(200)
-         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-         .end(data.encodePrettily());
     }
 
     private List<String> extractIdsFromQuery(String query) {

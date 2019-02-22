@@ -7,7 +7,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.ListUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.apache.commons.lang3.StringUtils;
@@ -46,8 +45,6 @@ import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
 import static org.folio.rest.impl.AbstractHelper.ID;
 
 public class InventoryHelper {
-
-  private static final int MAX_IDS_FOR_GET_RQ = 15;
 
   static final String INSTANCE_SOURCE = "source";
   static final String INSTANCE_TITLE = "title";
@@ -150,24 +147,10 @@ public class InventoryHelper {
    * @return future with list of item records
    */
   public CompletableFuture<List<JsonObject>> getItemRecordsByIds(List<String> ids) {
-    List<CompletableFuture<List<JsonObject>>> itemsPerQuery = new ArrayList<>();
-
-    // Split all id's by maximum number of id's for get query
-    StreamEx.ofSubLists(ids, MAX_IDS_FOR_GET_RQ)
-            // Transform id's to CQL query
-            .map(HelperUtils::convertIdsToCqlQuery)
-            // Send get request for each CQL query
-            .forEach(query -> itemsPerQuery.add(
-              searchForItemsByQuery(query)
-                // In case of error juts return empty list
-                .exceptionally(e -> {
-                  logger.error("Some items cannot be retrieved", e);
-                  return Collections.emptyList();
-                })
-            ));
-
-    return collectResultsOnSuccess(itemsPerQuery)
-      .thenApply(results -> StreamEx.of(results).toFlatList(lists -> lists));
+    String query = encodeQuery(HelperUtils.convertIdsToCqlQuery(ids), logger);
+    String endpoint = String.format(LOOKUP_ITEMS_ENDPOINT, query, ids.size(), lang);
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(this::extractItems);
   }
 
   /**
@@ -394,12 +377,6 @@ public class InventoryHelper {
       });
   }
 
-  private CompletableFuture<List<JsonObject>> searchForItemsByQuery(String query) {
-    String endpoint = String.format(LOOKUP_ITEMS_ENDPOINT, encodeQuery(query, logger), MAX_IDS_FOR_GET_RQ, lang);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(this::extractItems);
-  }
-
   /**
    * Validates if the json object contains items and returns items as list of JsonObject elements
    * @param itemEntries {@link JsonObject} representing item storage response
@@ -552,7 +529,7 @@ public class InventoryHelper {
                      new HttpException(422, MISSING_MATERIAL_TYPE)));
   }
 
-  private String extractId(JsonObject json) {
+  String extractId(JsonObject json) {
     return json.getString(ID);
   }
 

@@ -78,7 +78,7 @@ Upon receiving a request to receive resources, it does the following:
   * `receivingStatus`: `Received`
   * `locationId`: from the request
   * `receivedDate`: current date
-* Retrieve all involved PO Lines from the storage and updates receipt status. If all pieces of this order line have been received, the receipt status is `Fully Received`. If more than one, but less than the total number of pieces have been received, it is `Partially Received`. If the status is the same, no update is made
+* Retrieve all involved PO Lines from the storage and updates receipt status. If all pieces of an order line have been received, the receipt status is `Fully Received`. If more than one, but less than the total number of pieces have been received, it is `Partially Received`. If the calculated status is the same as current one, no update is made
 * Prepare [response](https://github.com/folio-org/acq-models/blob/master/mod-orders/schemas/receivingResults.json) to the client taking into account any error happened processing particular piece record.
 
 ### Issue tracker

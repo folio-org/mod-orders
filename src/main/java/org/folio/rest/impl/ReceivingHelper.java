@@ -4,7 +4,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.EntryStream;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
@@ -42,6 +41,7 @@ import static java.util.stream.Collectors.toList;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.orders.utils.ErrorCodes.PIECE_ALREADY_RECEIVED;
 import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_FOUND;
@@ -91,19 +91,17 @@ public class ReceivingHelper extends AbstractHelper {
     // Logging quantity of the piece records to be received
     if (logger.isDebugEnabled()) {
       int poLinesQty = receivingItems.size();
-      long piecesQty = StreamEx.ofValues(receivingItems)
-                               .flatMap(StreamEx::of)
-                               .count();
+      int piecesQty = StreamEx.ofValues(receivingItems)
+                               .mapToInt(Map::size)
+                               .sum();
       logger.debug("{} piece record(s) are going to be received for {} PO line(s)", piecesQty, poLinesQty);
     }
   }
 
-  public CompletableFuture<ReceivingResults> receiveItems(ReceivingCollection receivingCollection) {
-    CompletableFuture<ReceivingResults> futureForResult = new VertxCompletableFuture<>(ctx);
-    Map<String, List<Piece>> piecesByPoLine = new HashMap<>();
+  void receiveItems(ReceivingCollection receivingCollection) {
 
     // 1. Get piece records from storage
-    retrievePieceRecords(piecesByPoLine)
+    retrievePieceRecords()
       // 2. Update items in the Inventory if required
       .thenCompose(this::updateInventoryItems)
       // 3. Update piece records with receiving details which do not have associated item
@@ -115,12 +113,9 @@ public class ReceivingHelper extends AbstractHelper {
       // 6. Return results to the client
       .thenAccept(piecesGroupedByPoLine -> {
         ReceivingResults results = prepareResponseBody(receivingCollection, piecesGroupedByPoLine);
-        futureForResult.complete(results);
         asyncResultHandler.handle(succeededFuture(respond200WithApplicationJson(results)));
       })
       .exceptionally(this::handleError);
-
-    return futureForResult;
   }
 
   private ReceivingResults prepareResponseBody(ReceivingCollection receivingCollection, Map<String, List<Piece>> piecesGroupedByPoLine) {
@@ -168,24 +163,25 @@ public class ReceivingHelper extends AbstractHelper {
 
   /**
    * Retrieves piece records from storage based on request data
-   * @param piecesByPoLine map with PO line id as key and list of corresponding pieces as value
    * @return {@link CompletableFuture} which holds map with PO line id as key and list of corresponding pieces as value
    */
-  private CompletableFuture<Map<String, List<Piece>>> retrievePieceRecords(Map<String, List<Piece>> piecesByPoLine) {
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
+  private CompletableFuture<Map<String, List<Piece>>> retrievePieceRecords() {
+    Map<String, List<Piece>> piecesByPoLine = new HashMap<>();
 
     // Split all piece id's by maximum number of id's for get query
-    StreamEx.ofSubLists(getPieceIds(), MAX_IDS_FOR_GET_RQ)
-            // Send get request for each CQL query
-            .forEach(ids -> futures.add(getPiecesByIds(ids, piecesByPoLine)));
+    CompletableFuture[] futures = StreamEx
+      .ofSubLists(getPieceIds(), MAX_IDS_FOR_GET_RQ)
+      // Send get request for each CQL query
+      .map(ids -> getPiecesByIds(ids, piecesByPoLine))
+      .toArray(CompletableFuture.class);
 
     // Wait for all pieces to be retrieved and complete resulting future
-    return allOf(ctx, futures.toArray(new CompletableFuture[0]))
+    return allOf(ctx, futures)
       .thenApply(v -> {
         if (logger.isDebugEnabled()) {
           int poLinesQty = piecesByPoLine.size();
-          long piecesQty = StreamEx.ofValues(piecesByPoLine)
-                                   .mapToLong(List::size)
+          int piecesQty = StreamEx.ofValues(piecesByPoLine)
+                                   .mapToInt(List::size)
                                    .sum();
           logger.debug("{} piece record(s) retrieved from storage for {} PO line(s)", piecesQty, poLinesQty);
         }
@@ -210,7 +206,7 @@ public class ReceivingHelper extends AbstractHelper {
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(pieceJson -> {
         List<Piece> pieces = pieceJson.mapTo(PieceCollection.class).getPieces();
-        pieces.forEach(piece -> validateAndProcessPiece(piece, piecesByPoLine));
+        pieces.forEach(piece -> addPieceIfValid(piece, piecesByPoLine));
         checkIfAllPiecesFound(ids, pieces);
       })
       .exceptionally(e -> {
@@ -220,7 +216,12 @@ public class ReceivingHelper extends AbstractHelper {
       });
   }
 
-  private void validateAndProcessPiece(Piece piece, Map<String, List<Piece>> piecesByPoLine) {
+  /**
+   * Validates if the piece corresponds to PO Line specified in the request and can be received. If all checks pass, adds to map
+   * @param piece {@link Piece} piece to validate and add to map
+   * @param piecesByPoLine map with PO line id as a key and list of corresponding pieces as a value
+   */
+  private void addPieceIfValid(Piece piece, Map<String, List<Piece>> piecesByPoLine) {
     String poLineId = piece.getPoLineId();
     String pieceId = piece.getId();
 
@@ -238,12 +239,15 @@ public class ReceivingHelper extends AbstractHelper {
     }
   }
 
+  /**
+   * Checks if all expected piece records found in the storage. If any is missing, adds corresponding error
+   * @param pieceIds list of expected piece id's
+   * @param pieces found pieces
+   */
   private void checkIfAllPiecesFound(List<String> pieceIds, List<Piece> pieces) {
     // Handle the case when for some reason some pieces are not found
     if (pieces.size() < pieceIds.size()) {
-      List<String> foundPieces = StreamEx.of(pieces)
-                                         .map(Piece::getId)
-                                         .toList();
+      List<String> foundPieces = StreamEx.of(pieces).map(Piece::getId).toList();
 
       pieceIds.stream()
               .filter(pieceId -> !foundPieces.contains(pieceId))
@@ -264,46 +268,16 @@ public class ReceivingHelper extends AbstractHelper {
       return completedFuture(piecesGroupedByPoLine);
     }
 
-    // Get item records from Inventory storage
-    List<String> itemIds = new ArrayList<>(piecesWithItems.keySet());
-    return inventoryHelper
-      .getItemRecordsByIds(itemIds)
-      // Update item records with receiving information and update Piece record on success
+    return getItemRecords(piecesWithItems)
       .thenCompose(items -> {
-        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
+        List<CompletableFuture<Boolean>> futuresForItemUpdates = new ArrayList<>();
         for (JsonObject item : items) {
           String itemId = item.getString(ID);
           Piece piece = piecesWithItems.get(itemId);
-          ReceivedItem receivedItem = receivingItems.get(piece.getPoLineId())
-                                                    .get(piece.getId());
-          futures.add(inventoryHelper
-            // Update item records with receiving information and send updates to Inventory
-            .receiveItem(item, receivedItem)
-            // Update Piece record object with receiving details if item updated successfully
-            .thenApply(v -> {
-              updatePieceWithReceivingInfo(piece);
-              return true;
-            })
-            // Add processing error if item failed to be updated
-            .exceptionally(e -> {
-              logger.error("Item associated with piece '{}' cannot be updated", e, piece.getId());
-              addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
-              return false;
-            }));
-
-          // Remove item id to verify if all desired items were actually found
-          itemIds.remove(itemId);
+          futuresForItemUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece));
         }
 
-        // Check if all items retrieved from inventory and process errors if not
-        if (!itemIds.isEmpty()) {
-          itemIds.forEach(itemId -> {
-            Piece piece = piecesWithItems.get(itemId);
-            addError(piece.getPoLineId(), piece.getId(), ITEM_NOT_FOUND.toError());
-          });
-        }
-
-        return collectResultsOnSuccess(futures)
+        return collectResultsOnSuccess(futuresForItemUpdates)
           .thenApply(results -> {
             if (logger.isDebugEnabled()) {
               long successQty = results.stream()
@@ -313,6 +287,90 @@ public class ReceivingHelper extends AbstractHelper {
             }
             return piecesGroupedByPoLine;
           });
+      });
+  }
+
+  /**
+   * Retrieves item records from inventory storage
+   * @param piecesWithItems map with item id as a key and piece record as a value
+   * @return future with list of item records
+   */
+  private CompletableFuture<List<JsonObject>> getItemRecords(Map<String, Piece> piecesWithItems) {
+    // Split all id's by maximum number of id's for get query
+    List<CompletableFuture<List<JsonObject>>> futures = StreamEx
+      .ofSubLists(new ArrayList<>(piecesWithItems.keySet()), MAX_IDS_FOR_GET_RQ)
+      // Get item records from Inventory storage
+      .map(ids -> getItemRecordsByIds(ids, piecesWithItems))
+      .toList();
+
+    return collectResultsOnSuccess(futures)
+      .thenApply(lists -> StreamEx.of(lists).toFlatList(jsonObjects -> jsonObjects));
+  }
+
+  /**
+   * Returns list of item records for specified id's.
+   *
+   * @param ids List of item id's
+   * @param piecesWithItems map with item id as a key and piece record as a value
+   * @return future with list of item records
+   */
+  private CompletableFuture<List<JsonObject>> getItemRecordsByIds(List<String> ids, Map<String, Piece> piecesWithItems) {
+    return inventoryHelper.getItemRecordsByIds(ids)
+      .thenApply(items -> {
+        checkIfAllItemsFound(ids, items, piecesWithItems);
+        return items;
+      })
+      .exceptionally(e -> {
+        logger.error("The issue happened getting item records");
+        ids.forEach(id -> {
+          Piece piece = piecesWithItems.get(id);
+          addError(piece.getPoLineId(), piece.getId(), ITEM_NOT_RETRIEVED.toError());
+        });
+        return Collections.emptyList();
+      });
+  }
+
+  /**
+   * Checks if all expected piece records found in the storage. If any is missing, adds corresponding error
+   * @param expectedItemIds list of expected item id's
+   * @param piecesWithItems map with item id as a key and piece record as a value
+   * @param items found item records
+   */
+  private void checkIfAllItemsFound(List<String> expectedItemIds, List<JsonObject> items, Map<String, Piece> piecesWithItems) {
+    // Handle the case when for some reason some items are not found
+    if (items.size() < expectedItemIds.size()) {
+      List<String> foundItemIds = StreamEx.of(items).map(inventoryHelper::extractId).toList();
+
+      expectedItemIds.stream()
+              .filter(id -> !foundItemIds.contains(id))
+              .forEach(itemId -> {
+                Piece piece = piecesWithItems.get(itemId);
+                addError(piece.getPoLineId(), piece.getId(), ITEM_NOT_FOUND.toError());
+              });
+    }
+  }
+
+  /**
+   * @param item inventory item
+   * @param piece piece associated with the item
+   * @return future indicating if the item update is successful.
+   */
+  private CompletableFuture<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece) {
+    ReceivedItem receivedItem = receivingItems.get(piece.getPoLineId())
+                                              .get(piece.getId());
+    return inventoryHelper
+      // Update item records with receiving information and send updates to Inventory
+      .receiveItem(item, receivedItem)
+      // Update Piece record object with receiving details if item updated successfully
+      .thenApply(v -> {
+        updatePieceWithReceivingInfo(piece);
+        return true;
+      })
+      // Add processing error if item failed to be updated
+      .exceptionally(e -> {
+        logger.error("Item associated with piece '{}' cannot be updated", piece.getId());
+        addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
+        return false;
       });
   }
 

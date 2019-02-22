@@ -1,7 +1,6 @@
 package org.folio.orders.utils;
 
 import static java.util.Objects.nonNull;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;

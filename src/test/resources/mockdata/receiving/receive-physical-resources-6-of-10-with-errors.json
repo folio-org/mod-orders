@@ -6,7 +6,7 @@
       "receivedItems": [
         {
           "barcode": 11111111112,
-          "comment": "Very important note",
+          "comment": "Expected error pieceAlreadyReceived",
           "caption": "Vol. 1",
           "itemStatus": "Received",
           "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
@@ -14,7 +14,7 @@
         },
         {
           "barcode": 11111111113,
-          "comment": "Very important note",
+          "comment": "Expected error itemNotFound",
           "caption": "Vol. 1",
           "itemStatus": "Received",
           "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
@@ -30,7 +30,7 @@
         },
         {
           "barcode": 11111111115,
-          "comment": "Very important note",
+          "comment": "Expected error piecePolMismatch",
           "caption": "Vol. 1",
           "itemStatus": "Received",
           "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
@@ -38,7 +38,7 @@
         },
         {
           "barcode": 11111111116,
-          "comment": "Very important note",
+          "comment": "Expected error pieceNotFound",
           "caption": "Vol. 1",
           "itemStatus": "Received",
           "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
@@ -46,11 +46,11 @@
         },
         {
           "barcode": 11111111117,
-          "comment": "Very important note",
+          "comment": "500500500500 Expected error pieceUpdateFailed",
           "caption": "Vol. 1",
           "itemStatus": "Received",
-          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
-          "pieceId": "168f8a86-d26c-406e-813f-c7527f241ac3"
+          "locationId": "168f8a86-d26c-406e-813f-c7527f241ac3",
+          "pieceId": "de647d4a-cc53-440d-be2b-da12559ba51c"
         },
         {
           "barcode": 11111111118,
@@ -78,7 +78,7 @@
         },
         {
           "barcode": 500500500500,
-          "comment": "Very important note",
+          "comment": "Expected error itemUpdateFailed",
           "caption": "Vol. 1",
           "itemStatus": "Received",
           "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
