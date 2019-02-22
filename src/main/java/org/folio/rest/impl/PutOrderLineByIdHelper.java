@@ -70,7 +70,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   private final InventoryHelper inventoryHelper;
   private final Errors processingErrors = new Errors();
 
-  private static final String PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId=%s&lang=%s";
+  private static final String LOOKUP_PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId=%s&limit=%d&lang=%s";
 
   public PutOrderLineByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
                                 Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
@@ -167,7 +167,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
     if (expectedItemsQuantity == 0) {
     	// Create pieces if items does not exists
-    	return createMissingPieces(compPOL, Collections.emptyList())
+    	return createPieces(compPOL, Collections.emptyList())
     	.thenRun(() ->
     		logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId())
     	);
@@ -177,7 +177,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenCompose(withInstId -> getPoLineById(compPOL.getId(), lang, httpClient, ctx, okapiHeaders, logger))
       .thenCompose(jsonObj -> updateOrderLine(compPOL, jsonObj))
       .thenCompose(holdingsId -> inventoryHelper.handleItemRecords(compPOL))
-      .thenCompose(piecesWithItemId -> createMissingPieces(compPOL, piecesWithItemId));
+      .thenCompose(piecesWithItemId -> createPieces(compPOL, piecesWithItemId));
   }
 
   /**
@@ -187,26 +187,39 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    * @param expectedPiecesWithItem expected Pieces to create with created associated Items records
    * @return void future
    */
-  private CompletableFuture<Void> createMissingPieces(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem) {
-    int itemsSize = expectedPiecesWithItem.size();
-    return searchForExistingPieces(compPOL)
+  private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem) {
+    int expectedItemsQuantity = expectedPiecesWithItem.size();
+    int expectedPiecesQuantity = expectedItemsQuantity + calculateExpectedQuantityOfPiecesWithoutItemCreation(compPOL, compPOL.getLocations());
+
+    return searchForExistingPieces(compPOL, expectedPiecesQuantity)
       .thenCompose(existingPieces -> {
         List<Piece> piecesToCreate = new ArrayList<>();
+        // For each location collect pieces that need to be created.
         groupLocationsById(compPOL)
           .forEach((locationId, locations) -> {
               List<Piece> filteredExistingPieces = filterByLocationId(existingPieces, locationId);
               List<Piece> filteredExpectedPiecesWithItem = filterByLocationId(expectedPiecesWithItem, locationId);
               piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
-              piecesToCreate.addAll(constructMissingPiecesWithoutItem(compPOL, filteredExistingPieces, locations));
+
+              int expectedQuantityOfPiecesWithoutItem = calculateExpectedQuantityOfPiecesWithoutItemCreation(compPOL, locations);
+              int existingQuantityOfPiecesWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existingPieces);
+              int remainingPiecesQuantity = expectedQuantityOfPiecesWithoutItem - existingQuantityOfPiecesWithoutItem;
+              piecesToCreate.addAll(constructMissingPiecesWithoutItem(compPOL, remainingPiecesQuantity, locationId));
             });
 
         return allOf(piecesToCreate.stream().map(this::createPiece).toArray(CompletableFuture[]::new));
       })
-      .thenAccept(v -> validateItemsCreation(compPOL, itemsSize));
+      .thenAccept(v -> validateItemsCreation(compPOL, expectedItemsQuantity));
   }
 
-  private CompletableFuture<List<Piece>> searchForExistingPieces(CompositePoLine compPOL) {
-    String endpoint = String.format(PIECES_ENDPOINT, compPOL.getId(), lang);
+  /**
+   * Search for pieces which might be already created for the PO line
+   * @param compPOL PO line to retrieve Piece Records for
+   * @param expectedQuantity expected quantity of the pieces for PO Line uuid's from the storage
+   * @return future with list of Pieces
+   */
+  private CompletableFuture<List<Piece>> searchForExistingPieces(CompositePoLine compPOL, int expectedQuantity) {
+    String endpoint = String.format(LOOKUP_PIECES_ENDPOINT, compPOL.getId(), expectedQuantity, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(body -> {
         PieceCollection existedPieces = body.mapTo(PieceCollection.class);
@@ -221,6 +234,13 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .collect(Collectors.toList());
   }
 
+  /**
+   * Find pieces for which created items, but which are not yet in the storage.
+   *
+   * @param piecesWithItem pieces for which created items
+   * @param existingPieces pieces from storage
+   * @return List of Pieces with itemId that are not in storage.
+   */
   private List<Piece> collectMissingPiecesWithItem(List<Piece> piecesWithItem, List<Piece> existingPieces) {
     return piecesWithItem.stream()
       .filter(pieceWithItem -> existingPieces.stream()
@@ -228,19 +248,23 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .collect(Collectors.toList());
   }
 
-  private List<Piece> constructMissingPiecesWithoutItem(CompositePoLine compPOL, List<Piece> existingPieces, List<Location> locations) {
+  /**
+   * Creates Piece objects associated with compPOL for which do not need to create an item.
+   *
+   * @param compPOL PO line to construct Piece Records for
+   * @param remainingPiecesQuantity quantity of pieces to create
+   * @param locationId UUID of the (inventory) location record
+   * @return List of pieces not requiring item creation
+   */
+  private List<Piece> constructMissingPiecesWithoutItem(CompositePoLine compPOL, int remainingPiecesQuantity, String locationId) {
     List<Piece> pieces = new ArrayList<>();
-    String locationId = locations.get(0).getLocationId();
-    int expectedQuantityOfPiecesWithoutItem = calculateExpectedQuantityOfPiecesWithoutItemCreation(compPOL, locations);
-    int existingQuantityOfPiecesWithoutItem = calculateQuantityExistingPiecesWithoutItem(existingPieces);
-    int remainingPiecesQuantity = expectedQuantityOfPiecesWithoutItem - existingQuantityOfPiecesWithoutItem;
     for (int i = 0; i < remainingPiecesQuantity; i++) {
       pieces.add(constructPiece(locationId, compPOL.getId(), null));
     }
     return pieces;
   }
 
-  private int calculateQuantityExistingPiecesWithoutItem(List<Piece> pieces) {
+  private int calculateQuantityOfExistingPiecesWithoutItem(List<Piece> pieces) {
     return Math.toIntExact(pieces.stream()
       .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
       .count());
