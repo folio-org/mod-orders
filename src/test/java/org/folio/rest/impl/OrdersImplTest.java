@@ -12,6 +12,7 @@ import static org.folio.orders.utils.ErrorCodes.ZERO_COST_QTY;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
+import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
@@ -537,10 +538,12 @@ public class OrdersImplTest {
     // Make sure that mock PO has 1 po lines
     assertEquals(1, reqData.getCompositePoLines().size());
 
-    reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(false);
-    reqData.getCompositePoLines().get(0).getCost().setQuantityPhysical(3);
-    reqData.getCompositePoLines().get(0).getCost().setQuantityElectronic(2);
-    reqData.getCompositePoLines().get(0).setOrderFormat(OrderFormat.P_E_MIX);
+    CompositePoLine compositePoLine = reqData.getCompositePoLines().get(0);
+
+    compositePoLine.getEresource().setCreateInventory(false);
+    compositePoLine.getCost().setQuantityPhysical(3);
+    compositePoLine.getCost().setQuantityElectronic(2);
+    compositePoLine.setOrderFormat(OrderFormat.P_E_MIX);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
 
@@ -550,6 +553,7 @@ public class OrdersImplTest {
     int itemSize = createdItems != null ? createdItems.size() : 0;
     logger.debug("------------------- piecesSize, itemSize --------------------\n" + piecesSize + " " + itemSize);
     // Verify total number of pieces created should be equal to total quantity
+    assertEquals(calculateTotalQuantity(compositePoLine), createdPieces.size());
     verifyPiecesCreated(createdItems, reqData.getCompositePoLines(), createdPieces);
   }
 
@@ -567,7 +571,7 @@ public class OrdersImplTest {
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
     List<JsonObject> items = joinExistingAndNewItems();
     List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
-
+    verifyPiecesQuantityForSuccessCase(reqData, createdPieces);
     verifyPiecesCreated(items, reqData.getCompositePoLines(), createdPieces);
   }
 
@@ -1224,6 +1228,8 @@ public class OrdersImplTest {
     // All existing and created items
     List<JsonObject> items = joinExistingAndNewItems();
 
+    verifyPiecesQuantityForSuccessCase(reqData, createdPieces);
+
     for (CompositePoLine pol : reqData.getCompositePoLines()) {
       verifyInstanceCreated(createdInstances, pol);
       verifyHoldingsCreated(createdHoldings, pol);
@@ -1262,6 +1268,14 @@ public class OrdersImplTest {
     }
     assertNotNull(createdPieces);
     logger.debug("--------------------------- Pieces created -------------------------------\n" + new JsonArray(createdPieces).encodePrettily());
+  }
+
+  private void verifyPiecesQuantityForSuccessCase(CompositePurchaseOrder reqData, List<JsonObject> createdPieces) {
+    int totalQuantity = 0;
+    for (CompositePoLine poLine : reqData.getCompositePoLines()) {
+      totalQuantity += calculateTotalQuantity(poLine);
+    }
+    assertEquals(totalQuantity, createdPieces.size());
   }
 
   private List<JsonObject> joinExistingAndNewItems() {
@@ -1462,6 +1476,7 @@ public class OrdersImplTest {
     List<JsonObject> items = joinExistingAndNewItems();
 
     verifyInstanceLinksForUpdatedOrder(reqData);
+    assertEquals(calculateTotalQuantity(reqData.getCompositePoLines().get(0)), createdPieces.size());
 
     // Check that instance and items created successfully for first POL
     CompositePoLine firstPol = reqData.getCompositePoLines().get(0);

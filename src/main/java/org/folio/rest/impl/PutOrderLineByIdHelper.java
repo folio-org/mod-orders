@@ -6,6 +6,7 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.comple
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation;
+import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.constructPiece;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
@@ -188,9 +189,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    */
   private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem) {
     int expectedItemsQuantity = expectedPiecesWithItem.size();
-    int expectedPiecesQuantity = expectedItemsQuantity + calculateExpectedQuantityOfPiecesWithoutItemCreation(compPOL, compPOL.getLocations());
 
-    return searchForExistingPieces(compPOL, expectedPiecesQuantity)
+    return searchForExistingPieces(compPOL)
       .thenCompose(existingPieces -> {
         List<Piece> piecesToCreate = new ArrayList<>();
         // For each location collect pieces that need to be created.
@@ -214,11 +214,10 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   /**
    * Search for pieces which might be already created for the PO line
    * @param compPOL PO line to retrieve Piece Records for
-   * @param expectedQuantity expected quantity of the pieces for PO Line uuid's from the storage
    * @return future with list of Pieces
    */
-  private CompletableFuture<List<Piece>> searchForExistingPieces(CompositePoLine compPOL, int expectedQuantity) {
-    String endpoint = String.format(LOOKUP_PIECES_ENDPOINT, compPOL.getId(), expectedQuantity, lang);
+  private CompletableFuture<List<Piece>> searchForExistingPieces(CompositePoLine compPOL) {
+    String endpoint = String.format(LOOKUP_PIECES_ENDPOINT, compPOL.getId(), calculateTotalQuantity(compPOL), lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(body -> {
         PieceCollection existedPieces = body.mapTo(PieceCollection.class);

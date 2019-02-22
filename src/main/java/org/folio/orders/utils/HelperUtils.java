@@ -27,10 +27,12 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.client.ConfigurationsClient;
+import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -451,7 +453,23 @@ public class HelperUtils {
                                              .map(ErrorCodes::toError)
                                              .collect(Collectors.toList()));
   }
-  
+
+  /**
+   * Calculates total quantity based of cost for electronic and physical resources
+   *
+   * @param compPOL PO line to calculate total quantity
+   * @return total quantity for PO Line
+   */
+  public static int calculateTotalQuantity(CompositePoLine compPOL) {
+    Cost cost = compPOL.getCost();
+    if (cost == null) {
+      return 0;
+    }
+  	int eQuantity = ObjectUtils.defaultIfNull(cost.getQuantityElectronic(), 0);
+    int physicalQuantity = ObjectUtils.defaultIfNull(cost.getQuantityPhysical(), 0);
+    return eQuantity + physicalQuantity;
+  }
+
   /**
    * Calculates total items quantity for all locations.
    * The quantity is based on Order Format (please see MODORDERS-117):<br/>
