@@ -25,6 +25,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -569,14 +570,12 @@ public class HelperUtils {
   }
 
   /**
-   * Transform piece id's to CQL query
-   * @param ids list of piece id's
-   * @return String representing CQL query to get piece records by id's
+   * Transform list of id's to CQL query using 'or' operation
+   * @param ids list of id's
+   * @return String representing CQL query to get records by id's
    */
   public static String convertIdsToCqlQuery(List<String> ids) {
-    return ids.stream()
-              .map(id -> "id==" + id)
-              .collect(joining(" or "));
+    return StreamEx.of(ids).map(id -> "id==" + id).joining(" or ");
   }
 
   public static CompletableFuture<JsonObject> handleGetRequest(String endpoint, HttpClientInterface

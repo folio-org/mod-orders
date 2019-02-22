@@ -91,7 +91,7 @@ public class ReceivingHelper extends AbstractHelper {
     // Logging quantity of the piece records to be received
     if (logger.isDebugEnabled()) {
       int poLinesQty = receivingItems.size();
-      long piecesQty = StreamEx.of(receivingItems.values())
+      long piecesQty = StreamEx.ofValues(receivingItems)
                                .flatMap(StreamEx::of)
                                .count();
       logger.debug("{} piece record(s) are going to be received for {} PO line(s)", piecesQty, poLinesQty);
@@ -184,9 +184,9 @@ public class ReceivingHelper extends AbstractHelper {
       .thenApply(v -> {
         if (logger.isDebugEnabled()) {
           int poLinesQty = piecesByPoLine.size();
-          long piecesQty = StreamEx.of(piecesByPoLine.values())
-                                   .flatMap(StreamEx::of)
-                                   .count();
+          long piecesQty = StreamEx.ofValues(piecesByPoLine)
+                                   .mapToLong(List::size)
+                                   .sum();
           logger.debug("{} piece record(s) retrieved from storage for {} PO line(s)", piecesQty, poLinesQty);
         }
         return piecesByPoLine;
@@ -323,8 +323,8 @@ public class ReceivingHelper extends AbstractHelper {
    */
   private Map<String, Piece> collectPiecesWithItemId(Map<String, List<Piece>> piecesGroupedByPoLine) {
     return StreamEx
-        .of(piecesGroupedByPoLine.values())
-        .flatMap(StreamEx::of)
+        .ofValues(piecesGroupedByPoLine)
+        .flatMap(List::stream)
         .filter(piece -> StringUtils.isNotEmpty(piece.getItemId()))
         .toMap(Piece::getItemId, piece -> piece);
   }
@@ -336,41 +336,12 @@ public class ReceivingHelper extends AbstractHelper {
    */
   private Map<String, List<Piece>> updatePieceRecordsWithoutItems(Map<String, List<Piece>> piecesGroupedByPoLine) {
     // Collect all piece records without item id and update with receiving information.
-    StreamEx
-      .of(piecesGroupedByPoLine.values())
-      .flatMap(StreamEx::of)
-      .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
-      .forEach(this::updatePieceWithReceivingInfo);
+    StreamEx.ofValues(piecesGroupedByPoLine)
+            .flatMap(List::stream)
+            .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
+            .forEach(this::updatePieceWithReceivingInfo);
 
     return piecesGroupedByPoLine;
-  }
-
-  /**
-   * Stores updated piece records with receiving details into storage.
-   * @param piecesGroupedByPoLine map with PO line id as key and list of corresponding pieces as value
-   * @return map passed as a parameter
-   */
-  private CompletableFuture<Map<String, List<Piece>>> storeUpdatedPieceRecords(Map<String, List<Piece>> piecesGroupedByPoLine) {
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
-
-    // Collect all piece records which update with receiving information.
-    StreamEx
-      .of(piecesGroupedByPoLine.values())
-      .flatMap(StreamEx::of)
-      .filter(piece -> piece.getReceivingStatus() == ReceivingStatus.RECEIVED)
-      .forEach(piece -> {
-          String pieceId = piece.getId();
-          futures.add(
-            handlePutRequest(resourceByIdPath(PIECES, pieceId), JsonObject.mapFrom(piece), httpClient, ctx, okapiHeaders, logger)
-              .exceptionally(e -> {
-                addError(getPoLineIdByPieceId(pieceId), pieceId, PIECE_UPDATE_FAILED.toError());
-                return null;
-              }));
-        }
-      );
-
-    return allOf(ctx, futures.toArray(new CompletableFuture[0]))
-      .thenApply(v -> piecesGroupedByPoLine);
   }
 
   /**
@@ -390,6 +361,38 @@ public class ReceivingHelper extends AbstractHelper {
   }
 
   /**
+   * Stores updated piece records with receiving details into storage.
+   * @param piecesGroupedByPoLine map with PO line id as key and list of corresponding pieces as value
+   * @return map passed as a parameter
+   */
+  private CompletableFuture<Map<String, List<Piece>>> storeUpdatedPieceRecords(Map<String, List<Piece>> piecesGroupedByPoLine) {
+    // Collect all piece records which marked as ready to be received and update storage
+    CompletableFuture[] futures = StreamEx
+      .ofValues(piecesGroupedByPoLine)
+      .flatMap(List::stream)
+      .filter(piece -> piece.getReceivingStatus() == ReceivingStatus.RECEIVED)
+      .map(this::storeUpdatedPieceRecord)
+      .toArray(new CompletableFuture[0]);
+
+    return allOf(ctx, futures)
+      .thenApply(v -> piecesGroupedByPoLine);
+  }
+
+  /**
+   * Sends request to update piece record with receiving details in the storage.
+   * In case error happens updating the piece, this is collected to return in the response to client
+   * @param piece {@link Piece} with receiving information
+   */
+  private CompletableFuture<Void> storeUpdatedPieceRecord(Piece piece) {
+    String pieceId = piece.getId();
+    return handlePutRequest(resourceByIdPath(PIECES, pieceId), JsonObject.mapFrom(piece), httpClient, ctx, okapiHeaders, logger)
+      .exceptionally(e -> {
+        addError(getPoLineIdByPieceId(pieceId), pieceId, PIECE_UPDATE_FAILED.toError());
+        return null;
+      });
+  }
+
+  /**
    * Converts {@link ReceivingCollection} to map with PO line id as a key and value is map with piece id as a key
    * and {@link ReceivedItem} as a value
    * @param receivingCollection {@link ReceivingCollection} object
@@ -406,12 +409,13 @@ public class ReceivingHelper extends AbstractHelper {
               .toMap(ReceivedItem::getPieceId, receivedItem -> receivedItem))));
   }
 
+  /**
+   * @param pieceId piece id
+   * @return PO Line id corresponding to passed pieceId from request data
+   */
   private String getPoLineIdByPieceId(String pieceId) {
-    return EntryStream
-      .of(receivingItems)
-      .filter(entry -> entry.getValue()
-                            .containsKey(pieceId))
-      .keys()
+    return StreamEx
+      .ofKeys(receivingItems, values -> values.containsKey(pieceId))
       .findFirst()
       .orElse(EMPTY);
   }
