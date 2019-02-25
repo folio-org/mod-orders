@@ -113,7 +113,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
   }
 
   private boolean isTransitionToOpen(CompositePurchaseOrder compPO, JsonObject poFromStorage) {
-    WorkflowStatus currentStatus = WorkflowStatus.fromValue(poFromStorage.getString("workflow_status"));
+    WorkflowStatus currentStatus = WorkflowStatus.fromValue(poFromStorage.getString("workflowStatus"));
     return currentStatus == PENDING && compPO.getWorkflowStatus() == OPEN;
   }
 

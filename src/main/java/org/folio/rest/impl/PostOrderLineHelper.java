@@ -101,9 +101,6 @@ public class PostOrderLineHelper extends AbstractHelper {
         if (id == null) {
           line.remove(ADJUSTMENT);
           compPOL.setAdjustment(null);
-        } else {
-          compPOL.getAdjustment().setId(id);
-          compPOL.getAdjustment().setPoLineId(compPOL.getId());
         }
       })
       .exceptionally(t -> {
@@ -119,9 +116,6 @@ public class PostOrderLineHelper extends AbstractHelper {
         if (id == null) {
           line.remove(COST);
           compPOL.setCost(null);
-        } else {
-          compPOL.getCost().setId(id);
-          compPOL.getCost().setPoLineId(compPOL.getId());
         }
       })
       .exceptionally(t -> {
@@ -136,9 +130,6 @@ public class PostOrderLineHelper extends AbstractHelper {
         if (id == null) {
           line.remove(DETAILS);
           compPOL.setDetails(null);
-        } else {
-          compPOL.getDetails().setId(id);
-          compPOL.getDetails().setPoLineId(compPOL.getId());
         }
       })
       .exceptionally(t -> {
@@ -153,9 +144,6 @@ public class PostOrderLineHelper extends AbstractHelper {
         if (id == null) {
           line.remove(ERESOURCE);
           compPOL.setEresource(null);
-        } else {
-          compPOL.getEresource().setId(id);
-          compPOL.getEresource().setPoLineId(compPOL.getId());
         }
       })
       .exceptionally(t -> {
@@ -175,9 +163,6 @@ public class PostOrderLineHelper extends AbstractHelper {
           .thenApply(id -> {
             if (StringUtils.isEmpty(id)) {
               iterator.remove();
-            } else {
-              location.setId(id);
-              location.setPoLineId(compPOL.getId());
             }
             return id;
         }));
@@ -209,9 +194,6 @@ public class PostOrderLineHelper extends AbstractHelper {
         if (id == null) {
           line.remove(PHYSICAL);
           compPOL.setPhysical(null);
-        } else {
-          compPOL.getPhysical().setId(id);
-          compPOL.getPhysical().setPoLineId(compPOL.getId());
         }
       })
       .exceptionally(t -> {
@@ -226,9 +208,6 @@ public class PostOrderLineHelper extends AbstractHelper {
         if (id == null) {
           line.remove(VENDOR_DETAIL);
           compPOL.setVendorDetail(null);
-        } else {
-          compPOL.getVendorDetail().setId(id);
-          compPOL.getVendorDetail().setPoLineId(compPOL.getId());
         }
       })
       .exceptionally(t -> {
@@ -266,8 +245,6 @@ public class PostOrderLineHelper extends AbstractHelper {
         if (id == null) {
           line.remove(SOURCE);
           compPOL.setSource(null);
-        } else {
-          compPOL.getSource().setId(id);
         }
       })
       .exceptionally(t -> {
@@ -283,14 +260,7 @@ public class PostOrderLineHelper extends AbstractHelper {
     if(null!=claims)
       claims
         .forEach(claimObject ->
-          futures.add(createSubObjIfPresent(line, claimObject, CLAIMS, resourcesPath(CLAIMS))
-            .thenApply(id -> {
-              if (id != null) {
-                claimObject.setId(id);
-                claimObject.setPoLineId(compPOL.getId());
-              }
-              return id;
-            }))
+          futures.add(createSubObjIfPresent(line, claimObject, CLAIMS, resourcesPath(CLAIMS)))
         );
 
     return collectResultsOnSuccess(futures)
@@ -308,14 +278,7 @@ public class PostOrderLineHelper extends AbstractHelper {
     List<Alert> alerts = compPOL.getAlerts();
     if (null != alerts)
       alerts.forEach(alertObject ->
-        futures.add(createSubObjIfPresent(line, alertObject, ALERTS, resourcesPath(ALERTS))
-          .thenApply(id -> {
-            if (id != null) {
-              alertObject.setId(id);
-              alertObject.setPoLineId(compPOL.getId());
-            }
-            return id;
-          }))
+        futures.add(createSubObjIfPresent(line, alertObject, ALERTS, resourcesPath(ALERTS)))
       );
 
     return collectResultsOnSuccess(futures)
@@ -369,14 +332,7 @@ public class PostOrderLineHelper extends AbstractHelper {
     if (null != fundDistribution)
       fundDistribution
         .forEach(fundObject ->
-          futures.add(createSubObjIfPresent(line, fundObject, FUND_DISTRIBUTION, resourcesPath(FUND_DISTRIBUTION))
-            .thenApply(id -> {
-              if (id != null) {
-                fundObject.setId(id);
-                fundObject.setPoLineId(compPOL.getId());
-              }
-              return id;
-            }))
+          futures.add(createSubObjIfPresent(line, fundObject, FUND_DISTRIBUTION, resourcesPath(FUND_DISTRIBUTION)))
         );
 
     return collectResultsOnSuccess(futures)

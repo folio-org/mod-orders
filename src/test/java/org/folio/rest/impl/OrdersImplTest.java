@@ -275,12 +275,7 @@ public class OrdersImplTest {
       assertNotNull(polId);
       assertNotNull(polNumber);
       assertTrue(polNumber.startsWith(poNumber));
-      assertNotNull(line.getCost().getId());
-      assertNotNull(line.getDetails().getId());
       assertNull(line.getInstanceId());
-
-      line.getLocations()
-          .forEach(location -> assertNotNull(location.getId()));
     }
   }
 
@@ -420,11 +415,11 @@ public class OrdersImplTest {
       assertNotNull(polId);
       assertNotNull(polNumber);
       assertTrue(polNumber.startsWith(poNumber));
-      assertNotNull(line.getCost().getId());
-      assertNotNull(line.getDetails().getId());
+      //assertNotNull(line.getCost().getId());
+      //assertNotNull(line.getDetails().getId());
       assertNotNull(line.getInstanceId());
 
-      line.getLocations().forEach(location -> assertNotNull(location.getId()));
+      //line.getLocations().forEach(location -> assertNotNull(location.getId()));
     }
 
     int polCount = resp.getCompositePoLines().size();
@@ -530,7 +525,7 @@ public class OrdersImplTest {
   public void testPutOrdersByIdPEMixFormat() throws Exception {
     logger.info("=== Test Put Order By Id create Pieces with P/E Mix format ===");
     JsonObject order = new JsonObject(getMockData(PE_MIX_PATH));
-    order.put("workflow_status", "Pending");
+    order.put("workflowStatus", "Pending");
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
 
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
@@ -921,7 +916,7 @@ public class OrdersImplTest {
 
   @Test
   public void testPutOrdersByIdWorkflowStatusOpenForStorageAndCurrentRequest() throws Exception {
-    logger.info("=== Test Put Order By Id workflow_status is Open from storage and workflow_status is Open in current request  ===");
+    logger.info("=== Test Put Order By Id workflowStatus is Open from storage and workflowStatus is Open in current request  ===");
 
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
@@ -930,8 +925,8 @@ public class OrdersImplTest {
 
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData.toString(), "", 204);
 
-    storageData.put("workflow_status", "Open");
-    reqData.put("workflow_status", "Open");
+    storageData.put("workflowStatus", "Open");
+    reqData.put("workflowStatus", "Open");
     verifyPoWithPoLinesUpdate(reqData, storageData);
   }
 
@@ -2460,7 +2455,7 @@ public class OrdersImplTest {
 
   private JsonObject getMockDraftOrder() throws Exception {
     JsonObject order = new JsonObject(getMockData(LISTED_PRINT_MONOGRAPH_PATH));
-    order.put("workflow_status", "Pending");
+    order.put("workflowStatus", "Pending");
 
     return order;
   }
@@ -2832,7 +2827,7 @@ public class OrdersImplTest {
       } else if (queryParam.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
         serverResponse(ctx, 500, APPLICATION_JSON, Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
       } else {
-        String id = queryParam.split("purchase_order_id==")[1];
+        String id = queryParam.split("purchaseOrderId==")[1];
         String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
 
         try {
@@ -2867,8 +2862,8 @@ public class OrdersImplTest {
       PoLineCollection result = new PoLineCollection();
       if (lines == null || lines.isEmpty()) {
         result.setTotalRecords(0);
-        result.setFirst(0);
-        result.setLast(0);
+//        result.setFirst(0);
+//        result.setLast(0);
       } else {
         // Transform composite PO Lines to storage representation
         List<org.folio.rest.acq.model.PoLine> poLines = lines
@@ -2889,8 +2884,8 @@ public class OrdersImplTest {
         }
 
         result.setPoLines(poLines);
-        result.setFirst(1);
-        result.setLast(lines.size());
+//        result.setFirst(1);
+//        result.setLast(lines.size());
         if (EMPTY_CONFIG_TENANT.equals(tenant)) {
           result.setTotalRecords(Integer.parseInt(DEFAULT_POLINE_LIMIT));
         } else {
@@ -3043,7 +3038,7 @@ public class OrdersImplTest {
       addServerRqRsData(HttpMethod.GET, ADJUSTMENT, new JsonObject().put(ID, id));
 
       Adjustment a = new Adjustment();
-      a.setId(id);
+//      a.setId(id);
       a.setCredit(1d);
       a.setDiscount(2d);
       a.setInsurance(3d);
@@ -3237,9 +3232,9 @@ public class OrdersImplTest {
       addServerRqRsData(HttpMethod.GET, LOCATIONS, new JsonObject().put(ID, id));
 
       Location location = new Location();
-      location.setId(id);
+//      location.setId(id);
       location.setLocationId("123");
-      location.setPoLineId("123");
+//      location.setPoLineId("123");
       location.setQuantity(3);
       location.setQuantityElectronic(1);
       location.setQuantityPhysical(2);
