@@ -60,8 +60,8 @@ public class PutOrdersByIdHelper extends AbstractHelper {
       if (isEmpty(compPO.getCompositePoLines())) {
         return HelperUtils.getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
           .thenApply(pols -> pols.stream().map(poline -> {
-            // Ignore status update when receipt not required
-            if (poline.getReceiptStatus() != CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED) {
+            // Update receipt status from Pending to awaiting receipt
+            if (poline.getReceiptStatus() == CompositePoLine.ReceiptStatus.PENDING) {
               poline.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
             }
             compPO.getCompositePoLines().add(poline);
@@ -69,7 +69,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
           }).collect(Collectors.toList()));
       } else {
         compPO.getCompositePoLines().forEach(poLine -> {
-          if (poLine.getReceiptStatus() != CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED) {
+          if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.PENDING) {
             poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
           }
         });
