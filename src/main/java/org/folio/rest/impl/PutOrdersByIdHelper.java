@@ -2,7 +2,6 @@ package org.folio.rest.impl;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
@@ -25,8 +24,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
+import static io.vertx.core.Future.succeededFuture;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
@@ -54,30 +53,27 @@ public class PutOrdersByIdHelper extends AbstractHelper {
 
   }
 
-  private CompletableFuture<List<CompositePoLine>> changePoLinesReceiptStatus(CompositePurchaseOrder compPO, JsonObject poFromStorage) {
-    CompletableFuture<List<CompositePoLine>> compositePoLines;
-    if (isTransitionToOpen(compPO, poFromStorage)) {
-      if (isEmpty(compPO.getCompositePoLines())) {
-        return HelperUtils.getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
-          .thenApply(pols -> pols.stream().map(poline -> {
-            // Update receipt status from Pending to awaiting receipt
-            if (poline.getReceiptStatus() == CompositePoLine.ReceiptStatus.PENDING) {
-              poline.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
-            }
-            compPO.getCompositePoLines().add(poline);
-            return poline;
-          }).collect(Collectors.toList()));
-      } else {
-        compPO.getCompositePoLines().forEach(poLine -> {
-          if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.PENDING) {
-            poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
+  private CompletableFuture<Void> changePoLinesReceiptStatus(CompositePurchaseOrder compPO) {
+    logger.debug("Start updating receipt status for order ", compPO.getId());
+    if (isEmpty(compPO.getCompositePoLines())) {
+      return HelperUtils.getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
+        .thenAccept(pols -> pols.stream().forEach(poline -> {
+          // Update receipt status from Pending to awaiting receipt
+          if (poline.getReceiptStatus() == CompositePoLine.ReceiptStatus.PENDING) {
+            poline.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
           }
-        });
-      }
+          compPO.getCompositePoLines().add(poline);
+        }));
     }
-    compositePoLines = completedFuture(compPO.getCompositePoLines());
 
-    return compositePoLines;
+    return CompletableFuture.supplyAsync(() -> {
+      compPO.getCompositePoLines().stream().forEach(poLine -> {
+        if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.PENDING) {
+          poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
+        }
+      });
+      return null;
+    });
   }
 
   /**
@@ -87,24 +83,21 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     compPO.setId(orderId);
     getPurchaseOrderById(orderId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(poFromStorage -> validatePoNumber(compPO, poFromStorage))
-      .thenCompose(poFromStorage -> changePoLinesReceiptStatus(compPO, poFromStorage).thenApply(v -> poFromStorage))
       .thenCompose(poFromStorage -> updatePoLines(poFromStorage, compPO).thenApply(v -> poFromStorage))
-      .thenAccept(poFromStorage -> {
-        CompletableFuture<Void> updatedPoFuture;
+      .thenCompose(poFromStorage -> {
         if (isTransitionToOpen(compPO, poFromStorage)) {
-          updatedPoFuture = openOrder(compPO);
+          return openOrder(compPO)
+            .thenCompose(v -> changePoLinesReceiptStatus(compPO))
+            .thenCompose(v -> updatePoLines(poFromStorage, compPO));
         } else {
-          updatedPoFuture = updateOrderSummary(compPO);
+          return updateOrderSummary(compPO);
         }
-        updatedPoFuture
-          .thenAccept(v -> {
-            logger.info("Successfully Updated Order: " + JsonObject.mapFrom(compPO).encodePrettily());
-            httpClient.closeClient();
-            javax.ws.rs.core.Response response = PutOrdersCompositeOrdersByIdResponse.respond204();
-            AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
-            asyncResultHandler.handle(result);
-          })
-          .exceptionally(this::handleError);
+      })
+      .thenAccept(v -> {
+        logger.info("Successfully Updated Order: " + JsonObject.mapFrom(compPO).encodePrettily());
+        httpClient.closeClient();
+        javax.ws.rs.core.Response response = PutOrdersCompositeOrdersByIdResponse.respond204();
+        asyncResultHandler.handle(succeededFuture(response));
       })
       .exceptionally(this::handleError);
   }
