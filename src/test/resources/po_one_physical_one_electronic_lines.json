@@ -27,7 +27,11 @@
         "receiving_note": "Receive all 25 items",
         "product_ids": [
           {
-            "product_id": "9780439708184",
+            "product_id": "0439708184",
+            "product_id_type": "ISBN"
+          },
+          {
+            "product_id": "9780439708180",
             "product_id_type": "ISBN"
           }
         ],

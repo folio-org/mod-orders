@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -33,6 +34,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
@@ -78,6 +80,7 @@ public class InventoryHelper {
   private static final String DEFAULT_STATUS_CODE = "temp";
   private static final String DEFAULT_LOAN_TYPE_NAME = "Can circulate";
   private static final String LOCATION_HEADER = "Location";
+  private static final String LOOKUP_IDENTIFIER_TYPES_ENDPOINT = "/identifier-types?query=%s&limit=%d&lang=%s";
   private static final String LOOKUP_INSTANCES_ENDPOINT = "/inventory/instances?query=%s&lang=%s";
   private static final String CREATE_INSTANCE_ENDPOINT = "/inventory/instances?lang=%s";
   private static final String LOOKUP_ITEM_STOR_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
@@ -237,13 +240,26 @@ public class InventoryHelper {
       return completedFuture(Collections.emptyMap());
     }
 
-    String endpoint = compPOL.getDetails().getProductIds().stream()
-      .map(productId -> String.format("name==%s", productId.getProductIdType().toString()))
-      .collect(joining(" or ", "/identifier-types?query=", ""));
+    // Extract unique product types
+    Set<String> uniqueProductTypes = compPOL
+      .getDetails()
+      .getProductIds()
+      .stream()
+      .map(productId -> productId.getProductIdType().value())
+      .collect(toSet());
+
+    int prodTypesQty = uniqueProductTypes.size();
+
+    String query = uniqueProductTypes
+      .stream()
+      .map(productType -> "name==" + productType)
+      .collect(joining(" or "));
+
+    String endpoint = String.format(LOOKUP_IDENTIFIER_TYPES_ENDPOINT, encodeQuery(query, logger), prodTypesQty, lang);
 
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(productTypes -> {
-        if (productTypes.getJsonArray(IDENTIFIER_TYPES).size() != compPOL.getDetails().getProductIds().size()) {
+        if (productTypes.getJsonArray(IDENTIFIER_TYPES).size() != prodTypesQty) {
           throw new HttpException(422, "Invalid product type(s) is specified for the PO line with id " + compPOL.getId());
         }
         return productTypes;
