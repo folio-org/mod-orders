@@ -303,13 +303,14 @@ public class PostOrderLineHelper extends AbstractHelper {
 
   private CompletableFuture<String> createSubObj(JsonObject pol, JsonObject obj, String field, String url) {
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
-    if (!(SOURCE.equals(field) || REPORTING_CODES.equals(field))) {
-      obj.put("po_line_id", pol.getString(ID));
-    }
+//    if (!(SOURCE.equals(field) || REPORTING_CODES.equals(field))) {
+//      obj.put("poLineId", pol.getString(ID));
+//    }
     try {
       operateOnSubObj(HttpMethod.POST, url, obj, httpClient, ctx, okapiHeaders, logger)
         .thenAccept(body -> {
           String id = JsonObject.mapFrom(body).getString("id");
+          logger.debug("Field= '{}' id={}", field, id);
           pol.put(field, id);
           future.complete(id);
           logger.debug("The '{}' sub-object successfully created with id={}", field, id);

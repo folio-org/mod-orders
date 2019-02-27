@@ -3150,7 +3150,7 @@ public class OrdersImplTest {
       switch (status) {
         case 201:
           contentType = APPLICATION_JSON;
-          body = JsonObject.mapFrom(ctx.getBodyAsJson().mapTo(getSubObjClass(subObj))).put(ID, UUID.randomUUID().toString());
+          body = JsonObject.mapFrom(ctx.getBodyAsJson().mapTo(getSubObjClass(subObj)));//.put(ID, UUID.randomUUID().toString());
           respBody = body.encodePrettily();
           break;
         case 403:

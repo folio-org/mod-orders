@@ -341,7 +341,10 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
         if (operation == HttpMethod.PUT) {
           return storageId;
         } else if (operation == HttpMethod.POST) {
-          return json.getString(ID);
+        	if(json.getString(ID)!=null) {
+	        	logger.debug("-------check if ID exists for subObj-------");
+	          return json.getString(ID);
+        	}
         }
         return null;
       });
