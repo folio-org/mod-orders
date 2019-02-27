@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 
 import javax.ws.rs.core.Response;
 
@@ -62,34 +63,34 @@ public class PostOrderLineHelper extends AbstractHelper {
 
     return CompletableFuture.allOf(subObjFuts.toArray(new CompletableFuture[0]))
       .thenCompose(v -> handleGetRequest(getPoLineNumberEndpoint(compPOL.getPurchaseOrderId()), httpClient, ctx, okapiHeaders, logger)
-      .thenAccept(poLoneNumber -> {
-        String poLineNumberSuffix = poLoneNumber.getString("sequenceNumber");
-        addSuffixToPoLineNumber(line, poLineNumberSuffix);
-      }))
-      .thenCompose(v -> {
-        try {
-          Buffer polBuf = JsonObject.mapFrom(line).toBuffer();
-          return httpClient.request(HttpMethod.POST, polBuf, resourcesPath(PO_LINES), okapiHeaders)
-            .thenApply(HelperUtils::verifyAndExtractBody)
-            .thenApply(body -> {
-              logger.info("response from /po_line: " + body.encodePrettily());
+      .thenAccept(sequenceNumber -> addSuffixToPoLineNumber(line, sequenceNumber)))
+      .thenCompose(v -> createPoLineSummary(compPOL, line));
+  }
 
-              compPOL.setId(body.getString(ID));
-              compPOL.setPoLineNumber(body.getString(PO_LINE_NUMBER));
-              return compPOL;
-            });
-        } catch (Exception e) {
-          logger.error("Exception calling POST /po_line", e);
-          throw new CompletionException(e);
-        }
-      });
+  private CompletionStage<CompositePoLine> createPoLineSummary(CompositePoLine compPOL, JsonObject line) {
+    try {
+      Buffer polBuf = JsonObject.mapFrom(line).toBuffer();
+      return httpClient.request(HttpMethod.POST, polBuf, resourcesPath(PO_LINES), okapiHeaders)
+        .thenApply(HelperUtils::verifyAndExtractBody)
+        .thenApply(body -> {
+          logger.info("response from /po_line: " + body.encodePrettily());
+
+          compPOL.setId(body.getString(ID));
+          compPOL.setPoLineNumber(body.getString(PO_LINE_NUMBER));
+          return compPOL;
+        });
+    } catch (Exception e) {
+      logger.error("Exception calling POST /po_line", e);
+      throw new CompletionException(e);
+    }
   }
 
   private String getPoLineNumberEndpoint(String id) {
     return String.format(PO_LINE_URL_WITH_PARAM, resourcesPath(PO_LINE_NUMBER), id);
   }
 
-  private void addSuffixToPoLineNumber(JsonObject line, String poLineNumberSuffix) {
+  private void addSuffixToPoLineNumber(JsonObject line, JsonObject sequenceNumber) {
+    String poLineNumberSuffix = sequenceNumber.getString("sequenceNumber");
     String purchaseOrderNumber = line.getString(PO_LINE_NUMBER);
     line.put(PO_LINE_NUMBER, purchaseOrderNumber + "-" + poLineNumberSuffix);
   }
