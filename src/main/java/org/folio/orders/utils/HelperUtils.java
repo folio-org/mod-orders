@@ -8,6 +8,8 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -25,13 +27,15 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.acq.model.Piece;
 import org.folio.rest.client.ConfigurationsClient;
+import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
@@ -49,7 +53,6 @@ public class HelperUtils {
 
   public static final String COMPOSITE_PO_LINES = "compositePoLines";
 
-  public static final String PO_NUMBER_ALREADY_EXISTS = "PO Number already exists";
   public static final String DEFAULT_POLINE_LIMIT = "1";
   private static final String MAX_POLINE_LIMIT = "500";
   public static final String OKAPI_URL = "X-Okapi-Url";
@@ -361,9 +364,9 @@ public class HelperUtils {
 
   public static List<ErrorCodes> validatePoLine(CompositePoLine compPOL) {
     CompositePoLine.OrderFormat orderFormat = compPOL.getOrderFormat();
-    if (orderFormat == CompositePoLine.OrderFormat.P_E_MIX) {
+    if (orderFormat == P_E_MIX) {
       return validatePoLineWithMixedFormat(compPOL);
-    } else if (orderFormat == CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE) {
+    } else if (orderFormat == ELECTRONIC_RESOURCE) {
       return validatePoLineWithElectronicFormat(compPOL);
     } else if (orderFormat == CompositePoLine.OrderFormat.PHYSICAL_RESOURCE) {
       return validatePoLineWithPhysicalFormat(compPOL);
@@ -454,15 +457,19 @@ public class HelperUtils {
   /**
    * Calculates total quantity based of cost for electronic and physical resources
    *
-   * @param cost Cost associated with PO Line
+   * @param compPOL PO line to calculate total quantity
    * @return total quantity for PO Line
    */
-  public static int calculateTotalQuantity(Cost cost) {
-  	int eQuantity = cost.getQuantityElectronic()!=null ? cost.getQuantityElectronic() : 0;
-    int physicalQuantity = cost.getQuantityPhysical()!=null ? cost.getQuantityPhysical() : 0;
+  public static int calculateTotalQuantity(CompositePoLine compPOL) {
+    Cost cost = compPOL.getCost();
+    if (cost == null) {
+      return 0;
+    }
+  	int eQuantity = ObjectUtils.defaultIfNull(cost.getQuantityElectronic(), 0);
+    int physicalQuantity = ObjectUtils.defaultIfNull(cost.getQuantityPhysical(), 0);
     return eQuantity + physicalQuantity;
   }
-  
+
   /**
    * Calculates total items quantity for all locations.
    * The quantity is based on Order Format (please see MODORDERS-117):<br/>
@@ -499,6 +506,34 @@ public class HelperUtils {
       default:
         return 0;
     }
+  }
+
+  public static int calculateExpectedQuantityOfPiecesWithoutItemCreation(CompositePoLine compPOL, List<Location> locations) {
+    switch (compPOL.getOrderFormat()) {
+      case P_E_MIX:
+        return isInventoryUpdateRequiredForEresource(compPOL) ? 0 : getElectronicQuantity(locations);
+      case ELECTRONIC_RESOURCE:
+        return isInventoryUpdateRequiredForEresource(compPOL) ? 0 : getElectronicQuantity(locations);
+      case OTHER:
+        return getPhysicalQuantity(locations);
+      case PHYSICAL_RESOURCE:
+      default:
+        return 0;
+    }
+  }
+
+  public static List<Piece> constructPieces(List<String> itemIds, String poLineId, String locationId) {
+    return itemIds.stream()
+      .map(itemId -> constructPiece(locationId, poLineId, itemId))
+      .collect(toList());
+  }
+
+  public static Piece constructPiece(String locationId, String poLineId, String itemId) {
+    Piece piece = new Piece();
+    piece.setItemId(itemId);
+    piece.setPoLineId(poLineId);
+    piece.setLocationId(locationId);
+    return piece;
   }
 
   private static int getPhysicalQuantity(List<Location> locations) {

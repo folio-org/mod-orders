@@ -7,6 +7,7 @@
         "comment": "Special Edition",
         "dateOrdered": "2018-09-09T00:00:00.000",
         "itemId": "1c92433e-916d-452e-ac76-5268d0ec3f66",
+        "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
         "poLineId": "c1498090-538a-4470-9525-27e4e0c74b07",
         "poLineNumber": "268758-03",
         "purchaseOrderId": "0804ddec-6545-404a-b54d-a693f505681d",
@@ -17,7 +18,5 @@
         "title": "Kayak Fishing in the Northern Gulf Coast"
       }
     ],
-  "total_records": 1,
-  "first": 1,
-  "last": 1
+  "total_records": 1
 }
