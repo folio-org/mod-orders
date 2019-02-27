@@ -98,7 +98,7 @@ public class PostOrdersHelper extends AbstractHelper {
         .thenCompose(v -> {
           if (finalStatus == OPEN) {
             return putOrderHelper
-              .openOrder(compPO, true);
+              .openOrder(compPO);
           }
           return completedFuture(null);
         })
