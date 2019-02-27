@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -75,9 +74,9 @@ public class PutOrdersByIdHelper extends AbstractHelper {
       .thenCompose(poFromStorage -> updatePoLines(poFromStorage, compPO).thenApply(v -> poFromStorage))
       .thenCompose(poFromStorage -> {
         if (isTransitionToOpen(compPO, poFromStorage)) {
-          return openOrder(compPO);
+          return openOrder(compPO).thenCompose(v -> updateCompositePoLines(compPO));
         } else {
-          return updateOrderSummary(compPO).thenCompose(v -> updatePoLines(poFromStorage, compPO));
+          return updateOrderSummary(compPO);
         }
       })
       .thenAccept(v -> {
@@ -99,10 +98,9 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
     return fetchCompositePoLines(compPO)
-      .thenCompose(v -> updateInventory(compPO))
-      .thenCompose(v -> updateOrderSummary(compPO))
       .thenCompose(v -> changePoLineReceiptStatuses(compPO))
-      .thenCompose(v -> updateCompositePoLines(compPO));
+      .thenCompose(v -> updateInventory(compPO))
+      .thenCompose(v -> updateOrderSummary(compPO));
   }
 
   private CompletionStage<Void> changePoLineReceiptStatuses(CompositePurchaseOrder compPO) {
