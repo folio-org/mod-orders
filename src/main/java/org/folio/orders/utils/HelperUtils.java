@@ -38,8 +38,9 @@ import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
-import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -68,6 +69,7 @@ public class HelperUtils {
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
   private static final String QUERY = "module=ORDERS";
   private static final Pattern HOST_PORT_PATTERN = Pattern.compile("https?://([^:/]+)(?::?(\\d+)?)");
+  private static final String PO_LINE_NUMBER = "poLineNumber";
 
   private HelperUtils() {
 
@@ -351,19 +353,19 @@ public class HelperUtils {
     return isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
   }
 
-  public static List<ErrorCodes> validateOrder(CompositePurchaseOrder compositeOrder) {
+  public static List<Error> validateOrder(CompositePurchaseOrder compositeOrder) {
     if (CollectionUtils.isEmpty(compositeOrder.getCompositePoLines())) {
       return Collections.emptyList();
     }
 
-    List<ErrorCodes> errors = new ArrayList<>();
+    List<Error> errors = new ArrayList<>();
     for (CompositePoLine compositePoLine : compositeOrder.getCompositePoLines()) {
       errors.addAll(validatePoLine(compositePoLine));
     }
     return errors;
   }
 
-  public static List<ErrorCodes> validatePoLine(CompositePoLine compPOL) {
+  public static List<Error> validatePoLine(CompositePoLine compPOL) {
     CompositePoLine.OrderFormat orderFormat = compPOL.getOrderFormat();
     if (orderFormat == P_E_MIX) {
       return validatePoLineWithMixedFormat(compPOL);
@@ -378,7 +380,7 @@ public class HelperUtils {
     return Collections.emptyList();
   }
 
-  private static List<ErrorCodes> validatePoLineWithMixedFormat(CompositePoLine compPOL) {
+  private static List<Error> validatePoLineWithMixedFormat(CompositePoLine compPOL) {
     int costPhysicalQuantity = defaultIfNull(compPOL.getCost().getQuantityPhysical(), 0);
     int costElectronicQuantity = defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0);
     int locPhysicalQuantity = getPhysicalQuantity(compPOL.getLocations());
@@ -404,10 +406,10 @@ public class HelperUtils {
       errors.add(ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST);
     }
 
-    return errors;
+    return convertErrorCodesToErrors(compPOL, errors);
   }
 
-  private static List<ErrorCodes> validatePoLineWithPhysicalFormat(CompositePoLine compPOL) {
+  private static List<Error> validatePoLineWithPhysicalFormat(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
 
     int costPhysicalQuantity = defaultIfNull(compPOL.getCost().getQuantityPhysical(), 0);
@@ -427,10 +429,10 @@ public class HelperUtils {
       errors.add(ErrorCodes.PHYSICAL_COST_QTY_EXCEEDS_LOC);
     }
 
-    return errors;
+    return convertErrorCodesToErrors(compPOL, errors);
   }
 
-  private static List<ErrorCodes> validatePoLineWithElectronicFormat(CompositePoLine compPOL) {
+  private static List<Error> validatePoLineWithElectronicFormat(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
 
     int costElectronicQuantity = defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0);
@@ -447,17 +449,32 @@ public class HelperUtils {
       errors.add(ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST);
     }
 
-    return errors;
+    return convertErrorCodesToErrors(compPOL, errors);
   }
 
-  private static List<ErrorCodes> validatePoLineWithOtherFormat(CompositePoLine compPOL) {
+  private static List<Error> validatePoLineWithOtherFormat(CompositePoLine compPOL) {
     return validatePoLineWithPhysicalFormat(compPOL);
   }
 
-  public static Errors convertErrorCodesToErrors(List<ErrorCodes> errorCodes) {
-    return new Errors().withErrors(errorCodes.stream()
-                                             .map(ErrorCodes::toError)
-                                             .collect(Collectors.toList()));
+  /**
+   * The method converts {@link ErrorCodes} elements to {@link Error} adding additionally {@link Parameter} with PO Line number is presents
+   * @param compPOL Composite PO Line
+   * @param errors list of static {@link ErrorCodes}
+   * @return List of {@link Error} elements
+   */
+  private static List<Error> convertErrorCodesToErrors(CompositePoLine compPOL, List<ErrorCodes> errors) {
+    return errors.stream()
+                 .map(errorCode -> {
+                   Error error = errorCode.toError();
+                   String poLineNumber = compPOL.getPoLineNumber();
+                   if (StringUtils.isNotEmpty(poLineNumber)) {
+                     error.getParameters()
+                          .add(new Parameter().withKey(PO_LINE_NUMBER)
+                                              .withValue(poLineNumber));
+                   }
+                   return error;
+                 })
+                 .collect(toList());
   }
 
   /**
