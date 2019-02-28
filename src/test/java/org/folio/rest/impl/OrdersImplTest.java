@@ -3193,12 +3193,17 @@ public class OrdersImplTest {
           // Attempt to find POLine in mock server memory
           List<JsonObject> postedPolines = serverRqRs.column(HttpMethod.POST).get(PO_LINES);
 
-          if (postedPolines != null)
-            postedPolines.stream()
-              .map(jsonObj -> jsonObj.mapTo(org.folio.rest.acq.model.PoLine.class))
-              .filter(poline -> id.equals(poline.getPurchaseOrderId()))
-              .forEach(poLine -> poLineCollection.getPoLines().add(poLine));
+          if (postedPolines != null) {
+            List<PoLine> polines = postedPolines.stream()
+              .map(jsonObj -> jsonObj.mapTo(PoLine.class))
+              .collect(Collectors.toList());
 
+            for (PoLine poLine : polines) {
+              if (poId.equals(poLine.getPurchaseOrderId())) {
+                poLineCollection.getPoLines().add(poLine);
+              }
+            }
+          }
           poLineCollection.setTotalRecords(poLineCollection.getPoLines().size());
           serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(poLineCollection).encodePrettily());
         } catch (IOException e) {
