@@ -177,8 +177,6 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     }
 
     return inventoryHelper.handleInstanceRecord(compPOL)
-      .thenCompose(withInstId -> getPoLineById(compPOL.getId(), lang, httpClient, ctx, okapiHeaders, logger))
-      .thenCompose(jsonObj -> updateOrderLine(compPOL, jsonObj))
       .thenCompose(holdingsId -> inventoryHelper.handleItemRecords(compPOL))
       .thenCompose(piecesWithItemId -> createPieces(compPOL, piecesWithItemId));
   }

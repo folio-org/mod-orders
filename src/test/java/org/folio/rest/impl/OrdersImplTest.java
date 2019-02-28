@@ -38,11 +38,13 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.isNotNull;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -1498,21 +1500,28 @@ public class OrdersImplTest {
 
     List<JsonObject> items = joinExistingAndNewItems();
 
-    verifyInstanceLinksForUpdatedOrder(reqData);
+    // Check instance Ids not exist for polines
+    verifyInstanceLinksNotCreatedForPoLine();
+
+    // Verify pieces were created
     assertEquals(calculateTotalQuantity(reqData.getCompositePoLines().get(0)), createdPieces.size());
 
-    // Check that instance and items created successfully for first POL
-    CompositePoLine firstPol = reqData.getCompositePoLines().get(0);
-    verifyInstanceCreated(createdInstances, firstPol);
-    verifyHoldingsCreated(createdHoldings, firstPol);
-    verifyItemsCreated(items, firstPol, calculateInventoryItemsQuantity(firstPol));
     verifyPiecesCreated(items, reqData.getCompositePoLines().subList(0, 1), createdPieces);
+  }
 
-    // Check that instance created successfully for second POL but no items created (but expected)
-    CompositePoLine secondPol = reqData.getCompositePoLines().get(1);
-    verifyInstanceCreated(createdInstances, secondPol);
-    verifyHoldingsCreated(createdHoldings, secondPol);
-    verifyItemsCreated(items, secondPol, 0);
+  private void verifyInstanceLinksNotCreatedForPoLine() {
+    List<JsonObject> polUpdates = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
+    assertNotNull(polUpdates);
+    boolean instanceIdExists = false;
+    for (JsonObject jsonObj : polUpdates) {
+      PoLine line = jsonObj.mapTo(PoLine.class);
+      if (StringUtils.isNotEmpty(line.getInstanceId())) {
+        instanceIdExists = true;
+        break;
+      }
+    }
+
+    assertFalse("The PO Line must NOT contain instance id", instanceIdExists);
   }
 
   @Test
@@ -2900,6 +2909,20 @@ public class OrdersImplTest {
           logger.info(po_lines.encodePrettily());
 
           serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encode());
+        } catch (NoSuchFileException e) {
+          PoLineCollection poLineCollection = new PoLineCollection();
+
+          // Attempt to find POLine in mock server memory
+          List<JsonObject> postedPolines = serverRqRs.column(HttpMethod.POST).get(PO_LINES);
+
+          if (postedPolines != null)
+            postedPolines.stream()
+              .map(jsonObj -> jsonObj.mapTo(org.folio.rest.acq.model.PoLine.class))
+              .filter(poline -> id.equals(poline.getPurchaseOrderId()))
+              .forEach(poLine -> poLineCollection.getPoLines().add(poLine));
+
+          poLineCollection.setTotalRecords(poLineCollection.getPoLines().size());
+          serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(poLineCollection).encodePrettily());
         } catch (IOException e) {
           PoLineCollection poLineCollection = new PoLineCollection();
           poLineCollection.setTotalRecords(0);

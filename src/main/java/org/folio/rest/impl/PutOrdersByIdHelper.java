@@ -74,7 +74,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
       .thenCompose(poFromStorage -> updatePoLines(poFromStorage, compPO).thenApply(v -> poFromStorage))
       .thenCompose(poFromStorage -> {
         if (isTransitionToOpen(compPO, poFromStorage)) {
-          return openOrder(compPO).thenCompose(v -> updateCompositePoLines(compPO));
+          return openOrder(compPO);
         } else {
           return updateOrderSummary(compPO);
         }
@@ -98,19 +98,20 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
     return fetchCompositePoLines(compPO)
-      .thenCompose(v -> changePoLineReceiptStatuses(compPO))
       .thenCompose(v -> updateInventory(compPO))
-      .thenCompose(v -> updateOrderSummary(compPO));
+      .thenCompose(v -> updateOrderSummary(compPO))
+      .thenAccept(v -> changePoLineReceiptStatuses(compPO))
+      .thenCompose(v -> updateCompositePoLines(compPO));
   }
 
-  private CompletionStage<Void> changePoLineReceiptStatuses(CompositePurchaseOrder compPO) {
-      return CompletableFuture.allOf(compPO.getCompositePoLines().stream().map(poLine -> {
-        if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.PENDING) {
-          poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
-        }
-        return completedFuture(null);
-      }).toArray(CompletableFuture[]::new));
-    }
+  private void changePoLineReceiptStatuses(CompositePurchaseOrder compPO) {
+    compPO.getCompositePoLines().stream().forEach(poLine -> {
+      if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.PENDING) {
+        poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
+      }
+    });
+  }
+
 
   private CompletionStage<JsonObject> validatePoNumber(CompositePurchaseOrder compPO, JsonObject poFromStorage) {
     if (isPoNumberChanged(poFromStorage, compPO)) {
@@ -180,7 +181,7 @@ public class PutOrdersByIdHelper extends AbstractHelper {
     return VertxCompletableFuture.allOf(ctx, futures);
   }
 
-  public CompletableFuture<Void> updateInventory(CompositePurchaseOrder compPO) {
+  private CompletableFuture<Void> updateInventory(CompositePurchaseOrder compPO) {
     return CompletableFuture.allOf(compPO.getCompositePoLines().stream()
       .map(putLineHelper::updateInventory)
       .toArray(CompletableFuture[]::new));
