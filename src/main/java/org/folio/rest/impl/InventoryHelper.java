@@ -9,11 +9,14 @@ import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.collections4.ListUtils;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.InventoryException;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -22,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -31,6 +35,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
@@ -39,6 +44,7 @@ import static org.folio.orders.utils.HelperUtils.constructPieces;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
 import static org.folio.rest.impl.AbstractHelper.ID;
 
@@ -58,6 +64,7 @@ public class InventoryHelper {
   static final String HOLDING_INSTANCE_ID = "instanceId";
   static final String HOLDING_PERMANENT_LOCATION_ID = "permanentLocationId";
   static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
+  static final String ITEM_BARCODE = "barcode";
   static final String ITEM_STATUS = "status";
   static final String ITEM_STATUS_NAME = "name";
   static final String ITEM_STATUS_ON_ORDER = "On order";
@@ -65,21 +72,24 @@ public class InventoryHelper {
   static final String ITEM_PERMANENT_LOAN_TYPE_ID = "permanentLoanTypeId";
   static final String ITEM_PURCHASE_ORDER_LINE_IDENTIFIER = "purchaseOrderLineIdentifier";
 
+  static final String ITEMS = "items";
   private static final String HOLDINGS_RECORDS = "holdingsRecords";
   private static final String IDENTIFIER_TYPES = "identifierTypes";
   private static final String INSTANCES = "instances";
-  private static final String ITEMS = "items";
   private static final String LOAN_TYPES = "loantypes";
 
   private static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
   private static final String DEFAULT_STATUS_CODE = "temp";
   private static final String DEFAULT_LOAN_TYPE_NAME = "Can circulate";
   private static final String LOCATION_HEADER = "Location";
+  private static final String LOOKUP_IDENTIFIER_TYPES_ENDPOINT = "/identifier-types?query=%s&limit=%d&lang=%s";
   private static final String LOOKUP_INSTANCES_ENDPOINT = "/inventory/instances?query=%s&lang=%s";
   private static final String CREATE_INSTANCE_ENDPOINT = "/inventory/instances?lang=%s";
-  private static final String LOOKUP_ITEMS_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
-  private static final String LOOKUP_ITEMS_ENDPOINT = "/item-storage/items?query=%s&limit=%d&lang=%s";
-  private static final String CREATE_ITEM_ENDPOINT = "/item-storage/items?lang=%s";
+  private static final String LOOKUP_ITEM_STOR_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
+  private static final String LOOKUP_ITEM_STOR_ENDPOINT = "/item-storage/items?query=%s&limit=%d&lang=%s";
+  private static final String CREATE_ITEM_STOR_ENDPOINT = "/item-storage/items?lang=%s";
+  private static final String LOOKUP_ITEMS_ENDPOINT = "/inventory/items?query=%s&limit=%d&lang=%s";
+  private static final String UPDATE_ITEM_ENDPOINT = "/inventory/items/%s?lang=%s";
   private static final String HOLDINGS_LOOKUP_QUERY = "instanceId==%s and permanentLocationId==%s";
   private static final String HOLDINGS_LOOKUP_ENDPOINT = "/holdings-storage/holdings?query=%s&limit=1&lang=%s";
   private static final String HOLDINGS_CREATE_ENDPOINT = "/holdings-storage/holdings?lang=%s";
@@ -134,6 +144,38 @@ public class InventoryHelper {
         .flatMap(List::stream)
         .collect(toList())
       );
+  }
+
+  /**
+   * Returns list of item records for specified id's.
+   *
+   * @param ids   List of item id's
+   * @return future with list of item records
+   */
+  public CompletableFuture<List<JsonObject>> getItemRecordsByIds(List<String> ids) {
+    String query = encodeQuery(HelperUtils.convertIdsToCqlQuery(ids), logger);
+    String endpoint = String.format(LOOKUP_ITEMS_ENDPOINT, query, ids.size(), lang);
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(this::extractItems);
+  }
+
+  /**
+   * Returns list of item records for specified id's.
+   *
+   * @param itemRecord item record
+   * @param receivedItem item details specified by user upon receiving flow
+   * @return future with list of item records
+   */
+  public CompletableFuture<Void> receiveItem(JsonObject itemRecord, ReceivedItem receivedItem) {
+    String endpoint = String.format(UPDATE_ITEM_ENDPOINT, itemRecord.getString(ID), lang);
+
+    // Update item record with receiving details
+    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus()));
+    if (StringUtils.isNotEmpty(receivedItem.getBarcode())) {
+      itemRecord.put(ITEM_BARCODE, receivedItem.getBarcode());
+    }
+
+    return handlePutRequest(endpoint, itemRecord, httpClient, ctx, okapiHeaders, logger);
   }
 
   private CompletableFuture<String> getOrCreateHoldingsRecord(CompositePoLine compPOL, String locationId) {
@@ -201,13 +243,26 @@ public class InventoryHelper {
       return completedFuture(Collections.emptyMap());
     }
 
-    String endpoint = compPOL.getDetails().getProductIds().stream()
-      .map(productId -> String.format("name==%s", productId.getProductIdType().toString()))
-      .collect(joining(" or ", "/identifier-types?query=", ""));
+    // Extract unique product types
+    Set<String> uniqueProductTypes = compPOL
+      .getDetails()
+      .getProductIds()
+      .stream()
+      .map(productId -> productId.getProductIdType().value())
+      .collect(toSet());
+
+    int prodTypesQty = uniqueProductTypes.size();
+
+    String query = uniqueProductTypes
+      .stream()
+      .map(productType -> "name==" + productType)
+      .collect(joining(" or "));
+
+    String endpoint = String.format(LOOKUP_IDENTIFIER_TYPES_ENDPOINT, encodeQuery(query, logger), prodTypesQty, lang);
 
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(productTypes -> {
-        if (productTypes.getJsonArray(IDENTIFIER_TYPES).size() != compPOL.getDetails().getProductIds().size()) {
+        if (productTypes.getJsonArray(IDENTIFIER_TYPES).size() != prodTypesQty) {
           throw new HttpException(422, "Invalid product type(s) is specified for the PO line with id " + compPOL.getId());
         }
         return productTypes;
@@ -331,8 +386,8 @@ public class InventoryHelper {
    * @return future with list of item id's
    */
   private CompletableFuture<List<String>> searchForExistingItems(CompositePoLine compPOL, String holdingId, int expectedQuantity) {
-    String query = encodeQuery(String.format(LOOKUP_ITEMS_QUERY, compPOL.getId(), holdingId), logger);
-    String endpoint = String.format(LOOKUP_ITEMS_ENDPOINT, query, expectedQuantity, lang);
+    String query = encodeQuery(String.format(LOOKUP_ITEM_STOR_QUERY, compPOL.getId(), holdingId), logger);
+    String endpoint = String.format(LOOKUP_ITEM_STOR_ENDPOINT, query, expectedQuantity, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(items -> {
         List<String> itemIds = collectItemIds(items);
@@ -342,17 +397,32 @@ public class InventoryHelper {
   }
 
   /**
+   * Validates if the json object contains items and returns items as list of JsonObject elements
+   * @param itemEntries {@link JsonObject} representing item storage response
+   * @return list of the item records as JsonObject elements
+   */
+  private List<JsonObject> extractItems(JsonObject itemEntries) {
+    return Optional.ofNullable(itemEntries.getJsonArray(ITEMS))
+                   .map(items -> items.stream()
+                                      .map(item -> (JsonObject) item)
+                                      .collect(toList()))
+                   .orElseGet(Collections::emptyList);
+  }
+
+  /**
    * Validates if the json object contains items and extracts ids or returns empty list
    * @param itemEntries {@link JsonObject} representing item storage response
    * @return list of the item ids if any item returned
    */
   private List<String> collectItemIds(JsonObject itemEntries) {
-    return Optional.ofNullable(itemEntries.getJsonArray(ITEMS))
-                   .map(items -> items.stream()
-                                      .map(item -> (JsonObject) item)
-                                      .map(this::extractId)
-                                      .collect(toList()))
-                   .orElseGet(Collections::emptyList);
+    List<JsonObject> jsonObjects = extractItems(itemEntries);
+    if (jsonObjects.isEmpty()) {
+      return Collections.emptyList();
+    } else {
+      return jsonObjects.stream()
+                        .map(this::extractId)
+                        .collect(toList());
+    }
   }
 
   /**
@@ -397,7 +467,7 @@ public class InventoryHelper {
    * @return id of newly created entity Record
    */
   private CompletableFuture<String> createItemInInventory(JsonObject itemData) {
-    return createRecordInStorage(itemData, String.format(CREATE_ITEM_ENDPOINT, lang))
+    return createRecordInStorage(itemData, String.format(CREATE_ITEM_STOR_ENDPOINT, lang))
       // In case item creation failed, return null instead of id
       .exceptionally(throwable -> null);
   }
@@ -478,7 +548,7 @@ public class InventoryHelper {
                      new HttpException(422, MISSING_MATERIAL_TYPE)));
   }
 
-  private String extractId(JsonObject json) {
+  String extractId(JsonObject json) {
     return json.getString(ID);
   }
 

@@ -1,0 +1,1370 @@
+{
+  "items": [
+    {
+      "id": "98eba19f-11c6-4a45-b4c0-0b9f30148f22",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000252",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:44.672+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:44.672+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/98eba19f-11c6-4a45-b4c0-0b9f30148f22"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "d3505286-ffbf-408d-96ec-b0c3a6b8bca8",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000255",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:44.693+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:44.693+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/d3505286-ffbf-408d-96ec-b0c3a6b8bca8"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "5a8b32b3-3e11-4af9-b652-c8eeb1c2b8b8",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000258",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:44.852+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:44.852+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/5a8b32b3-3e11-4af9-b652-c8eeb1c2b8b8"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "a146dc53-be76-4431-8fce-f1c27e323ed2",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000259",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:44.860+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:44.860+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/a146dc53-be76-4431-8fce-f1c27e323ed2"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "984e32d0-b46c-4612-b44c-6c8349ff5717",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000266",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:45.066+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:45.066+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/984e32d0-b46c-4612-b44c-6c8349ff5717"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "5d3d815a-0e51-4632-8f99-a2929df4eb01",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000265",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:45.067+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:45.067+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/5d3d815a-0e51-4632-8f99-a2929df4eb01"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "690e058d-48b3-449b-8a91-de95efc5960f",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000270",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:45.220+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:45.220+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/690e058d-48b3-449b-8a91-de95efc5960f"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "07f91e36-b22b-4114-aa8c-73cfaf4f1871",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000275",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "fee56afa-f2c5-410a-8a87-7155599dd1c7",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:45.388+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:45.388+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/07f91e36-b22b-4114-aa8c-73cfaf4f1871"
+      },
+      "effectiveLocation": {
+        "id": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+        "name": "SECOND FLOOR"
+      }
+    },
+    {
+      "id": "c27f379f-3bc4-49a4-b184-c173ec627169",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000267",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:45.068+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:45.068+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/c27f379f-3bc4-49a4-b184-c173ec627169"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "a3c36d4f-0698-4444-8fbb-fcd36dcb4e41",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000273",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "fee56afa-f2c5-410a-8a87-7155599dd1c7",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:45.292+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:45.292+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/a3c36d4f-0698-4444-8fbb-fcd36dcb4e41"
+      },
+      "effectiveLocation": {
+        "id": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+        "name": "SECOND FLOOR"
+      }
+    },
+    {
+      "id": "585092c4-6585-4512-bc74-055ab9d58c6f",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000253",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:44.675+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:44.675+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/585092c4-6585-4512-bc74-055ab9d58c6f"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "8ced07ec-0c19-4515-8a37-6e749dfa716a",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000254",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:44.685+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:44.685+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/8ced07ec-0c19-4515-8a37-6e749dfa716a"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "8967bbe9-c0af-4293-a03e-4bfd3fd25bfa",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000256",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:44.687+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:44.687+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/8967bbe9-c0af-4293-a03e-4bfd3fd25bfa"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "09c180f7-35ca-402a-810f-5599568012b4",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000257",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:44.784+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:44.784+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/09c180f7-35ca-402a-810f-5599568012b4"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "e3759cba-5303-49fe-b9ed-20d5ff4effe9",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000260",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:44.864+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:44.864+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/e3759cba-5303-49fe-b9ed-20d5ff4effe9"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "eb88f76e-8158-4c8b-a777-371e8e31228e",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000272",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "fee56afa-f2c5-410a-8a87-7155599dd1c7",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:45.222+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:45.222+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/eb88f76e-8158-4c8b-a777-371e8e31228e"
+      },
+      "effectiveLocation": {
+        "id": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+        "name": "SECOND FLOOR"
+      }
+    },
+    {
+      "id": "b941c136-d8b1-49ed-9c33-466cabce3a1d",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000261",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:44.885+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:44.885+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/b941c136-d8b1-49ed-9c33-466cabce3a1d"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "2dff0db1-563b-4b70-b2a1-579f45b0f12f",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000262",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:44.914+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:44.914+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/2dff0db1-563b-4b70-b2a1-579f45b0f12f"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "505f7a3f-863a-4e98-a7a7-567b17d7217b",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000271",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:45.221+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:45.221+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/505f7a3f-863a-4e98-a7a7-567b17d7217b"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "73db3f0a-4091-403b-ab36-b4e286d98d56",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000276",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "fee56afa-f2c5-410a-8a87-7155599dd1c7",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:45.411+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:45.411+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/73db3f0a-4091-403b-ab36-b4e286d98d56"
+      },
+      "effectiveLocation": {
+        "id": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+        "name": "SECOND FLOOR"
+      }
+    },
+    {
+      "id": "78992e05-8325-4da8-b527-e2f466913ebc",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000263",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:45.029+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:45.029+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/78992e05-8325-4da8-b527-e2f466913ebc"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "836f7d07-0072-4060-9d72-793515eebc32",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000268",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:45.139+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:45.139+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/836f7d07-0072-4060-9d72-793515eebc32"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "58093488-a593-4ed4-8930-f9a141d89e9e",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000264",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:45.044+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:45.044+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/58093488-a593-4ed4-8930-f9a141d89e9e"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "1984d052-bc2b-495a-984d-7fd07f65b7fe",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000269",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:45.181+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:45.181+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/1984d052-bc2b-495a-984d-7fd07f65b7fe"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "011fed67-57b0-45e6-bfab-b4803d267dea",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000274",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "fee56afa-f2c5-410a-8a87-7155599dd1c7",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:45.328+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:45.328+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/011fed67-57b0-45e6-bfab-b4803d267dea"
+      },
+      "effectiveLocation": {
+        "id": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+        "name": "SECOND FLOOR"
+      }
+    },
+    {
+      "id": "15231514-7aaf-46df-b009-8a4cfa3392af",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000303",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "cf447221-29b9-481e-947c-9ad545f22888",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-21T09:50:12.576+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-21T09:50:12.576+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/15231514-7aaf-46df-b009-8a4cfa3392af"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "248ed3cf-cd2f-4f95-93b7-e09c8c1dc6eb",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000306",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "cf447221-29b9-481e-947c-9ad545f22888",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-21T09:50:12.621+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-21T09:50:12.621+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/248ed3cf-cd2f-4f95-93b7-e09c8c1dc6eb"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "e81ec61f-a8e7-4d76-ad97-1c462ea8f00e",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000308",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "fee56afa-f2c5-410a-8a87-7155599dd1c7",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "cf447221-29b9-481e-947c-9ad545f22888",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-21T09:50:12.709+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-21T09:50:12.709+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/e81ec61f-a8e7-4d76-ad97-1c462ea8f00e"
+      },
+      "effectiveLocation": {
+        "id": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+        "name": "SECOND FLOOR"
+      }
+    },
+    {
+      "id": "c0ac82e3-e53f-48d1-a435-86d965250e47",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000311",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "fee56afa-f2c5-410a-8a87-7155599dd1c7",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "cf447221-29b9-481e-947c-9ad545f22888",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-21T09:50:12.860+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-21T09:50:12.860+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/c0ac82e3-e53f-48d1-a435-86d965250e47"
+      },
+      "effectiveLocation": {
+        "id": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+        "name": "SECOND FLOOR"
+      }
+    },
+    {
+      "id": "883b67bd-8a69-45c2-8db2-441ce393e85f",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000304",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "cf447221-29b9-481e-947c-9ad545f22888",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-21T09:50:12.619+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-21T09:50:12.619+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/883b67bd-8a69-45c2-8db2-441ce393e85f"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "5319cb55-eb71-4528-80d4-472bbd48541d",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000305",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "cf447221-29b9-481e-947c-9ad545f22888",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-21T09:50:12.594+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-21T09:50:12.594+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/5319cb55-eb71-4528-80d4-472bbd48541d"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    },
+    {
+      "id": "b92b9b57-00ce-4fac-b199-fc638097fe76",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000307",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "fee56afa-f2c5-410a-8a87-7155599dd1c7",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "cf447221-29b9-481e-947c-9ad545f22888",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-21T09:50:12.680+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-21T09:50:12.680+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/b92b9b57-00ce-4fac-b199-fc638097fe76"
+      },
+      "effectiveLocation": {
+        "id": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+        "name": "SECOND FLOOR"
+      }
+    },
+    {
+      "id": "08955027-88c5-4065-b0a5-01258aabdb50",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000309",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "fee56afa-f2c5-410a-8a87-7155599dd1c7",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "cf447221-29b9-481e-947c-9ad545f22888",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-21T09:50:12.757+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-21T09:50:12.757+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/08955027-88c5-4065-b0a5-01258aabdb50"
+      },
+      "effectiveLocation": {
+        "id": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+        "name": "SECOND FLOOR"
+      }
+    },
+    {
+      "id": "14359fb4-20e0-4198-94ca-88017f43d8e7",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000310",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "fee56afa-f2c5-410a-8a87-7155599dd1c7",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "cf447221-29b9-481e-947c-9ad545f22888",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-21T09:50:12.756+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-21T09:50:12.756+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/14359fb4-20e0-4198-94ca-88017f43d8e7"
+      },
+      "effectiveLocation": {
+        "id": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+        "name": "SECOND FLOOR"
+      }
+    },
+    {
+      "id": "e8e20101-807c-4f77-8836-04da15a443f4",
+      "status": {
+        "name": "On order"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "hrid": "it00000302",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "26b512a8-80b5-45a9-be13-e3b0f3cfde7f",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "cf447221-29b9-481e-947c-9ad545f22888",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-02-21T09:50:12.560+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-21T09:50:12.560+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/e8e20101-807c-4f77-8836-04da15a443f4"
+      },
+      "effectiveLocation": {
+        "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "name": "Main Library"
+      }
+    }
+  ],
+  "totalRecords": 35
+}
