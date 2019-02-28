@@ -156,7 +156,7 @@ public class HelperUtils {
         return VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]));
       })
       .exceptionally(t -> {
-        logger.error("Exception deleting po_line data for order id={}:", t, orderId);
+        logger.error("Exception deleting poLine data for order id={}:", t, orderId);
         throw new CompletionException(t.getCause());
       });
   }

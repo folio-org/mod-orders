@@ -193,7 +193,7 @@ public class OrdersImpl implements Orders {
         handleGetRequest(endpoint, httpClient, vertxContext, okapiHeaders, logger)
           .thenAccept(entries -> {
             int limit = getPoLineLimit(config);
-            if (entries.getInteger("total_records") < limit) {
+            if (entries.getInteger("totalRecords") < limit) {
               getPurchaseOrderById(poLine.getPurchaseOrderId(), lang, httpClient, vertxContext, okapiHeaders, logger)
                 .thenCompose( purchaseOrder -> {
                   poLine.setPoLineNumber(purchaseOrder.getString(PO_NUMBER));

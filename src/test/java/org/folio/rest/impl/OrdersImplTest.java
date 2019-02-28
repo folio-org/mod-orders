@@ -606,7 +606,7 @@ public class OrdersImplTest {
     logger.info("=== Test Placement of minimal order failure with Invalid PO Number===");
 
     JsonObject request = new JsonObject();
-    request.put("po_number", "1234");
+    request.put("poNumber", "1234");
     String body= request.toString();
 
      verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
@@ -619,7 +619,7 @@ public class OrdersImplTest {
     logger.info("=== Test Placement of minimal order failure with Existing PO Number===");
 
     JsonObject request = new JsonObject();
-    request.put("po_number", EXISTING_PO_NUMBER);
+    request.put("poNumber", EXISTING_PO_NUMBER);
     String body= request.toString();
 
      verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
@@ -878,7 +878,7 @@ public class OrdersImplTest {
     logger.info("=== Test Delete Order By Id ===");
 
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
-    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
+    String id = ordersList.getJsonArray("compositePurchaseOrders").getJsonObject(0).getString(ID);
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
 
     RestAssured
@@ -919,7 +919,7 @@ public class OrdersImplTest {
     logger.info("=== Test Put Order By Id workflowStatus is Open from storage and workflowStatus is Open in current request  ===");
 
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
-    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
+    String id = ordersList.getJsonArray("compositePurchaseOrders").getJsonObject(0).getString(ID);
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_PO_LINES_JSON));
     JsonObject storageData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id);
 
@@ -2477,7 +2477,7 @@ public class OrdersImplTest {
 
   public static class MockServer {
 
-    private static final String TOTAL_RECORDS = "total_records";
+    private static final String TOTAL_RECORDS = "totalRecords";
     static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
     private static final Logger logger = LoggerFactory.getLogger(MockServer.class);
 
@@ -2534,7 +2534,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, "/loan-types").handler(this::handleGetLoanType);
       router.route(HttpMethod.GET, resourcesPath(PO_LINES)).handler(this::handleGetPoLines);
       router.route(HttpMethod.GET, resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
-      router.route(HttpMethod.GET, resourcePath(ADJUSTMENT)).handler(this::handleGetAdjustment);
+      //router.route(HttpMethod.GET, resourcePath(ADJUSTMENT)).handler(this::handleGetAdjustment);
       router.route(HttpMethod.GET, resourcePath(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
       router.route(HttpMethod.GET, resourcePath(CLAIMS)).handler(ctx -> handleGetGenericSubObj(ctx, CLAIMS));
       router.route(HttpMethod.GET, resourcePath(COST)).handler(ctx -> handleGetGenericSubObj(ctx, COST));
@@ -2992,7 +2992,7 @@ public class OrdersImplTest {
       logger.info("id: " + id);
 
       JsonArray pieces = new JsonArray();
-      JsonObject data = new JsonObject().put("pieces", pieces).put("total_records", 0);
+      JsonObject data = new JsonObject().put("pieces", pieces).put("totalRecords", 0);
       addServerRqRsData(HttpMethod.GET, OrdersImplTest.PIECES, data);
 
       ctx.response()

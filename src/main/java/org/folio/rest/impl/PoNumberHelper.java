@@ -41,7 +41,7 @@ public class PoNumberHelper extends AbstractHelper {
   CompletableFuture<Void> checkPONumberUnique(String poNumber) {
     return getPurchaseOrderByPONumber(poNumber, lang, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(po -> {
-         if (po.getInteger("total_records") != 0) {
+         if (po.getInteger("totalRecords") != 0) {
            logger.error("Exception validating PO Number existence");
            throw new CompletionException(new HttpException(400, ErrorCodes.PO_NUMBER_ALREADY_EXISTS));
          }

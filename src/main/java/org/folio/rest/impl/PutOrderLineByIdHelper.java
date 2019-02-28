@@ -287,18 +287,18 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     logger.debug("Updating PO line sub-objects...");
 
     List<CompletableFuture<Void>> futures = new ArrayList<>();
-    futures.add(handleSubObjOperation(ADJUSTMENT, updatedLineJson, lineFromStorage));
-    futures.add(handleSubObjOperation(COST, updatedLineJson, lineFromStorage));
-    futures.add(handleSubObjOperation(DETAILS, updatedLineJson, lineFromStorage));
-    futures.add(handleSubObjOperation(ERESOURCE, updatedLineJson, lineFromStorage));
-    futures.add(handleSubObjOperation(PHYSICAL, updatedLineJson, lineFromStorage));
-    futures.add(handleSubObjOperation(SOURCE, updatedLineJson, lineFromStorage));
-    futures.add(handleSubObjOperation(VENDOR_DETAIL, updatedLineJson, lineFromStorage));
-    futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage));
-    futures.add(handleSubObjsOperation(CLAIMS, updatedLineJson, lineFromStorage));
-    futures.add(handleSubObjsOperation(FUND_DISTRIBUTION, updatedLineJson, lineFromStorage));
-    futures.add(handleSubObjsOperation(LOCATIONS, updatedLineJson, lineFromStorage));
-    futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage));
+//    futures.add(handleSubObjOperation(ADJUSTMENT, updatedLineJson, lineFromStorage));
+//    futures.add(handleSubObjOperation(COST, updatedLineJson, lineFromStorage));
+//    futures.add(handleSubObjOperation(DETAILS, updatedLineJson, lineFromStorage));
+//    futures.add(handleSubObjOperation(ERESOURCE, updatedLineJson, lineFromStorage));
+//    futures.add(handleSubObjOperation(PHYSICAL, updatedLineJson, lineFromStorage));
+//    futures.add(handleSubObjOperation(SOURCE, updatedLineJson, lineFromStorage));
+//    futures.add(handleSubObjOperation(VENDOR_DETAIL, updatedLineJson, lineFromStorage));
+//    futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage));
+//    futures.add(handleSubObjsOperation(CLAIMS, updatedLineJson, lineFromStorage));
+//    futures.add(handleSubObjsOperation(FUND_DISTRIBUTION, updatedLineJson, lineFromStorage));
+//    futures.add(handleSubObjsOperation(LOCATIONS, updatedLineJson, lineFromStorage));
+//    futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage));
 
     // Once all operations completed, return updated PO Line with new sub-object id's as json object
     return allOf(futures.toArray(new CompletableFuture[0]))
@@ -361,9 +361,9 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       updatedLine.remove(prop);
       for (int i = 0; i < jsonObjects.size(); i++) {
         JsonObject subObj = jsonObjects.getJsonObject(i);
-        if (subObj != null) {
-          // In case there is existing id in the sub-object, the content will be replaced
-          String id = idsInStorage.remove(subObj.getString(ID)) ? subObj.getString(ID) : null;
+       // String id = null;
+        if (subObj != null  && subObj.getString(ID)!=null) {
+        	 String id = idsInStorage.remove(subObj.getString(ID)) ? subObj.getString(ID) : null;
 
           futures.add(handleSubObjOperation(prop, subObj, id)
             .exceptionally(throwable -> {

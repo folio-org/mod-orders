@@ -47,18 +47,18 @@ public class PostOrderLineHelper extends AbstractHelper {
     JsonObject line = JsonObject.mapFrom(compPOL);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
 
-    subObjFuts.add(createAdjustment(compPOL, line));
-    subObjFuts.add(createCost(compPOL, line));
-    subObjFuts.add(createDetails(compPOL, line));
-    subObjFuts.add(createEresource(compPOL, line));
-    subObjFuts.add(createPhysical(compPOL, line));
-    subObjFuts.add(createVendorDetail(compPOL, line));
+//    subObjFuts.add(createAdjustment(compPOL, line));
+//    subObjFuts.add(createCost(compPOL, line));
+//    subObjFuts.add(createDetails(compPOL, line));
+//    subObjFuts.add(createEresource(compPOL, line));
+//    subObjFuts.add(createPhysical(compPOL, line));
+//    subObjFuts.add(createVendorDetail(compPOL, line));
     subObjFuts.add(createAlerts(compPOL, line));
-    subObjFuts.add(createClaims(compPOL, line));
-    subObjFuts.add(createSource(compPOL, line));
-    subObjFuts.add(createLocations(compPOL, line));
+//    subObjFuts.add(createClaims(compPOL, line));
+//    subObjFuts.add(createSource(compPOL, line));
+//    subObjFuts.add(createLocations(compPOL, line));
     subObjFuts.add(createReportingCodes(compPOL, line));
-    subObjFuts.add(createFundDistribution(compPOL, line));
+//    subObjFuts.add(createFundDistribution(compPOL, line));
 
     return CompletableFuture.allOf(subObjFuts.toArray(new CompletableFuture[0]))
       .thenCompose(v -> handleGetRequest(getPoLineNumberEndpoint(compPOL.getPurchaseOrderId()), httpClient, ctx, okapiHeaders, logger)
