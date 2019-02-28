@@ -4,7 +4,6 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.GET_ALL_POLINES_QUERY_WITH_LIMIT;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
-import static org.folio.orders.utils.HelperUtils.convertErrorCodesToErrors;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.loadConfiguration;
@@ -24,6 +23,7 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -96,9 +96,9 @@ public class OrdersImpl implements Orders {
   public void postOrdersCompositeOrders(String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     // First validate content of the PO and proceed only if all is okay
-    List<ErrorCodes> errorCodes = validateOrder(compPO);
-    if (!errorCodes.isEmpty()) {
-      PostOrdersCompositeOrdersResponse response = PostOrdersCompositeOrdersResponse.respond422WithApplicationJson(convertErrorCodesToErrors(errorCodes));
+    List<Error> errors = validateOrder(compPO);
+    if (!errors.isEmpty()) {
+      PostOrdersCompositeOrdersResponse response = PostOrdersCompositeOrdersResponse.respond422WithApplicationJson(new Errors().withErrors(errors));
       asyncResultHandler.handle(succeededFuture(response));
       return;
     }
@@ -135,12 +135,12 @@ public class OrdersImpl implements Orders {
                                            Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     // First validate content of the PO and proceed only if all is okay
-    List<ErrorCodes> errorCodes = new ArrayList<>(validateOrder(compPO));
+    List<Error> errors = new ArrayList<>(validateOrder(compPO));
     if (StringUtils.isEmpty(compPO.getPoNumber())) {
-      errorCodes.add(ErrorCodes.PO_NUMBER_REQUIRED);
+      errors.add(ErrorCodes.PO_NUMBER_REQUIRED.toError());
     }
-    if (!errorCodes.isEmpty()) {
-      PutOrdersCompositeOrdersByIdResponse response = PutOrdersCompositeOrdersByIdResponse.respond422WithApplicationJson(convertErrorCodesToErrors(errorCodes));
+    if (!errors.isEmpty()) {
+      PutOrdersCompositeOrdersByIdResponse response = PutOrdersCompositeOrdersByIdResponse.respond422WithApplicationJson(new Errors().withErrors(errors));
       asyncResultHandler.handle(succeededFuture(response));
       return;
     }
@@ -171,13 +171,13 @@ public class OrdersImpl implements Orders {
                                    Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     // First validate content of the PO Line and proceed only if all is okay
-    List<ErrorCodes> errorCodes = new ArrayList<>();
+    List<Error> errors = new ArrayList<>();
     if (poLine.getPurchaseOrderId() == null) {
-      errorCodes.add(ErrorCodes.MISSING_ORDER_ID_IN_POL);
+      errors.add(ErrorCodes.MISSING_ORDER_ID_IN_POL.toError());
     }
-    errorCodes.addAll(validatePoLine(poLine));
-    if (!errorCodes.isEmpty()) {
-      PostOrdersOrderLinesResponse response = PostOrdersOrderLinesResponse.respond422WithApplicationJson(convertErrorCodesToErrors(errorCodes));
+    errors.addAll(validatePoLine(poLine));
+    if (!errors.isEmpty()) {
+      PostOrdersOrderLinesResponse response = PostOrdersOrderLinesResponse.respond422WithApplicationJson(new Errors().withErrors(errors));
       asyncResultHandler.handle(succeededFuture(response));
       return;
     }
@@ -274,12 +274,12 @@ public class OrdersImpl implements Orders {
     }
 
     // First validate content of the PO Line and proceed only if all is okay
-    List<ErrorCodes> errorCodes = new ArrayList<>(validatePoLine(poLine));
+    List<Error> errors = new ArrayList<>(validatePoLine(poLine));
     if (!lineId.equals(poLine.getId())) {
-      errorCodes.add(ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE);
+      errors.add(ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE.toError());
     }
-    if (!errorCodes.isEmpty()) {
-      PutOrdersOrderLinesByIdResponse response = PutOrdersOrderLinesByIdResponse.respond422WithApplicationJson(convertErrorCodesToErrors(errorCodes));
+    if (!errors.isEmpty()) {
+      PutOrdersOrderLinesByIdResponse response = PutOrdersOrderLinesByIdResponse.respond422WithApplicationJson(new Errors().withErrors(errors));
       asyncResultHandler.handle(succeededFuture(response));
       return;
     }
@@ -302,8 +302,9 @@ public class OrdersImpl implements Orders {
   @Validate
   public void postOrdersReceive(String lang, ReceivingCollection entity, Map<String, String> okapiHeaders,
                                 Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    // Return 501 (Not Implemented) for now
-    asyncResultHandler.handle(succeededFuture(Response.status(501).build()));
+    logger.info("Receiving {} items", entity.getTotalRecords());
+    new ReceivingHelper(entity, okapiHeaders, asyncResultHandler, vertxContext, lang)
+      .receiveItems(entity);
   }
 
   @Override

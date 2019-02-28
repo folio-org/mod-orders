@@ -66,6 +66,21 @@ Upon receiving a request to delete a PO Line, it does the following:
 * Validate that PO id of the PO Line corresponds to order id in the path; then
 * Delete PO Line and its sub-objects
 
+### Receiving logic 
+Upon receiving a request to receive resources, it does the following:
+* Retrieve piece records from the orders storage based on the [request body](https://github.com/folio-org/acq-models/blob/master/mod-orders/schemas/receivingCollection.json).
+* For those pieces which have item id the process is like following:
+  * Retrieve items from inventory.
+  * Update item entities with barcode (if specified) and status
+  * Send PUT requests to inventory to update items. In case any errors happen while updating items, the logic just collects them and does not stop entire process
+* Update piece records with receiving information and send PUT requests to orders storage. If any errors happen, just collect them.  
+  The following is expected to be update in piece:
+  * `receivingStatus`: `Received`
+  * `locationId`: from the request
+  * `receivedDate`: current date
+* Retrieve all involved PO Lines from the storage and updates receipt status. If all pieces of an order line have been received, the receipt status is `Fully Received`. If more than one, but less than the total number of pieces have been received, it is `Partially Received`. If the calculated status is the same as current one, no update is made
+* Prepare [response](https://github.com/folio-org/acq-models/blob/master/mod-orders/schemas/receivingResults.json) to the client taking into account any error happened processing particular piece record.
+
 ### Issue tracker
 
 See project [MODORDERS](https://issues.folio.org/browse/MODORDERS)
