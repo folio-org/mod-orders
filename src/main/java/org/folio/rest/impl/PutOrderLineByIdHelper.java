@@ -164,6 +164,9 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    */
   public CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
     // Check if any item should be created
+    if (compPOL.getReceiptStatus() == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED) {
+      return completedFuture(null);
+    }
     int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
     if (expectedItemsQuantity == 0) {
     	// Create pieces if items does not exists
@@ -174,8 +177,6 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     }
 
     return inventoryHelper.handleInstanceRecord(compPOL)
-      .thenCompose(withInstId -> getPoLineById(compPOL.getId(), lang, httpClient, ctx, okapiHeaders, logger))
-      .thenCompose(jsonObj -> updateOrderLine(compPOL, jsonObj))
       .thenCompose(holdingsId -> inventoryHelper.handleItemRecords(compPOL))
       .thenCompose(piecesWithItemId -> createPieces(compPOL, piecesWithItemId));
   }
