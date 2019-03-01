@@ -2219,6 +2219,7 @@ public class OrdersImplTest {
     assertEquals(lineId, lineWithIds.remove(ID));
     assertEquals(orderId, lineWithIds.remove(PURCHASE_ORDER_ID));
     assertEquals(poLineNumber, lineWithIds.remove(PO_LINE_NUMBER));
+    assertEquals(org.folio.rest.acq.model.PoLine.ReceiptStatus.PENDING.value(), lineWithIds.remove("receipt_status"));
     lineWithIds.stream().forEach(entry -> {
       Object value = entry.getValue();
       // Required properties
