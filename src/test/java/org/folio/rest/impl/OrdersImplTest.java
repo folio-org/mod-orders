@@ -165,7 +165,6 @@ public class OrdersImplTest {
   private static final String ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   private static final String PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED = "0009662b-8b80-4001-b704-ca10971f175d";
   private static final String PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE = "c2755a78-2f8d-47d0-a218-059a9b7391b4";
-  private static final String PO_LINE_ID_WITH_FUND_DISTRIBUTION_404_CODE = "f7223ce8-9e92-4c28-8fd9-097596053b7c";
   private static final String ORDER_ID_WITHOUT_PO_LINES = "50fb922c-3fa9-494e-a972-f2801f1b9fd1";
   private static final String ORDER_ID_WITH_PO_LINES = "ab18897b-0e40-4f31-896b-9c9adc979a87";
   private static final String ORDER_WITHOUT_WORKFLOW_STATUS = "41d56e59-46db-4d5e-a1ad-a178228913e5";
@@ -1393,7 +1392,7 @@ public class OrdersImplTest {
           .as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
-    ctx.assertEquals(3, errors.getErrors().size());
+    ctx.assertEquals(2, errors.getErrors().size());
     ctx.assertNull(MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET));
     ctx.assertNull(MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET));
   }
@@ -1485,7 +1484,7 @@ public class OrdersImplTest {
     logger.info("=== Test Put Order By Id without PO lines doesn't delete lines from storage ===");
 
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
-    String id = ordersList.getJsonArray("composite_purchase_orders").getJsonObject(0).getString(ID);
+    String id = ordersList.getJsonArray("compositePurchaseOrders").getJsonObject(0).getString(ID);
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITHOUT_PO_LINES));
 
@@ -1986,42 +1985,6 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPutOrderLineByIdWithOneIncorrectFundDistroSubObject() {
-    logger.info("=== Test PUT Order Line By Id - Line refers to not existing fund_distribution ===");
-
-    String lineId = PO_LINE_ID_WITH_FUND_DISTRIBUTION_404_CODE;
-    JsonObject body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId);
-
-    String url = String.format(LINE_BY_ID_PATH, lineId);
-
-    final Response resp = verifyPut(url, body.encodePrettily(), APPLICATION_JSON, 500);
-    assertEquals(2, resp.as(Errors.class).getErrors().size());
-
-    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(1, column.size());
-    assertThat(column, hasKey(PO_LINES));
-
-    column = MockServer.serverRqRs.column(HttpMethod.POST);
-    assertTrue(column.isEmpty());
-
-    column = MockServer.serverRqRs.column(HttpMethod.DELETE);
-    assertEquals(1, column.size());
-    assertThat(column, hasKey(FUND_DISTRIBUTION));
-
-    column = MockServer.serverRqRs.column(HttpMethod.PUT);
-    assertEquals(13, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, ALERTS, CLAIMS, COST, DETAILS, ERESOURCE, FUND_DISTRIBUTION, LOCATIONS, PHYSICAL, REPORTING_CODES, SOURCE, VENDOR_DETAIL, PO_LINES));
-
-    List<JsonObject> jsonObjects = column.get(PO_LINES);
-    assertThat(jsonObjects, hasSize(1));
-    JsonObject entry = jsonObjects.get(0);
-
-    // Verify that reference failed to be deleted still presented
-    assertTrue(entry.containsKey(FUND_DISTRIBUTION));
-    assertEquals(2, entry.getJsonArray(FUND_DISTRIBUTION).size());
-  }
-
-  @Test
   public void testPutOrderLineByIdWithoutOkapiUrlHeader() throws IOException {
     logger.info("=== Test PUT Order Line By Id - 500 due to missing Okapi URL header ===");
 
@@ -2307,7 +2270,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
-        .param(QUERY_PARAM_NAME, "purchase_order_id==" + ORDER_ID_WITH_PO_LINES)
+        .param(QUERY_PARAM_NAME, "purchaseOrderId==" + ORDER_ID_WITH_PO_LINES)
       .get(LINES_PATH)
         .then()
           .statusCode(200)
@@ -2758,8 +2721,8 @@ public class OrdersImplTest {
         }
         else {
           receivingHistory = new JsonObject();
-          receivingHistory.put("receiving_history", new JsonArray());
-          receivingHistory.put("total_records", 0);
+          receivingHistory.put("receivingHistory", new JsonArray());
+          receivingHistory.put("totalRecords", 0);
         }
         addServerRqRsData(HttpMethod.GET, RECEIVING_HISTORY, receivingHistory);
         serverResponse(ctx, 200, APPLICATION_JSON, receivingHistory.encodePrettily());

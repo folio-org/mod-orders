@@ -294,11 +294,11 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 //    futures.add(handleSubObjOperation(PHYSICAL, updatedLineJson, lineFromStorage));
 //    futures.add(handleSubObjOperation(SOURCE, updatedLineJson, lineFromStorage));
 //    futures.add(handleSubObjOperation(VENDOR_DETAIL, updatedLineJson, lineFromStorage));
-//    futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage));
+    futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage));
 //    futures.add(handleSubObjsOperation(CLAIMS, updatedLineJson, lineFromStorage));
 //    futures.add(handleSubObjsOperation(FUND_DISTRIBUTION, updatedLineJson, lineFromStorage));
 //    futures.add(handleSubObjsOperation(LOCATIONS, updatedLineJson, lineFromStorage));
-//    futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage));
+    futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage));
 
     // Once all operations completed, return updated PO Line with new sub-object id's as json object
     return allOf(futures.toArray(new CompletableFuture[0]))
@@ -442,7 +442,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    * @param line PO line retrieved from storage
    */
   private void validateOrderId(String orderId, JsonObject line) {
-    if (!StringUtils.equals(orderId, line.getString("purchase_order_id"))) {
+    if (!StringUtils.equals(orderId, line.getString("purchaseOrderId"))) {
       throw new HttpException(422, ErrorCodes.INCORRECT_ORDER_ID_IN_POL);
     }
   }

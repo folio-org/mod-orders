@@ -207,17 +207,17 @@ public class HelperUtils {
     }
 
     List<CompletableFuture<Void>> futures = new ArrayList<>();
-    futures.add(operateOnSubObjIfPresent(operation, line, ADJUSTMENT, httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, COST, httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, DETAILS, httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, ERESOURCE, httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, PHYSICAL, httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, SOURCE, httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, VENDOR_DETAIL, httpClient, ctx, okapiHeaders, logger));
+//    futures.add(operateOnSubObjIfPresent(operation, line, ADJUSTMENT, httpClient, ctx, okapiHeaders, logger));
+//    futures.add(operateOnSubObjIfPresent(operation, line, COST, httpClient, ctx, okapiHeaders, logger));
+//    futures.add(operateOnSubObjIfPresent(operation, line, DETAILS, httpClient, ctx, okapiHeaders, logger));
+//    futures.add(operateOnSubObjIfPresent(operation, line, ERESOURCE, httpClient, ctx, okapiHeaders, logger));
+//    futures.add(operateOnSubObjIfPresent(operation, line, PHYSICAL, httpClient, ctx, okapiHeaders, logger));
+//    futures.add(operateOnSubObjIfPresent(operation, line, SOURCE, httpClient, ctx, okapiHeaders, logger));
+//    futures.add(operateOnSubObjIfPresent(operation, line, VENDOR_DETAIL, httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, ALERTS, httpClient, ctx, okapiHeaders, logger));
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, CLAIMS, httpClient, ctx, okapiHeaders, logger));
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, FUND_DISTRIBUTION, httpClient, ctx, okapiHeaders, logger));
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, LOCATIONS, httpClient, ctx, okapiHeaders, logger));
+//    futures.addAll(operateOnSubObjsIfPresent(operation, line, CLAIMS, httpClient, ctx, okapiHeaders, logger));
+//    futures.addAll(operateOnSubObjsIfPresent(operation, line, FUND_DISTRIBUTION, httpClient, ctx, okapiHeaders, logger));
+//    futures.addAll(operateOnSubObjsIfPresent(operation, line, LOCATIONS, httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, REPORTING_CODES, httpClient, ctx, okapiHeaders, logger));
 
     CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
