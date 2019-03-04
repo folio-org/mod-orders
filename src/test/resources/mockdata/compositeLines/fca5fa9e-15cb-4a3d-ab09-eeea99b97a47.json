@@ -60,7 +60,10 @@
     "expectedActivation": null,
     "userLimit": 0,
     "accessProvider": null,
-    "license": "07c5d8be-cabe-11e8-a8d5-f2801f1b9fd1"
+    "license": {
+      "code": "Code 1",
+      "description": "License Agreement 1"
+    }
   },
   "fundDistribution": [
     {
@@ -95,9 +98,21 @@
   "receiptDate": null,
   "receiptStatus": "Awaiting Receipt",
   "reportingCodes": [
-    "cb934e2a-8e0b-4721-b89a-f4e59a013d8e",
-    "ff84a8b9-e004-434d-b64d-d907383e79f5",
-    "6b218686-bcdc-43a4-b72b-198896cd74e0"
+    {
+      "code": "CODE1",
+      "id": "5926dcd7-85f5-4504-8283-712595ebc38b",
+      "description": "ABCDEF"
+    },
+    {
+      "code": "CODE2",
+      "id": "fa316c04-8101-4e72-8aaf-01281bac718f",
+      "description": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    },
+    {
+      "code": "CODE3",
+      "id": "ea68b696-3125-4940-bf91-1d128323473e",
+      "description": "ABCDE"
+    }
   ],
   "requester": "",
   "rush": false,

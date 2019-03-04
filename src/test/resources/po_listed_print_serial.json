@@ -45,7 +45,7 @@
         "invoiceId": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
         "overhead": 0.0,
         "shipment": 0.0,
-        "tax11": 0.0,
+        "tax1": 0.0,
         "tax2": 0.0,
         "useProRate": false
       },

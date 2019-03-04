@@ -1,132 +1,113 @@
 {
   "id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
-  "acquisition_method": "Purchase",
+  "acquisitionMethod": "Purchase",
   "adjustment": {
-    "id": "d5795705-6f8e-48bb-bd3a-bfbfb22e8654",
     "credit": 0.0,
     "discount": 0.0,
     "insurance": 0.0,
-    "invoice_id": "ed68f36c-aeee-44d2-a215-e2f21cb38476",
+    "invoiceId": "ed68f36c-aeee-44d2-a215-e2f21cb38476",
     "overhead": 0.0,
     "shipment": 0.0,
-    "tax_1": 0.0,
-    "tax_2": 0.0,
-    "use_pro_rate": false,
-    "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+    "tax1": 0.0,
+    "tax2": 0.0,
+    "useProRate": false
   },
   "alerts": [],
-  "cancellation_restriction": false,
-  "cancellation_restriction_note": "",
+  "cancellationRestriction": false,
+  "cancellationRestrictionNote": "",
   "claims": [
     {
-      "id": "2db3c11a-e5ed-4912-a8f9-88b2da9f01ab",
       "claimed": false,
-      "grace": 0,
-      "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+      "grace": 0
     }
   ],
   "collection": false,
   "contributors": [
     {
       "contributor": "Ed Mashburn",
-      "contributor_type": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+      "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
     }
   ],
   "cost": {
-    "id": "d25498e7-3ae6-45fe-9612-ec99e2700d2f",
-    "list_price": 75.22,
+    "listPrice": 75.22,
     "currency": "USD",
-    "quantity_physical": 0,
-    "quantity_electronic": 1,
-    "po_line_estimated_price": 75.22,
-    "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+    "quantityPhysical": 0,
+    "quantityElectronic": 1,
+    "poLineEstimatedPrice": 75.22
   },
   "description": "",
   "details": {
-    "id": "168f8a86-d26c-406e-813f-c7527f241ac3",
-    "receiving_note": "",
-    "product_ids": [
+    "receivingNote": "",
+    "productIds": [
       {
-        "product_id": "9781118416068",
-        "product_id_type": "ISBN"
+        "productId": "9781118416068",
+        "productIdType": "ISBN"
       }
     ],
-    "material_types": [
+    "materialTypes": [
       "fde2e958-cde3-11e8-a8d5-f2801f1b9fd1"
     ],
-    "subscription_from": null,
-    "subscription_interval": 0,
-    "subscription_to": null,
-    "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+    "subscriptionFrom": null,
+    "subscriptionInterval": 0,
+    "subscriptionTo": null
   },
   "donor": "",
   "eresource": {
-    "id": "974e2bf3-b872-410d-9cde-871a4deb49cc",
     "activated": true,
     "activation_due": 0,
-    "create_inventory": false,
+    "createInventory": false,
     "trial": false,
-    "expected_activation": "2014-07-06T00:00:00.000Z",
-    "user_limit": 1,
-    "access_provider": "7e1841d9-c0a4-4ae0-8521-b7e08fdcbc8a",
-    "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
+    "expectedActivation": "2014-07-06T00:00:00.000Z",
+    "userLimit": 1,
+    "accessProvider": "7e1841d9-c0a4-4ae0-8521-b7e08fdcbc8a",
     "license": "b0ef584b-a960-4c4e-83b1-2ca048cb4ebb"
   },
-  "fund_distribution": [
+  "fundDistribution": [
     {
-      "id": "fde2d472-cde3-11e8-a8d5-f2801f1b9fd1",
       "code": "MISCHIST-FY19",
       "percentage": 100.0,
-      "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08015",
-      "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+      "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08015"
     }
   ],
   "locations": [
     {
-      "id": "96a07b68-3cb5-4452-b957-f55479005e69",
-      "location_id": "df86a175-cafe-4c4a-b968-41d955c5cda8",
-      "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
+      "locationId": "df86a175-cafe-4c4a-b968-41d955c5cda8",
       "quantity": 1,
-      "quantity_electronic": 1,
-      "quantity_physical": 0
+      "quantityElectronic": 1,
+      "quantityPhysical": 0
     }
   ],
-  "order_format": "Electronic Resource",
+  "orderFormat": "Electronic Resource",
   "owner": "LTS E-Resources & Serials",
-  "payment_status": "Awaiting Payment",
+  "paymentStatus": "Awaiting Payment",
   "physical": {
-    "id": "50fb81ec-cdf1-11e8-a8d5-f2801f1b9fd1",
-    "material_supplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
-    "receipt_due": null,
-    "volumes": [],
-    "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+    "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+    "receiptDue": null,
+    "volumes": []
   },
-  "po_line_description": "",
-  "po_line_number": "268758-03",
-  "publication_date": "2017",
+  "poLineDescription": "",
+  "poLineNumber": "268758-03",
+  "publicationDate": "2017",
   "publisher": "John Wiley & Sons, Inc.",
-  "purchase_order_id": "3419ed01-a339-4448-9539-9815f231d405",
-  "receipt_date": null,
-  "receipt_status": "Fully Received",
-  "reporting_codes": [],
+  "purchaseOrderId": "3419ed01-a339-4448-9539-9815f231d405",
+  "receiptDate": null,
+  "receiptStatus": "Fully Received",
+  "reportingCodes": [],
   "requester": "",
   "rush": false,
   "selector": "Woods",
   "source": {
-    "id": "ecb05974-8cc8-481d-a3ce-f20af51110c1",
     "code": "FOLIO",
     "description": "Manually entered"
   },
   "tags": [""],
   "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
-  "vendor_detail": {
-    "id": "50fb922c-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "vendorDetail": {
     "instructions": "",
     "note_from_vendor": "",
     "ref_number": "999632785",
     "ref_number_type": "Supplier's unique order line reference number",
-    "vendor_account": "12345-50",
-    "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+    "vendor_account": "12345-50"
   },
   "metadata": {
     "createdDate": "2018-06-29T00:00:00.000",

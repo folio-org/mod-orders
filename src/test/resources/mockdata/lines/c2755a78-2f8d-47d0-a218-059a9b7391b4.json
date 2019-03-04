@@ -1,7 +1,17 @@
 {
   "id" : "c2755a78-2f8d-47d0-a218-059a9b7391b4",
   "acquisitionMethod" : "Purchase At Vendor System",
-  "adjustment" : "2978bf2a-a15f-41af-9bea-98cf996629b2",
+  "adjustment": {
+    "credit": 0.0,
+    "discount": 0.0,
+    "insurance": 0.0,
+    "invoiceId": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
+    "overhead": 0.0,
+    "shipment": 0.0,
+    "tax1": 0.0,
+    "tax2": 0.0,
+    "useProRate": false
+  },
   "alerts" : [ ],
   "cancellationRestriction" : false,
   "cancellationRestrictionNote" : "ABCDEFGHIJKLMNOPQRSTUVW",
@@ -11,17 +21,69 @@
     "contributor" : "Ed Mashburn",
     "contributorType" : "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
   } ],
-  "cost" : "d25498e7-3ae6-45fe-9612-ec99e2700d2f",
+  "cost": {
+    "listPrice": 24.99,
+    "currency": "USD",
+    "quantityPhysical": 6,
+    "quantityElectronic": 1,
+    "poLineEstimatedPrice": 174.93
+  },
   "description" : "ABCDEFGH",
-  "details" : "168f8a86-d26c-406e-813f-c7527f241ac3",
+  "details": {
+    "receivingNote": "ABCDEFGHIJKL",
+    "productIds": [
+      {
+        "productId": "9780764354113",
+        "productIdType": "ISBN"
+      }
+    ],
+    "materialTypes": [
+      "f7e72403-2a13-43a4-a069-aaabe6c9dea8"
+    ],
+    "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+    "subscriptionInterval": 824,
+    "subscriptionTo": "2020-10-09T00:00:00.000Z"
+  },
   "donor" : "ABCDEFGHIJKLM",
-  "eresource" : "88662ff3-632e-4ee3-80fa-05a41c9ba306",
+  "eresource": {
+    "activated": false,
+    "activationDue": 10,
+    "createInventory": true,
+    "trial": false,
+    "expectedActivation": "2018-10-09T00:00:00.000Z",
+    "userLimit": 10,
+    "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
+    "license": {
+      "code": "Code 1",
+      "description": "License Agreement 1"
+    }
+  },
   "fundDistribution" : [ ],
-  "locations" : ["3ae6dfc3-bf0e-4bd1-90e6-22429eba278a"],
+  "locations": [
+    {
+      "locationId": "b241764c-1466-4e1d-a028-1a3684a5da87",
+      "quantity": 5,
+      "quantityElectronic": 1,
+      "quantityPhysical": 4
+    },
+    {
+      "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "quantity": 2,
+      "quantityElectronic": 0,
+      "quantityPhysical": 2
+    }
+  ],
   "orderFormat" : "Physical Resource",
   "owner" : "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
   "paymentStatus" : "Awaiting Payment",
-  "physical" : "aa7ef327-14b2-4773-aaf9-ffba7cb7748a",
+  "physical": {
+    "volumes": [
+      "vol. 1"
+    ],
+    "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+    "expectedReceiptDate": "2018-10-05T00:00:00.000Z",
+    "receiptDue": "2018-10-10T00:00:00.000Z"
+  },
   "poLineDescription" : "ABCDEFGHIJKLMNOPQRSTUVWXY",
   "poLineNumber" : "1EFC97C6B7-1",
   "publicationDate" : "2017",
@@ -33,10 +95,19 @@
   "requester" : "Leo Bulero",
   "rush" : true,
   "selector" : "ABCD",
-  "source": "ecb05974-8cc8-481d-a3ce-f20af51110c1",
+  "source": {
+    "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
+    "description": "ABCDEFGHIJKLMNO"
+  },
   "tags" : [ "ABCDEFGHIJKLMNOPQRSTU", "ABCDEFG", "ABCDEFGHIJKLMNOPQRSTU", "ABCDEFGHIJKLMNO" ],
   "title" : "Kayak Fishing in the Northern Gulf Coast",
-  "vendorDetail" : "a53d30b7-0f3f-446b-aee7-8d4134cd54a3",
+  "vendorDetail": {
+    "instructions": "ABCDEFG",
+    "noteFromVendor": "ABCDEFGHIKJKLMNOP",
+    "refNumber": "123456-78",
+    "refNumberType": "Supplier's unique order line reference number",
+    "vendorAccount": "8910-10"
+  },
   "metadata": {
     "createdDate": "2018-06-29T00:00:00.000",
     "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"

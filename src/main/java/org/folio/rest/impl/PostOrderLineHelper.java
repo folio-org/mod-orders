@@ -326,23 +326,23 @@ public class PostOrderLineHelper extends AbstractHelper {
     return future;
   }
 
-  private CompletableFuture<Void> createFundDistribution(CompositePoLine compPOL, JsonObject line) {
-    List<CompletableFuture<String>> futures = new ArrayList<>();
-
-    List<FundDistribution> fundDistribution = compPOL.getFundDistribution();
-    if (null != fundDistribution)
-      fundDistribution
-        .forEach(fundObject ->
-          futures.add(createSubObjIfPresent(line, fundObject, FUND_DISTRIBUTION, resourcesPath(FUND_DISTRIBUTION)))
-        );
-
-    return collectResultsOnSuccess(futures)
-      .thenAccept(fundDistributionIds -> line.put(FUND_DISTRIBUTION, fundDistributionIds))
-      .exceptionally(t -> {
-        logger.error("failed to create FundDistribution", t);
-        throw new CompletionException(t.getCause());
-      });
-  }
+//  private CompletableFuture<Void> createFundDistribution(CompositePoLine compPOL, JsonObject line) {
+//    List<CompletableFuture<String>> futures = new ArrayList<>();
+//
+//    List<FundDistribution> fundDistribution = compPOL.getFundDistribution();
+//    if (null != fundDistribution)
+//      fundDistribution
+//        .forEach(fundObject ->
+//          futures.add(createSubObjIfPresent(line, fundObject, FUND_DISTRIBUTION, resourcesPath(FUND_DISTRIBUTION)))
+//        );
+//
+//    return collectResultsOnSuccess(futures)
+//      .thenAccept(fundDistributionIds -> line.put(FUND_DISTRIBUTION, fundDistributionIds))
+//      .exceptionally(t -> {
+//        logger.error("failed to create FundDistribution", t);
+//        throw new CompletionException(t.getCause());
+//      });
+//  }
 
 
   @Override
