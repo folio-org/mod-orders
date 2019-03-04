@@ -13,20 +13,10 @@ import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
-import static org.folio.orders.utils.ResourcePathResolver.ADJUSTMENT;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.CLAIMS;
-import static org.folio.orders.utils.ResourcePathResolver.COST;
-import static org.folio.orders.utils.ResourcePathResolver.DETAILS;
-import static org.folio.orders.utils.ResourcePathResolver.ERESOURCE;
-import static org.folio.orders.utils.ResourcePathResolver.FUND_DISTRIBUTION;
-import static org.folio.orders.utils.ResourcePathResolver.LOCATIONS;
-import static org.folio.orders.utils.ResourcePathResolver.PHYSICAL;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
-import static org.folio.orders.utils.ResourcePathResolver.SOURCE;
-import static org.folio.orders.utils.ResourcePathResolver.VENDOR_DETAIL;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -304,17 +294,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     logger.debug("Updating PO line sub-objects...");
 
     List<CompletableFuture<Void>> futures = new ArrayList<>();
-//    futures.add(handleSubObjOperation(ADJUSTMENT, updatedLineJson, lineFromStorage));
-//    futures.add(handleSubObjOperation(COST, updatedLineJson, lineFromStorage));
-//    futures.add(handleSubObjOperation(DETAILS, updatedLineJson, lineFromStorage));
-//    futures.add(handleSubObjOperation(ERESOURCE, updatedLineJson, lineFromStorage));
-//    futures.add(handleSubObjOperation(PHYSICAL, updatedLineJson, lineFromStorage));
-//    futures.add(handleSubObjOperation(SOURCE, updatedLineJson, lineFromStorage));
-//    futures.add(handleSubObjOperation(VENDOR_DETAIL, updatedLineJson, lineFromStorage));
+    
     futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage));
-//    futures.add(handleSubObjsOperation(CLAIMS, updatedLineJson, lineFromStorage));
-//    futures.add(handleSubObjsOperation(FUND_DISTRIBUTION, updatedLineJson, lineFromStorage));
-//    futures.add(handleSubObjsOperation(LOCATIONS, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage));
 
     // Once all operations completed, return updated PO Line with new sub-object id's as json object
@@ -322,21 +303,21 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenApply(v -> updatedLineJson);
   }
 
-  private CompletableFuture<Void> handleSubObjOperation(String prop, JsonObject updatedLine, JsonObject lineFromStorage) {
-    String objId = lineFromStorage.getString(prop);
-    JsonObject jsonObject = updatedLine.getJsonObject(prop);
-
-    // Remove sub-object which will be replaced by id
-    updatedLine.remove(prop);
-
-    return handleSubObjOperation(prop, jsonObject, objId)
-      .thenAccept(id -> {
-        if (id != null) {
-          updatedLine.put(prop, id);
-        }
-      })
-      .exceptionally(throwable -> addProcessingError(throwable, prop, objId));
-  }
+//  private CompletableFuture<Void> handleSubObjOperation(String prop, JsonObject updatedLine, JsonObject lineFromStorage) {
+//    String objId = lineFromStorage.getString(prop);
+//    JsonObject jsonObject = updatedLine.getJsonObject(prop);
+//
+//    // Remove sub-object which will be replaced by id
+//    updatedLine.remove(prop);
+//
+//    return handleSubObjOperation(prop, jsonObject, objId)
+//      .thenAccept(id -> {
+//        if (id != null) {
+//          updatedLine.put(prop, id);
+//        }
+//      })
+//      .exceptionally(throwable -> addProcessingError(throwable, prop, objId));
+//  }
 
   private CompletableFuture<String> handleSubObjOperation(String prop, JsonObject subObjContent, String storageId) {
     final String url;
@@ -359,7 +340,6 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
           return storageId;
         } else if (operation == HttpMethod.POST) {
         	if(json.getString(ID)!=null) {
-	        	logger.debug("-------check if ID exists for subObj-------");
 	          return json.getString(ID);
         	}
         }
@@ -378,9 +358,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       updatedLine.remove(prop);
       for (int i = 0; i < jsonObjects.size(); i++) {
         JsonObject subObj = jsonObjects.getJsonObject(i);
-       // String id = null;
         if (subObj != null  && subObj.getString(ID)!=null) {
-        	 String id = idsInStorage.remove(subObj.getString(ID)) ? subObj.getString(ID) : null;
+          String id = idsInStorage.remove(subObj.getString(ID)) ? subObj.getString(ID) : null;
 
           futures.add(handleSubObjOperation(prop, subObj, id)
             .exceptionally(throwable -> {

@@ -131,7 +131,6 @@ public class PostOrderLineHelper extends AbstractHelper {
     return completedFuture(null);
   }
 
-
   private CompletableFuture<String> createSubObj(JsonObject pol, JsonObject obj, String field, String url) {
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
     try {

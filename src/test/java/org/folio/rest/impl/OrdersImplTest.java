@@ -538,8 +538,8 @@ public class OrdersImplTest {
 
     List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
     List<JsonObject> createdItems = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.POST);
-    int piecesSize = createdPieces!=null ? createdPieces.size() : 0;
-    int itemSize = createdItems!=null ? createdItems.size() : 0;
+    int piecesSize = createdPieces != null ? createdPieces.size() : 0;
+    int itemSize = createdItems != null ? createdItems.size() : 0;
     logger.debug("------------------- piecesSize, itemSize --------------------\n" + piecesSize + " " + itemSize);
     // Verify total number of pieces created should be equal to total quantity
     assertEquals(calculateTotalQuantity(compositePoLine), createdPieces.size());
@@ -2066,52 +2066,6 @@ public class OrdersImplTest {
     assertTrue(column.isEmpty());
   }
 
-//  @Test
-//  public void testPutOrderLineById500FromStorageOnSubObjectDeletion() throws IOException {
-//    logger.info("=== Test PUT Order Line By Id - 500 From Storage On Sub-Object deletion ===");
-//
-//    //String lineId = PO_LINE_ID_WITH_SUB_OBJECT_OPERATION_500_CODE; //168f8a86-d26c-406e-813f-c7527f241ac3
-//    String lineId = ID_FOR_INTERNAL_SERVER_ERROR;
-////    org.folio.rest.acq.model.PoLine line = getMockLine(lineId);
-////    String orderId = line.getPurchaseOrderId(); //3419ed01-a339-4448-9539-9815f231d405
-////    String poLineNumber = line.getPoLineNumber();//1EFC97C6B7-1
-//
-//    String url = String.format(LINE_BY_ID_PATH, lineId);
-//    String body = getPoLineWithMinContentAndIds(lineId, "3419ed01-a339-4448-9539-9815f231d405");
-//    Response actual = verifyPut(url, body, APPLICATION_JSON, 500);
-//
-//    assertEquals(1, actual.as(Errors.class).getErrors().size());
-//
-//    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-//    assertEquals(1, column.size());
-//    assertThat(column, hasKey(PO_LINES));
-//
-//    column = MockServer.serverRqRs.column(HttpMethod.POST);
-//    assertTrue(column.isEmpty());
-//
-////    column = MockServer.serverRqRs.column(HttpMethod.DELETE);
-////    assertThat(column.keySet(), containsInAnyOrder(ADJUSTMENT, COST, DETAILS, ERESOURCE, LOCATIONS, PHYSICAL, VENDOR_DETAIL));
-//
-//    column = MockServer.serverRqRs.column(HttpMethod.PUT);
-//    assertThat(column.keySet(), containsInAnyOrder(PO_LINES, SOURCE));
-//
-//    JsonObject lineWithIds = column.get(PO_LINES).get(0);
-//
-//    // Verify that object has only PO and PO line ids
-//    assertEquals(lineId, lineWithIds.remove(ID));
-//    assertEquals("3419ed01-a339-4448-9539-9815f231d405", lineWithIds.remove(PURCHASE_ORDER_ID));
-//    assertEquals("1EFC97C6B7", lineWithIds.remove(PO_LINE_NUMBER));
-//    lineWithIds.stream().forEach(entry -> {
-//      Object value = entry.getValue();
-//      // Required properties
-//      if (REQUIRED_PO_LINE_PROPERTIES.contains(entry.getKey())) {
-//        assertThat(value, is(notNullValue()));
-//      } else {
-//        assertTrue(Objects.isNull(value) || (value instanceof Iterable && !((Iterable) value).iterator().hasNext()));
-//      }
-//    });
-//  }
-
   @Test
   public void testCreatePoLineWithGetPoLineNumberError() throws IOException {
     logger.info("=== Test Get PO Line Number (generate po_number) - fail ===");
@@ -2139,7 +2093,7 @@ public class OrdersImplTest {
   {
     JsonObject poNumber=new JsonObject();
     poNumber.put("poNumber", EXISTING_PO_NUMBER);
-    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, "", 400);
+    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 400);
   }
 
 
@@ -2256,17 +2210,17 @@ public class OrdersImplTest {
 
   @Test
   public void testGetPoNumber() {
-    logger.info("=== Test Get PO Number (generate po_number) ===");
+    logger.info("=== Test Get PO Number (generate poNumber) ===");
 
     final Response response = RestAssured
       .with()
-      .header(X_OKAPI_URL)
-      .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
+        .header(X_OKAPI_URL)
+        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
       .get("/orders/po-number")
-      .then()
-      .statusCode(200)
-      .extract()
-      .response();
+        .then()
+        .statusCode(200)
+        .extract()
+          .response();
 
     String actualResponse = response.getBody().asString();
     logger.info(actualResponse);
@@ -2280,17 +2234,17 @@ public class OrdersImplTest {
 
   @Test
   public void testGetPoNumberError() {
-    logger.info("=== Test Get PO Number (generate po_number) - fail ===");
+    logger.info("=== Test Get PO Number (generate poNumber) - fail ===");
 
     RestAssured
       .with()
       .header(X_OKAPI_URL)
       .header(PO_NUMBER_ERROR_X_OKAPI_TENANT)
       .get("/orders/po-number")
-      .then()
-      .statusCode(500)
-      .extract()
-      .response();
+        .then()
+          .statusCode(500)
+          .extract()
+            .response();
   }
 
   @Test
@@ -2768,9 +2722,9 @@ public class OrdersImplTest {
         String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
 
         try {
-          JsonObject po_lines;
+          JsonObject poLinesCollection;
           if (id.equals(ORDER_ID_WITH_PO_LINES)) {
-            po_lines = new JsonObject(getMockData(POLINES_COLLECTION));
+          	poLinesCollection = new JsonObject(getMockData(POLINES_COLLECTION));
           } else {
             String filePath;
             if (ID_FOR_PRINT_MONOGRAPH_ORDER.equals(id)) {
@@ -2781,12 +2735,12 @@ public class OrdersImplTest {
             JsonObject compPO = new JsonObject(getMockData(filePath));
             // Build PoLineCollection to make sure content is valid
             PoLineCollection poLines = buildPoLineCollection(tenant, compPO.getJsonArray(COMPOSITE_PO_LINES));
-            po_lines = JsonObject.mapFrom(poLines);
+            poLinesCollection = JsonObject.mapFrom(poLines);
           }
 
-          logger.info(po_lines.encodePrettily());
+          logger.info(poLinesCollection.encodePrettily());
 
-          serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encode());
+          serverResponse(ctx, 200, APPLICATION_JSON, poLinesCollection.encode());
         } catch (IOException e) {
           PoLineCollection poLineCollection = new PoLineCollection();
           poLineCollection.setTotalRecords(0);
@@ -2799,8 +2753,6 @@ public class OrdersImplTest {
       PoLineCollection result = new PoLineCollection();
       if (lines == null || lines.isEmpty()) {
         result.setTotalRecords(0);
-//        result.setFirst(0);
-//        result.setLast(0);
       } else {
         // Transform composite PO Lines to storage representation
         List<org.folio.rest.acq.model.PoLine> poLines = lines
@@ -2821,8 +2773,6 @@ public class OrdersImplTest {
         }
 
         result.setPoLines(poLines);
-//        result.setFirst(1);
-//        result.setLast(lines.size());
         if (EMPTY_CONFIG_TENANT.equals(tenant)) {
           result.setTotalRecords(Integer.parseInt(DEFAULT_POLINE_LIMIT));
         } else {
@@ -2967,29 +2917,29 @@ public class OrdersImplTest {
       serverRqRs.put(objName, method, entries);
     }
 
-    private void handleGetAdjustment(RoutingContext ctx) {
-      logger.info("got: " + ctx.request().path());
-      String id = ctx.request().getParam(ID);
-      logger.info("id: " + id);
-
-      addServerRqRsData(HttpMethod.GET, ADJUSTMENT, new JsonObject().put(ID, id));
-
-      Adjustment a = new Adjustment();
-//      a.setId(id);
-      a.setCredit(1d);
-      a.setDiscount(2d);
-      a.setInsurance(3d);
-      a.setOverhead(4d);
-      a.setShipment(5d);
-      a.setTax1(6d);
-      a.setTax2(7d);
-      a.setInvoiceId(UUID.randomUUID().toString());
-
-      ctx.response()
-        .setStatusCode(200)
-        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .end(JsonObject.mapFrom(a).encodePrettily());
-    }
+//    private void handleGetAdjustment(RoutingContext ctx) {
+//      logger.info("got: " + ctx.request().path());
+//      String id = ctx.request().getParam(ID);
+//      logger.info("id: " + id);
+//
+//      addServerRqRsData(HttpMethod.GET, ADJUSTMENT, new JsonObject().put(ID, id));
+//
+//      Adjustment a = new Adjustment();
+////      a.setId(id);
+//      a.setCredit(1d);
+//      a.setDiscount(2d);
+//      a.setInsurance(3d);
+//      a.setOverhead(4d);
+//      a.setShipment(5d);
+//      a.setTax1(6d);
+//      a.setTax2(7d);
+//      a.setInvoiceId(UUID.randomUUID().toString());
+//
+//      ctx.response()
+//        .setStatusCode(200)
+//        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+//        .end(JsonObject.mapFrom(a).encodePrettily());
+//    }
 
     private void handleGetPurchaseOrderById(RoutingContext ctx) {
       logger.info("handleGetPurchaseOrderById got: GET " + ctx.request().path());
@@ -3169,9 +3119,7 @@ public class OrdersImplTest {
       addServerRqRsData(HttpMethod.GET, LOCATIONS, new JsonObject().put(ID, id));
 
       Location location = new Location();
-//      location.setId(id);
       location.setLocationId("123");
-//      location.setPoLineId("123");
       location.setQuantity(3);
       location.setQuantityElectronic(1);
       location.setQuantityPhysical(2);
@@ -3197,6 +3145,5 @@ public class OrdersImplTest {
           .end(JsonObject.mapFrom(seqNumber).encodePrettily());
       }
     }
-
   }
 }
