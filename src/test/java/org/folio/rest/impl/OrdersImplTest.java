@@ -825,29 +825,29 @@ public class OrdersImplTest {
     assertNull(resp.getCompositePoLines().get(0).getSource());
   }
 
-//  @Test
-//  public void testGetOrderByIdIncorrectIdFormat() {
-//    logger.info("=== Test Get Order By Id - Incorrect Id format - 400 ===");
-//
-//    String id = ID_BAD_FORMAT;
-//
-//    final Response resp = RestAssured
-//      .with()
-//        .header(X_OKAPI_URL)
-//        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-//      .get(COMPOSITE_ORDERS_PATH + "/" + id)
-//        .then()
-//          // The status code should be 400 once Pattern validation annotation is added to Orders interface methods
-//          .statusCode(400)
-//          .extract()
-//            .response();
-//
-//    String actual = resp.getBody().asString();
-//    logger.info(actual);
-//
-//    assertNotNull(actual);
-//    assertTrue(actual.contains(id));
-//  }
+  @Test
+  public void testGetOrderByIdIncorrectIdFormat() {
+    logger.info("=== Test Get Order By Id - Incorrect Id format - 400 ===");
+
+    String id = ID_BAD_FORMAT;
+
+    final Response resp = RestAssured
+      .with()
+        .header(X_OKAPI_URL)
+        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+      .get(COMPOSITE_ORDERS_PATH + "/" + id)
+        .then()
+          // The status code should be 400 once Pattern validation annotation is added to Orders interface methods
+          .statusCode(400)
+          .extract()
+            .response();
+
+    String actual = resp.getBody().asString();
+    logger.info(actual);
+
+    assertNotNull(actual);
+    assertTrue(actual.contains(id));
+  }
 
   @Test
   public void testGetOrderByIdNotFound() {
@@ -1060,20 +1060,20 @@ public class OrdersImplTest {
 
   }
 
-//  @Test
-//  public void testPutOrderFailsWithExistingPONumber() throws Exception {
-//    logger.info("=== Test update of order failure with Existing PO Number===");
-//
-//    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
-//    String id = ordersList.getJsonArray("compositePurchaseOrders").getJsonObject(0).getString(ID);
-//
-//    JsonObject request = new JsonObject();
-//    request.put("poNumber", "oldPoNumber-03"/*EXISTING_PO_NUMBER*/);
-//    String body= request.toString();
-//
-//    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, body, APPLICATION_JSON, 400);
-//
-//  }
+  @Test
+  public void testPutOrderFailsWithExistingPONumber() throws Exception {
+    logger.info("=== Test update of order failure with Existing PO Number===");
+
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("compositePurchaseOrders").getJsonObject(0).getString(ID);
+
+    JsonObject request = new JsonObject();
+    request.put("poNumber", EXISTING_PO_NUMBER);
+    String body= request.toString();
+
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, body, APPLICATION_JSON, 400);
+
+  }
 
   @Test
   public void testPoUpdateWithOverLimitPOLines(TestContext ctx) throws Exception {
@@ -3010,7 +3010,7 @@ public class OrdersImplTest {
       } else {
         JsonObject po = new JsonObject();
         addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
-        final String PO_NUMBER_QUERY = "po_number==";
+        final String PO_NUMBER_QUERY = "poNumber==";
         switch (queryParam) {
           case PO_NUMBER_QUERY + EXISTING_PO_NUMBER:
             po.put(TOTAL_RECORDS, 1);
