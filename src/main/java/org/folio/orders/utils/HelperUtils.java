@@ -197,7 +197,7 @@ public class HelperUtils {
           });
       })
       .exceptionally(t -> {
-        logger.error("Exception gathering po_line data:", t);
+        logger.error("Exception gathering poLine data:", t);
         future.completeExceptionally(t);
         return null;
       });
@@ -213,17 +213,7 @@ public class HelperUtils {
     }
 
     List<CompletableFuture<Void>> futures = new ArrayList<>();
-//    futures.add(operateOnSubObjIfPresent(operation, line, ADJUSTMENT, httpClient, ctx, okapiHeaders, logger));
-//    futures.add(operateOnSubObjIfPresent(operation, line, COST, httpClient, ctx, okapiHeaders, logger));
-//    futures.add(operateOnSubObjIfPresent(operation, line, DETAILS, httpClient, ctx, okapiHeaders, logger));
-//    futures.add(operateOnSubObjIfPresent(operation, line, ERESOURCE, httpClient, ctx, okapiHeaders, logger));
-//    futures.add(operateOnSubObjIfPresent(operation, line, PHYSICAL, httpClient, ctx, okapiHeaders, logger));
-//    futures.add(operateOnSubObjIfPresent(operation, line, SOURCE, httpClient, ctx, okapiHeaders, logger));
-//    futures.add(operateOnSubObjIfPresent(operation, line, VENDOR_DETAIL, httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, ALERTS, httpClient, ctx, okapiHeaders, logger));
-//    futures.addAll(operateOnSubObjsIfPresent(operation, line, CLAIMS, httpClient, ctx, okapiHeaders, logger));
-//    futures.addAll(operateOnSubObjsIfPresent(operation, line, FUND_DISTRIBUTION, httpClient, ctx, okapiHeaders, logger));
-//    futures.addAll(operateOnSubObjsIfPresent(operation, line, LOCATIONS, httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, REPORTING_CODES, httpClient, ctx, okapiHeaders, logger));
 
     CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
@@ -234,7 +224,7 @@ public class HelperUtils {
         future.complete(line.mapTo(CompositePoLine.class));
       })
       .exceptionally(t -> {
-        logger.error("Exception resolving one or more po_line sub-object(s) on {} operation:", t, operation);
+        logger.error("Exception resolving one or more poLine sub-object(s) on {} operation:", t, operation);
         future.completeExceptionally(t);
         return null;
       });
