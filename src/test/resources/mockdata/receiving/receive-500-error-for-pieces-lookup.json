@@ -1,0 +1,18 @@
+{
+  "toBeReceived": [
+    {
+      "poLineId": "cf447221-29b9-481e-947c-9ad545f22888",
+      "received": 1,
+      "receivedItems": [
+        {
+          "barcode": 21111311112,
+          "comment": "Expected error pieceNotRetrieved",
+          "itemStatus": "Received",
+          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "pieceId": "168f8a86-d26c-406e-813f-c7527f241ac3"
+        }
+      ]
+    }
+  ],
+  "totalRecords": 1
+}

@@ -137,7 +137,7 @@
       "publicationDate": "2017",
       "publisher": "Schiffer Publishing",
       "receiptDate": "2018-10-09T00:00:00.000Z",
-      "receiptStatus": "Awaiting Receipt",
+      "receiptStatus": "Pending",
       "reportingCodes": [
         {
           "code": "CODE1",
@@ -266,7 +266,7 @@
       "publicationDate": "2017",
       "publisher": "John Wiley & Sons, Inc.",
       "receiptDate": "2020-10-10T00:00:00.000Z",
-      "receiptStatus": "Fully Received",
+      "receiptStatus": "Pending",
       "reportingCodes": [],
       "requester": "",
       "rush": false,

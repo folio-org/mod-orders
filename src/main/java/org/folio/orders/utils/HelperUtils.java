@@ -8,6 +8,8 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -24,17 +26,21 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.acq.model.Piece;
 import org.folio.rest.client.ConfigurationsClient;
+import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
-import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -49,7 +55,6 @@ public class HelperUtils {
 
   public static final String COMPOSITE_PO_LINES = "compositePoLines";
 
-  public static final String PO_NUMBER_ALREADY_EXISTS = "PO Number already exists";
   public static final String DEFAULT_POLINE_LIMIT = "1";
   private static final String MAX_POLINE_LIMIT = "500";
   public static final String OKAPI_URL = "X-Okapi-Url";
@@ -64,6 +69,7 @@ public class HelperUtils {
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
   private static final String QUERY = "module=ORDERS";
   private static final Pattern HOST_PORT_PATTERN = Pattern.compile("https?://([^:/]+)(?::?(\\d+)?)");
+  private static final String PO_LINE_NUMBER = "poLineNumber";
 
   private HelperUtils() {
 
@@ -347,23 +353,23 @@ public class HelperUtils {
     return isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
   }
 
-  public static List<ErrorCodes> validateOrder(CompositePurchaseOrder compositeOrder) {
+  public static List<Error> validateOrder(CompositePurchaseOrder compositeOrder) {
     if (CollectionUtils.isEmpty(compositeOrder.getCompositePoLines())) {
       return Collections.emptyList();
     }
 
-    List<ErrorCodes> errors = new ArrayList<>();
+    List<Error> errors = new ArrayList<>();
     for (CompositePoLine compositePoLine : compositeOrder.getCompositePoLines()) {
       errors.addAll(validatePoLine(compositePoLine));
     }
     return errors;
   }
 
-  public static List<ErrorCodes> validatePoLine(CompositePoLine compPOL) {
+  public static List<Error> validatePoLine(CompositePoLine compPOL) {
     CompositePoLine.OrderFormat orderFormat = compPOL.getOrderFormat();
-    if (orderFormat == CompositePoLine.OrderFormat.P_E_MIX) {
+    if (orderFormat == P_E_MIX) {
       return validatePoLineWithMixedFormat(compPOL);
-    } else if (orderFormat == CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE) {
+    } else if (orderFormat == ELECTRONIC_RESOURCE) {
       return validatePoLineWithElectronicFormat(compPOL);
     } else if (orderFormat == CompositePoLine.OrderFormat.PHYSICAL_RESOURCE) {
       return validatePoLineWithPhysicalFormat(compPOL);
@@ -374,7 +380,7 @@ public class HelperUtils {
     return Collections.emptyList();
   }
 
-  private static List<ErrorCodes> validatePoLineWithMixedFormat(CompositePoLine compPOL) {
+  private static List<Error> validatePoLineWithMixedFormat(CompositePoLine compPOL) {
     int costPhysicalQuantity = defaultIfNull(compPOL.getCost().getQuantityPhysical(), 0);
     int costElectronicQuantity = defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0);
     int locPhysicalQuantity = getPhysicalQuantity(compPOL.getLocations());
@@ -392,16 +398,18 @@ public class HelperUtils {
     // The total quantity of the physical resources of all locations must not exceed specified in the cost
     if (locPhysicalQuantity > costPhysicalQuantity) {
       errors.add(ErrorCodes.PHYSICAL_LOC_QTY_EXCEEDS_COST);
+    } else if (locPhysicalQuantity < costPhysicalQuantity) {
+      errors.add(ErrorCodes.PHYSICAL_COST_QTY_EXCEEDS_LOC);
     }
     // The total quantity of the electronic resources of all locations must not exceed specified in the cost
     if (locElectronicQuantity > costElectronicQuantity) {
       errors.add(ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST);
     }
 
-    return errors;
+    return convertErrorCodesToErrors(compPOL, errors);
   }
 
-  private static List<ErrorCodes> validatePoLineWithPhysicalFormat(CompositePoLine compPOL) {
+  private static List<Error> validatePoLineWithPhysicalFormat(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
 
     int costPhysicalQuantity = defaultIfNull(compPOL.getCost().getQuantityPhysical(), 0);
@@ -414,14 +422,17 @@ public class HelperUtils {
       errors.add(ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY);
     }
     // The total quantity of the physical resources of all locations must not exceed specified in the cost
-    if (getPhysicalQuantity(compPOL.getLocations()) > costPhysicalQuantity) {
+    int locationsPhysicalQuantity = getPhysicalQuantity(compPOL.getLocations());
+    if (locationsPhysicalQuantity > costPhysicalQuantity) {
       errors.add(ErrorCodes.PHYSICAL_LOC_QTY_EXCEEDS_COST);
+    } else if (locationsPhysicalQuantity < costPhysicalQuantity) {
+      errors.add(ErrorCodes.PHYSICAL_COST_QTY_EXCEEDS_LOC);
     }
 
-    return errors;
+    return convertErrorCodesToErrors(compPOL, errors);
   }
 
-  private static List<ErrorCodes> validatePoLineWithElectronicFormat(CompositePoLine compPOL) {
+  private static List<Error> validatePoLineWithElectronicFormat(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
 
     int costElectronicQuantity = defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0);
@@ -438,31 +449,50 @@ public class HelperUtils {
       errors.add(ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST);
     }
 
-    return errors;
+    return convertErrorCodesToErrors(compPOL, errors);
   }
 
-  private static List<ErrorCodes> validatePoLineWithOtherFormat(CompositePoLine compPOL) {
+  private static List<Error> validatePoLineWithOtherFormat(CompositePoLine compPOL) {
     return validatePoLineWithPhysicalFormat(compPOL);
   }
 
-  public static Errors convertErrorCodesToErrors(List<ErrorCodes> errorCodes) {
-    return new Errors().withErrors(errorCodes.stream()
-                                             .map(ErrorCodes::toError)
-                                             .collect(Collectors.toList()));
+  /**
+   * The method converts {@link ErrorCodes} elements to {@link Error} adding additionally {@link Parameter} with PO Line number is presents
+   * @param compPOL Composite PO Line
+   * @param errors list of static {@link ErrorCodes}
+   * @return List of {@link Error} elements
+   */
+  private static List<Error> convertErrorCodesToErrors(CompositePoLine compPOL, List<ErrorCodes> errors) {
+    return errors.stream()
+                 .map(errorCode -> {
+                   Error error = errorCode.toError();
+                   String poLineNumber = compPOL.getPoLineNumber();
+                   if (StringUtils.isNotEmpty(poLineNumber)) {
+                     error.getParameters()
+                          .add(new Parameter().withKey(PO_LINE_NUMBER)
+                                              .withValue(poLineNumber));
+                   }
+                   return error;
+                 })
+                 .collect(toList());
   }
 
   /**
    * Calculates total quantity based of cost for electronic and physical resources
    *
-   * @param cost Cost associated with PO Line
+   * @param compPOL PO line to calculate total quantity
    * @return total quantity for PO Line
    */
-  public static int calculateTotalQuantity(Cost cost) {
-  	int eQuantity = cost.getQuantityElectronic()!=null ? cost.getQuantityElectronic() : 0;
-    int physicalQuantity = cost.getQuantityPhysical()!=null ? cost.getQuantityPhysical() : 0;
+  public static int calculateTotalQuantity(CompositePoLine compPOL) {
+    Cost cost = compPOL.getCost();
+    if (cost == null) {
+      return 0;
+    }
+  	int eQuantity = ObjectUtils.defaultIfNull(cost.getQuantityElectronic(), 0);
+    int physicalQuantity = ObjectUtils.defaultIfNull(cost.getQuantityPhysical(), 0);
     return eQuantity + physicalQuantity;
   }
-  
+
   /**
    * Calculates total items quantity for all locations.
    * The quantity is based on Order Format (please see MODORDERS-117):<br/>
@@ -499,6 +529,34 @@ public class HelperUtils {
       default:
         return 0;
     }
+  }
+
+  public static int calculateExpectedQuantityOfPiecesWithoutItemCreation(CompositePoLine compPOL, List<Location> locations) {
+    switch (compPOL.getOrderFormat()) {
+      case P_E_MIX:
+        return isInventoryUpdateRequiredForEresource(compPOL) ? 0 : getElectronicQuantity(locations);
+      case ELECTRONIC_RESOURCE:
+        return isInventoryUpdateRequiredForEresource(compPOL) ? 0 : getElectronicQuantity(locations);
+      case OTHER:
+        return getPhysicalQuantity(locations);
+      case PHYSICAL_RESOURCE:
+      default:
+        return 0;
+    }
+  }
+
+  public static List<Piece> constructPieces(List<String> itemIds, String poLineId, String locationId) {
+    return itemIds.stream()
+      .map(itemId -> constructPiece(locationId, poLineId, itemId))
+      .collect(toList());
+  }
+
+  public static Piece constructPiece(String locationId, String poLineId, String itemId) {
+    Piece piece = new Piece();
+    piece.setItemId(itemId);
+    piece.setPoLineId(poLineId);
+    piece.setLocationId(locationId);
+    return piece;
   }
 
   private static int getPhysicalQuantity(List<Location> locations) {
@@ -563,6 +621,15 @@ public class HelperUtils {
        );
   }
 
+  /**
+   * Transform list of id's to CQL query using 'or' operation
+   * @param ids list of id's
+   * @return String representing CQL query to get records by id's
+   */
+  public static String convertIdsToCqlQuery(List<String> ids) {
+    return StreamEx.of(ids).map(id -> "id==" + id).joining(" or ");
+  }
+
   public static CompletableFuture<JsonObject> handleGetRequest(String endpoint, HttpClientInterface
     httpClient, Context ctx, Map<String, String> okapiHeaders,
                                        Logger logger) {
@@ -591,6 +658,38 @@ public class HelperUtils {
       logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, e, HttpMethod.GET, endpoint);
       future.completeExceptionally(e);
     }
+    return future;
+  }
+
+  /**
+   * A common method to update an entry in the storage
+   *
+   * @param recordData json to use for update operation
+   * @param endpoint endpoint
+   */
+  public static CompletableFuture<Void> handlePutRequest(String endpoint, JsonObject recordData, HttpClientInterface httpClient,
+                                                         Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+    try {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Sending 'PUT {}' with body: {}", endpoint, recordData.encodePrettily());
+      }
+      httpClient
+        .request(HttpMethod.PUT, recordData.toBuffer(), endpoint, okapiHeaders)
+        .thenApply(HelperUtils::verifyAndExtractBody)
+        .thenAccept(response -> {
+          logger.debug("'PUT {}' request successfully processed", endpoint);
+          future.complete(null);
+        })
+        .exceptionally(e -> {
+          future.completeExceptionally(e);
+          logger.error("'PUT {}' request failed. Request body: {}", e, endpoint, recordData.encodePrettily());
+          return null;
+        });
+    } catch (Exception e) {
+      future.completeExceptionally(e);
+    }
+
     return future;
   }
 

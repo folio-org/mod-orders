@@ -27,7 +27,7 @@
   },
   "compositePoLines": [
     {
-      "id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1",
+      "id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47",
       "acquisitionMethod": "Purchase",
       "adjustment": {
         "credit": 0.0,
@@ -259,8 +259,8 @@
       }
     },
     {
-      "id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3",
-      "acquisitionMethod": "Purchase",
+      "id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
+      "acquisition_method": "Purchase",
       "adjustment": {
         "credit": 0.0,
         "discount": 0.0,

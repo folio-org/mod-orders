@@ -531,10 +531,12 @@ public class OrdersImplTest {
     // Make sure that mock PO has 1 po lines
     assertEquals(1, reqData.getCompositePoLines().size());
 
-    reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(false);
-    reqData.getCompositePoLines().get(0).getCost().setQuantityPhysical(3);
-    reqData.getCompositePoLines().get(0).getCost().setQuantityElectronic(2);
-    reqData.getCompositePoLines().get(0).setOrderFormat(OrderFormat.P_E_MIX);
+    CompositePoLine compositePoLine = reqData.getCompositePoLines().get(0);
+    
+    compositePoLine.getEresource().setCreateInventory(false);
+    compositePoLine.getCost().setQuantityPhysical(3);
+    compositePoLine.getCost().setQuantityElectronic(2);
+    compositePoLine.setOrderFormat(OrderFormat.P_E_MIX);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
 
@@ -544,8 +546,8 @@ public class OrdersImplTest {
     int itemSize = createdItems!=null ? createdItems.size() : 0;
     logger.debug("------------------- piecesSize, itemSize --------------------\n" + piecesSize + " " + itemSize);
     // Verify total number of pieces created should be equal to total quantity
-    int totalQuantity = HelperUtils.calculateTotalQuantity(reqData.getCompositePoLines().get(0).getCost());
-    assertEquals( piecesSize, totalQuantity);
+    assertEquals(calculateTotalQuantity(compositePoLine), createdPieces.size());
+    verifyPiecesCreated(createdItems, reqData.getCompositePoLines(), createdPieces);
   }
   
   @Test

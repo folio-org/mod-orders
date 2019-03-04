@@ -281,7 +281,145 @@
         "createdDate": "2018-07-19T00:00:00.000+0000",
         "createdByUserId": "28d1057c-d137-11e8-a8d5-f2801f1b9fd1"
       }
+    },
+    {
+      "id": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
+      "instanceId": "b252d8f4-e14f-4f27-9f11-876b1f8ed13a",
+      "acquisitionMethod": "Purchase At Vendor System",
+      "alerts": [],
+      "cancellationRestriction": false,
+      "claims": [],
+      "collection": false,
+      "contributors": [],
+      "cost": {
+        "currency": "USD",
+        "listPrice": 24.99,
+        "quantityPhysical": 1,
+        "quantityElectronic": 1,
+        "poLineEstimatedPrice": 49.98
+      },
+      "description": "25 physical resources for 2 locations",
+      "details": {
+        "receivingNote": "ABCDEFGHIJKL",
+        "productIds": [
+          {
+            "productId": "9780764354113",
+            "productIdType": "ISBN"
+          }
+        ],
+        "materialTypes": [
+          "f7e72403-2a13-43a4-a069-aaabe6c9dea8"
+        ],
+        "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+        "subscriptionInterval": 824,
+        "subscriptionTo": "2020-10-09T00:00:00.000Z"
+      },
+      "fundDistribution": [],
+      "locations": [
+        {
+          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "quantity": 1,
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
+        },
+        {
+          "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
+          "quantity": 2,
+          "quantityElectronic": 0,
+          "quantityPhysical": 2
+        }
+      ],
+      "orderFormat": "Physical Resource",
+      "paymentStatus": "Fully Paid",
+      "physical": {
+        "volumes": [
+          "vol. 1"
+        ],
+        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "expectedReceiptDate": "2018-10-05T00:00:00.000Z",
+        "receiptDue": "2018-10-10T00:00:00.000Z"
+      },
+      "poLineDescription": "Harry Potter (Book 1)",
+      "poLineNumber": "2LINES1PHYS1EL-1",
+      "publicationDate": "1998",
+      "publisher": "Scholastic",
+      "purchaseOrderId": "555a155e-8bb7-4670-ace4-463fc70c2a75",
+      "receiptStatus": "Awaiting Receipt",
+      "reportingCodes": [],
+      "requester": "Leo Bulero",
+      "rush": true,
+      "source": {
+        "code": "Code5",
+        "description": ""
+      },
+      "tags": [],
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:43.854+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:44.418+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      }
+    },
+    {
+      "id": "daa9cfd1-b330-4b65-8c2a-3663aaae5130",
+      "acquisitionMethod": "Purchase At Vendor System",
+      "alerts": [],
+      "cancellationRestriction": false,
+      "claims": [],
+      "collection": false,
+      "contributors": [],
+      "cost": {
+        "currency": "USD",
+        "listPrice": 29.99,
+        "quantityPhysical": 1,
+        "quantityElectronic": 1,
+        "poLineEstimatedPrice": 39.98
+      },
+      "description": "10 electronic resources for 1 location",
+      "details": "007e607d-7617-4bc3-9f6d-563519b3d401",
+      "eresource": "22837acf-46fb-471b-ac7f-6b68f14155f2",
+      "fundDistribution": [],
+      "locations": [
+        {
+          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "quantity": 1,
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
+        }
+      ],
+      "orderFormat": "Electronic Resource",
+      "paymentStatus": "Fully Paid",
+      "physical": {
+        "volumes": [
+          "vol. 1"
+        ],
+        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "expectedReceiptDate": "2018-10-05T00:00:00.000Z",
+        "receiptDue": "2018-10-10T00:00:00.000Z"
+      },
+      "poLineDescription": "Harry Potter (Book 2)",
+      "poLineNumber": "2LINES1PHYS1EL-2",
+      "publicationDate": "2000",
+      "publisher": "Scholastic Paperbacks",
+      "purchaseOrderId": "555a155e-8bb7-4670-ace4-463fc70c2a75",
+      "receiptStatus": "Awaiting Receipt",
+      "reportingCodes": [],
+      "requester": "Leo Bulero",
+      "rush": true,
+      "source": {
+        "code": "Code1",
+        "description": ""
+      },
+      "tags": [],
+      "title": "Harry Potter and the Chamber of Secrets",
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:43.877+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:43.877+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      }
     }
   ],
-  "totalRecords": 2
+  "totalRecords": 4
 }
