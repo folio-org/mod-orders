@@ -5,43 +5,42 @@
     "insurance": 0.0,
     "overhead": 0.0,
     "shipment": 0.0,
-    "tax_1": 0.0,
-    "tax_2": 0.0,
-    "use_pro_rate": false
+    "tax1": 0.0,
+    "tax2": 0.0,
+    "useProRate": false
   },
   "approved": true,
-  "assigned_to": "ab18897b-0e40-4f31-896b-9c9adc979a88",
-  "manual_po": false,
+  "assignedTo": "ab18897b-0e40-4f31-896b-9c9adc979a88",
+  "manualPo": false,
   "notes": [
     "ABCDEFGHIJKLMNO",
     "ABCDEFGHIJKLMNOPQRST",
     "ABCDEFGHIJKLMNOPQRSTUV"
   ],
-  "order_type": "One-Time",
-  "po_number": "268758",
-  "re_encumber": false,
-  "total_estimated_price": 49.98,
-  "total_items": 2,
+  "orderType": "One-Time",
+  "poNumber": "268758",
+  "reEncumber": false,
+  "totalEstimatedPrice": 49.98,
+  "totalItems": 2,
   "vendor": "168f8a86-d26c-406e-813f-c7527f241ac3",
-  "workflow_status": "Open",
+  "workflowStatus": "Open",
   "metadata": {
     "createdDate": "2010-10-08T03:53:00.000",
     "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
   },
   "compositePoLines": [
     {
-      "acquisition_method": "Purchase At Vendor System",
+      "acquisitionMethod": "Purchase At Vendor System",
       "adjustment": {
-        "id": "1363467f-eb47-4e09-9e28-e25aa464adb7",
         "credit": 0.0,
         "discount": 0.0,
         "insurance": 0.0,
-        "invoice_id": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
+        "invoiceId": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
         "overhead": 0.0,
         "shipment": 0.0,
-        "tax_1": 0.0,
-        "tax_2": 0.0,
-        "use_pro_rate": false
+        "tax1": 0.0,
+        "tax2": 0.0,
+        "useProRate": false
       },
       "alerts": [
         {
@@ -49,11 +48,10 @@
           "id": "9a665b22-9fe5-4c95-b4ee-837a5433c95d"
         }
       ],
-      "cancellation_restriction": false,
-      "cancellation_restriction_note": "ABCDEFGHIJKLMNOPQRSTUVW",
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
       "claims": [
         {
-          "id": "f7d7d4e4-255e-46dc-9f08-b953fb1e872d",
           "claimed": false,
           "sent": "2018-10-09T00:00:00.000Z",
           "grace": 30
@@ -63,68 +61,66 @@
       "contributors": [
         {
           "contributor": "Ed Mashburn",
-          "contributor_type": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+          "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
         }
       ],
       "cost": {
-        "list_price": 24.99,
-        "id": "e047212b-c94f-4cb1-84b0-367848381494",
+        "listPrice": 24.99,
         "currency": "USD",
-        "quantity_physical": 1,
-        "quantity_electronic": 1,
-        "po_line_estimated_price": 49.98
+        "quantityPhysical": 1,
+        "quantityElectronic": 1,
+        "poLineEstimatedPrice": 49.98
       },
       "description": "ABCDEFGH",
       "details": {
         "id": "349d9438-12bd-4e2e-9eb6-dfa830ab99a4",
-        "receiving_note": "ABCDEFGHIJKL",
-        "product_ids": [
+        "receivingNote": "ABCDEFGHIJKL",
+        "productIds": [
           {
-            "product_id": "9780764354113",
-            "product_id_type": "ISBN"
+            "productId": "9780764354113",
+            "productIdType": "ISBN"
           }
         ],
-        "material_types": [
+        "materialTypes": [
           "1a54b431-2e4f-452d-9cae-9cee66c9a892"
         ],
-        "subscription_from": "2018-10-09T00:00:00.000Z",
-        "subscription_interval": 824,
-        "subscription_to": "2020-10-09T00:00:00.000Z"
+        "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+        "subscriptionInterval": 824,
+        "subscriptionTo": "2020-10-09T00:00:00.000Z"
       },
       "donor": "ABCDEFGHIJKLM",
       "eresource": {
         "id": "468b679c-378b-4009-9a17-a6711cefc85f",
         "activated": false,
-        "activation_due": 10,
-        "create_inventory": true,
+        "activationDue": 10,
+        "createInventory": true,
         "trial": false,
-        "expected_activation": "2018-10-09T00:00:00.000Z",
-        "user_limit": 10,
-        "access_provider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
+        "expectedActivation": "2018-10-09T00:00:00.000Z",
+        "userLimit": 10,
+        "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
         "license": "7c063655-b384-4a6f-b367-3c2f95f7a49c"
       },
-      "fund_distribution": [
+      "fundDistribution": [
         "d10879e8-8c2d-4850-bcb9-0ec8e2e10021"
       ],
       "locations": [
         {
-          "id": "a4e65e03-99a4-4b39-8e6a-ae666ac52bea",
-          "location_id": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
           "quantity": 2,
-          "quantity_electronic": 1,
-          "quantity_physical": 1
+          "quantityElectronic": 1,
+          "quantityPhysical": 1
         }
       ],
-      "order_format": "Physical Resource",
+      "orderFormat": "Physical Resource",
       "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-      "payment_status": "Awaiting Payment",
-      "po_line_description": "ABCDEFGHIJKLMNOPQRSTUVWXY",
-      "po_line_number": "268758-03",
+      "paymentStatus": "Awaiting Payment",
+      "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
+      "poLineNumber": "268758-03",
       "publication_date": "2017",
       "publisher": "Schiffer Publishing",
-      "receipt_date": "2018-10-09T00:00:00.000Z",
-      "receipt_status": "Awaiting Receipt",
-      "reporting_codes": [
+      "receiptDate": "2018-10-09T00:00:00.000Z",
+      "receiptStatus": "Awaiting Receipt",
+      "reportingCodes": [
         {
           "code": "CODE1",
           "id": "5926dcd7-85f5-4504-8283-712595ebc38b",
@@ -146,7 +142,6 @@
       "selector": "ABCD",
       "source": {
         "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-        "id": "024b6f41-c5c6-4280-858e-33fba452a334",
         "description": "ABCDEFGHIJKLMNO"
       },
       "tags": [
@@ -156,13 +151,13 @@
         "ABCDEFGHIJKLMNO"
       ],
       "title": "Kayak Fishing in the Northern Gulf Coast",
-      "vendor_detail": {
+      "vendorDetail": {
         "id": "d5065f0d-fb88-4d23-b0c1-57e754fba40e",
         "instructions": "ABCDEFG",
-        "note_from_vendor": "ABCDEFGHIKJKLMNOP",
-        "ref_number": "123456-78",
-        "ref_number_type": "Supplier's unique order line reference number",
-        "vendor_account": "8910-10"
+        "noteFromVendor": "ABCDEFGHIKJKLMNOP",
+        "refNumber": "123456-78",
+        "refNumberType": "Supplier's unique order line reference number",
+        "vendorAccount": "8910-10"
       },
       "metadata": {
         "createdDate": "2010-10-08T03:53:00.000",

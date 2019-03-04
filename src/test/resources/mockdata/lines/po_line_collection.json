@@ -377,8 +377,34 @@
         "poLineEstimatedPrice": 39.98
       },
       "description": "10 electronic resources for 1 location",
-      "details": "007e607d-7617-4bc3-9f6d-563519b3d401",
-      "eresource": "22837acf-46fb-471b-ac7f-6b68f14155f2",
+      "details": {
+        "receivingNote": "start with v. 162",
+        "productIds": [
+          {
+            "productId": "0065-3438",
+            "productIdType": "ISSN"
+          }
+        ],
+        "materialTypes": [
+          "fde2e5ca-cde3-11e8-a8d5-f2801f1b9fd1"
+        ],
+        "subscriptionFrom": "2018-07-01T00:00:00.000Z",
+        "subscriptionInterval": 1095,
+        "subscriptionTo": "2021-06-30T00:00:00.000Z"
+      },
+      "eresource": {
+        "activated": false,
+        "activationDue": 0,
+        "createInventory": false,
+        "trial": false,
+        "expectedActivation": null,
+        "userLimit": 0,
+        "accessProvider": "9bdc385e-6403-46aa-a3aa-db91d4527b19",
+        "license": {
+          "code": "Code 1",
+          "description": "License Agreement 1"
+        }
+      },
       "fundDistribution": [],
       "locations": [
         {
