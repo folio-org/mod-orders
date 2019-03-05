@@ -2406,9 +2406,6 @@ public class OrdersImplTest {
       EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 200).as(ReceivingResults.class);
 
     assertThat(results.getTotalRecords(), equalTo(receiving.getTotalRecords()));
-
-    logger.info("=== results.getTotalRecords() ==" + results.getTotalRecords());
-    logger.info("=== receiving.getTotalRecords() ==" + receiving.getTotalRecords());
     
     Map<String, Set<String>> pieceIdsByPol = verifyReceivingSuccessRs(results);
 

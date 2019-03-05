@@ -303,22 +303,6 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenApply(v -> updatedLineJson);
   }
 
-//  private CompletableFuture<Void> handleSubObjOperation(String prop, JsonObject updatedLine, JsonObject lineFromStorage) {
-//    String objId = lineFromStorage.getString(prop);
-//    JsonObject jsonObject = updatedLine.getJsonObject(prop);
-//
-//    // Remove sub-object which will be replaced by id
-//    updatedLine.remove(prop);
-//
-//    return handleSubObjOperation(prop, jsonObject, objId)
-//      .thenAccept(id -> {
-//        if (id != null) {
-//          updatedLine.put(prop, id);
-//        }
-//      })
-//      .exceptionally(throwable -> addProcessingError(throwable, prop, objId));
-//  }
-
   private CompletableFuture<String> handleSubObjOperation(String prop, JsonObject subObjContent, String storageId) {
     final String url;
     final HttpMethod operation;
