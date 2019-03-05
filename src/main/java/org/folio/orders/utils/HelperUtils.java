@@ -246,24 +246,6 @@ public class HelperUtils {
     return futures;
   }
 
-  private static CompletableFuture<Void> operateOnSubObjIfPresent(HttpMethod operation, JsonObject pol, String field, HttpClientInterface httpClient,
-                                                                  Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-    String id = (String) pol.remove(field);
-    if (id != null) {
-      return operateOnSubObj(operation, resourceByIdPath(field, id), httpClient, ctx, okapiHeaders, logger)
-        .thenAccept(json -> {
-          if (json != null) {
-            if (!json.isEmpty()) {
-              pol.put(field, json);
-            } else if (HttpMethod.DELETE != operation) {
-              logger.warn("The '{}' sub-object with id={} is empty for Order line with id={}", field, id, pol.getString("id"));
-            }
-          }
-        });
-    }
-    return CompletableFuture.completedFuture(null);
-  }
-
   public static CompletableFuture<JsonObject> operateOnSubObj(HttpMethod operation, String url,
       HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     return operateOnSubObj(operation, url, null, httpClient, ctx, okapiHeaders, logger);

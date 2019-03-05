@@ -322,10 +322,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenApply(json -> {
         if (operation == HttpMethod.PUT) {
           return storageId;
-        } else if (operation == HttpMethod.POST) {
-        	if(json.getString(ID)!=null) {
+        } else if (operation == HttpMethod.POST && json.getString(ID)!=null) {
 	          return json.getString(ID);
-        	}
         }
         return null;
       });
