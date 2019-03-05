@@ -44,14 +44,6 @@ public class OrdersImpl implements Orders {
   private static final String ORDERS_LOCATION_PREFIX = "/orders/composite-orders/%s";
   private static final String ORDER_LINE_LOCATION_PREFIX = "/orders/order-lines/%s";
 
-  private static int getPoLineLimit(JsonObject config) {
-    try {
-      return Integer.parseInt(config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));
-    } catch (NumberFormatException e) {
-      throw new NumberFormatException("Invalid limit value in configuration.");
-    }
-  }
-
   @Override
   @Validate
   public void deleteOrdersCompositeOrdersById(String id, String lang, Map<String, String> okapiHeaders,
@@ -337,6 +329,14 @@ public class OrdersImpl implements Orders {
                                 Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     // Return 501 (Not Implemented) for now
     asyncResultHandler.handle(succeededFuture(Response.status(501).build()));
+  }
+
+  private static int getPoLineLimit(JsonObject config) {
+    try {
+      return Integer.parseInt(config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));
+    } catch (NumberFormatException e) {
+      throw new NumberFormatException("Invalid limit value in configuration.");
+    }
   }
 
   private void validatePoLinesQuantity(CompositePurchaseOrder compPO, JsonObject config) {
