@@ -37,18 +37,8 @@ public class ResourcePathResolver {
 
   static {
     Map<String, String> apis = new HashMap<>();
-    apis.put(ADJUSTMENT, "/orders-storage/adjustments");
     apis.put(ALERTS, "/orders-storage/alerts");
-    apis.put(CLAIMS, "/orders-storage/claims");
-    apis.put(COST, "/orders-storage/costs");
-    apis.put(DETAILS, "/orders-storage/details");
-    apis.put(ERESOURCE, "/orders-storage/eresources");
-    apis.put(FUND_DISTRIBUTION, "/orders-storage/fundDistributions");
-    apis.put(LOCATIONS, "/orders-storage/locations");
-    apis.put(PHYSICAL, "/orders-storage/physicals");
     apis.put(REPORTING_CODES, "/orders-storage/reportingCodes");
-    apis.put(SOURCE, "/orders-storage/sources");
-    apis.put(VENDOR_DETAIL, "/orders-storage/vendorDetails");
     apis.put(PO_LINES, "/orders-storage/poLines");
     apis.put(PO_NUMBER, "/orders-storage/poNumber");
     apis.put(PURCHASE_ORDER, "/orders-storage/purchaseOrders");

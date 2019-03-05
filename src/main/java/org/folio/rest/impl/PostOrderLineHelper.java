@@ -109,7 +109,13 @@ public class PostOrderLineHelper extends AbstractHelper {
     List<Alert> alerts = compPOL.getAlerts();
     if (null != alerts)
       alerts.forEach(alertObject ->
-        futures.add(createSubObjIfPresent(line, alertObject, ALERTS, resourcesPath(ALERTS)))
+        futures.add(createSubObjIfPresent(line, alertObject, ALERTS, resourcesPath(ALERTS))
+          .thenApply(id -> {
+            if (id != null) {
+              alertObject.setId(id);
+            }
+            return id;
+          }))
       );
 
     return collectResultsOnSuccess(futures)
