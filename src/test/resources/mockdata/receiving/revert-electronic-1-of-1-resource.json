@@ -1,0 +1,15 @@
+{
+  "toBeReceived": [
+    {
+      "poLineId": "f217a5c2-2c56-4d05-9412-a96cfc8e52de",
+      "received": 1,
+      "receivedItems": [
+        {
+          "itemStatus": "On order",
+          "pieceId": "56fbfde4-6335-4dd7-9a03-d100821f1d18"
+        }
+      ]
+    }
+  ],
+  "totalRecords": 1
+}

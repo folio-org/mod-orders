@@ -173,9 +173,15 @@ public class InventoryHelper {
     itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus()));
     if (StringUtils.isNotEmpty(receivedItem.getBarcode())) {
       itemRecord.put(ITEM_BARCODE, receivedItem.getBarcode());
+    } else if (isOnOrderItemStatus(receivedItem)) {
+      itemRecord.remove(ITEM_BARCODE);
     }
 
     return handlePutRequest(endpoint, itemRecord, httpClient, ctx, okapiHeaders, logger);
+  }
+
+  public boolean isOnOrderItemStatus(ReceivedItem receivedItem) {
+    return ITEM_STATUS_ON_ORDER.equalsIgnoreCase(receivedItem.getItemStatus());
   }
 
   private CompletableFuture<String> getOrCreateHoldingsRecord(CompositePoLine compPOL, String locationId) {
