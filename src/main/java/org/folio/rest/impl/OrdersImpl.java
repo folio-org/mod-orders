@@ -14,9 +14,11 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import javax.ws.rs.core.Response;
 
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -41,6 +43,14 @@ public class OrdersImpl implements Orders {
 
   private static final String ORDERS_LOCATION_PREFIX = "/orders/composite-orders/%s";
   private static final String ORDER_LINE_LOCATION_PREFIX = "/orders/order-lines/%s";
+
+  private static int getPoLineLimit(JsonObject config) {
+    try {
+      return Integer.parseInt(config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));
+    } catch (NumberFormatException e) {
+      throw new NumberFormatException("Invalid limit value in configuration.");
+    }
+  }
 
   @Override
   @Validate
@@ -105,28 +115,34 @@ public class OrdersImpl implements Orders {
 
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
     PostOrdersHelper helper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
-    loadConfiguration(okapiHeaders, vertxContext, logger).thenAccept(config -> {
-      validatePoLinesQuantity(compPO, config);
-      logger.info("Creating PO and POLines...");
-      helper.createPurchaseOrder(compPO)
-        .thenAccept(withIds -> {
 
-          logger.info("Applying Funds...");
-          helper.applyFunds(withIds)
-            .thenAccept(withFunds -> {
-
-              logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withFunds).encodePrettily());
-              httpClient.closeClient();
-              javax.ws.rs.core.Response response = PostOrdersCompositeOrdersResponse.respond201WithApplicationJson(withFunds,
-                PostOrdersCompositeOrdersResponse.headersFor201().withLocation(String.format(ORDERS_LOCATION_PREFIX, withFunds.getId())));
-              AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
-              asyncResultHandler.handle(result);
+    validate(lang, okapiHeaders, vertxContext, httpClient, compPO).thenAccept(errs -> {
+      if (errs.getTotalRecords() != 0) {
+        PostOrdersCompositeOrdersResponse response = PostOrdersCompositeOrdersResponse.respond422WithApplicationJson(errs);
+        asyncResultHandler.handle(succeededFuture(response));
+      } else {
+        loadConfiguration(okapiHeaders, vertxContext, logger).thenAccept(config -> {
+          validatePoLinesQuantity(compPO, config);
+          logger.info("Creating PO and POLines...");
+          helper.createPurchaseOrder(compPO)
+            .thenAccept(withIds -> {
+              logger.info("Applying Funds...");
+              helper.applyFunds(withIds)
+                .thenAccept(withFunds -> {
+                  logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withFunds).encodePrettily());
+                  httpClient.closeClient();
+                  javax.ws.rs.core.Response response = PostOrdersCompositeOrdersResponse.respond201WithApplicationJson(withFunds,
+                    PostOrdersCompositeOrdersResponse.headersFor201().withLocation(String.format(ORDERS_LOCATION_PREFIX, withFunds.getId())));
+                  AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
+                  asyncResultHandler.handle(result);
+                })
+                .exceptionally(helper::handleError);
             })
             .exceptionally(helper::handleError);
         })
-        .exceptionally(helper::handleError);
-
-    }).exceptionally(helper::handleError);
+          .exceptionally(helper::handleError);
+      }
+    });
   }
 
   @Override
@@ -146,23 +162,31 @@ public class OrdersImpl implements Orders {
     }
 
     PutOrdersByIdHelper putHelper = new PutOrdersByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang);
-    if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-      putHelper.updateOrder(orderId, compPO);
-    } else {
-      loadConfiguration(okapiHeaders, vertxContext, logger)
-        .thenAccept(config -> {
-          validatePoLinesQuantity(compPO, config);
-          compPO.getCompositePoLines().forEach(poLine -> {
-            if (StringUtils.isEmpty(poLine.getPurchaseOrderId())) {
-              poLine.setPurchaseOrderId(orderId);
-            }
-            if (!orderId.equals(poLine.getPurchaseOrderId())) {
-              throw new HttpException(422, ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE);
-            }
-          });
+    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
+    validate(lang, okapiHeaders, vertxContext, httpClient, compPO).thenAccept(errs -> {
+      if (compPO.getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.OPEN && !errs.getErrors().isEmpty()) {
+        PutOrdersCompositeOrdersByIdResponse response = PutOrdersCompositeOrdersByIdResponse.respond422WithApplicationJson(errs);
+        asyncResultHandler.handle(succeededFuture(response));
+      } else {
+        if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
           putHelper.updateOrder(orderId, compPO);
-      }).exceptionally(putHelper::handleError);
-    }
+        } else {
+          loadConfiguration(okapiHeaders, vertxContext, logger)
+            .thenAccept(config -> {
+              validatePoLinesQuantity(compPO, config);
+              compPO.getCompositePoLines().forEach(poLine -> {
+                if (StringUtils.isEmpty(poLine.getPurchaseOrderId())) {
+                  poLine.setPurchaseOrderId(orderId);
+                }
+                if (!orderId.equals(poLine.getPurchaseOrderId())) {
+                  throw new HttpException(422, ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE);
+                }
+              });
+              putHelper.updateOrder(orderId, compPO);
+            }).exceptionally(putHelper::handleError);
+        }
+      }
+    });
   }
 
   @Override
@@ -238,7 +262,7 @@ public class OrdersImpl implements Orders {
   @Override
   @Validate
   public void deleteOrdersOrderLinesById(String lineId, String lang, Map<String, String> okapiHeaders,
-                                             Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+                                         Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     new DeleteOrderLineByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang)
       .deleteLine(lineId);
   }
@@ -315,14 +339,6 @@ public class OrdersImpl implements Orders {
     asyncResultHandler.handle(succeededFuture(Response.status(501).build()));
   }
 
-  private static int getPoLineLimit(JsonObject config) {
-    try {
-      return Integer.parseInt(config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));
-    } catch (NumberFormatException e) {
-      throw new NumberFormatException("Invalid limit value in configuration.");
-    }
-  }
-
   private void validatePoLinesQuantity(CompositePurchaseOrder compPO, JsonObject config) {
     int limit = getPoLineLimit(config);
     if (compPO.getCompositePoLines().size() > limit) {
@@ -367,5 +383,17 @@ public class OrdersImpl implements Orders {
 
   }
 
+    private CompletableFuture<Errors> validate(String lang, Map<String, String> okapiHeaders, Context vertxContext, HttpClientInterface httpClient, CompositePurchaseOrder compPO) {
+      CompletableFuture<Errors> future = new VertxCompletableFuture<>(vertxContext);
+      VendorHelper vendorHelper = new VendorHelper(lang, httpClient, okapiHeaders, vertxContext);
+      vendorHelper.validateVendor(compPO)
+        .thenAccept(errors -> vendorHelper.validateAccessProviders(compPO)
+        .thenApply(accessProvidersErrors -> {
+          errors.getErrors().addAll(accessProvidersErrors.getErrors());
+          errors.setTotalRecords(errors.getErrors().size());
+          return errors;
+        }).thenApply(future::complete));
+      return future;
+  }
 }
 
