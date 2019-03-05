@@ -137,7 +137,6 @@ public class PostOrderLineHelper extends AbstractHelper {
       operateOnSubObj(HttpMethod.POST, url, obj, httpClient, ctx, okapiHeaders, logger)
         .thenAccept(body -> {
           String id = JsonObject.mapFrom(body).getString("id");
-          logger.debug("Field= '{}' id={}", field, id);
           pol.put(field, id);
           future.complete(id);
           logger.debug("The '{}' sub-object successfully created with id={}", field, id);
