@@ -147,7 +147,10 @@ resourceTypes:
                   value: !include raml-util/examples/errors.sample
   /receive:
     displayName: Receive items
-    description: Receive items spanning one or more PO lines
+    description: |
+      Receive items spanning one or more PO lines. The endpoint is used to:
+      - receive pieces and associated inventory items
+      - move a received piece back to "Expected" in case "receivedItems" element's "itemStatus" is "On order"
     type:
       post-with-200:
         requestSchema: receiving-collection
