@@ -124,17 +124,18 @@ public class OrdersImplTest {
   private static final String PO_NUMBER_VALUE = "228D126";
   private static final String PO_LINE_NUMBER_VALUE = "1";
 
-  private static final String ACTIVE_VENDOR_ID = "2acdf60c-835f-41c1-963b-f87c4ee3fa08";
+  private static final String ACTIVE_VENDOR_ID = "168f8a86-d26c-406e-813f-c7527f241ac3";
   private static final String INACTIVE_VENDOR_ID = "b1ef7e96-98f3-4f0d-9820-98c322c989d2";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";
   private static final String NON_EXIST_VENDOR_ID = "bba87500-6e71-4057-a2a9-a091bac7e0c1";
+  private static final String MOD_VENDOR_INTERNAL_ERROR_ID = "bba81500-6e41-4057-a2a9-a081bac7e0c1";
 
   private static final String ACTIVE_ACCESS_PROVIDER_A = "858e80d2-f562-4c54-9934-6e274dee511d";
   private static final String ACTIVE_ACCESS_PROVIDER_B = "d1b79c8d-4950-482f-8e42-04f9aae3cb40";
   private static final String INACTIVE_ACCESS_PROVIDER_A = "f6cd1850-2587-4f6c-b680-9b27ff26d619";
   private static final String INACTIVE_ACCESS_PROVIDER_B = "f64bbcae-e5ea-42b6-8236-55fefed0fb8f";
   private static final String NON_EXIST_ACCESS_PROVIDER_A = "160501b3-52dd-31ec-a0ce-17762e6a9b47";
-  public static final String EMPTY_STR = "";
+  private static final String EMPTY_STR = "";
 
   static {
     System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, "io.vertx.core.logging.Log4j2LogDelegateFactory");
@@ -2724,6 +2725,10 @@ public class OrdersImplTest {
       EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(Errors.class);
     assertThat(activeVendorActiveAccessProviderErrors.getErrors(), empty());
 
+    // Internal mod-vendor error
+    Errors internalServerError = verifyPostResponseErrors(1, MOD_VENDOR_INTERNAL_ERROR_ID, ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B);
+    assertEquals(GENERIC_ERROR_CODE.getCode(), internalServerError.getErrors().get(0).getCode());
+
     // Non-existed vendor
     Errors nonExistedVendorError = verifyPostResponseErrors(1, NON_EXIST_VENDOR_ID, ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B);
     checkExpectedError(NON_EXIST_VENDOR_ID, nonExistedVendorError, 0, ORDER_VENDOR_NOT_FOUND);
@@ -3147,36 +3152,43 @@ public class OrdersImplTest {
     private void handleGetAccessProviders(RoutingContext ctx) {
       logger.info("handleGetAccessProviders got: " + ctx.request().path());
       String query = ctx.request().getParam("query");
-      JsonObject body;
+      JsonObject body = new JsonObject();
+
       try {
         if(getQuery(ACTIVE_ACCESS_PROVIDER_A, NON_EXIST_ACCESS_PROVIDER_A).equals(query)) {
           body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "one_access_provider_not_found.json"));
-        }  else if(getQuery(ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B).equals(query)) {
+        }  else if(getQuery(ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B).equals(query)
+          || getQuery(ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_A).equals(query)) {
           body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "all_access_providers_active.json"));
         } else if(getQuery(ACTIVE_ACCESS_PROVIDER_A, INACTIVE_ACCESS_PROVIDER_A).equals(query)) {
           body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "active_inactive_access_providers.json"));
         } else if(getQuery(INACTIVE_ACCESS_PROVIDER_A, INACTIVE_ACCESS_PROVIDER_B).equals(query)) {
           body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "all_inactive_access_providers.json"));
+        } else if(getQuery(ACTIVE_ACCESS_PROVIDER_A).equals(query)) {
+          body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "one_access_provider_not_found.json"));
         } else {
-          // To ensure compatibility with already existing tests
-          body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "all_access_providers_active.json"));
+          ctx.response()
+            .setStatusCode(HttpStatus.HTTP_NOT_FOUND.toInt())
+            .end();
+          return;
         }
-        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
-
       } catch(IOException e) {
         ctx.response()
-          .setStatusCode(HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt())
+          .setStatusCode(HttpStatus.HTTP_NOT_FOUND.toInt())
           .end();
       }
+      serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
     }
 
     private void handleGetVendorById(RoutingContext ctx) {
       logger.info("handleGetVendorById got: " + ctx.request().path());
       String vendorId = ctx.request().getParam(ID);
-      JsonObject body;
+      JsonObject body = null;
       try {
-        if(NON_EXIST_VENDOR_ID.equals(vendorId)) {
+        if (NON_EXIST_VENDOR_ID.equals(vendorId)) {
           serverResponse(ctx, HttpStatus.HTTP_NOT_FOUND.toInt(), APPLICATION_JSON, "vendor not found");
+        } else if (MOD_VENDOR_INTERNAL_ERROR_ID.equals(vendorId)) {
+          serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), APPLICATION_JSON, "internal server error, contact administrator");
         } else {
           switch (vendorId) {
             case ACTIVE_VENDOR_ID:
@@ -3189,8 +3201,7 @@ public class OrdersImplTest {
               body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "pending_vendor.json"));
               break;
             default :
-              // To ensure compatibility with existing tests - return active existing vendor.
-              body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "active_vendor.json"));
+              serverResponse(ctx, HttpStatus.HTTP_NOT_FOUND.toInt(), APPLICATION_JSON, "vendor not found");
           }
           serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
         }

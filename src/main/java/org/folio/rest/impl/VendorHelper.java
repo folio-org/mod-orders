@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
@@ -26,7 +27,6 @@ import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_NOT_FOUND;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
-import static org.folio.orders.utils.HelperUtils.getAccessProvidersList;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 
 
@@ -63,26 +63,29 @@ public class VendorHelper {
     String id = compPO.getVendor();
     CompletableFuture<Errors> future = new VertxCompletableFuture<>(ctx);
     List<Error> errors = new ArrayList<>();
-    getVendorJsonById(id)
-      .thenApply(vendorJson -> {
-        VendorStatus status = VendorStatus.valueOf(vendorJson.getString(VENDOR_STATUS).toUpperCase());
-
-        if(status != VendorStatus.ACTIVE) {
-          errors.add(createErrorWithId(ORDER_VENDOR_IS_INACTIVE, id));
-        }
-        return buildErrorsObject(errors);
-      })
-      .thenAccept(future::complete)
-      .exceptionally(t -> {
-        if(HttpStatus.HTTP_NOT_FOUND.toInt() == (((HttpException) t.getCause()).getCode())) {
-          errors.add(createErrorWithId(ORDER_VENDOR_NOT_FOUND, id));
-        } else {
-          logger.error("Failed to validate vendor's status", t);
-          errors.add(GENERIC_ERROR_CODE.toError());
-        }
-        future.complete(buildErrorsObject(errors));
-        return null;
-      });
+    if(id != null) {
+      getVendorJsonById(id)
+        .thenApply(vendorJson -> {
+          VendorStatus status = VendorStatus.valueOf(vendorJson.getString(VENDOR_STATUS).toUpperCase());
+          if(status != VendorStatus.ACTIVE) {
+            errors.add(createErrorWithId(ORDER_VENDOR_IS_INACTIVE, id));
+          }
+          return buildErrorsObject(errors);
+        })
+        .thenAccept(future::complete)
+        .exceptionally(t -> {
+          if(HttpStatus.HTTP_NOT_FOUND.toInt() == (((HttpException) t.getCause()).getCode())) {
+            errors.add(createErrorWithId(ORDER_VENDOR_NOT_FOUND, id));
+          } else {
+            logger.error("Failed to validate vendor's status", t);
+            errors.add(GENERIC_ERROR_CODE.toError());
+          }
+          future.complete(buildErrorsObject(errors));
+          return null;
+        });
+    } else {
+      future.complete(buildErrorsObject(errors));
+    }
     return future;
   }
 
@@ -93,32 +96,33 @@ public class VendorHelper {
    */
   public CompletableFuture<Errors> validateAccessProviders(CompositePurchaseOrder compPO) {
     CompletableFuture<Errors> future = new VertxCompletableFuture<>(ctx);
-    List<String> ids = getAccessProvidersList(compPO);
+    List<String> ids = verifyAndGetAccessProvidersIdsList(compPO);
     List<Error> errors = new ArrayList<>();
-    getAccessProvidersByIds(ids).thenApply(vendors -> {
-      // Validate access provider status Active
-      vendors.forEach(vendorJson -> {
-        if(VendorStatus.valueOf(vendorJson.getString(VENDOR_STATUS).toUpperCase()) != VendorStatus.ACTIVE) {
-          errors.add(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, vendorJson.getString(ID)));
-        }
-      });
-
-      // Validate access provider existence
-      List<String> vendorsIds = vendors.stream()
-        .map(jsonObject -> jsonObject.getString(ID))
-        .collect(toList());
-
-      ids.stream()
-        .filter(id -> !vendorsIds.contains(id))
-        .forEach(id -> errors.add(POL_ACCESS_PROVIDER_NOT_FOUND.toError().withAdditionalProperty(ID, id)));
-
-      return buildErrorsObject(errors);
-    }).thenAccept(future::complete)
-      .exceptionally(t -> {
-        logger.error("Failed to validate access provider's status", t);
-        future.completeExceptionally(t);
-        return null;
-      });
+    if (!ids.isEmpty()) {
+      getAccessProvidersByIds(ids).thenApply(vendors -> {
+        // Validate access provider status Active
+        vendors.forEach(vendorJson -> {
+          if(VendorStatus.valueOf(vendorJson.getString(VENDOR_STATUS).toUpperCase()) != VendorStatus.ACTIVE) {
+            errors.add(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, vendorJson.getString(ID)));
+          }
+        });
+        // Validate access provider existence
+        List<String> vendorsIds = vendors.stream()
+          .map(jsonObject -> jsonObject.getString(ID))
+          .collect(toList());
+        ids.stream()
+          .filter(id -> !vendorsIds.contains(id))
+          .forEach(id -> errors.add(POL_ACCESS_PROVIDER_NOT_FOUND.toError().withAdditionalProperty(ID, id)));
+        return buildErrorsObject(errors);
+      }).thenAccept(future::complete)
+        .exceptionally(t -> {
+          logger.error("Failed to validate access provider's status", t);
+          future.completeExceptionally(t);
+          return null;
+        });
+    } else {
+      future.complete(buildErrorsObject(errors));
+    }
     return future;
   }
 
@@ -169,6 +173,18 @@ public class VendorHelper {
     handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(vendors -> vendors.getJsonArray(VENDORS).stream().map(obj -> (JsonObject) obj).collect(toList())).thenAccept(future::complete);
     return future;
+  }
+
+  /**
+   * Returns list of access providers ids
+   *
+   * @param compPO composite purchase order
+   * @return list of access providers id
+   */
+  private List<String> verifyAndGetAccessProvidersIdsList(CompositePurchaseOrder compPO) {
+    return compPO.getCompositePoLines().stream()
+      .filter(p -> (p.getEresource() != null && p.getEresource().getAccessProvider() != null))
+      .map(p -> p.getEresource().getAccessProvider()).collect(Collectors.toList());
   }
 
   public enum VendorStatus {

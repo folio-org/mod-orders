@@ -743,16 +743,4 @@ public class HelperUtils {
     }
     return future;
   }
-
-  /**
-   * Returns list of access providers ids
-   *
-   * @param compPO composite purchase order
-   * @return list of access providers id
-   */
-  public static List<String> getAccessProvidersList(CompositePurchaseOrder compPO) {
-    return compPO.getCompositePoLines().stream()
-      .filter(p -> (p.getEresource() != null && p.getEresource().getAccessProvider() != null))
-      .map(p -> p.getEresource().getAccessProvider()).collect(Collectors.toList());
-  }
 }
