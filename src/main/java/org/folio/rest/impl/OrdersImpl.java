@@ -246,7 +246,7 @@ public class OrdersImpl implements Orders {
   @Override
   @Validate
   public void getOrdersPoNumber(String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    logger.info("Receiving generated po_number ...");
+    logger.info("Receiving generated poNumber ...");
 
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
     PoNumberHelper helper = new PoNumberHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);

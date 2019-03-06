@@ -38,10 +38,10 @@ public class ResourcePathResolver {
   static {
     Map<String, String> apis = new HashMap<>();
     apis.put(ALERTS, "/orders-storage/alerts");
-    apis.put(REPORTING_CODES, "/orders-storage/reportingCodes");
-    apis.put(PO_LINES, "/orders-storage/poLines");
-    apis.put(PO_NUMBER, "/orders-storage/poNumber");
-    apis.put(PURCHASE_ORDER, "/orders-storage/purchaseOrders");
+    apis.put(REPORTING_CODES, "/orders-storage/reporting-codes");
+    apis.put(PO_LINES, "/orders-storage/po-lines");
+    apis.put(PO_NUMBER, "/orders-storage/po-number");
+    apis.put(PURCHASE_ORDER, "/orders-storage/purchase-orders");
     apis.put(PIECES, "/orders-storage/pieces");
     apis.put(RECEIVING_HISTORY, "/orders-storage/receiving-history");
     apis.put(PO_LINE_NUMBER, "/orders-storage/po-line-number");
