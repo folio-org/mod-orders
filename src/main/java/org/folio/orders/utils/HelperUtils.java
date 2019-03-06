@@ -130,7 +130,7 @@ public class HelperUtils {
 
 
   /**
-   *  Retrieves PO lines from storage by PO id as JsonObject with array of po_lines (/acq-models/mod-orders-storage/schemas/po_line.json objects)
+   *  Retrieves PO lines from storage by PO id as JsonObject with array of poLines (/acq-models/mod-orders-storage/schemas/po_line.json objects)
    */
   public static CompletableFuture<JsonObject> getPoLines(String id, String lang, HttpClientInterface httpClient, Context ctx,
                                                           Map<String, String> okapiHeaders, Logger logger) {

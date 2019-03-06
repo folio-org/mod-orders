@@ -11,6 +11,7 @@ import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_QTY;
 import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_RETRIEVED;
 import static org.folio.orders.utils.ErrorCodes.PIECE_ALREADY_RECEIVED;
+import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.orders.utils.ErrorCodes.PIECE_POL_MISMATCH;
 import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
@@ -2529,7 +2530,7 @@ public class OrdersImplTest {
         assertThat(receivingItemResult.getPieceId(), not(isEmptyString()));
         assertThat(receivingItemResult.getProcessingStatus(), not(nullValue()));
         assertThat(receivingItemResult.getProcessingStatus().getType(), is(ProcessingStatus.Type.FAILURE));
-        // assertThat(receivingItemResult.getProcessingStatus().getError().getCode(), is(ITEM_NOT_RETRIEVED.getCode()));
+        assertThat(receivingItemResult.getProcessingStatus().getError().getCode(), is(ITEM_NOT_RETRIEVED.getCode()));
     }
 
     List<JsonObject> pieceSearches = MockServer.serverRqRs.get(PIECES, HttpMethod.GET);
@@ -2684,6 +2685,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.PUT, resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
       router.route(HttpMethod.PUT, resourcePath(PIECES)).handler(ctx -> handlePutGenericSubObj(ctx, PIECES));
       router.route(HttpMethod.PUT, resourcePath(REPORTING_CODES)).handler(ctx -> handlePutGenericSubObj(ctx, REPORTING_CODES));
+      router.route(HttpMethod.PUT, resourcePath(ALERTS)).handler(ctx -> handlePutGenericSubObj(ctx, ALERTS));
       router.route(HttpMethod.PUT, "/inventory/items/:id").handler(ctx -> handlePutGenericSubObj(ctx, ITEM_RECORDS));
 
       router.route(HttpMethod.DELETE, resourcesPath(PURCHASE_ORDER)+"/:id").handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER));
@@ -3052,8 +3054,7 @@ public class OrdersImplTest {
           .stream()
           .map(l -> (JsonObject) l)
           .map(line -> {
-            replaceObjectById(line, ADJUSTMENT, COST, DETAILS, ERESOURCE, PHYSICAL, SOURCE, VENDOR_DETAIL);
-            replaceObjectsByIds(line, ALERTS, CLAIMS, FUND_DISTRIBUTION, LOCATIONS, REPORTING_CODES);
+            replaceObjectsByIds(line, ALERTS, REPORTING_CODES);
             return line.mapTo(PoLine.class);
           })
           .collect(Collectors.toList());
@@ -3084,20 +3085,6 @@ public class OrdersImplTest {
                                            .map(o -> ((Map<?, ?>) o).get(ID))
                                            .filter(Objects::nonNull)
                                            .collect(Collectors.toList())));
-        }
-      }
-    }
-
-    private void replaceObjectById(JsonObject line, String... property) {
-      for (String prop : property) {
-        try {
-          Map<?, ?> obj = (Map<?, ?>) line.remove(prop);
-          if (obj != null && obj.containsKey(ID)) {
-            line.put(prop, obj.get(ID));
-          }
-        } catch (Exception e) {
-          logger.error("Error replacing content for '{}' sub-object", prop);
-          throw e;
         }
       }
     }
@@ -3362,7 +3349,7 @@ public class OrdersImplTest {
       switch (status) {
         case 201:
           contentType = APPLICATION_JSON;
-          body = JsonObject.mapFrom(ctx.getBodyAsJson().mapTo(getSubObjClass(subObj)));
+          body = JsonObject.mapFrom(ctx.getBodyAsJson().mapTo(getSubObjClass(subObj))).put(ID, UUID.randomUUID().toString());
           respBody = body.encodePrettily();
           break;
         case 403:

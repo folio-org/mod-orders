@@ -322,7 +322,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenApply(json -> {
         if (operation == HttpMethod.PUT) {
           return storageId;
-        } else if (operation == HttpMethod.POST && json.getString(ID)!=null) {
+        } else if (operation == HttpMethod.POST && json.getString(ID) != null) {
 	        return json.getString(ID);
         }
         return null;
@@ -340,7 +340,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       updatedLine.remove(prop);
       for (int i = 0; i < jsonObjects.size(); i++) {
         JsonObject subObj = jsonObjects.getJsonObject(i);
-        if (subObj != null  && subObj.getString(ID)!=null) {
+        if (subObj != null  && subObj.getString(ID) != null) {
           String id = idsInStorage.remove(subObj.getString(ID)) ? subObj.getString(ID) : null;
 
           futures.add(handleSubObjOperation(prop, subObj, id)
