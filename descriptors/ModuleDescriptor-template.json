@@ -11,7 +11,7 @@
           "pathPattern": "/orders/composite-orders",
           "permissionsRequired": ["orders.collection.get"],
           "modulePermissions": [
-            "orders-storage.purchase_orders.collection.get"
+            "orders-storage.purchase-orders.collection.get"
           ]
         },
         {
@@ -19,13 +19,13 @@
           "pathPattern": "/orders/composite-orders",
           "permissionsRequired": ["orders.item.post"],
           "modulePermissions": [
-            "orders-storage.purchase_orders.item.post",
-            "orders-storage.po_lines.item.post",
+            "orders-storage.purchase-orders.item.post",
+            "orders-storage.po-lines.item.post",
             "orders-storage.pieces.item.post",
             "orders-storage.pieces.collection.get",
-            "orders-storage.po_number.get",
+            "orders-storage.po-number.get",
             "orders-storage.alerts.item.post",
-            "orders-storage.reporting_codes.item.post",
+            "orders-storage.reporting-codes.item.post",
             "configuration.entries.collection.get",
             "inventory-storage.identifier-types.collection.get",
             "inventory.instances.collection.get",
@@ -44,10 +44,10 @@
           "pathPattern": "/orders/composite-orders/{id}",
           "permissionsRequired": ["orders.item.get"],
           "modulePermissions": [
-            "orders-storage.purchase_orders.item.get",
-            "orders-storage.po_lines.collection.get",
+            "orders-storage.purchase-orders.item.get",
+            "orders-storage.po-lines.collection.get",
              "orders-storage.alerts.item.get",
-            "orders-storage.reporting_codes.item.get"
+            "orders-storage.reporting-codes.item.get"
           ]
         },
         {
@@ -55,12 +55,12 @@
           "pathPattern": "/orders/composite-orders/{id}",
           "permissionsRequired": ["orders.item.put"],
           "modulePermissions": [
-            "orders-storage.purchase_orders.item.put",
-            "orders-storage.po_lines.all",
+            "orders-storage.purchase-orders.item.put",
+            "orders-storage.po-lines.all",
             "orders-storage.alerts.all",
             "orders-storage.pieces.item.post",
             "orders-storage.pieces.collection.get",
-            "orders-storage.reporting_codes.all",
+            "orders-storage.reporting-codes.all",
             "inventory-storage.identifier-types.collection.get",
             "inventory.instances.collection.get",
             "inventory.instances.item.post",
@@ -78,12 +78,11 @@
           "pathPattern": "/orders/composite-orders/{id}",
           "permissionsRequired": ["orders.item.delete"],
           "modulePermissions": [
-            "orders-storage.purchase_orders.item.delete",
-            "orders-storage.po_lines.item.delete",
+            "orders-storage.purchase-orders.item.delete",
+            "orders-storage.po-lines.item.delete",
             "orders-storage.alerts.item.delete",
-            "orders-storage.reporting_codes.item.delete",
-            "orders-storage.sources.item.delete",
-            "orders-storage.vendor_details.item.delete"
+            "orders-storage.reporting-codes.item.delete",
+            "orders-storage.sources.item.delete"
           ]
         },
         {
@@ -91,7 +90,7 @@
           "pathPattern": "/orders/order-lines",
           "permissionsRequired": ["orders.po-lines.collection.get"],
           "modulePermissions": [
-            "orders-storage.po_lines.collection.get"
+            "orders-storage.po-lines.collection.get"
           ]
         },
         {
@@ -99,9 +98,9 @@
           "pathPattern": "/orders/order-lines",
           "permissionsRequired": ["orders.po-lines.item.post"],
           "modulePermissions": [
-            "orders-storage.po_lines.item.post",
+            "orders-storage.po-lines.item.post",
             "orders-storage.alerts.item.post",
-            "orders-storage.reporting_codes.item.post",
+            "orders-storage.reporting-codes.item.post",
             "configuration.entries.collection.get"
           ]
         },
@@ -110,9 +109,9 @@
           "pathPattern": "/orders/order-lines/{id}",
           "permissionsRequired": ["orders.po-lines.item.get"],
           "modulePermissions": [
-            "orders-storage.po_lines.item.get",
+            "orders-storage.po-lines.item.get",
             "orders-storage.alerts.item.get",
-            "orders-storage.reporting_codes.item.get"
+            "orders-storage.reporting-codes.item.get"
           ]
         },
         {
@@ -120,9 +119,9 @@
           "pathPattern": "/orders/order-lines/{id}",
           "permissionsRequired": ["orders.po-lines.item.put"],
           "modulePermissions": [
-            "orders-storage.po_lines.item.put",
+            "orders-storage.po-lines.item.put",
             "orders-storage.alerts.all",
-            "orders-storage.reporting_codes.all"
+            "orders-storage.reporting-codes.all"
           ]
         },
         {
@@ -130,9 +129,9 @@
           "pathPattern": "/orders/order-lines/{id}",
           "permissionsRequired": ["orders.po-lines.item.delete"],
           "modulePermissions": [
-            "orders-storage.po_lines.item.delete",
+            "orders-storage.po-lines.item.delete",
             "orders-storage.alerts.item.delete",
-            "orders-storage.reporting_codes.item.delete"
+            "orders-storage.reporting-codes.item.delete"
           ]
         },
         {
@@ -140,7 +139,7 @@
           "pathPattern": "/orders/po-number/validate",
           "permissionsRequired": ["orders.po-number.item.post"],
           "modulePermissions": [
-            "orders-storage.purchase_orders.collection.get"
+            "orders-storage.purchase-orders.collection.get"
           ]
         },
         {
@@ -148,7 +147,7 @@
           "pathPattern": "/orders/po-number",
           "permissionsRequired": ["orders.po-number.item.get"],
           "modulePermissions": [
-            "orders-storage.po_number.get"
+            "orders-storage.po-number.get"
           ]
         },
         {
@@ -158,8 +157,8 @@
           "modulePermissions": [
             "orders-storage.pieces.collection.get",
             "orders-storage.pieces.item.put",
-            "orders-storage.po_lines.collection.get",
-            "orders-storage.po_lines.item.put",
+            "orders-storage.po-lines.collection.get",
+            "orders-storage.po-lines.item.put",
             "inventory.items.collection.get",
             "inventory.items.item.put"
           ]
@@ -171,8 +170,8 @@
           "modulePermissions": [
             "orders-storage.pieces.collection.get",
             "orders-storage.pieces.item.put",
-            "orders-storage.po_lines.collection.get",
-            "orders-storage.po_lines.item.put",
+            "orders-storage.po-lines.collection.get",
+            "orders-storage.po-lines.item.put",
             "inventory-storage.items.collection.get",
             "inventory-storage.items.item.post",
             "inventory-storage.items.item.put"
@@ -191,7 +190,7 @@
   ],
   "requires": [
     {
-      "id": "orders-storage.purchase_orders",
+      "id": "orders-storage.purchase-orders",
       "version": "3.0"
     },
     {
@@ -207,11 +206,11 @@
       "version": "2.0"
     },
     {
-      "id": "orders-storage.reporting_codes",
+      "id": "orders-storage.reporting-codes",
       "version": "3.0"
     },
     {
-      "id": "orders-storage.po_lines",
+      "id": "orders-storage.po-lines",
       "version": "3.0"
     },
     {
@@ -219,7 +218,7 @@
       "version": "3.0"
     },
     {
-      "id": "orders-storage.po_number",
+      "id": "orders-storage.po-number",
       "version": "2.0"
     },
     {
@@ -311,12 +310,12 @@
     {
       "permissionName": "orders.receiving.collection.post",
       "displayName": "Orders - Receive items",
-      "description": "Receive items spanning one or more po_lines in this order"
+      "description": "Receive items spanning one or more po-lines in this order"
     },
     {
       "permissionName": "orders.check-in.collection.post",
       "displayName": "Orders - Check-in items",
-      "description": "Check-in items spanning one or more po_lines in this order"
+      "description": "Check-in items spanning one or more po-lines in this order"
     },
     {
       "permissionName": "orders.receiving-history.collection.get",
