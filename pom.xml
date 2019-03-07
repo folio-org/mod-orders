@@ -204,12 +204,22 @@
         </configuration>
         <executions>
           <execution>
-            <id>acq-models</id>
+            <id>orders-storage</id>
             <goals>
               <goal>generate</goal>
             </goals>
             <configuration>
               <sourceDirectory>${basedir}/ramls/acq-models/mod-orders-storage/schemas</sourceDirectory>
+              <targetPackage>org.folio.rest.acq.model</targetPackage>
+            </configuration>
+          </execution>
+          <execution>
+            <id>common</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <sourceDirectory>${basedir}/ramls/acq-models/common/schemas</sourceDirectory>
               <targetPackage>org.folio.rest.acq.model</targetPackage>
             </configuration>
           </execution>
