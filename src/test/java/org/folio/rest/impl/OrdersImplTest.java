@@ -2733,7 +2733,6 @@ public class OrdersImplTest {
     assertThat(polUpdates, hasSize(pieceIdsByPol.size()));
 
     itemUpdates.forEach(item -> {
-      assertThat(item.getString(ITEM_BARCODE), nullValue());
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
       assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_ON_ORDER));
     });
@@ -2780,7 +2779,6 @@ public class OrdersImplTest {
     assertThat(polUpdates, hasSize(1));
 
     itemUpdates.forEach(item -> {
-      assertThat(item.getString(ITEM_BARCODE), nullValue());
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
       assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_ON_ORDER));
     });

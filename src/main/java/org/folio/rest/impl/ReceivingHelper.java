@@ -242,7 +242,7 @@ public class ReceivingHelper extends AbstractHelper {
 
   /**
    * Verifies if the current status of the piece record is "Received" and the client would like to roll-back to Expected
-   * @param piece piece reqcord involved in receiving flow
+   * @param piece piece record to asses
    * @return {@code true} if piece record is already received and has to be rolled-back to Expected
    */
   private boolean isRevertReceivedItem(Piece piece) {

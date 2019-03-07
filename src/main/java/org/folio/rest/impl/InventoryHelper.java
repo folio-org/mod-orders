@@ -173,13 +173,16 @@ public class InventoryHelper {
     itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus()));
     if (StringUtils.isNotEmpty(receivedItem.getBarcode())) {
       itemRecord.put(ITEM_BARCODE, receivedItem.getBarcode());
-    } else if (isOnOrderItemStatus(receivedItem)) {
-      itemRecord.remove(ITEM_BARCODE);
     }
 
     return handlePutRequest(endpoint, itemRecord, httpClient, ctx, okapiHeaders, logger);
   }
 
+  /**
+   * Checks if the {@link ReceivedItem} has item status as "On order"
+   * @param receivedItem item details specified by user upon receiving flow
+   * @return {@code true} if the item status is "On order"
+   */
   public boolean isOnOrderItemStatus(ReceivedItem receivedItem) {
     return ITEM_STATUS_ON_ORDER.equalsIgnoreCase(receivedItem.getItemStatus());
   }
