@@ -384,14 +384,12 @@ public class OrdersImpl implements Orders {
   }
 
     private CompletableFuture<Errors> validate(String lang, Map<String, String> okapiHeaders, Context vertxContext, HttpClientInterface httpClient, CompositePurchaseOrder compPO) {
-      CompletableFuture<Errors> future = new VertxCompletableFuture<>(vertxContext);
       VendorHelper vendorHelper = new VendorHelper(lang, httpClient, okapiHeaders, vertxContext);
-      vendorHelper.validateVendor(compPO).thenCombine(vendorHelper.validateAccessProviders(compPO), (errors, accessProvidersErrors) -> {
+      return vendorHelper.validateVendor(compPO).thenCombine(vendorHelper.validateAccessProviders(compPO), (errors, accessProvidersErrors) -> {
           errors.getErrors().addAll(accessProvidersErrors.getErrors());
           errors.setTotalRecords(errors.getErrors().size());
           return errors;
-        }).thenApply(future::complete);
-      return future;
+        });
   }
 }
 
