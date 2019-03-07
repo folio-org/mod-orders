@@ -16,16 +16,8 @@ public class ResourcePathResolver {
 
   public static final String ADJUSTMENT = "adjustment";
   public static final String ALERTS = "alerts";
-  public static final String CLAIMS = "claims";
-  public static final String COST = "cost";
-  public static final String DETAILS = "details";
-  public static final String ERESOURCE = "eresource";
-  public static final String FUND_DISTRIBUTION = "fundDistribution";
-  public static final String LOCATIONS = "locations";
-  public static final String PHYSICAL = "physical";
   public static final String REPORTING_CODES = "reportingCodes";
   public static final String SOURCE = "source";
-  public static final String VENDOR_DETAIL = "vendorDetail";
   public static final String PURCHASE_ORDER = "purchaseOrder";
   public static final String PIECES = "pieces";
   public static final String RECEIVING_HISTORY = "receiving-history";

@@ -3366,30 +3366,10 @@ public class OrdersImplTest {
 
     private Class<?> getSubObjClass(String subObj) {
       switch (subObj) {
-        case ADJUSTMENT:
-          return org.folio.rest.acq.model.Adjustment.class;
         case ALERTS:
           return org.folio.rest.acq.model.Alert.class;
-        case CLAIMS:
-          return org.folio.rest.acq.model.Claim.class;
-        case COST:
-          return org.folio.rest.acq.model.Cost.class;
-        case DETAILS:
-          return org.folio.rest.acq.model.Details.class;
-        case ERESOURCE:
-          return org.folio.rest.acq.model.Eresource.class;
-        case FUND_DISTRIBUTION:
-          return org.folio.rest.acq.model.FundDistribution.class;
-        case LOCATIONS:
-          return org.folio.rest.acq.model.Location.class;
-        case PHYSICAL:
-          return org.folio.rest.acq.model.Physical.class;
         case REPORTING_CODES:
           return org.folio.rest.acq.model.ReportingCode.class;
-        case SOURCE:
-          return org.folio.rest.acq.model.Source.class;
-        case VENDOR_DETAIL:
-          return org.folio.rest.acq.model.VendorDetail.class;
         case PIECES:
             return org.folio.rest.acq.model.Piece.class;
       }
