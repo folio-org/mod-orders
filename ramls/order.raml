@@ -9,10 +9,10 @@ documentation:
     content: <b>API for managing purchase orders</b>
 
 types:
-  composite-purchase-order: !include acq-models/composite_purchase_order.json
+  composite-purchase-order: !include acq-models/mod-orders/schemas/composite_purchase_order.json
   purchase-orders: !include acq-models/mod-orders-storage/schemas/purchase_order_collection.json
   purchase_order: !include acq-models/mod-orders-storage/schemas/purchase_order.json
-  composite-po-line: !include acq-models/composite_po_line.json
+  composite-po-line: !include acq-models/mod-orders/schemas/composite_po_line.json
   po-line-collection: !include acq-models/mod-orders-storage/schemas/po_line_collection.json
   po-line: !include acq-models/mod-orders-storage/schemas/po_line.json
   checkin-collection: !include acq-models/mod-orders/schemas/checkinCollection.json
@@ -44,7 +44,7 @@ resourceTypes:
     type:
       collection:
         exampleCollection: !include acq-models/mod-orders-storage/examples/purchase_order_collection.sample
-        exampleItem: !include acq-models/examples/composite_purchase_order.sample
+        exampleItem: !include acq-models/mod-orders/examples/composite_purchase_order.sample
         schemaCollection: purchase-orders
         schemaItem: composite-purchase-order
     is: [validate]
@@ -59,7 +59,7 @@ resourceTypes:
           type: UUID
       type:
         collection-item:
-          exampleItem: !include acq-models/examples/composite_purchase_order.sample
+          exampleItem: !include acq-models/mod-orders/examples/composite_purchase_order.sample
           schema: composite-purchase-order
       is: [validate]
       get:
@@ -77,7 +77,7 @@ resourceTypes:
     type:
       collection:
         exampleCollection: !include acq-models/mod-orders-storage/examples/po_line_collection.sample
-        exampleItem: !include acq-models/examples/composite_po_line.sample
+        exampleItem: !include acq-models/mod-orders/examples/composite_po_line.sample
         schemaCollection: po-line-collection
         schemaItem: composite-po-line
     is: [validate]
@@ -94,7 +94,7 @@ resourceTypes:
           type: UUID
       type:
         collection-item:
-          exampleItem: !include acq-models/examples/composite_po_line.sample
+          exampleItem: !include acq-models/mod-orders/examples/composite_po_line.sample
           schema: composite-po-line
       is: [validate]
       get:
