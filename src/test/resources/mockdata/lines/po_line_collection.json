@@ -362,6 +362,81 @@
       }
     },
     {
+      "id": "cf447221-29b9-481e-947c-9ad545f22888",
+      "instanceId": "b252d8f4-e14f-4f27-9f11-876b1f8ed13a",
+      "acquisitionMethod": "Purchase At Vendor System",
+      "cancellationRestriction": false,
+      "collection": false,
+      "cost": {
+        "listPrice": 24.99,
+        "currency": "USD",
+        "quantityPhysical": 3,
+        "quantityElectronic": 0,
+        "poLineEstimatedPrice": 74.97
+      },
+      "description": "10 physical resources",
+      "details": {
+        "receivingNote": "ABCDEFGHIJKL",
+        "productIds": [
+          {
+            "productId": "9780764354113",
+            "productIdType": "ISBN"
+          }
+        ],
+        "materialTypes": [
+          "f7e72403-2a13-43a4-a069-aaabe6c9dea8"
+        ],
+        "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+        "subscriptionInterval": 824,
+        "subscriptionTo": "2020-10-09T00:00:00.000Z"
+      },
+      "fundDistribution": [],
+      "locations": [
+        {
+          "locationId": "b241764c-1466-4e1d-a028-1a3684a5da87",
+          "quantity": 2,
+          "quantityElectronic": 0,
+          "quantityPhysical": 2
+        },
+        {
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "quantity": 1,
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
+        }
+      ],
+      "orderFormat": "Physical Resource",
+      "paymentStatus": "Fully Paid",
+      "physical": {
+        "volumes": [
+          "vol. 1"
+        ],
+        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "expectedReceiptDate": "2018-10-05T00:00:00.000Z",
+        "receiptDue": "2018-10-10T00:00:00.000Z"
+      },
+      "poLineDescription": "Harry Potter (Book 1)",
+      "poLineNumber": "LINE-1",
+      "publicationDate": "1998",
+      "publisher": "Scholastic",
+      "purchaseOrderId": "555a155e-8bb7-4670-ace4-463fc70c2a75",
+      "receiptStatus": "Awaiting Receipt",
+      "reportingCodes": [],
+      "requester": "Leo Bulero",
+      "rush": true,
+      "source": {
+        "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
+        "description": "ABCDEFGHIJKLMNO"
+      },
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "metadata": {
+        "createdDate": "2019-02-20T19:49:43.854+0000",
+        "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
+        "updatedDate": "2019-02-20T19:49:44.418+0000",
+        "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
+      }
+    },
+    {
       "id": "daa9cfd1-b330-4b65-8c2a-3663aaae5130",
       "acquisitionMethod": "Purchase At Vendor System",
       "alerts": [],
@@ -445,7 +520,246 @@
         "updatedDate": "2019-02-20T19:49:43.877+0000",
         "updatedByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb"
       }
+    },
+    {
+      "id": "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56",
+      "instanceId": "b82e1191-453d-4d41-91c5-b5c386018685",
+      "acquisitionMethod": "Purchase At Vendor System",
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "Ed Mashburn",
+          "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+        }
+      ],
+      "cost": {
+        "currency": "USD",
+        "listPrice": 24.99,
+        "quantityPhysical": 1,
+        "quantityElectronic": 1,
+        "poLineEstimatedPrice": 49.98
+      },
+      "description": "ABCDEFGH",
+      "details": {
+        "receivingNote": "ABCDEFGHIJKL",
+        "productIds": [
+          {
+            "productId": "9780764354113",
+            "productIdType": "ISBN"
+          }
+        ],
+        "materialTypes": [
+          "f7e72403-2a13-43a4-a069-aaabe6c9dea8"
+        ],
+        "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+        "subscriptionInterval": 824,
+        "subscriptionTo": "2020-10-09T00:00:00.000Z"
+      },
+      "donor": "ABCDEFGHIJKLM",
+      "eresource": {
+        "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
+        "activated": false,
+        "activationDue": 10,
+        "createInventory": true,
+        "expectedActivation": "2018-10-09T00:00:00.000Z",
+        "license": {
+          "code": "Code 1",
+          "description": "License Agreement 1"
+        },
+        "trial": false,
+        "userLimit": 10
+      },
+      "fundDistribution": [
+        {
+          "code": "HIST",
+          "percentage": 80.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3"
+        },
+        {
+          "code": "GENRL",
+          "percentage": 20.0,
+          "encumbrance": "0466cb77-0344-43c6-85eb-0a64aa2934e5"
+        }
+      ],
+      "locations": [
+        {
+          "locationId": "b51ceba3-3da0-4db6-b1c7-9ff5b590ac89",
+          "quantity": 1,
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
+        },
+        {
+          "locationId": "7b0e2b10-a30b-4737-97b1-dfe52b0c0b14",
+          "quantity": 2,
+          "quantityElectronic": 0,
+          "quantityPhysical": 2
+        },
+        {
+          "locationId": "3f2c235d-6f8f-455a-abd2-b24c78faf9b3",
+          "quantity": 1,
+          "quantityElectronic": 1,
+          "quantityPhysical": 0
+        }
+      ],
+      "orderFormat": "P/E Mix",
+      "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
+      "paymentStatus": "Awaiting Payment",
+      "physical": {
+        "volumes": [
+          "vol. 1"
+        ],
+        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "expectedReceiptDate": "2018-10-05T00:00:00.000Z",
+        "receiptDue": "2018-10-10T00:00:00.000Z"
+      },
+      "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
+      "poLineNumber": "10080-1",
+      "publicationDate": "2017",
+      "publisher": "Schiffer Publishing",
+      "purchaseOrderId": "18f2185a-a40b-40da-acd2-067fd24cd1a5",
+      "receiptDate": "2019-03-05T08:06:58.721+0000",
+      "receiptStatus": "Fully Received",
+      "reportingCodes": [
+        "9397990a-96f9-4c55-a958-f5f6941b9e68"
+      ],
+      "requester": "Leo Bulero",
+      "rush": true,
+      "selector": "ABCD",
+      "source": {
+        "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
+        "description": "ABCDEFGHIJKLMNO"
+      },
+      "title": "Kayak Fishing in the Northern Gulf Coast",
+      "vendorDetail": {
+        "instructions": "ABCDEFG",
+        "noteFromVendor": "ABCDEFGHIKJKLMNOP",
+        "refNumber": "123456-78",
+        "refNumberType": "Supplier's unique order line reference number",
+        "vendorAccount": "8910-25"
+      },
+      "metadata": {
+        "createdDate": "2019-03-05T07:52:47.992+0000",
+        "createdByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9",
+        "updatedDate": "2019-03-05T08:06:58.757+0000",
+        "updatedByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9"
+      }
+    },
+    {
+      "id": "f217a5c2-2c56-4d05-9412-a96cfc8e52de",
+      "instanceId": "9085cdef-0758-4d8f-8c35-54795739472e",
+      "acquisitionMethod": "Purchase",
+      "adjustment": {
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoiceId": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax1": 0.0,
+        "tax2": 0.0,
+        "useProRate": false
+      },
+      "alerts": [],
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "",
+      "claims": [
+        {
+          "claimed": false,
+          "sent": "2018-10-09T00:00:00.000Z",
+          "grace": 30
+        }
+      ],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "Ed Mashburn",
+          "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+        }
+      ],
+      "cost": {
+        "currency": "USD",
+        "listPrice": 24.99,
+        "quantityPhysical": 1,
+        "quantityElectronic": 1,
+        "poLineEstimatedPrice": 49.98
+      },
+      "description": "",
+      "details": {
+        "receivingNote": "ABCDEFGHIJKL",
+        "productIds": [
+          {
+            "productId": "9780764354113",
+            "productIdType": "ISBN"
+          }
+        ],
+        "materialTypes": [
+          "f7e72403-2a13-43a4-a069-aaabe6c9dea8"
+        ],
+        "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+        "subscriptionInterval": 824,
+        "subscriptionTo": "2020-10-09T00:00:00.000Z"
+      },
+      "donor": "",
+      "eresource": {
+        "activated": false,
+        "activationDue": 10,
+        "createInventory": false,
+        "trial": false,
+        "expectedActivation": "2018-10-09T00:00:00.000Z",
+        "userLimit": 10,
+        "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
+        "license": {
+          "code": "Code 1",
+          "description": "License Agreement 1"
+        }
+      },
+      "locations": [
+        {
+          "locationId": "b241764c-1466-4e1d-a028-1a3684a5da87",
+          "quantity": 2,
+          "quantityElectronic": 0,
+          "quantityPhysical": 2
+        },
+        {
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "quantity": 1,
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
+        }
+      ],
+      "orderFormat": "Electronic Resource",
+      "owner": "LTS E-Resources & Serials",
+      "paymentStatus": "Awaiting Payment",
+      "poLineDescription": "",
+      "poLineNumber": "10080-2",
+      "publicationDate": "2017",
+      "publisher": "John Wiley & Sons, Inc.",
+      "purchaseOrderId": "18f2185a-a40b-40da-acd2-067fd24cd1a5",
+      "receiptDate": "2019-03-05T08:43:38.235+0000",
+      "receiptStatus": "Fully Received",
+      "rush": false,
+      "selector": "Woods",
+      "source": {
+        "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
+        "description": "ABCDEFGHIJKLMNO"
+      },
+      "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
+      "vendorDetail": {
+        "instructions": "ABCDEFG",
+        "noteFromVendor": "ABCDEFGHIKJKLMNOP",
+        "refNumber": "123456-78",
+        "refNumberType": "Supplier's unique order line reference number",
+        "vendorAccount": "8910-10"
+      },
+      "metadata": {
+        "createdDate": "2019-03-05T07:52:48.026+0000",
+        "createdByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9",
+        "updatedDate": "2019-03-05T08:43:38.271+0000",
+        "updatedByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9"
+      }
     }
   ],
-  "totalRecords": 4
+  "totalRecords": 7
 }
