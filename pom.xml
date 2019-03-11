@@ -213,6 +213,16 @@
               <targetPackage>org.folio.rest.acq.model</targetPackage>
             </configuration>
           </execution>
+          <execution>
+            <id>mod-vendors</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <sourceDirectory>${basedir}/ramls/acq-models/mod-vendors/schemas</sourceDirectory>
+              <targetPackage>org.folio.rest.acq.model</targetPackage>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
 

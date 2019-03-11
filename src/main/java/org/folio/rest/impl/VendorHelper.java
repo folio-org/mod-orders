@@ -8,6 +8,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
+import org.folio.rest.acq.model.Vendor;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -16,10 +17,11 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
@@ -64,9 +66,9 @@ public class VendorHelper {
     CompletableFuture<Errors> future = new VertxCompletableFuture<>(ctx);
     List<Error> errors = new ArrayList<>();
     if(id != null) {
-      getVendorJsonById(id)
-        .thenApply(vendorJson -> {
-          VendorStatus status = VendorStatus.valueOf(vendorJson.getString(VENDOR_STATUS).toUpperCase());
+      getVendorById(id)
+        .thenApply(vendor -> {
+          VendorStatus status = VendorStatus.valueOf(vendor.getVendorStatus().toUpperCase());
           if(status != VendorStatus.ACTIVE) {
             errors.add(createErrorWithId(ORDER_VENDOR_IS_INACTIVE, id));
           }
@@ -96,19 +98,19 @@ public class VendorHelper {
    */
   public CompletableFuture<Errors> validateAccessProviders(CompositePurchaseOrder compPO) {
     CompletableFuture<Errors> future = new VertxCompletableFuture<>(ctx);
-    List<String> ids = verifyAndGetAccessProvidersIdsList(compPO);
+    Set<String> ids = verifyAndGetAccessProvidersIdsList(compPO);
     List<Error> errors = new ArrayList<>();
     if (!ids.isEmpty()) {
       getAccessProvidersByIds(ids).thenApply(vendors -> {
         // Validate access provider status Active
-        vendors.forEach(vendorJson -> {
-          if(VendorStatus.valueOf(vendorJson.getString(VENDOR_STATUS).toUpperCase()) != VendorStatus.ACTIVE) {
-            errors.add(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, vendorJson.getString(ID)));
+        vendors.forEach(vendor -> {
+          if(VendorStatus.valueOf(vendor.getVendorStatus().toUpperCase()) != VendorStatus.ACTIVE) {
+            errors.add(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, vendor.getId()));
           }
         });
         // Validate access provider existence
         List<String> vendorsIds = vendors.stream()
-          .map(jsonObject -> jsonObject.getString(ID))
+          .map(Vendor::getId)
           .collect(toList());
         ids.stream()
           .filter(id -> !vendorsIds.contains(id))
@@ -151,40 +153,41 @@ public class VendorHelper {
   }
 
   /**
-   * Retrieves vendor as json file
+   * Retrieves vendor by id
    *
    * @param vendorId vendor's id
-   * @return CompletableFuture with {@link JsonObject} representation of vendor
+   * @return CompletableFuture with {@link Vendor} object
    */
-  private CompletableFuture<JsonObject> getVendorJsonById(String vendorId) {
-    return handleGetRequest(VENDOR_STORAGE_VENDORS + vendorId, httpClient, ctx, okapiHeaders, logger);
+  private CompletableFuture<Vendor> getVendorById(String vendorId) {
+    return handleGetRequest(VENDOR_STORAGE_VENDORS + vendorId, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(json -> json.mapTo(Vendor.class));
   }
 
   /**
-   * Retrieves list of access providers
+   * Retrieves set of access providers
    *
-   * @param accessProviderIds - list of access providers id
-   * @return CompletableFuture with {@link List<JsonObject>} representation of vendor
+   * @param accessProviderIds - {@link Set<String>} of access providers id
+   * @return CompletableFuture with {@link List<Vendor>} of vendors
    */
-  private CompletableFuture<List<JsonObject>> getAccessProvidersByIds(List<String> accessProviderIds) {
-    CompletableFuture<List<JsonObject>> future = new CompletableFuture<>();
-    String query = convertIdsToCqlQuery(accessProviderIds);
+  private CompletableFuture<Set<Vendor>> getAccessProvidersByIds(Set<String> accessProviderIds) {
+    CompletableFuture<Set<Vendor>> future = new CompletableFuture<>();
+    String query = convertIdsToCqlQuery(new ArrayList<>(accessProviderIds));
     String endpoint = String.format(VENDORS_WITH_QUERY_ENDPOINT, accessProviderIds.size(), lang, encodeQuery(query, logger));
     handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(vendors -> vendors.getJsonArray(VENDORS).stream().map(obj -> (JsonObject) obj).collect(toList())).thenAccept(future::complete);
+      .thenApply(jsons -> jsons.getJsonArray(VENDORS).stream().map(obj -> ((JsonObject) obj).mapTo(Vendor.class)).collect(toSet())).thenAccept(future::complete);
     return future;
   }
 
   /**
-   * Returns list of access providers ids
+   * Returns set of access providers ids for composite purchase order
    *
    * @param compPO composite purchase order
-   * @return list of access providers id
+   * @return {@link Set<String>} of access providers ids
    */
-  private List<String> verifyAndGetAccessProvidersIdsList(CompositePurchaseOrder compPO) {
+  private Set<String> verifyAndGetAccessProvidersIdsList(CompositePurchaseOrder compPO) {
     return compPO.getCompositePoLines().stream()
       .filter(p -> (p.getEresource() != null && p.getEresource().getAccessProvider() != null))
-      .map(p -> p.getEresource().getAccessProvider()).collect(Collectors.toList());
+      .map(p -> p.getEresource().getAccessProvider()).collect(toSet());
   }
 
   public enum VendorStatus {
