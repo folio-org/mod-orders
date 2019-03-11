@@ -43,7 +43,6 @@ public class VendorHelper {
 
   private static final String ID = "id";
   private static final String VENDORS = "vendors";
-  private static final String VENDOR_STATUS = "vendor_status";
   private static final String VENDOR_STORAGE_VENDORS = "/vendor-storage/vendors/";
   private static final String VENDORS_WITH_QUERY_ENDPOINT = "/vendor-storage/vendors?limit=%d&lang=%s&query=%s";
 
