@@ -75,11 +75,67 @@ Upon receiving a request to receive resources, it does the following:
   * Send PUT requests to inventory to update items. In case any errors happen while updating items, the logic just collects them and does not stop entire process
 * Update piece records with receiving information and send PUT requests to orders storage. If any errors happen, just collect them.  
   The following is expected to be update in piece:
-  * `receivingStatus`: `Received`
+  * `receivingStatus`: in case the `itemStatus` is `On order` the status is set to `Expected`, otherwise to `Received`
   * `locationId`: from the request
-  * `receivedDate`: current date
-* Retrieve all involved PO Lines from the storage and updates receipt status. If all pieces of an order line have been received, the receipt status is `Fully Received`. If more than one, but less than the total number of pieces have been received, it is `Partially Received`. If the calculated status is the same as current one, no update is made
+  * `receivedDate`: current date or `null` in case the `itemStatus` is `On order` 
+* Retrieve all involved PO Lines from the storage and updates receipt status.
+  * If all pieces of an order line have been received, the receipt status is `Fully Received`. 
+  * If more than one, but less than the total number of pieces have been received, it is `Partially Received`.
+  * If none received, it is `Awaiting Receipt`.
+  * If the calculated status is the same as current one, no update is made
 * Prepare [response](https://github.com/folio-org/acq-models/blob/master/mod-orders/schemas/receivingResults.json) to the client taking into account any error happened processing particular piece record.
+
+Sample of the requests:
+  * Request to receive pieces for 2 PO Lines
+    ```json
+    {
+      "toBeReceived": [
+        {
+          "poLineId": "0804ddec-6545-404a-b54d-a693f505681d",
+          "received": 1,
+          "receivedItems": [
+            {
+              "barcode": "0987654111",
+              "itemStatus": "Received",
+              "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+              "pieceId": "cb9b0468-f2b4-4a13-b64c-662c4c9ec3ed"
+            }
+          ]
+        },
+        {
+          "poLineId": "7f0c4975-885e-47d5-8d5a-793dffbba9b2",
+          "received": 1,
+          "receivedItems": [
+            {
+              "barcode": "0987654333",
+              "itemStatus": "In transit",
+              "locationId": "279f42ce-17d1-463e-b890-deeebd1baeee",
+              "pieceId": "20241b8c-9076-4cf5-817b-f2c1e2cb242f"
+            }
+          ]
+        }
+      ],
+      "totalRecords": 2
+    }
+    ```
+  * Request to move a received piece back to `Expected`
+    ```json
+    {
+      "toBeReceived": [
+        {
+          "poLineId": "f217a5c2-2c56-4d05-9412-a96cfc8e52de",
+          "received": 1,
+          "receivedItems": [
+            {
+              "itemStatus": "On order",
+              "pieceId": "56fbfde4-6335-4dd7-9a03-d100821f1d18"
+            }
+          ]
+        }
+      ],
+      "totalRecords": 1
+    }
+    ```
 
 ### Issue tracker
 

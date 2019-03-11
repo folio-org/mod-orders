@@ -56,6 +56,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
 import static org.folio.rest.jaxrs.resource.Orders.PostOrdersReceiveResponse.respond200WithApplicationJson;
@@ -228,7 +229,7 @@ public class ReceivingHelper extends AbstractHelper {
     // Validate if the piece actually corresponds to PO line specified in the request
     if (receivingItems.containsKey(poLineId) && receivingItems.get(poLineId).containsKey(pieceId)) {
       // Validate if the piece is not yet received
-      if (piece.getReceivingStatus() == ReceivingStatus.EXPECTED) {
+      if (piece.getReceivingStatus() == ReceivingStatus.EXPECTED || isRevertReceivedItem(piece)) {
         piecesByPoLine.computeIfAbsent(poLineId, v -> new ArrayList<>())
                       .add(piece);
       } else {
@@ -237,6 +238,16 @@ public class ReceivingHelper extends AbstractHelper {
     } else {
       addError(getPoLineIdByPieceId(pieceId), pieceId, PIECE_POL_MISMATCH.toError());
     }
+  }
+
+  /**
+   * Verifies if the current status of the piece record is "Received" and the client would like to roll-back to Expected
+   * @param piece piece record to asses
+   * @return {@code true} if piece record is already received and has to be rolled-back to Expected
+   */
+  private boolean isRevertReceivedItem(Piece piece) {
+    return piece.getReceivingStatus() == ReceivingStatus.RECEIVED
+      && inventoryHelper.isOnOrderItemStatus(receivingItems.get(piece.getPoLineId()).get(piece.getId()));
   }
 
   /**
@@ -411,11 +422,24 @@ public class ReceivingHelper extends AbstractHelper {
     ReceivedItem receivedItem = receivingItems.get(piece.getPoLineId())
                                               .get(piece.getId());
 
-    piece.setCaption(receivedItem.getCaption());
-    piece.setComment(receivedItem.getComment());
-    piece.setLocationId(receivedItem.getLocationId());
-    piece.setReceivedDate(new Date());
-    piece.setReceivingStatus(ReceivingStatus.RECEIVED);
+    if (StringUtils.isNotEmpty(receivedItem.getCaption())) {
+      piece.setCaption(receivedItem.getCaption());
+    }
+    if (StringUtils.isNotEmpty(receivedItem.getComment())) {
+      piece.setComment(receivedItem.getComment());
+    }
+    if (StringUtils.isNotEmpty(receivedItem.getLocationId())) {
+      piece.setLocationId(receivedItem.getLocationId());
+    }
+
+    // Piece record might be received or rolled-back to Expected
+    if (inventoryHelper.isOnOrderItemStatus(receivedItem)) {
+      piece.setReceivedDate(null);
+      piece.setReceivingStatus(ReceivingStatus.EXPECTED);
+    } else {
+      piece.setReceivedDate(new Date());
+      piece.setReceivingStatus(ReceivingStatus.RECEIVED);
+    }
   }
 
   /**
@@ -428,7 +452,7 @@ public class ReceivingHelper extends AbstractHelper {
     CompletableFuture[] futures = StreamEx
       .ofValues(piecesGroupedByPoLine)
       .flatMap(List::stream)
-      .filter(piece -> piece.getReceivingStatus() == ReceivingStatus.RECEIVED)
+      .filter(piece -> getError(piece.getPoLineId(), piece.getId()) == null)
       .map(this::storeUpdatedPieceRecord)
       .toArray(new CompletableFuture[0]);
 
@@ -503,7 +527,7 @@ public class ReceivingHelper extends AbstractHelper {
         // Calculate expected status for each PO Line and update with new one if required
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         for (PoLine poLine : poLines) {
-          futures.add(calculatePoLineReceiptStatus(poLine)
+          futures.add(calculatePoLineReceiptStatus(poLine, getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine))
             .thenCompose(status -> updatePoLineReceiptStatus(poLine, status)));
         }
         return collectResultsOnSuccess(futures)
@@ -512,20 +536,57 @@ public class ReceivingHelper extends AbstractHelper {
       .thenApply(v -> piecesGroupedByPoLine);
   }
 
-  private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine) {
-    String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLine.getId(), ReceivingStatus.EXPECTED.value());
-    // Limit to 0 because only total number is important
-    String endpoint = String.format(PIECES_WITH_QUERY_ENDPOINT, 0, lang, encodeQuery(query, logger));
+  private List<Piece> getSuccessfullyProcessedPieces(String poLineId, Map<String, List<Piece>> piecesGroupedByPoLine) {
+    return StreamEx.of(piecesGroupedByPoLine.get(poLineId))
+                   .filter(piece -> getError(poLineId, piece.getId()) == null)
+                   .toList();
+  }
+
+  /**
+   * @param poLine PO Line record from storage
+   * @param pieces list of pieces
+   * @return
+   */
+  private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine, List<Piece> pieces) {
     // Search for pieces with Expected status
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      // Check if total records is more than zero
-      .thenApply(json -> json.mapTo(PieceCollection.class).getTotalRecords() > 0)
-      // return expected status
-      .thenApply(isPartiallyReceived -> isPartiallyReceived ? PARTIALLY_RECEIVED : FULLY_RECEIVED)
+    return getPiecesQuantityByPoLineAndStatus(poLine.getId(), ReceivingStatus.EXPECTED)
+      // Calculate receipt status
+      .thenCompose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, poLine, pieces))
       .exceptionally(e -> {
         logger.error("The expected receipt status for PO Line '{}' cannot be calculated", e, poLine.getId());
         return null;
       });
+  }
+
+  private CompletableFuture<Integer> getPiecesQuantityByPoLineAndStatus(String poLineId, ReceivingStatus receivingStatus) {
+    String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, receivingStatus.value());
+    // Limit to 0 because only total number is important
+    String endpoint = String.format(PIECES_WITH_QUERY_ENDPOINT, 0, lang, encodeQuery(query, logger));
+    // Search for pieces with Expected status
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      // Return total records quantity
+      .thenApply(json -> json.mapTo(PieceCollection.class).getTotalRecords());
+  }
+
+  /**
+   * Returns "Fully Received" status if quantity of expected piece records is zero, otherwise checks how many received pieces.
+   * If quantity of received piece records is zero, returns "Awaiting Receipt" status, otherwise - "Partially Received"
+   * @param expectedPiecesQuantity expected piece records quantity
+   * @param poLine PO Line record representation from storage
+   * @return completable future holding calculated PO Line's receipt status
+   */
+  private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity, PoLine poLine, List<Piece> pieces) {
+    // Fully Received: In case there is no any expected piece remaining
+    if (expectedPiecesQuantity == 0) {
+      return CompletableFuture.completedFuture(FULLY_RECEIVED);
+    }
+    // Partially Received: In case there is at least one successfully received piece
+    if (StreamEx.of(pieces).anyMatch(piece -> ReceivingStatus.RECEIVED == piece.getReceivingStatus())) {
+      return CompletableFuture.completedFuture(PARTIALLY_RECEIVED);
+    }
+    // Pieces were rolled-back to Expected. In this case we have to check if there is any Received piece in the storage
+    return getPiecesQuantityByPoLineAndStatus(poLine.getId(), ReceivingStatus.RECEIVED)
+      .thenApply(receivedQty -> receivedQty == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED);
   }
 
   private CompletableFuture<Void> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status) {
@@ -537,6 +598,8 @@ public class ReceivingHelper extends AbstractHelper {
     poLine.setReceiptStatus(status);
     if (status == FULLY_RECEIVED) {
       poLine.setReceiptDate(new Date());
+    } else {
+      poLine.setReceiptDate(null);
     }
 
     // Update PO Line in storage
@@ -552,7 +615,8 @@ public class ReceivingHelper extends AbstractHelper {
       .of(piecesGroupedByPoLine)
       .filter(entry -> entry.getValue()
                             .stream()
-                            .anyMatch(piece -> piece.getReceivingStatus() == ReceivingStatus.RECEIVED))
+                            // Check if there is at least one piece record which processed successfully
+                            .anyMatch(piece -> getError(entry.getKey(), piece.getId()) == null))
       .keys()
       .toList();
   }
