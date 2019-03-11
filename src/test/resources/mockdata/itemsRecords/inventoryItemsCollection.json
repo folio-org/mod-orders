@@ -1364,7 +1364,167 @@
         "id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
         "name": "Main Library"
       }
+    },
+    {
+      "id": "fbd41843-569b-4a15-95da-6d543fe489ad",
+      "status": {
+        "name": "Received"
+      },
+      "title": "Kayak Fishing in the Northern Gulf Coast",
+      "hrid": "it00001200",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "6fef5d5e-54a9-4a82-b857-1279bc2c483c",
+      "barcode": "11111111334",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-03-05T07:52:48.563+0000",
+        "createdByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9",
+        "updatedDate": "2019-03-05T08:06:58.442+0000",
+        "updatedByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/fbd41843-569b-4a15-95da-6d543fe489ad"
+      },
+      "effectiveLocation": {
+        "id": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+        "name": "SECOND FLOOR"
+      }
+    },
+    {
+      "id": "821559ef-4ee7-4b19-a835-a6787c2bafb9",
+      "status": {
+        "name": "Received"
+      },
+      "title": "Kayak Fishing in the Northern Gulf Coast",
+      "hrid": "it00001199",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "1c5e6f42-204b-433a-9748-1b5e1876508e",
+      "barcode": "11111111331",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-03-05T07:52:48.656+0000",
+        "createdByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9",
+        "updatedDate": "2019-03-05T08:06:58.435+0000",
+        "updatedByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/821559ef-4ee7-4b19-a835-a6787c2bafb9"
+      },
+      "effectiveLocation": {
+        "id": "b241764c-1466-4e1d-a028-1a3684a5da87",
+        "name": "Popular Reading Collection"
+      }
+    },
+    {
+      "id": "a940a524-ec08-42a4-8e63-2b7f8194371e",
+      "status": {
+        "name": "Received"
+      },
+      "title": "Kayak Fishing in the Northern Gulf Coast",
+      "hrid": "it00001201",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "6fef5d5e-54a9-4a82-b857-1279bc2c483c",
+      "barcode": "11111111333",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "book"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-03-05T07:52:48.573+0000",
+        "createdByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9",
+        "updatedDate": "2019-03-05T08:06:58.456+0000",
+        "updatedByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/a940a524-ec08-42a4-8e63-2b7f8194371e"
+      },
+      "effectiveLocation": {
+        "id": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+        "name": "SECOND FLOOR"
+      }
+    },
+    {
+      "id": "17b9bbc2-f2fa-4bbc-b82b-d40476b30872",
+      "status": {
+        "name": "Received"
+      },
+      "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
+      "hrid": "it00001206",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "73499948-6b8d-45bb-ad81-c25fda22ced2",
+      "barcode": "11111111335",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "f217a5c2-2c56-4d05-9412-a96cfc8e52de",
+      "materialType": {
+        "id": "615b8413-82d5-4203-aa6e-e37984cb5ac3",
+        "name": "electronic resource"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-03-05T07:52:48.657+0000",
+        "createdByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9",
+        "updatedDate": "2019-03-05T08:43:38.089+0000",
+        "updatedByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/17b9bbc2-f2fa-4bbc-b82b-d40476b30872"
+      },
+      "effectiveLocation": {
+        "id": "758258bc-ecc1-41b8-abca-f7b610822ffd",
+        "name": "ORWIG ETHNO CD"
+      }
     }
   ],
-  "totalRecords": 35
+  "totalRecords": 39
 }

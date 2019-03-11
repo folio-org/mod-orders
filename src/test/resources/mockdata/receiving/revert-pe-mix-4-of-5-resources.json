@@ -1,0 +1,27 @@
+{
+  "toBeReceived": [
+    {
+      "poLineId": "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56",
+      "received": 4,
+      "receivedItems": [
+        {
+          "itemStatus": "On order",
+          "pieceId": "7802b94d-68b4-41e5-91ff-0cee8cd8f029"
+        },
+        {
+          "itemStatus": "On order",
+          "pieceId": "4d19a3ff-986f-4150-95a2-2f2da797591c"
+        },
+        {
+          "itemStatus": "On order",
+          "pieceId": "6a53eb3c-f9dd-46f5-bbf8-5768cf97ec6d"
+        },
+        {
+          "itemStatus": "On order",
+          "pieceId": "61437764-03e4-4c75-a743-d40f71ff9161"
+        }
+      ]
+    }
+  ],
+  "totalRecords": 4
+}
