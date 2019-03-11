@@ -6,6 +6,7 @@ import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
+import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
@@ -15,6 +16,7 @@ import static org.folio.rest.impl.InventoryHelper.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasKey;
@@ -43,6 +45,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -64,7 +67,9 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.acq.model.Piece;
@@ -118,6 +123,19 @@ public class OrdersImplTest {
   private static final String ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON = "put_order_with_mismatch_id_in_po_lines.json";
   private static final String PO_NUMBER_VALUE = "228D126";
   private static final String PO_LINE_NUMBER_VALUE = "1";
+
+  private static final String ACTIVE_VENDOR_ID = "168f8a86-d26c-406e-813f-c7527f241ac3";
+  private static final String INACTIVE_VENDOR_ID = "b1ef7e96-98f3-4f0d-9820-98c322c989d2";
+  private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";
+  private static final String NON_EXIST_VENDOR_ID = "bba87500-6e71-4057-a2a9-a091bac7e0c1";
+  private static final String MOD_VENDOR_INTERNAL_ERROR_ID = "bba81500-6e41-4057-a2a9-a081bac7e0c1";
+
+  private static final String ACTIVE_ACCESS_PROVIDER_A = "858e80d2-f562-4c54-9934-6e274dee511d";
+  private static final String ACTIVE_ACCESS_PROVIDER_B = "d1b79c8d-4950-482f-8e42-04f9aae3cb40";
+  private static final String INACTIVE_ACCESS_PROVIDER_A = "f6cd1850-2587-4f6c-b680-9b27ff26d619";
+  private static final String INACTIVE_ACCESS_PROVIDER_B = "f64bbcae-e5ea-42b6-8236-55fefed0fb8f";
+  private static final String NON_EXIST_ACCESS_PROVIDER_A = "160501b3-52dd-31ec-a0ce-17762e6a9b47";
+  private static final String EMPTY_STR = "";
 
   static {
     System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, "io.vertx.core.logging.Log4j2LogDelegateFactory");
@@ -190,6 +208,7 @@ public class OrdersImplTest {
   private static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
   private static final String COMP_ORDER_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/";
   private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
+  private static final String VENDORS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "vendors/";
   private static final String ORDERS_MOCK_DATA_PATH = COMP_ORDER_MOCK_DATA_PATH + "getOrders.json";
   private static final String ORDER_FOR_FAILURE_CASE_MOCK_DATA_PATH = COMP_ORDER_MOCK_DATA_PATH + PO_ID_FOR_FAILURE_CASE + ".json";
   private static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
@@ -2809,6 +2828,115 @@ public class OrdersImplTest {
     return pieceIdsByPol;
   }
 
+  @Test
+  public void testCreatePoWithDifferentVendorStatus() throws Exception {
+
+    logger.info("=== Test POST PO with vendor's status ===");
+
+    // Purchase order is OK
+    Errors activeVendorActiveAccessProviderErrors = verifyPostResponse(COMPOSITE_ORDERS_PATH, getPoWithVendorId(ACTIVE_VENDOR_ID, ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B),
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(Errors.class);
+    assertThat(activeVendorActiveAccessProviderErrors.getErrors(), empty());
+
+    // Internal mod-vendor error
+    Errors internalServerError = verifyPostResponseErrors(1, MOD_VENDOR_INTERNAL_ERROR_ID, ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B);
+    assertEquals(GENERIC_ERROR_CODE.getCode(), internalServerError.getErrors().get(0).getCode());
+
+    // Non-existed vendor
+    Errors nonExistedVendorError = verifyPostResponseErrors(1, NON_EXIST_VENDOR_ID, ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B);
+    checkExpectedError(NON_EXIST_VENDOR_ID, nonExistedVendorError, 0, ORDER_VENDOR_NOT_FOUND);
+
+    // Active vendor and non-existed access provider
+    Errors inactiveAccessProviderErrors = verifyPostResponseErrors(1, ACTIVE_VENDOR_ID, ACTIVE_ACCESS_PROVIDER_A, NON_EXIST_ACCESS_PROVIDER_A);
+    checkExpectedError(NON_EXIST_ACCESS_PROVIDER_A, inactiveAccessProviderErrors, 0, POL_ACCESS_PROVIDER_NOT_FOUND);
+
+    // Inactive access provider
+    Errors nonExistedAccessProviderErrors = verifyPostResponseErrors(1, ACTIVE_VENDOR_ID, ACTIVE_ACCESS_PROVIDER_A, INACTIVE_ACCESS_PROVIDER_A);
+    checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, nonExistedAccessProviderErrors, 0, POL_ACCESS_PROVIDER_IS_INACTIVE);
+
+    // Inactive vendor and inactive access providers
+    Errors allInactiveErrors = verifyPostResponseErrors(3, INACTIVE_VENDOR_ID, INACTIVE_ACCESS_PROVIDER_A, INACTIVE_ACCESS_PROVIDER_B);
+    checkExpectedError(INACTIVE_VENDOR_ID, allInactiveErrors, 0, ORDER_VENDOR_IS_INACTIVE);
+    checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, allInactiveErrors, 1, POL_ACCESS_PROVIDER_IS_INACTIVE);
+    checkExpectedError(INACTIVE_ACCESS_PROVIDER_B, allInactiveErrors, 2, POL_ACCESS_PROVIDER_IS_INACTIVE);
+
+  }
+
+  @Test
+  public void testPutOrdersByIdToChangeStatusToOpenInactiveVendor() throws Exception {
+
+    logger.info("=== Test Put Order By Id to change status of Order to Open for different vendor's status ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+
+    // Positive cases
+    reqData.setVendor(ACTIVE_VENDOR_ID);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), EMPTY_STR, 204);
+
+    reqData.setVendor(INACTIVE_VENDOR_ID);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), EMPTY_STR, 204);
+
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.setVendor(ACTIVE_VENDOR_ID);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), EMPTY_STR, 204);
+
+    // Negative cases
+    // Non-existed vendor
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.setVendor(NON_EXIST_VENDOR_ID);
+    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
+    reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
+    Errors nonExistedVendorErrors
+      = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), EMPTY_STR, 422).as(Errors.class);
+    checkExpectedError(NON_EXIST_VENDOR_ID, nonExistedVendorErrors, 0, ORDER_VENDOR_NOT_FOUND);
+
+    // Inactive access provider
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.setVendor(ACTIVE_VENDOR_ID);
+    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
+    reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
+    Errors inactiveAccessProviderErrors
+      = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), EMPTY_STR, 422).as(Errors.class);
+    checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, inactiveAccessProviderErrors, 0, POL_ACCESS_PROVIDER_IS_INACTIVE);
+
+    // Inactive vendor and inactive access providers
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.setVendor(INACTIVE_VENDOR_ID);
+    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
+    reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_B);
+    Errors allInactiveErrors
+      = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), EMPTY_STR, 422).as(Errors.class);
+    checkExpectedError(INACTIVE_VENDOR_ID, allInactiveErrors, 0, ORDER_VENDOR_IS_INACTIVE);
+    checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, allInactiveErrors, 1, POL_ACCESS_PROVIDER_IS_INACTIVE);
+    checkExpectedError(INACTIVE_ACCESS_PROVIDER_B, allInactiveErrors, 2, POL_ACCESS_PROVIDER_IS_INACTIVE);
+  }
+
+  private Errors verifyPostResponseErrors(int expectedErrorsNumber, String vendorId, String... accessProviderIds) throws Exception {
+    Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, getPoWithVendorId(vendorId, accessProviderIds),
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 422).as(Errors.class);
+    assertEquals(errors.getTotalRecords(), new Integer(expectedErrorsNumber));
+    assertThat(errors.getErrors(), hasSize(expectedErrorsNumber));
+    return errors;
+  }
+
+  private String getPoWithVendorId(String vendorId, String... accessProviderIds) throws Exception {
+    CompositePurchaseOrder comPo = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    comPo.setVendor(vendorId);
+    for(int i = 0; i < accessProviderIds.length; i++) {
+      comPo.getCompositePoLines().get(i).getEresource().setAccessProvider(accessProviderIds[i]);
+    }
+    return JsonObject.mapFrom(comPo).toString();
+  }
+
+  private void checkExpectedError(String id, Errors errors, int index, ErrorCodes expectedErrorCodes) {
+    assertEquals(id, errors.getErrors().get(index).getAdditionalProperties().get(ID));
+    assertEquals(expectedErrorCodes.getCode(), errors.getErrors().get(index).getCode());
+    assertEquals(expectedErrorCodes.getDescription(), errors.getErrors().get(index).getMessage());
+  }
+
   private org.folio.rest.acq.model.PoLine getMockLine(String id) {
     return getMockAsJson(PO_LINES_MOCK_DATA_PATH, id).mapTo(org.folio.rest.acq.model.PoLine.class);
   }
@@ -2922,6 +3050,8 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, "/inventory/items").handler(this::handleGetInventoryItemRecords);
       router.route(HttpMethod.GET, "/holdings-storage/holdings").handler(this::handleGetHoldingRecord);
       router.route(HttpMethod.GET, "/loan-types").handler(this::handleGetLoanType);
+      router.route(HttpMethod.GET, "/vendor-storage/vendors/:id").handler(this::handleGetVendorById);
+      router.route(HttpMethod.GET, "/vendor-storage/vendors").handler(this::handleGetAccessProviders);
       router.route(HttpMethod.GET, resourcesPath(PO_LINES)).handler(this::handleGetPoLines);
       router.route(HttpMethod.GET, resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
       router.route(HttpMethod.GET, resourcePath(ADJUSTMENT)).handler(this::handleGetAdjustment);
@@ -3130,6 +3260,75 @@ public class OrdersImplTest {
            .setStatusCode(404)
            .end();
       }
+    }
+
+    private void handleGetAccessProviders(RoutingContext ctx) {
+      logger.info("handleGetAccessProviders got: " + ctx.request().path());
+      String query = ctx.request().getParam("query");
+      JsonObject body = new JsonObject();
+
+      try {
+        if(getQuery(ACTIVE_ACCESS_PROVIDER_A, NON_EXIST_ACCESS_PROVIDER_A).equals(query)) {
+          body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "one_access_provider_not_found.json"));
+        }  else if(getQuery(ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B).equals(query)
+          || getQuery(ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_A).equals(query)
+          || getQuery(ACTIVE_ACCESS_PROVIDER_B, ACTIVE_ACCESS_PROVIDER_A).equals(query)) {
+          body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "all_access_providers_active.json"));
+        } else if(getQuery(ACTIVE_ACCESS_PROVIDER_A, INACTIVE_ACCESS_PROVIDER_A).equals(query)) {
+          body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "active_inactive_access_providers.json"));
+        } else if(getQuery(INACTIVE_ACCESS_PROVIDER_A, INACTIVE_ACCESS_PROVIDER_B).equals(query)
+        || getQuery(INACTIVE_ACCESS_PROVIDER_B, INACTIVE_ACCESS_PROVIDER_A).equals(query)) {
+          body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "all_inactive_access_providers.json"));
+        } else if(getQuery(ACTIVE_ACCESS_PROVIDER_A).equals(query)) {
+          body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "one_access_provider_not_found.json"));
+        } else {
+          ctx.response()
+            .setStatusCode(HttpStatus.HTTP_NOT_FOUND.toInt())
+            .end();
+          return;
+        }
+      } catch(IOException e) {
+        ctx.response()
+          .setStatusCode(HttpStatus.HTTP_NOT_FOUND.toInt())
+          .end();
+      }
+      serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
+    }
+
+    private void handleGetVendorById(RoutingContext ctx) {
+      logger.info("handleGetVendorById got: " + ctx.request().path());
+      String vendorId = ctx.request().getParam(ID);
+      JsonObject body = null;
+      try {
+        if (NON_EXIST_VENDOR_ID.equals(vendorId)) {
+          serverResponse(ctx, HttpStatus.HTTP_NOT_FOUND.toInt(), APPLICATION_JSON, "vendor not found");
+        } else if (MOD_VENDOR_INTERNAL_ERROR_ID.equals(vendorId)) {
+          serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), APPLICATION_JSON, "internal server error, contact administrator");
+        } else {
+          switch (vendorId) {
+            case ACTIVE_VENDOR_ID:
+              body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "active_vendor.json"));
+              break;
+            case INACTIVE_VENDOR_ID:
+              body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "inactive_vendor.json"));
+              break;
+            case PENDING_VENDOR_ID:
+              body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "pending_vendor.json"));
+              break;
+            default :
+              serverResponse(ctx, HttpStatus.HTTP_NOT_FOUND.toInt(), APPLICATION_JSON, "vendor not found");
+          }
+          serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
+        }
+      } catch (IOException e) {
+        ctx.response()
+          .setStatusCode(HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt())
+          .end();
+      }
+    }
+
+    private String getQuery(String... accessProviders) {
+      return convertIdsToCqlQuery(Arrays.asList(accessProviders));
     }
 
     private void handleGetIdentifierType(RoutingContext ctx) {
