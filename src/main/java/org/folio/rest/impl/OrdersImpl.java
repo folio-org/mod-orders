@@ -18,7 +18,6 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.ws.rs.core.Response;
 
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -384,16 +383,12 @@ public class OrdersImpl implements Orders {
   }
 
     private CompletableFuture<Errors> validate(String lang, Map<String, String> okapiHeaders, Context vertxContext, HttpClientInterface httpClient, CompositePurchaseOrder compPO) {
-      CompletableFuture<Errors> future = new VertxCompletableFuture<>(vertxContext);
       VendorHelper vendorHelper = new VendorHelper(lang, httpClient, okapiHeaders, vertxContext);
-      vendorHelper.validateVendor(compPO)
-        .thenAccept(errors -> vendorHelper.validateAccessProviders(compPO)
-        .thenApply(accessProvidersErrors -> {
+      return vendorHelper.validateVendor(compPO).thenCombine(vendorHelper.validateAccessProviders(compPO), (errors, accessProvidersErrors) -> {
           errors.getErrors().addAll(accessProvidersErrors.getErrors());
           errors.setTotalRecords(errors.getErrors().size());
           return errors;
-        }).thenApply(future::complete));
-      return future;
+        });
   }
 }
 
