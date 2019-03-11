@@ -1711,16 +1711,6 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testDeleteOrderLineById500FromStorageOnGetPoLine() {
-    logger.info("=== Test Delete Order Line By Id - 500 From Storage On Get PO Line ===");
-
-    String url = String.format(LINE_BY_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR);
-    Response actual = verifyDeleteResponse(url, APPLICATION_JSON, 500);
-
-    assertNotNull(actual.asString());
-  }
-
-  @Test
   public void testDeleteOrderLineById500FromStorageOnSubObjectDeletion() {
     logger.info("=== Test Delete Order Line By Id - 500 From Storage On Sub-Object deletion ===");
 
