@@ -167,17 +167,22 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     if (compPOL.getReceiptStatus() == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED) {
       return completedFuture(null);
     }
+    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
+      return inventoryHelper.handleInstanceRecord(compPOL)
+        .thenCompose(cPOL -> completedFuture(null));
+    }
+
     int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
     if (expectedItemsQuantity == 0) {
-    	// Create pieces if items does not exists
-    	return createPieces(compPOL, Collections.emptyList())
-    	.thenRun(() ->
-    		logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId())
-    	);
+      // Create pieces if items does not exists
+      return createPieces(compPOL, Collections.emptyList())
+        .thenRun(() ->
+          logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId())
+        );
     }
 
     return inventoryHelper.handleInstanceRecord(compPOL)
-      .thenCompose(holdingsId -> inventoryHelper.handleItemRecords(compPOL))
+      .thenCompose(compositePOLine -> inventoryHelper.handleItemRecords(compPOL))
       .thenCompose(piecesWithItemId -> createPieces(compPOL, piecesWithItemId));
   }
 

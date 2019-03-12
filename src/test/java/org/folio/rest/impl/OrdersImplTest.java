@@ -1147,7 +1147,7 @@ public class OrdersImplTest {
     // MODORDERS-117 guarantee electronic resource for the second PO Line but set "create items" to false
     reqData.getCompositePoLines().get(1).setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
     reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(false);
-    reqData.getCompositePoLines().stream().forEach(s -> s.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING));
+    reqData.getCompositePoLines().forEach(s -> s.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING));
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
 
@@ -1155,6 +1155,62 @@ public class OrdersImplTest {
 
     verifyInstanceLinksForUpdatedOrder(reqData);
     verifyInventoryInteraction(reqData, polCount - 1);
+    verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value());
+  }
+
+  @Test
+  public void testPostOrdersWithOpenStatusAndCheckinItems() throws Exception {
+    logger.info("=== Test POST Order By Id to change status of Order to Open - inventory interaction required only for first POL ===");
+
+    // Get Open Order
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    // Make sure that mock po has 2 po lines
+    assertEquals(2, reqData.getCompositePoLines().size());
+    // Make sure that mock po has the first PO line with 3 locations
+    assertEquals(3, reqData.getCompositePoLines().get(0).getLocations().size());
+
+    // Make sure that Order moves to Open
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    // Set checkin items flag true
+    reqData.getCompositePoLines().forEach(s -> s.setCheckinItems(true));
+
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
+    List<JsonObject> holdingsSearches = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
+    List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
+    List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
+
+    assertNotNull(instancesSearches);
+    assertNull(holdingsSearches);
+    assertNull(itemsSearches);
+    assertNull(createdPieces);
+  }
+
+  @Test
+  public void testPutOrdersByIdToChangeStatusToOpenWithCheckinItems() throws Exception {
+    logger.info("=== Test Put Order By Id to change status of Order to Open ===");
+
+    // Get Open Order
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+
+    // Make sure that mock PO has 2 po lines
+    assertEquals(2, reqData.getCompositePoLines().size());
+
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    // MODORDERS-183 Set the second POLine checkin items true
+    reqData.getCompositePoLines().get(1).setCheckinItems(true);
+    reqData.getCompositePoLines().forEach(s -> s.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING));
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
+
+    int polCount = reqData.getCompositePoLines().size();
+
+    verifyInstanceLinksForUpdatedOrder(reqData);
+    verifyInventoryInteraction(reqData, polCount);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value());
   }
 
@@ -1174,9 +1230,9 @@ public class OrdersImplTest {
   private void verifyReceiptStatusChangedTo(String expectedStatus) {
     List<JsonObject> polUpdates = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
     assertNotNull(polUpdates);
-    // check with filter last 2 putted polines
+    // check receipt status for the last 2 putted polines
     for (JsonObject jsonObj : polUpdates.subList(polUpdates.size() - 2, polUpdates.size())) {
-      assertTrue(jsonObj.getString(RECEIPT_STATUS).equals(expectedStatus));
+      assertEquals(jsonObj.getString(RECEIPT_STATUS), expectedStatus);
     }
   }
 
@@ -1295,6 +1351,7 @@ public class OrdersImplTest {
   private void verifyPiecesQuantityForSuccessCase(CompositePurchaseOrder reqData, List<JsonObject> createdPieces) {
     int totalQuantity = 0;
     for (CompositePoLine poLine : reqData.getCompositePoLines()) {
+      if (poLine.getCheckinItems()!= null && poLine.getCheckinItems()) continue;
       totalQuantity += calculateTotalQuantity(poLine);
     }
     assertEquals(totalQuantity, createdPieces.size());
@@ -1320,6 +1377,7 @@ public class OrdersImplTest {
         break;
       }
     }
+    if (pol.getCheckinItems() != null && pol.getCheckinItems()) return;
 
     int expectedItemsQuantity = calculateInventoryItemsQuantity(pol);
     if (!verified && expectedItemsQuantity > 0) {
@@ -1346,7 +1404,7 @@ public class OrdersImplTest {
 
     List<String> locationIds = compositePoLines.stream()
       .flatMap(compositePoLine -> compositePoLine.getLocations().stream())
-      .map(location -> location.getLocationId())
+      .map(Location::getLocationId)
       .distinct()
       .collect(Collectors.toList());
 
