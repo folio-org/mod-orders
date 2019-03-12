@@ -46,7 +46,9 @@
             "inventory-storage.holdings.collection.get",
             "inventory-storage.items.collection.get",
             "inventory-storage.items.item.post",
-            "inventory-storage.loan-types.collection.get"
+            "inventory-storage.loan-types.collection.get",
+            "vendor-storage.vendors.collection.get",
+            "vendor-storage.vendors.item.get"
           ]
         },
         {
@@ -100,7 +102,9 @@
             "inventory-storage.holdings.collection.get",
             "inventory-storage.items.collection.get",
             "inventory-storage.items.item.post",
-            "inventory-storage.loan-types.collection.get"
+            "inventory-storage.loan-types.collection.get",
+            "vendor-storage.vendors.collection.get",
+            "vendor-storage.vendors.item.get"
           ]
         },
         {
@@ -363,6 +367,10 @@
     {
       "id": "loan-types",
       "version": "2.2"
+    },
+    {
+      "id":"vendor-storage.vendors",
+      "version": "1.0"
     }
   ],
     "permissionSets": [
