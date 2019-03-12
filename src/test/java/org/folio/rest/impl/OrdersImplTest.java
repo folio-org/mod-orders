@@ -1229,7 +1229,7 @@ public class OrdersImplTest {
     assertEquals(2, reqData.getCompositePoLines().size());
 
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    // MODORDERS-183 Set the second POLine checkin items true
+    // MODORDERS-183 Set the second POLine checkinItems true
     reqData.getCompositePoLines().get(1).setCheckinItems(true);
     reqData.getCompositePoLines().forEach(s -> s.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING));
 
