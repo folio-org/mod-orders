@@ -1260,7 +1260,7 @@ public class OrdersImplTest {
     assertNotNull(polUpdates);
     // check receipt status of the last 2 updated polines
     for (JsonObject jsonObj : polUpdates.subList(polUpdates.size() - 2, polUpdates.size())) {
-      assertEquals(jsonObj.getString(RECEIPT_STATUS), expectedStatus);
+      assertEquals(expectedStatus, jsonObj.getString(RECEIPT_STATUS));
     }
   }
 
