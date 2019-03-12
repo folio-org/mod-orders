@@ -88,6 +88,7 @@
       },
       "donor": "ABCDEFGHIJKLM",
       "eresource": {
+        "access_provider": "858e80d2-f562-4c54-9934-6e274dee511d",
         "create_inventory": true
       },
       "fund_distribution": [
@@ -241,6 +242,7 @@
       },
       "donor": "",
       "eresource": {
+        "access_provider": "d1b79c8d-4950-482f-8e42-04f9aae3cb40",
         "create_inventory": true
       },
       "fund_distribution": [

@@ -8,7 +8,7 @@
   "re_encumber": false,
   "total_estimated_price": 127.94,
   "total_items": 3,
-  "vendor": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "vendor": "168f8a86-d26c-406e-813f-c7527f241ac3",
   "workflow_status": "Pending",
   "compositePoLines": [
     {
@@ -81,7 +81,7 @@
         "trial": false,
         "expected_activation": "2014-07-06T00:00:00.000Z",
         "user_limit": 1,
-        "access_provider": "7e1841d9-c0a4-4ae0-8521-b7e08fdcbc8a",
+        "access_provider": "858e80d2-f562-4c54-9934-6e274dee511d",
         "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
         "license": "b0ef584b-a960-4c4e-83b1-2ca048cb4ebb"
       },
