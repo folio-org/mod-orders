@@ -172,7 +172,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     }
 
     return inventoryHelper.handleInstanceRecord(compPOL)
-      .thenCompose(compositePOLine -> inventoryHelper.handleItemRecords(compPOL))
+      .thenCompose(inventoryHelper::handleItemRecords)
       .thenCompose(piecesWithItemId -> createPieces(compPOL, piecesWithItemId));
   }
 

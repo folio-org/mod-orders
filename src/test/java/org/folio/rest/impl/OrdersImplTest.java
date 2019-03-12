@@ -1258,7 +1258,7 @@ public class OrdersImplTest {
   private void verifyReceiptStatusChangedTo(String expectedStatus) {
     List<JsonObject> polUpdates = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
     assertNotNull(polUpdates);
-    // check receipt status for the last 2 putted polines
+    // check receipt status of the last 2 updated polines
     for (JsonObject jsonObj : polUpdates.subList(polUpdates.size() - 2, polUpdates.size())) {
       assertEquals(jsonObj.getString(RECEIPT_STATUS), expectedStatus);
     }
@@ -1379,7 +1379,7 @@ public class OrdersImplTest {
   private void verifyPiecesQuantityForSuccessCase(CompositePurchaseOrder reqData, List<JsonObject> createdPieces) {
     int totalQuantity = 0;
     for (CompositePoLine poLine : reqData.getCompositePoLines()) {
-      if (poLine.getCheckinItems()!= null && poLine.getCheckinItems()) continue;
+      if (poLine.getCheckinItems() != null && poLine.getCheckinItems()) continue;
       totalQuantity += calculateTotalQuantity(poLine);
     }
     assertEquals(totalQuantity, createdPieces.size());
