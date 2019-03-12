@@ -1,51 +1,113 @@
 {
-  "po_lines": [
+  "poLines": [
     {
       "id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
       "edition": "First edition",
-      "checkin_items": false,
-      "instance_id": "8343e5a0-fed8-11e8-8eb2-f2801f1b9fd1",
-      "agreement_id": "bdc75fea-fed8-11e8-8eb2-f2801f1b9fd1",
-      "acquisition_method": "Purchase At Vendor System",
-      "adjustment": "1363467f-eb47-4e09-9e28-e25aa464adb7",
+      "checkinItems": false,
+      "instanceId": "8343e5a0-fed8-11e8-8eb2-f2801f1b9fd1",
+      "agreementId": "bdc75fea-fed8-11e8-8eb2-f2801f1b9fd1",
+      "acquisitionMethod": "Purchase At Vendor System",
+      "adjustment": {
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoiceId": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax1": 0.0,
+        "tax2": 0.0,
+        "useProRate": false
+      },
       "alerts": [
         "9a665b22-9fe5-4c95-b4ee-837a5433c95d"
       ],
-      "cancellation_restriction": false,
-      "cancellation_restriction_note": "ABCDEFGHIJKLMNOPQRSTUVW",
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
       "claims": [
-        "f7d7d4e4-255e-46dc-9f08-b953fb1e872d"
+        {
+          "claimed": false,
+          "sent": "2018-10-09T00:00:00.000Z",
+          "grace": 30
+        }
       ],
       "collection": false,
       "contributors": [
         {
           "contributor": "Ed Mashburn",
-          "contributor_type": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+          "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
         }
       ],
-      "cost": "e047212b-c94f-4cb1-84b0-367848381494",
+      "cost": {
+        "listPrice": 24.99,
+        "currency": "USD",
+        "quantityPhysical": 3,
+        "quantityElectronic": 0,
+        "poLineEstimatedPrice": 74.97
+      },
       "description": "ABCDEFGH",
-      "details": "349d9438-12bd-4e2e-9eb6-dfa830ab99a4",
+      "details": {
+        "receivingNote": "ABCDEFGHIJKL",
+        "productIds": [
+          {
+            "productId": "9780764354113",
+            "productIdType": "ISBN"
+          }
+        ],
+        "materialTypes": [
+          "f7e72403-2a13-43a4-a069-aaabe6c9dea8"
+        ],
+        "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+        "subscriptionInterval": 824,
+        "subscriptionTo": "2020-10-09T00:00:00.000Z"
+      },
       "donor": "ABCDEFGHIJKLM",
-      "eresource": "468b679c-378b-4009-9a17-a6711cefc85f",
-      "fund_distribution": [
-        "d10879e8-8c2d-4850-bcb9-0ec8e2e10021"
+      "eresource": {
+        "activated": false,
+        "activationDue": 10,
+        "createInventory": false,
+        "trial": false,
+        "expectedActivation": "2018-10-09T00:00:00.000Z",
+        "userLimit": 10,
+        "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
+        "license": {
+          "code": "Code 1",
+          "description": "License Agreement 1"
+        }
+      },
+      "fundDistribution": [
+        {
+          "code": "HIST",
+          "percentage": 80.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3"
+        }
       ],
       "locations": [
-        "a4e65e03-99a4-4b39-8e6a-ae666ac52bea"
+        {
+          "locationId": "a4e65e03-99a4-4b39-8e6a-ae666ac52bea",
+          "quantity": 5,
+          "quantityElectronic": 1,
+          "quantityPhysical": 4
+        }
       ],
-      "order_format": "Physical Resource",
+      "orderFormat": "Physical Resource",
       "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-      "payment_status": "Awaiting Payment",
-      "physical": "5ee243f9-72e5-4464-bdbc-43a21873d648",
-      "po_line_description": "ABCDEFGHIJKLMNOPQRSTUVWXY",
-      "po_line_number": "268758-03",
-      "publication_date": "2017",
+      "paymentStatus": "Awaiting Payment",
+      "physical": {
+        "volumes": [
+          "vol. 1"
+        ],
+        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "expectedReceiptDate": "2018-10-05T00:00:00.000Z",
+        "receiptDue": "2018-10-10T00:00:00.000Z"
+      },
+      "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
+      "poLineNumber": "268758-03",
+      "publicationDate": "2017",
       "publisher": "Schiffer Publishing",
-      "purchase_order_id": "ab18897b-0e40-4f31-896b-9c9adc979a87",
-      "receipt_date": "2018-10-09T00:00:00.000Z",
-      "receipt_status": "Awaiting Receipt",
-      "reporting_codes": [
+      "purchaseOrderId": "ab18897b-0e40-4f31-896b-9c9adc979a87",
+      "receiptDate": "2018-10-09T00:00:00.000Z",
+      "receiptStatus": "Awaiting Receipt",
+      "reportingCodes": [
         "5926dcd7-85f5-4504-8283-712595ebc38b",
         "fa316c04-8101-4e72-8aaf-01281bac718f",
         "ea68b696-3125-4940-bf91-1d128323473e"
@@ -53,7 +115,10 @@
       "requester": "Leo Bulero",
       "rush": true,
       "selector": "ABCD",
-      "source": "024b6f41-c5c6-4280-858e-33fba452a334",
+      "source": {
+        "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
+        "description": "ABCDEFGHIJKLMNO"
+      },
       "tags": [
         "ABCDEFGHIJKLMNOPQRSTU",
         "ABCDEFG",
@@ -61,7 +126,13 @@
         "ABCDEFGHIJKLMNO"
       ],
       "title": "Kayak Fishing in the Northern Gulf Coast",
-      "vendor_detail": "d5065f0d-fb88-4d23-b0c1-57e754fba40e",
+      "vendorDetail": {
+        "instructions": "ABCDEFG",
+        "noteFromVendor": "ABCDEFGHIKJKLMNOP",
+        "refNumber": "123456-78",
+        "refNumberType": "Supplier's unique order line reference number",
+        "vendorAccount": "8910-10"
+      },
       "metadata": {
         "createdDate": "2018-07-19T00:00:00.000+0000",
         "createdByUserId": "28d1057c-d137-11e8-a8d5-f2801f1b9fd1"
@@ -70,49 +141,117 @@
     {
       "id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
       "edition": "First edition",
-      "checkin_items": false,
-      "instance_id": "8343e5a0-fed8-11e8-8eb2-f2801f1b9fd1",
-      "agreement_id": "bdc75fea-fed8-11e8-8eb2-f2801f1b9fd1",
-      "acquisition_method": "Purchase At Vendor System",
-      "adjustment": "1363467f-eb47-4e09-9e28-e25aa464adb7",
+      "checkinItems": false,
+      "instanceId": "8343e5a0-fed8-11e8-8eb2-f2801f1b9fd1",
+      "agreementId": "bdc75fea-fed8-11e8-8eb2-f2801f1b9fd1",
+      "acquisitionMethod": "Purchase At Vendor System",
+      "adjustment": {
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoiceId": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax1": 0.0,
+        "tax2": 0.0,
+        "useProRate": false
+      },
       "alerts": [
         "9a665b22-9fe5-4c95-b4ee-837a5433c95d"
       ],
-      "cancellation_restriction": false,
-      "cancellation_restriction_note": "ABCDEFGHIJKLMNOPQRSTUVW",
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
       "claims": [
-        "f7d7d4e4-255e-46dc-9f08-b953fb1e872d"
+        {
+          "claimed": false,
+          "sent": "2018-10-09T00:00:00.000Z",
+          "grace": 30
+        }
       ],
       "collection": false,
       "contributors": [
         {
           "contributor": "Ed Mashburn",
-          "contributor_type": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+          "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
         }
       ],
-      "cost": "e047212b-c94f-4cb1-84b0-367848381494",
+      "cost": {
+        "currency": "USD",
+        "listPrice": 24.99,
+        "quantityPhysical": 1,
+        "quantityElectronic": 1,
+        "poLineEstimatedPrice": 49.98
+      },
       "description": "ABCDEFGH",
-      "details": "349d9438-12bd-4e2e-9eb6-dfa830ab99a4",
+      "details": {
+        "receivingNote": "ABCDEFGHIJKL",
+        "productIds": [
+          {
+            "productId": "9780764354113",
+            "productIdType": "ISBN"
+          }
+        ],
+        "materialTypes": [
+          "f7e72403-2a13-43a4-a069-aaabe6c9dea8"
+        ],
+        "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+        "subscriptionInterval": 824,
+        "subscriptionTo": "2020-10-09T00:00:00.000Z"
+      },
       "donor": "ABCDEFGHIJKLM",
-      "eresource": "468b679c-378b-4009-9a17-a6711cefc85f",
-      "fund_distribution": [
-        "d10879e8-8c2d-4850-bcb9-0ec8e2e10021"
+      "eresource": {
+        "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
+        "activated": false,
+        "activationDue": 10,
+        "createInventory": true,
+        "expectedActivation": "2018-10-09T00:00:00.000Z",
+        "license": {
+          "code": "Code 1",
+          "description": "License Agreement 1"
+        },
+        "trial": false,
+        "userLimit": 10
+      },
+      "fundDistribution": [
+        {
+          "code": "HIST",
+          "percentage": 80.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3"
+        }
       ],
       "locations": [
-        "a4e65e03-99a4-4b39-8e6a-ae666ac52bea"
+        {
+          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "quantity": 1,
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
+        },
+        {
+          "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
+          "quantity": 2,
+          "quantityElectronic": 0,
+          "quantityPhysical": 2
+        }
       ],
-      "order_format": "Physical Resource",
+      "orderFormat": "Physical Resource",
       "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-      "payment_status": "Awaiting Payment",
-      "physical": "5ee243f9-72e5-4464-bdbc-43a21873d648",
-      "po_line_description": "ABCDEFGHIJKLMNOPQRSTUVWXY",
-      "po_line_number": "268758-03",
-      "publication_date": "2017",
+      "paymentStatus": "Awaiting Payment",
+      "physical": {
+        "volumes": [
+          "vol. 1"
+        ],
+        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "expectedReceiptDate": "2018-10-05T00:00:00.000Z",
+        "receiptDue": "2018-10-10T00:00:00.000Z"
+      },
+      "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
+      "poLineNumber": "268758-03",
+      "publicationDate": "2017",
       "publisher": "Schiffer Publishing",
-      "purchase_order_id": "ab18897b-0e40-4f31-896b-9c9adc979a87",
-      "receipt_date": "2018-10-09T00:00:00.000Z",
-      "receipt_status": "Awaiting Receipt",
-      "reporting_codes": [
+      "purchaseOrderId": "ab18897b-0e40-4f31-896b-9c9adc979a87",
+      "receiptDate": "2018-10-09T00:00:00.000Z",
+      "receiptStatus": "Awaiting Receipt",
+      "reportingCodes": [
         "5926dcd7-85f5-4504-8283-712595ebc38b",
         "fa316c04-8101-4e72-8aaf-01281bac718f",
         "ea68b696-3125-4940-bf91-1d128323473e"
@@ -120,7 +259,10 @@
       "requester": "Leo Bulero",
       "rush": true,
       "selector": "ABCD",
-      "source": "024b6f41-c5c6-4280-858e-33fba452a334",
+      "source": {
+        "code": "Code1",
+        "description": ""
+      },
       "tags": [
         "ABCDEFGHIJKLMNOPQRSTU",
         "ABCDEFG",
@@ -128,7 +270,13 @@
         "ABCDEFGHIJKLMNO"
       ],
       "title": "Kayak Fishing in the Northern Gulf Coast",
-      "vendor_detail": "d5065f0d-fb88-4d23-b0c1-57e754fba40e",
+      "vendorDetail": {
+        "instructions": "ABCDEFG",
+        "noteFromVendor": "ABCDEFGHIKJKLMNOP",
+        "refNumber": "123456-78",
+        "refNumberType": "Supplier's unique order line reference number",
+        "vendorAccount": "8910-25"
+      },
       "metadata": {
         "createdDate": "2018-07-19T00:00:00.000+0000",
         "createdByUserId": "28d1057c-d137-11e8-a8d5-f2801f1b9fd1"
@@ -136,34 +284,74 @@
     },
     {
       "id": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
-      "instance_id": "b252d8f4-e14f-4f27-9f11-876b1f8ed13a",
-      "acquisition_method": "Purchase At Vendor System",
+      "instanceId": "b252d8f4-e14f-4f27-9f11-876b1f8ed13a",
+      "acquisitionMethod": "Purchase At Vendor System",
       "alerts": [],
-      "cancellation_restriction": false,
+      "cancellationRestriction": false,
       "claims": [],
       "collection": false,
       "contributors": [],
-      "cost": "bb4e98be-e787-4193-a97a-9496341cf2c1",
+      "cost": {
+        "currency": "USD",
+        "listPrice": 24.99,
+        "quantityPhysical": 1,
+        "quantityElectronic": 1,
+        "poLineEstimatedPrice": 49.98
+      },
       "description": "25 physical resources for 2 locations",
-      "details": "92656b58-2528-46f4-b8ff-8fa976051a6d",
-      "fund_distribution": [],
+      "details": {
+        "receivingNote": "ABCDEFGHIJKL",
+        "productIds": [
+          {
+            "productId": "9780764354113",
+            "productIdType": "ISBN"
+          }
+        ],
+        "materialTypes": [
+          "f7e72403-2a13-43a4-a069-aaabe6c9dea8"
+        ],
+        "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+        "subscriptionInterval": 824,
+        "subscriptionTo": "2020-10-09T00:00:00.000Z"
+      },
+      "fundDistribution": [],
       "locations": [
-        "a24c922c-a224-4620-97e6-05b4468f8f27",
-        "f527db3a-fb25-40e8-a027-93775ca8b2eb"
+        {
+          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "quantity": 1,
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
+        },
+        {
+          "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
+          "quantity": 2,
+          "quantityElectronic": 0,
+          "quantityPhysical": 2
+        }
       ],
-      "order_format": "Physical Resource",
-      "payment_status": "Fully Paid",
-      "physical": "0ae68bf4-48e6-47d8-8846-297fae67f88e",
-      "po_line_description": "Harry Potter (Book 1)",
-      "po_line_number": "2LINES1PHYS1EL-1",
-      "publication_date": "1998",
+      "orderFormat": "Physical Resource",
+      "paymentStatus": "Fully Paid",
+      "physical": {
+        "volumes": [
+          "vol. 1"
+        ],
+        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "expectedReceiptDate": "2018-10-05T00:00:00.000Z",
+        "receiptDue": "2018-10-10T00:00:00.000Z"
+      },
+      "poLineDescription": "Harry Potter (Book 1)",
+      "poLineNumber": "2LINES1PHYS1EL-1",
+      "publicationDate": "1998",
       "publisher": "Scholastic",
-      "purchase_order_id": "555a155e-8bb7-4670-ace4-463fc70c2a75",
-      "receipt_status": "Awaiting Receipt",
-      "reporting_codes": [],
+      "purchaseOrderId": "555a155e-8bb7-4670-ace4-463fc70c2a75",
+      "receiptStatus": "Awaiting Receipt",
+      "reportingCodes": [],
       "requester": "Leo Bulero",
       "rush": true,
-      "source": "2306a19c-b675-4c87-88a1-0a1079c65117",
+      "source": {
+        "code": "Code5",
+        "description": ""
+      },
       "tags": [],
       "title": "Harry Potter and the Sorcerer's Stone",
       "metadata": {
@@ -175,31 +363,71 @@
     },
     {
       "id": "cf447221-29b9-481e-947c-9ad545f22888",
-      "instance_id": "b252d8f4-e14f-4f27-9f11-876b1f8ed13a",
-      "acquisition_method": "Purchase At Vendor System",
-      "cancellation_restriction": false,
+      "instanceId": "b252d8f4-e14f-4f27-9f11-876b1f8ed13a",
+      "acquisitionMethod": "Purchase At Vendor System",
+      "cancellationRestriction": false,
       "collection": false,
-      "cost": "bb4e98be-e787-4193-a97a-9496341cf2c1",
+      "cost": {
+        "listPrice": 24.99,
+        "currency": "USD",
+        "quantityPhysical": 3,
+        "quantityElectronic": 0,
+        "poLineEstimatedPrice": 74.97
+      },
       "description": "10 physical resources",
-      "details": "92656b58-2528-46f4-b8ff-8fa976051a6d",
-      "fund_distribution": [],
+      "details": {
+        "receivingNote": "ABCDEFGHIJKL",
+        "productIds": [
+          {
+            "productId": "9780764354113",
+            "productIdType": "ISBN"
+          }
+        ],
+        "materialTypes": [
+          "f7e72403-2a13-43a4-a069-aaabe6c9dea8"
+        ],
+        "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+        "subscriptionInterval": 824,
+        "subscriptionTo": "2020-10-09T00:00:00.000Z"
+      },
+      "fundDistribution": [],
       "locations": [
-        "a24c922c-a224-4620-97e6-05b4468f8f27",
-        "f527db3a-fb25-40e8-a027-93775ca8b2eb"
+        {
+          "locationId": "b241764c-1466-4e1d-a028-1a3684a5da87",
+          "quantity": 2,
+          "quantityElectronic": 0,
+          "quantityPhysical": 2
+        },
+        {
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "quantity": 1,
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
+        }
       ],
-      "order_format": "Physical Resource",
-      "payment_status": "Fully Paid",
-      "physical": "0ae68bf4-48e6-47d8-8846-297fae67f88e",
-      "po_line_description": "Harry Potter (Book 1)",
-      "po_line_number": "LINE-1",
-      "publication_date": "1998",
+      "orderFormat": "Physical Resource",
+      "paymentStatus": "Fully Paid",
+      "physical": {
+        "volumes": [
+          "vol. 1"
+        ],
+        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "expectedReceiptDate": "2018-10-05T00:00:00.000Z",
+        "receiptDue": "2018-10-10T00:00:00.000Z"
+      },
+      "poLineDescription": "Harry Potter (Book 1)",
+      "poLineNumber": "LINE-1",
+      "publicationDate": "1998",
       "publisher": "Scholastic",
-      "purchase_order_id": "555a155e-8bb7-4670-ace4-463fc70c2a75",
-      "receipt_status": "Awaiting Receipt",
-      "reporting_codes": [],
+      "purchaseOrderId": "555a155e-8bb7-4670-ace4-463fc70c2a75",
+      "receiptStatus": "Awaiting Receipt",
+      "reportingCodes": [],
       "requester": "Leo Bulero",
       "rush": true,
-      "source": "2306a19c-b675-4c87-88a1-0a1079c65117",
+      "source": {
+        "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
+        "description": "ABCDEFGHIJKLMNO"
+      },
       "title": "Harry Potter and the Sorcerer's Stone",
       "metadata": {
         "createdDate": "2019-02-20T19:49:43.854+0000",
@@ -210,33 +438,80 @@
     },
     {
       "id": "daa9cfd1-b330-4b65-8c2a-3663aaae5130",
-      "acquisition_method": "Purchase At Vendor System",
+      "acquisitionMethod": "Purchase At Vendor System",
       "alerts": [],
-      "cancellation_restriction": false,
+      "cancellationRestriction": false,
       "claims": [],
       "collection": false,
       "contributors": [],
-      "cost": "2a030c58-7a30-4c4f-abca-2bc8dd799bf3",
+      "cost": {
+        "currency": "USD",
+        "listPrice": 29.99,
+        "quantityPhysical": 1,
+        "quantityElectronic": 1,
+        "poLineEstimatedPrice": 39.98
+      },
       "description": "10 electronic resources for 1 location",
-      "details": "007e607d-7617-4bc3-9f6d-563519b3d401",
-      "eresource": "22837acf-46fb-471b-ac7f-6b68f14155f2",
-      "fund_distribution": [],
+      "details": {
+        "receivingNote": "start with v. 162",
+        "productIds": [
+          {
+            "productId": "0065-3438",
+            "productIdType": "ISSN"
+          }
+        ],
+        "materialTypes": [
+          "fde2e5ca-cde3-11e8-a8d5-f2801f1b9fd1"
+        ],
+        "subscriptionFrom": "2018-07-01T00:00:00.000Z",
+        "subscriptionInterval": 1095,
+        "subscriptionTo": "2021-06-30T00:00:00.000Z"
+      },
+      "eresource": {
+        "activated": false,
+        "activationDue": 0,
+        "createInventory": false,
+        "trial": false,
+        "expectedActivation": null,
+        "userLimit": 0,
+        "accessProvider": "9bdc385e-6403-46aa-a3aa-db91d4527b19",
+        "license": {
+          "code": "Code 1",
+          "description": "License Agreement 1"
+        }
+      },
+      "fundDistribution": [],
       "locations": [
-        "642a281d-8d8e-4d4b-8d3a-0905074b1f73"
+        {
+          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "quantity": 1,
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
+        }
       ],
-      "order_format": "Electronic Resource",
-      "payment_status": "Fully Paid",
-      "physical": "53349162-6c44-4438-b651-3057b598140d",
-      "po_line_description": "Harry Potter (Book 2)",
-      "po_line_number": "2LINES1PHYS1EL-2",
-      "publication_date": "2000",
+      "orderFormat": "Electronic Resource",
+      "paymentStatus": "Fully Paid",
+      "physical": {
+        "volumes": [
+          "vol. 1"
+        ],
+        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "expectedReceiptDate": "2018-10-05T00:00:00.000Z",
+        "receiptDue": "2018-10-10T00:00:00.000Z"
+      },
+      "poLineDescription": "Harry Potter (Book 2)",
+      "poLineNumber": "2LINES1PHYS1EL-2",
+      "publicationDate": "2000",
       "publisher": "Scholastic Paperbacks",
-      "purchase_order_id": "555a155e-8bb7-4670-ace4-463fc70c2a75",
-      "receipt_status": "Awaiting Receipt",
-      "reporting_codes": [],
+      "purchaseOrderId": "555a155e-8bb7-4670-ace4-463fc70c2a75",
+      "receiptStatus": "Awaiting Receipt",
+      "reportingCodes": [],
       "requester": "Leo Bulero",
       "rush": true,
-      "source": "ef5e635c-0af9-46bf-ba16-1e417028a1bb",
+      "source": {
+        "code": "Code1",
+        "description": ""
+      },
       "tags": [],
       "title": "Harry Potter and the Chamber of Secrets",
       "metadata": {
@@ -248,51 +523,122 @@
     },
     {
       "id": "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56",
-      "instance_id": "b82e1191-453d-4d41-91c5-b5c386018685",
-      "acquisition_method": "Purchase At Vendor System",
-      "cancellation_restriction": false,
-      "cancellation_restriction_note": "ABCDEFGHIJKLMNOPQRSTUVW",
+      "instanceId": "b82e1191-453d-4d41-91c5-b5c386018685",
+      "acquisitionMethod": "Purchase At Vendor System",
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
       "collection": false,
       "contributors": [
         {
           "contributor": "Ed Mashburn",
-          "contributor_type": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+          "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
         }
       ],
-      "cost": "8ae8c511-a355-43c8-8293-44dda118c21e",
+      "cost": {
+        "currency": "USD",
+        "listPrice": 24.99,
+        "quantityPhysical": 1,
+        "quantityElectronic": 1,
+        "poLineEstimatedPrice": 49.98
+      },
       "description": "ABCDEFGH",
-      "details": "30f107af-c616-4193-b012-cbfce03da023",
+      "details": {
+        "receivingNote": "ABCDEFGHIJKL",
+        "productIds": [
+          {
+            "productId": "9780764354113",
+            "productIdType": "ISBN"
+          }
+        ],
+        "materialTypes": [
+          "f7e72403-2a13-43a4-a069-aaabe6c9dea8"
+        ],
+        "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+        "subscriptionInterval": 824,
+        "subscriptionTo": "2020-10-09T00:00:00.000Z"
+      },
       "donor": "ABCDEFGHIJKLM",
-      "eresource": "d218ec74-45e8-47b9-a2d7-fc865630a240",
-      "fund_distribution": [
-        "b73f279d-babc-4afb-8bc1-71b7750e5416",
-        "b6985ad0-dcec-4cd8-b276-760f10998055"
+      "eresource": {
+        "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
+        "activated": false,
+        "activationDue": 10,
+        "createInventory": true,
+        "expectedActivation": "2018-10-09T00:00:00.000Z",
+        "license": {
+          "code": "Code 1",
+          "description": "License Agreement 1"
+        },
+        "trial": false,
+        "userLimit": 10
+      },
+      "fundDistribution": [
+        {
+          "code": "HIST",
+          "percentage": 80.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3"
+        },
+        {
+          "code": "GENRL",
+          "percentage": 20.0,
+          "encumbrance": "0466cb77-0344-43c6-85eb-0a64aa2934e5"
+        }
       ],
       "locations": [
-        "b51ceba3-3da0-4db6-b1c7-9ff5b590ac89",
-        "7b0e2b10-a30b-4737-97b1-dfe52b0c0b14",
-        "3f2c235d-6f8f-455a-abd2-b24c78faf9b3"
+        {
+          "locationId": "b51ceba3-3da0-4db6-b1c7-9ff5b590ac89",
+          "quantity": 1,
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
+        },
+        {
+          "locationId": "7b0e2b10-a30b-4737-97b1-dfe52b0c0b14",
+          "quantity": 2,
+          "quantityElectronic": 0,
+          "quantityPhysical": 2
+        },
+        {
+          "locationId": "3f2c235d-6f8f-455a-abd2-b24c78faf9b3",
+          "quantity": 1,
+          "quantityElectronic": 1,
+          "quantityPhysical": 0
+        }
       ],
-      "order_format": "P/E Mix",
+      "orderFormat": "P/E Mix",
       "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-      "payment_status": "Awaiting Payment",
-      "physical": "586c3bb8-f9d6-4bb9-a287-d4501382aa6f",
-      "po_line_description": "ABCDEFGHIJKLMNOPQRSTUVWXY",
-      "po_line_number": "10080-1",
-      "publication_date": "2017",
+      "paymentStatus": "Awaiting Payment",
+      "physical": {
+        "volumes": [
+          "vol. 1"
+        ],
+        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "expectedReceiptDate": "2018-10-05T00:00:00.000Z",
+        "receiptDue": "2018-10-10T00:00:00.000Z"
+      },
+      "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
+      "poLineNumber": "10080-1",
+      "publicationDate": "2017",
       "publisher": "Schiffer Publishing",
-      "purchase_order_id": "18f2185a-a40b-40da-acd2-067fd24cd1a5",
-      "receipt_date": "2019-03-05T08:06:58.721+0000",
-      "receipt_status": "Fully Received",
-      "reporting_codes": [
+      "purchaseOrderId": "18f2185a-a40b-40da-acd2-067fd24cd1a5",
+      "receiptDate": "2019-03-05T08:06:58.721+0000",
+      "receiptStatus": "Fully Received",
+      "reportingCodes": [
         "9397990a-96f9-4c55-a958-f5f6941b9e68"
       ],
       "requester": "Leo Bulero",
       "rush": true,
       "selector": "ABCD",
-      "source": "0df216fd-679c-4b9e-a348-9143d0168319",
+      "source": {
+        "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
+        "description": "ABCDEFGHIJKLMNO"
+      },
       "title": "Kayak Fishing in the Northern Gulf Coast",
-      "vendor_detail": "7b8f0f74-96d4-4f21-b248-7e8ef70a7d9d",
+      "vendorDetail": {
+        "instructions": "ABCDEFG",
+        "noteFromVendor": "ABCDEFGHIKJKLMNOP",
+        "refNumber": "123456-78",
+        "refNumberType": "Supplier's unique order line reference number",
+        "vendorAccount": "8910-25"
+      },
       "metadata": {
         "createdDate": "2019-03-05T07:52:47.992+0000",
         "createdByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9",
@@ -302,46 +648,111 @@
     },
     {
       "id": "f217a5c2-2c56-4d05-9412-a96cfc8e52de",
-      "instance_id": "9085cdef-0758-4d8f-8c35-54795739472e",
-      "acquisition_method": "Purchase",
-      "adjustment": "75e9c1c7-32e5-4c27-accc-331d615d0f91",
+      "instanceId": "9085cdef-0758-4d8f-8c35-54795739472e",
+      "acquisitionMethod": "Purchase",
+      "adjustment": {
+        "credit": 0.0,
+        "discount": 0.0,
+        "insurance": 0.0,
+        "invoiceId": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
+        "overhead": 0.0,
+        "shipment": 0.0,
+        "tax1": 0.0,
+        "tax2": 0.0,
+        "useProRate": false
+      },
       "alerts": [],
-      "cancellation_restriction": false,
-      "cancellation_restriction_note": "",
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "",
       "claims": [
-        "e96856eb-4b67-411c-9691-7856f84de7b0"
+        {
+          "claimed": false,
+          "sent": "2018-10-09T00:00:00.000Z",
+          "grace": 30
+        }
       ],
       "collection": false,
       "contributors": [
         {
           "contributor": "Ed Mashburn",
-          "contributor_type": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+          "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
         }
       ],
-      "cost": "0fd29d37-70eb-408a-bb28-53a514247f68",
+      "cost": {
+        "currency": "USD",
+        "listPrice": 24.99,
+        "quantityPhysical": 1,
+        "quantityElectronic": 1,
+        "poLineEstimatedPrice": 49.98
+      },
       "description": "",
-      "details": "58f12422-6535-4127-b1aa-e73d128b11a6",
+      "details": {
+        "receivingNote": "ABCDEFGHIJKL",
+        "productIds": [
+          {
+            "productId": "9780764354113",
+            "productIdType": "ISBN"
+          }
+        ],
+        "materialTypes": [
+          "f7e72403-2a13-43a4-a069-aaabe6c9dea8"
+        ],
+        "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+        "subscriptionInterval": 824,
+        "subscriptionTo": "2020-10-09T00:00:00.000Z"
+      },
       "donor": "",
-      "eresource": "995d7df3-6e11-47ee-a5e6-2b1643c5eb0c",
+      "eresource": {
+        "activated": false,
+        "activationDue": 10,
+        "createInventory": false,
+        "trial": false,
+        "expectedActivation": "2018-10-09T00:00:00.000Z",
+        "userLimit": 10,
+        "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
+        "license": {
+          "code": "Code 1",
+          "description": "License Agreement 1"
+        }
+      },
       "locations": [
-        "4d9b665b-87d4-4a58-88b6-e0315eb190c1",
-        "f29a0fef-7977-4f00-b8bb-49639e2de786"
+        {
+          "locationId": "b241764c-1466-4e1d-a028-1a3684a5da87",
+          "quantity": 2,
+          "quantityElectronic": 0,
+          "quantityPhysical": 2
+        },
+        {
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "quantity": 1,
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
+        }
       ],
-      "order_format": "Electronic Resource",
+      "orderFormat": "Electronic Resource",
       "owner": "LTS E-Resources & Serials",
-      "payment_status": "Awaiting Payment",
-      "po_line_description": "",
-      "po_line_number": "10080-2",
-      "publication_date": "2017",
+      "paymentStatus": "Awaiting Payment",
+      "poLineDescription": "",
+      "poLineNumber": "10080-2",
+      "publicationDate": "2017",
       "publisher": "John Wiley & Sons, Inc.",
-      "purchase_order_id": "18f2185a-a40b-40da-acd2-067fd24cd1a5",
-      "receipt_date": "2019-03-05T08:43:38.235+0000",
-      "receipt_status": "Fully Received",
+      "purchaseOrderId": "18f2185a-a40b-40da-acd2-067fd24cd1a5",
+      "receiptDate": "2019-03-05T08:43:38.235+0000",
+      "receiptStatus": "Fully Received",
       "rush": false,
       "selector": "Woods",
-      "source": "c58cda63-df41-4f2f-95c0-c4b6b72beb94",
+      "source": {
+        "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
+        "description": "ABCDEFGHIJKLMNO"
+      },
       "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
-      "vendor_detail": "a81df210-27b4-48c7-9bf2-2ea0ca8a3983",
+      "vendorDetail": {
+        "instructions": "ABCDEFG",
+        "noteFromVendor": "ABCDEFGHIKJKLMNOP",
+        "refNumber": "123456-78",
+        "refNumberType": "Supplier's unique order line reference number",
+        "vendorAccount": "8910-10"
+      },
       "metadata": {
         "createdDate": "2019-03-05T07:52:48.026+0000",
         "createdByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9",
@@ -350,5 +761,5 @@
       }
     }
   ],
-  "total_records": 7
+  "totalRecords": 7
 }

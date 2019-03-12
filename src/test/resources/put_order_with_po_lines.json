@@ -1,96 +1,88 @@
 {
   "approved": true,
-  "assigned_to": "ab18897b-0e40-4f31-896b-9c9adc979a88",
-  "manual_po": false,
+  "assignedTo": "ab18897b-0e40-4f31-896b-9c9adc979a88",
+  "manualPo": false,
   "notes": [],
-  "po_number": "268758",
-  "order_type": "One-Time",
-  "re_encumber": false,
-  "total_estimated_price": 127.94,
-  "total_items": 3,
+  "poNumber": "268758",
+  "orderType": "One-Time",
+  "reEncumber": false,
+  "totalEstimatedPrice": 127.94,
+  "totalItems": 3,
   "vendor": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
-  "workflow_status": "Pending",
+  "workflowStatus": "Pending",
   "compositePoLines": [
     {
       "id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1",
-      "acquisition_method": "Purchase",
+      "acquisitionMethod": "Purchase",
       "adjustment": {
         "credit": 0.0,
         "discount": 0.0,
         "insurance": 0.0,
-        "invoice_id": "2d6d495c-c237-476f-aa48-50f7cbf74ca4",
+        "invoiceId": "2d6d495c-c237-476f-aa48-50f7cbf74ca4",
         "overhead": 0.0,
         "shipment": 0.0,
-        "tax_1": 0.0,
-        "tax_2": 0.0,
-        "use_pro_rate": false,
-        "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
+        "tax1": 0.0,
+        "tax2": 0.0,
+        "useProRate": false
       },
       "alerts": [],
-      "cancellation_restriction": false,
-      "cancellation_restriction_note": "",
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "",
       "claims": [
         {
           "claimed": false,
-          "grace": 90,
-          "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
+          "grace": 90
         }
       ],
       "collection": false,
       "cost": {
-        "list_price": 68.00,
+        "listPrice": 68.00,
         "currency": "USD",
-        "quantity_physical": 1,
-        "quantity_electronic": 0,
-        "po_line_estimated_price": 68.00,
-        "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
+        "quantityPhysical": 1,
+        "quantityElectronic": 0,
+        "poLineEstimatedPrice": 68.00
       },
       "description": "",
       "donor": "",
       "eresource": {
         "activated": false,
-        "activation_due": 0,
-        "create_inventory": false,
+        "activationDue": 0,
+        "createInventory": false,
         "trial": false,
-        "expected_activation": null,
-        "user_limit": 0,
-        "access_provider": null,
-        "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1",
-        "license": "07c5d8be-cabe-11e8-a8d5-f2801f1b9fd1"
+        "expectedActivation": null,
+        "userLimit": 0,
+        "accessProvider": null
       },
-      "fund_distribution": [
+      "fundDistribution": [
         {
           "code": "EUROHIST-FY19",
           "percentage": 100.0,
-          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08003",
-          "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08003"
         }
       ],
       "locations": [
         {
           "quantity": 1,
-          "quantity_electronic": 0,
-          "quantity_physical": 1,
-          "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
         }
       ],
-      "order_format": "Physical Resource",
+      "orderFormat": "Physical Resource",
       "owner": "LTS Acquisitions",
-      "payment_status": "Awaiting Payment",
+      "paymentStatus": "Awaiting Payment",
       "physical": {
-        "receipt_due": "2018-09-29T00:00:00.000Z",
+        "receiptDue": "2018-09-29T00:00:00.000Z",
         "volumes": [
           "vol. 1"
-        ],
-        "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
+        ]
       },
-      "po_line_description": "",
-      "po_line_number": "268758-01",
-      "publication_date": "2011",
+      "poLineDescription": "",
+      "poLineNumber": "268758-01",
+      "publicationDate": "2011",
       "publisher": "Tapir Academic Press",
-      "receipt_date": null,
-      "receipt_status": "Awaiting Receipt",
-      "reporting_codes": [],
+      "receiptDate": null,
+      "receiptStatus": "Awaiting Receipt",
+      "reportingCodes": [],
       "requester": "",
       "rush": false,
       "selector": "Stevens",
@@ -100,109 +92,100 @@
       },
       "tags": [],
       "title": "Taxes, tributes and tributary lands in the making of Scandinavian kingdoms in the Middle Ages",
-      "vendor_detail": {
+      "vendorDetail": {
         "instructions": "",
-        "note_from_vendor": "",
-        "vendor_account": "",
-        "po_line_id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1"
+        "noteFromVendor": "",
+        "vendorAccount": ""
       }
     },
     {
       "id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3",
-      "acquisition_method": "Purchase",
+      "acquisitionMethod": "Purchase",
       "adjustment": {
         "credit": 0.0,
         "discount": 0.0,
         "insurance": 0.0,
-        "invoice_id": "366d495c-c237-476f-aa48-50f7cbf74ca4",
+        "invoiceId": "366d495c-c237-476f-aa48-50f7cbf74ca4",
         "overhead": 0.0,
         "shipment": 0.0,
-        "tax_1": 0.0,
-        "tax_2": 0.0,
-        "use_pro_rate": false,
-        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3"
+        "tax1": 0.0,
+        "tax2": 0.0,
+        "useProRate": false
       },
       "alerts": [],
-      "cancellation_restriction": false,
-      "cancellation_restriction_note": "",
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "",
       "claims": [
         {
           "claimed": false,
-          "grace": 90,
-          "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3"
+          "grace": 90
         }
       ],
       "collection": false,
 
       "cost": {
-        "list_price": 24.99,
+        "listPrice": 24.99,
         "currency": "USD",
-        "quantity_physical": 1,
-        "quantity_electronic": 0,
-        "po_line_estimated_price": 24.99,
-        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3"
+        "quantityPhysical": 1,
+        "quantityElectronic": 0,
+        "poLineEstimatedPrice": 24.99
       },
       "description": "",
       "details": {
-        "receiving_note": "",
-        "product_ids": [
+        "receivingNote": "",
+        "productIds": [
           {
-            "product_id": "9780764354113",
-            "product_id_type": "ISBN"
+            "productId": "9780764354113",
+            "productIdType": "ISBN"
           }
         ],
-        "material_types": [
+        "materialTypes": [
           "fde2dc42-cde3-11e8-a8d5-f2801f1b9fd1"
         ],
-        "subscription_from": null,
-        "subscription_interval": 0,
-        "subscription_to": null,
-        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3"
+        "subscriptionFrom": null,
+        "subscriptionInterval": 0,
+        "subscriptionTo": null
       },
       "donor": "",
       "eresource": {
         "activated": false,
-        "activation_due": 0,
-        "create_inventory": false,
+        "activationDue": 0,
+        "createInventory": false,
         "trial": false,
-        "expected_activation": null,
-        "user_limit": 0,
-        "access_provider": null,
-        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3"
+        "expectedActivation": null,
+        "userLimit": 0,
+        "accessProvider": null
       },
-      "fund_distribution": [
+      "fundDistribution": [
         {
           "code": "USHIST-FY19",
           "percentage": 100.0,
-          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08005",
-          "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3"
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08005"
         }
       ],
       "locations": [
         {
           "quantity": 1,
-          "quantity_electronic": 0,
-          "quantity_physical": 1,
-          "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3"
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
         }
       ],
-      "order_format": "Physical Resource",
+      "orderFormat": "Physical Resource",
       "owner": "LTS Acquisitions",
-      "payment_status": "Awaiting Payment",
+      "paymentStatus": "Awaiting Payment",
       "physical": {
-        "receipt_due": "2018-09-29T00:00:00.000Z",
+        "receiptDue": "2018-09-29T00:00:00.000Z",
         "volumes": [
           "vol. 1"
-        ],
-        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3"
+        ]
       },
-      "po_line_description": "",
-      "po_line_number": "268758-03",
-      "publication_date": "2011",
+      "poLineDescription": "",
+      "poLineNumber": "268758-03",
+      "publicationDate": "2011",
       "publisher": "Tapir Academic Press",
-      "receipt_date": null,
-      "receipt_status": "Awaiting Receipt",
-      "reporting_codes": [],
+      "receiptDate": null,
+      "receiptStatus": "Awaiting Receipt",
+      "reportingCodes": [],
       "requester": "",
       "rush": false,
       "selector": "Brown",
@@ -212,34 +195,33 @@
       },
       "tags": [],
       "title": "Kayak Fishing in the Northern Gulf Coast",
-      "vendor_detail": {
+      "vendorDetail": {
         "instructions": "",
-        "note_from_vendor": "",
-        "vendor_account": "",
-        "po_line_id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3"
+        "noteFromVendor": "",
+        "vendorAccount": ""
       }
     },
     {
       "id": "c2755a78-2f8d-47d0-a218-059a9b7391b3",
-      "acquisition_method": "Purchase At Vendor System",
+      "acquisitionMethod": "Purchase At Vendor System",
       "adjustment": {
         "credit": 0.0,
         "discount": 0.0,
         "insurance": 0.0,
-        "invoice_id": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
+        "invoiceId": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
         "overhead": 0.0,
         "shipment": 0.0,
-        "tax_1": 0.0,
-        "tax_2": 0.0,
-        "use_pro_rate": false
+        "tax1": 0.0,
+        "tax2": 0.0,
+        "useProRate": false
       },
       "alerts": [
         {
           "alert": "Receipt overdue"
         }
       ],
-      "cancellation_restriction": false,
-      "cancellation_restriction_note": "ABCDEFGHIJKLMNOPQRSTUVW",
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
       "claims": [
         {
           "claimed": false,
@@ -251,34 +233,34 @@
       "contributors": [
         {
           "contributor": "Ed Mashburn",
-          "contributor_type": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+          "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
         }
       ],
       "cost": {
-        "list_price": 24.99,
+        "listPrice": 24.99,
         "currency": "USD",
-        "quantity_physical": 1,
-        "quantity_electronic": 0,
-        "po_line_estimated_price": 49.98
+        "quantityPhysical": 1,
+        "quantityElectronic": 0,
+        "poLineEstimatedPrice": 49.98
       },
       "description": "ABCDEFGH",
       "details": {
-        "receiving_note": "ABCDEFGHIJKL",
-        "product_ids": [
+        "receivingNote": "ABCDEFGHIJKL",
+        "productIds": [
           {
-            "product_id": "9780764354113",
-            "product_id_type": "ISBN"
+            "productId": "9780764354113",
+            "productIdType": "ISBN"
           }
         ],
-        "material_types": [
+        "materialTypes": [
           "1a54b431-2e4f-452d-9cae-9cee66c9a892"
         ],
-        "subscription_from": "2018-10-09T00:00:00.000Z",
-        "subscription_interval": 824,
-        "subscription_to": "2020-10-09T00:00:00.000Z"
+        "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+        "subscriptionInterval": 824,
+        "subscriptionTo": "2020-10-09T00:00:00.000Z"
       },
       "donor": "ABCDEFGHIJKLM",
-      "fund_distribution": [
+      "fundDistribution": [
         {
           "code": "HIST",
           "percentage": 80.0,
@@ -293,27 +275,27 @@
       "locations": [
         {
           "quantity": 1,
-          "quantity_electronic": 0,
-          "quantity_physical": 1
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
         }
       ],
-      "order_format": "Physical Resource",
+      "orderFormat": "Physical Resource",
       "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-      "payment_status": "Awaiting Payment",
+      "paymentStatus": "Awaiting Payment",
       "physical": {
         "volumes": [
           "vol.1"
         ],
-        "material_supplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
-        "receipt_due": "2018-10-10T00:00:00.000Z"
+        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "receiptDue": "2018-10-10T00:00:00.000Z"
       },
-      "po_line_description": "ABCDEFGHIJKLMNOPQRSTUVWXY",
-      "po_line_number": "268758-03",
-      "publication_date": "2017",
+      "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
+      "poLineNumber": "268758-03",
+      "publicationDate": "2017",
       "publisher": "Schiffer Publishing",
-      "receipt_date": "2018-10-09T00:00:00.000Z",
-      "receipt_status": "Awaiting Receipt",
-      "reporting_codes": [
+      "receiptDate": "2018-10-09T00:00:00.000Z",
+      "receiptStatus": "Awaiting Receipt",
+      "reportingCodes": [
         {
           "code": "CODE1",
           "id": "5926dcd7-85f5-4504-8283-712595ebc38b",
@@ -335,7 +317,6 @@
       "selector": "ABCD",
       "source": {
         "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-        "id": "024b6f41-c5c6-4280-858e-33fba452a334",
         "description": "ABCDEFGHIJKLMNO"
       },
       "tags": [
@@ -345,12 +326,12 @@
         "ABCDEFGHIJKLMNO"
       ],
       "title": "Kayak Fishing in the Northern Gulf Coast",
-      "vendor_detail": {
+      "vendorDetail": {
         "instructions": "ABCDEFG",
-        "note_from_vendor": "ABCDEFGHIKJKLMNOP",
-        "ref_number": "123456-78",
-        "ref_number_type": "Supplier's unique order line reference number",
-        "vendor_account": "8910-10"
+        "noteFromVendor": "ABCDEFGHIKJKLMNOP",
+        "refNumber": "123456-78",
+        "refNumberType": "Supplier's unique order line reference number",
+        "vendorAccount": "8910-10"
       },
       "metadata": {
         "createdDate": "2010-10-08T03:53:00.000",
@@ -359,87 +340,81 @@
     },
     {
       "id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
-      "acquisition_method": "Purchase",
+      "acquisitionMethod": "Purchase",
       "adjustment": {
         "credit": 0.0,
         "discount": 0.0,
         "insurance": 0.0,
-        "invoice_id": "2ddfeb5c-1237-476f-aa88-57f7cbf74ca4",
+        "invoiceId": "2ddfeb5c-1237-476f-aa88-57f7cbf74ca4",
         "overhead": 0.0,
         "shipment": 0.0,
-        "tax_1": 0.0,
-        "tax_2": 0.0,
-        "use_pro_rate": false,
-        "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+        "tax1": 0.0,
+        "tax2": 0.0,
+        "useProRate": false
       },
       "alerts": [],
-      "cancellation_restriction": false,
-      "cancellation_restriction_note": "",
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "",
       "claims": [
         {
           "claimed": false,
-          "grace": 0,
-          "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+          "grace": 0
         }
       ],
       "collection": false,
       "contributors": [
         {
           "contributor": "Ed Mashburn",
-          "contributor_type": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+          "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
         }
       ],
       "cost": {
-        "list_price": 75.22,
+        "listPrice": 75.22,
         "currency": "USD",
-        "quantity_physical": 0,
-        "quantity_electronic": 1,
-        "po_line_estimated_price": 75.22,
-        "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+        "quantityPhysical": 0,
+        "quantityElectronic": 1,
+        "poLineEstimatedPrice": 75.22
       },
       "description": "",
       "details": {
-        "receiving_note": "",
-        "product_ids": [
+        "receivingNote": "",
+        "productIds": [
           {
-            "product_id": "9781118416068",
-            "product_id_type": "ISBN"
+            "productId": "9781118416068",
+            "productIdType": "ISBN"
           }
         ],
-        "material_types": [
+        "materialTypes": [
           "fde2e958-cde3-11e8-a8d5-f2801f1b9fd1"
         ],
-        "subscription_from": null,
-        "subscription_interval": 0,
-        "subscription_to": null,
-        "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+        "subscriptionFrom": null,
+        "subscriptionInterval": 0,
+        "subscriptionTo": null
       },
       "donor": "",
-      "fund_distribution": [
+      "fundDistribution": [
         {
           "code": "MISCHIST-FY19",
           "percentage": 100.0,
-          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08015",
-          "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08015"
         }
       ],
       "locations": [
         {
-          "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
           "quantity": 1,
-          "quantity_electronic": 1,
-          "quantity_physical": 0
+          "quantityElectronic": 1,
+          "quantityPhysical": 0
         }
       ],
-      "order_format": "Electronic Resource",
+      "orderFormat": "Electronic Resource",
       "owner": "LTS E-Resources & Serials",
-      "payment_status": "Awaiting Payment",
-      "po_line_description": "",
-      "publication_date": "2017",
+      "paymentStatus": "Awaiting Payment",
+      "poLineDescription": "",
+      "publicationDate": "2017",
       "publisher": "John Wiley & Sons, Inc.",
-      "receipt_date": null,
-      "receipt_status": "Fully Received",
-      "reporting_codes": [],
+      "receiptDate": null,
+      "receiptStatus": "Fully Received",
+      "reportingCodes": [],
       "requester": "",
       "rush": false,
       "selector": "Woods",
@@ -449,13 +424,12 @@
       },
       "tags": [""],
       "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
-      "vendor_detail": {
-        "note_from_vendor": "",
+      "vendorDetail": {
+        "noteFromVendor": "",
         "instructions": "ABCDEFG",
-        "ref_number": "999632785",
-        "ref_number_type": "Supplier's unique order line reference number",
-        "vendor_account": "12345-50",
-        "po_line_id": "c2755a78-2f8d-47d0-a218-059a9b7391b4"
+        "refNumber": "999632785",
+        "refNumberType": "Supplier's unique order line reference number",
+        "vendorAccount": "12345-50"
       },
       "metadata": {
         "createdDate": "2010-10-08T03:53:00.000",
