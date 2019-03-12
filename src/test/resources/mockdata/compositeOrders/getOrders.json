@@ -1,20 +1,20 @@
 {
-  "composite_purchase_orders" : [ {
+  "compositePurchaseOrders" : [ {
     "id" : "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
-    "po_number" : "268758",
+    "poNumber" : "268758",
     "compositePoLines" : [ ]
   }, {
     "id" : "e5ae4afd-3fa9-494e-a972-f541df9b877e",
-    "po_number" : "268879",
+    "poNumber" : "268879",
     "compositePoLines" : [ ]
   }, {
     "id" : "07f65192-44a4-483d-97aa-b137bbd96390",
-    "po_number" : "S60402",
+    "poNumber" : "S60402",
     "compositePoLines" : [ ]
   }, {
     "id" : "e5ae4afd-3fa9-494e-a972-f541df9b877e",
-    "po_number" : "268s879",
+    "poNumber" : "268s879",
     "compositePoLines" : [ ]
   } ],
-  "total_records" : 4
+  "totalRecords" : 4
 }

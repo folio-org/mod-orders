@@ -1,129 +1,116 @@
 {
   "id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47",
-  "acquisition_method": "Purchase",
+  "acquisitionMethod": "Purchase",
   "adjustment": {
-    "id": "c7841c8f-a7fd-466c-9774-56443e1f0589",
     "credit": 0.0,
     "discount": 0.0,
     "insurance": 0.0,
-    "invoice_id": "2d6d495c-c237-476f-aa48-50f7cbf74ca4",
+    "invoiceId": "2d6d495c-c237-476f-aa48-50f7cbf74ca4",
     "overhead": 0.0,
     "shipment": 0.0,
-    "tax_1": 0.0,
-    "tax_2": 0.0,
-    "use_pro_rate": false,
-    "po_line_id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47"
+    "tax1": 0.0,
+    "tax2": 0.0,
+    "useProRate": false
   },
   "alerts": [],
-  "cancellation_restriction": false,
-  "cancellation_restriction_note": "",
+  "cancellationRestriction": false,
+  "cancellationRestrictionNote": "",
   "claims": [
     {
-      "id": "07c5d666-cabe-11e8-a8d5-f2811f1b9fd1",
       "claimed": false,
-      "grace": 90,
-      "po_line_id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47"
+      "grace": 90
     }
   ],
   "collection": false,
   "contributors": [
     {
       "contributor" : "Ed Mashburn",
-      "contributor_type" : "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+      "contributorType" : "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
     }
   ],
   "cost": {
-    "id": "cc984941-389d-4cf8-b6d4-2ec085206b99",
-    "list_price": 68.00,
+    "listPrice": 68.00,
     "currency": "USD",
-    "quantity_physical": 1,
-    "quantity_electronic": 0,
-    "po_line_estimated_price": 68.00,
-    "po_line_id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47"
+    "quantityPhysical": 1,
+    "quantityElectronic": 0,
+    "poLineEstimatedPrice": 68.00
   },
   "description": "",
   "details": {
-    "id": "9555108c-91ad-4489-9f12-821c5ed623f1",
-    "receiving_note": "",
-    "product_ids": [
+    "receivingNote": "",
+    "productIds": [
       {
-        "product_id": "10407849",
-        "product_id_type": "Vendor Item Number"
+        "productId": "10407849",
+        "productIdType": "Vendor Item Number"
       }
     ],
-    "material_types": [
+    "materialTypes": [
       "fde2dc42-cde3-11e8-a8d5-f2801f1b9fd1"
     ],
-    "subscription_from": null,
-    "subscription_interval": 0,
-    "subscription_to": null,
-    "po_line_id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47"
+    "subscriptionFrom": null,
+    "subscriptionInterval": 0,
+    "subscriptionTo": null
   },
   "donor": "",
   "eresource": {
-    "id": "b6162930-1f4d-4cdd-8f39-c2e377269061",
     "activated": false,
-    "activation_due": 0,
-    "create_inventory": false,
+    "activationDue": 0,
+    "createInventory": false,
     "trial": false,
-    "expected_activation": null,
-    "user_limit": 0,
-    "access_provider": null,
-    "po_line_id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47",
-    "license": "07c5d8be-cabe-11e8-a8d5-f2801f1b9fd1"
+    "expectedActivation": null,
+    "userLimit": 0,
+    "accessProvider": null,
+    "license": {
+      "code": "Code 1",
+      "description": "License Agreement 1"
+    }
   },
-  "fund_distribution": [
+  "fundDistribution": [
     {
-      "id": "fde2c22a-cde3-11e8-a8d5-f2801f1b9fd1",
       "code": "EUROHIST-FY19",
       "percentage": 100.0,
-      "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08003",
-      "po_line_id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47"
+      "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08003"
     }
   ],
   "locations": [
     {
-      "id": "8654ba03-310f-4455-8fa0-ebaff272b158",
-      "location_id": "07c5d9ea-cabe-11e8-a8d5-f2901f1b9fd1",
+      "locationId": "07c5d9ea-cabe-11e8-a8d5-f2901f1b9fd1",
       "quantity": 1,
-      "quantity_electronic": 0,
-      "quantity_physical": 1,
-      "po_line_id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47"
+      "quantityElectronic": 0,
+      "quantityPhysical": 1
     }
   ],
-  "order_format": "Physical Resource",
+  "orderFormat": "Physical Resource",
   "owner": "LTS Acquisitions",
-  "payment_status": "Awaiting Payment",
+  "paymentStatus": "Awaiting Payment",
   "physical": {
-    "id": "2f8ad479-1137-45d8-aee8-4b79e9a8e7ff",
-    "material_supplier": "1c9a6406-dc14-46cc-8777-5199d791c21f",
-    "receipt_due": "2018-09-29T00:00:00.000Z",
+    "materialSupplier": "1c9a6406-dc14-46cc-8777-5199d791c21f",
+    "receiptDue": "2018-09-29T00:00:00.000Z",
     "volumes": [
       "vol. 1"
-    ],
-    "po_line_id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47"
+    ]
   },
-  "po_line_description": "",
-  "po_line_number": "268758-01",
-  "publication_date": "2011",
+  "poLineDescription": "",
+  "poLineNumber": "268758-01",
+  "publicationDate": "2011",
   "publisher": "Tapir Academic Press",
-  "purchase_order_id": "95d29d04-34b1-4fe0-a15e-1cd129143692",
-  "receipt_date": null,
-  "receipt_status": "Awaiting Receipt",
-  "reporting_codes": [
+  "purchaseOrderId": "95d29d04-34b1-4fe0-a15e-1cd129143692",
+  "receiptDate": null,
+  "receiptStatus": "Awaiting Receipt",
+  "reportingCodes": [
     {
-      "id": "cb934e2a-8e0b-4721-b89a-f4e59a013d8e",
       "code": "CODE1",
+      "id": "5926dcd7-85f5-4504-8283-712595ebc38b",
       "description": "ABCDEF"
     },
     {
-      "id": "ff84a8b9-e004-434d-b64d-d907383e79f5",
       "code": "CODE2",
+      "id": "fa316c04-8101-4e72-8aaf-01281bac718f",
       "description": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     },
     {
-      "id": "6b218686-bcdc-43a4-b72b-198896cd74e0",
       "code": "CODE3",
+      "id": "ea68b696-3125-4940-bf91-1d128323473e",
       "description": "ABCDE"
     }
   ],
@@ -131,18 +118,15 @@
   "rush": false,
   "selector": "Stevens",
   "source": {
-
     "code": "FOLIO",
     "description": "Manually entered"
   },
   "tags": [],
   "title": "Taxes, tributes and tributary lands in the making of Scandinavian kingdoms in the Middle Ages",
-  "vendor_detail": {
-    "id": "3af03b68-d45c-48f3-89f3-1f0f2afe9fb7",
+  "vendorDetail": {
     "instructions": "",
-    "note_from_vendor": "",
-    "vendor_account": "",
-    "po_line_id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47"
+    "noteFromVendor": "",
+    "vendorAccount": ""
   },
   "metadata": {
     "createdDate": "2018-06-29T00:00:00.000",

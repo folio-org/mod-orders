@@ -1,20 +1,20 @@
 {
-  "assigned_to": "ab18897b-0e40-4f31-896b-9c9adc979a88",
-  "order_type": "Ongoing",
-  "po_number": "268758",
-  "total_items": 1,
+  "assignedTo": "ab18897b-0e40-4f31-896b-9c9adc979a88",
+  "orderType": "Ongoing",
+  "poNumber": "268758",
+  "totalItems": 1,
   "vendor": "168f8a86-d26c-406e-813f-c7527f241ac3",
-  "workflow_status": "Pending",
+  "workflowStatus": "Pending",
   "metadata": {
     "createdDate": "2010-10-08T03:53:00.000",
     "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
   },
   "compositePoLines": [
     {
-      "acquisition_method": "Purchase At Vendor System",
+      "acquisitionMethod": "Purchase At Vendor System",
       "description": "ABCDEFGH",
-      "po_line_description": "ABCDEFGHIJKLMNOPQRSTUVWXY",
-      "po_line_number": "268758-03",
+      "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
+      "poLineNumber": "268758-03",
       "source": { "code": "FOLIO" },
       "title": "Kayak Fishing in the Northern Gulf Coast",
       "metadata": {
