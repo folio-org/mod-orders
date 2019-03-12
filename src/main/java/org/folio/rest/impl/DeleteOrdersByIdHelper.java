@@ -31,7 +31,7 @@ public class DeleteOrdersByIdHelper extends AbstractHelper {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
     HelperUtils.deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger).thenRun(() -> {
-      logger.info("Successfully deleted po_lines, proceding with purchase order");
+      logger.info("Successfully deleted poLines, proceding with purchase order");
       HelperUtils.operateOnSubObj(HttpMethod.DELETE, resourceByIdPath(PURCHASE_ORDER, id), httpClient, ctx, okapiHeaders, logger)
           .thenAccept(action -> {
             httpClient.closeClient();

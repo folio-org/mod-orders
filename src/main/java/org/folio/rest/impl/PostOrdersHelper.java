@@ -108,7 +108,7 @@ public class PostOrdersHelper extends AbstractHelper {
           return null;
         });
     } catch (Exception e) {
-      logger.error("Exception calling POST /orders-storage/purchase_orders", e);
+      logger.error("Exception calling POST /orders-storage/purchase-orders", e);
       future.completeExceptionally(e);
     }
     return future;

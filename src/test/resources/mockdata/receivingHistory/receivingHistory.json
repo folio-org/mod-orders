@@ -1,5 +1,5 @@
 {
-  "receiving_history":
+  "receivingHistory":
     [
       {
         "id": "5e317dc2-deeb-4429-b2a1-91e5cd0fd5f7",
@@ -22,5 +22,5 @@
         "title": "Kayak Fishing in the Northern Gulf Coast"
       }
     ],
-  "total_records": 1
+  "totalRecords": 1
 }

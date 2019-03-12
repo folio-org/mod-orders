@@ -1,67 +1,67 @@
 {
   "approved": true,
-  "assigned_to": "ab18897b-0e40-4f31-896b-9c9adc979a88",
+  "assignedTo": "ab18897b-0e40-4f31-896b-9c9adc979a88",
   "notes": [
     "Order with one line of Physical and one of Electronic Resources format"
   ],
-  "order_type": "One-Time",
-  "po_number": "TEST2POL1PHYS1EL",
-  "re_encumber": false,
-  "total_estimated_price": 350.00,
-  "total_items": 35,
+  "orderType": "One-Time",
+  "poNumber": "TEST2POL1PHYS1EL",
+  "reEncumber": false,
+  "totalEstimatedPrice": 350.00,
+  "totalItems": 35,
   "vendor": "8be1cd0a-acab-488d-b650-65ceb96aa148",
-  "workflow_status": "Open",
+  "workflowStatus": "Open",
   "compositePoLines": [
     {
-      "acquisition_method": "Purchase At Vendor System",
-      "cancellation_restriction": false,
+      "acquisitionMethod": "Purchase At Vendor System",
+      "cancellationRestriction": false,
       "collection": false,
       "cost": {
-        "list_price": 10.00,
+        "listPrice": 10.00,
         "currency": "USD",
-        "quantity_physical": 25,
-        "po_line_estimated_price": 250.00
+        "quantityPhysical": 25,
+        "poLineEstimatedPrice": 250.00
       },
       "description": "25 physical resources for 2 locations",
       "details": {
-        "receiving_note": "Receive all 25 items",
-        "product_ids": [
+        "receivingNote": "Receive all 25 items",
+        "productIds": [
           {
-            "product_id": "0439708184",
-            "product_id_type": "ISBN"
+            "productId": "0439708184",
+            "productIdType": "ISBN"
           },
           {
-            "product_id": "9780439708180",
-            "product_id_type": "ISBN"
+            "productId": "9780439708180",
+            "productIdType": "ISBN"
           }
         ],
-        "material_types": [
+        "materialTypes": [
           "1a54b431-2e4f-452d-9cae-9cee66c9a892"
         ]
       },
       "locations": [
         {
-          "location_id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
-          "quantity_physical": 20
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "quantityPhysical": 20
         },
         {
-          "location_id": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
-          "quantity_physical": 5
+          "locationId": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+          "quantityPhysical": 5
         }
       ],
-      "order_format": "Physical Resource",
-      "payment_status": "Fully Paid",
+      "orderFormat": "Physical Resource",
+      "paymentStatus": "Fully Paid",
       "physical": {
         "volumes": [
           "vol.1"
         ],
-        "material_supplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
-        "receipt_due": "2020-10-10T00:00:00.000Z"
+        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "receiptDue": "2020-10-10T00:00:00.000Z"
       },
-      "po_line_description": "Harry Potter (Book 1)",
-      "publication_date": "1998",
+      "poLineDescription": "Harry Potter (Book 1)",
+      "publicationDate": "1998",
       "publisher": "Scholastic",
-      "receipt_status": "Awaiting Receipt",
+      "receiptStatus": "Awaiting Receipt",
       "requester": "Leo Bulero",
       "rush": true,
       "source": {
@@ -70,44 +70,44 @@
       "title": "Harry Potter and the Sorcerer's Stone"
     },
     {
-      "acquisition_method": "Purchase At Vendor System",
-      "cancellation_restriction": false,
+      "acquisitionMethod": "Purchase At Vendor System",
+      "cancellationRestriction": false,
       "collection": false,
       "cost": {
-        "list_price": 10.00,
+        "listPrice": 10.00,
         "currency": "USD",
-        "quantity_electronic": 10,
-        "po_line_estimated_price": 100.00
+        "quantityElectronic": 10,
+        "poLineEstimatedPrice": 100.00
       },
       "description": "10 electronic resources for 1 location",
       "details": {
-        "receiving_note": "Receive 10 items",
-        "product_ids": [
+        "receivingNote": "Receive 10 items",
+        "productIds": [
           {
-            "product_id": "9780439064873",
-            "product_id_type": "ISBN"
+            "productId": "9780439064873",
+            "productIdType": "ISBN"
           }
         ],
-        "material_types": [
+        "materialTypes": [
           "615b8413-82d5-4203-aa6e-e37984cb5ac3"
         ]
       },
       "eresource": {
-        "access_provider": "8be1cd0a-acab-488d-b650-65ceb96aa148",
-        "create_inventory": false
+        "accessProvider": "8be1cd0a-acab-488d-b650-65ceb96aa148",
+        "createInventory": false
       },
       "locations": [
         {
-          "location_id": "b241764c-1466-4e1d-a028-1a3684a5da87",
-          "quantity_electronic": 10
+          "locationId": "b241764c-1466-4e1d-a028-1a3684a5da87",
+          "quantityElectronic": 10
         }
       ],
-      "order_format": "Electronic Resource",
-      "payment_status": "Fully Paid",
-      "po_line_description": "Harry Potter (Book 2)",
-      "publication_date": "2000",
+      "orderFormat": "Electronic Resource",
+      "paymentStatus": "Fully Paid",
+      "poLineDescription": "Harry Potter (Book 2)",
+      "publicationDate": "2000",
       "publisher": "Scholastic Paperbacks",
-      "receipt_status": "Awaiting Receipt",
+      "receiptStatus": "Awaiting Receipt",
       "requester": "Leo Bulero",
       "rush": true,
       "source": {
