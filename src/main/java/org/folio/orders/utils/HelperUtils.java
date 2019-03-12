@@ -60,9 +60,9 @@ public class HelperUtils {
   public static final String OKAPI_URL = "X-Okapi-Url";
   public static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
   public static final String URL_WITH_LANG_PARAM = "%s?lang=%s";
-  public static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = resourcesPath(PO_LINES) + "?limit=%s&query=purchase_order_id==%s&lang=%s";
+  public static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = resourcesPath(PO_LINES) + "?limit=%s&query=purchaseOrderId==%s&lang=%s";
   private static final String GET_PURCHASE_ORDER_BYID = resourceByIdPath(PURCHASE_ORDER) + URL_WITH_LANG_PARAM;
-  private static final String GET_PURCHASE_ORDER_BYPONUMBER_QUERY = resourcesPath(PURCHASE_ORDER) + "?query=po_number==%s&lang=%s";
+  private static final String GET_PURCHASE_ORDER_BYPONUMBER_QUERY = resourcesPath(PURCHASE_ORDER) + "?query=poNumber==%s&lang=%s";
 
 
   private static final int DEFAULT_PORT = 9130;
@@ -130,7 +130,7 @@ public class HelperUtils {
 
 
   /**
-   *  Retrieves PO lines from storage by PO id as JsonObject with array of po_lines (/acq-models/mod-orders-storage/schemas/po_line.json objects)
+   *  Retrieves PO lines from storage by PO id as JsonObject with array of poLines (/acq-models/mod-orders-storage/schemas/po_line.json objects)
    */
   public static CompletableFuture<JsonObject> getPoLines(String id, String lang, HttpClientInterface httpClient, Context ctx,
                                                           Map<String, String> okapiHeaders, Logger logger) {
@@ -162,7 +162,7 @@ public class HelperUtils {
         return VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]));
       })
       .exceptionally(t -> {
-        logger.error("Exception deleting po_line data for order id={}:", t, orderId);
+        logger.error("Exception deleting poLine data for order id={}:", t, orderId);
         throw new CompletionException(t.getCause());
       });
   }
@@ -197,7 +197,7 @@ public class HelperUtils {
           });
       })
       .exceptionally(t -> {
-        logger.error("Exception gathering po_line data:", t);
+        logger.error("Exception gathering poLine data:", t);
         future.completeExceptionally(t);
         return null;
       });
@@ -213,17 +213,7 @@ public class HelperUtils {
     }
 
     List<CompletableFuture<Void>> futures = new ArrayList<>();
-    futures.add(operateOnSubObjIfPresent(operation, line, ADJUSTMENT, httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, COST, httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, DETAILS, httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, ERESOURCE, httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, PHYSICAL, httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, SOURCE, httpClient, ctx, okapiHeaders, logger));
-    futures.add(operateOnSubObjIfPresent(operation, line, VENDOR_DETAIL, httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, ALERTS, httpClient, ctx, okapiHeaders, logger));
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, CLAIMS, httpClient, ctx, okapiHeaders, logger));
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, FUND_DISTRIBUTION, httpClient, ctx, okapiHeaders, logger));
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, LOCATIONS, httpClient, ctx, okapiHeaders, logger));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, REPORTING_CODES, httpClient, ctx, okapiHeaders, logger));
 
     CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
@@ -234,7 +224,7 @@ public class HelperUtils {
         future.complete(line.mapTo(CompositePoLine.class));
       })
       .exceptionally(t -> {
-        logger.error("Exception resolving one or more po_line sub-object(s) on {} operation:", t, operation);
+        logger.error("Exception resolving one or more poLine sub-object(s) on {} operation:", t, operation);
         future.completeExceptionally(t);
         return null;
       });
@@ -254,24 +244,6 @@ public class HelperUtils {
                 })));
     pol.put(field, array);
     return futures;
-  }
-
-  private static CompletableFuture<Void> operateOnSubObjIfPresent(HttpMethod operation, JsonObject pol, String field, HttpClientInterface httpClient,
-                                                                  Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-    String id = (String) pol.remove(field);
-    if (id != null) {
-      return operateOnSubObj(operation, resourceByIdPath(field, id), httpClient, ctx, okapiHeaders, logger)
-        .thenAccept(json -> {
-          if (json != null) {
-            if (!json.isEmpty()) {
-              pol.put(field, json);
-            } else if (HttpMethod.DELETE != operation) {
-              logger.warn("The '{}' sub-object with id={} is empty for Order line with id={}", field, id, pol.getString("id"));
-            }
-          }
-        });
-    }
-    return CompletableFuture.completedFuture(null);
   }
 
   public static CompletableFuture<JsonObject> operateOnSubObj(HttpMethod operation, String url,

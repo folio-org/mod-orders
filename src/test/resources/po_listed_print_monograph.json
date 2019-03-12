@@ -5,24 +5,24 @@
     "insurance": 0.0,
     "overhead": 0.0,
     "shipment": 0.0,
-    "tax_1": 0.0,
-    "tax_2": 0.0,
-    "use_pro_rate": false
+    "tax1": 0.0,
+    "tax2": 0.0,
+    "useProRate": false
   },
   "approved": true,
-  "assigned_to": "ab18897b-0e40-4f31-896b-9c9adc979a88",
+  "assignedTo": "ab18897b-0e40-4f31-896b-9c9adc979a88",
   "notes": [
     "ABCDEFGHIJKLMNO",
     "ABCDEFGHIJKLMNOPQRST",
     "ABCDEFGHIJKLMNOPQRSTUV"
   ],
-  "order_type": "One-Time",
-  "po_number": "268758",
-  "re_encumber": false,
-  "total_estimated_price": 49.98,
-  "total_items": 2,
+  "orderType": "One-Time",
+  "poNumber": "268758",
+  "reEncumber": false,
+  "totalEstimatedPrice": 49.98,
+  "totalItems": 2,
   "vendor": "168f8a86-d26c-406e-813f-c7527f241ac3",
-  "workflow_status": "Pending",
+  "workflowStatus": "Pending",
   "metadata": {
     "createdDate": "2010-10-08T03:53:00.000",
     "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
@@ -30,25 +30,25 @@
   "compositePoLines": [
     {
       "id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47",
-      "acquisition_method": "Purchase At Vendor System",
+      "acquisitionMethod": "Purchase At Vendor System",
       "adjustment": {
         "credit": 0.0,
         "discount": 0.0,
         "insurance": 0.0,
-        "invoice_id": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
+        "invoiceId": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
         "overhead": 0.0,
         "shipment": 0.0,
-        "tax_1": 0.0,
-        "tax_2": 0.0,
-        "use_pro_rate": false
+        "tax1": 0.0,
+        "tax2": 0.0,
+        "useProRate": false
       },
       "alerts": [
         {
           "alert": "Receipt overdue"
         }
       ],
-      "cancellation_restriction": false,
-      "cancellation_restriction_note": "ABCDEFGHIJKLMNOPQRSTUVW",
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
       "claims": [
         {
           "claimed": false,
@@ -60,38 +60,38 @@
       "contributors": [
         {
           "contributor": "Ed Mashburn",
-          "contributor_type": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+          "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
         }
       ],
       "cost": {
-        "list_price": 24.99,
+        "listPrice": 24.99,
         "currency": "USD",
-        "quantity_physical": 3,
-        "quantity_electronic": 1,
-        "po_line_estimated_price": 99.96
+        "quantityPhysical": 3,
+        "quantityElectronic": 1,
+        "poLineEstimatedPrice": 99.96
       },
       "description": "ABCDEFGH",
       "details": {
-        "receiving_note": "ABCDEFGHIJKL",
-        "product_ids": [
+        "receivingNote": "ABCDEFGHIJKL",
+        "productIds": [
           {
-            "product_id": "9780764354113",
-            "product_id_type": "ISBN"
+            "productId": "9780764354113",
+            "productIdType": "ISBN"
           }
         ],
-        "material_types": [
+        "materialTypes": [
           "1a54b431-2e4f-452d-9cae-9cee66c9a892"
         ],
-        "subscription_from": "2018-10-09T00:00:00.000Z",
-        "subscription_interval": 824,
-        "subscription_to": "2020-10-09T00:00:00.000Z"
+        "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+        "subscriptionInterval": 824,
+        "subscriptionTo": "2020-10-09T00:00:00.000Z"
       },
       "donor": "ABCDEFGHIJKLM",
       "eresource": {
-        "access_provider": "858e80d2-f562-4c54-9934-6e274dee511d",
-        "create_inventory": true
+        "accessProvider": "858e80d2-f562-4c54-9934-6e274dee511d",
+        "createInventory": true
       },
-      "fund_distribution": [
+      "fundDistribution": [
         {
           "code": "HIST",
           "percentage": 80.0,
@@ -105,41 +105,41 @@
       ],
       "locations": [
         {
-          "location_id": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "quantity": 1,
-          "quantity_electronic": 0,
-          "quantity_physical": 1
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
         },
         {
-          "location_id": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+          "locationId": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
           "quantity": 2,
-          "quantity_electronic": 0,
-          "quantity_physical": 2
+          "quantityElectronic": 0,
+          "quantityPhysical": 2
         },
         {
-          "location_id": "b241764c-1466-4e1d-a028-1a3684a5da87",
+          "locationId": "b241764c-1466-4e1d-a028-1a3684a5da87",
           "quantity": 1,
-          "quantity_electronic": 1,
-          "quantity_physical": 0
+          "quantityElectronic": 1,
+          "quantityPhysical": 0
         }
       ],
-      "order_format": "P/E Mix",
+      "orderFormat": "P/E Mix",
       "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-      "payment_status": "Awaiting Payment",
+      "paymentStatus": "Awaiting Payment",
       "physical": {
         "volumes": [
           "vol.1"
         ],
-        "material_supplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
-        "receipt_due": "2018-10-10T00:00:00.000Z"
+        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "receiptDue": "2018-10-10T00:00:00.000Z"
       },
-      "po_line_description": "ABCDEFGHIJKLMNOPQRSTUVWXY",
-      "po_line_number": "268758-03",
-      "publication_date": "2017",
+      "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
+      "poLineNumber": "268758-03",
+      "publicationDate": "2017",
       "publisher": "Schiffer Publishing",
-      "receipt_date": "2018-10-09T00:00:00.000Z",
-      "receipt_status": "Pending",
-      "reporting_codes": [
+      "receiptDate": "2018-10-09T00:00:00.000Z",
+      "receiptStatus": "Pending",
+      "reportingCodes": [
         {
           "code": "CODE1",
           "id": "5926dcd7-85f5-4504-8283-712595ebc38b",
@@ -161,7 +161,6 @@
       "selector": "ABCD",
       "source": {
         "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-        "id": "024b6f41-c5c6-4280-858e-33fba452a334",
         "description": "ABCDEFGHIJKLMNO"
       },
       "tags": [
@@ -171,12 +170,12 @@
         "ABCDEFGHIJKLMNO"
       ],
       "title": "Kayak Fishing in the Northern Gulf Coast",
-      "vendor_detail": {
+      "vendorDetail": {
         "instructions": "ABCDEFG",
-        "note_from_vendor": "ABCDEFGHIKJKLMNOP",
-        "ref_number": "123456-78",
-        "ref_number_type": "Supplier's unique order line reference number",
-        "vendor_account": "8910-10"
+        "noteFromVendor": "ABCDEFGHIKJKLMNOP",
+        "refNumber": "123456-78",
+        "refNumberType": "Supplier's unique order line reference number",
+        "vendorAccount": "8910-10"
       },
       "metadata": {
         "createdDate": "2010-10-08T03:53:00.000",
@@ -185,99 +184,92 @@
     },
     {
       "id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
-      "acquisition_method": "Purchase",
+      "acquisitionMethod": "Purchase",
       "adjustment": {
         "credit": 0.0,
         "discount": 0.0,
         "insurance": 0.0,
-        "invoice_id": "2ddfeb5c-1237-476f-aa88-57f7cbf74ca4",
+        "invoiceId": "2ddfeb5c-1237-476f-aa88-57f7cbf74ca4",
         "overhead": 0.0,
         "shipment": 0.0,
-        "tax_1": 0.0,
-        "tax_2": 0.0,
-        "use_pro_rate": false,
-        "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
+        "tax1": 0.0,
+        "tax2": 0.0,
+        "useProRate": false
       },
       "alerts": [],
-      "cancellation_restriction": false,
-      "cancellation_restriction_note": "",
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "",
       "claims": [
         {
           "claimed": false,
-          "grace": 0,
-          "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
+          "grace": 0
         }
       ],
       "collection": false,
       "contributors": [
         {
           "contributor": "Ed Mashburn",
-          "contributor_type": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+          "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
         }
       ],
       "cost": {
-        "list_price": 25.10,
+        "listPrice": 25.10,
         "currency": "USD",
-        "quantity_physical": 0,
-        "quantity_electronic": 3,
-        "po_line_estimated_price": 75.30,
-        "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
+        "quantityPhysical": 0,
+        "quantityElectronic": 3,
+        "poLineEstimatedPrice": 75.30
       },
       "description": "",
       "details": {
-        "receiving_note": "",
-        "product_ids": [
+        "receivingNote": "",
+        "productIds": [
           {
-            "product_id": "9781118416068",
-            "product_id_type": "ISBN"
+            "productId": "9781118416068",
+            "productIdType": "ISBN"
           }
         ],
-        "material_types": [
+        "materialTypes": [
           "615b8413-82d5-4203-aa6e-e37984cb5ac3"
         ],
-        "subscription_from": null,
-        "subscription_interval": 0,
-        "subscription_to": null,
-        "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
+        "subscriptionFrom": null,
+        "subscriptionInterval": 0,
+        "subscriptionTo": null
       },
       "donor": "",
       "eresource": {
-        "access_provider": "d1b79c8d-4950-482f-8e42-04f9aae3cb40",
-        "create_inventory": true
+        "accessProvider": "d1b79c8d-4950-482f-8e42-04f9aae3cb40",
+        "createInventory": true
       },
-      "fund_distribution": [
+      "fundDistribution": [
         {
           "code": "MISCHIST-FY19",
           "percentage": 100.0,
-          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08015",
-          "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08015"
         }
       ],
       "locations": [
         {
-          "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
-          "location_id": "b241764c-1466-4e1d-a028-1a3684a5da87",
+          "locationId": "b241764c-1466-4e1d-a028-1a3684a5da87",
           "quantity": 2,
-          "quantity_electronic": 2,
-          "quantity_physical": 0
+          "quantityElectronic": 2,
+          "quantityPhysical": 0
         },
         {
-          "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
-          "location_id": "758258bc-ecc1-41b8-abca-f7b610822ffd",
+          "locationId": "758258bc-ecc1-41b8-abca-f7b610822ffd",
           "quantity": 1,
-          "quantity_electronic": 1,
-          "quantity_physical": 0
+          "quantityElectronic": 1,
+          "quantityPhysical": 0
         }
       ],
-      "order_format": "Electronic Resource",
+      "orderFormat": "Electronic Resource",
       "owner": "LTS E-Resources & Serials",
-      "payment_status": "Awaiting Payment",
-      "po_line_description": "",
-      "publication_date": "2017",
+      "paymentStatus": "Awaiting Payment",
+      "poLineDescription": "",
+      "publicationDate": "2017",
       "publisher": "John Wiley & Sons, Inc.",
-      "receipt_date": "2020-10-10T00:00:00.000Z",
-      "receipt_status": "Pending",
-      "reporting_codes": [],
+      "receiptDate": "2020-10-10T00:00:00.000Z",
+      "receiptStatus": "Pending",
+      "reportingCodes": [],
       "requester": "",
       "rush": false,
       "selector": "Woods",
@@ -287,13 +279,12 @@
       },
       "tags": [""],
       "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
-      "vendor_detail": {
-        "note_from_vendor": "",
+      "vendorDetail": {
+        "noteFromVendor": "",
         "instructions": "ABCDEFG",
-        "ref_number": "999632785",
-        "ref_number_type": "Supplier's unique order line reference number",
-        "vendor_account": "12345-50",
-        "po_line_id": "c0d08448-347b-418a-8c2f-5fb50248d67e"
+        "refNumber": "999632785",
+        "refNumberType": "Supplier's unique order line reference number",
+        "vendorAccount": "12345-50"
       },
       "metadata": {
         "createdDate": "2010-10-08T03:53:00.000",

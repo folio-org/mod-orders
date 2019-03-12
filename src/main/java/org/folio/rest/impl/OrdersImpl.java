@@ -208,7 +208,7 @@ public class OrdersImpl implements Orders {
         handleGetRequest(endpoint, httpClient, vertxContext, okapiHeaders, logger)
           .thenAccept(entries -> {
             int limit = getPoLineLimit(config);
-            if (entries.getInteger("total_records") < limit) {
+            if (entries.getInteger("totalRecords") < limit) {
               getPurchaseOrderById(poLine.getPurchaseOrderId(), lang, httpClient, vertxContext, okapiHeaders, logger)
                 .thenCompose( purchaseOrder -> {
                   poLine.setPoLineNumber(purchaseOrder.getString(PO_NUMBER));
@@ -261,7 +261,7 @@ public class OrdersImpl implements Orders {
   @Override
   @Validate
   public void getOrdersPoNumber(String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    logger.info("Receiving generated po_number ...");
+    logger.info("Receiving generated poNumber ...");
 
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
     PoNumberHelper helper = new PoNumberHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);

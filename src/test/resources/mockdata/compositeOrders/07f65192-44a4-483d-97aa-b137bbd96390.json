@@ -6,28 +6,28 @@
     "insurance": 0,
     "overhead": 0,
     "shipment": 0,
-    "tax_1": 0,
-    "tax_2": 0,
-    "use_pro_rate": false
+    "tax1": 0,
+    "tax2": 0,
+    "useProRate": false
   },
   "approved": true,
-  "assigned_to": "28d102a2-d137-11e8-a8d5-f2801f1b9fd1",
+  "assignedTo": "28d102a2-d137-11e8-a8d5-f2801f1b9fd1",
   "notes": [],
-  "manual_po": false,
-  "po_number": "S60402",
-  "order_type": "Ongoing",
-  "re_encumber": false,
+  "manualPo": false,
+  "poNumber": "S60402",
+  "orderType": "Ongoing",
+  "reEncumber": false,
   "renewal": {
      "cycle": "6 Months",
      "interval": 182,
-     "manual_renewal": true,
-     "review_period": 30,
-     "renewal_date": "2019-04-09T00:00:00.000Z"
+     "manualRenewal": true,
+     "reviewPeriod": 30,
+     "renewalDate": "2019-04-09T00:00:00.000Z"
   },
-  "total_estimated_price": 200000.00,
-  "total_items": 80,
+  "totalEstimatedPrice": 200000.00,
+  "totalItems": 80,
   "vendor": "50fb8b56-cdf1-11e8-a8d5-f2801f1b9fd1",
-  "workflow_status": "Closed",
+  "workflowStatus": "Closed",
   "metadata": {
     "createdDate": "2018-07-18T00:00:00.000",
     "createdByUserId": "28d102a2-d137-11e8-a8d5-f2801f1b9fd1"
@@ -35,130 +35,114 @@
   "compositePoLines": [
     {
       "id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
-      "acquisition_method": "Purchase",
+      "acquisitionMethod": "Purchase",
       "adjustment": {
-        "id": "1963f6cf-eb47-4e09-9e28-e20aa464adb7",
         "credit": 0.0,
         "discount": 0.0,
         "insurance": 0.0,
-        "invoice_id": "2d6dc95c-c237-476f-aa48-57f7cbf74ca4",
+        "invoiceId": "2d6dc95c-c237-476f-aa48-57f7cbf74ca4",
         "overhead": 0.0,
         "shipment": 0.0,
-        "tax_1": 0.0,
-        "tax_2": 0.0,
-        "use_pro_rate": false,
-        "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1"
+        "tax1": 0.0,
+        "tax2": 0.0,
+        "useProRate": false
       },
       "alerts": [],
-      "cancellation_restriction": false,
-      "cancellation_restriction_note": "",
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "",
       "claims": [
         {
-          "id": "07c1d666-cace-11e8-a8d5-f2801f1b9fd1",
           "claimed": false,
-          "grace": 0,
-          "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1"
+          "grace": 0
         }
       ],
       "collection": true,
       "contributors": [
         {
           "contributor": "",
-          "contributor_type": "07c3d791-cabe-11e8-a8d5-f2801f1b9fd1"
+          "contributorType": "07c3d791-cabe-11e8-a8d5-f2801f1b9fd1"
         }
       ],
       "cost": {
-        "id": "07c3d796-cabe-11e8-a8d5-f2801f1b9fd1",
-        "list_price": 200000.00,
+        "listPrice": 200000.00,
         "currency": "USD",
-        "quantity_physical": 0,
-        "quantity_electronic": 1,
-        "po_line_estimated_price": 200000.00,
-        "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1"
+        "quantityPhysical": 0,
+        "quantityElectronic": 1,
+        "poLineEstimatedPrice": 200000.00
       },
       "description": "",
       "details": {
-        "id": "b7c5d792-cabe-11e9-a8d5-f2801f1b9fd1",
-        "receiving_note": "Renewal, access continuous",
-        "product_ids": [
+        "receivingNote": "Renewal, access continuous",
+        "productIds": [
           {
-            "product_id": "807922",
-            "product_id_type": "ISBN"
+            "productId": "807922",
+            "productIdType": "ISBN"
           }
         ],
-        "material_types": [
+        "materialTypes": [
           "fde2dfb2-cde3-11e8-a8d5-f2801f1b9fd1"
         ],
-        "subscription_from": "2019-01-01T00:00:00.000Z",
-        "subscription_interval": 365,
-        "subscription_to": "2019-12-31T00:00:00.000Z",
-        "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1"
+        "subscriptionFrom": "2019-01-01T00:00:00.000Z",
+        "subscriptionInterval": 365,
+        "subscriptionTo": "2019-12-31T00:00:00.000Z"
       },
       "donor": "",
       "eresource": {
-        "id": "07c51803-c9be-11e8-a8d5-f2801f1b9fd1",
         "activated": true,
-        "activation_due": 0,
-        "create_inventory": false,
+        "activationDue": 0,
+        "createInventory": false,
         "trial": false,
-        "expected_activation": "2019-01-01T00:00:00.000Z",
-        "user_limit": 0,
-        "access_provider": "fde2cad6-cde3-11e8-a8d5-f2801f1b9fd1",
-        "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
-        "license": "09c1d8be-cabe-11e8-a8d5-f2801f1b9fd1"
+        "expectedActivation": "2019-01-01T00:00:00.000Z",
+        "userLimit": 0,
+        "accessProvider": "fde2cad6-cde3-11e8-a8d5-f2801f1b9fd1",
+        "license": {
+          "code": "Code 1",
+          "description": "License Agreement 1"
+        }
       },
-      "fund_distribution": [
+      "fundDistribution": [
         {
-          "id": "fde2cad6-cde3-11e8-a8d5-f2801f1b9fd1",
           "code": "ENDOW-SUBN-FY19",
           "percentage": 100.0,
-          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08008",
-          "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1"
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08008"
         }
       ],
       "locations": [
         {
-          "id": "07c5d9ea-cabe-11e8-a8d5-f2801f1b9f04",
-          "location_id": "9cc5d9ea-cabe-11e8-a8d5-f2901f1b9fd1",
-          "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
+          "locationId": "9cc5d9ea-cabe-11e8-a8d5-f2901f1b9fd1",
           "quantity": 1,
-          "quantity_electronic": 1,
-          "quantity_physical": 0
+          "quantityElectronic": 1,
+          "quantityPhysical": 0
         }
       ],
-      "order_format": "Electronic Resource",
+      "orderFormat": "Electronic Resource",
       "owner": "Technical Services Department",
-      "payment_status": "Awaiting Payment",
+      "paymentStatus": "Awaiting Payment",
       "physical": {
-        "id": "50fb7332-cdf1-11e8-a8d5-f2801f1b9fd1",
-        "material_supplier": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd8",
-        "receipt_due": null,
-        "volumes": [],
-        "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1"
+        "materialSupplier": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd8",
+        "receiptDue": null,
+        "volumes": []
       },
-      "po_line_description": "",
-      "po_line_number": "841240-021",
-      "publication_date": "2019",
+      "poLineDescription": "",
+      "poLineNumber": "841240-021",
+      "publicationDate": "2019",
       "publisher": "American Chemical Society",
-      "purchase_order_id": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB4bb",
-      "receipt_date": null,
-      "reporting_codes": [],
+      "purchaseOrderId": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB4bb",
+      "receiptDate": null,
+      "reportingCodes": [],
       "requester": "",
       "rush": false,
       "selector": "Buchanan",
       "source": {
-        "id": "d25498e7-3ae6-45fe-9612-ec99e2700d2f",
         "code": "FOLIO",
         "description": "Manually entered"
       },
       "tags": [],
       "title": "American Chemical Society Web Editions",
-      "vendor_detail": {
-        "id": "50fb8b56-cdf1-11e8-a8d5-f2801f1b9fd1",
+      "vendorDetail": {
         "instructions": "",
-        "note_from_vendor": "",
-        "vendor_account": "",
-        "po_line_id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1"
+        "noteFromVendor": "",
+        "vendorAccount": ""
       },
       "metadata": {
         "createdDate": "2018-07-18T00:00:00.000",
