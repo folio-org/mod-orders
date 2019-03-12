@@ -4,6 +4,7 @@ import org.folio.rest.jaxrs.model.Error;
 
 public enum ErrorCodes {
 
+  GENERIC_ERROR_CODE("genericError", "Generic error"),
   PO_NUMBER_ALREADY_EXISTS("poNumberNotUnique", "PO Number already exists"),
   PO_NUMBER_REQUIRED("poNumberRequired", "PO Number is missing"),
   MISSING_ORDER_ID_IN_POL("orderIdRequired", "Purchase order id is missing in PoLine object"),
@@ -26,7 +27,11 @@ public enum ErrorCodes {
   NON_ZERO_COST_ELECTRONIC_QTY("nonZeroCostQtyElectronic", "Electronic cost quantity must not be specified"),
   PHYSICAL_LOC_QTY_EXCEEDS_COST("locQtyPhysicalExceedsCost", "Locations physical quantity exceeds cost physical quantity"),
   PHYSICAL_COST_QTY_EXCEEDS_LOC("costQtyPhysicalExceedsLoc", "Cost's physical quantity exceeds locations' physical quantity"),
-  ELECTRONIC_LOC_QTY_EXCEEDS_COST("locQtyElectronicExceedsCost", "Locations electronic quantity exceeds cost electronic quantity");
+  ELECTRONIC_LOC_QTY_EXCEEDS_COST("locQtyElectronicExceedsCost", "Locations electronic quantity exceeds cost electronic quantity"),
+  ORDER_VENDOR_IS_INACTIVE("vendorIsInactive", "Order cannot be open as the associated vendor is inactive"),
+  POL_ACCESS_PROVIDER_IS_INACTIVE("accessProviderIsInactive", "Order cannot be open as the associated access provider is inactive"),
+  ORDER_VENDOR_NOT_FOUND("vendorNotFound", "Order cannot be open as the associated vendor not found"),
+  POL_ACCESS_PROVIDER_NOT_FOUND("accessProviderNotFound", "Order cannot be open as the associated access provider not found");
 
   private final String code;
   private final String description;

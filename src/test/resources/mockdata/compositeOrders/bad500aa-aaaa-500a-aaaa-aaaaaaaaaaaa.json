@@ -8,7 +8,7 @@
   "reEncumber": false,
   "totalEstimatedPrice": 127.94,
   "totalItems": 3,
-  "vendor": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "vendor": "168f8a86-d26c-406e-813f-c7527f241ac3",
   "workflowStatus": "Pending",
   "compositePoLines": [
     {
@@ -72,7 +72,7 @@
         "trial": false,
         "expectedActivation": "2014-07-06T00:00:00.000Z",
         "userLimit": 1,
-        "accessProvider": "7e1841d9-c0a4-4ae0-8521-b7e08fdcbc8a",
+        "accessProvider": "858e80d2-f562-4c54-9934-6e274dee511d",
         "license": {
           "code": "Code 1",
           "description": "License Agreement 1"
