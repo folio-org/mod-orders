@@ -5,6 +5,8 @@
         "id": "5e317dc2-deeb-4429-b2a1-91e5cd0fd5f7",
         "caption": "Tutorial Volume 10",
         "comment": "Special Edition",
+        "checkin": true,
+        "instanceId": "7fbd5d84-62d1-44c6-9c45-6cb173998bbd",
         "dateOrdered": "2018-09-09T00:00:00.000",
         "itemId": "1c92433e-916d-452e-ac76-5268d0ec3f66",
         "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
