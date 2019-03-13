@@ -489,6 +489,7 @@ public class HelperUtils {
    * @see #calculateInventoryItemsQuantity(CompositePoLine)
    */
   public static int calculateInventoryItemsQuantity(CompositePoLine compPOL, List<Location> locations) {
+    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) return 0;
     switch (compPOL.getOrderFormat()) {
       case P_E_MIX:
         int quantity = getPhysicalQuantity(locations);
