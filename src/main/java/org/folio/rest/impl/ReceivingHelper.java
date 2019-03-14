@@ -1,9 +1,8 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.EntryStream;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
@@ -18,13 +17,12 @@ import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
 import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.jaxrs.model.ReceivingCollection;
+import org.folio.rest.jaxrs.model.ReceivingHistoryCollection;
 import org.folio.rest.jaxrs.model.ReceivingItemResult;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeReceived;
-import org.folio.rest.jaxrs.resource.Orders;
 
-import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -50,10 +48,12 @@ import static org.folio.orders.utils.ErrorCodes.PIECE_UPDATE_FAILED;
 import static org.folio.orders.utils.ErrorCodes.PIECE_POL_MISMATCH;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.getEndpointWithQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
@@ -64,6 +64,8 @@ import static org.folio.rest.jaxrs.resource.Orders.PostOrdersReceiveResponse.res
 public class ReceivingHelper extends AbstractHelper {
 
   static final int MAX_IDS_FOR_GET_RQ = 15;
+
+  private static final String GET_RECEIVING_HISTORY_BY_QUERY = resourcesPath(RECEIVING_HISTORY) + "?limit=%s&offset=%s%s&lang=%s";
   private static final String PIECES_WITH_QUERY_ENDPOINT = resourcesPath(PIECES) + "?limit=%d&lang=%s&query=%s";
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
 
@@ -77,14 +79,13 @@ public class ReceivingHelper extends AbstractHelper {
   private final Map<String, Map<String, ReceivedItem>> receivingItems;
 
   private final InventoryHelper inventoryHelper;
-  private final GetPOLinesHelper lookupPoLinesHelper;
+  private final PurchaseOrderLineHelper poLineHelper;
 
-  ReceivingHelper(ReceivingCollection receivingCollection, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
-    super(getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx, lang);
-    setDefaultHeaders(httpClient);
+  ReceivingHelper(ReceivingCollection receivingCollection, Map<String, String> okapiHeaders, Context ctx, String lang) {
+    super(okapiHeaders, ctx, lang);
 
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
-    lookupPoLinesHelper = new GetPOLinesHelper(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
+    poLineHelper = new PurchaseOrderLineHelper(httpClient, okapiHeaders, ctx, lang);
 
     // Convert request to map representation
     receivingItems = groupReceivedItemsByPoLineId(receivingCollection);
@@ -99,10 +100,17 @@ public class ReceivingHelper extends AbstractHelper {
     }
   }
 
-  void receiveItems(ReceivingCollection receivingCollection) {
+  ReceivingHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
+    super(okapiHeaders, ctx, lang);
+    receivingItems = null;
+    inventoryHelper = null;
+    poLineHelper = null;
+  }
+
+  CompletableFuture<ReceivingResults> receiveItems(ReceivingCollection receivingCollection) {
 
     // 1. Get piece records from storage
-    retrievePieceRecords()
+    return retrievePieceRecords()
       // 2. Update items in the Inventory if required
       .thenCompose(this::updateInventoryItems)
       // 3. Update piece records with receiving details which do not have associated item
@@ -112,11 +120,27 @@ public class ReceivingHelper extends AbstractHelper {
       // 5. Update PO Line status
       .thenCompose(this::updatePoLinesStatus)
       // 6. Return results to the client
-      .thenAccept(piecesGroupedByPoLine -> {
-        ReceivingResults results = prepareResponseBody(receivingCollection, piecesGroupedByPoLine);
-        asyncResultHandler.handle(succeededFuture(respond200WithApplicationJson(results)));
-      })
-      .exceptionally(this::handleError);
+      .thenApply(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
+  }
+
+  CompletableFuture<ReceivingHistoryCollection> getReceivingHistory(int limit, int offset, String query) {
+    CompletableFuture<ReceivingHistoryCollection> future = new VertxCompletableFuture<>(ctx);
+
+    try {
+      String queryParam = getEndpointWithQuery(query, logger);
+      String endpoint = String.format(GET_RECEIVING_HISTORY_BY_QUERY, limit, offset, queryParam, lang);
+      handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+        .thenAccept(jsonReceivingHistory -> future.complete(jsonReceivingHistory.mapTo(ReceivingHistoryCollection.class)))
+        .exceptionally(t -> {
+          logger.error("Error retrieving receiving history", t);
+          future.completeExceptionally(t.getCause());
+          return null;
+        });
+    } catch (Exception e) {
+      future.completeExceptionally(e);
+    }
+
+    return future;
   }
 
   private ReceivingResults prepareResponseBody(ReceivingCollection receivingCollection, Map<String, List<Piece>> piecesGroupedByPoLine) {
@@ -622,9 +646,9 @@ public class ReceivingHelper extends AbstractHelper {
   }
 
   private CompletableFuture<List<PoLine>> getPoLinesByQuery(String query) {
-    return lookupPoLinesHelper.getPOLines(MAX_IDS_FOR_GET_RQ, 0, query)
-      .thenApply(PoLineCollection::getPoLines)
-      .exceptionally(e -> {
+    return poLineHelper.getPoLines(MAX_IDS_FOR_GET_RQ, 0, query)
+     .thenApply(PoLineCollection::getPoLines)
+     .exceptionally(e -> {
         logger.error("The issue happened getting PO Lines", e);
         return null;
       });
@@ -638,21 +662,5 @@ public class ReceivingHelper extends AbstractHelper {
   private void addError(String polId, String pieceId, Error error) {
     processingErrors.computeIfAbsent(polId, k -> new HashMap<>())
                            .put(pieceId, error);
-  }
-
-  @Override
-  Response buildErrorResponse(int code, Error error) {
-    final Response result;
-    switch (code) {
-      case 400:
-        result = Orders.PostOrdersReceiveResponse.respond400WithApplicationJson(withErrors(error));
-        break;
-      case 422:
-        result = Orders.PostOrdersReceiveResponse.respond422WithApplicationJson(withErrors(error));
-        break;
-      default:
-        result = Orders.PostOrdersReceiveResponse.respond500WithApplicationJson(withErrors(error));
-    }
-    return result;
   }
 }

@@ -1,50 +1,53 @@
 package org.folio.rest.impl;
 
-import static io.vertx.core.Future.succeededFuture;
-import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
-import static org.folio.orders.utils.HelperUtils.OKAPI_URL;
-import static org.folio.orders.utils.ResourcePathResolver.ADJUSTMENT;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-
-import java.util.HashMap;
-import java.util.Map;
-import javax.ws.rs.core.Response;
-
 import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
 
+import javax.ws.rs.core.Response;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
+import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
+import static org.folio.orders.utils.HelperUtils.OKAPI_URL;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+
 public abstract class AbstractHelper {
   public static final String ID = "id";
 
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
+  private final Errors processingErrors = new Errors();
   protected final HttpClientInterface httpClient;
-  protected final Handler<AsyncResult<Response>> asyncResultHandler;
   protected final Map<String, String> okapiHeaders;
   protected final Context ctx;
   protected final String lang;
 
-  AbstractHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
-                      Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
+  AbstractHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     this.httpClient = httpClient;
-    this.asyncResultHandler = asyncResultHandler;
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
     this.lang = lang;
+    setDefaultHeaders();
+  }
+
+  AbstractHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
+    this.httpClient = getHttpClient(okapiHeaders);
+    this.okapiHeaders = okapiHeaders;
+    this.ctx = ctx;
+    this.lang = lang;
+    setDefaultHeaders();
   }
 
   public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {
@@ -54,60 +57,84 @@ public abstract class AbstractHelper {
     return HttpClientFactory.getHttpClient(okapiURL, tenantId);
   }
 
+  public void closeHttpClient() {
+    httpClient.closeClient();
+  }
 
+  public List<Error> getErrors() {
+    return processingErrors.getErrors();
+  }
 
   /**
    * Some requests do not have body and in happy flow do not produce response body. The Accept header is required for calls to storage
-   * @param httpClient
    */
-  protected void setDefaultHeaders(HttpClientInterface httpClient) {
+  protected void setDefaultHeaders() {
     Map<String,String> customHeader = new HashMap<>();
-    customHeader.put(HttpHeaders.ACCEPT.toString(), "application/json, text/plain");
+    customHeader.put(HttpHeaders.ACCEPT.toString(), APPLICATION_JSON  + ", " + TEXT_PLAIN);
     httpClient.setDefaultHeaders(customHeader);
   }
 
-  /**
-   * Convert CompositePurchaseOrder to Json representation of PurchaseOrder.
-   * These objects are the same except PurchaseOrder doesn't contains adjustment and poLines fields.
-   * @param compPO
-   * @return JsonObject representation of PurchaseOrder
-   */
-  protected JsonObject convertToPurchaseOrder(CompositePurchaseOrder compPO) {
-    JsonObject purchaseOrder = JsonObject.mapFrom(compPO);
-    if (purchaseOrder.containsKey(ADJUSTMENT)) {
-      purchaseOrder.remove(ADJUSTMENT);
-    }
-    if (purchaseOrder.containsKey(COMPOSITE_PO_LINES)) {
-      purchaseOrder.remove(COMPOSITE_PO_LINES);
-    }
-    return purchaseOrder;
+  protected Errors getProcessingErrors() {
+    processingErrors.setTotalRecords(processingErrors.getErrors().size());
+    return processingErrors;
   }
 
-  protected Void handleError(Throwable throwable) {
-    final Future<Response> result;
+  protected void addProcessingError(Error error) {
+    processingErrors.getErrors().add(error);
+  }
 
-    logger.error("Exception encountered", throwable.getCause());
-    final Throwable t = throwable.getCause();
-    final String message = t.getMessage();
-    if (t instanceof HttpException) {
-      final int code = ((HttpException) t).getCode();
-      final String errorCode = ((HttpException) t).getErrorCode();
-      result = succeededFuture(buildErrorResponse(code, new Error().withMessage(message).withCode(errorCode)));
+  protected void addProcessingErrors(List<Error> errors) {
+    processingErrors.getErrors().addAll(errors);
+  }
+
+  protected int handleProcessingError(Throwable throwable) {
+    final Throwable cause = throwable.getCause();
+    logger.error("Exception encountered", cause);
+    final Error error = new Error().withMessage(cause.getMessage());
+    final int code;
+
+    if (cause instanceof HttpException) {
+      code = ((HttpException) cause).getCode();
+      error.withCode(((HttpException) cause).getErrorCode());
     } else {
-      result = succeededFuture(buildErrorResponse(-1, new Error().withMessage(message)));
+      code = INTERNAL_SERVER_ERROR.getStatusCode();
     }
 
-    httpClient.closeClient();
-    asyncResultHandler.handle(result);
+    addProcessingError(error);
 
-    return null;
+    return code;
   }
 
-  protected Errors withErrors(Error error) {
-    Errors errors = new Errors();
-    errors.getErrors().add(error);
-    return errors;
+  public Response buildErrorResponse(Throwable throwable) {
+    return buildErrorResponse(handleProcessingError(throwable));
   }
 
-  abstract Response buildErrorResponse(int code, Error error);
+  public Response buildErrorResponse(int code) {
+    final Response.ResponseBuilder responseBuilder;
+    switch (code) {
+      case 400:
+      case 404:
+      case 422:
+        responseBuilder = Response.status(code);
+        break;
+      default:
+        responseBuilder = Response.status(INTERNAL_SERVER_ERROR);
+    }
+    closeHttpClient();
+
+    return responseBuilder
+      .header(CONTENT_TYPE, APPLICATION_JSON)
+      .entity(getProcessingErrors())
+      .build();
+  }
+
+  public Response buildOkResponse(Object body) {
+    closeHttpClient();
+    return Response.ok(body, APPLICATION_JSON).build();
+  }
+
+  public Response buildNoContentResponse() {
+    closeHttpClient();
+    return Response.noContent().build();
+  }
 }

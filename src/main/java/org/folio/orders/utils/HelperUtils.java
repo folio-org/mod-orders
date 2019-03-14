@@ -69,7 +69,6 @@ public class HelperUtils {
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
   private static final String QUERY = "module=ORDERS";
   private static final Pattern HOST_PORT_PATTERN = Pattern.compile("https?://([^:/]+)(?::?(\\d+)?)");
-  private static final String PO_LINE_NUMBER = "poLineNumber";
 
   private HelperUtils() {
 
@@ -172,7 +171,7 @@ public class HelperUtils {
     return operateOnPoLine(HttpMethod.DELETE, line, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(poline -> {
         String polineId = poline.getId();
-        return operateOnSubObj(HttpMethod.DELETE, resourceByIdPath(PO_LINES, polineId), httpClient, ctx, okapiHeaders, logger);
+        return operateOnObject(HttpMethod.DELETE, resourceByIdPath(PO_LINES, polineId), httpClient, ctx, okapiHeaders, logger);
       });
   }
 
@@ -236,7 +235,7 @@ public class HelperUtils {
     JsonArray array = new JsonArray();
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     ((List<?>) pol.remove(field))
-      .forEach(fieldId -> futures.add(operateOnSubObj(operation, resourceByIdPath(field) + fieldId, httpClient, ctx, okapiHeaders, logger)
+      .forEach(fieldId -> futures.add(operateOnObject(operation, resourceByIdPath(field) + fieldId, httpClient, ctx, okapiHeaders, logger)
                 .thenAccept(value -> {
                   if (value != null && !value.isEmpty()) {
                     array.add(value);
@@ -246,13 +245,13 @@ public class HelperUtils {
     return futures;
   }
 
-  public static CompletableFuture<JsonObject> operateOnSubObj(HttpMethod operation, String url,
-      HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-    return operateOnSubObj(operation, url, null, httpClient, ctx, okapiHeaders, logger);
+  public static CompletableFuture<JsonObject> operateOnObject(HttpMethod operation, String url,
+                                                              HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+    return operateOnObject(operation, url, null, httpClient, ctx, okapiHeaders, logger);
   }
 
-  public static CompletableFuture<JsonObject> operateOnSubObj(HttpMethod operation, String url, JsonObject body,
-      HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+  public static CompletableFuture<JsonObject> operateOnObject(HttpMethod operation, String url, JsonObject body,
+                                                              HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
 
     logger.info("Calling {} {}", operation, url);
@@ -703,6 +702,9 @@ public class HelperUtils {
           }
 
           JsonObject entries = body.toJsonObject();
+          if (logger.isDebugEnabled()) {
+            logger.debug("The response from mod-configuration: {}", entries.encodePrettily());
+          }
           entries.getJsonArray("configs").stream()
             .forEach(o ->
               config.put(((JsonObject) o).getString("configName"),
@@ -711,9 +713,28 @@ public class HelperUtils {
         })
       );
     } catch (Exception e) {
-      logger.error(e.getMessage());
+      logger.error("Error happened while getting configs", e);
       future.complete(config);
     }
     return future;
+  }
+
+  public static int getPoLineLimit(JsonObject config) {
+    try {
+      return Integer.parseInt(config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));
+    } catch (NumberFormatException e) {
+      throw new NumberFormatException("Invalid limit value in configuration.");
+    }
+  }
+
+  /**
+   * Convert {@link JsonObject} which actually represents org.folio.rest.acq.model.PurchaseOrder to {@link CompositePurchaseOrder}
+   * These objects are the same except PurchaseOrder doesn't contains adjustment and poLines fields.
+   * @param poJson {@link JsonObject} representing org.folio.rest.acq.model.PurchaseOrder
+   * @return {@link CompositePurchaseOrder}
+   */
+  public static CompositePurchaseOrder convertToCompositePurchaseOrder(JsonObject poJson) {
+    poJson.remove(ADJUSTMENT);
+    return poJson.mapTo(CompositePurchaseOrder.class);
   }
 }
