@@ -9,7 +9,9 @@ import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.loadConfiguration;
 import static org.folio.orders.utils.HelperUtils.validateOrder;
 import static org.folio.orders.utils.HelperUtils.validatePoLine;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,10 +20,13 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.ws.rs.core.Response;
 
+import io.vertx.core.http.HttpMethod;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
@@ -389,6 +394,32 @@ public class OrdersImpl implements Orders {
           errors.setTotalRecords(errors.getErrors().size());
           return errors;
         });
+  }
+
+  @Override
+  public void postOrdersPieces(String lang, Piece entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+
+    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
+    String endpoint = resourcesPath(PIECES);
+
+    final AbstractHelper helper = new AbstractHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang) {
+      @Override
+      Response buildErrorResponse(int code, Error error) {
+        return code == HttpStatus.HTTP_BAD_REQUEST.toInt() ? PostOrdersPiecesResponse.respond400WithApplicationJson(withErrors(error))
+          : PostOrdersPiecesResponse.respond500WithApplicationJson(withErrors(error));
+      }
+    };
+
+    try {
+      httpClient.request(HttpMethod.POST, entity, endpoint, okapiHeaders)
+        .thenApply(HelperUtils::verifyAndExtractBody)
+        .thenAccept(body -> {
+          logger.debug("Successfully created piece: " + body.encodePrettily());
+          asyncResultHandler.handle(succeededFuture(PostOrdersPiecesResponse.respond201WithApplicationJson(body.mapTo(Piece.class))));
+        }).exceptionally(helper::handleError);
+    } catch (Exception e) {
+      helper.handleError(e);
+    }
   }
 }
 
