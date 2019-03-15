@@ -1,18 +1,23 @@
 package org.folio.rest.impl;
 
-import static io.vertx.core.Future.succeededFuture;
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
+import static io.vertx.core.json.JsonObject.mapFrom;
+import static java.util.concurrent.CompletableFuture.allOf;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.completedFuture;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.constructPiece;
+import static org.folio.orders.utils.HelperUtils.deletePoLine;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
+import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.operateOnSubObj;
+import static org.folio.orders.utils.HelperUtils.operateOnObject;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
@@ -20,94 +25,159 @@ import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.respond204;
-import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.respond404WithApplicationJson;
-import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.respond422WithApplicationJson;
-import static org.folio.rest.jaxrs.resource.Orders.PutOrdersOrderLinesByIdResponse.respond500WithApplicationJson;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.acq.model.SequenceNumber;
+import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
-import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
-public class PutOrderLineByIdHelper extends AbstractHelper {
+import javax.ws.rs.core.Response;
+
+class PurchaseOrderLineHelper extends AbstractHelper {
+
+  private static final String GET_PO_LINES_BY_QUERY = resourcesPath(PO_LINES) + "?limit=%s&offset=%s%s&lang=%s";
+  private static final String LOOKUP_PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId==%s&limit=%d&lang=%s";
+  private static final String PO_LINE_NUMBER_ENDPOINT = resourcesPath(PO_LINE_NUMBER) + "?purchaseOrderId=";
+  private static final Pattern PO_LINE_NUMBER_PATTERN = Pattern.compile("([a-zA-Z0-9]{5,16}-)([0-9]{1,3})");
 
   private final InventoryHelper inventoryHelper;
-  private final Errors processingErrors = new Errors();
 
-  private static final String LOOKUP_PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId==%s&limit=%d&lang=%s";
-
-  public PutOrderLineByIdHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders,
-                                Handler<AsyncResult<Response>> asyncResultHandler, Context ctx, String lang) {
-    super(httpClient, okapiHeaders, asyncResultHandler, ctx, lang);
+  PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+    super(httpClient, okapiHeaders, ctx, lang);
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
-  public PutOrderLineByIdHelper(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-                                Context ctx, String lang) {
-    this(AbstractHelper.getHttpClient(okapiHeaders), okapiHeaders, asyncResultHandler, ctx, lang);
-    setDefaultHeaders(httpClient);
+  PurchaseOrderLineHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
+    this(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
+  }
+
+  CompletableFuture<PoLineCollection> getPoLines(int limit, int offset, String query) {
+    CompletableFuture<PoLineCollection> future = new VertxCompletableFuture<>(ctx);
+    try {
+      String queryParam = isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
+      String endpoint = String.format(GET_PO_LINES_BY_QUERY, limit, offset, queryParam, lang);
+      handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+        .thenAccept(jsonOrderLines -> {
+          if (logger.isInfoEnabled()) {
+            logger.info("Successfully retrieved order lines: {}", jsonOrderLines.encodePrettily());
+          }
+          future.complete(jsonOrderLines.mapTo(PoLineCollection.class));
+        })
+        .exceptionally(t -> {
+          future.completeExceptionally(t);
+          return null;
+        });
+    } catch (Exception e) {
+      future.completeExceptionally(e);
+    }
+
+    return future;
+  }
+
+  CompletableFuture<CompositePoLine> createPoLine(CompositePoLine compPOL) {
+    return getPurchaseOrderById(compPOL.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(HelperUtils::convertToCompositePurchaseOrder)
+      .thenCompose(po -> createPoLine(compPOL, po))
+      .exceptionally(t -> {
+        // The case when specified order does not exist
+        Throwable cause = t.getCause();
+        if (cause instanceof HttpException && ((HttpException) cause).getCode() == Response.Status.NOT_FOUND.getStatusCode()) {
+          throw new HttpException(422, ErrorCodes.ORDER_NOT_FOUND);
+        }
+        throw new CompletionException(cause);
+      });
+  }
+
+  CompletableFuture<CompositePoLine> createPoLine(CompositePoLine compPoLine, CompositePurchaseOrder compOrder) {
+    // The id is required because sub-objects are being created first
+    compPoLine.setId(UUID.randomUUID().toString());
+    compPoLine.setPurchaseOrderId(compOrder.getId());
+
+    JsonObject line = mapFrom(compPoLine);
+    List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
+
+    subObjFuts.add(createAlerts(compPoLine, line));
+    subObjFuts.add(createReportingCodes(compPoLine, line));
+
+    return allOf(subObjFuts.toArray(new CompletableFuture[0]))
+      .thenCompose(v -> generateLineNumber(compOrder))
+      .thenAccept(lineNumber -> line.put(PO_LINE_NUMBER, lineNumber))
+      .thenCompose(v -> createPoLineSummary(compPoLine, line));
+  }
+
+  CompletableFuture<CompositePoLine> getCompositePoLine(String polineId) {
+    return getPoLineById(polineId, lang, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(this::populateCompositeLine);
+  }
+
+  CompletableFuture<Void> deleteLine(String lineId) {
+    return getPoLineById(lineId, lang, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(line -> {
+        logger.debug("Deleting PO line...");
+        return deletePoLine(line, httpClient, ctx, okapiHeaders, logger);
+      })
+      .thenAccept(json -> logger.info("The PO Line with id='{}' has been deleted successfully", lineId));
   }
 
   /**
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
-  public void updateOrderLine(CompositePoLine compOrderLine) {
-    getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
+  CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine) {
+    return getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
       .thenCompose(lineFromStorage -> {
         // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line update
         compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
         return updateOrderLine(compOrderLine, lineFromStorage);
-      })
-      .thenAccept(v -> {
-        httpClient.closeClient();
-        asyncResultHandler.handle(succeededFuture(respond204()));
-      })
-      .exceptionally(this::handleError);
+      });
   }
 
   /**
    * Handles update of the order line depending on the content in the storage. Returns {@link CompletableFuture} as a result.
    * In case the exception happened in future lifecycle, the caller should handle it. The logic is like following:<br/>
    * 1. Handle sub-objects operations's. All the exception happened for any sub-object are handled generating an error.
-   * All errors can be retrieved by calling {@link #getProcessingErrors()}.<br/>
+   * All errors can be retrieved by calling {@link #getErrors()}.<br/>
    * 2. Store PO line summary. On success, the logic checks if there are no errors happened on sub-objects operations and
    * returns succeeded future. Otherwise {@link HttpException} will be returned as result of the future.
    *
    * @param compOrderLine The composite {@link CompositePoLine} to use for storage data update
    * @param lineFromStorage {@link JsonObject} representing PO line from storage (/acq-models/mod-orders-storage/schemas/po_line.json)
    */
-  public CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
+  CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
     updatePoLineSubObjects(compOrderLine, lineFromStorage)
       .thenCompose(poLine -> updateOrderLineSummary(compOrderLine.getId(), poLine))
       .thenAccept(json -> {
-        if (isUpdateSuccessful()) {
+        if (getErrors().isEmpty()) {
           future.complete(null);
         } else {
           String message = String.format("PO Line with '%s' id partially updated but there are issues processing some PO Line sub-objects",
@@ -126,24 +196,10 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   /**
    * Handle update of the order line without sub-objects
    */
-  public CompletableFuture<JsonObject> updateOrderLineSummary(String poLineId, JsonObject poLine) {
+  CompletableFuture<JsonObject> updateOrderLineSummary(String poLineId, JsonObject poLine) {
     logger.debug("Updating PO line...");
     String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES, poLineId), lang);
-    return operateOnSubObj(HttpMethod.PUT, endpoint, poLine, httpClient, ctx, okapiHeaders, logger);
-  }
-
-  /**
-   * @return unmodifiable List of the {@link Error} objects. In case the list is empty, the update of the PO line was successful
-   */
-  public List<Error> getProcessingErrors() {
-    return Collections.unmodifiableList(processingErrors.getErrors());
-  }
-
-  /**
-   * @return {@code true} if the the update of the PO line sub-objects was successful and there were no error happened communicating with other services
-   */
-  public boolean isUpdateSuccessful() {
-    return processingErrors.getErrors().isEmpty();
+    return operateOnObject(HttpMethod.PUT, endpoint, poLine, httpClient, ctx, okapiHeaders, logger);
   }
 
   /**
@@ -152,7 +208,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
    * @param compPOL Composite PO line to update Inventory for
    * @return CompletableFuture with void.
    */
-  public CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
+  CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
     // Check if any item should be created
     if (compPOL.getReceiptStatus() == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED) {
       return completedFuture(null);
@@ -174,6 +230,32 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     return inventoryHelper.handleInstanceRecord(compPOL)
       .thenCompose(inventoryHelper::handleItemRecords)
       .thenCompose(piecesWithItemId -> createPieces(compPOL, piecesWithItemId));
+  }
+
+  String buildNewPoLineNumber(JsonObject poLineFromStorage, String poNumber) {
+    String oldPoLineNumber = poLineFromStorage.getString(PO_LINE_NUMBER);
+    Matcher matcher = PO_LINE_NUMBER_PATTERN.matcher(oldPoLineNumber);
+    if (matcher.find()) {
+      return buildPoLineNumber(poNumber, matcher.group(2));
+    }
+    logger.error("PO Line - {} has invalid or missing number.", poLineFromStorage.getString(ID));
+    return oldPoLineNumber;
+  }
+
+  private CompletableFuture<String> generateLineNumber(CompositePurchaseOrder compOrder) {
+    return handleGetRequest(getPoLineNumberEndpoint(compOrder.getId()), httpClient, ctx, okapiHeaders, logger)
+      .thenApply(sequenceNumberJson -> {
+        SequenceNumber sequenceNumber = sequenceNumberJson.mapTo(SequenceNumber.class);
+        return buildPoLineNumber(compOrder.getPoNumber(), sequenceNumber.getSequenceNumber());
+      });
+  }
+
+  private CompletionStage<CompositePoLine> populateCompositeLine(JsonObject poline) {
+    return HelperUtils.operateOnPoLine(HttpMethod.GET, poline, httpClient, ctx, okapiHeaders, logger);
+  }
+
+  private String buildPoLineNumber(String poNumber, String sequence) {
+    return poNumber + "-" + sequence;
   }
 
   /**
@@ -282,9 +364,9 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
   private CompletableFuture<Void> createPiece(Piece piece) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
-    JsonObject pieceObj = JsonObject.mapFrom(piece);
-    operateOnSubObj(HttpMethod.POST, resourcesPath(PIECES), pieceObj, httpClient, ctx, okapiHeaders, logger)
-      .thenAccept(body -> future.complete(null))
+    JsonObject pieceObj = mapFrom(piece);
+    createRecordInStorage(pieceObj, resourcesPath(PIECES))
+      .thenAccept(id -> future.complete(null))
       .exceptionally(t -> {
         logger.error("The piece record failed to be created. The request body: {}", pieceObj.encodePrettily());
         future.completeExceptionally(t);
@@ -295,7 +377,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 	}
 
   private CompletionStage<JsonObject> updatePoLineSubObjects(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
-    JsonObject updatedLineJson = JsonObject.mapFrom(compOrderLine);
+    JsonObject updatedLineJson = mapFrom(compOrderLine);
     logger.debug("Updating PO line sub-objects...");
 
     List<CompletableFuture<Void>> futures = new ArrayList<>();
@@ -323,8 +405,8 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       return completedFuture(null);
     }
 
-    return operateOnSubObj(operation, url, subObjContent, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(json -> {
+    return operateOnObject(operation, url, subObjContent, httpClient, ctx, okapiHeaders, logger)
+                      .thenApply(json -> {
         if (operation == HttpMethod.PUT) {
           return storageId;
         } else if (operation == HttpMethod.POST && json.getString(ID) != null) {
@@ -350,7 +432,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
 
           futures.add(handleSubObjOperation(prop, subObj, id)
             .exceptionally(throwable -> {
-              addProcessingError(throwable, prop, id);
+              handleProcessingError(throwable, prop, id);
               return null;
             })
           );
@@ -364,7 +446,7 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       if (id != null) {
         futures.add(handleSubObjOperation(prop, null, id)
           .exceptionally(throwable -> {
-            addProcessingError(throwable, prop, id);
+            handleProcessingError(throwable, prop, id);
             // In case the object is not deleted, still keep reference to old id
             return id;
           })
@@ -376,41 +458,19 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
       .thenAccept(newIds -> updatedLine.put(prop, newIds));
   }
 
-  private Void addProcessingError(Throwable exc, String propName, String propId) {
+  private void handleProcessingError(Throwable exc, String propName, String propId) {
     Error error = new Error().withMessage(exc.getMessage());
     error.getParameters()
          .add(new Parameter().withKey(propName)
                              .withValue(propId));
-    processingErrors.getErrors()
-                    .add(error);
-    return null;
-  }
 
-  @Override
-  protected Response buildErrorResponse(int code, Error error) {
-    final Response result;
-    switch (code) {
-      case 404:
-        result = respond404WithApplicationJson(withErrors(error));
-        break;
-      case 422:
-        result = respond422WithApplicationJson(withErrors(error));
-        break;
-      default:
-        if (getProcessingErrors().isEmpty()) {
-          result = respond500WithApplicationJson(withErrors(error));
-        } else {
-          processingErrors.getErrors().add(error);
-          result = respond500WithApplicationJson(processingErrors);
-        }
-    }
-    return result;
+    addProcessingError(error);
   }
 
   /**
    * Retrieves PO line from storage by PO line id as JsonObject and validates order id match.
    */
-  protected CompletableFuture<JsonObject> getPoLineByIdAndValidate(String orderId, String lineId) {
+  private CompletableFuture<JsonObject> getPoLineByIdAndValidate(String orderId, String lineId) {
     return getPoLineById(lineId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(line -> {
         logger.debug("Validating if the retrieved PO line corresponds to PO");
@@ -428,5 +488,77 @@ public class PutOrderLineByIdHelper extends AbstractHelper {
     if (!StringUtils.equals(orderId, line.getString("purchaseOrderId"))) {
       throw new HttpException(422, ErrorCodes.INCORRECT_ORDER_ID_IN_POL);
     }
+  }
+
+  private CompletionStage<CompositePoLine> createPoLineSummary(CompositePoLine compPOL, JsonObject line) {
+    return createRecordInStorage(line, resourcesPath(PO_LINES))
+      // On success set id and number of the created PO Line to composite object
+      .thenApply(id -> compPOL.withId(id).withPoLineNumber(line.getString(PO_LINE_NUMBER)));
+  }
+
+  private String getPoLineNumberEndpoint(String id) {
+    return PO_LINE_NUMBER_ENDPOINT + id;
+  }
+
+  private CompletableFuture<Void> createReportingCodes(CompositePoLine compPOL, JsonObject line) {
+    List<CompletableFuture<String>> futures = new ArrayList<>();
+
+    List<ReportingCode> reportingCodes = compPOL.getReportingCodes();
+    if (null != reportingCodes)
+      reportingCodes
+        .forEach(reportingObject ->
+          futures.add(createSubObjIfPresent(line, reportingObject, REPORTING_CODES, resourcesPath(REPORTING_CODES))
+            .thenApply(id -> {
+              if (id != null)
+                reportingObject.setId(id);
+              return id;
+            }))
+        );
+
+    return collectResultsOnSuccess(futures)
+      .thenAccept(reportingIds -> line.put(REPORTING_CODES, reportingIds))
+      .exceptionally(t -> {
+        logger.error("failed to create Reporting Codes", t);
+        throw new CompletionException(t.getCause());
+      });
+  }
+
+  private CompletableFuture<Void> createAlerts(CompositePoLine compPOL, JsonObject line) {
+    List<CompletableFuture<String>> futures = new ArrayList<>();
+
+    List<Alert> alerts = compPOL.getAlerts();
+    if (null != alerts)
+      alerts.forEach(alertObject ->
+        futures.add(createSubObjIfPresent(line, alertObject, ALERTS, resourcesPath(ALERTS))
+          .thenApply(id -> {
+            if (id != null) {
+              alertObject.setId(id);
+            }
+            return id;
+          }))
+      );
+
+    return collectResultsOnSuccess(futures)
+      .thenAccept(ids -> line.put(ALERTS, ids))
+      .exceptionally(t -> {
+        logger.error("failed to create Alerts", t);
+        throw new CompletionException(t.getCause());
+      });
+
+  }
+
+  private CompletableFuture<String> createSubObjIfPresent(JsonObject line, Object obj, String field, String url) {
+    if (obj != null) {
+      JsonObject json = mapFrom(obj);
+      if (!json.isEmpty()) {
+        return createRecordInStorage(json, url)
+          .thenApply(id -> {
+            logger.debug("The '{}' sub-object successfully created with id={}", field, id);
+            line.put(field, id);
+            return id;
+          });
+      }
+    }
+    return completedFuture(null);
   }
 }

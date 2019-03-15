@@ -81,7 +81,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.google.common.collect.ImmutableSet;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
@@ -252,7 +251,6 @@ public class OrdersImplTest {
   private static final String NONEXISTING_PO_NUMBER = "newPoNumber";
   private static final String BAD_QUERY = "unprocessableQuery";
 
-  private static final Set<String> REQUIRED_OR_DEFAULT_PO_LINE_PROPERTIES = ImmutableSet.of(SOURCE, RECEIPT_STATUS);
   private static Vertx vertx;
   private static MockServer mockServer;
 
@@ -1895,7 +1893,7 @@ public class OrdersImplTest {
     logger.info("=== Test Post Order Line (expected flow) ===");
 
     JsonObject reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
-    JsonObject purchaseOrderOwner = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, reqData.getString("purchaseOrderId"));
+    JsonObject purchaseOrderOwner = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, reqData.getString(PURCHASE_ORDER_ID));
 
     final CompositePoLine response = verifyPostResponse(LINES_PATH, reqData.encodePrettily(),
       EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePoLine.class);
@@ -1970,18 +1968,20 @@ public class OrdersImplTest {
       NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422).as(Errors.class);
 
     ctx.assertEquals(1, resp.getErrors().size());
+    ctx.assertEquals(ErrorCodes.MISSING_ORDER_ID_IN_POL.getCode(), resp.getErrors().get(0).getCode());
   }
 
   @Test
   public void testPostOrdersLinesByIdPoLineWithNonExistPurchaseOrder(TestContext ctx) {
     logger.info("=== Test Post Order Lines By Id (empty id in body) ===");
     JsonObject reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, PO_LINE_ID_FOR_SUCCESS_CASE);
-    reqData.put("purchaseOrderId", ID_DOES_NOT_EXIST);
+    reqData.put(PURCHASE_ORDER_ID, ID_DOES_NOT_EXIST);
 
     Errors resp = verifyPostResponse(LINES_PATH, reqData.encodePrettily(),
-      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 400).as(Errors.class);
+      NON_EXIST_CONFIG_X_OKAPI_TENANT, APPLICATION_JSON, 422).as(Errors.class);
 
     ctx.assertEquals(1, resp.getErrors().size());
+    ctx.assertEquals(ErrorCodes.ORDER_NOT_FOUND.getCode(), resp.getErrors().get(0).getCode());
   }
 
   @Test
@@ -2176,17 +2176,18 @@ public class OrdersImplTest {
 
   @Test
   public void testCreatePoLineWithGetPoLineNumberError() throws IOException {
-    logger.info("=== Test Get PO Line Number (generate poNumber) - fail ===");
+    logger.info("=== Test Create PO Line - fail on PO Line number generation ===");
     String body = getMockData(String.format("%s%s.json", COMP_PO_LINES_MOCK_DATA_PATH, PO_LINE_ID_FOR_SUCCESS_CASE));
     RestAssured
       .with()
         .header(X_OKAPI_URL)
+        .header(X_OKAPI_TOKEN)
         .header(PO_NUMBER_ERROR_X_OKAPI_TENANT)
         .contentType(APPLICATION_JSON)
         .body(body)
       .post(LINES_PATH)
         .then()
-          .statusCode(400);
+          .statusCode(500);
   }
 
   private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {
@@ -2306,7 +2307,7 @@ public class OrdersImplTest {
       .with()
         .header(X_OKAPI_URL)
         .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
-        .param(QUERY_PARAM_NAME, "purchaseOrderId==" + ORDER_ID_WITH_PO_LINES)
+        .param(QUERY_PARAM_NAME, PURCHASE_ORDER_ID + "==" + ORDER_ID_WITH_PO_LINES)
       .get(LINES_PATH)
         .then()
           .statusCode(200)
@@ -2848,6 +2849,7 @@ public class OrdersImplTest {
 
   private String getPoWithVendorId(String vendorId, String... accessProviderIds) throws Exception {
     CompositePurchaseOrder comPo = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    comPo.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     comPo.setVendor(vendorId);
     for(int i = 0; i < accessProviderIds.length; i++) {
       comPo.getCompositePoLines().get(i).getEresource().setAccessProvider(accessProviderIds[i]);
@@ -3293,6 +3295,9 @@ public class OrdersImplTest {
     private void handleConfigurationModuleResponse(RoutingContext ctx) {
       try {
         String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT) ;
+        if (PO_NUMBER_ERROR_X_OKAPI_TENANT.getValue().equals(tenant)) {
+          tenant = EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue();
+        }
         serverResponse(ctx, 200, APPLICATION_JSON, getMockData(String.format(CONFIG_MOCK_PATH, tenant)));
       } catch (IOException e) {
         serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
@@ -3343,8 +3348,8 @@ public class OrdersImplTest {
         String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
         List<String> polIds = Collections.emptyList();
 
-        if (queryParam.contains("purchaseOrderId")) {
-          poId = queryParam.split("purchaseOrderId==")[1];
+        if (queryParam.contains(PURCHASE_ORDER_ID)) {
+          poId = queryParam.split(PURCHASE_ORDER_ID + "==")[1];
         } else if (queryParam.startsWith("id==")) {
           polIds = extractIdsFromQuery(queryParam);
         }
