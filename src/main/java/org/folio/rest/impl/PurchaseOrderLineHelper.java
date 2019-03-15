@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import static io.vertx.core.json.JsonObject.mapFrom;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.completedFuture;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -122,18 +123,14 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     compPoLine.setId(UUID.randomUUID().toString());
     compPoLine.setPurchaseOrderId(compOrder.getId());
 
-    JsonObject line = JsonObject.mapFrom(compPoLine);
+    JsonObject line = mapFrom(compPoLine);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
 
     subObjFuts.add(createAlerts(compPoLine, line));
     subObjFuts.add(createReportingCodes(compPoLine, line));
 
     return allOf(subObjFuts.toArray(new CompletableFuture[0]))
-      .thenCompose(v -> handleGetRequest(getPoLineNumberEndpoint(compOrder.getId()), httpClient, ctx, okapiHeaders, logger))
-      .thenApply(sequenceNumberJson -> {
-        SequenceNumber sequenceNumber = sequenceNumberJson.mapTo(SequenceNumber.class);
-        return buildPoLineNumber(compOrder.getPoNumber(), sequenceNumber.getSequenceNumber());
-      })
+      .thenCompose(v -> generateLineNumber(compOrder))
       .thenAccept(lineNumber -> line.put(PO_LINE_NUMBER, lineNumber))
       .thenCompose(v -> createPoLineSummary(compPoLine, line));
   }
@@ -243,6 +240,14 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     }
     logger.error("PO Line - {} has invalid or missing number.", poLineFromStorage.getString(ID));
     return oldPoLineNumber;
+  }
+
+  private CompletableFuture<String> generateLineNumber(CompositePurchaseOrder compOrder) {
+    return handleGetRequest(getPoLineNumberEndpoint(compOrder.getId()), httpClient, ctx, okapiHeaders, logger)
+      .thenApply(sequenceNumberJson -> {
+        SequenceNumber sequenceNumber = sequenceNumberJson.mapTo(SequenceNumber.class);
+        return buildPoLineNumber(compOrder.getPoNumber(), sequenceNumber.getSequenceNumber());
+      });
   }
 
   private CompletionStage<CompositePoLine> populateCompositeLine(JsonObject poline) {
@@ -359,10 +364,10 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private CompletableFuture<Void> createPiece(Piece piece) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
-    JsonObject pieceObj = JsonObject.mapFrom(piece);
-    operateOnObject(HttpMethod.POST, resourcesPath(PIECES), pieceObj, httpClient, ctx, okapiHeaders, logger)
-               .thenAccept(body -> future.complete(null))
-               .exceptionally(t -> {
+    JsonObject pieceObj = mapFrom(piece);
+    createRecordInStorage(pieceObj, resourcesPath(PIECES))
+      .thenAccept(id -> future.complete(null))
+      .exceptionally(t -> {
         logger.error("The piece record failed to be created. The request body: {}", pieceObj.encodePrettily());
         future.completeExceptionally(t);
         return null;
@@ -372,7 +377,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 	}
 
   private CompletionStage<JsonObject> updatePoLineSubObjects(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
-    JsonObject updatedLineJson = JsonObject.mapFrom(compOrderLine);
+    JsonObject updatedLineJson = mapFrom(compOrderLine);
     logger.debug("Updating PO line sub-objects...");
 
     List<CompletableFuture<Void>> futures = new ArrayList<>();
@@ -486,14 +491,9 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private CompletionStage<CompositePoLine> createPoLineSummary(CompositePoLine compPOL, JsonObject line) {
-    return operateOnObject(HttpMethod.POST, resourcesPath(PO_LINES), line, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(body -> {
-        logger.info("response from /poLine: " + body.encodePrettily());
-
-        compPOL.setId(body.getString(ID));
-        compPOL.setPoLineNumber(body.getString(PO_LINE_NUMBER));
-        return compPOL;
-      });
+    return createRecordInStorage(line, resourcesPath(PO_LINES))
+      // On success set id and number of the created PO Line to composite object
+      .thenApply(id -> compPOL.withId(id).withPoLineNumber(line.getString(PO_LINE_NUMBER)));
   }
 
   private String getPoLineNumberEndpoint(String id) {
@@ -549,32 +549,16 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   private CompletableFuture<String> createSubObjIfPresent(JsonObject line, Object obj, String field, String url) {
     if (obj != null) {
-      JsonObject json = JsonObject.mapFrom(obj);
+      JsonObject json = mapFrom(obj);
       if (!json.isEmpty()) {
-        return createSubObj(line, json, field, url);
+        return createRecordInStorage(json, url)
+          .thenApply(id -> {
+            logger.debug("The '{}' sub-object successfully created with id={}", field, id);
+            line.put(field, id);
+            return id;
+          });
       }
     }
     return completedFuture(null);
-  }
-
-  private CompletableFuture<String> createSubObj(JsonObject pol, JsonObject obj, String field, String url) {
-    CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
-    try {
-      operateOnObject(HttpMethod.POST, url, obj, httpClient, ctx, okapiHeaders, logger)
-        .thenAccept(body -> {
-          String id = body.getString(ID);
-          pol.put(field, id);
-          future.complete(id);
-          logger.debug("The '{}' sub-object successfully created with id={}", field, id);
-        })
-        .exceptionally(t -> {
-          future.completeExceptionally(t);
-          return null;
-        });
-    } catch (Exception e) {
-      future.completeExceptionally(e);
-    }
-
-    return future;
   }
 }

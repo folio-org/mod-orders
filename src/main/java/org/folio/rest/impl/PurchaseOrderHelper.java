@@ -326,44 +326,28 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO) {
-    CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
     final WorkflowStatus finalStatus = compPO.getWorkflowStatus();
 
-    try {
-      // we should always create PO and PO lines in PENDING status and transition to OPEN only when it's all set
-      // (e.g. PO lines are created, Inventory is updated, etc.)
-      if (finalStatus == OPEN) {
-        compPO.setWorkflowStatus(PENDING);
-      }
-      JsonObject purchaseOrder = convertToPurchaseOrder(compPO);
-      httpClient.request(HttpMethod.POST, purchaseOrder, resourcesPath(PURCHASE_ORDER), okapiHeaders)
-        .thenApply(HelperUtils::verifyAndExtractBody)
-        .thenApply(poBody -> {
-          // At this point only id is important so using JsonObject
-          compPO.setId(poBody.getString(ID));
-          return compPO;
-        })
-        .thenCompose(this::createPoLines)
-        .thenAccept(lines -> {
-          compPO.setCompositePoLines(lines);
-          compPO.setAdjustment(HelperUtils.calculateAdjustment(lines));
-        })
-        .thenCompose(v -> {
-          if (finalStatus == OPEN) {
-            return openOrder(compPO);
-          }
-          return completedFuture(null);
-        })
-        .thenAccept(v -> future.complete(compPO))
-        .exceptionally(e -> {
-          future.completeExceptionally(e.getCause());
-          return null;
-        });
-    } catch (Exception e) {
-      logger.error("Exception calling POST /orders-storage/purchase-orders", e);
-      future.completeExceptionally(e);
+    // we should always create PO and PO lines in PENDING status and transition to OPEN only when it's all set
+    // (e.g. PO lines are created, Inventory is updated, etc.)
+    if (finalStatus == OPEN) {
+      compPO.setWorkflowStatus(PENDING);
     }
-    return future;
+
+    return createRecordInStorage(convertToPurchaseOrder(compPO), resourcesPath(PURCHASE_ORDER))
+      .thenApply(compPO::withId)
+      .thenCompose(this::createPoLines)
+      .thenAccept(lines -> {
+        compPO.setCompositePoLines(lines);
+        compPO.setAdjustment(HelperUtils.calculateAdjustment(lines));
+      })
+      .thenCompose(v -> {
+        if (finalStatus == OPEN) {
+          return openOrder(compPO);
+        }
+        return completedFuture(null);
+      })
+      .thenApply(v -> compPO);
   }
 
   private CompletableFuture<List<CompositePoLine>> createPoLines(CompositePurchaseOrder compPO) {
