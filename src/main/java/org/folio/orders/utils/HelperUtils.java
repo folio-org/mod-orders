@@ -246,12 +246,12 @@ public class HelperUtils {
   }
 
   public static CompletableFuture<JsonObject> operateOnObject(HttpMethod operation, String url,
-                                                              HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+      HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     return operateOnObject(operation, url, null, httpClient, ctx, okapiHeaders, logger);
   }
 
   public static CompletableFuture<JsonObject> operateOnObject(HttpMethod operation, String url, JsonObject body,
-                                                              HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+      HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
 
     logger.info("Calling {} {}", operation, url);

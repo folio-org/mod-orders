@@ -1,21 +1,5 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.Context;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.rest.tools.utils.TenantTool;
-
-import javax.ws.rs.core.Response;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
@@ -23,12 +7,30 @@ import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static org.folio.orders.utils.HelperUtils.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
+import io.vertx.core.Context;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+
+import javax.ws.rs.core.Response;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.tools.client.HttpClientFactory;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.rest.tools.utils.TenantTool;
+
 public abstract class AbstractHelper {
   public static final String ID = "id";
 
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   private final Errors processingErrors = new Errors();
+
   protected final HttpClientInterface httpClient;
   protected final Map<String, String> okapiHeaders;
   protected final Context ctx;
@@ -68,7 +70,7 @@ public abstract class AbstractHelper {
   /**
    * Some requests do not have body and in happy flow do not produce response body. The Accept header is required for calls to storage
    */
-  protected void setDefaultHeaders() {
+  private void setDefaultHeaders() {
     Map<String,String> customHeader = new HashMap<>();
     customHeader.put(HttpHeaders.ACCEPT.toString(), APPLICATION_JSON  + ", " + TEXT_PLAIN);
     httpClient.setDefaultHeaders(customHeader);

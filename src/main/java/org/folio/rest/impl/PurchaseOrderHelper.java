@@ -1,31 +1,5 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.Context;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.utils.ErrorCodes;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
-
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.stream.Collectors;
-
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
@@ -50,9 +24,37 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.stream.Collectors;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.PurchaseOrders;
+
+import io.vertx.core.Context;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+
 public class PurchaseOrderHelper extends AbstractHelper {
 
-  public static final String GET_PURCHASE_ORDERS_BY_QUERY = resourcesPath(PURCHASE_ORDER) + "?limit=%s&offset=%s%s&lang=%s";
+  private static final String GET_PURCHASE_ORDERS_BY_QUERY = resourcesPath(PURCHASE_ORDER) + "?limit=%s&offset=%s%s&lang=%s";
 
   private final PoNumberHelper poNumberHelper;
   private final PurchaseOrderLineHelper orderLineHelper;
@@ -64,6 +66,14 @@ public class PurchaseOrderHelper extends AbstractHelper {
     orderLineHelper = new PurchaseOrderLineHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
+  /**
+   * Retrieve a list of {@link PurchaseOrder} objects retrieved from storage by provided query.
+   *
+   * @param limit limit the number of elements returned in the response
+   * @param offset skip over a number of elements by specifying an offset value for the query
+   * @param query A query expressed as a CQL string using valid searchable fields.
+   * @return completable future with {@link PurchaseOrders} object on success or an exception if processing fails
+   */
   public CompletableFuture<PurchaseOrders> getPurchaseOrders(int limit, int offset, String query) {
     CompletableFuture<PurchaseOrders> future = new VertxCompletableFuture<>(ctx);
 
@@ -86,12 +96,22 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return future;
   }
 
+  /**
+   * Create a purchase order (PO) and a number of PO lines if provided.
+   * @param compPO {@link CompositePurchaseOrder} object representing Purchase Order and optionally Purchase Order Line details.
+   * @return completable future with {@link CompositePurchaseOrder} object with populated uuid on success or an exception if processing fails
+   */
   public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO) {
     return setPoNumberIfMissing(compPO)
       .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber()))
       .thenCompose(v -> createPOandPOLines(compPO));
   }
 
+  /**
+   * Create fund transactions corresponding to the order
+   * @param compPO {@link CompositePurchaseOrder} object representing Purchase Order and optionally Purchase Order Line details.
+   * @return completable future with {@link CompositePurchaseOrder}
+   */
   public CompletableFuture<CompositePurchaseOrder> applyFunds(CompositePurchaseOrder compPO) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
     future.complete(compPO);
@@ -121,6 +141,11 @@ public class PurchaseOrderHelper extends AbstractHelper {
       );
   }
 
+  /**
+   * Delete a purchase order with given uuid. As a first step the logic deletes all associated PO Lines and then order.
+   * @param id purchase order id
+   * @return completable future which is just completed with nothing on success or an exception if processing fails
+   */
   public CompletableFuture<Void> deleteOrder(String id) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
@@ -151,7 +176,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * Gets purchase order by id
    *
    * @param id purchase order uuid
-   * @return completable future with {@link CompositePurchaseOrder}
+   * @return completable future with {@link CompositePurchaseOrder} on success or an exception if processing fails
    */
   public CompletableFuture<CompositePurchaseOrder> getCompositeOrder(String id) {
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
@@ -199,6 +224,11 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenCompose(v -> updateCompositePoLines(compPO));
   }
 
+  /**
+   * Validates purchase order content. If content is okay, checks if allowed PO Lines limit is not exceeded and validates vendors.
+   * @param compPO Purchase Order to validate
+   * @return completable future which might be completed with {@code true} if order is valid, {@code false} if not valid or an exception if processing fails
+   */
   public CompletableFuture<Boolean> validateOrder(CompositePurchaseOrder compPO) {
     addProcessingErrors(HelperUtils.validateOrder(compPO));
 
@@ -211,6 +241,14 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenCompose(isStillValid -> isStillValid ? validateVendor(compPO) : completedFuture(false));
   }
 
+  /**
+   * Validates purchase order which already exists in the storage.
+   * Checks PO Number presence, validates that provided order id corresponds to one set in order and its lines.
+   * If all is okay, {@link #validateOrder(CompositePurchaseOrder)} is called afterwards.
+   * @param orderId Purchase Order id
+   * @param compPO Purchase Order to validate
+   * @return completable future which might be completed with {@code true} if order is valid, {@code false} if not valid or an exception if processing fails
+   */
   public CompletableFuture<Boolean> validateExistingOrder(String orderId, CompositePurchaseOrder compPO) {
     // The PO Number is required for existing orders
     if (StringUtils.isEmpty(compPO.getPoNumber())) {
@@ -355,7 +393,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
       }
     });
   }
-
 
   private CompletionStage<Void> validatePoNumber(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
     if (isPoNumberChanged(poFromStorage, updatedPo)) {
