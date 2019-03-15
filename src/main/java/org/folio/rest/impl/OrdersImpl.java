@@ -397,6 +397,7 @@ public class OrdersImpl implements Orders {
   }
 
   @Override
+  @Validate
   public void postOrdersPieces(String lang, Piece entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
