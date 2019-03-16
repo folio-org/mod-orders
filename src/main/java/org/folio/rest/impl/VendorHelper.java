@@ -2,8 +2,6 @@ package org.folio.rest.impl;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -22,7 +20,6 @@ import java.util.concurrent.CompletableFuture;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
-import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
@@ -32,25 +29,19 @@ import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 
 
-public class VendorHelper {
-
-  private static final Logger logger = LoggerFactory.getLogger(VendorHelper.class);
-
-  private final HttpClientInterface httpClient;
-  private final Map<String, String> okapiHeaders;
-  private final Context ctx;
-  private final String lang;
+public class VendorHelper extends AbstractHelper {
 
   private static final String ID = "id";
   private static final String VENDORS = "vendors";
   private static final String VENDOR_STORAGE_VENDORS = "/vendor-storage/vendors/";
   private static final String VENDORS_WITH_QUERY_ENDPOINT = "/vendor-storage/vendors?limit=%d&lang=%s&query=%s";
 
-  public VendorHelper(String lang, HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx) {
-    this.lang = lang;
-    this.httpClient = httpClient;
-    this.okapiHeaders = okapiHeaders;
-    this.ctx = ctx;
+  public VendorHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+    super(httpClient, okapiHeaders, ctx, lang);
+  }
+
+  public VendorHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
+    super(okapiHeaders, ctx, lang);
   }
 
   /**
@@ -63,29 +54,28 @@ public class VendorHelper {
   public CompletableFuture<Errors> validateVendor(CompositePurchaseOrder compPO) {
     String id = compPO.getVendor();
     CompletableFuture<Errors> future = new VertxCompletableFuture<>(ctx);
-    List<Error> errors = new ArrayList<>();
     if(id != null) {
       getVendorById(id)
         .thenApply(vendor -> {
           VendorStatus status = VendorStatus.valueOf(vendor.getVendorStatus().toUpperCase());
           if(status != VendorStatus.ACTIVE) {
-            errors.add(createErrorWithId(ORDER_VENDOR_IS_INACTIVE, id));
+            addProcessingError(createErrorWithId(ORDER_VENDOR_IS_INACTIVE, id));
           }
-          return buildErrorsObject(errors);
+          return getProcessingErrors();
         })
         .thenAccept(future::complete)
         .exceptionally(t -> {
           if(HttpStatus.HTTP_NOT_FOUND.toInt() == (((HttpException) t.getCause()).getCode())) {
-            errors.add(createErrorWithId(ORDER_VENDOR_NOT_FOUND, id));
+            addProcessingError(createErrorWithId(ORDER_VENDOR_NOT_FOUND, id));
+            future.complete(getProcessingErrors());
           } else {
             logger.error("Failed to validate vendor's status", t);
-            errors.add(GENERIC_ERROR_CODE.toError());
+            future.completeExceptionally(t);
           }
-          future.complete(buildErrorsObject(errors));
           return null;
         });
     } else {
-      future.complete(buildErrorsObject(errors));
+      future.complete(getProcessingErrors());
     }
     return future;
   }
@@ -98,13 +88,12 @@ public class VendorHelper {
   public CompletableFuture<Errors> validateAccessProviders(CompositePurchaseOrder compPO) {
     CompletableFuture<Errors> future = new VertxCompletableFuture<>(ctx);
     Set<String> ids = verifyAndGetAccessProvidersIdsList(compPO);
-    List<Error> errors = new ArrayList<>();
     if (!ids.isEmpty()) {
       getAccessProvidersByIds(ids).thenApply(vendors -> {
         // Validate access provider status Active
         vendors.forEach(vendor -> {
           if(VendorStatus.valueOf(vendor.getVendorStatus().toUpperCase()) != VendorStatus.ACTIVE) {
-            errors.add(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, vendor.getId()));
+            addProcessingError(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, vendor.getId()));
           }
         });
         // Validate access provider existence
@@ -113,8 +102,8 @@ public class VendorHelper {
           .collect(toList());
         ids.stream()
           .filter(id -> !vendorsIds.contains(id))
-          .forEach(id -> errors.add(POL_ACCESS_PROVIDER_NOT_FOUND.toError().withAdditionalProperty(ID, id)));
-        return buildErrorsObject(errors);
+          .forEach(id -> addProcessingError(POL_ACCESS_PROVIDER_NOT_FOUND.toError().withAdditionalProperty(ID, id)));
+        return getProcessingErrors();
       }).thenAccept(future::complete)
         .exceptionally(t -> {
           logger.error("Failed to validate access provider's status", t);
@@ -122,21 +111,9 @@ public class VendorHelper {
           return null;
         });
     } else {
-      future.complete(buildErrorsObject(errors));
+      future.complete(getProcessingErrors());
     }
     return future;
-  }
-
-  /**
-   * Builds {@link Errors} object based on list of {@link Error}
-   *
-   * @param errors list of {@link Error}
-   * @return {@link Errors} object with list of {@link Error}
-   */
-  private Errors buildErrorsObject(List<Error> errors) {
-    return new Errors()
-      .withErrors(errors)
-      .withTotalRecords(errors.size());
   }
 
   /**

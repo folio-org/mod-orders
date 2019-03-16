@@ -238,7 +238,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     }
 
     return validatePoLineLimit(compPO)
-      .thenCompose(isStillValid -> isStillValid ? validateVendor(compPO) : completedFuture(false));
+      .thenCompose(isStillValid -> isStillValid ? validateVendorsAndAccessProviders(compPO) : completedFuture(false));
   }
 
   /**
@@ -290,14 +290,13 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return completedFuture(null);
   }
 
-  private CompletableFuture<Boolean> validateVendor(CompositePurchaseOrder compPO) {
+  private CompletableFuture<Boolean> validateVendorsAndAccessProviders(CompositePurchaseOrder compPO) {
     if (compPO.getWorkflowStatus() == WorkflowStatus.OPEN) {
-      VendorHelper vendorHelper = new VendorHelper(lang, httpClient, okapiHeaders, ctx);
+      VendorHelper vendorHelper = new VendorHelper(httpClient, okapiHeaders, ctx, lang);
       return vendorHelper
         .validateVendor(compPO)
-        .thenCombine(vendorHelper.validateAccessProviders(compPO), (vendorErrors, accessProvidersErrors) -> {
-          addProcessingErrors(vendorErrors.getErrors());
-          addProcessingErrors(accessProvidersErrors.getErrors());
+        .thenCombine(vendorHelper.validateAccessProviders(compPO), (rVoid, errors) -> {
+          addProcessingErrors(errors.getErrors());
           return getErrors().isEmpty();
         });
     }

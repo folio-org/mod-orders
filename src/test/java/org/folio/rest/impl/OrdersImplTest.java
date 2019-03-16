@@ -2764,8 +2764,10 @@ public class OrdersImplTest {
     assertThat(activeVendorActiveAccessProviderErrors.getErrors(), empty());
 
     // Internal mod-vendor error
-    Errors internalServerError = verifyPostResponseErrors(1, MOD_VENDOR_INTERNAL_ERROR_ID, ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B);
-    assertEquals(GENERIC_ERROR_CODE.getCode(), internalServerError.getErrors().get(0).getCode());
+    Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, getPoWithVendorId(MOD_VENDOR_INTERNAL_ERROR_ID, ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B),
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 500).as(Errors.class);
+    assertEquals(errors.getTotalRecords(), new Integer(1));
+    assertThat(errors.getErrors(), hasSize(1));
 
     // Non-existed vendor
     Errors nonExistedVendorError = verifyPostResponseErrors(1, NON_EXIST_VENDOR_ID, ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B);
