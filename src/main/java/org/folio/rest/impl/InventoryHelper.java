@@ -1,12 +1,8 @@
 package org.folio.rest.impl;
 
 import io.vertx.core.Context;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.collections4.ListUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.apache.commons.lang3.StringUtils;
@@ -17,7 +13,6 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.ReceivedItem;
-import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import java.util.ArrayList;
@@ -45,10 +40,8 @@ import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
-import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
-import static org.folio.rest.impl.AbstractHelper.ID;
 
-public class InventoryHelper {
+public class InventoryHelper extends AbstractHelper {
 
   static final String INSTANCE_SOURCE = "source";
   static final String INSTANCE_TITLE = "title";
@@ -81,7 +74,6 @@ public class InventoryHelper {
   private static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
   private static final String DEFAULT_STATUS_CODE = "temp";
   private static final String DEFAULT_LOAN_TYPE_NAME = "Can circulate";
-  private static final String LOCATION_HEADER = "Location";
   private static final String LOOKUP_IDENTIFIER_TYPES_ENDPOINT = "/identifier-types?query=%s&limit=%d&lang=%s";
   private static final String LOOKUP_INSTANCES_ENDPOINT = "/inventory/instances?query=%s&lang=%s";
   private static final String CREATE_INSTANCE_ENDPOINT = "/inventory/instances?lang=%s";
@@ -94,18 +86,8 @@ public class InventoryHelper {
   private static final String HOLDINGS_LOOKUP_ENDPOINT = "/holdings-storage/holdings?query=%s&limit=1&lang=%s";
   private static final String HOLDINGS_CREATE_ENDPOINT = "/holdings-storage/holdings?lang=%s";
 
-  private static final Logger logger = LoggerFactory.getLogger(InventoryHelper.class);
-
-  private final HttpClientInterface httpClient;
-  private final Map<String, String> okapiHeaders;
-  private final Context ctx;
-  private final String lang;
-
   InventoryHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
-    this.httpClient = httpClient;
-    this.okapiHeaders = okapiHeaders;
-    this.ctx = ctx;
-    this.lang = lang;
+    super(httpClient, okapiHeaders, ctx, lang);
   }
 
   public CompletableFuture<CompositePoLine> handleInstanceRecord(CompositePoLine compPOL) {
@@ -479,53 +461,6 @@ public class InventoryHelper {
     return createRecordInStorage(itemData, String.format(CREATE_ITEM_STOR_ENDPOINT, lang))
       // In case item creation failed, return null instead of id
       .exceptionally(throwable -> null);
-  }
-
-  /**
-   * A common method to create a new entry in the inventory storage
-   * based on the Json Object and returns the created id.
-   *
-   * @param recordData json to post
-   * @return id of newly created entity Record
-   */
-  private CompletableFuture<String> createRecordInStorage(JsonObject recordData, String endpoint) {
-    CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
-    try {
-      if (logger.isDebugEnabled()) {
-        logger.debug("Sending 'POST {}' with body: {}", endpoint, recordData.encodePrettily());
-      }
-      httpClient
-        .request(HttpMethod.POST, recordData.toBuffer(), endpoint, okapiHeaders)
-        .thenApply(this::verifyAndExtractRecordId)
-        .thenAccept(id -> {
-          future.complete(id);
-          logger.debug("'POST {}' request successfully processed. Record with '{}' id has been created", endpoint, id);
-        })
-        .exceptionally(throwable -> {
-          future.completeExceptionally(throwable);
-          logger.error("'POST {}' request failed. Request body: {}", throwable, endpoint, recordData.encodePrettily());
-          return null;
-        });
-    } catch (Exception e) {
-      future.completeExceptionally(e);
-    }
-
-    return future;
-  }
-
-  private String verifyAndExtractRecordId(Response response) {
-    logger.debug("Validating received response");
-
-    JsonObject body = verifyAndExtractBody(response);
-
-    String id;
-    if (body != null && !body.isEmpty() && body.containsKey(ID)) {
-      id = body.getString(ID);
-    } else {
-      String location = response.getHeaders().get(LOCATION_HEADER);
-      id = location.substring(location.lastIndexOf('/') + 1);
-    }
-    return id;
   }
 
   /**

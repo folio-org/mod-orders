@@ -1,22 +1,15 @@
 package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
-import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
-import static org.folio.orders.utils.HelperUtils.GET_ALL_POLINES_QUERY_WITH_LIMIT;
-import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
-import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.HelperUtils.loadConfiguration;
-import static org.folio.orders.utils.HelperUtils.validateOrder;
 import static org.folio.orders.utils.HelperUtils.validatePoLine;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
-import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import javax.ws.rs.core.Response;
 
@@ -31,11 +24,9 @@ import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.resource.Orders;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -52,73 +43,49 @@ public class OrdersImpl implements Orders {
   @Validate
   public void deleteOrdersCompositeOrdersById(String id, String lang, Map<String, String> okapiHeaders,
                                               Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    DeleteOrdersByIdHelper helper = new DeleteOrdersByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang);
-    helper.deleteOrder(id)
-    .thenRun(()->{
-      logger.info("Successfully deleted order: ");
-      javax.ws.rs.core.Response response = DeleteOrdersCompositeOrdersByIdResponse.respond204();
-      AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
-      asyncResultHandler.handle(result);
-    })
-    .exceptionally(helper::handleError);
+
+    PurchaseOrderHelper helper = new PurchaseOrderHelper(okapiHeaders, vertxContext, lang);
+    helper
+      .deleteOrder(id)
+      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
   @Validate
-  public void getOrdersOrderLines(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    GetPOLinesHelper helper = new GetPOLinesHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
-    helper.getPOLines(limit, offset, query)
-      .thenAccept(lines -> {
-        logger.info("Successfully retrieved orders: " + JsonObject.mapFrom(lines).encodePrettily());
-        httpClient.closeClient();
-        javax.ws.rs.core.Response response = GetOrdersOrderLinesResponse.respond200WithApplicationJson(lines);
-        AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
-        asyncResultHandler.handle(result);
-      })
-      .exceptionally(helper::handleError);
+  public void getOrdersOrderLines(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders,
+                                  Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
+    helper
+      .getPoLines(limit, offset, query)
+      .thenAccept(lines -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(lines))))
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
   @Validate
   public void getOrdersCompositeOrdersById(String id, String lang, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, Context vertxContext) {
-    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    GetOrdersByIdHelper helper = new GetOrdersByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
+                                           Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    helper.getOrder(id)
-      .thenAccept(order -> {
-        logger.info("Successfully retrieved order: " + JsonObject.mapFrom(order).encodePrettily());
-        httpClient.closeClient();
-        javax.ws.rs.core.Response response = GetOrdersCompositeOrdersByIdResponse.respond200WithApplicationJson(order);
-        AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
-        asyncResultHandler.handle(result);
-      })
-      .exceptionally(helper::handleError);
+    PurchaseOrderHelper helper = new PurchaseOrderHelper(okapiHeaders, vertxContext, lang);
+    helper
+      .getCompositeOrder(id)
+      .thenAccept(order -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(order))))
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
   @Validate
-  public void postOrdersCompositeOrders(String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void postOrdersCompositeOrders(String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
+                                        Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+
+    PurchaseOrderHelper helper = new PurchaseOrderHelper(okapiHeaders, vertxContext, lang);
 
     // First validate content of the PO and proceed only if all is okay
-    List<Error> errors = validateOrder(compPO);
-    if (!errors.isEmpty()) {
-      PostOrdersCompositeOrdersResponse response = PostOrdersCompositeOrdersResponse.respond422WithApplicationJson(new Errors().withErrors(errors));
-      asyncResultHandler.handle(succeededFuture(response));
-      return;
-    }
-
-    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    PostOrdersHelper helper = new PostOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
-
-    validate(lang, okapiHeaders, vertxContext, httpClient, compPO).thenAccept(errs -> {
-      if (errs.getTotalRecords() != 0) {
-        PostOrdersCompositeOrdersResponse response = PostOrdersCompositeOrdersResponse.respond422WithApplicationJson(errs);
-        asyncResultHandler.handle(succeededFuture(response));
-      } else {
-        loadConfiguration(okapiHeaders, vertxContext, logger).thenAccept(config -> {
-          validatePoLinesQuantity(compPO, config);
+    helper
+      .validateOrder(compPO)
+      .thenAccept(isValid -> {
+        if (isValid) {
           logger.info("Creating PO and POLines...");
           helper.createPurchaseOrder(compPO)
             .thenAccept(withIds -> {
@@ -126,19 +93,28 @@ public class OrdersImpl implements Orders {
               helper.applyFunds(withIds)
                 .thenAccept(withFunds -> {
                   logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withFunds).encodePrettily());
-                  httpClient.closeClient();
-                  javax.ws.rs.core.Response response = PostOrdersCompositeOrdersResponse.respond201WithApplicationJson(withFunds,
-                    PostOrdersCompositeOrdersResponse.headersFor201().withLocation(String.format(ORDERS_LOCATION_PREFIX, withFunds.getId())));
-                  AsyncResult<javax.ws.rs.core.Response> result = Future.succeededFuture(response);
-                  asyncResultHandler.handle(result);
+                  helper.closeHttpClient();
+                  Response response = PostOrdersCompositeOrdersResponse.respond201WithApplicationJson(withFunds,
+                    PostOrdersCompositeOrdersResponse.headersFor201()
+                                                     .withLocation(String.format(ORDERS_LOCATION_PREFIX, withFunds.getId())));
+                  asyncResultHandler.handle(succeededFuture(response));
                 })
-                .exceptionally(helper::handleError);
+                .exceptionally(t -> {
+                  logger.error("Failure happened applying funds to created order");
+                  asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(t)));
+                  return null;
+                });
             })
-            .exceptionally(helper::handleError);
-        })
-          .exceptionally(helper::handleError);
-      }
-    });
+            .exceptionally(t -> {
+              logger.error("Failure to create order");
+              asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(t)));
+              return null;
+            });
+        } else {
+          asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422)));
+        }
+      })
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
@@ -146,43 +122,44 @@ public class OrdersImpl implements Orders {
   public void putOrdersCompositeOrdersById(String orderId, String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
                                            Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    // First validate content of the PO and proceed only if all is okay
-    List<Error> errors = new ArrayList<>(validateOrder(compPO));
-    if (StringUtils.isEmpty(compPO.getPoNumber())) {
-      errors.add(ErrorCodes.PO_NUMBER_REQUIRED.toError());
-    }
-    if (!errors.isEmpty()) {
-      PutOrdersCompositeOrdersByIdResponse response = PutOrdersCompositeOrdersByIdResponse.respond422WithApplicationJson(new Errors().withErrors(errors));
-      asyncResultHandler.handle(succeededFuture(response));
-      return;
-    }
+    // Set order id from path if not specified in body
+    populateOrderId(orderId, compPO);
 
-    PutOrdersByIdHelper putHelper = new PutOrdersByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang);
-    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    validate(lang, okapiHeaders, vertxContext, httpClient, compPO).thenAccept(errs -> {
-      if (compPO.getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.OPEN && !errs.getErrors().isEmpty()) {
-        PutOrdersCompositeOrdersByIdResponse response = PutOrdersCompositeOrdersByIdResponse.respond422WithApplicationJson(errs);
-        asyncResultHandler.handle(succeededFuture(response));
-      } else {
-        if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-          putHelper.updateOrder(orderId, compPO);
+    PurchaseOrderHelper helper = new PurchaseOrderHelper(okapiHeaders, vertxContext, lang);
+    helper
+      .validateExistingOrder(orderId, compPO)
+      .thenAccept(isValid -> {
+        logger.info("Order is valid: {}", isValid);
+        if (isValid) {
+          helper
+            .updateOrder(compPO)
+            .thenAccept(v -> {
+              if (logger.isInfoEnabled()) {
+                logger.info("Successfully Updated Order: " + JsonObject.mapFrom(compPO).encodePrettily());
+              }
+              asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
+            })
+            .exceptionally(t -> {
+              logger.error("Failed to update purchase order with id={}", t, orderId);
+              return handleErrorResponse(asyncResultHandler, helper, t);
+            });
         } else {
-          loadConfiguration(okapiHeaders, vertxContext, logger)
-            .thenAccept(config -> {
-              validatePoLinesQuantity(compPO, config);
-              compPO.getCompositePoLines().forEach(poLine -> {
-                if (StringUtils.isEmpty(poLine.getPurchaseOrderId())) {
-                  poLine.setPurchaseOrderId(orderId);
-                }
-                if (!orderId.equals(poLine.getPurchaseOrderId())) {
-                  throw new HttpException(422, ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE);
-                }
-              });
-              putHelper.updateOrder(orderId, compPO);
-            }).exceptionally(putHelper::handleError);
+          asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422)));
         }
-      }
-    });
+      });
+  }
+
+  private void populateOrderId(String orderId, CompositePurchaseOrder compPO) {
+    if (StringUtils.isEmpty(compPO.getId())) {
+      compPO.setId(orderId);
+    }
+    if (CollectionUtils.isNotEmpty(compPO.getCompositePoLines())) {
+      compPO.getCompositePoLines().forEach(poLine -> {
+        if (StringUtils.isEmpty(poLine.getPurchaseOrderId())) {
+          poLine.setPurchaseOrderId(orderId);
+        }
+      });
+    }
   }
 
   @Override
@@ -202,65 +179,60 @@ public class OrdersImpl implements Orders {
       return;
     }
 
-    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    PostOrderLineHelper helper = new PostOrderLineHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
+    PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
 
     logger.info("Creating POLine to an existing order...");
 
+    String query = "purchaseOrderId==" + poLine.getPurchaseOrderId();
     loadConfiguration(okapiHeaders, vertxContext, logger)
-      .thenAccept(config -> {
-        String endpoint = String.format(GET_ALL_POLINES_QUERY_WITH_LIMIT, 1, poLine.getPurchaseOrderId(), lang);
-        handleGetRequest(endpoint, httpClient, vertxContext, okapiHeaders, logger)
-          .thenAccept(entries -> {
-            int limit = getPoLineLimit(config);
-            if (entries.getInteger("totalRecords") < limit) {
-              getPurchaseOrderById(poLine.getPurchaseOrderId(), lang, httpClient, vertxContext, okapiHeaders, logger)
-                .thenCompose( purchaseOrder -> {
-                  poLine.setPoLineNumber(purchaseOrder.getString(PO_NUMBER));
-                  return helper.createPoLine(poLine)
-                    .thenAccept(pol -> {
-                      logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
-                      httpClient.closeClient();
-                      Response response = PostOrdersOrderLinesResponse.respond201WithApplicationJson
-                        (poLine, PostOrdersOrderLinesResponse.headersFor201().withLocation(String.format(ORDER_LINE_LOCATION_PREFIX, pol.getId())));
-                      asyncResultHandler.handle(succeededFuture(response));
-
-                    });
-                  }
-                )
-                .exceptionally(helper::handleError);
-            } else {
-              throw new HttpException(422, ErrorCodes.POL_LINES_LIMIT_EXCEEDED);
-            }
-          }).exceptionally(helper::handleError);
-      }).exceptionally(helper::handleError);
+      .thenAcceptBoth(helper.getPoLines(0, 0, query), (config, poLines) -> {
+        int limit = getPoLineLimit(config);
+        if (poLines.getTotalRecords() < limit) {
+          helper
+            .createPoLine(poLine)
+            .thenAccept(pol -> {
+              logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
+              Response response = PostOrdersOrderLinesResponse.respond201WithApplicationJson(pol,
+                PostOrdersOrderLinesResponse.headersFor201()
+                                            .withLocation(String.format(ORDER_LINE_LOCATION_PREFIX, pol.getId())));
+              asyncResultHandler.handle(succeededFuture(response));
+            })
+            .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+        } else {
+          throw new HttpException(422, ErrorCodes.POL_LINES_LIMIT_EXCEEDED);
+        }
+      })
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
   @Validate
   public void getOrdersOrderLinesById(String lineId, String lang, Map<String, String> okapiHeaders,
-                                          Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    logger.info("Started Invocation of POLine Request with id = " + lineId);
-    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    GetPOLineByIdHelper helper = new GetPOLineByIdHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
+                                      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    logger.info("Started Invocation of POLine Request with id = {}", lineId);
+    PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
 
-    helper.getPOLineByPOLineId(lineId)
-      .thenAccept(poline -> {
-        logger.info("Received POLine Response: " + JsonObject.mapFrom(poline).encodePrettily());
-        httpClient.closeClient();
-        javax.ws.rs.core.Response response = GetOrdersOrderLinesByIdResponse.respond200WithApplicationJson(poline);
-        AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
-        asyncResultHandler.handle(result);
+    helper
+      .getCompositePoLine(lineId)
+      .thenAccept(poLine -> {
+        if (logger.isInfoEnabled()) {
+          logger.info("Received PO Line Response: {}", JsonObject.mapFrom(poLine).encodePrettily());
+        }
+        asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(poLine)));
       })
-      .exceptionally(helper::handleError);
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
   @Validate
   public void deleteOrdersOrderLinesById(String lineId, String lang, Map<String, String> okapiHeaders,
                                          Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    new DeleteOrderLineByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang)
-      .deleteLine(lineId);
+
+    PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
+    helper
+      .deleteLine(lineId)
+      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
@@ -268,18 +240,9 @@ public class OrdersImpl implements Orders {
   public void getOrdersPoNumber(String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Receiving generated poNumber ...");
 
-    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    PoNumberHelper helper = new PoNumberHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
-
-    helper.generatePoNumber()
-      .thenAccept(poNumber -> {
-        logger.info("Received PoNumber Response: " + poNumber);
-        httpClient.closeClient();
-        javax.ws.rs.core.Response response
-          = GetOrdersPoNumberResponse.respond200WithApplicationJson(new PoNumber().withPoNumber(poNumber));
-        AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
-        asyncResultHandler.handle(result);
-      }).exceptionally(helper::handleError);
+    new PoNumberHelper(okapiHeaders, vertxContext, lang)
+      .getPoNumber()
+      .thenAccept(response -> asyncResultHandler.handle(succeededFuture(response)));
   }
 
   @Override
@@ -296,7 +259,7 @@ public class OrdersImpl implements Orders {
     // First validate content of the PO Line and proceed only if all is okay
     List<Error> errors = new ArrayList<>(validatePoLine(poLine));
     if (!lineId.equals(poLine.getId())) {
-      errors.add(ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_PO_LINE.toError());
+      errors.add(ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
     }
     if (!errors.isEmpty()) {
       PutOrdersOrderLinesByIdResponse response = PutOrdersOrderLinesByIdResponse.respond422WithApplicationJson(new Errors().withErrors(errors));
@@ -304,18 +267,22 @@ public class OrdersImpl implements Orders {
       return;
     }
 
-    new PutOrderLineByIdHelper(okapiHeaders, asyncResultHandler, vertxContext, lang).updateOrderLine(poLine);
+    PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
+    helper.updateOrderLine(poLine)
+      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
   @Validate
   public void postOrdersPoNumberValidate(String lang, PoNumber poNumber, Map<String, String> okapiHeaders,
-     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    PoNumberHelper helper=new PoNumberHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
+                                         Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    PoNumberHelper helper = new PoNumberHelper(okapiHeaders, vertxContext, lang);
     logger.info("Validating a PO Number");
+
     //@Validate asserts the pattern of a PO Number, the below method is used to check for uniqueness
-     helper.checkPONumberUnique(poNumber);
+    helper.checkPONumberUnique(poNumber)
+          .thenAccept(response -> asyncResultHandler.handle(succeededFuture(response)));
   }
 
   @Override
@@ -323,8 +290,11 @@ public class OrdersImpl implements Orders {
   public void postOrdersReceive(String lang, ReceivingCollection entity, Map<String, String> okapiHeaders,
                                 Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Receiving {} items", entity.getTotalRecords());
-    new ReceivingHelper(entity, okapiHeaders, asyncResultHandler, vertxContext, lang)
-      .receiveItems(entity);
+    ReceivingHelper helper = new ReceivingHelper(entity, okapiHeaders, vertxContext, lang);
+    helper
+      .receiveItems(entity)
+      .thenAccept(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
@@ -335,65 +305,42 @@ public class OrdersImpl implements Orders {
     asyncResultHandler.handle(succeededFuture(Response.status(501).build()));
   }
 
-  private static int getPoLineLimit(JsonObject config) {
-    try {
-      return Integer.parseInt(config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));
-    } catch (NumberFormatException e) {
-      throw new NumberFormatException("Invalid limit value in configuration.");
-    }
-  }
-
-  private void validatePoLinesQuantity(CompositePurchaseOrder compPO, JsonObject config) {
-    int limit = getPoLineLimit(config);
-    if (compPO.getCompositePoLines().size() > limit) {
-      throw new HttpException(422, ErrorCodes.POL_LINES_LIMIT_EXCEEDED);
-    }
-  }
-
   @Override
   @Validate
   public void getOrdersCompositeOrders(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    GetOrdersHelper helper = new GetOrdersHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
-    helper.getPurchaseOrders(limit, offset, query)
-      .thenAccept(order -> {
-        logger.info("Successfully retrieved orders: " + JsonObject.mapFrom(order).encodePrettily());
-        httpClient.closeClient();
-        javax.ws.rs.core.Response response = GetOrdersCompositeOrdersResponse.respond200WithApplicationJson(order);
-        AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
-        asyncResultHandler.handle(result);
+    PurchaseOrderHelper helper = new PurchaseOrderHelper(okapiHeaders, vertxContext, lang);
+    helper
+      .getPurchaseOrders(limit, offset, query)
+      .thenAccept(orders -> {
+        if (logger.isInfoEnabled()) {
+          logger.info("Successfully retrieved orders: " + JsonObject.mapFrom(orders).encodePrettily());
+        }
+        asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(orders)));
       })
-      .exceptionally(helper::handleError);
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
-
 
   @Override
   @Validate
-  public void getOrdersReceivingHistory(int offset, int limit, String query, String lang,
-      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOrdersReceivingHistory(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders,
+                                        Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    final HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders);
-    GetReceivingHistoryHelper helper= new GetReceivingHistoryHelper(httpClient, okapiHeaders, asyncResultHandler, vertxContext, lang);
+    ReceivingHelper helper = new ReceivingHelper(okapiHeaders, vertxContext, lang);
 
-    helper.getReceivingHistory(limit, offset, query)
-    .thenAccept(receivingHistory -> {
-      logger.info("Successfully retrieved receiving history: " + JsonObject.mapFrom(receivingHistory).encodePrettily());
-      httpClient.closeClient();
-      javax.ws.rs.core.Response response = GetOrdersReceivingHistoryResponse.respond200WithApplicationJson(receivingHistory);
-      AsyncResult<javax.ws.rs.core.Response> result = succeededFuture(response);
-      asyncResultHandler.handle(result);
-    })
-    .exceptionally(helper::handleError);
-
+    helper
+      .getReceivingHistory(limit, offset, query)
+      .thenAccept(receivingHistory -> {
+        if (logger.isInfoEnabled()) {
+          logger.info("Successfully retrieved receiving history: " + JsonObject.mapFrom(receivingHistory).encodePrettily());
+        }
+        asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(receivingHistory)));
+      })
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
-    private CompletableFuture<Errors> validate(String lang, Map<String, String> okapiHeaders, Context vertxContext, HttpClientInterface httpClient, CompositePurchaseOrder compPO) {
-      VendorHelper vendorHelper = new VendorHelper(lang, httpClient, okapiHeaders, vertxContext);
-      return vendorHelper.validateVendor(compPO).thenCombine(vendorHelper.validateAccessProviders(compPO), (errors, accessProvidersErrors) -> {
-          errors.getErrors().addAll(accessProvidersErrors.getErrors());
-          errors.setTotalRecords(errors.getErrors().size());
-          return errors;
-        });
+  private Void handleErrorResponse(Handler<AsyncResult<Response>> asyncResultHandler, AbstractHelper helper, Throwable t) {
+    asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(t)));
+    return null;
   }
 
   @Override
