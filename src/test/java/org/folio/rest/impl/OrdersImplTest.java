@@ -1984,7 +1984,7 @@ public class OrdersImplTest {
     reqData.put(PURCHASE_ORDER_ID, ID_DOES_NOT_EXIST);
 
     Errors resp = verifyPostResponse(LINES_PATH, reqData.encodePrettily(),
-      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 400).as(Errors.class);
+      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
 
     ctx.assertEquals(1, resp.getErrors().size());
     ctx.assertEquals(ErrorCodes.ORDER_NOT_FOUND.getCode(), resp.getErrors().get(0).getCode());
