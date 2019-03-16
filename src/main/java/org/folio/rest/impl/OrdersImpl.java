@@ -15,6 +15,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
@@ -340,13 +341,13 @@ public class OrdersImpl implements Orders {
 
   @Override
   @Validate
-  public void postOrdersPieces(String lang, org.folio.rest.jaxrs.model.Piece entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void postOrdersPieces(String lang, Piece entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     PiecesHelper helper = new PiecesHelper(okapiHeaders, vertxContext, lang);
     helper
       .createRecordInStorage(entity)
       .thenAccept(piece -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved receiving history: " + JsonObject.mapFrom(piece).encodePrettily());
+          logger.info("Successfully created piece: " + JsonObject.mapFrom(piece).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildCreatedResponse(piece)));
       })
