@@ -297,8 +297,12 @@ public class OrdersImpl implements Orders {
   @Validate
   public void postOrdersCheckIn(String lang, CheckinCollection entity, Map<String, String> okapiHeaders,
                                 Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    // Return 501 (Not Implemented) for now
-    asyncResultHandler.handle(succeededFuture(Response.status(501).build()));
+    logger.info("Checkin {} items", entity.getTotalRecords());
+    CheckinHelper helper = new CheckinHelper(entity, okapiHeaders, vertxContext, lang);
+    helper
+      .checkinItems(entity)
+      .thenAccept(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
