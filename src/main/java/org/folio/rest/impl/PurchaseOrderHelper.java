@@ -191,6 +191,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           .thenAccept(poLines -> {
             compPO.setCompositePoLines(poLines);
             compPO.setAdjustment(HelperUtils.calculateAdjustment(poLines));
+            compPO.setTotalItems(calculateTotalItemsQuantity(poLines));
             future.complete(compPO);
           })
           .exceptionally(t -> {
@@ -206,6 +207,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
       });
 
     return future;
+  }
+
+  private int calculateTotalItemsQuantity(List<CompositePoLine> poLines) {
+    return poLines.stream().mapToInt(HelperUtils::calculateTotalQuantity).sum();
   }
 
   /**
