@@ -15,6 +15,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
@@ -336,6 +337,21 @@ public class OrdersImpl implements Orders {
   private Void handleErrorResponse(Handler<AsyncResult<Response>> asyncResultHandler, AbstractHelper helper, Throwable t) {
     asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(t)));
     return null;
+  }
+
+  @Override
+  @Validate
+  public void postOrdersPieces(String lang, Piece entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    PiecesHelper helper = new PiecesHelper(okapiHeaders, vertxContext, lang);
+    helper
+      .createRecordInStorage(entity)
+      .thenAccept(piece -> {
+        if (logger.isInfoEnabled()) {
+          logger.info("Successfully created piece: " + JsonObject.mapFrom(piece).encodePrettily());
+        }
+        asyncResultHandler.handle(succeededFuture(helper.buildCreatedResponse(piece)));
+      })
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 }
 
