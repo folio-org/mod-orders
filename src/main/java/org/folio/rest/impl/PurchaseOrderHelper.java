@@ -37,20 +37,15 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
 
 import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import org.folio.rest.jaxrs.model.Error;
 
 public class PurchaseOrderHelper extends AbstractHelper {
 
@@ -218,10 +213,23 @@ public class PurchaseOrderHelper extends AbstractHelper {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
     return fetchCompositePoLines(compPO)
+      .thenAccept(v -> setTenantDefaultCreateInventoryValues(compPO))
       .thenCompose(v -> updateInventory(compPO))
       .thenCompose(v -> updateOrderSummary(compPO))
       .thenAccept(v -> changePoLineReceiptStatuses(compPO))
       .thenCompose(v -> updateCompositePoLines(compPO));
+  }
+
+  private void setTenantDefaultCreateInventoryValues(CompositePurchaseOrder compPO) {
+    // TODO : MODORDERS-179 - load default values from mod-configuration
+    compPO.getCompositePoLines().forEach(poLine -> {
+      if ((poLine.getPhysical() != null) && (poLine.getPhysical().getCreateInventory() == null)) {
+        poLine.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
+      }
+      if ((poLine.getEresource() != null) && (poLine.getEresource().getCreateInventory() == null)) {
+        poLine.getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
+      }
+    });
   }
 
   /**

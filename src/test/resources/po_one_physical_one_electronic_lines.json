@@ -94,7 +94,7 @@
       },
       "eresource": {
         "accessProvider": "8be1cd0a-acab-488d-b650-65ceb96aa148",
-        "createInventory": false
+        "createInventory": "Instance"
       },
       "locations": [
         {

@@ -55,7 +55,7 @@
   "eresource": {
     "activated": false,
     "activationDue": 0,
-    "createInventory": false,
+    "createInventory": "Instance",
     "trial": false,
     "expectedActivation": null,
     "userLimit": 0,

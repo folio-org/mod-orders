@@ -89,7 +89,7 @@
       "donor": "ABCDEFGHIJKLM",
       "eresource": {
         "accessProvider": "858e80d2-f562-4c54-9934-6e274dee511d",
-        "createInventory": true
+        "createInventory": "Instance, Holding, Item"
       },
       "fundDistribution": [
         {
@@ -238,7 +238,7 @@
       "donor": "",
       "eresource": {
         "accessProvider": "d1b79c8d-4950-482f-8e42-04f9aae3cb40",
-        "createInventory": true
+        "createInventory": "Instance, Holding, Item"
       },
       "fundDistribution": [
         {

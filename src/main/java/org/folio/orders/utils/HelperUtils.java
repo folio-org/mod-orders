@@ -33,14 +33,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.client.ConfigurationsClient;
-import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.Adjustment;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -491,10 +485,12 @@ public class HelperUtils {
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) return 0;
     switch (compPOL.getOrderFormat()) {
       case P_E_MIX:
-        int quantity = getPhysicalQuantity(locations);
-        return isInventoryUpdateRequiredForEresource(compPOL) ? quantity + getElectronicQuantity(locations) : quantity;
+        int quantity = 0;
+        quantity += isInventoryUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
+        quantity += isInventoryUpdateRequiredForEresource(compPOL) ? getElectronicQuantity(locations) : 0;
+        return quantity;
       case PHYSICAL_RESOURCE:
-        return getPhysicalQuantity(locations);
+        return isInventoryUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
       case ELECTRONIC_RESOURCE:
         return isInventoryUpdateRequiredForEresource(compPOL) ? getElectronicQuantity(locations) : 0;
       case OTHER:
@@ -557,8 +553,14 @@ public class HelperUtils {
 
   private static boolean isInventoryUpdateRequiredForEresource(CompositePoLine compPOL) {
     return Optional.ofNullable(compPOL.getEresource())
-                   .map(Eresource::getCreateInventory)
-                   .orElse(false);
+      .map(eresource -> eresource.getCreateInventory() != Eresource.CreateInventory.NONE)
+      .orElse(false);
+  }
+
+  private static boolean isInventoryUpdateRequiredForPhysical(CompositePoLine compPOL) {
+    return Optional.ofNullable(compPOL.getPhysical())
+      .map(physical -> physical.getCreateInventory() != Physical.CreateInventory.NONE)
+      .orElse(false);
   }
 
   /**

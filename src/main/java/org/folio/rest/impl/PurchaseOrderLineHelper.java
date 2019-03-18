@@ -46,13 +46,8 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.SequenceNumber;
-import org.folio.rest.jaxrs.model.Alert;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.PoLineCollection;
-import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.Context;
@@ -210,7 +205,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    */
   CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
     // Check if any item should be created
-    if (compPOL.getReceiptStatus() == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED) {
+    if (isInventoryUpdateRequired(compPOL)) {
       return completedFuture(null);
     }
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
@@ -230,6 +225,22 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     return inventoryHelper.handleInstanceRecord(compPOL)
       .thenCompose(inventoryHelper::handleItemRecords)
       .thenCompose(piecesWithItemId -> createPieces(compPOL, piecesWithItemId));
+  }
+
+  private boolean isInventoryUpdateRequired(CompositePoLine compPOL) {
+    // skip inventory update in case of receipt ot required status
+    if (compPOL.getReceiptStatus() == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED) return false;
+
+    // check if none of inventory records need to be updated
+    boolean eresourceUpdateRequired = false;
+    if (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() != Eresource.CreateInventory.NONE) {
+      eresourceUpdateRequired = true;
+    }
+    boolean physicalUpdateRequired = false;
+    if (compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() != Physical.CreateInventory.NONE) {
+      physicalUpdateRequired = true;
+    }
+    return eresourceUpdateRequired || physicalUpdateRequired;
   }
 
   String buildNewPoLineNumber(JsonObject poLineFromStorage, String poNumber) {

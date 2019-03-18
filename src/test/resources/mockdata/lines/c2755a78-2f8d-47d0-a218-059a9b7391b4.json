@@ -48,7 +48,7 @@
   "eresource": {
     "activated": false,
     "activationDue": 10,
-    "createInventory": true,
+    "createInventory": "Instance, Holding, Item",
     "trial": false,
     "expectedActivation": "2018-10-09T00:00:00.000Z",
     "userLimit": 10,

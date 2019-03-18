@@ -49,7 +49,7 @@
     "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
     "activated": false,
     "activationDue": 10,
-    "createInventory": true,
+    "createInventory": "Instance, Holding, Item",
     "expectedActivation": "2018-10-09T00:00:00.000Z",
     "license": {
       "code": "Code 1",

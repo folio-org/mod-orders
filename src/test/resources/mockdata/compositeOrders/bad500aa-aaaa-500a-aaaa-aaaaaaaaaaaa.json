@@ -68,7 +68,7 @@
       "eresource": {
         "activated": true,
         "activationDue": 0,
-        "createInventory": false,
+        "createInventory": "Instance",
         "trial": false,
         "expectedActivation": "2014-07-06T00:00:00.000Z",
         "userLimit": 1,
