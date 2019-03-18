@@ -188,6 +188,14 @@
           "modulePermissions": [
             "orders-storage.receiving-history.collection.get"
           ]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/orders/pieces",
+          "permissionsRequired": ["orders.pieces.item.post"],
+          "modulePermissions": [
+            "orders-storage.pieces.item.post"
+          ]
         }
       ]
     }
@@ -331,6 +339,11 @@
       "description": "Get receiving history matching the provided criteria"
     },
     {
+      "permissionName": "orders.pieces.item.post",
+      "displayName": "Orders - Piece",
+      "description": "Create piece record"
+    },
+    {
       "permissionName": "orders.all",
       "displayName": "orders - all permissions",
       "description": "Entire set of permissions needed to use orders",
@@ -348,7 +361,8 @@
         "orders.po-number.item.post",
         "orders.receiving.collection.post",
         "orders.check-in.collection.post",
-        "orders.receiving-history.collection.get"
+        "orders.receiving-history.collection.get",
+        "orders.pieces.item.post"
       ]
     }
   ],

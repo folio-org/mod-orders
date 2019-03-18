@@ -22,6 +22,7 @@ types:
   receiving-history-collection: !include acq-models/mod-orders-storage/schemas/receiving_history_collection.json
   errors: !include raml-util/schemas/errors.schema
   po-number: !include acq-models/mod-orders/schemas/po_number.json
+  piece: !include acq-models/mod-orders-storage/schemas/piece.json
   UUID:
     type: string
     pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
@@ -37,6 +38,7 @@ resourceTypes:
   collection-item: !include rtypes/item-collection-with-json-response.raml
   collection-get: !include rtypes/collection-get-with-json-response.raml
   post-with-200: !include rtypes/post-json-200.raml
+  post-with-201: !include rtypes/post-json-201.raml
 
 /orders:
   /composite-orders:
@@ -190,3 +192,15 @@ resourceTypes:
       collection-get:
         exampleCollection: !include acq-models/mod-orders-storage/examples/receiving_history_collection.sample
         schemaCollection: receiving-history-collection
+  /pieces:
+    displayName: Pieces
+    description: Create piece record
+    type:
+      post-with-201:
+        requestSchema: piece
+        responseSchema: piece
+        requestExample: !include acq-models/mod-orders-storage/examples/piece_post.sample
+        responseExample: !include acq-models/mod-orders-storage/examples/piece_get.sample
+    is: [validate]
+    post:
+      description: Create piece record
