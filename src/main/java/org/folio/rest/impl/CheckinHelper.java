@@ -39,7 +39,7 @@ public class CheckinHelper extends AbstractHelper {
       int piecesQty = StreamEx.ofValues(checkinPieces)
         .mapToInt(Map::size)
         .sum();
-      logger.debug("{} piece record(s) are going to be checked in for {} PO line(s)", piecesQty, poLinesQty);
+      logger.debug("{} piece record(s) are going to be checked-In for {} PO line(s)", piecesQty, poLinesQty);
     }
   }
 
@@ -49,7 +49,7 @@ public class CheckinHelper extends AbstractHelper {
     return piecesHelper.retrievePieceRecords()
       // 2. Update items in the Inventory if required
       .thenCompose(piecesHelper::updateInventoryItems)
-      // 3. Update piece records with receiving details which do not have
+      // 3. Update piece records with checkIn details which do not have
       // associated item
       .thenApply(piecesHelper::updatePieceRecordsWithoutItems)
       // 4. Update received piece records in the storage
