@@ -9,10 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.Details;
-import org.folio.rest.jaxrs.model.ProductId;
-import org.folio.rest.jaxrs.model.ReceivedItem;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import java.util.ArrayList;
@@ -159,6 +156,18 @@ public class InventoryHelper extends AbstractHelper {
 
     return handlePutRequest(endpoint, itemRecord, httpClient, ctx, okapiHeaders, logger);
   }
+  
+  public CompletableFuture<Void> checkinItem(JsonObject itemRecord, CheckInPiece checkinPiece) {
+    String endpoint = String.format(UPDATE_ITEM_ENDPOINT, itemRecord.getString(ID), lang);
+
+    // Update item record with checkIn details
+    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus()));
+    if (StringUtils.isNotEmpty(checkinPiece.getBarcode())) {
+      itemRecord.put(ITEM_BARCODE, checkinPiece.getBarcode());
+    }
+
+    return handlePutRequest(endpoint, itemRecord, httpClient, ctx, okapiHeaders, logger);
+  }
 
   /**
    * Checks if the {@link ReceivedItem} has item status as "On order"
@@ -167,6 +176,15 @@ public class InventoryHelper extends AbstractHelper {
    */
   public boolean isOnOrderItemStatus(ReceivedItem receivedItem) {
     return ITEM_STATUS_ON_ORDER.equalsIgnoreCase(receivedItem.getItemStatus());
+  }
+  
+  /**
+   * Checks if the {@link ReceivedItem} has item status as "On order"
+   * @param receivedItem item details specified by user upon receiving flow
+   * @return {@code true} if the item status is "On order"
+   */
+  public boolean isOnOrderPieceStatus(CheckInPiece checkinPiece) {
+    return ITEM_STATUS_ON_ORDER.equalsIgnoreCase(checkinPiece.getItemStatus());
   }
 
   private CompletableFuture<String> getOrCreateHoldingsRecord(CompositePoLine compPOL, String locationId) {
