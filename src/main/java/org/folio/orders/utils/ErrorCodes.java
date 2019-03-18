@@ -32,6 +32,8 @@ public enum ErrorCodes {
   ORDER_VENDOR_IS_INACTIVE("vendorIsInactive", "Order cannot be open as the associated vendor is inactive"),
   POL_ACCESS_PROVIDER_IS_INACTIVE("accessProviderIsInactive", "Order cannot be open as the associated access provider is inactive"),
   ORDER_VENDOR_NOT_FOUND("vendorNotFound", "Order cannot be open as the associated vendor not found"),
+  ORDER_OPEN("orderOpen", "Order cannot be modified in Open status"),
+  ORDER_CLOSED("orderClosed", "Order cannot be modified in Closed status"),
   POL_ACCESS_PROVIDER_NOT_FOUND("accessProviderNotFound", "Order cannot be open as the associated access provider not found");
 
   private final String code;

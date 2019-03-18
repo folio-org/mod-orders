@@ -129,12 +129,13 @@ public class HelperUtils {
 
 
   /**
-   *  Retrieves PO lines from storage by PO id as JsonObject with array of poLines (/acq-models/mod-orders-storage/schemas/po_line.json objects)
+   *  Retrieves PO lines from storage by PO id as JsonArray of poLines (/acq-models/mod-orders-storage/schemas/po_line.json objects)
    */
-  public static CompletableFuture<JsonObject> getPoLines(String id, String lang, HttpClientInterface httpClient, Context ctx,
+  public static CompletableFuture<JsonArray> getPoLines(String id, String lang, HttpClientInterface httpClient, Context ctx,
                                                           Map<String, String> okapiHeaders, Logger logger) {
     String endpoint = String.format(GET_ALL_POLINES_QUERY_WITH_LIMIT, MAX_POLINE_LIMIT, id, lang);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(body -> body.getJsonArray(PO_LINES));
   }
 
   /**
@@ -150,11 +151,11 @@ public class HelperUtils {
       Context ctx, Map<String, String> okapiHeaders, Logger logger) {
 
     return getPoLines(orderId, lang, httpClient,ctx, okapiHeaders, logger)
-      .thenCompose(body -> {
+      .thenCompose(jsonArray -> {
         List<CompletableFuture<JsonObject>> futures = new ArrayList<>();
 
-        for (int i = 0; i < body.getJsonArray(PO_LINES).size(); i++) {
-          JsonObject line = body.getJsonArray(PO_LINES).getJsonObject(i);
+        for (int i = 0; i < jsonArray.size(); i++) {
+          JsonObject line = jsonArray.getJsonObject(i);
           futures.add(deletePoLine(line, httpClient, ctx, okapiHeaders, logger));
         }
 
@@ -180,11 +181,11 @@ public class HelperUtils {
     CompletableFuture<List<CompositePoLine>> future = new VertxCompletableFuture<>(ctx);
 
     getPoLines(id,lang, httpClient,ctx, okapiHeaders, logger)
-      .thenAccept(body -> {
+      .thenAccept(jsonArray -> {
         List<CompletableFuture<CompositePoLine>> futures = new ArrayList<>();
 
-        for (int i = 0; i < body.getJsonArray(PO_LINES).size(); i++) {
-          JsonObject line = body.getJsonArray(PO_LINES).getJsonObject(i);
+        for (int i = 0; i < jsonArray.size(); i++) {
+          JsonObject line = jsonArray.getJsonObject(i);
           futures.add(operateOnPoLine(HttpMethod.GET, line, httpClient, ctx, okapiHeaders, logger));
         }
 

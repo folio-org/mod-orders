@@ -8,6 +8,8 @@ import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
+import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
+import static org.folio.orders.utils.ErrorCodes.ORDER_OPEN;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.PHYSICAL_LOC_QTY_EXCEEDS_COST;
@@ -81,7 +83,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.google.common.collect.ImmutableSet;
 import io.restassured.http.Headers;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
@@ -192,12 +193,13 @@ public class OrdersImplTest {
 
   private static final String INVALID_LANG = "?lang=english";
 
-  private static final String VALID_ORDER_ID = "07f65192-44a4-483d-97aa-b137bbd96390";
-  private static final String PO_ID = "e5ae4afd-3fa9-494e-a972-f541df9b877e";
   private static final String ID_BAD_FORMAT = "123-45-678-90-abc";
   private static final String ID_DOES_NOT_EXIST = "d25498e7-3ae6-45fe-9612-ec99e2700d2f";
   private static final String ID_FOR_INTERNAL_SERVER_ERROR = "168f8a86-d26c-406e-813f-c7527f241ac3";
   private static final String ID_FOR_PRINT_MONOGRAPH_ORDER = "00000000-1111-2222-8888-999999999999";
+  private static final String PO_ID = "e5ae4afd-3fa9-494e-a972-f541df9b877e";
+  private static final String PO_ID_OPEN_STATUS = "c1465131-ed35-4308-872c-d7cdf0afc5f7";
+  private static final String PO_ID_CLOSED_STATUS = "07f65192-44a4-483d-97aa-b137bbd96390";
   private static final String PO_ID_FOR_FAILURE_CASE = "bad500aa-aaaa-500a-aaaa-aaaaaaaaaaaa";
   private static final String PO_LINE_ID_FOR_SUCCESS_CASE = "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47";
   private static final String ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE = "c0d08448-347b-418a-8c2f-5fb50248d67e";
@@ -582,8 +584,11 @@ public class OrdersImplTest {
     int itemSize = createdItems != null ? createdItems.size() : 0;
     logger.debug("------------------- piecesSize, itemSize --------------------\n" + piecesSize + " " + itemSize);
     // Verify total number of pieces created should be equal to total quantity
-    assertEquals(calculateTotalQuantity(compositePoLine), createdPieces.size());
-    verifyPiecesCreated(createdItems, reqData.getCompositePoLines(), createdPieces);
+    assertEquals(calculateTotalQuantity(compositePoLine), piecesSize);
+
+    if (createdItems != null) {
+      verifyPiecesCreated(createdItems, reqData.getCompositePoLines(), createdPieces);
+    }
   }
 
   @Test
@@ -839,7 +844,7 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testGetOrderByIdWithOnePoLineWithNullCost() throws Exception {
+  public void testGetOrderByIdWithOnePoLineWithNullCost() {
     logger.info("=== Test Get Order By Id with one PO Line without cost totalItems value is 0 ===");
 
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, ORDER_ID_WITH_MINIMAL_PO_LINE));
@@ -863,7 +868,7 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testGetPOByIdTotalItemsWithoutPOLines() throws Exception {
+  public void testGetPOByIdTotalItemsWithoutPOLines() {
     logger.info("=== Test Get Order By Id without PO Line totalItems value is 0 ===");
 
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, ORDER_ID_WITHOUT_PO_LINES));
@@ -890,7 +895,7 @@ public class OrdersImplTest {
   public void testGetOrderByIdWithOnePoLine() {
     logger.info("=== Test Get Order By Id - With one PO Line and empty source ===");
 
-    String id = VALID_ORDER_ID;
+    String id = PO_ID_CLOSED_STATUS;
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
 
     final CompositePurchaseOrder resp = RestAssured
@@ -1175,7 +1180,7 @@ public class OrdersImplTest {
         .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
         .body(body)
-      .put(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES)
+      .put(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_ID_WITHOUT_PO_LINES))
         .then()
           .statusCode(422)
             .extract()
@@ -1201,7 +1206,7 @@ public class OrdersImplTest {
         .header(X_OKAPI_USER_ID)
         .contentType(APPLICATION_JSON)
         .body(body)
-      .put(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES)
+      .put(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_ID_WITHOUT_PO_LINES))
         .then()
           .statusCode(422)
             .extract()
@@ -1664,7 +1669,7 @@ public class OrdersImplTest {
     JsonObject reqData = getMockDraftOrder();
     String poNumber = reqData.getString(PO_NUMBER);
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES, reqData.toString(), "", 204);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_ID_WITHOUT_PO_LINES), reqData.toString(), "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     List<JsonObject> createdPoLines = MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST);
@@ -1688,11 +1693,45 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPutOrderByIdWith404InvalidId() throws IOException {
+  public void testPutOrderByIdWith404InvalidId() {
     logger.info("=== Test Put Order By Id for 404 with Invalid Id or Order not found ===");
 
-    JsonObject reqData = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + "93f612a9-9a05-4eef-aac5-435be131454b", reqData.toString(), APPLICATION_JSON, 404);
+    JsonObject reqData = getMockAsJson(LISTED_PRINT_SERIAL_PATH);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, "93f612a9-9a05-4eef-aac5-435be131454b"), reqData.toString(), APPLICATION_JSON, 404);
+  }
+
+  @Test
+  public void testPutOrderInOpenStatusAddingNewLine() {
+    logger.info("=== Test update Open order - add new line ===");
+
+    validateUpdateRejectedForNonPendingOrder(PO_ID_OPEN_STATUS, ORDER_OPEN.getCode());
+  }
+
+  @Test
+  public void testPutOrderInClosedStatusAddingNewLine() {
+    logger.info("=== Test update Closed order - add new line ===");
+
+    validateUpdateRejectedForNonPendingOrder(PO_ID_CLOSED_STATUS, ORDER_CLOSED.getCode());
+  }
+
+  private void validateUpdateRejectedForNonPendingOrder(String orderId, String errorCode) {
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, orderId).mapTo(CompositePurchaseOrder.class);
+
+    // Delete PO Line id emulating case when new PO Line is being added
+    reqData.getCompositePoLines().forEach(line -> line.setId(null));
+
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(), APPLICATION_JSON, 422).as(Errors.class);
+    validatePoLineCreationErrorForNonPendingOrder(errorCode, errors);
+  }
+
+  private void validatePoLineCreationErrorForNonPendingOrder(String errorCode, Errors errors) {
+    assertEquals(1, errors.getErrors().size());
+    assertEquals(errorCode, errors.getErrors().get(0).getCode());
+    // Assert that only PO Lines limit (count of existing Lines) and GET PO requests made
+    assertEquals(2, MockServer.serverRqRs.size());
+    assertEquals(2, MockServer.serverRqRs.rowKeySet().size());
+    assertEquals(1, MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET).size());
+    assertEquals(1, MockServer.serverRqRs.get(PO_LINES, HttpMethod.GET).size());
   }
 
   @Test
@@ -1755,7 +1794,7 @@ public class OrdersImplTest {
        .header(X_OKAPI_URL)
        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
        .contentType(APPLICATION_JSON)
-      .delete(COMPOSITE_ORDERS_PATH + "/" + VALID_ORDER_ID + INVALID_LANG)
+      .delete(String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID_CLOSED_STATUS) + INVALID_LANG)
        .then()
          .statusCode(400)
          .body(containsString(INCORRECT_LANG_PARAMETER));
@@ -2232,6 +2271,31 @@ public class OrdersImplTest {
 
     column = MockServer.serverRqRs.column(HttpMethod.DELETE);
     assertTrue(column.isEmpty());
+  }
+
+  @Test
+  public void testAddOrderLineToOrderInOpenStatus() {
+    logger.info("=== Test add new line to Open order ===");
+
+    validateNoLineCreatedForNonPendingOrder(PO_ID_OPEN_STATUS, ORDER_OPEN.getCode());
+  }
+
+  @Test
+  public void testAddOrderLineToOrderInClosedStatus() {
+    logger.info("=== Test add new line to Closed order ===");
+
+    validateNoLineCreatedForNonPendingOrder(PO_ID_CLOSED_STATUS, ORDER_CLOSED.getCode());
+  }
+
+  private void validateNoLineCreatedForNonPendingOrder(String orderId, String errorCode) {
+    CompositePurchaseOrder order = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, orderId).mapTo(CompositePurchaseOrder.class);
+
+    CompositePoLine poLine = order.getCompositePoLines().get(0);
+    poLine.setId(null);
+
+    Errors errors = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(poLine).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
+    validatePoLineCreationErrorForNonPendingOrder(errorCode, errors);
   }
 
   @Test
@@ -2786,7 +2850,7 @@ public class OrdersImplTest {
 
     assertThat(results.getTotalRecords(), equalTo(receivingRq.getTotalRecords()));
 
-    Map<String, Set<String>> pieceIdsByPol = verifyReceivingSuccessRs(results);
+    verifyReceivingSuccessRs(results);
 
     List<JsonObject> pieceSearches = MockServer.serverRqRs.get(PIECES, HttpMethod.GET);
     List<JsonObject> pieceUpdates = MockServer.serverRqRs.get(PIECES, HttpMethod.PUT);
@@ -2949,10 +3013,6 @@ public class OrdersImplTest {
     assertEquals(id, errors.getErrors().get(index).getAdditionalProperties().get(ID));
     assertEquals(expectedErrorCodes.getCode(), errors.getErrors().get(index).getCode());
     assertEquals(expectedErrorCodes.getDescription(), errors.getErrors().get(index).getMessage());
-  }
-
-  private org.folio.rest.acq.model.PoLine getMockLine(String id) {
-    return getMockAsJson(PO_LINES_MOCK_DATA_PATH, id).mapTo(org.folio.rest.acq.model.PoLine.class);
   }
 
   private JsonObject getMockAsJson(String path, String id) {
@@ -3273,7 +3333,7 @@ public class OrdersImplTest {
     private void handleGetVendorById(RoutingContext ctx) {
       logger.info("handleGetVendorById got: " + ctx.request().path());
       String vendorId = ctx.request().getParam(ID);
-      JsonObject body = null;
+      JsonObject body;
       try {
         if (NON_EXIST_VENDOR_ID.equals(vendorId)) {
           serverResponse(ctx, HttpStatus.HTTP_NOT_FOUND.toInt(), APPLICATION_JSON, "vendor not found");
@@ -3292,6 +3352,7 @@ public class OrdersImplTest {
               break;
             default :
               serverResponse(ctx, HttpStatus.HTTP_NOT_FOUND.toInt(), APPLICATION_JSON, "vendor not found");
+              return;
           }
           serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
         }
@@ -3479,14 +3540,14 @@ public class OrdersImplTest {
           PoLineCollection poLineCollection = new PoLineCollection();
 
           // Attempt to find POLine in mock server memory
-          List<JsonObject> postedPolines = serverRqRs.column(HttpMethod.POST).get(PO_LINES);
+          List<JsonObject> postedPoLines = serverRqRs.column(HttpMethod.POST).get(PO_LINES);
 
-          if (postedPolines != null) {
-            List<PoLine> polines = postedPolines.stream()
+          if (postedPoLines != null) {
+            List<PoLine> poLines = postedPoLines.stream()
               .map(jsonObj -> jsonObj.mapTo(PoLine.class))
               .collect(Collectors.toList());
 
-            for (PoLine poLine : polines) {
+            for (PoLine poLine : poLines) {
               if (poId.equals(poLine.getPurchaseOrderId())) {
                 poLineCollection.getPoLines().add(poLine);
               }
