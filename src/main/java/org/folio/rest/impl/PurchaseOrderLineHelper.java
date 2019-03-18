@@ -5,19 +5,7 @@ import static java.util.concurrent.CompletableFuture.allOf;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.completedFuture;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
-import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
-import static org.folio.orders.utils.HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation;
-import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
-import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.constructPiece;
-import static org.folio.orders.utils.HelperUtils.deletePoLine;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
-import static org.folio.orders.utils.HelperUtils.getPoLineById;
-import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
-import static org.folio.orders.utils.HelperUtils.groupLocationsById;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.operateOnObject;
+import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
@@ -205,16 +193,16 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    */
   CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
     // Check if any item should be created
-    if (isInventoryUpdateRequired(compPOL)) {
+    if (compPOL.getReceiptStatus() == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED) {
       return completedFuture(null);
     }
+    // Set InstanceId only for the checkin flow
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
       return inventoryHelper.handleInstanceRecord(compPOL)
         .thenCompose(cPOL -> completedFuture(null));
     }
-
     int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
-    if (expectedItemsQuantity == 0) {
+    if (expectedItemsQuantity == 0 || !HelperUtils.isInventoryUpdateRequired(compPOL)) {
       // Create pieces if items does not exists
       return createPieces(compPOL, Collections.emptyList())
         .thenRun(() ->
@@ -223,25 +211,14 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     }
 
     return inventoryHelper.handleInstanceRecord(compPOL)
-      .thenCompose(inventoryHelper::handleItemRecords)
-      .thenCompose(piecesWithItemId -> createPieces(compPOL, piecesWithItemId));
-  }
-
-  private boolean isInventoryUpdateRequired(CompositePoLine compPOL) {
-    // skip inventory update in case of receipt ot required status
-    if (compPOL.getReceiptStatus() == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED) return false;
-
-    // check if none of inventory records need to be updated
-    boolean eresourceUpdateRequired = false;
-    if (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() != Eresource.CreateInventory.NONE) {
-      eresourceUpdateRequired = true;
+      .thenCompose(compositePoLine -> {
+        if (isHoldingsUpdateRequired(compPOL)) {
+          return inventoryHelper.handleItemRecords(compositePoLine);
+        }
+        return completedFuture(Collections.emptyList());
+      })
+      .thenCompose(pieces -> createPieces(compPOL, pieces));
     }
-    boolean physicalUpdateRequired = false;
-    if (compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() != Physical.CreateInventory.NONE) {
-      physicalUpdateRequired = true;
-    }
-    return eresourceUpdateRequired || physicalUpdateRequired;
-  }
 
   String buildNewPoLineNumber(JsonObject poLineFromStorage, String poNumber) {
     String oldPoLineNumber = poLineFromStorage.getString(PO_LINE_NUMBER);

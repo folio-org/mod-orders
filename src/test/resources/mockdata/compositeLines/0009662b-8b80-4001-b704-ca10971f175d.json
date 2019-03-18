@@ -84,6 +84,7 @@
   "owner": "Acquisitions - Serials",
   "paymentStatus": "Pending",
   "physical": {
+    "createInventory": "Instance, Holding, Item",
     "materialSupplier": "6828d7cb-d84e-41e5-9db5-fc2e162f9ffb",
     "receiptDue": "2018-07-31T00:00:00.000Z",
     "volumes": []

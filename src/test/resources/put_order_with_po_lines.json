@@ -71,6 +71,7 @@
       "owner": "LTS Acquisitions",
       "paymentStatus": "Awaiting Payment",
       "physical": {
+        "createInventory": "Instance, Holding, Item",
         "receiptDue": "2018-09-29T00:00:00.000Z",
         "volumes": [
           "vol. 1"
@@ -174,6 +175,7 @@
       "owner": "LTS Acquisitions",
       "paymentStatus": "Awaiting Payment",
       "physical": {
+        "createInventory": "Instance, Holding, Item",
         "receiptDue": "2018-09-29T00:00:00.000Z",
         "volumes": [
           "vol. 1"
@@ -283,6 +285,7 @@
       "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
       "paymentStatus": "Awaiting Payment",
       "physical": {
+        "createInventory": "Instance, Holding, Item",
         "volumes": [
           "vol.1"
         ],

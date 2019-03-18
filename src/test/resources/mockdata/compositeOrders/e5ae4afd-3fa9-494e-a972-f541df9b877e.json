@@ -112,6 +112,7 @@
       "owner": "LTS E-Resources & Serials",
       "paymentStatus": "Awaiting Payment",
       "physical": {
+        "createInventory": "Instance, Holding, Item",
         "materialSupplier": "36dd6d62-c55e-4b19-a3a0-a870da57610a",
         "receiptDue": null,
         "volumes": []

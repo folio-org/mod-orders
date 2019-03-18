@@ -9,10 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.Details;
-import org.folio.rest.jaxrs.model.ProductId;
-import org.folio.rest.jaxrs.model.ReceivedItem;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import java.util.ArrayList;
@@ -33,13 +30,7 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
-import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
-import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.constructPieces;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
-import static org.folio.orders.utils.HelperUtils.groupLocationsById;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.HelperUtils.*;
 
 public class InventoryHelper extends AbstractHelper {
 
@@ -105,12 +96,11 @@ public class InventoryHelper extends AbstractHelper {
    */
   public CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL) {
     List<CompletableFuture<List<Piece>>> itemsPerHolding = new ArrayList<>();
-
     // Group all locations by location id because the holding should be unique for different locations
     groupLocationsById(compPOL)
       .forEach((locationId, locations) -> {
         int expectedQuantity = calculateInventoryItemsQuantity(compPOL, locations);
-        // For some cases items might not be created e.g. Electronic resource with create inventory set to false
+        // For some cases items might not be created e.g. Electronic resource with create inventory set to "None"
         if (expectedQuantity > 0) {
           itemsPerHolding.add(
             // Search for or create a new holding and then create items for this holding
@@ -201,6 +191,10 @@ public class InventoryHelper extends AbstractHelper {
    * @return future with list of item id's
    */
   private CompletableFuture<List<String>> handleItemRecords(CompositePoLine compPOL, String holdingId, int expectedQuantity) {
+    // check if update required for items
+    if (!HelperUtils.isItemsUpdateRequired(compPOL)){
+      return completedFuture(new ArrayList<>());
+    }
     // Search for already existing items
     return searchForExistingItems(compPOL, holdingId, expectedQuantity)
       .thenCompose(existingItemIds -> {

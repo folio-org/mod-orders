@@ -119,6 +119,7 @@
       "owner": "Technical Services Department",
       "paymentStatus": "Awaiting Payment",
       "physical": {
+        "createInventory": "Instance, Holding, Item",
         "materialSupplier": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd8",
         "receiptDue": null,
         "volumes": []

@@ -592,7 +592,7 @@ public class OrdersImplTest {
     // Make sure that mock PO has 2 po lines
     assertEquals(2, reqData.getCompositePoLines().size());
 
-    reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE);
+    reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
     List<JsonObject> items = joinExistingAndNewItems();
@@ -1170,9 +1170,9 @@ public class OrdersImplTest {
     assertEquals(2, reqData.getCompositePoLines().size());
 
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    // MODORDERS-178 guarantee electronic resource for the second PO Line but set "create items" to INSTANCE
+    // MODORDERS-178 guarantee electronic resource for the second PO Line but set "create items" to NONE
     reqData.getCompositePoLines().get(1).setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
-    reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE);
+    reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
     reqData.getCompositePoLines().forEach(s -> s.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING));
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
