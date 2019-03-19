@@ -32,9 +32,7 @@ public class ReceivingHelper extends AbstractHelper {
    * Map with PO line id as a key and value is map with piece id as a key and {@link ReceivedItem} as a value
    */
   private final Map<String, Map<String, ReceivedItem>> receivingItems;
-
-
-  private final CheckInRecievePiecesHelper<ReceivedItem> piecesHelper;
+  private final CheckinReceivePiecesHelper<ReceivedItem> piecesHelper;
 
 
   ReceivingHelper(ReceivingCollection receivingCollection, Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -42,7 +40,7 @@ public class ReceivingHelper extends AbstractHelper {
 
     // Convert request to map representation
     receivingItems = groupReceivedItemsByPoLineId(receivingCollection);
-    piecesHelper = new CheckInRecievePiecesHelper<>(httpClient, okapiHeaders, ctx, lang, receivingItems, processingErrors);
+    piecesHelper = new CheckinReceivePiecesHelper<>(httpClient, okapiHeaders, ctx, lang, receivingItems, processingErrors);
 
     // Logging quantity of the piece records to be received
     if (logger.isDebugEnabled()) {
@@ -109,36 +107,21 @@ public class ReceivingHelper extends AbstractHelper {
         .of(piecesGroupedByPoLine.getOrDefault(poLineId, Collections.emptyList()))
         .toMap(Piece::getId, piece -> piece);
 
-      int succeded = 0;
-      int failed = 0;
+      Map<String, Integer> resultCounts = new HashMap<>();
+      
       for (ReceivedItem receivedItem : toBeReceived.getReceivedItems()) {
         String pieceId = receivedItem.getPieceId();
-
-        // Calculate processing status
-        ProcessingStatus status = new ProcessingStatus();
-        if (processedPiecesForPoLine.get(pieceId) != null && getError(poLineId, pieceId) == null) {
-          status.setType(ProcessingStatus.Type.SUCCESS);
-          succeded++;
-        } else {
-          status.setType(ProcessingStatus.Type.FAILURE);
-          status.setError(getError(poLineId, pieceId));
-          failed++;
-        }
-
-        ReceivingItemResult itemResult = new ReceivingItemResult();
-        itemResult.setPieceId(pieceId);
-        itemResult.setProcessingStatus(status);
-        result.getReceivingItemResults().add(itemResult);
+        piecesHelper.calculateProcessingErrors(poLineId, result, processedPiecesForPoLine, resultCounts, pieceId);
       }
 
       result.withPoLineId(poLineId)
-            .withProcessedSuccessfully(succeded)
-            .withProcessedWithError(failed);
+            .withProcessedSuccessfully(resultCounts.get("succeded"))
+            .withProcessedWithError(resultCounts.get("failed"));
     }
 
     return results;
   }
- 
+
   /**
    * Converts {@link ReceivingCollection} to map with PO line id as a key and value is map with piece id as a key
    * and {@link ReceivedItem} as a value
