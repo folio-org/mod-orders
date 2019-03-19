@@ -109,10 +109,4 @@ public class CheckinHelper extends AbstractHelper {
               .toMap(CheckInPiece::getId, checkInPiece -> checkInPiece))));
   }
     
-    
-  private Error getError(String polId, String pieceId) {
-    return processingErrors.computeIfAbsent(polId, k -> Collections.emptyMap())
-      .get(pieceId);
-  }
-
 }

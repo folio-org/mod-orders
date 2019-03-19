@@ -140,9 +140,4 @@ public class ReceivingHelper extends AbstractHelper {
               .flatMap(List::stream)
               .toMap(ReceivedItem::getPieceId, receivedItem -> receivedItem))));
   }
-  
-  private Error getError(String polId, String pieceId) {
-    return processingErrors.computeIfAbsent(polId, k -> Collections.emptyMap())
-                           .get(pieceId);
-  }
 }
