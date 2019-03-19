@@ -1471,7 +1471,8 @@ public class OrdersImplTest {
     }
   }
 
-        private void verifyPiecesCreated(List<JsonObject> inventoryItems, List<CompositePoLine> compositePoLines, List<JsonObject> pieces) {
+  private void verifyPiecesCreated(List<JsonObject> inventoryItems, List<CompositePoLine> compositePoLines,
+      List<JsonObject> pieces) {
     // Collect all item id's
     List<String> itemIds = inventoryItems.stream()
                                     .map(item -> item.getString(ID))
@@ -2927,8 +2928,8 @@ public class OrdersImplTest {
     checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, allInactiveErrors, 1, POL_ACCESS_PROVIDER_IS_INACTIVE);
     checkExpectedError(INACTIVE_ACCESS_PROVIDER_B, allInactiveErrors, 2, POL_ACCESS_PROVIDER_IS_INACTIVE);
   }
-  
-  
+
+
   @Test
   public void testPostCheckInElectronicWithNoItems() {
     logger.info("=== Test POST Checkin - CheckIn Electronic resource");
@@ -2970,7 +2971,7 @@ public class OrdersImplTest {
       assertThat(poLine.getReceiptDate(), is(notNullValue()));
     });
   }
-  
+
   @Test
   public void testPostCheckInPhysicalWithItemsPartialSuccess() {
     logger.info("=== Test POST Checkin - CheckIn physical resource with only one item updated");
@@ -2982,7 +2983,7 @@ public class OrdersImplTest {
 
     assertThat(results.getTotalRecords(), equalTo(checkInRq.getTotalRecords()));
     ReceivingResult receivingResult = results.getReceivingResults().get(0);
-    
+
     Set<String> errorCodes = new HashSet<>();
     for (ReceivingItemResult receivingItemResult : receivingResult.getReceivingItemResults()) {
       assertThat(receivingItemResult.getPieceId(), not(isEmptyString()));
@@ -3010,8 +3011,7 @@ public class OrdersImplTest {
     assertThat(itemUpdates, not(nullValue()));
     assertThat(polSearches, not(nullValue()));
     assertThat(polUpdates, not(nullValue()));
-    
-    
+
     assertThat(pieceSearches, hasSize(2));
     assertThat(pieceUpdates, hasSize(1));
     assertThat(itemsSearches, hasSize(1));
@@ -3974,6 +3974,5 @@ public class OrdersImplTest {
           .end(JsonObject.mapFrom(seqNumber).encodePrettily());
       }
     }
-
   }
 }

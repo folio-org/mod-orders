@@ -109,8 +109,8 @@ public class ReceivingHelper extends AbstractHelper {
 
       Map<String, Integer> resultCounts = new HashMap<>();
       resultCounts.put(ProcessingStatus.Type.SUCCESS.toString(), 0);
-      resultCounts.put(ProcessingStatus.Type.FAILURE.toString(),0);
-      
+      resultCounts.put(ProcessingStatus.Type.FAILURE.toString(), 0);
+
       for (ReceivedItem receivedItem : toBeReceived.getReceivedItems()) {
         String pieceId = receivedItem.getPieceId();
         piecesHelper.calculateProcessingErrors(poLineId, result, processedPiecesForPoLine, resultCounts, pieceId);
