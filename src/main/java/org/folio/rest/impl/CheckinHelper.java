@@ -24,14 +24,14 @@ public class CheckinHelper extends AbstractHelper {
    * {@link CheckInPiece} as a value
    */
   private final Map<String, Map<String, CheckInPiece>> checkinPieces;
-  private final CheckInRecievePiecesHelper<CheckInPiece> piecesHelper;
+  private final CheckinReceivePiecesHelper<CheckInPiece> piecesHelper;
 
   CheckinHelper(CheckinCollection checkinCollection, Map<String, String> okapiHeaders,
       Context ctx, String lang) {
     super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
     // Convert request to map representation
     checkinPieces = groupcheckinPiecesByPoLineId(checkinCollection);
-    piecesHelper = new CheckInRecievePiecesHelper<>(httpClient, okapiHeaders, ctx, lang, checkinPieces, processingErrors);
+    piecesHelper = new CheckinReceivePiecesHelper<>(httpClient, okapiHeaders, ctx, lang, checkinPieces, processingErrors);
 
     // Logging quantity of the piece records to be checked in
     if (logger.isDebugEnabled()) {
@@ -39,11 +39,11 @@ public class CheckinHelper extends AbstractHelper {
       int piecesQty = StreamEx.ofValues(checkinPieces)
         .mapToInt(Map::size)
         .sum();
-      logger.debug("{} piece record(s) are going to be checked-In for {} PO line(s)", piecesQty, poLinesQty);
+      logger.debug("{} piece record(s) are going to be checkedIn for {} PO line(s)", piecesQty, poLinesQty);
     }
   }
 
-  CompletableFuture<ReceivingResults> checkinItems(CheckinCollection receivingCollection) {
+  CompletableFuture<ReceivingResults> checkinPieces(CheckinCollection checkinCollection) {
 
     // 1. Get piece records from storage
     return piecesHelper.retrievePieceRecords()
@@ -57,7 +57,7 @@ public class CheckinHelper extends AbstractHelper {
       // 5. Update PO Line status
       .thenCompose(piecesHelper::updatePoLinesStatus)
       // 6. Return results to the client
-      .thenApply(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
+      .thenApply(piecesGroupedByPoLine -> prepareResponseBody(checkinCollection, piecesGroupedByPoLine));
   }
 
   private ReceivingResults prepareResponseBody(CheckinCollection checkinCollection,
@@ -74,31 +74,16 @@ public class CheckinHelper extends AbstractHelper {
         .of(piecesGroupedByPoLine.getOrDefault(poLineId, Collections.emptyList()))
         .toMap(Piece::getId, piece -> piece);
 
-      int succeded = 0;
-      int failed = 0;
+      Map<String, Integer> resultCounts = new HashMap<>();
       for (CheckInPiece checkinPiece : toBeCheckedIn.getCheckInPieces()) {
         String pieceId = checkinPiece.getId();
 
-        // Calculate processing status
-        ProcessingStatus status = new ProcessingStatus();
-        if (processedPiecesForPoLine.get(pieceId) != null && getError(poLineId, pieceId) == null) {
-          status.setType(ProcessingStatus.Type.SUCCESS);
-          succeded++;
-        } else {
-          status.setType(ProcessingStatus.Type.FAILURE);
-          status.setError(getError(poLineId, pieceId));
-          failed++;
-        }
-
-        ReceivingItemResult itemResult = new ReceivingItemResult();
-        itemResult.setPieceId(pieceId);
-        itemResult.setProcessingStatus(status);
-        result.getReceivingItemResults().add(itemResult);
+        piecesHelper.calculateProcessingErrors(poLineId, result, processedPiecesForPoLine, resultCounts, pieceId);
       }
 
       result.withPoLineId(poLineId)
-        .withProcessedSuccessfully(succeded)
-        .withProcessedWithError(failed);
+            .withProcessedSuccessfully(resultCounts.get("succeded"))
+            .withProcessedWithError(resultCounts.get("failed"));
     }
 
     return results;

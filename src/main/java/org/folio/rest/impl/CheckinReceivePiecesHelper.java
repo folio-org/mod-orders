@@ -26,36 +26,35 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
-import org.folio.rest.jaxrs.model.CheckInPiece;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PoLineCollection;
-import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
-public class CheckInRecievePiecesHelper<T> extends AbstractHelper {
+public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
   static final int MAX_IDS_FOR_GET_RQ = 15;
   private static final String PIECES_WITH_QUERY_ENDPOINT = resourcesPath(PIECES) + "?limit=%d&lang=%s&query=%s";
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
-  Map<String, Map<String, T>> piecesFromclass;
+  Map<String, Map<String, T>> piecesByLineId;
   private final InventoryHelper inventoryHelper;
   Map<String, Map<String, Error>> processingErrors;
   private final PurchaseOrderLineHelper poLineHelper;
   private boolean isReceiving = false;
   private boolean isCheckIn = false;
 
-  CheckInRecievePiecesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang,
-      Map<String, Map<String, T>> p, Map<String, Map<String, Error>> processingError) {
+  CheckinReceivePiecesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang,
+      Map<String, Map<String, T>> piecesByLineId, Map<String, Map<String, Error>> processingErrors) {
     super(httpClient, okapiHeaders, ctx, lang);
-    piecesFromclass = p;
+    this.piecesByLineId = piecesByLineId;
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
-    processingErrors = processingError;
+    this.processingErrors = processingErrors;
     poLineHelper = new PurchaseOrderLineHelper(httpClient, okapiHeaders, ctx, lang);
-    isReceiving= StreamEx.ofValues(piecesFromclass).allMatch(piece-> piece.values().iterator().next().getClass().isAssignableFrom(ReceivedItem.class));
-    isCheckIn= StreamEx.ofValues(piecesFromclass).allMatch(piece-> piece.values().iterator().next().getClass().isAssignableFrom(CheckInPiece.class));
+    isReceiving = StreamEx.ofValues(piecesByLineId)
+      .allMatch(piece -> piece.values().iterator().next().getClass().isAssignableFrom(ReceivedItem.class));
+    isCheckIn = StreamEx.ofValues(piecesByLineId)
+      .allMatch(piece -> piece.values().iterator().next().getClass().isAssignableFrom(CheckInPiece.class));
   }
 
   /**
@@ -94,7 +93,7 @@ public class CheckInRecievePiecesHelper<T> extends AbstractHelper {
    * @return extract all piece id's
    */
   private List<String> getPieceIds() {
-    return StreamEx.ofValues(piecesFromclass)
+    return StreamEx.ofValues(piecesByLineId)
       .map(Map::keySet)
       .toFlatList(ids -> ids);
   }
@@ -132,7 +131,7 @@ public class CheckInRecievePiecesHelper<T> extends AbstractHelper {
 
     // Validate if the piece actually corresponds to PO line specified in the
     // request
-    if (piecesFromclass.containsKey(poLineId) && piecesFromclass.get(poLineId).containsKey(pieceId)) {
+    if (piecesByLineId.containsKey(poLineId) && piecesByLineId.get(poLineId).containsKey(pieceId)) {
       // Validate if the piece is not yet received
       if (piece.getReceivingStatus() == ReceivingStatus.EXPECTED || isRevertToOnOrder(piece)) {
         piecesByPoLine.computeIfAbsent(poLineId, v -> new ArrayList<>())
@@ -158,11 +157,11 @@ public class CheckInRecievePiecesHelper<T> extends AbstractHelper {
     if (isReceiving) {
       return piece.getReceivingStatus() == ReceivingStatus.RECEIVED
           && inventoryHelper
-            .isOnOrderItemStatus((ReceivedItem) piecesFromclass.get(piece.getPoLineId()).get(piece.getId()));
-    }else if(isCheckIn) {
+            .isOnOrderItemStatus((ReceivedItem) piecesByLineId.get(piece.getPoLineId()).get(piece.getId()));
+    } else if (isCheckIn) {
       return piece.getReceivingStatus() == ReceivingStatus.RECEIVED
           && inventoryHelper
-            .isOnOrderPieceStatus((CheckInPiece) piecesFromclass.get(piece.getPoLineId()).get(piece.getId()));
+            .isOnOrderPieceStatus((CheckInPiece) piecesByLineId.get(piece.getPoLineId()).get(piece.getId()));
     }
     return false;
 
@@ -175,7 +174,7 @@ public class CheckInRecievePiecesHelper<T> extends AbstractHelper {
    */
   private String getPoLineIdByPieceId(String pieceId) {
     return StreamEx
-      .ofKeys(piecesFromclass, values -> values.containsKey(pieceId))
+      .ofKeys(piecesByLineId, values -> values.containsKey(pieceId))
       .findFirst()
       .orElse(EMPTY);
   }
@@ -338,7 +337,7 @@ public class CheckInRecievePiecesHelper<T> extends AbstractHelper {
 
     if (isReceiving) {
 
-      ReceivedItem receivedItem = (ReceivedItem) piecesFromclass.get(piece.getPoLineId())
+      ReceivedItem receivedItem = (ReceivedItem) piecesByLineId.get(piece.getPoLineId())
         .get(piece.getId());
       return inventoryHelper
         // Update item records with receiving information and send updates to
@@ -356,26 +355,26 @@ public class CheckInRecievePiecesHelper<T> extends AbstractHelper {
           addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
           return false;
         });
-    } else if(isCheckIn){
-      CheckInPiece checkinPiece = (CheckInPiece) piecesFromclass.get(piece.getPoLineId())
-          .get(piece.getId());
-        return inventoryHelper
-          // Update item records with checkIn information and send updates to
-          // Inventory
-          .checkinItem(item, checkinPiece)
-          // Update Piece record object with checkIn details if item updated
-          // successfully
-          .thenApply(v -> {
-            updatePieceWithCheckinInfo(piece);
-            return true;
-          })
-          // Add processing error if item failed to be updated
-          .exceptionally(e -> {
-            logger.error("Item associated with piece '{}' cannot be updated", piece.getId());
-            addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
-            return false;
-          });
-      
+    } else if (isCheckIn) {
+      CheckInPiece checkinPiece = (CheckInPiece) piecesByLineId.get(piece.getPoLineId())
+        .get(piece.getId());
+      return inventoryHelper
+        // Update item records with checkIn information and send updates to
+        // Inventory
+        .checkinItem(item, checkinPiece)
+        // Update Piece record object with checkIn details if item updated
+        // successfully
+        .thenApply(v -> {
+          updatePieceWithCheckinInfo(piece);
+          return true;
+        })
+        // Add processing error if item failed to be updated
+        .exceptionally(e -> {
+          logger.error("Item associated with piece '{}' cannot be updated", piece.getId());
+          addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
+          return false;
+        });
+
     }
     return null;
   }
@@ -388,7 +387,7 @@ public class CheckInRecievePiecesHelper<T> extends AbstractHelper {
    */
   private void updatePieceWithReceivingInfo(Piece piece) {
     // Get ReceivedItem corresponding to piece record
-    ReceivedItem receivedItem = (ReceivedItem) piecesFromclass.get(piece.getPoLineId())
+    ReceivedItem receivedItem = (ReceivedItem) piecesByLineId.get(piece.getPoLineId())
       .get(piece.getId());
 
     if (StringUtils.isNotEmpty(receivedItem.getCaption())) {
@@ -410,10 +409,10 @@ public class CheckInRecievePiecesHelper<T> extends AbstractHelper {
       piece.setReceivingStatus(ReceivingStatus.RECEIVED);
     }
   }
-  
+
   private void updatePieceWithCheckinInfo(Piece piece) {
     // Get ReceivedItem corresponding to piece record
-    CheckInPiece checkinPiece = (CheckInPiece) piecesFromclass.get(piece.getPoLineId())
+    CheckInPiece checkinPiece = (CheckInPiece) piecesByLineId.get(piece.getPoLineId())
       .get(piece.getId());
 
     if (StringUtils.isNotEmpty(checkinPiece.getCaption())) {
@@ -446,20 +445,20 @@ public class CheckInRecievePiecesHelper<T> extends AbstractHelper {
    * @return updated map passed as a parameter
    */
   Map<String, List<Piece>> updatePieceRecordsWithoutItems(Map<String, List<Piece>> piecesGroupedByPoLine) {
-    // Collect all piece records without item id and update with receiving
+    // Collect all piece records without item id and update with
+    // receiving/checkin
     // information.
-    if(isReceiving) {
+    if (isReceiving) {
       StreamEx.ofValues(piecesGroupedByPoLine)
-      .flatMap(List::stream)
-      .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
-      .forEach(this::updatePieceWithReceivingInfo);
-    } else if(isCheckIn) {
+        .flatMap(List::stream)
+        .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
+        .forEach(this::updatePieceWithReceivingInfo);
+    } else if (isCheckIn) {
       StreamEx.ofValues(piecesGroupedByPoLine)
-      .flatMap(List::stream)
-      .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
-      .forEach(this::updatePieceWithCheckinInfo);
+        .flatMap(List::stream)
+        .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
+        .forEach(this::updatePieceWithCheckinInfo);
     }
-   
 
     return piecesGroupedByPoLine;
   }
@@ -665,5 +664,25 @@ public class CheckInRecievePiecesHelper<T> extends AbstractHelper {
     processingErrors.computeIfAbsent(polId, k -> new HashMap<>())
       .put(pieceId, error);
   }
+  
+  public void calculateProcessingErrors(String poLineId, ReceivingResult result,
+      Map<String, Piece> processedPiecesForPoLine, Map<String, Integer> resultCounts, String pieceId) {
+    // Calculate processing status
+    ProcessingStatus status = new ProcessingStatus();
+    if (processedPiecesForPoLine.get(pieceId) != null && getError(poLineId, pieceId) == null) {
+      status.setType(ProcessingStatus.Type.SUCCESS);
+      resultCounts.merge("succeded", 1, Integer::sum);
+    } else {
+      status.setType(ProcessingStatus.Type.FAILURE);
+      status.setError(getError(poLineId, pieceId));
+      resultCounts.merge("failed", 1, Integer::sum);
+    }
+
+    ReceivingItemResult itemResult = new ReceivingItemResult();
+    itemResult.setPieceId(pieceId);
+    itemResult.setProcessingStatus(status);
+    result.getReceivingItemResults().add(itemResult);
+  }
+ 
 
 }

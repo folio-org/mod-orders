@@ -285,7 +285,7 @@ public class OrdersImpl implements Orders {
     logger.info("Checkin {} items", entity.getTotalRecords());
     CheckinHelper helper = new CheckinHelper(entity, okapiHeaders, vertxContext, lang);
     helper
-      .checkinItems(entity)
+      .checkinPieces(entity)
       .thenAccept(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
