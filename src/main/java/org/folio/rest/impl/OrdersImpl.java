@@ -13,7 +13,6 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.annotations.Validate;
@@ -163,40 +162,26 @@ public class OrdersImpl implements Orders {
   public void postOrdersOrderLines(String lang, CompositePoLine poLine, Map<String, String> okapiHeaders,
                                    Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    // First validate content of the PO Line and proceed only if all is okay
-    List<Error> errors = new ArrayList<>();
-    if (poLine.getPurchaseOrderId() == null) {
-      errors.add(ErrorCodes.MISSING_ORDER_ID_IN_POL.toError());
-    }
-    errors.addAll(validatePoLine(poLine));
-    if (!errors.isEmpty()) {
-      PostOrdersOrderLinesResponse response = PostOrdersOrderLinesResponse.respond422WithApplicationJson(new Errors().withErrors(errors));
-      asyncResultHandler.handle(succeededFuture(response));
-      return;
-    }
-
     PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
 
     logger.info("Creating POLine to an existing order...");
 
-    String query = "purchaseOrderId==" + poLine.getPurchaseOrderId();
-    loadConfiguration(okapiHeaders, vertxContext, logger)
-      .thenAcceptBoth(helper.getPoLines(0, 0, query), (config, poLines) -> {
-        int limit = getPoLineLimit(config);
-        if (poLines.getTotalRecords() < limit) {
-          helper
-            .createPoLine(poLine)
-            .thenAccept(pol -> {
-              logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
-              Response response = PostOrdersOrderLinesResponse.respond201WithApplicationJson(pol,
-                PostOrdersOrderLinesResponse.headersFor201()
-                                            .withLocation(String.format(ORDER_LINE_LOCATION_PREFIX, pol.getId())));
-              asyncResultHandler.handle(succeededFuture(response));
-            })
-            .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+    // The validation of the PO Line content and its order state is done in scope of the 'createPoLine' method logic
+    helper
+      .createPoLine(poLine)
+      .thenAccept(pol -> {
+        Response response;
+        if (helper.getErrors().isEmpty()) {
+          if (logger.isInfoEnabled()) {
+            logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
+          }
+          response = PostOrdersOrderLinesResponse.respond201WithApplicationJson(pol,
+            PostOrdersOrderLinesResponse.headersFor201()
+                                        .withLocation(String.format(ORDER_LINE_LOCATION_PREFIX, pol.getId())));
         } else {
-          throw new HttpException(422, ErrorCodes.POL_LINES_LIMIT_EXCEEDED);
+          response = helper.buildErrorResponse(422);
         }
+        asyncResultHandler.handle(succeededFuture(response));
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
@@ -354,4 +339,3 @@ public class OrdersImpl implements Orders {
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 }
-
