@@ -34,7 +34,6 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.Adjustment;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
@@ -81,38 +80,6 @@ public class HelperUtils {
     }
 
     return response.getBody();
-  }
-
-  public static Adjustment calculateAdjustment(List<CompositePoLine> lines) {
-    Adjustment ret = null;
-    for (CompositePoLine line : lines) {
-      Adjustment a = line.getAdjustment();
-      if (a != null) {
-        if (ret == null) {
-          ret = a;
-        } else {
-          ret.setCredit(accumulate(ret.getCredit(), a.getCredit()));
-          ret.setDiscount(accumulate(ret.getDiscount(), a.getDiscount()));
-          ret.setInsurance(accumulate(ret.getInsurance(), a.getInsurance()));
-          ret.setOverhead(accumulate(ret.getOverhead(), a.getOverhead()));
-          ret.setShipment(accumulate(ret.getShipment(), a.getShipment()));
-          ret.setTax1(accumulate(ret.getTax1(), a.getTax1()));
-          ret.setTax2(accumulate(ret.getTax2(), a.getTax2()));
-        }
-      }
-    }
-    return ret;
-  }
-
-  private static double accumulate(Double a, Double b) {
-    if (a == null && b == null)
-      return 0d;
-    if (a == null)
-      return b;
-    if (b == null)
-      return a;
-
-    return (a + b);
   }
 
   public static CompletableFuture<JsonObject> getPurchaseOrderById(String id, String lang, HttpClientInterface httpClient, Context ctx,
@@ -730,12 +697,11 @@ public class HelperUtils {
 
   /**
    * Convert {@link JsonObject} which actually represents org.folio.rest.acq.model.PurchaseOrder to {@link CompositePurchaseOrder}
-   * These objects are the same except PurchaseOrder doesn't contains adjustment and poLines fields.
+   * These objects are the same except PurchaseOrder doesn't contain poLines field.
    * @param poJson {@link JsonObject} representing org.folio.rest.acq.model.PurchaseOrder
    * @return {@link CompositePurchaseOrder}
    */
   public static CompositePurchaseOrder convertToCompositePurchaseOrder(JsonObject poJson) {
-    poJson.remove(ADJUSTMENT);
     return poJson.mapTo(CompositePurchaseOrder.class);
   }
 }
