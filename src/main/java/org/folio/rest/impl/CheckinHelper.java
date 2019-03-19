@@ -75,6 +75,8 @@ public class CheckinHelper extends AbstractHelper {
         .toMap(Piece::getId, piece -> piece);
 
       Map<String, Integer> resultCounts = new HashMap<>();
+      resultCounts.put(ProcessingStatus.Type.SUCCESS.toString(), 0);
+      resultCounts.put(ProcessingStatus.Type.FAILURE.toString(),0);
       for (CheckInPiece checkinPiece : toBeCheckedIn.getCheckInPieces()) {
         String pieceId = checkinPiece.getId();
 
@@ -82,8 +84,8 @@ public class CheckinHelper extends AbstractHelper {
       }
 
       result.withPoLineId(poLineId)
-            .withProcessedSuccessfully(resultCounts.get("succeded"))
-            .withProcessedWithError(resultCounts.get("failed"));
+            .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS.toString()))
+            .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE.toString()));
     }
 
     return results;

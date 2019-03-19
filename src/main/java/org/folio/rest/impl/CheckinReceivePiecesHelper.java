@@ -109,7 +109,7 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
         checkIfAllPiecesFound(ids, pieces);
       })
       .exceptionally(e -> {
-        logger.error("The issue happened getting piece records", e);
+        logger.error("Error fetching piece records", e);
         ids.forEach(pieceId -> addError(getPoLineIdByPieceId(pieceId), pieceId, PIECE_NOT_RETRIEVED.toError()));
         return null;
       });
@@ -671,11 +671,11 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     ProcessingStatus status = new ProcessingStatus();
     if (processedPiecesForPoLine.get(pieceId) != null && getError(poLineId, pieceId) == null) {
       status.setType(ProcessingStatus.Type.SUCCESS);
-      resultCounts.merge("succeded", 1, Integer::sum);
+      resultCounts.merge(ProcessingStatus.Type.SUCCESS.toString(), 1, Integer::sum);
     } else {
       status.setType(ProcessingStatus.Type.FAILURE);
       status.setError(getError(poLineId, pieceId));
-      resultCounts.merge("failed", 1, Integer::sum);
+      resultCounts.merge(ProcessingStatus.Type.FAILURE.toString(), 1, Integer::sum);
     }
 
     ReceivingItemResult itemResult = new ReceivingItemResult();
