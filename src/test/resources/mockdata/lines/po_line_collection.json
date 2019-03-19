@@ -7,17 +7,6 @@
       "instanceId": "8343e5a0-fed8-11e8-8eb2-f2801f1b9fd1",
       "agreementId": "bdc75fea-fed8-11e8-8eb2-f2801f1b9fd1",
       "acquisitionMethod": "Purchase At Vendor System",
-      "adjustment": {
-        "credit": 0.0,
-        "discount": 0.0,
-        "insurance": 0.0,
-        "invoiceId": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
-        "overhead": 0.0,
-        "shipment": 0.0,
-        "tax1": 0.0,
-        "tax2": 0.0,
-        "useProRate": false
-      },
       "alerts": [
         "9a665b22-9fe5-4c95-b4ee-837a5433c95d"
       ],
@@ -38,7 +27,7 @@
         }
       ],
       "cost": {
-        "listPrice": 24.99,
+        "listUnitPrice": 24.99,
         "currency": "USD",
         "quantityPhysical": 3,
         "quantityElectronic": 0,
@@ -145,17 +134,6 @@
       "instanceId": "8343e5a0-fed8-11e8-8eb2-f2801f1b9fd1",
       "agreementId": "bdc75fea-fed8-11e8-8eb2-f2801f1b9fd1",
       "acquisitionMethod": "Purchase At Vendor System",
-      "adjustment": {
-        "credit": 0.0,
-        "discount": 0.0,
-        "insurance": 0.0,
-        "invoiceId": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
-        "overhead": 0.0,
-        "shipment": 0.0,
-        "tax1": 0.0,
-        "tax2": 0.0,
-        "useProRate": false
-      },
       "alerts": [
         "9a665b22-9fe5-4c95-b4ee-837a5433c95d"
       ],
@@ -177,7 +155,7 @@
       ],
       "cost": {
         "currency": "USD",
-        "listPrice": 24.99,
+        "listUnitPrice": 24.99,
         "quantityPhysical": 1,
         "quantityElectronic": 1,
         "poLineEstimatedPrice": 49.98
@@ -293,7 +271,7 @@
       "contributors": [],
       "cost": {
         "currency": "USD",
-        "listPrice": 24.99,
+        "listUnitPrice": 24.99,
         "quantityPhysical": 1,
         "quantityElectronic": 1,
         "poLineEstimatedPrice": 49.98
@@ -368,7 +346,7 @@
       "cancellationRestriction": false,
       "collection": false,
       "cost": {
-        "listPrice": 24.99,
+        "listUnitPrice": 24.99,
         "currency": "USD",
         "quantityPhysical": 3,
         "quantityElectronic": 0,
@@ -446,7 +424,7 @@
       "contributors": [],
       "cost": {
         "currency": "USD",
-        "listPrice": 29.99,
+        "listUnitPrice": 29.99,
         "quantityPhysical": 1,
         "quantityElectronic": 1,
         "poLineEstimatedPrice": 39.98
@@ -536,7 +514,7 @@
       ],
       "cost": {
         "currency": "USD",
-        "listPrice": 24.99,
+        "listUnitPrice": 24.99,
         "quantityPhysical": 1,
         "quantityElectronic": 1,
         "poLineEstimatedPrice": 49.98
@@ -650,17 +628,6 @@
       "id": "f217a5c2-2c56-4d05-9412-a96cfc8e52de",
       "instanceId": "9085cdef-0758-4d8f-8c35-54795739472e",
       "acquisitionMethod": "Purchase",
-      "adjustment": {
-        "credit": 0.0,
-        "discount": 0.0,
-        "insurance": 0.0,
-        "invoiceId": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
-        "overhead": 0.0,
-        "shipment": 0.0,
-        "tax1": 0.0,
-        "tax2": 0.0,
-        "useProRate": false
-      },
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
@@ -680,7 +647,7 @@
       ],
       "cost": {
         "currency": "USD",
-        "listPrice": 24.99,
+        "listUnitPrice": 24.99,
         "quantityPhysical": 1,
         "quantityElectronic": 1,
         "poLineEstimatedPrice": 49.98

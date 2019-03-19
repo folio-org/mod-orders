@@ -1,15 +1,5 @@
 {
   "id": "11111111-dddd-4444-9999-ffffffffffff",
-  "adjustment": {
-    "credit": 0,
-    "discount": 0,
-    "insurance": 0,
-    "overhead": 0,
-    "shipment": 0,
-    "tax1": 0,
-    "tax2": 0,
-    "useProRate": false
-  },
   "approved": true,
   "assignedTo": "28d102a2-d137-11e8-a8d5-f2801f1b9fd1",
   "notes": [],
@@ -24,8 +14,6 @@
     "reviewPeriod": 30,
     "renewalDate": "2019-04-09T00:00:00.000Z"
   },
-  "totalEstimatedPrice": 200000.00,
-  "totalItems": 80,
   "vendor": "50fb8b56-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Closed",
   "metadata": {

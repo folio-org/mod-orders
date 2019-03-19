@@ -6,25 +6,12 @@
   "poNumber": "268758",
   "orderType": "One-Time",
   "reEncumber": false,
-  "totalEstimatedPrice": 127.94,
-  "totalItems": 3,
   "vendor": "168f8a86-d26c-406e-813f-c7527f241ac3",
   "workflowStatus": "Pending",
   "compositePoLines": [
     {
       "id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
       "acquisitionMethod": "Purchase",
-      "adjustment": {
-        "credit": 0.0,
-        "discount": 0.0,
-        "insurance": 0.0,
-        "invoiceId": "ed68f36c-aeee-44d2-a215-e2f21cb38476",
-        "overhead": 0.0,
-        "shipment": 0.0,
-        "tax1": 0.0,
-        "tax2": 0.0,
-        "useProRate": false
-      },
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
@@ -42,7 +29,7 @@
         }
       ],
       "cost": {
-        "listPrice": 75.22,
+        "listUnitPrice": 75.22,
         "currency": "USD",
         "quantityPhysical": 0,
         "quantityElectronic": 1,

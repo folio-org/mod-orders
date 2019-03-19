@@ -1,17 +1,6 @@
 {
   "id": "0009662b-8b80-4001-b704-ca10971f175d",
   "acquisitionMethod": "Purchase",
-  "adjustment": {
-    "credit": 0.0,
-    "discount": 0.0,
-    "insurance": 0.0,
-    "invoiceId": "aa0fbc71-5bc0-4fa0-9e8d-f6a14d3c50fd",
-    "overhead": 0.0,
-    "shipment": 0.0,
-    "tax1": 0.0,
-    "tax2": 0.0,
-    "useProRate": false
-  },
   "alerts": [],
   "cancellationRestriction": false,
   "cancellationRestrictionNote": "",
@@ -29,7 +18,7 @@
     }
   ],
   "cost": {
-    "listPrice": 900.00,
+    "listUnitPrice": 900.00,
     "currency": "USD",
     "quantityPhysical": 1,
     "quantityElectronic": 0,

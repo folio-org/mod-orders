@@ -1,15 +1,5 @@
 {
   "id": "e5ae4afd-3fa9-494e-a972-f541df9b877e",
-  "adjustment": {
-    "credit": 0,
-    "discount": 0,
-    "insurance": 0,
-    "overhead": 0,
-    "shipment": 0,
-    "tax1": 0,
-    "tax2": 0,
-    "useProRate": false
-  },
   "approved": true,
   "assignedTo": "",
   "notes": [],
@@ -17,8 +7,6 @@
   "poNumber": "268879",
   "orderType": "One-Time",
   "reEncumber": false,
-  "totalEstimatedPrice": 75.22,
-  "totalItems": 1,
   "vendor": "50fb922c-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Pending",
   "metadata": {
@@ -29,17 +17,6 @@
     {
       "id": "50fb63b0-cdf1-11e8-a8d5-f2801f1b9fd1",
       "acquisitionMethod": "Purchase",
-      "adjustment": {
-        "credit": 0.0,
-        "discount": 0.0,
-        "insurance": 0.0,
-        "invoiceId": "ed68f36c-aeee-44d2-a215-e2f21cb38476",
-        "overhead": 0.0,
-        "shipment": 0.0,
-        "tax1": 0.0,
-        "tax2": 0.0,
-        "useProRate": false
-      },
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
@@ -57,7 +34,7 @@
         }
       ],
       "cost": {
-        "listPrice": 75.22,
+        "listUnitPrice": 75.22,
         "currency": "USD",
         "quantityPhysical": 0,
         "quantityElectronic": 1,

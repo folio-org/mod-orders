@@ -1,15 +1,5 @@
 {
   "id": "07f65192-44a4-483d-97aa-b137bbd96390",
-  "adjustment": {
-    "credit": 0,
-    "discount": 0,
-    "insurance": 0,
-    "overhead": 0,
-    "shipment": 0,
-    "tax1": 0,
-    "tax2": 0,
-    "useProRate": false
-  },
   "approved": true,
   "assignedTo": "28d102a2-d137-11e8-a8d5-f2801f1b9fd1",
   "notes": [],
@@ -24,8 +14,6 @@
      "reviewPeriod": 30,
      "renewalDate": "2019-04-09T00:00:00.000Z"
   },
-  "totalEstimatedPrice": 200000.00,
-  "totalItems": 80,
   "vendor": "50fb8b56-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Closed",
   "metadata": {
@@ -36,17 +24,6 @@
     {
       "id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
       "acquisitionMethod": "Purchase",
-      "adjustment": {
-        "credit": 0.0,
-        "discount": 0.0,
-        "insurance": 0.0,
-        "invoiceId": "2d6dc95c-c237-476f-aa48-57f7cbf74ca4",
-        "overhead": 0.0,
-        "shipment": 0.0,
-        "tax1": 0.0,
-        "tax2": 0.0,
-        "useProRate": false
-      },
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
@@ -64,7 +41,7 @@
         }
       ],
       "cost": {
-        "listPrice": 200000.00,
+        "listUnitPrice": 200000.00,
         "currency": "USD",
         "quantityPhysical": 0,
         "quantityElectronic": 1,

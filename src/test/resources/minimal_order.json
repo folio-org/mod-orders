@@ -12,6 +12,9 @@
   "compositePoLines": [
     {
       "acquisitionMethod": "Purchase At Vendor System",
+      "cost": {
+        "currency": "USD"
+      },
       "description": "ABCDEFGH",
       "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
       "poLineNumber": "268758-03",

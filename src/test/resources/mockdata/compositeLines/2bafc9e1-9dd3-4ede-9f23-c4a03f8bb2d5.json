@@ -4,7 +4,7 @@
   "cancellationRestriction": false,
   "collection": false,
   "cost": {
-    "listPrice": 10.00,
+    "listUnitPrice": 10.00,
     "currency": "USD",
     "quantityPhysical": 25,
     "poLineEstimatedPrice": 250.00

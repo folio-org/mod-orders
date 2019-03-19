@@ -7,8 +7,6 @@
   "orderType": "One-Time",
   "poNumber": "TEST2POL1PHYS1EL",
   "reEncumber": false,
-  "totalEstimatedPrice": 350.00,
-  "totalItems": 35,
   "vendor": "8be1cd0a-acab-488d-b650-65ceb96aa148",
   "workflowStatus": "Open",
   "compositePoLines": [
@@ -17,7 +15,7 @@
       "cancellationRestriction": false,
       "collection": false,
       "cost": {
-        "listPrice": 10.00,
+        "listUnitPrice": 10.00,
         "currency": "USD",
         "quantityPhysical": 25,
         "poLineEstimatedPrice": 250.00
@@ -74,7 +72,7 @@
       "cancellationRestriction": false,
       "collection": false,
       "cost": {
-        "listPrice": 10.00,
+        "listUnitPrice": 10.00,
         "currency": "USD",
         "quantityElectronic": 10,
         "poLineEstimatedPrice": 100.00

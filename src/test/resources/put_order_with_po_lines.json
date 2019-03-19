@@ -6,25 +6,12 @@
   "poNumber": "268758",
   "orderType": "One-Time",
   "reEncumber": false,
-  "totalEstimatedPrice": 127.94,
-  "totalItems": 3,
   "vendor": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Pending",
   "compositePoLines": [
     {
       "id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1",
       "acquisitionMethod": "Purchase",
-      "adjustment": {
-        "credit": 0.0,
-        "discount": 0.0,
-        "insurance": 0.0,
-        "invoiceId": "2d6d495c-c237-476f-aa48-50f7cbf74ca4",
-        "overhead": 0.0,
-        "shipment": 0.0,
-        "tax1": 0.0,
-        "tax2": 0.0,
-        "useProRate": false
-      },
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
@@ -36,7 +23,7 @@
       ],
       "collection": false,
       "cost": {
-        "listPrice": 68.00,
+        "listUnitPrice": 68.00,
         "currency": "USD",
         "quantityPhysical": 1,
         "quantityElectronic": 0,
@@ -101,17 +88,6 @@
     {
       "id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3",
       "acquisitionMethod": "Purchase",
-      "adjustment": {
-        "credit": 0.0,
-        "discount": 0.0,
-        "insurance": 0.0,
-        "invoiceId": "366d495c-c237-476f-aa48-50f7cbf74ca4",
-        "overhead": 0.0,
-        "shipment": 0.0,
-        "tax1": 0.0,
-        "tax2": 0.0,
-        "useProRate": false
-      },
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
@@ -124,7 +100,7 @@
       "collection": false,
 
       "cost": {
-        "listPrice": 24.99,
+        "listUnitPrice": 24.99,
         "currency": "USD",
         "quantityPhysical": 1,
         "quantityElectronic": 0,
@@ -204,17 +180,6 @@
     {
       "id": "c2755a78-2f8d-47d0-a218-059a9b7391b3",
       "acquisitionMethod": "Purchase At Vendor System",
-      "adjustment": {
-        "credit": 0.0,
-        "discount": 0.0,
-        "insurance": 0.0,
-        "invoiceId": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
-        "overhead": 0.0,
-        "shipment": 0.0,
-        "tax1": 0.0,
-        "tax2": 0.0,
-        "useProRate": false
-      },
       "alerts": [
         {
           "alert": "Receipt overdue"
@@ -237,7 +202,7 @@
         }
       ],
       "cost": {
-        "listPrice": 24.99,
+        "listUnitPrice": 24.99,
         "currency": "USD",
         "quantityPhysical": 1,
         "quantityElectronic": 0,
@@ -341,17 +306,6 @@
     {
       "id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
       "acquisitionMethod": "Purchase",
-      "adjustment": {
-        "credit": 0.0,
-        "discount": 0.0,
-        "insurance": 0.0,
-        "invoiceId": "2ddfeb5c-1237-476f-aa88-57f7cbf74ca4",
-        "overhead": 0.0,
-        "shipment": 0.0,
-        "tax1": 0.0,
-        "tax2": 0.0,
-        "useProRate": false
-      },
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
@@ -369,7 +323,7 @@
         }
       ],
       "cost": {
-        "listPrice": 75.22,
+        "listUnitPrice": 75.22,
         "currency": "USD",
         "quantityPhysical": 0,
         "quantityElectronic": 1,
