@@ -17,10 +17,9 @@
     "contributorType" : "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
   } ],
   "cost" : {
-    "listUnitPrice" : 24.99,
     "currency" : "USD",
-    "quantityPhysical" : 1,
-    "poLineEstimatedPrice" : 49.98
+    "listUnitPrice" : 24.99,
+    "quantityPhysical" : 1
   },
   "description" : "Quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat",
   "details" : {
@@ -35,19 +34,6 @@
     "subscriptionTo" : "2020-10-09T00:00:00.000+0000"
   },
   "donor" : "Some text goes here",
-  "eresource" : {
-    "activated" : false,
-    "activationDue" : 10,
-    "createInventory" : true,
-    "trial" : false,
-    "expectedActivation" : "2018-10-09T00:00:00.000+0000",
-    "userLimit" : 10,
-    "accessProvider" : "ba3f3d45-247d-41f6-8dc9-6488adcad329",
-    "license" : {
-      "code": "Code 1",
-      "description": "License Agreement 1"
-    }
-  },
   "fundDistribution": [
     {
       "code": "HIST",

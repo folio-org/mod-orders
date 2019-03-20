@@ -18,11 +18,9 @@
     }
   ],
   "cost": {
-    "listUnitPrice": 68.00,
     "currency": "USD",
-    "quantityPhysical": 1,
-    "quantityElectronic": 0,
-    "poLineEstimatedPrice": 68.00
+    "listUnitPrice": 68.00,
+    "quantityPhysical": 1
   },
   "description": "",
   "details": {
@@ -41,19 +39,6 @@
     "subscriptionTo": null
   },
   "donor": "",
-  "eresource": {
-    "activated": false,
-    "activationDue": 0,
-    "createInventory": false,
-    "trial": false,
-    "expectedActivation": null,
-    "userLimit": 0,
-    "accessProvider": null,
-    "license": {
-      "code": "Code 1",
-      "description": "License Agreement 1"
-    }
-  },
   "fundDistribution": [
     {
       "code": "EUROHIST-FY19",

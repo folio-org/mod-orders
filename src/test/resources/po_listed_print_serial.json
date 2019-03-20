@@ -17,7 +17,7 @@
      "reviewPeriod": 0,
      "renewalDate": "2019-04-09T00:00:00.000Z"
   },
-  "vendor": "168f8a86-d26c-406e-813f-c7527f241ac3",
+  "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Open",
   "metadata": {
     "createdDate": "2010-10-08T03:53:00.000",
@@ -49,11 +49,11 @@
         }
       ],
       "cost": {
-        "listUnitPrice": 24.99,
         "currency": "USD",
-        "quantityPhysical": 1,
+        "listUnitPrice": 24.99,
+        "listUnitPriceElectronic": 22.99,
         "quantityElectronic": 1,
-        "poLineEstimatedPrice": 49.98
+        "quantityPhysical": 1
       },
       "description": "ABCDEFGH",
       "details": {
@@ -72,6 +72,14 @@
         "subscriptionTo": "2020-10-09T00:00:00.000Z"
       },
       "donor": "ABCDEFGHIJKLM",
+      "eresource": {
+        "activated": false,
+        "activationDue": 0,
+        "createInventory": false,
+        "trial": false,
+        "userLimit": 10,
+        "accessProvider": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
       "fundDistribution": [
         {
           "code": "HIST",

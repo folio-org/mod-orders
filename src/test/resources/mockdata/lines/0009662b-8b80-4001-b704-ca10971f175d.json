@@ -13,9 +13,7 @@
   "cost": {
     "currency": "USD",
     "listUnitPrice": 24.99,
-    "quantityPhysical": 1,
-    "quantityElectronic": 1,
-    "poLineEstimatedPrice": 49.98
+    "quantityPhysical": 1
   },
   "description" : "ABCDEFGH",
   "details": {
@@ -34,19 +32,6 @@
     "subscriptionTo": "2020-10-09T00:00:00.000Z"
   },
   "donor" : "ABCDEFGHIJKLM",
-  "eresource": {
-    "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
-    "activated": false,
-    "activationDue": 10,
-    "createInventory": true,
-    "expectedActivation": "2018-10-09T00:00:00.000Z",
-    "license": {
-      "code": "Code 1",
-      "description": "License Agreement 1"
-    },
-    "trial": false,
-    "userLimit": 10
-  },
   "fundDistribution": [
     {
       "code": "HIST",

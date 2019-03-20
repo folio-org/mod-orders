@@ -29,9 +29,7 @@
       "cost": {
         "listUnitPrice": 24.99,
         "currency": "USD",
-        "quantityPhysical": 3,
-        "quantityElectronic": 0,
-        "poLineEstimatedPrice": 74.97
+        "quantityPhysical": 3
       },
       "description": "ABCDEFGH",
       "details": {
@@ -50,19 +48,6 @@
         "subscriptionTo": "2020-10-09T00:00:00.000Z"
       },
       "donor": "ABCDEFGHIJKLM",
-      "eresource": {
-        "activated": false,
-        "activationDue": 10,
-        "createInventory": false,
-        "trial": false,
-        "expectedActivation": "2018-10-09T00:00:00.000Z",
-        "userLimit": 10,
-        "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
-        "license": {
-          "code": "Code 1",
-          "description": "License Agreement 1"
-        }
-      },
       "fundDistribution": [
         {
           "code": "HIST",
@@ -73,8 +58,7 @@
       "locations": [
         {
           "locationId": "a4e65e03-99a4-4b39-8e6a-ae666ac52bea",
-          "quantity": 5,
-          "quantityElectronic": 1,
+          "quantity": 4,
           "quantityPhysical": 4
         }
       ],
@@ -156,9 +140,7 @@
       "cost": {
         "currency": "USD",
         "listUnitPrice": 24.99,
-        "quantityPhysical": 1,
-        "quantityElectronic": 1,
-        "poLineEstimatedPrice": 49.98
+        "quantityPhysical": 3
       },
       "description": "ABCDEFGH",
       "details": {
@@ -177,19 +159,6 @@
         "subscriptionTo": "2020-10-09T00:00:00.000Z"
       },
       "donor": "ABCDEFGHIJKLM",
-      "eresource": {
-        "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
-        "activated": false,
-        "activationDue": 10,
-        "createInventory": true,
-        "expectedActivation": "2018-10-09T00:00:00.000Z",
-        "license": {
-          "code": "Code 1",
-          "description": "License Agreement 1"
-        },
-        "trial": false,
-        "userLimit": 10
-      },
       "fundDistribution": [
         {
           "code": "HIST",
@@ -272,9 +241,7 @@
       "cost": {
         "currency": "USD",
         "listUnitPrice": 24.99,
-        "quantityPhysical": 1,
-        "quantityElectronic": 1,
-        "poLineEstimatedPrice": 49.98
+        "quantityPhysical": 3
       },
       "description": "25 physical resources for 2 locations",
       "details": {
@@ -348,9 +315,7 @@
       "cost": {
         "listUnitPrice": 24.99,
         "currency": "USD",
-        "quantityPhysical": 3,
-        "quantityElectronic": 0,
-        "poLineEstimatedPrice": 74.97
+        "quantityPhysical": 3
       },
       "description": "10 physical resources",
       "details": {
@@ -424,10 +389,8 @@
       "contributors": [],
       "cost": {
         "currency": "USD",
-        "listUnitPrice": 29.99,
-        "quantityPhysical": 1,
-        "quantityElectronic": 1,
-        "poLineEstimatedPrice": 39.98
+        "listUnitPriceElectronic": 29.99,
+        "quantityElectronic": 1
       },
       "description": "10 electronic resources for 1 location",
       "details": {
@@ -469,14 +432,6 @@
       ],
       "orderFormat": "Electronic Resource",
       "paymentStatus": "Fully Paid",
-      "physical": {
-        "volumes": [
-          "vol. 1"
-        ],
-        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
-        "expectedReceiptDate": "2018-10-05T00:00:00.000Z",
-        "receiptDue": "2018-10-10T00:00:00.000Z"
-      },
       "poLineDescription": "Harry Potter (Book 2)",
       "poLineNumber": "2LINES1PHYS1EL-2",
       "publicationDate": "2000",
@@ -515,9 +470,9 @@
       "cost": {
         "currency": "USD",
         "listUnitPrice": 24.99,
-        "quantityPhysical": 1,
-        "quantityElectronic": 1,
-        "poLineEstimatedPrice": 49.98
+        "listUnitPriceElectronic": 22.99,
+        "quantityPhysical": 3,
+        "quantityElectronic": 1
       },
       "description": "ABCDEFGH",
       "details": {
@@ -647,10 +602,8 @@
       ],
       "cost": {
         "currency": "USD",
-        "listUnitPrice": 24.99,
-        "quantityPhysical": 1,
-        "quantityElectronic": 1,
-        "poLineEstimatedPrice": 49.98
+        "listUnitPriceElectronic": 24.99,
+        "quantityElectronic": 3
       },
       "description": "",
       "details": {
@@ -686,14 +639,12 @@
         {
           "locationId": "b241764c-1466-4e1d-a028-1a3684a5da87",
           "quantity": 2,
-          "quantityElectronic": 0,
-          "quantityPhysical": 2
+          "quantityElectronic": 2
         },
         {
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "quantity": 1,
-          "quantityElectronic": 0,
-          "quantityPhysical": 1
+          "quantityElectronic": 1
         }
       ],
       "orderFormat": "Electronic Resource",

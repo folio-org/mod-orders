@@ -9,7 +9,7 @@
   "orderType": "One-Time",
   "poNumber": "268758",
   "reEncumber": false,
-  "vendor": "168f8a86-d26c-406e-813f-c7527f241ac3",
+  "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Pending",
   "metadata": {
     "createdDate": "2010-10-08T03:53:00.000",
@@ -41,11 +41,11 @@
         }
       ],
       "cost": {
-        "listUnitPrice": 24.99,
         "currency": "USD",
+        "listUnitPrice": 24.99,
+        "listUnitPriceElectronic": 20.99,
         "quantityPhysical": 3,
-        "quantityElectronic": 1,
-        "poLineEstimatedPrice": 99.96
+        "quantityElectronic": 1
       },
       "description": "ABCDEFGH",
       "details": {
@@ -179,11 +179,9 @@
         }
       ],
       "cost": {
-        "listUnitPrice": 25.10,
         "currency": "USD",
-        "quantityPhysical": 0,
-        "quantityElectronic": 3,
-        "poLineEstimatedPrice": 75.30
+        "listUnitPriceElectronic": 25.10,
+        "quantityElectronic": 3
       },
       "description": "",
       "details": {

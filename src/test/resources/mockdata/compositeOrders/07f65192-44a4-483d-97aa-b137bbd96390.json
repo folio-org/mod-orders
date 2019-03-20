@@ -14,7 +14,7 @@
      "reviewPeriod": 30,
      "renewalDate": "2019-04-09T00:00:00.000Z"
   },
-  "vendor": "50fb8b56-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Closed",
   "metadata": {
     "createdDate": "2018-07-18T00:00:00.000",
@@ -41,11 +41,9 @@
         }
       ],
       "cost": {
-        "listUnitPrice": 200000.00,
         "currency": "USD",
-        "quantityPhysical": 0,
-        "quantityElectronic": 1,
-        "poLineEstimatedPrice": 200000.00
+        "listUnitPriceElectronic": 200000.00,
+        "quantityElectronic": 1
       },
       "description": "",
       "details": {
@@ -95,11 +93,6 @@
       "orderFormat": "Electronic Resource",
       "owner": "Technical Services Department",
       "paymentStatus": "Awaiting Payment",
-      "physical": {
-        "materialSupplier": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd8",
-        "receiptDue": null,
-        "volumes": []
-      },
       "poLineDescription": "",
       "poLineNumber": "841240-021",
       "publicationDate": "2019",
