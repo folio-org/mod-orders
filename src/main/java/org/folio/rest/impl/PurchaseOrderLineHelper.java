@@ -113,9 +113,39 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     subObjFuts.add(createReportingCodes(compPoLine, line));
 
     return allOf(subObjFuts.toArray(new CompletableFuture[0]))
+      .thenCompose(v -> setTenantDefaultCreateInventoryValues(compPoLine))
       .thenCompose(v -> generateLineNumber(compOrder))
       .thenAccept(lineNumber -> line.put(PO_LINE_NUMBER, lineNumber))
       .thenCompose(v -> createPoLineSummary(compPoLine, line));
+  }
+
+  private CompletableFuture<Void> setTenantDefaultCreateInventoryValues(CompositePoLine compPOL) {
+    CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
+
+    if ((compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() == null)
+      || (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() == null)) {
+      loadConfiguration(okapiHeaders, ctx, logger)
+        .thenApply(config -> future.complete(config.getJsonObject("CREATE_INVENTORY")))
+        .exceptionally(t -> future.complete(new JsonObject()));
+      return future
+        .thenAccept(jsonConfig -> updateCreateInventory(compPOL, jsonConfig));
+    } else return completedFuture(null);
+  }
+
+  private void updateCreateInventory(CompositePoLine compPOL, JsonObject jsonConfig) {
+    //try to set createInventory by values from mod-configuration. If empty - set default hardcoded values
+    if (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() == null) {
+      String createInventory = jsonConfig.getString("ERESOURCE");
+      Eresource.CreateInventory eresource = StringUtils.isEmpty(createInventory) ?
+        Eresource.CreateInventory.INSTANCE_HOLDING : Eresource.CreateInventory.fromValue(createInventory);
+      compPOL.getEresource().setCreateInventory(eresource);
+    }
+    if (compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() == null) {
+      String createInventory = jsonConfig.getString("PHYSICAL");
+      Physical.CreateInventory physical = StringUtils.isEmpty(createInventory) ?
+        Physical.CreateInventory.INSTANCE_HOLDING_ITEM : Physical.CreateInventory.fromValue(createInventory);
+      compPOL.getPhysical().setCreateInventory(physical);
+    }
   }
 
   CompletableFuture<CompositePoLine> getCompositePoLine(String polineId) {
@@ -157,7 +187,8 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    */
   CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-    updatePoLineSubObjects(compOrderLine, lineFromStorage)
+    setTenantDefaultCreateInventoryValues(compOrderLine)
+      .thenCompose(v -> updatePoLineSubObjects(compOrderLine, lineFromStorage))
       .thenCompose(poLine -> updateOrderLineSummary(compOrderLine.getId(), poLine))
       .thenAccept(json -> {
         if (getErrors().isEmpty()) {
@@ -201,9 +232,8 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       return inventoryHelper.handleInstanceRecord(compPOL)
         .thenCompose(cPOL -> completedFuture(null));
     }
-    int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
-    if (expectedItemsQuantity == 0 || !HelperUtils.isInventoryUpdateRequired(compPOL)) {
-      // Create pieces if items does not exists
+    // create pieces only in case of no inventory updates required
+    if (inventoryUpdateNotRequired(compPOL)) {
       return createPieces(compPOL, Collections.emptyList())
         .thenRun(() ->
           logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId())
@@ -211,14 +241,9 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     }
 
     return inventoryHelper.handleInstanceRecord(compPOL)
-      .thenCompose(compositePoLine -> {
-        if (isHoldingsUpdateRequired(compPOL)) {
-          return inventoryHelper.handleItemRecords(compositePoLine);
-        }
-        return completedFuture(Collections.emptyList());
-      })
-      .thenCompose(pieces -> createPieces(compPOL, pieces));
-    }
+      .thenCompose(inventoryHelper::handleHoldingRecords)
+      .thenCompose(piecesWithItemId -> createPieces(compPOL, piecesWithItemId));
+  }
 
   String buildNewPoLineNumber(JsonObject poLineFromStorage, String poNumber) {
     String oldPoLineNumber = poLineFromStorage.getString(PO_LINE_NUMBER);
@@ -254,7 +279,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * @return void future
    */
   private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem) {
-    int expectedItemsQuantity = expectedPiecesWithItem.size();
+    int expectedItemsQuantity = isItemsUpdateRequired(compPOL) ? expectedPiecesWithItem.size() : calculateTotalQuantity(compPOL);
 
     return searchForExistingPieces(compPOL)
       .thenCompose(existingPieces -> {
@@ -369,7 +394,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     logger.debug("Updating PO line sub-objects...");
 
     List<CompletableFuture<Void>> futures = new ArrayList<>();
-    
+
     futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage));
 

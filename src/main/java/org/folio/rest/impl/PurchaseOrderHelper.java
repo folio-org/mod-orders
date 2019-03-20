@@ -213,48 +213,11 @@ public class PurchaseOrderHelper extends AbstractHelper {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
     return fetchCompositePoLines(compPO)
-      .thenCompose(v -> setTenantDefaultCreateInventoryValues(compPO))
       .thenCompose(v -> updateInventory(compPO))
       .thenCompose(v -> updateOrderSummary(compPO))
       .thenAccept(v -> changePoLineReceiptStatuses(compPO))
       .thenCompose(v -> updateCompositePoLines(compPO));
   }
-
-  private CompletableFuture<Void> setTenantDefaultCreateInventoryValues(CompositePurchaseOrder compPO) {
-    return updateCreateInventoryEresource(compPO)
-      .thenCompose(v -> updateCreateInventoryPhysical(compPO));
-  }
-
-  private CompletableFuture<Void> updateCreateInventoryEresource(CompositePurchaseOrder compPO) {
-    return CompletableFuture.allOf(compPO.getCompositePoLines().stream()
-      .filter(line -> line.getEresource() != null && line.getEresource().getCreateInventory() == null)
-      .map(line -> getModConfigurationByKey("CREATE_INVENTORY_ERESOURCE")
-        .thenApply(createInv -> StringUtils.isEmpty(createInv) ? Eresource.CreateInventory.INSTANCE_HOLDING : Eresource.CreateInventory.fromValue(createInv))
-        .thenAccept(createInv -> line.getEresource().setCreateInventory(createInv))
-        .exceptionally(t -> {
-          line.getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
-          return null;
-        }))
-      .toArray(CompletableFuture[]::new));
-  }
-
-  private CompletableFuture<Void> updateCreateInventoryPhysical(CompositePurchaseOrder compPO) {
-    return CompletableFuture.allOf(compPO.getCompositePoLines().stream()
-      .filter(line -> line.getPhysical() != null && line.getPhysical().getCreateInventory() == null)
-      .map(line -> getModConfigurationByKey("CREATE_INVENTORY_PHYSICAL")
-        .thenApply(createInv -> StringUtils.isEmpty(createInv) ? Physical.CreateInventory.INSTANCE_HOLDING_ITEM : Physical.CreateInventory.fromValue(createInv))
-        .thenAccept(createInv -> line.getPhysical().setCreateInventory(createInv))
-        .exceptionally(t -> {
-          line.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
-          return null;
-        }))
-      .toArray(CompletableFuture[]::new));
-  }
-
-private CompletableFuture<String> getModConfigurationByKey(String key){
-  return loadConfiguration(okapiHeaders, ctx, logger)
-    .thenApply(config -> config.getString(key));
-}
 
   /**
    * Validates purchase order content. If content is okay, checks if allowed PO Lines limit is not exceeded and validates vendors.

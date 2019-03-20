@@ -21,6 +21,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -94,23 +96,22 @@ public class InventoryHelper extends AbstractHelper {
    * @param compPOL   PO line to retrieve/create Item Records for. At this step PO Line must contain instance Id
    * @return future with list of pieces with item and location id's
    */
-  public CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL) {
+  public CompletableFuture<List<Piece>> handleHoldingRecords(CompositePoLine compPOL) {
     List<CompletableFuture<List<Piece>>> itemsPerHolding = new ArrayList<>();
     // Group all locations by location id because the holding should be unique for different locations
-    groupLocationsById(compPOL)
-      .forEach((locationId, locations) -> {
-        int expectedQuantity = calculateInventoryItemsQuantity(compPOL, locations);
-        // For some cases items might not be created e.g. Electronic resource with create inventory set to "None"
-        if (expectedQuantity > 0) {
+    if (HelperUtils.isHoldingsUpdateRequired(compPOL)) {
+      groupLocationsById(compPOL)
+        .forEach((locationId, locations) -> {
+          int expectedQuantity = calculateInventoryItemsQuantity(compPOL, locations);
+          // For some cases items might not be created e.g. Electronic resource with create inventory set to "None"
           itemsPerHolding.add(
             // Search for or create a new holding and then create items for this holding
             getOrCreateHoldingsRecord(compPOL, locationId)
               .thenCompose(holdingId -> handleItemRecords(compPOL, holdingId, expectedQuantity))
               .thenApply(itemIds -> constructPieces(itemIds, compPOL.getId(), locationId))
           );
-        }
-      });
-
+        });
+    }
     return collectResultsOnSuccess(itemsPerHolding)
       .thenApply(results -> results.stream()
         .flatMap(List::stream)

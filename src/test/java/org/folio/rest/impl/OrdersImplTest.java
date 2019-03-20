@@ -232,6 +232,7 @@ public class OrdersImplTest {
   private static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private static final String LISTED_PRINT_MONOGRAPH_PATH = "po_listed_print_monograph.json";
   private static final String PE_MIX_PATH = "po_listed_print_monograph_pe_mix.json";
+  private static final String MONOGRAPH_FOR_CREATE_INVENTORY_TEST = "print_monograph_for_create_inventory_test.json";
   private static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "/po_line_collection.json";
   private static final String LISTED_PRINT_SERIAL_PATH = "po_listed_print_serial.json";
   private static final String MINIMAL_ORDER_PATH = "minimal_order.json";
@@ -546,11 +547,11 @@ public class OrdersImplTest {
     assertNotNull(instancesSearches);
     assertNotNull(holdingsSearches);
     assertNotNull(itemsSearches);
-    assertEquals(1, instancesSearches.size());
+    assertEquals(2, instancesSearches.size());
     assertEquals(1, holdingsSearches.size());
     assertEquals(1, itemsSearches.size());
 
-    verifyInventoryInteraction(resp, 1);
+    verifyInventoryInteraction(resp, 2);
   }
 
   @Test
@@ -566,7 +567,7 @@ public class OrdersImplTest {
 
     CompositePoLine compositePoLine = reqData.getCompositePoLines().get(0);
 
-    compositePoLine.getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE);
+    compositePoLine.getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
     compositePoLine.getCost().setQuantityPhysical(3);
     compositePoLine.getCost().setQuantityElectronic(2);
     compositePoLine.setOrderFormat(OrderFormat.P_E_MIX);
@@ -1213,6 +1214,110 @@ public class OrdersImplTest {
     assertNull(holdingsSearches);
     assertNull(itemsSearches);
     assertNull(createdPieces);
+  }
+
+  @Test
+  public void testPostOrdersCreateInventoryNone() throws Exception {
+    JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
+    // Get Open Order
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    // Make sure that Order moves to Open
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    // Set CreateInventory value to create nothing in inventory
+    reqData.getCompositePoLines().get(0).getPhysical().setCreateInventory(Physical.CreateInventory.NONE);
+    reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
+
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
+    List<JsonObject> holdingsSearches = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
+    List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
+    List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
+
+    assertNull(instancesSearches);
+    assertNull(holdingsSearches);
+    assertNull(itemsSearches);
+    assertNotNull(createdPieces);
+  }
+
+  @Test
+  public void testPostOrdersCreateInventoryInstance() throws Exception {
+    JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
+    // Get Open Order
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    // Make sure that Order moves to Open
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    // Set CreateInventory value to create inventory Instance
+    reqData.getCompositePoLines().get(0).getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE);
+    reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE);
+
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
+    List<JsonObject> holdingsSearches = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
+    List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
+    List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
+
+    assertNotNull(instancesSearches);
+    assertNull(holdingsSearches);
+    assertNull(itemsSearches);
+    assertNotNull(createdPieces);
+  }
+
+  @Test
+  public void testPostOrdersCreateInventoryInstanceHolding() throws Exception {
+    JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
+    // Get Open Order
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    // Make sure that Order moves to Open
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    // Set CreateInventory value to create inventory instances and holdings
+    reqData.getCompositePoLines().get(0).getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
+    reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
+
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
+    List<JsonObject> holdingsSearches = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
+    List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
+    List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
+
+    assertNotNull(instancesSearches);
+    assertNotNull(holdingsSearches);
+    assertNull(itemsSearches);
+    assertNotNull(createdPieces);
+  }
+
+  @Test
+  public void testPostOrdersCreateInventoryInstanceHoldingItem() throws Exception {
+    JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
+    // Get Open Order
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    // Make sure that Order moves to Open
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    // Set CreateInventory value to create inventory instances, holdings and items
+    reqData.getCompositePoLines().get(0).getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
+    reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
+
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
+    List<JsonObject> holdingsSearches = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
+    List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
+    List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
+
+    assertNotNull(instancesSearches);
+    assertNotNull(holdingsSearches);
+    assertNotNull(itemsSearches);
+    assertNotNull(createdPieces);
   }
 
   @Test
