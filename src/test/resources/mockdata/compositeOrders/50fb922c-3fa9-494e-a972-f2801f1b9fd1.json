@@ -1,24 +1,12 @@
 {
   "id": "50fb922c-3fa9-494e-a972-f2801f1b9fd1",
-  "adjustment": {
-    "credit": 0,
-    "discount": 0,
-    "insurance": 0,
-    "overhead": 0,
-    "shipment": 0,
-    "tax1": 0,
-    "tax2": 0,
-    "useProRate": false
-  },
   "approved": true,
   "notes": [],
   "manualPo": false,
   "poNumber": "268s879",
   "orderType": "One-Time",
   "reEncumber": false,
-  "totalEstimatedPrice": 75.22,
-  "totalItems": 1,
-  "vendor": "50fb922c-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Pending",
   "metadata": {
     "createdDate": "2014-07-06T00:00:00.000",

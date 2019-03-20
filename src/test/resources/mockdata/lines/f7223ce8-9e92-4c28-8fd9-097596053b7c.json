@@ -1,7 +1,6 @@
 {
   "id" : "f7223ce8-9e92-4c28-8fd9-097596053b7c",
   "acquisitionMethod" : "Purchase At Vendor System",
-  "adjustment" : "74eabc72-024b-4477-9d43-edd8f7a4223b",
   "alerts" : [ "66552699-62eb-45e4-8dfa-4f048645156b" ],
   "cancellationRestriction" : false,
   "cancellationRestrictionNote" : "Incididunt ut labore et dolore magna aliqua",

@@ -14,10 +14,8 @@ public class ResourcePathResolver {
   public static final String PO_NUMBER = "poNumber";
   public static final String PO_LINE_NUMBER = "poLineNumber";
 
-  public static final String ADJUSTMENT = "adjustment";
   public static final String ALERTS = "alerts";
   public static final String REPORTING_CODES = "reportingCodes";
-  public static final String SOURCE = "source";
   public static final String PURCHASE_ORDER = "purchaseOrder";
   public static final String PIECES = "pieces";
   public static final String RECEIVING_HISTORY = "receiving-history";

@@ -1,17 +1,6 @@
 {
   "id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47",
   "acquisitionMethod": "Purchase",
-  "adjustment": {
-    "credit": 0.0,
-    "discount": 0.0,
-    "insurance": 0.0,
-    "invoiceId": "2d6d495c-c237-476f-aa48-50f7cbf74ca4",
-    "overhead": 0.0,
-    "shipment": 0.0,
-    "tax1": 0.0,
-    "tax2": 0.0,
-    "useProRate": false
-  },
   "alerts": [],
   "cancellationRestriction": false,
   "cancellationRestrictionNote": "",
@@ -29,11 +18,9 @@
     }
   ],
   "cost": {
-    "listPrice": 68.00,
     "currency": "USD",
-    "quantityPhysical": 1,
-    "quantityElectronic": 0,
-    "poLineEstimatedPrice": 68.00
+    "listUnitPrice": 68.00,
+    "quantityPhysical": 1
   },
   "description": "",
   "details": {
@@ -52,19 +39,6 @@
     "subscriptionTo": null
   },
   "donor": "",
-  "eresource": {
-    "activated": false,
-    "activationDue": 0,
-    "createInventory": false,
-    "trial": false,
-    "expectedActivation": null,
-    "userLimit": 0,
-    "accessProvider": null,
-    "license": {
-      "code": "Code 1",
-      "description": "License Agreement 1"
-    }
-  },
   "fundDistribution": [
     {
       "code": "EUROHIST-FY19",
