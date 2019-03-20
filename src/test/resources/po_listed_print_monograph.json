@@ -41,7 +41,10 @@
         }
       ],
       "cost": {
+        "additionalCost": 10,
         "currency": "USD",
+        "discount": 5,
+        "discountType": "percentage",
         "listUnitPrice": 24.99,
         "listUnitPriceElectronic": 20.99,
         "quantityPhysical": 3,
@@ -179,7 +182,10 @@
         }
       ],
       "cost": {
+        "additionalCost": 1.11,
         "currency": "USD",
+        "discount": 5,
+        "discountType": "amount",
         "listUnitPriceElectronic": 25.10,
         "quantityElectronic": 3
       },

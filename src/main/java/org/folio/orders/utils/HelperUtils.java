@@ -373,7 +373,7 @@ public class HelperUtils {
       errors.add(ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID);
     }
 
-    double additionalCost = defaultIfNull(cost.getListUnitPriceElectronic(), 0d);
+    double additionalCost = defaultIfNull(cost.getAdditionalCost(), 0d);
     if (additionalCost < 0d) {
       errors.add(ErrorCodes.COST_ADDITIONAL_COST_INVALID);
     }
