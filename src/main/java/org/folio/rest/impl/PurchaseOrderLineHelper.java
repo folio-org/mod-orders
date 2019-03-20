@@ -6,6 +6,7 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.comple
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
+import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
@@ -31,11 +32,8 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Currency;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -350,38 +348,6 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     if (cost != null) {
       cost.setPoLineEstimatedPrice(calculateEstimatedPrice(cost));
     }
-  }
-
-  /**
-   * Calculates total estimated price. See MODORDERS-180 for more details.
-   * @param cost PO Line's cost
-   */
-  double calculateEstimatedPrice(Cost cost) {
-    BigDecimal total = BigDecimal.ZERO;
-    if (cost.getListUnitPrice() != null) {
-      BigDecimal pPrice = BigDecimal.valueOf(cost.getListUnitPrice())
-                                    .multiply(BigDecimal.valueOf(cost.getQuantityPhysical()));
-      total = total.add(pPrice);
-    }
-    if (cost.getListUnitPriceElectronic() != null) {
-      BigDecimal ePrice = BigDecimal.valueOf(cost.getListUnitPriceElectronic())
-                                    .multiply(BigDecimal.valueOf(cost.getQuantityElectronic()));
-      total = total.add(ePrice);
-    }
-    if (cost.getDiscount() != null) {
-      BigDecimal discount;
-      if (Cost.DiscountType.AMOUNT == cost.getDiscountType()) {
-        discount = BigDecimal.valueOf(cost.getDiscount());
-      } else {
-        discount = total.multiply(BigDecimal.valueOf(cost.getDiscount()/100d));
-      }
-      total = total.subtract(discount);
-    }
-    if (cost.getAdditionalCost() != null) {
-      total = total.add(BigDecimal.valueOf(cost.getAdditionalCost()));
-    }
-    Currency currency = Currency.getInstance(cost.getCurrency());
-    return total.setScale(currency.getDefaultFractionDigits(), RoundingMode.HALF_UP).doubleValue();
   }
 
   /**

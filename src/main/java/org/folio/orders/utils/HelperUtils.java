@@ -9,13 +9,17 @@ import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Currency;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -345,7 +349,39 @@ public class HelperUtils {
       errors.add(ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST);
     }
 
+    validateCostPrices(compPOL.getCost(), P_E_MIX, errors);
+
     return convertErrorCodesToErrors(compPOL, errors);
+  }
+
+  private static void validateCostPrices(Cost cost, CompositePoLine.OrderFormat orderFormat, List<ErrorCodes> errors) {
+    double unitPrice = defaultIfNull(cost.getListUnitPrice(), 0d);
+    if (orderFormat == ELECTRONIC_RESOURCE) {
+      if (unitPrice > 0d) {
+        errors.add(ErrorCodes.COST_UNIT_PRICE_INVALID);
+      }
+    } else if (unitPrice <= 0d) {
+      errors.add(ErrorCodes.COST_UNIT_PRICE_INVALID);
+    }
+
+    double unitPriceElectronic = defaultIfNull(cost.getListUnitPriceElectronic(), 0d);
+    if (orderFormat == ELECTRONIC_RESOURCE || orderFormat == P_E_MIX) {
+      if (unitPriceElectronic <= 0d) {
+        errors.add(ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID);
+      }
+    } else if (unitPriceElectronic > 0d) {
+      errors.add(ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID);
+    }
+
+    double additionalCost = defaultIfNull(cost.getListUnitPriceElectronic(), 0d);
+    if (additionalCost < 0d) {
+      errors.add(ErrorCodes.COST_ADDITIONAL_COST_INVALID);
+    }
+
+    double discount = defaultIfNull(cost.getDiscount(), 0d);
+    if (discount < 0d || (cost.getDiscountType() == Cost.DiscountType.PERCENTAGE && discount > 100d)) {
+      errors.add(ErrorCodes.COST_DISCOUNT_INVALID);
+    }
   }
 
   private static List<Error> validatePoLineWithPhysicalFormat(CompositePoLine compPOL) {
@@ -368,6 +404,8 @@ public class HelperUtils {
       errors.add(ErrorCodes.PHYSICAL_COST_QTY_EXCEEDS_LOC);
     }
 
+    validateCostPrices(compPOL.getCost(), PHYSICAL_RESOURCE, errors);
+
     return convertErrorCodesToErrors(compPOL, errors);
   }
 
@@ -387,6 +425,8 @@ public class HelperUtils {
     if (getElectronicQuantity(compPOL.getLocations()) > costElectronicQuantity) {
       errors.add(ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST);
     }
+
+    validateCostPrices(compPOL.getCost(), ELECTRONIC_RESOURCE, errors);
 
     return convertErrorCodesToErrors(compPOL, errors);
   }
@@ -483,6 +523,38 @@ public class HelperUtils {
       default:
         return 0;
     }
+  }
+
+  /**
+   * Calculates total estimated price. See MODORDERS-180 for more details.
+   * @param cost PO Line's cost
+   */
+  public static double calculateEstimatedPrice(Cost cost) {
+    BigDecimal total = BigDecimal.ZERO;
+    if (cost.getListUnitPrice() != null) {
+      BigDecimal pPrice = BigDecimal.valueOf(cost.getListUnitPrice())
+                                    .multiply(BigDecimal.valueOf(cost.getQuantityPhysical()));
+      total = total.add(pPrice);
+    }
+    if (cost.getListUnitPriceElectronic() != null) {
+      BigDecimal ePrice = BigDecimal.valueOf(cost.getListUnitPriceElectronic())
+                                    .multiply(BigDecimal.valueOf(cost.getQuantityElectronic()));
+      total = total.add(ePrice);
+    }
+    if (cost.getDiscount() != null) {
+      BigDecimal discount;
+      if (Cost.DiscountType.AMOUNT == cost.getDiscountType()) {
+        discount = BigDecimal.valueOf(cost.getDiscount());
+      } else {
+        discount = total.multiply(BigDecimal.valueOf(cost.getDiscount()/100d));
+      }
+      total = total.subtract(discount);
+    }
+    if (cost.getAdditionalCost() != null) {
+      total = total.add(BigDecimal.valueOf(cost.getAdditionalCost()));
+    }
+    Currency currency = Currency.getInstance(cost.getCurrency());
+    return total.setScale(currency.getDefaultFractionDigits(), RoundingMode.HALF_UP).doubleValue();
   }
 
   public static List<Piece> constructPieces(List<String> itemIds, String poLineId, String locationId) {

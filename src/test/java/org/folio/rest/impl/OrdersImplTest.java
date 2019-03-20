@@ -2,11 +2,16 @@ package org.folio.rest.impl;
 
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.folio.orders.utils.ErrorCodes.COST_ADDITIONAL_COST_INVALID;
+import static org.folio.orders.utils.ErrorCodes.COST_DISCOUNT_INVALID;
+import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
+import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
 import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
+import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
@@ -27,6 +32,7 @@ import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_QTY;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
+import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
@@ -41,6 +47,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
@@ -90,6 +97,7 @@ import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -149,7 +157,7 @@ public class OrdersImplTest {
   private static final String PO_NUMBER_VALUE = "228D126";
   private static final String PO_LINE_NUMBER_VALUE = "1";
 
-  private static final String ACTIVE_VENDOR_ID = "168f8a86-d26c-406e-813f-c7527f241ac3";
+  private static final String ACTIVE_VENDOR_ID = "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1";
   private static final String INACTIVE_VENDOR_ID = "b1ef7e96-98f3-4f0d-9820-98c322c989d2";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";
   private static final String NON_EXIST_VENDOR_ID = "bba87500-6e71-4057-a2a9-a091bac7e0c1";
@@ -369,8 +377,8 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPostOrderWithIncorrectQuantities() throws Exception {
-    logger.info("=== Test Order creation - Quantity validation fails ===");
+  public void testPostOrderWithIncorrectCost() throws Exception {
+    logger.info("=== Test Order creation - Cost validation fails ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     // Assert that there are 2 lines
@@ -381,6 +389,8 @@ public class OrdersImplTest {
     firstPoLine.setOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
     firstPoLine.getCost().setQuantityPhysical(1);
     firstPoLine.getCost().setQuantityElectronic(0);
+    firstPoLine.getCost().setListUnitPrice(0d);
+    firstPoLine.getCost().setListUnitPriceElectronic(0d);
     firstPoLine.getLocations().forEach(location -> {
       location.setQuantityElectronic(1);
       location.setQuantityPhysical(2);
@@ -391,6 +401,8 @@ public class OrdersImplTest {
     secondPoLine.setOrderFormat(CompositePoLine.OrderFormat.OTHER);
     secondPoLine.getCost().setQuantityPhysical(0);
     secondPoLine.getCost().setQuantityElectronic(1);
+    secondPoLine.getCost().setListUnitPrice(0d);
+    secondPoLine.getCost().setListUnitPriceElectronic(10d);
     secondPoLine.getLocations().forEach(location -> {
       location.setQuantityElectronic(0);
       location.setQuantityPhysical(1);
@@ -399,7 +411,7 @@ public class OrdersImplTest {
     final Errors response = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(6));
+    assertThat(response.getErrors(), hasSize(10));
     Set<String> errorCodes = response.getErrors()
                                      .stream()
                                      .map(Error::getCode)
@@ -409,7 +421,9 @@ public class OrdersImplTest {
                                               ZERO_COST_ELECTRONIC_QTY.getCode(),
                                               NON_ZERO_COST_ELECTRONIC_QTY.getCode(),
                                               ELECTRONIC_LOC_QTY_EXCEEDS_COST.getCode(),
-                                              PHYSICAL_LOC_QTY_EXCEEDS_COST.getCode()));
+                                              PHYSICAL_LOC_QTY_EXCEEDS_COST.getCode(),
+                                              COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
+                                              COST_UNIT_PRICE_INVALID.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -473,6 +487,8 @@ public class OrdersImplTest {
     // Set cost quantities
     firstPoLine.getCost().setQuantityPhysical(totalQty);
     firstPoLine.getCost().setQuantityElectronic(0);
+    firstPoLine.getCost().setListUnitPrice(10d);
+    firstPoLine.getCost().setListUnitPriceElectronic(0d);
 
     // Set status to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
@@ -515,6 +531,7 @@ public class OrdersImplTest {
     assertEquals(polCount - 1, instancesSearches.size());
 
     verifyInventoryInteraction(resp, polCount);
+    verifyCalculatedData(resp);
   }
 
   @Test
@@ -577,6 +594,8 @@ public class OrdersImplTest {
     secondPol.setOrderFormat(CompositePoLine.OrderFormat.OTHER);
     // Specify correct quantities for OTHER format
     secondPol.getCost().setQuantityElectronic(0);
+    secondPol.getCost().setListUnitPriceElectronic(null);
+    secondPol.getCost().setListUnitPrice(10d);
     secondPol.getCost().setQuantityPhysical(secondPolLocations.size());
     secondPolLocations.forEach(location -> {
       location.setQuantityElectronic(0);
@@ -603,6 +622,7 @@ public class OrdersImplTest {
     assertEquals(1, itemsSearches.size());
 
     verifyInventoryInteraction(resp, 1);
+    verifyCalculatedData(resp);
   }
 
   @Test
@@ -884,10 +904,18 @@ public class OrdersImplTest {
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
     assertEquals(id, resp.getId());
+    verifyCalculatedData(resp);
+  }
+
+  private void verifyCalculatedData(CompositePurchaseOrder resp) {
     Integer expectedQuantity = resp
       .getCompositePoLines()
       .stream()
-      .mapToInt(poLine -> poLine.getCost().getQuantityElectronic() + poLine.getCost().getQuantityPhysical())
+      .mapToInt(poLine -> {
+        int eQty = ObjectUtils.defaultIfNull(poLine.getCost().getQuantityElectronic(), 0);
+        int pQty = ObjectUtils.defaultIfNull(poLine.getCost().getQuantityPhysical(), 0);
+        return eQty + pQty;
+      })
       .sum();
 
     double expectedPrice = resp
@@ -899,6 +927,10 @@ public class OrdersImplTest {
 
     assertThat(resp.getTotalItems(), equalTo(expectedQuantity));
     assertThat(resp.getTotalEstimatedPrice(), equalTo(expectedPrice));
+
+    resp.getCompositePoLines().forEach(line -> {
+      assertThat(line.getCost().getPoLineEstimatedPrice(), greaterThan(0d));
+    });
   }
 
   @Test
@@ -1759,6 +1791,37 @@ public class OrdersImplTest {
   }
 
   @Test
+  public void testPutOrderByIdWithInvalidOrderIdInBody() {
+    logger.info("=== Test Put Order By Id for 422 with Invalid Id in the Order ===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(LISTED_PRINT_SERIAL_PATH).mapTo(CompositePurchaseOrder.class);
+    reqData.setId(PO_ID);
+
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID_FOR_FAILURE_CASE),
+      JsonObject.mapFrom(reqData).encodePrettily(), APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(errors.getErrors(), hasSize(1));
+    assertThat(errors.getErrors().get(0).getCode(), equalTo(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.getCode()));
+  }
+
+  @Test
+  public void testPutOrderByIdWithInvalidOrderIdInPol() {
+    logger.info("=== Test Put Order By Id for 422 with invalid purchase order Id in the POL ===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(LISTED_PRINT_SERIAL_PATH).mapTo(CompositePurchaseOrder.class);
+    reqData.getCompositePoLines().forEach(line -> line.setPurchaseOrderId(PO_ID_FOR_FAILURE_CASE));
+
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID),
+      JsonObject.mapFrom(reqData).encodePrettily(), APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(errors.getErrors(), hasSize(reqData.getCompositePoLines().size()));
+    errors.getErrors().forEach(error -> {
+      assertThat(error.getCode(), equalTo(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.getCode()));
+      assertThat(error.getParameters(), hasSize(1));
+    });
+  }
+
+  @Test
   public void testPutOrderInOpenStatusAddingNewLine() {
     logger.info("=== Test update Open order - add new line ===");
 
@@ -2093,28 +2156,40 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPutOrderLineElectronicFormatIncorrectQuantity() {
-    logger.info("=== Test Put Electronic Order Line - incorrect quantity ===");
+  public void testPutOrderLineElectronicFormatIncorrectQuantityAndPrice() {
+    logger.info("=== Test Put Electronic Order Line - incorrect quantity and Price ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
     reqData.setId(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
 
     // Set incorrect cost and location quantities
     reqData.setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
-    reqData.getCost().setQuantityPhysical(1);
-    reqData.getCost().setQuantityElectronic(0);
+    Cost cost = reqData.getCost();
+    cost.setQuantityPhysical(1);
+    cost.setQuantityElectronic(0);
+    cost.setListUnitPriceElectronic(-1d);
+    cost.setListUnitPrice(1d);
+    cost.setAdditionalCost(-1d);
+    cost.setDiscountType(Cost.DiscountType.PERCENTAGE);
+    cost.setDiscount(100.1d);
     reqData.getLocations().get(0).setQuantityElectronic(1);
 
     final Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encodePrettily(),
       APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(3));
+    assertThat(response.getErrors(), hasSize(7));
     List<String> errorCodes = response.getErrors()
                                       .stream()
                                       .map(Error::getCode)
                                       .collect(Collectors.toList());
 
-    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_ELECTRONIC_QTY.getCode(), NON_ZERO_COST_PHYSICAL_QTY.getCode(), ELECTRONIC_LOC_QTY_EXCEEDS_COST.getCode()));
+    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_ELECTRONIC_QTY.getCode(),
+                                              NON_ZERO_COST_PHYSICAL_QTY.getCode(),
+                                              COST_UNIT_PRICE_INVALID.getCode(),
+                                              COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
+                                              COST_ADDITIONAL_COST_INVALID.getCode(),
+                                              COST_DISCOUNT_INVALID.getCode(),
+                                              ELECTRONIC_LOC_QTY_EXCEEDS_COST.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -3578,9 +3653,9 @@ public class OrdersImplTest {
         }
 
         try {
-          JsonObject po_lines;
+          PoLineCollection poLineCollection;
           if (poId.equals(ORDER_ID_WITH_PO_LINES) || !polIds.isEmpty()) {
-            PoLineCollection poLineCollection = new JsonObject(getMockData(POLINES_COLLECTION)).mapTo(PoLineCollection.class);
+            poLineCollection = new JsonObject(getMockData(POLINES_COLLECTION)).mapTo(PoLineCollection.class);
 
             // Filter PO Lines either by PO id or by expected line ids
             Iterator<PoLine> iterator = poLineCollection.getPoLines().iterator();
@@ -3591,8 +3666,6 @@ public class OrdersImplTest {
               }
             }
             poLineCollection.setTotalRecords(poLineCollection.getPoLines().size());
-
-            po_lines = JsonObject.mapFrom(poLineCollection);
           } else {
             String filePath;
             if (ID_FOR_PRINT_MONOGRAPH_ORDER.equals(poId)) {
@@ -3602,10 +3675,13 @@ public class OrdersImplTest {
             }
             JsonObject compPO = new JsonObject(getMockData(filePath));
             // Build PoLineCollection to make sure content is valid
-            PoLineCollection poLines = buildPoLineCollection(tenant, compPO.getJsonArray(COMPOSITE_PO_LINES));
-            po_lines = JsonObject.mapFrom(poLines);
+            poLineCollection = buildPoLineCollection(tenant, compPO.getJsonArray(COMPOSITE_PO_LINES));
           }
 
+          // Update calculated data
+          updatePoLineCalculatedData(poLineCollection);
+
+          JsonObject po_lines = JsonObject.mapFrom(poLineCollection);
           logger.info(po_lines.encodePrettily());
 
           addServerRqRsData(HttpMethod.GET, PO_LINES, po_lines);
@@ -3636,6 +3712,18 @@ public class OrdersImplTest {
         }
       }
     }
+
+    private void updatePoLineCalculatedData(PoLineCollection poLineCollection) {
+      poLineCollection.getPoLines().forEach(this::updatePoLineEstimatedPrice);
+    }
+
+    private void updatePoLineEstimatedPrice(PoLine line) {
+      if (line.getCost() != null) {
+        Cost cost = JsonObject.mapFrom(line.getCost()).mapTo(Cost.class);
+        line.getCost().setPoLineEstimatedPrice(calculateEstimatedPrice(cost));
+      }
+    }
+
     private PoLineCollection buildPoLineCollection(String tenant, JsonArray lines) {
       PoLineCollection result = new PoLineCollection();
       if (lines == null || lines.isEmpty()) {
@@ -3693,7 +3781,7 @@ public class OrdersImplTest {
       } else {
         try {
 
-          JsonObject po = null;
+          JsonObject pol = null;
 
           // Attempt to find POLine in mock server memory
           Map<String, List<JsonObject>> column = serverRqRs.column(HttpMethod.POST);
@@ -3703,16 +3791,18 @@ public class OrdersImplTest {
             objects.sort(comparator);
             int ind = Collections.binarySearch(objects, new JsonObject().put(ID, id), comparator);
             if(ind > -1) {
-              po = objects.get(ind);
+              pol = objects.get(ind);
             }
           }
 
           // If previous step has no result then attempt to find POLine in stubs
-          if (po == null) {
-            po = new JsonObject(getMockData(String.format("%s%s.json", PO_LINES_MOCK_DATA_PATH, id)));
+          if (pol == null) {
+            PoLine poLine = new JsonObject(getMockData(String.format("%s%s.json", PO_LINES_MOCK_DATA_PATH, id))).mapTo(PoLine.class);
+            updatePoLineEstimatedPrice(poLine);
+            pol = JsonObject.mapFrom(poLine);
           }
 
-          serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+          serverResponse(ctx, 200, APPLICATION_JSON, pol.encodePrettily());
         } catch (IOException e) {
           serverResponse(ctx, 404, APPLICATION_JSON, id);
         }

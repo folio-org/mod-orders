@@ -28,7 +28,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
@@ -42,6 +41,7 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
+import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -229,12 +229,11 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @return estimated purchase order's total price
    */
   private Double calculateTotalEstimatedPrice(List<CompositePoLine> poLines) {
-    return poLines.stream()
+    return poLines
+      .stream()
       .map(CompositePoLine::getCost)
       .filter(Objects::nonNull)
-      .mapToDouble(cost -> Optional
-        .ofNullable(cost.getPoLineEstimatedPrice())
-        .orElse(orderLineHelper.calculateEstimatedPrice(cost)))
+      .mapToDouble(Cost::getPoLineEstimatedPrice)
       .sum();
   }
 
@@ -389,10 +388,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private CompletableFuture<Void> fetchCompositePoLines(CompositePurchaseOrder compPO) {
     if (isEmpty(compPO.getCompositePoLines())) {
       return getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
-                        .thenCompose(pols -> CompletableFuture.allOf(pols.stream().map(poline -> {
-                          compPO.getCompositePoLines().add(poline);
-                          return completedFuture(null);
-                        }).toArray(CompletableFuture[]::new)));
+        .thenAccept(compPO::setCompositePoLines);
     }
     return completedFuture(null);
   }

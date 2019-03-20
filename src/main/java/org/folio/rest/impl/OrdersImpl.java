@@ -141,7 +141,8 @@ public class OrdersImpl implements Orders {
         } else {
           asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422)));
         }
-      });
+      })
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   private void populateOrderId(String orderId, CompositePurchaseOrder compPO) {
