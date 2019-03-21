@@ -389,8 +389,8 @@ public class OrdersImplTest {
     firstPoLine.setOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
     firstPoLine.getCost().setQuantityPhysical(1);
     firstPoLine.getCost().setQuantityElectronic(0);
-    firstPoLine.getCost().setListUnitPrice(0d);
-    firstPoLine.getCost().setListUnitPriceElectronic(0d);
+    firstPoLine.getCost().setListUnitPrice(-10d);
+    firstPoLine.getCost().setListUnitPriceElectronic(-5d);
     firstPoLine.getLocations().forEach(location -> {
       location.setQuantityElectronic(1);
       location.setQuantityPhysical(2);
@@ -401,7 +401,7 @@ public class OrdersImplTest {
     secondPoLine.setOrderFormat(CompositePoLine.OrderFormat.OTHER);
     secondPoLine.getCost().setQuantityPhysical(0);
     secondPoLine.getCost().setQuantityElectronic(1);
-    secondPoLine.getCost().setListUnitPrice(0d);
+    secondPoLine.getCost().setListUnitPrice(-1d);
     secondPoLine.getCost().setListUnitPriceElectronic(10d);
     secondPoLine.getLocations().forEach(location -> {
       location.setQuantityElectronic(0);
@@ -2150,6 +2150,31 @@ public class OrdersImplTest {
                                       .collect(Collectors.toList());
 
     assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode(), NON_ZERO_COST_ELECTRONIC_QTY.getCode(), PHYSICAL_LOC_QTY_EXCEEDS_COST.getCode()));
+
+    // Check that no any calls made by the business logic to other services
+    assertTrue(MockServer.serverRqRs.isEmpty());
+  }
+
+  @Test
+  public void testPostOrdersLinePhysicalFormatDiscount() {
+    logger.info("=== Test Post Physical Order Line - discount exceeds total price ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+
+    // Set incorrect cost and location quantities
+    reqData.setOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
+    reqData.getCost().setQuantityPhysical(2);
+    reqData.getCost().setListUnitPrice(10d);
+    reqData.getCost().setDiscount(100d);
+    reqData.getCost().setDiscountType(Cost.DiscountType.AMOUNT);
+    reqData.getCost().setQuantityElectronic(0);
+    reqData.getLocations().get(0).setQuantityPhysical(2);
+
+    final Errors response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(response.getErrors(), hasSize(1));
+    assertThat(response.getErrors().get(0).getCode(), equalTo(COST_DISCOUNT_INVALID.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
