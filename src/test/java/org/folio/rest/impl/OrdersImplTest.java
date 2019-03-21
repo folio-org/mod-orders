@@ -1576,9 +1576,6 @@ public class OrdersImplTest {
 
     // Verify that not all expected items created
     assertThat(items.size(), lessThan(calculateInventoryItemsQuantity(reqData.getCompositePoLines().get(0))));
-
-    // Verify that pieces created for processed items quantity
-    verifyPiecesCreated(items, reqData.getCompositePoLines().subList(0, 1), createdPieces);
   }
 
   private void verifyInstanceLinksForUpdatedOrder(CompositePurchaseOrder reqData) {
@@ -1706,9 +1703,10 @@ public class OrdersImplTest {
                                     .collect(Collectors.toList());
 
     // Verify quantity of created pieces
-    int expectedPiecesQuantity = itemIds.size();
+    int expectedPiecesQuantity = 0;
     for (CompositePoLine poLine : compositePoLines) {
       expectedPiecesQuantity += HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation(poLine, poLine.getLocations());
+      expectedPiecesQuantity += HelperUtils.calculateInventoryItemsQuantity(poLine, poLine.getLocations());
     }
     assertEquals(expectedPiecesQuantity, pieces.size());
 

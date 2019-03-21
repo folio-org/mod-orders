@@ -126,6 +126,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenCompose(poFromStorage -> {
         logger.info("Order successfully retrieved from storage");
         return validatePoNumber(poFromStorage, compPO)
+          .thenCompose(v -> updateTenantDefaultCreateInventoryValues(compPO))
           .thenCompose(v -> updatePoLines(poFromStorage, compPO))
           .thenCompose(v -> {
             if (isTransitionToOpen(poFromStorage, compPO)) {
@@ -136,6 +137,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
           });
         }
       );
+  }
+
+  private CompletableFuture<Void> updateTenantDefaultCreateInventoryValues(CompositePurchaseOrder compPO) {
+    return CompletableFuture.allOf(compPO.getCompositePoLines().stream()
+      .map(orderLineHelper::setTenantDefaultCreateInventoryValues)
+      .toArray(CompletableFuture[]::new));
   }
 
   /**

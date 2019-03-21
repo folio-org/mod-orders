@@ -329,7 +329,7 @@
       "eresource": {
         "activated": false,
         "activationDue": 0,
-        "createInventory": false,
+        "createInventory": "None",
         "trial": false,
         "userLimit": 10,
         "accessProvider": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1"

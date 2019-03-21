@@ -142,7 +142,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       .thenCompose(v -> createPoLineSummary(compPoLine, line));
   }
 
-  private CompletableFuture<Void> setTenantDefaultCreateInventoryValues(CompositePoLine compPOL) {
+   CompletableFuture<Void> setTenantDefaultCreateInventoryValues(CompositePoLine compPOL) {
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
 
     if ((compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() == null)
