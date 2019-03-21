@@ -355,18 +355,19 @@ public class HelperUtils {
   }
 
   private static void validateCostPrices(Cost cost, CompositePoLine.OrderFormat orderFormat, List<ErrorCodes> errors) {
-    double unitPrice = defaultIfNull(cost.getListUnitPrice(), 0d);
+    // Using default value as -1 to avoid null checks
+    double unitPrice = defaultIfNull(cost.getListUnitPrice(), -1d);
     if (orderFormat == ELECTRONIC_RESOURCE) {
       if (unitPrice > 0d) {
         errors.add(ErrorCodes.COST_UNIT_PRICE_INVALID);
       }
-    } else if (unitPrice <= 0d) {
+    } else if (unitPrice < 0d) {
       errors.add(ErrorCodes.COST_UNIT_PRICE_INVALID);
     }
 
-    double unitPriceElectronic = defaultIfNull(cost.getListUnitPriceElectronic(), 0d);
+    double unitPriceElectronic = defaultIfNull(cost.getListUnitPriceElectronic(), -1d);
     if (orderFormat == ELECTRONIC_RESOURCE || orderFormat == P_E_MIX) {
-      if (unitPriceElectronic <= 0d) {
+      if (unitPriceElectronic < 0d) {
         errors.add(ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID);
       }
     } else if (unitPriceElectronic > 0d) {

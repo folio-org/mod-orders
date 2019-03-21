@@ -389,8 +389,8 @@ public class OrdersImplTest {
     firstPoLine.setOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
     firstPoLine.getCost().setQuantityPhysical(1);
     firstPoLine.getCost().setQuantityElectronic(0);
-    firstPoLine.getCost().setListUnitPrice(0d);
-    firstPoLine.getCost().setListUnitPriceElectronic(0d);
+    firstPoLine.getCost().setListUnitPrice(-10d);
+    firstPoLine.getCost().setListUnitPriceElectronic(-5d);
     firstPoLine.getLocations().forEach(location -> {
       location.setQuantityElectronic(1);
       location.setQuantityPhysical(2);
@@ -401,7 +401,7 @@ public class OrdersImplTest {
     secondPoLine.setOrderFormat(CompositePoLine.OrderFormat.OTHER);
     secondPoLine.getCost().setQuantityPhysical(0);
     secondPoLine.getCost().setQuantityElectronic(1);
-    secondPoLine.getCost().setListUnitPrice(0d);
+    secondPoLine.getCost().setListUnitPrice(-1d);
     secondPoLine.getCost().setListUnitPriceElectronic(10d);
     secondPoLine.getLocations().forEach(location -> {
       location.setQuantityElectronic(0);
