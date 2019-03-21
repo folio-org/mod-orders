@@ -1,6 +1,37 @@
+## 5.0.0 - Unreleased
+
 ## 4.0.0 - Unreleased
+The primary focus of this release was to implement backend logic for the receiving and preparation for the check-in flows.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v3.0.0...v4.0.0)
+
+### Stories
+ * [MODORDERS-193](https://issues.folio.org/browse/MODORDERS-193) Sum total quantity on PO retrieval
+ * [MODORDERS-185](https://issues.folio.org/browse/MODORDERS-185) Checkin: Implement `POST /orders/peices` endpoint
+ * [MODORDERS-184](https://issues.folio.org/browse/MODORDERS-184) Receiving history: updates to support check-in flow
+ * [MODORDERS-183](https://issues.folio.org/browse/MODORDERS-183) Checkin: create instance record on Order transition to Open
+ * [MODORDERS-181](https://issues.folio.org/browse/MODORDERS-181) Updates to PO: removal of `adjustment` and `totalEstimatedPrice` calculation
+ * [MODORDERS-180](https://issues.folio.org/browse/MODORDERS-180) Updates to PO Line: updates to `cost` and removal of `adjustment`
+ * [MODORDERS-175](https://issues.folio.org/browse/MODORDERS-175) Add ability to move a received piece back to `Expected`
+ * [MODORDERS-171](https://issues.folio.org/browse/MODORDERS-171) Receiving history: additional data for receiving flow
+ * [MODORDERS-170](https://issues.folio.org/browse/MODORDERS-170) Prevent ordering from Inactive vendors/access provider
+ * [MODORDERS-168](https://issues.folio.org/browse/MODORDERS-168) Refactor PO Line model - business logic
+ * [MODORDERS-166](https://issues.folio.org/browse/MODORDERS-166) Add `locationId` to the piece schema
+ * [MODORDERS-165](https://issues.folio.org/browse/MODORDERS-165) Add `locationId` to receiving_history
+ * [MODORDERS-163](https://issues.folio.org/browse/MODORDERS-163) Implement receiving flow for P/E mix
+ * [MODORDERS-162](https://issues.folio.org/browse/MODORDERS-162) Implement receiving flow for E-only
+ * [MODORDERS-159](https://issues.folio.org/browse/MODORDERS-159) PO Line: receipt status
+ * [MODORDERS-158](https://issues.folio.org/browse/MODORDERS-158) Refactor PO Line model - schema changes
+ * [MODORDERS-141](https://issues.folio.org/browse/MODORDERS-141) Refactor business logic helpers structure to improve code maintainability
+ * [MODORDERS-103](https://issues.folio.org/browse/MODORDERS-103) Implement receiving flow for physical-only
+
+### Bug Fixes
+ * [MODORDERS-188](https://issues.folio.org/browse/MODORDERS-188) Cryptic error returned when trying to add a POLine to an Open/Closed PO
 
 ## 3.0.0 - Released
+The primary focus of this release was to implement backend logic necessary for ui-orders to manage purchase orders and purchase order lines, integration between orders and inventory apps and preparation for the receiving flows.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v2.0.1...v3.0.0)
 
 ### Stories
  * [MODORDERS-154](https://issues.folio.org/browse/MODORDERS-154) - PO Line's `location` property is changed to `locations` i.e. from single object to array of objects
