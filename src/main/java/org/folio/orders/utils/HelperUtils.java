@@ -355,18 +355,19 @@ public class HelperUtils {
   }
 
   private static void validateCostPrices(Cost cost, CompositePoLine.OrderFormat orderFormat, List<ErrorCodes> errors) {
-    double unitPrice = defaultIfNull(cost.getListUnitPrice(), 0d);
+    // Using default value as -1 to avoid null checks
+    double unitPrice = defaultIfNull(cost.getListUnitPrice(), -1d);
     if (orderFormat == ELECTRONIC_RESOURCE) {
       if (unitPrice > 0d) {
         errors.add(ErrorCodes.COST_UNIT_PRICE_INVALID);
       }
-    } else if (unitPrice <= 0d) {
+    } else if (unitPrice < 0d) {
       errors.add(ErrorCodes.COST_UNIT_PRICE_INVALID);
     }
 
-    double unitPriceElectronic = defaultIfNull(cost.getListUnitPriceElectronic(), 0d);
+    double unitPriceElectronic = defaultIfNull(cost.getListUnitPriceElectronic(), -1d);
     if (orderFormat == ELECTRONIC_RESOURCE || orderFormat == P_E_MIX) {
-      if (unitPriceElectronic <= 0d) {
+      if (unitPriceElectronic < 0d) {
         errors.add(ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID);
       }
     } else if (unitPriceElectronic > 0d) {
@@ -379,7 +380,9 @@ public class HelperUtils {
     }
 
     double discount = defaultIfNull(cost.getDiscount(), 0d);
-    if (discount < 0d || (cost.getDiscountType() == Cost.DiscountType.PERCENTAGE && discount > 100d)) {
+    if (discount < 0d || (cost.getDiscountType() == Cost.DiscountType.PERCENTAGE && discount > 100d)
+      // validate that discount does not exceed total price
+      || (discount > 0d && cost.getDiscountType() == Cost.DiscountType.AMOUNT && calculateEstimatedPrice(cost) < 0d)) {
       errors.add(ErrorCodes.COST_DISCOUNT_INVALID);
     }
   }
@@ -531,12 +534,12 @@ public class HelperUtils {
    */
   public static double calculateEstimatedPrice(Cost cost) {
     BigDecimal total = BigDecimal.ZERO;
-    if (cost.getListUnitPrice() != null) {
+    if (cost.getListUnitPrice() != null && cost.getQuantityPhysical() != null) {
       BigDecimal pPrice = BigDecimal.valueOf(cost.getListUnitPrice())
                                     .multiply(BigDecimal.valueOf(cost.getQuantityPhysical()));
       total = total.add(pPrice);
     }
-    if (cost.getListUnitPriceElectronic() != null) {
+    if (cost.getListUnitPriceElectronic() != null && cost.getQuantityElectronic() != null) {
       BigDecimal ePrice = BigDecimal.valueOf(cost.getListUnitPriceElectronic())
                                     .multiply(BigDecimal.valueOf(cost.getQuantityElectronic()));
       total = total.add(ePrice);
