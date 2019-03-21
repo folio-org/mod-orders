@@ -2156,6 +2156,31 @@ public class OrdersImplTest {
   }
 
   @Test
+  public void testPostOrdersLinePhysicalFormatDiscount() {
+    logger.info("=== Test Post Physical Order Line - discount exceeds total price ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+
+    // Set incorrect cost and location quantities
+    reqData.setOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
+    reqData.getCost().setQuantityPhysical(2);
+    reqData.getCost().setListUnitPrice(10d);
+    reqData.getCost().setDiscount(100d);
+    reqData.getCost().setDiscountType(Cost.DiscountType.AMOUNT);
+    reqData.getCost().setQuantityElectronic(0);
+    reqData.getLocations().get(0).setQuantityPhysical(2);
+
+    final Errors response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(response.getErrors(), hasSize(1));
+    assertThat(response.getErrors().get(0).getCode(), equalTo(COST_DISCOUNT_INVALID.getCode()));
+
+    // Check that no any calls made by the business logic to other services
+    assertTrue(MockServer.serverRqRs.isEmpty());
+  }
+
+  @Test
   public void testPutOrderLineElectronicFormatIncorrectQuantityAndPrice() {
     logger.info("=== Test Put Electronic Order Line - incorrect quantity and Price ===");
 

@@ -380,7 +380,9 @@ public class HelperUtils {
     }
 
     double discount = defaultIfNull(cost.getDiscount(), 0d);
-    if (discount < 0d || (cost.getDiscountType() == Cost.DiscountType.PERCENTAGE && discount > 100d)) {
+    if (discount < 0d || (cost.getDiscountType() == Cost.DiscountType.PERCENTAGE && discount > 100d)
+      // validate that discount does not exceed total price
+      || (discount > 0d && cost.getDiscountType() == Cost.DiscountType.AMOUNT && calculateEstimatedPrice(cost) < 0d)) {
       errors.add(ErrorCodes.COST_DISCOUNT_INVALID);
     }
   }
@@ -532,12 +534,12 @@ public class HelperUtils {
    */
   public static double calculateEstimatedPrice(Cost cost) {
     BigDecimal total = BigDecimal.ZERO;
-    if (cost.getListUnitPrice() != null) {
+    if (cost.getListUnitPrice() != null && cost.getQuantityPhysical() != null) {
       BigDecimal pPrice = BigDecimal.valueOf(cost.getListUnitPrice())
                                     .multiply(BigDecimal.valueOf(cost.getQuantityPhysical()));
       total = total.add(pPrice);
     }
-    if (cost.getListUnitPriceElectronic() != null) {
+    if (cost.getListUnitPriceElectronic() != null && cost.getQuantityElectronic() != null) {
       BigDecimal ePrice = BigDecimal.valueOf(cost.getListUnitPriceElectronic())
                                     .multiply(BigDecimal.valueOf(cost.getQuantityElectronic()));
       total = total.add(ePrice);
