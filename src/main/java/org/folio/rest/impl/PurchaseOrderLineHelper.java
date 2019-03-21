@@ -14,11 +14,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -52,6 +48,9 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private static final String LOOKUP_PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId==%s&limit=%d&lang=%s";
   private static final String PO_LINE_NUMBER_ENDPOINT = resourcesPath(PO_LINE_NUMBER) + "?purchaseOrderId=";
   private static final Pattern PO_LINE_NUMBER_PATTERN = Pattern.compile("([a-zA-Z0-9]{5,16}-)([0-9]{1,3})");
+  private static final String CREATE_INVENTORY = "createInventory";
+  private static final String ERESOURCE = "eresource";
+  private static final String PHYSICAL = "physical";
 
   private final InventoryHelper inventoryHelper;
 
@@ -125,7 +124,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     if ((compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() == null)
       || (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() == null)) {
       loadConfiguration(okapiHeaders, ctx, logger)
-        .thenApply(config -> future.complete(config.getJsonObject("CREATE_INVENTORY")))
+        .thenApply(config -> future.complete(Optional.of(config.getJsonObject(CREATE_INVENTORY)).orElse(new JsonObject())))
         .exceptionally(t -> future.complete(new JsonObject()));
       return future
         .thenAccept(jsonConfig -> updateCreateInventory(compPOL, jsonConfig));
@@ -135,13 +134,13 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private void updateCreateInventory(CompositePoLine compPOL, JsonObject jsonConfig) {
     //try to set createInventory by values from mod-configuration. If empty - set default hardcoded values
     if (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() == null) {
-      String createInventory = jsonConfig.getString("ERESOURCE");
+      String createInventory = jsonConfig.getString(ERESOURCE);
       Eresource.CreateInventory eresource = StringUtils.isEmpty(createInventory) ?
         Eresource.CreateInventory.INSTANCE_HOLDING : Eresource.CreateInventory.fromValue(createInventory);
       compPOL.getEresource().setCreateInventory(eresource);
     }
     if (compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() == null) {
-      String createInventory = jsonConfig.getString("PHYSICAL");
+      String createInventory = jsonConfig.getString(PHYSICAL);
       Physical.CreateInventory physical = StringUtils.isEmpty(createInventory) ?
         Physical.CreateInventory.INSTANCE_HOLDING_ITEM : Physical.CreateInventory.fromValue(createInventory);
       compPOL.getPhysical().setCreateInventory(physical);

@@ -1318,6 +1318,34 @@ public class OrdersImplTest {
   }
 
   @Test
+  public void testPostOrdersWithEmptyCreateInventory() throws Exception {
+    JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
+    // Get Open Order
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    // Make sure that Order moves to Open
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    // Clear CreateInventory for setting default values
+    reqData.getCompositePoLines().get(0).getPhysical().setCreateInventory(null);
+    reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(null);
+
+    final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+      EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
+    List<JsonObject> holdingsSearches = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
+    List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
+    List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
+
+    assertNotNull(instancesSearches);
+    assertNotNull(holdingsSearches);
+    assertNotNull(itemsSearches);
+    verifyInventoryInteraction(resp, 1);
+
+    assertNotNull(createdPieces);
+  }
+
+  @Test
   public void testPutOrdersByIdToChangeStatusToOpenWithCheckinItems() throws Exception {
     logger.info("=== Test Put Order By Id to change status of Order to Open ===");
 
