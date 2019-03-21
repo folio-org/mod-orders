@@ -110,7 +110,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private CompositePurchaseOrder validateOrderState(CompositePurchaseOrder po) {
-    WorkflowStatus poStatus = po.getWorkflowStatus();
+    CompositePurchaseOrder.WorkflowStatus poStatus = po.getWorkflowStatus();
     if (poStatus != PENDING) {
       throw new HttpException(422, poStatus == OPEN ? ErrorCodes.ORDER_OPEN : ErrorCodes.ORDER_CLOSED);
     }
