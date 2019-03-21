@@ -1,6 +1,6 @@
 ## 5.0.0 - Unreleased
 
-## 4.0.0 - Unreleased
+## 4.0.0 - Released
 The primary focus of this release was to implement backend logic for the receiving and preparation for the check-in flows.
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v3.0.0...v4.0.0)
@@ -26,6 +26,7 @@ The primary focus of this release was to implement backend logic for the receivi
  * [MODORDERS-103](https://issues.folio.org/browse/MODORDERS-103) Implement receiving flow for physical-only
 
 ### Bug Fixes
+ * [MODORDERS-197](https://issues.folio.org/browse/MODORDERS-197) Allow 0.0 for unit price in Cost for Orders
  * [MODORDERS-188](https://issues.folio.org/browse/MODORDERS-188) Cryptic error returned when trying to add a POLine to an Open/Closed PO
 
 ## 3.0.0 - Released
