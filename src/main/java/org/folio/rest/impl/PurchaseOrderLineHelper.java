@@ -279,7 +279,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * @return void future
    */
   private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem) {
-    int expectedItemsQuantity = isItemsUpdateRequired(compPOL) ? expectedPiecesWithItem.size() : calculateTotalQuantity(compPOL);
+    int expectedItemsQuantity = isItemsUpdateRequired(compPOL) ? expectedPiecesWithItem.size() : calculateInventoryItemsQuantity(compPOL);
 
     return searchForExistingPieces(compPOL)
       .thenCompose(existingPieces -> {

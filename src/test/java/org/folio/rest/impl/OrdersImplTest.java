@@ -22,12 +22,7 @@ import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_QTY;
-import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
-import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
-import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
-import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
-import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.orders.utils.HelperUtils.groupLocationsById;
+import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
@@ -408,6 +403,7 @@ public class OrdersImplTest {
     firstPoLine.getDetails().getProductIds().clear();
     // MODORDERS-117 only physical quantity will be used
     firstPoLine.setOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
+    firstPoLine.setEresource(null);
     // Set locations quantities
     int totalQty = 0;
     for (int i = 0; i < firstPoLine.getLocations().size(); i++) {
@@ -421,6 +417,7 @@ public class OrdersImplTest {
     // Set cost quantities
     firstPoLine.getCost().setQuantityPhysical(totalQty);
     firstPoLine.getCost().setQuantityElectronic(0);
+    firstPoLine.getCost().setPoLineEstimatedPrice(totalQty * firstPoLine.getCost().getListPrice());
 
     // Set status to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
@@ -547,11 +544,11 @@ public class OrdersImplTest {
     assertNotNull(instancesSearches);
     assertNotNull(holdingsSearches);
     assertNotNull(itemsSearches);
-    assertEquals(2, instancesSearches.size());
+    assertEquals(1, instancesSearches.size());
     assertEquals(1, holdingsSearches.size());
     assertEquals(1, itemsSearches.size());
 
-    verifyInventoryInteraction(resp, 2);
+    verifyInventoryInteraction(resp, 1);
   }
 
   @Test
@@ -1569,7 +1566,6 @@ public class OrdersImplTest {
         .values()
         .stream()
         .mapToInt(locations -> calculateInventoryItemsQuantity(pol, locations))
-        .filter(qty -> qty > 0)
         .count();
       assertEquals("Quantity of holdings does not match to expected", expectedQty, actualQty);
     }
@@ -3271,8 +3267,10 @@ public class OrdersImplTest {
         } else if(getQuery(INACTIVE_ACCESS_PROVIDER_A, INACTIVE_ACCESS_PROVIDER_B).equals(query)
         || getQuery(INACTIVE_ACCESS_PROVIDER_B, INACTIVE_ACCESS_PROVIDER_A).equals(query)) {
           body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "all_inactive_access_providers.json"));
-        } else if(getQuery(ACTIVE_ACCESS_PROVIDER_A).equals(query)) {
+        } else if (getQuery(ACTIVE_ACCESS_PROVIDER_A).equals(query)) {
           body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "one_access_provider_not_found.json"));
+        } else if (getQuery(ACTIVE_ACCESS_PROVIDER_B).equals(query)) {
+          body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "one_access_providers_active.json"));
         } else {
           ctx.response()
             .setStatusCode(HttpStatus.HTTP_NOT_FOUND.toInt())

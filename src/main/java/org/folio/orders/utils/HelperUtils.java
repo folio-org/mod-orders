@@ -486,13 +486,13 @@ public class HelperUtils {
     switch (compPOL.getOrderFormat()) {
       case P_E_MIX:
         int quantity = 0;
-        quantity += isInventoryUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
-        quantity += isInventoryUpdateRequiredForEresource(compPOL) ? getElectronicQuantity(locations) : 0;
+        quantity += isItemsUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
+        quantity += isItemsUpdateRequiredForEresource(compPOL) ? getElectronicQuantity(locations) : 0;
         return quantity;
       case PHYSICAL_RESOURCE:
-        return isInventoryUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
+        return isItemsUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
       case ELECTRONIC_RESOURCE:
-        return isInventoryUpdateRequiredForEresource(compPOL) ? getElectronicQuantity(locations) : 0;
+        return isItemsUpdateRequiredForEresource(compPOL) ? getElectronicQuantity(locations) : 0;
       case OTHER:
       default:
         return 0;
@@ -555,17 +555,6 @@ public class HelperUtils {
     }
   }
 
-  private static boolean isInventoryUpdateRequiredForEresource(CompositePoLine compPOL) {
-    return Optional.ofNullable(compPOL.getEresource())
-      .map(eresource -> eresource.getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM)
-      .orElse(false);
-  }
-
-  private static boolean isInventoryUpdateRequiredForPhysical(CompositePoLine compPOL) {
-    return Optional.ofNullable(compPOL.getPhysical())
-      .map(physical -> physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM)
-      .orElse(false);
-  }
   private static boolean isItemsUpdateRequiredForEresource(CompositePoLine compPOL) {
     return Optional.ofNullable(compPOL.getEresource())
       .map(eresource -> eresource.getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM)
@@ -756,9 +745,13 @@ public class HelperUtils {
   }
 
   public static boolean inventoryUpdateNotRequired(CompositePoLine compPOL) {
-    return (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.NONE)
-      || (compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE);
-    }
+    return (compPOL.getPhysical() == null && compPOL.getEresource() == null) ||
+      (compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE && compPOL.getEresource() == null) ||
+      (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.NONE && compPOL.getPhysical() == null) ||
+      (compPOL.getPhysical() != null && compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.NONE && compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE) ||
+      // also ignore inventory interaction in case of "Other" order format
+      compPOL.getOrderFormat() == CompositePoLine.OrderFormat.OTHER;
+  }
 
   public static boolean isHoldingsUpdateRequired(CompositePoLine compPOL) {
     return (compPOL.getEresource() != null &&

@@ -9,7 +9,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Details;
+import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import java.util.ArrayList;
@@ -21,8 +24,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -101,16 +102,18 @@ public class InventoryHelper extends AbstractHelper {
     // Group all locations by location id because the holding should be unique for different locations
     if (HelperUtils.isHoldingsUpdateRequired(compPOL)) {
       groupLocationsById(compPOL)
-        .forEach((locationId, locations) -> {
-          int expectedQuantity = calculateInventoryItemsQuantity(compPOL, locations);
-          // For some cases items might not be created e.g. Electronic resource with create inventory set to "None"
-          itemsPerHolding.add(
-            // Search for or create a new holding and then create items for this holding
-            getOrCreateHoldingsRecord(compPOL, locationId)
-              .thenCompose(holdingId -> handleItemRecords(compPOL, holdingId, expectedQuantity))
-              .thenApply(itemIds -> constructPieces(itemIds, compPOL.getId(), locationId))
-          );
-        });
+        .forEach((locationId, locations) -> itemsPerHolding.add(
+          // Search for or create a new holding and then create items for this holding
+          getOrCreateHoldingsRecord(compPOL, locationId)
+            .thenCompose(holdingId -> {
+              int expectedQuantity = calculateInventoryItemsQuantity(compPOL, locations);
+              if (isItemsUpdateRequired(compPOL) && expectedQuantity > 0) {
+                  // For some cases items might not be created e.g. resources with create inventory set to "None"
+                  return handleItemRecords(compPOL, holdingId, expectedQuantity)
+                    .thenApply(itemIds -> constructPieces(itemIds, compPOL.getId(), locationId));
+                } else return completedFuture((new ArrayList<>()));
+              }
+            )));
     }
     return collectResultsOnSuccess(itemsPerHolding)
       .thenApply(results -> results.stream()
@@ -192,10 +195,6 @@ public class InventoryHelper extends AbstractHelper {
    * @return future with list of item id's
    */
   private CompletableFuture<List<String>> handleItemRecords(CompositePoLine compPOL, String holdingId, int expectedQuantity) {
-    // check if update required for items
-    if (!HelperUtils.isItemsUpdateRequired(compPOL)){
-      return completedFuture(new ArrayList<>());
-    }
     // Search for already existing items
     return searchForExistingItems(compPOL, holdingId, expectedQuantity)
       .thenCompose(existingItemIds -> {
