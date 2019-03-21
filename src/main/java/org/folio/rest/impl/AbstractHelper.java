@@ -5,6 +5,7 @@ import static javax.ws.rs.core.HttpHeaders.LOCATION;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
+import static javax.ws.rs.core.Response.Status.CREATED;
 import static org.folio.orders.utils.HelperUtils.OKAPI_URL;
 import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
@@ -190,5 +191,10 @@ public abstract class AbstractHelper {
   public Response buildNoContentResponse() {
     closeHttpClient();
     return Response.noContent().build();
+  }
+
+  public Response buildCreatedResponse(Object body) {
+    closeHttpClient();
+    return Response.status(CREATED).header(CONTENT_TYPE, APPLICATION_JSON).entity(body).build();
   }
 }

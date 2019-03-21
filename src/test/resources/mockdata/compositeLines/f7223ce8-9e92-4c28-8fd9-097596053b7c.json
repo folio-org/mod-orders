@@ -1,17 +1,6 @@
 {
   "id" : "f7223ce8-9e92-4c28-8fd9-097596053b7c",
   "acquisitionMethod" : "Purchase At Vendor System",
-  "adjustment" : {
-    "credit" : 0.0,
-    "discount" : 0.0,
-    "insurance" : 0.0,
-    "invoiceId" : "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
-    "overhead" : 0.0,
-    "shipment" : 0.0,
-    "tax1" : 0.0,
-    "tax2" : 0.0,
-    "useProRate" : false
-  },
   "alerts" : [ {
     "alert" : "Receipt overdue sed do eiusmod tempor"
   } ],
@@ -28,10 +17,9 @@
     "contributorType" : "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
   } ],
   "cost" : {
-    "listPrice" : 24.99,
     "currency" : "USD",
-    "quantityPhysical" : 1,
-    "poLineEstimatedPrice" : 49.98
+    "listUnitPrice" : 24.99,
+    "quantityPhysical" : 1
   },
   "description" : "Quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat",
   "details" : {
@@ -46,19 +34,6 @@
     "subscriptionTo" : "2020-10-09T00:00:00.000+0000"
   },
   "donor" : "Some text goes here",
-  "eresource" : {
-    "activated" : false,
-    "activationDue" : 10,
-    "createInventory" : "Instance, Holding, Item",
-    "trial" : false,
-    "expectedActivation" : "2018-10-09T00:00:00.000+0000",
-    "userLimit" : 10,
-    "accessProvider" : "ba3f3d45-247d-41f6-8dc9-6488adcad329",
-    "license" : {
-      "code": "Code 1",
-      "description": "License Agreement 1"
-    }
-  },
   "fundDistribution": [
     {
       "code": "HIST",

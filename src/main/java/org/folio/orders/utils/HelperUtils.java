@@ -9,13 +9,17 @@ import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Currency;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -77,38 +81,6 @@ public class HelperUtils {
     return response.getBody();
   }
 
-  public static Adjustment calculateAdjustment(List<CompositePoLine> lines) {
-    Adjustment ret = null;
-    for (CompositePoLine line : lines) {
-      Adjustment a = line.getAdjustment();
-      if (a != null) {
-        if (ret == null) {
-          ret = a;
-        } else {
-          ret.setCredit(accumulate(ret.getCredit(), a.getCredit()));
-          ret.setDiscount(accumulate(ret.getDiscount(), a.getDiscount()));
-          ret.setInsurance(accumulate(ret.getInsurance(), a.getInsurance()));
-          ret.setOverhead(accumulate(ret.getOverhead(), a.getOverhead()));
-          ret.setShipment(accumulate(ret.getShipment(), a.getShipment()));
-          ret.setTax1(accumulate(ret.getTax1(), a.getTax1()));
-          ret.setTax2(accumulate(ret.getTax2(), a.getTax2()));
-        }
-      }
-    }
-    return ret;
-  }
-
-  private static double accumulate(Double a, Double b) {
-    if (a == null && b == null)
-      return 0d;
-    if (a == null)
-      return b;
-    if (b == null)
-      return a;
-
-    return (a + b);
-  }
-
   public static CompletableFuture<JsonObject> getPurchaseOrderById(String id, String lang, HttpClientInterface httpClient, Context ctx,
                                                                Map<String, String> okapiHeaders, Logger logger) {
     String endpoint = String.format(GET_PURCHASE_ORDER_BYID, id, lang);
@@ -123,12 +95,13 @@ public class HelperUtils {
 
 
   /**
-   *  Retrieves PO lines from storage by PO id as JsonObject with array of poLines (/acq-models/mod-orders-storage/schemas/po_line.json objects)
+   *  Retrieves PO lines from storage by PO id as JsonArray of poLines (/acq-models/mod-orders-storage/schemas/po_line.json objects)
    */
-  public static CompletableFuture<JsonObject> getPoLines(String id, String lang, HttpClientInterface httpClient, Context ctx,
+  public static CompletableFuture<JsonArray> getPoLines(String id, String lang, HttpClientInterface httpClient, Context ctx,
                                                           Map<String, String> okapiHeaders, Logger logger) {
     String endpoint = String.format(GET_ALL_POLINES_QUERY_WITH_LIMIT, MAX_POLINE_LIMIT, id, lang);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(body -> body.getJsonArray(PO_LINES));
   }
 
   /**
@@ -144,11 +117,11 @@ public class HelperUtils {
       Context ctx, Map<String, String> okapiHeaders, Logger logger) {
 
     return getPoLines(orderId, lang, httpClient,ctx, okapiHeaders, logger)
-      .thenCompose(body -> {
+      .thenCompose(jsonArray -> {
         List<CompletableFuture<JsonObject>> futures = new ArrayList<>();
 
-        for (int i = 0; i < body.getJsonArray(PO_LINES).size(); i++) {
-          JsonObject line = body.getJsonArray(PO_LINES).getJsonObject(i);
+        for (int i = 0; i < jsonArray.size(); i++) {
+          JsonObject line = jsonArray.getJsonObject(i);
           futures.add(deletePoLine(line, httpClient, ctx, okapiHeaders, logger));
         }
 
@@ -174,11 +147,11 @@ public class HelperUtils {
     CompletableFuture<List<CompositePoLine>> future = new VertxCompletableFuture<>(ctx);
 
     getPoLines(id,lang, httpClient,ctx, okapiHeaders, logger)
-      .thenAccept(body -> {
+      .thenAccept(jsonArray -> {
         List<CompletableFuture<CompositePoLine>> futures = new ArrayList<>();
 
-        for (int i = 0; i < body.getJsonArray(PO_LINES).size(); i++) {
-          JsonObject line = body.getJsonArray(PO_LINES).getJsonObject(i);
+        for (int i = 0; i < jsonArray.size(); i++) {
+          JsonObject line = jsonArray.getJsonObject(i);
           futures.add(operateOnPoLine(HttpMethod.GET, line, httpClient, ctx, okapiHeaders, logger));
         }
 
@@ -371,7 +344,39 @@ public class HelperUtils {
       errors.add(ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST);
     }
 
+    validateCostPrices(compPOL.getCost(), P_E_MIX, errors);
+
     return convertErrorCodesToErrors(compPOL, errors);
+  }
+
+  private static void validateCostPrices(Cost cost, CompositePoLine.OrderFormat orderFormat, List<ErrorCodes> errors) {
+    double unitPrice = defaultIfNull(cost.getListUnitPrice(), 0d);
+    if (orderFormat == ELECTRONIC_RESOURCE) {
+      if (unitPrice > 0d) {
+        errors.add(ErrorCodes.COST_UNIT_PRICE_INVALID);
+      }
+    } else if (unitPrice <= 0d) {
+      errors.add(ErrorCodes.COST_UNIT_PRICE_INVALID);
+    }
+
+    double unitPriceElectronic = defaultIfNull(cost.getListUnitPriceElectronic(), 0d);
+    if (orderFormat == ELECTRONIC_RESOURCE || orderFormat == P_E_MIX) {
+      if (unitPriceElectronic <= 0d) {
+        errors.add(ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID);
+      }
+    } else if (unitPriceElectronic > 0d) {
+      errors.add(ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID);
+    }
+
+    double additionalCost = defaultIfNull(cost.getAdditionalCost(), 0d);
+    if (additionalCost < 0d) {
+      errors.add(ErrorCodes.COST_ADDITIONAL_COST_INVALID);
+    }
+
+    double discount = defaultIfNull(cost.getDiscount(), 0d);
+    if (discount < 0d || (cost.getDiscountType() == Cost.DiscountType.PERCENTAGE && discount > 100d)) {
+      errors.add(ErrorCodes.COST_DISCOUNT_INVALID);
+    }
   }
 
   private static List<Error> validatePoLineWithPhysicalFormat(CompositePoLine compPOL) {
@@ -394,6 +399,8 @@ public class HelperUtils {
       errors.add(ErrorCodes.PHYSICAL_COST_QTY_EXCEEDS_LOC);
     }
 
+    validateCostPrices(compPOL.getCost(), PHYSICAL_RESOURCE, errors);
+
     return convertErrorCodesToErrors(compPOL, errors);
   }
 
@@ -413,6 +420,8 @@ public class HelperUtils {
     if (getElectronicQuantity(compPOL.getLocations()) > costElectronicQuantity) {
       errors.add(ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST);
     }
+
+    validateCostPrices(compPOL.getCost(), ELECTRONIC_RESOURCE, errors);
 
     return convertErrorCodesToErrors(compPOL, errors);
   }
@@ -515,6 +524,38 @@ public class HelperUtils {
       default:
         return 0;
     }
+  }
+
+  /**
+   * Calculates total estimated price. See MODORDERS-180 for more details.
+   * @param cost PO Line's cost
+   */
+  public static double calculateEstimatedPrice(Cost cost) {
+    BigDecimal total = BigDecimal.ZERO;
+    if (cost.getListUnitPrice() != null) {
+      BigDecimal pPrice = BigDecimal.valueOf(cost.getListUnitPrice())
+                                    .multiply(BigDecimal.valueOf(cost.getQuantityPhysical()));
+      total = total.add(pPrice);
+    }
+    if (cost.getListUnitPriceElectronic() != null) {
+      BigDecimal ePrice = BigDecimal.valueOf(cost.getListUnitPriceElectronic())
+                                    .multiply(BigDecimal.valueOf(cost.getQuantityElectronic()));
+      total = total.add(ePrice);
+    }
+    if (cost.getDiscount() != null) {
+      BigDecimal discount;
+      if (Cost.DiscountType.AMOUNT == cost.getDiscountType()) {
+        discount = BigDecimal.valueOf(cost.getDiscount());
+      } else {
+        discount = total.multiply(BigDecimal.valueOf(cost.getDiscount()/100d));
+      }
+      total = total.subtract(discount);
+    }
+    if (cost.getAdditionalCost() != null) {
+      total = total.add(BigDecimal.valueOf(cost.getAdditionalCost()));
+    }
+    Currency currency = Currency.getInstance(cost.getCurrency());
+    return total.setScale(currency.getDefaultFractionDigits(), RoundingMode.HALF_UP).doubleValue();
   }
 
   public static List<Piece> constructPieces(List<String> itemIds, String poLineId, String locationId) {
@@ -735,12 +776,11 @@ public class HelperUtils {
 
   /**
    * Convert {@link JsonObject} which actually represents org.folio.rest.acq.model.PurchaseOrder to {@link CompositePurchaseOrder}
-   * These objects are the same except PurchaseOrder doesn't contains adjustment and poLines fields.
+   * These objects are the same except PurchaseOrder doesn't contain poLines field.
    * @param poJson {@link JsonObject} representing org.folio.rest.acq.model.PurchaseOrder
    * @return {@link CompositePurchaseOrder}
    */
   public static CompositePurchaseOrder convertToCompositePurchaseOrder(JsonObject poJson) {
-    poJson.remove(ADJUSTMENT);
     return poJson.mapTo(CompositePurchaseOrder.class);
   }
 

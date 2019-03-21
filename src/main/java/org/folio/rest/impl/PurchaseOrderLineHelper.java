@@ -13,6 +13,8 @@ import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -44,9 +46,10 @@ import javax.ws.rs.core.Response;
 
 class PurchaseOrderLineHelper extends AbstractHelper {
 
+  private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
   private static final String GET_PO_LINES_BY_QUERY = resourcesPath(PO_LINES) + "?limit=%s&offset=%s%s&lang=%s";
   private static final String LOOKUP_PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId==%s&limit=%d&lang=%s";
-  private static final String PO_LINE_NUMBER_ENDPOINT = resourcesPath(PO_LINE_NUMBER) + "?purchaseOrderId=";
+  private static final String PO_LINE_NUMBER_ENDPOINT = resourcesPath(PO_LINE_NUMBER) + "?" + PURCHASE_ORDER_ID + "=";
   private static final Pattern PO_LINE_NUMBER_PATTERN = Pattern.compile("([a-zA-Z0-9]{5,16}-)([0-9]{1,3})");
   private static final String CREATE_INVENTORY = "createInventory";
   private static final String ERESOURCE = "eresource";
@@ -86,24 +89,45 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     return future;
   }
 
+  /**
+   * Creates PO Line if its content is valid and all restriction checks passed
+   * @param compPOL {@link CompositePoLine} to be created
+   * @return completable future which might hold {@link CompositePoLine} on success, {@code null} if validation fails or an exception if any issue happens
+   */
   CompletableFuture<CompositePoLine> createPoLine(CompositePoLine compPOL) {
-    return getPurchaseOrderById(compPOL.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(HelperUtils::convertToCompositePurchaseOrder)
-      .thenCompose(po -> createPoLine(compPOL, po))
-      .exceptionally(t -> {
-        // The case when specified order does not exist
-        Throwable cause = t.getCause();
-        if (cause instanceof HttpException && ((HttpException) cause).getCode() == Response.Status.NOT_FOUND.getStatusCode()) {
-          throw new HttpException(422, ErrorCodes.ORDER_NOT_FOUND);
+    // Validate PO Line content and retrieve order only if this operation is allowed
+    return validateNewPoLine(compPOL)
+      .thenCompose(isValid -> {
+        if (isValid) {
+          return getCompositePurchaseOrder(compPOL)
+            // The PO Line can be created only for order in Pending state
+            .thenApply(this::validateOrderState)
+            .thenCompose(po -> createPoLine(compPOL, po));
+        } else {
+          return completedFuture(null);
         }
-        throw new CompletionException(cause);
       });
   }
 
+  private CompositePurchaseOrder validateOrderState(CompositePurchaseOrder po) {
+    WorkflowStatus poStatus = po.getWorkflowStatus();
+    if (poStatus != PENDING) {
+      throw new HttpException(422, poStatus == OPEN ? ErrorCodes.ORDER_OPEN : ErrorCodes.ORDER_CLOSED);
+    }
+    return po;
+  }
+
+  /**
+   * Creates PO Line assuming its content is valid and all restriction checks have been already passed
+   * @param compPoLine {@link CompositePoLine} to be created
+   * @param compOrder associated {@link CompositePurchaseOrder} object
+   * @return completable future which might hold {@link CompositePoLine} on success or an exception if any issue happens
+   */
   CompletableFuture<CompositePoLine> createPoLine(CompositePoLine compPoLine, CompositePurchaseOrder compOrder) {
     // The id is required because sub-objects are being created first
     compPoLine.setId(UUID.randomUUID().toString());
     compPoLine.setPurchaseOrderId(compOrder.getId());
+    updateEstimatedPrice(compPoLine);
 
     JsonObject line = mapFrom(compPoLine);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
@@ -186,6 +210,9 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    */
   CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+    // The estimated price should be always recalculated
+    updateEstimatedPrice(compOrderLine);
+
     setTenantDefaultCreateInventoryValues(compOrderLine)
       .thenCompose(v -> updatePoLineSubObjects(compOrderLine, lineFromStorage))
       .thenCompose(poLine -> updateOrderLineSummary(compOrderLine.getId(), poLine))
@@ -254,6 +281,54 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     return oldPoLineNumber;
   }
 
+  /**
+   * Validates purchase order line content. If content is okay, checks if allowed PO Lines limit is not exceeded.
+   * @param compPOL Purchase Order Line to validate
+   * @return completable future which might be completed with {@code true} if line is valid, {@code false} if not valid or an exception if processing fails
+   */
+  private CompletableFuture<Boolean> validateNewPoLine(CompositePoLine compPOL) {
+    logger.debug("Validating if PO Line is valid...");
+
+    // PO id is required for PO Line to be created
+    if (compPOL.getPurchaseOrderId() == null) {
+      addProcessingError(ErrorCodes.MISSING_ORDER_ID_IN_POL.toError());
+    }
+    addProcessingErrors(validatePoLine(compPOL));
+
+    // If static validation has failed, no need to call other services
+    if (!getErrors().isEmpty()) {
+      return completedFuture(false);
+    }
+
+    return allOf(validatePoLineLimit(compPOL))
+      .thenApply(v -> getErrors().isEmpty());
+  }
+
+  private CompletableFuture<Boolean> validatePoLineLimit(CompositePoLine compPOL) {
+    String query = PURCHASE_ORDER_ID + "==" + compPOL.getPurchaseOrderId();
+    return loadConfiguration(okapiHeaders, ctx, logger)
+      .thenCombine(getPoLines(0, 0, query), (config, poLines) -> {
+        boolean isValid = poLines.getTotalRecords() < getPoLineLimit(config);
+        if (!isValid) {
+          addProcessingError(ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
+        }
+        return isValid;
+      });
+  }
+
+  private CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(CompositePoLine compPOL) {
+    return getPurchaseOrderById(compPOL.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(HelperUtils::convertToCompositePurchaseOrder)
+      .exceptionally(t -> {
+        Throwable cause = t.getCause();
+        // The case when specified order does not exist
+        if (cause instanceof HttpException && ((HttpException) cause).getCode() == Response.Status.NOT_FOUND.getStatusCode()) {
+          throw new HttpException(422, ErrorCodes.ORDER_NOT_FOUND);
+        }
+        throw t instanceof CompletionException ? (CompletionException) t : new CompletionException(cause);
+      });
+  }
+
   private CompletableFuture<String> generateLineNumber(CompositePurchaseOrder compOrder) {
     return handleGetRequest(getPoLineNumberEndpoint(compOrder.getId()), httpClient, ctx, okapiHeaders, logger)
       .thenApply(sequenceNumberJson -> {
@@ -268,6 +343,17 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   private String buildPoLineNumber(String poNumber, String sequence) {
     return poNumber + "-" + sequence;
+  }
+
+  /**
+   * See MODORDERS-180 for more details.
+   * @param compPoLine composite PO Line
+   */
+  private void updateEstimatedPrice(CompositePoLine compPoLine) {
+    Cost cost = compPoLine.getCost();
+    if (cost != null) {
+      cost.setPoLineEstimatedPrice(calculateEstimatedPrice(cost));
+    }
   }
 
   /**
@@ -497,7 +583,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * @param line PO line retrieved from storage
    */
   private void validateOrderId(String orderId, JsonObject line) {
-    if (!StringUtils.equals(orderId, line.getString("purchaseOrderId"))) {
+    if (!StringUtils.equals(orderId, line.getString(PURCHASE_ORDER_ID))) {
       throw new HttpException(422, ErrorCodes.INCORRECT_ORDER_ID_IN_POL);
     }
   }

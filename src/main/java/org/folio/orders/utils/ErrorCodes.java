@@ -32,7 +32,13 @@ public enum ErrorCodes {
   ORDER_VENDOR_IS_INACTIVE("vendorIsInactive", "Order cannot be open as the associated vendor is inactive"),
   POL_ACCESS_PROVIDER_IS_INACTIVE("accessProviderIsInactive", "Order cannot be open as the associated access provider is inactive"),
   ORDER_VENDOR_NOT_FOUND("vendorNotFound", "Order cannot be open as the associated vendor not found"),
-  POL_ACCESS_PROVIDER_NOT_FOUND("accessProviderNotFound", "Order cannot be open as the associated access provider not found");
+  ORDER_OPEN("orderOpen", "Order cannot be modified in Open status"),
+  ORDER_CLOSED("orderClosed", "Order cannot be modified in Closed status"),
+  POL_ACCESS_PROVIDER_NOT_FOUND("accessProviderNotFound", "Order cannot be open as the associated access provider not found"),
+  COST_UNIT_PRICE_INVALID("costUnitPriceInvalid", "Cost's list unit price is invalid"),
+  COST_UNIT_PRICE_ELECTRONIC_INVALID("costUnitPriceElectronicInvalid", "Cost's list unit price for Electronic resource(s) is invalid"),
+  COST_ADDITIONAL_COST_INVALID("costAdditionalCostInvalid", "Cost's list unit price must be positive number"),
+  COST_DISCOUNT_INVALID("costDiscountInvalid", "Cost's discount is invalid");
 
   private final String code;
   private final String description;

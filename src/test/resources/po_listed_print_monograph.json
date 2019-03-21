@@ -1,14 +1,4 @@
 {
-  "adjustment": {
-    "credit": 0.0,
-    "discount": 0.0,
-    "insurance": 0.0,
-    "overhead": 0.0,
-    "shipment": 0.0,
-    "tax1": 0.0,
-    "tax2": 0.0,
-    "useProRate": false
-  },
   "approved": true,
   "assignedTo": "ab18897b-0e40-4f31-896b-9c9adc979a88",
   "notes": [
@@ -19,9 +9,7 @@
   "orderType": "One-Time",
   "poNumber": "268758",
   "reEncumber": false,
-  "totalEstimatedPrice": 49.98,
-  "totalItems": 2,
-  "vendor": "168f8a86-d26c-406e-813f-c7527f241ac3",
+  "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Pending",
   "metadata": {
     "createdDate": "2010-10-08T03:53:00.000",
@@ -31,17 +19,6 @@
     {
       "id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47",
       "acquisitionMethod": "Purchase At Vendor System",
-      "adjustment": {
-        "credit": 0.0,
-        "discount": 0.0,
-        "insurance": 0.0,
-        "invoiceId": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
-        "overhead": 0.0,
-        "shipment": 0.0,
-        "tax1": 0.0,
-        "tax2": 0.0,
-        "useProRate": false
-      },
       "alerts": [
         {
           "alert": "Receipt overdue"
@@ -64,11 +41,14 @@
         }
       ],
       "cost": {
-        "listPrice": 24.99,
+        "additionalCost": 10,
         "currency": "USD",
+        "discount": 5,
+        "discountType": "percentage",
+        "listUnitPrice": 24.99,
+        "listUnitPriceElectronic": 20.99,
         "quantityPhysical": 3,
-        "quantityElectronic": 1,
-        "poLineEstimatedPrice": 99.96
+        "quantityElectronic": 1
       },
       "description": "ABCDEFGH",
       "details": {
@@ -186,17 +166,6 @@
     {
       "id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
       "acquisitionMethod": "Purchase",
-      "adjustment": {
-        "credit": 0.0,
-        "discount": 0.0,
-        "insurance": 0.0,
-        "invoiceId": "2ddfeb5c-1237-476f-aa88-57f7cbf74ca4",
-        "overhead": 0.0,
-        "shipment": 0.0,
-        "tax1": 0.0,
-        "tax2": 0.0,
-        "useProRate": false
-      },
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
@@ -214,11 +183,12 @@
         }
       ],
       "cost": {
-        "listPrice": 25.10,
+        "additionalCost": 1.11,
         "currency": "USD",
-        "quantityPhysical": 0,
-        "quantityElectronic": 3,
-        "poLineEstimatedPrice": 75.30
+        "discount": 5,
+        "discountType": "amount",
+        "listUnitPriceElectronic": 25.10,
+        "quantityElectronic": 3
       },
       "description": "",
       "details": {

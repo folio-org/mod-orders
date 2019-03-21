@@ -15,8 +15,6 @@ import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.loadConfiguration;
 import static org.folio.orders.utils.HelperUtils.operateOnObject;
-import static org.folio.orders.utils.ResourcePathResolver.ADJUSTMENT;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
@@ -29,12 +27,15 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.*;
@@ -99,7 +100,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
   public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO) {
     return setPoNumberIfMissing(compPO)
       .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber()))
-      .thenCompose(v -> createPOandPOLines(compPO));
+      .thenCompose(v -> createPOandPOLines(compPO))
+      .thenApply(this::populateOrderSummary);
   }
 
   /**
@@ -178,16 +180,15 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
     getPurchaseOrderById(id, lang, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(po -> {
-        logger.info("got: " + po.encodePrettily());
-        po.remove(ADJUSTMENT);
-        CompositePurchaseOrder compPO = po.mapTo(CompositePurchaseOrder.class);
+        if (logger.isInfoEnabled()) {
+          logger.info("got: " + po.encodePrettily());
+        }
+        CompositePurchaseOrder compPO = HelperUtils.convertToCompositePurchaseOrder(po);
 
         getCompositePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
-          .thenAccept(poLines -> {
-            compPO.setCompositePoLines(poLines);
-            compPO.setAdjustment(HelperUtils.calculateAdjustment(poLines));
-            future.complete(compPO);
-          })
+          .thenApply(compPO::withCompositePoLines)
+          .thenApply(this::populateOrderSummary)
+          .thenAccept(future::complete)
           .exceptionally(t -> {
             logger.error("Failed to get POLines", t);
             future.completeExceptionally(t);
@@ -201,6 +202,33 @@ public class PurchaseOrderHelper extends AbstractHelper {
       });
 
     return future;
+  }
+
+  private CompositePurchaseOrder populateOrderSummary(CompositePurchaseOrder compPO) {
+    List<CompositePoLine> compositePoLines = compPO.getCompositePoLines();
+    compPO.setTotalEstimatedPrice(calculateTotalEstimatedPrice(compositePoLines));
+    compPO.setTotalItems(calculateTotalItemsQuantity(compositePoLines));
+
+    return compPO;
+  }
+
+  private int calculateTotalItemsQuantity(List<CompositePoLine> poLines) {
+    return poLines.stream().mapToInt(HelperUtils::calculateTotalQuantity).sum();
+  }
+
+  /**
+   * Calculates PO's estimated price by summing the Estimated Price of the associated PO Lines.
+   * See MODORDERS-181 for more details.
+   * @param poLines list of composite PO Lines
+   * @return estimated purchase order's total price
+   */
+  private Double calculateTotalEstimatedPrice(List<CompositePoLine> poLines) {
+    return poLines
+      .stream()
+      .map(CompositePoLine::getCost)
+      .filter(Objects::nonNull)
+      .mapToDouble(Cost::getPoLineEstimatedPrice)
+      .sum();
   }
 
   /**
@@ -332,10 +360,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return createRecordInStorage(convertToPurchaseOrder(compPO), resourcesPath(PURCHASE_ORDER))
       .thenApply(compPO::withId)
       .thenCompose(this::createPoLines)
-      .thenAccept(lines -> {
-        compPO.setCompositePoLines(lines);
-        compPO.setAdjustment(HelperUtils.calculateAdjustment(lines));
-      })
+      .thenAccept(compPO::setCompositePoLines)
       .thenCompose(v -> {
         if (finalStatus == OPEN) {
           return openOrder(compPO);
@@ -357,10 +382,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private CompletableFuture<Void> fetchCompositePoLines(CompositePurchaseOrder compPO) {
     if (isEmpty(compPO.getCompositePoLines())) {
       return getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
-                        .thenCompose(pols -> CompletableFuture.allOf(pols.stream().map(poline -> {
-                          compPO.getCompositePoLines().add(poline);
-                          return completedFuture(null);
-                        }).toArray(CompletableFuture[]::new)));
+        .thenAccept(compPO::setCompositePoLines);
     }
     return completedFuture(null);
   }
@@ -389,28 +411,31 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> updatePoLines(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO) {
-    if (isNotEmpty(compPO.getCompositePoLines()) || isPoNumberChanged(poFromStorage, compPO)) {
+    if (isPoLinesUpdateRequired(poFromStorage, compPO)) {
       return getPoLines(poFromStorage.getId(), lang, httpClient, ctx, okapiHeaders, logger)
-        .thenCompose(jsonObject -> {
-          JsonArray existedPoLinesArray = jsonObject.getJsonArray(PO_LINES);
+        .thenCompose(existedPoLinesArray -> {
           if (isNotEmpty(compPO.getCompositePoLines())) {
+            // New PO Line(s) can be added only to Pending order
+            if (poFromStorage.getWorkflowStatus() != PENDING && hasNewPoLines(compPO, existedPoLinesArray)) {
+              throw new HttpException(422, poFromStorage.getWorkflowStatus() == OPEN ? ErrorCodes.ORDER_OPEN : ErrorCodes.ORDER_CLOSED);
+            }
             return handlePoLines(compPO, existedPoLinesArray);
           } else {
             return updatePoLinesNumber(compPO, existedPoLinesArray);
           }
         });
-    } else {
-      return completedFuture(null);
     }
+    return completedFuture(null);
+  }
+
+  private boolean isPoLinesUpdateRequired(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO) {
+    return isNotEmpty(compPO.getCompositePoLines()) || isPoNumberChanged(poFromStorage, compPO);
   }
 
   private CompletableFuture<Void> updateCompositePoLines(CompositePurchaseOrder compPO) {
     if (isNotEmpty(compPO.getCompositePoLines())) {
       return getPoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
-        .thenCompose(jsonObject -> {
-          JsonArray existedPoLinesArray = jsonObject.getJsonArray(PO_LINES);
-          return handlePoLines(compPO, existedPoLinesArray);
-        });
+        .thenCompose(existedPoLinesArray -> handlePoLines(compPO, existedPoLinesArray));
     } else {
       return completedFuture(null);
     }
@@ -426,13 +451,16 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   /**
    * Convert {@link CompositePurchaseOrder} to Json representation of PurchaseOrder.
-   * These objects are the same except PurchaseOrder doesn't contains adjustment and poLines fields.
+   * These objects are the same except PurchaseOrder doesn't contain poLines field.
    * @param compPO {@link CompositePurchaseOrder}
    * @return JsonObject representation of PurchaseOrder
    */
   private JsonObject convertToPurchaseOrder(CompositePurchaseOrder compPO) {
+    // Remove dynamically calculated data
+    compPO.setTotalEstimatedPrice(null);
+    compPO.setTotalItems(null);
+
     JsonObject purchaseOrder = JsonObject.mapFrom(compPO);
-    purchaseOrder.remove(ADJUSTMENT);
     purchaseOrder.remove(COMPOSITE_PO_LINES);
     return purchaseOrder;
   }
@@ -488,14 +516,23 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private List<CompletableFuture<CompositePoLine>> processPoLinesCreation(CompositePurchaseOrder compOrder, JsonArray poLinesFromStorage) {
-    return compOrder.getCompositePoLines()
-      .stream()
-      .filter(poLine -> poLinesFromStorage
-        .stream()
-        .map(o -> ((JsonObject) o).getString(ID))
-        .noneMatch(s -> StringUtils.equals(s, poLine.getId()))
-      )
+    return getNewPoLines(compOrder, poLinesFromStorage)
       .map(compPOL -> orderLineHelper.createPoLine(compPOL, compOrder))
       .collect(toList());
+  }
+
+  private boolean hasNewPoLines(CompositePurchaseOrder compPO, JsonArray poLinesFromStorage) {
+    return getNewPoLines(compPO, poLinesFromStorage).count() > 0;
+  }
+
+  private Stream<CompositePoLine> getNewPoLines(CompositePurchaseOrder compPO, JsonArray poLinesFromStorage) {
+    List<String> lineIdsInStorage = poLinesFromStorage
+      .stream()
+      .map(o -> ((JsonObject) o).getString(ID))
+      .collect(toList());
+
+    return compPO.getCompositePoLines()
+      .stream()
+      .filter(poLine -> !lineIdsInStorage.contains(poLine.getId()));
   }
 }

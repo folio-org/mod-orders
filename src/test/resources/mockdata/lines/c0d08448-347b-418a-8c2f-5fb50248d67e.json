@@ -1,17 +1,6 @@
 {
   "id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
   "acquisitionMethod": "Purchase At Vendor System",
-  "adjustment": {
-    "credit": 0.0,
-    "discount": 0.0,
-    "insurance": 0.0,
-    "invoiceId": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
-    "overhead": 0.0,
-    "shipment": 0.0,
-    "tax1": 0.0,
-    "tax2": 0.0,
-    "useProRate": false
-  },
   "alerts": [
     "9a665b22-9fe5-4c95-b4ee-837a5433c95d"
   ],
@@ -32,11 +21,9 @@
     }
   ],
   "cost": {
-    "listPrice": 24.99,
     "currency": "USD",
-    "quantityPhysical": 3,
-    "quantityElectronic": 0,
-    "poLineEstimatedPrice": 74.97
+    "listUnitPrice": 24.99,
+    "quantityPhysical": 3
   },
   "description": "ABCDEFGH",
   "details": {
@@ -55,19 +42,6 @@
     "subscriptionTo": "2020-10-09T00:00:00.000Z"
   },
   "donor": "ABCDEFGHIJKLM",
-  "eresource": {
-    "activated": false,
-    "activationDue": 10,
-    "createInventory": "Instance",
-    "trial": false,
-    "expectedActivation": "2018-10-09T00:00:00.000Z",
-    "userLimit": 10,
-    "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
-    "license": {
-      "code": "Code 1",
-      "description": "License Agreement 1"
-    }
-  },
   "fundDistribution": [
     {
       "code": "HIST",

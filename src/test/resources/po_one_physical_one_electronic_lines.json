@@ -7,9 +7,7 @@
   "orderType": "One-Time",
   "poNumber": "TEST2POL1PHYS1EL",
   "reEncumber": false,
-  "totalEstimatedPrice": 350.00,
-  "totalItems": 35,
-  "vendor": "8be1cd0a-acab-488d-b650-65ceb96aa148",
+  "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Open",
   "compositePoLines": [
     {
@@ -17,10 +15,9 @@
       "cancellationRestriction": false,
       "collection": false,
       "cost": {
-        "listPrice": 10.00,
         "currency": "USD",
-        "quantityPhysical": 25,
-        "poLineEstimatedPrice": 250.00
+        "listUnitPrice": 10.00,
+        "quantityPhysical": 25
       },
       "description": "25 physical resources for 2 locations",
       "details": {
@@ -75,10 +72,9 @@
       "cancellationRestriction": false,
       "collection": false,
       "cost": {
-        "listPrice": 10.00,
         "currency": "USD",
-        "quantityElectronic": 10,
-        "poLineEstimatedPrice": 100.00
+        "listUnitPriceElectronic": 10.00,
+        "quantityElectronic": 10
       },
       "description": "10 electronic resources for 1 location",
       "details": {
