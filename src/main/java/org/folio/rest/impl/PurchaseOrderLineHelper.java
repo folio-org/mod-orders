@@ -142,7 +142,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       .thenCompose(v -> createPoLineSummary(compPoLine, line));
   }
 
-   CompletableFuture<Void> setTenantDefaultCreateInventoryValues(CompositePoLine compPOL) {
+  CompletableFuture<Void> setTenantDefaultCreateInventoryValues(CompositePoLine compPOL) {
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
 
     if ((compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() == null)
@@ -152,22 +152,24 @@ class PurchaseOrderLineHelper extends AbstractHelper {
         .exceptionally(t -> future.complete(new JsonObject()));
       return future
         .thenAccept(jsonConfig -> updateCreateInventory(compPOL, jsonConfig));
-    } else return completedFuture(null);
+    } else {
+      return completedFuture(null);
+    }
   }
 
   private void updateCreateInventory(CompositePoLine compPOL, JsonObject jsonConfig) {
     //try to set createInventory by values from mod-configuration. If empty - set default hardcoded values
     if (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() == null) {
-      String createInventory = jsonConfig.getString(ERESOURCE);
-      Eresource.CreateInventory eresource = StringUtils.isEmpty(createInventory) ?
-        Eresource.CreateInventory.INSTANCE_HOLDING : Eresource.CreateInventory.fromValue(createInventory);
-      compPOL.getEresource().setCreateInventory(eresource);
+      String tenantDefault = jsonConfig.getString(ERESOURCE);
+      Eresource.CreateInventory eresourceDefaultValue = StringUtils.isEmpty(tenantDefault) ?
+        Eresource.CreateInventory.INSTANCE_HOLDING : Eresource.CreateInventory.fromValue(tenantDefault);
+      compPOL.getEresource().setCreateInventory(eresourceDefaultValue);
     }
     if (compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() == null) {
-      String createInventory = jsonConfig.getString(PHYSICAL);
-      Physical.CreateInventory physical = StringUtils.isEmpty(createInventory) ?
-        Physical.CreateInventory.INSTANCE_HOLDING_ITEM : Physical.CreateInventory.fromValue(createInventory);
-      compPOL.getPhysical().setCreateInventory(physical);
+      String tenantDefault = jsonConfig.getString(PHYSICAL);
+      Physical.CreateInventory createInventoryDefaultValue = StringUtils.isEmpty(tenantDefault) ?
+        Physical.CreateInventory.INSTANCE_HOLDING_ITEM : Physical.CreateInventory.fromValue(tenantDefault);
+      compPOL.getPhysical().setCreateInventory(createInventoryDefaultValue);
     }
   }
 

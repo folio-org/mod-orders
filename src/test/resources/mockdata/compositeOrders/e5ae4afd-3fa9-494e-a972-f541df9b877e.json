@@ -90,7 +90,7 @@
       "physical": {
         "createInventory": "Instance, Holding, Item",
         "materialSupplier": "36dd6d62-c55e-4b19-a3a0-a870da57610a",
-        "receiptDue": null,
+        "receiptDue": "2018-09-29T00:00:00.000Z",
         "volumes": []
       },
       "poLineDescription": "",

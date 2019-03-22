@@ -106,12 +106,14 @@ public class InventoryHelper extends AbstractHelper {
           // Search for or create a new holding and then create items for this holding
           getOrCreateHoldingsRecord(compPOL, locationId)
             .thenCompose(holdingId -> {
-              int expectedQuantity = calculateInventoryItemsQuantity(compPOL, locations);
-              if (isItemsUpdateRequired(compPOL) && expectedQuantity > 0) {
+                int expectedQuantity = calculateInventoryItemsQuantity(compPOL, locations);
+                if (isItemsUpdateRequired(compPOL) && expectedQuantity > 0) {
                   // For some cases items might not be created e.g. resources with create inventory set to "None"
                   return handleItemRecords(compPOL, holdingId, expectedQuantity)
                     .thenApply(itemIds -> constructPieces(itemIds, compPOL.getId(), locationId));
-                } else return completedFuture((new ArrayList<>()));
+                } else {
+                  return completedFuture((new ArrayList<>()));
+                }
               }
             )));
     }
