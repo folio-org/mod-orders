@@ -1,17 +1,6 @@
 {
   "id" : "c2755a78-2f8d-47d0-a218-059a9b7391b4",
   "acquisitionMethod" : "Purchase At Vendor System",
-  "adjustment": {
-    "credit": 0.0,
-    "discount": 0.0,
-    "insurance": 0.0,
-    "invoiceId": "2d6d495c-c237-476f-aa48-57f7cbf74ca4",
-    "overhead": 0.0,
-    "shipment": 0.0,
-    "tax1": 0.0,
-    "tax2": 0.0,
-    "useProRate": false
-  },
   "alerts" : [ ],
   "cancellationRestriction" : false,
   "cancellationRestrictionNote" : "ABCDEFGHIJKLMNOPQRSTUVW",
@@ -22,11 +11,9 @@
     "contributorType" : "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
   } ],
   "cost": {
-    "listPrice": 24.99,
     "currency": "USD",
-    "quantityPhysical": 6,
-    "quantityElectronic": 1,
-    "poLineEstimatedPrice": 174.93
+    "listUnitPrice": 24.99,
+    "quantityPhysical": 6
   },
   "description" : "ABCDEFGH",
   "details": {
@@ -45,19 +32,6 @@
     "subscriptionTo": "2020-10-09T00:00:00.000Z"
   },
   "donor" : "ABCDEFGHIJKLM",
-  "eresource": {
-    "activated": false,
-    "activationDue": 10,
-    "createInventory": true,
-    "trial": false,
-    "expectedActivation": "2018-10-09T00:00:00.000Z",
-    "userLimit": 10,
-    "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
-    "license": {
-      "code": "Code 1",
-      "description": "License Agreement 1"
-    }
-  },
   "fundDistribution" : [ ],
   "locations": [
     {

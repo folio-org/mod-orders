@@ -1,15 +1,5 @@
 {
   "id": "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
-  "adjustment": {
-    "credit": 0.0,
-    "discount": 0.0,
-    "insurance": 0.0,
-    "overhead": 0.0,
-    "shipment": 0.0,
-    "tax1": 0.0,
-    "tax2": 0.0,
-    "useProRate": false
-  },
   "approved": true,
   "assignedTo": "",
   "manualPo": false,
@@ -17,9 +7,7 @@
   "poNumber": "268758",
   "orderType": "One-Time",
   "reEncumber": false,
-  "totalEstimatedPrice": 127.94,
-  "totalItems": 3,
-  "vendor": "50fb88ea-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Pending",
   "metadata": {
     "createdDate": "2018-06-29T00:00:00.000",
@@ -29,17 +17,6 @@
     {
       "id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47",
       "acquisitionMethod": "Purchase",
-      "adjustment": {
-        "credit": 0.0,
-        "discount": 0.0,
-        "insurance": 0.0,
-        "invoiceId": "2d6d495c-c237-476f-aa48-50f7cbf74ca4",
-        "overhead": 0.0,
-        "shipment": 0.0,
-        "tax1": 0.0,
-        "tax2": 0.0,
-        "useProRate": false
-      },
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
@@ -57,11 +34,9 @@
         }
       ],
       "cost": {
-        "listPrice": 68.00,
         "currency": "USD",
-        "quantityPhysical": 1,
-        "quantityElectronic": 0,
-        "poLineEstimatedPrice": 68.00
+        "listUnitPrice": 68.00,
+        "quantityPhysical": 1
       },
       "description": "",
       "details": {
@@ -80,19 +55,6 @@
         "subscriptionTo": null
       },
       "donor": "",
-      "eresource": {
-        "activated": false,
-        "activationDue": 0,
-        "createInventory": false,
-        "trial": false,
-        "expectedActivation": null,
-        "userLimit": 0,
-        "accessProvider": null,
-        "license": {
-          "code": "Code 1",
-          "description": "License Agreement 1"
-        }
-      },
       "fundDistribution": [
         {
           "code": "EUROHIST-FY19",
@@ -148,17 +110,6 @@
     {
       "id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd2",
       "acquisitionMethod": "Purchase",
-      "adjustment": {
-        "credit": 0.0,
-        "discount": 0.0,
-        "insurance": 0.0,
-        "invoiceId": "3d6d495c-c237-476f-aa48-50f7cbf74ca4",
-        "overhead": 0.0,
-        "shipment": 0.0,
-        "tax1": 0.0,
-        "tax2": 0.0,
-        "useProRate": false
-      },
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
@@ -176,11 +127,9 @@
         }
       ],
       "cost": {
-        "listPrice": 34.95,
         "currency": "USD",
-        "quantityPhysical": 1,
-        "quantityElectronic": 0,
-        "poLineEstimatedPrice": 34.95
+        "listUnitPrice": 34.95,
+        "quantityPhysical": 1
       },
       "description": "",
       "details": {
@@ -199,19 +148,6 @@
         "subscriptionTo": null
       },
       "donor": "",
-      "eresource": {
-        "activated": false,
-        "activationDue": 0,
-        "createInventory": false,
-        "trial": false,
-        "expectedActivation": null,
-        "userLimit": 0,
-        "accessProvider": null,
-        "license": {
-          "code": "Code 1",
-          "description": "License Agreement 1"
-        }
-      },
       "fundDistribution": [
         {
           "code": "USHIST-FY19",
@@ -267,17 +203,6 @@
     {
       "id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
       "acquisitionMethod": "Purchase",
-      "adjustment": {
-        "credit": 0.0,
-        "discount": 0.0,
-        "insurance": 0.0,
-        "invoiceId": "366d495c-c237-476f-aa48-50f7cbf74ca4",
-        "overhead": 0.0,
-        "shipment": 0.0,
-        "tax1": 0.0,
-        "tax2": 0.0,
-        "useProRate": false
-      },
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
@@ -295,11 +220,9 @@
         }
       ],
       "cost": {
-        "listPrice": 24.99,
         "currency": "USD",
-        "quantityPhysical": 1,
-        "quantityElectronic": 0,
-        "poLineEstimatedPrice": 24.99
+        "listUnitPrice": 24.99,
+        "quantityPhysical": 1
       },
       "description": "",
       "details": {
@@ -318,19 +241,6 @@
         "subscriptionTo": null
       },
       "donor": "",
-      "eresource": {
-        "activated": false,
-        "activationDue": 0,
-        "createInventory": false,
-        "trial": false,
-        "expectedActivation": null,
-        "userLimit": 0,
-        "accessProvider": null,
-        "license": {
-          "code": "Code 1",
-          "description": "License Agreement 1"
-        }
-      },
       "fundDistribution": [
         {
           "code": "USHIST-FY19",

@@ -169,12 +169,14 @@ public class VendorHelper {
    * @return CompletableFuture with {@link List<Vendor>} of vendors
    */
   private CompletableFuture<Set<Vendor>> getAccessProvidersByIds(Set<String> accessProviderIds) {
-    CompletableFuture<Set<Vendor>> future = new CompletableFuture<>();
     String query = convertIdsToCqlQuery(new ArrayList<>(accessProviderIds));
     String endpoint = String.format(VENDORS_WITH_QUERY_ENDPOINT, accessProviderIds.size(), lang, encodeQuery(query, logger));
-    handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(jsons -> jsons.getJsonArray(VENDORS).stream().map(obj -> ((JsonObject) obj).mapTo(Vendor.class)).collect(toSet())).thenAccept(future::complete);
-    return future;
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(jsons -> jsons.getJsonArray(VENDORS)
+        .stream()
+        .map(obj -> ((JsonObject) obj).mapTo(Vendor.class))
+        .collect(toSet())
+      );
   }
 
   /**

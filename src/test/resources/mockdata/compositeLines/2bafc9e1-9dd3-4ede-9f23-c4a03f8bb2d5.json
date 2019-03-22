@@ -4,10 +4,9 @@
   "cancellationRestriction": false,
   "collection": false,
   "cost": {
-    "listPrice": 10.00,
     "currency": "USD",
-    "quantityPhysical": 25,
-    "poLineEstimatedPrice": 250.00
+    "listUnitPrice": 10.00,
+    "quantityPhysical": 25
   },
   "description": "25 physical resources for 2 locations",
   "details": {

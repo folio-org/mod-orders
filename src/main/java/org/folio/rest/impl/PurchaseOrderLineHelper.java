@@ -6,6 +6,7 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.comple
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
+import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
@@ -55,6 +56,7 @@ import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
+import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLineCollection;
@@ -149,6 +151,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     // The id is required because sub-objects are being created first
     compPoLine.setId(UUID.randomUUID().toString());
     compPoLine.setPurchaseOrderId(compOrder.getId());
+    updateEstimatedPrice(compPoLine);
 
     JsonObject line = mapFrom(compPoLine);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
@@ -201,6 +204,9 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    */
   CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+
+    // The estimated price should be always recalculated
+    updateEstimatedPrice(compOrderLine);
     updatePoLineSubObjects(compOrderLine, lineFromStorage)
       .thenCompose(poLine -> updateOrderLineSummary(compOrderLine.getId(), poLine))
       .thenAccept(json -> {
@@ -331,6 +337,17 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   private String buildPoLineNumber(String poNumber, String sequence) {
     return poNumber + "-" + sequence;
+  }
+
+  /**
+   * See MODORDERS-180 for more details.
+   * @param compPoLine composite PO Line
+   */
+  private void updateEstimatedPrice(CompositePoLine compPoLine) {
+    Cost cost = compPoLine.getCost();
+    if (cost != null) {
+      cost.setPoLineEstimatedPrice(calculateEstimatedPrice(cost));
+    }
   }
 
   /**

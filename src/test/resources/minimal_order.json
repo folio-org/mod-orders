@@ -3,7 +3,7 @@
   "orderType": "Ongoing",
   "poNumber": "268758",
   "totalItems": 1,
-  "vendor": "168f8a86-d26c-406e-813f-c7527f241ac3",
+  "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Pending",
   "metadata": {
     "createdDate": "2010-10-08T03:53:00.000",
@@ -12,6 +12,9 @@
   "compositePoLines": [
     {
       "acquisitionMethod": "Purchase At Vendor System",
+      "cost": {
+        "currency": "USD"
+      },
       "description": "ABCDEFGH",
       "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
       "poLineNumber": "268758-03",
