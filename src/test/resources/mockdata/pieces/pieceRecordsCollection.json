@@ -335,7 +335,14 @@
       "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
       "poLineId": "9b68e7c2-8818-4387-a405-6567232c1c6f",
       "receivingStatus": "Expected"
+    },
+    {
+      "id": "bf3c14fe-6eac-450a-90ca-391d0788a5a4",
+      "itemId": "86481a22-633e-4b97-8061-0dc9fdaaeaca",
+      "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+      "poLineId": "7c98369b-89e4-4b2a-9793-ba36c056fc97",
+      "receivingStatus": "Received"
     }
   ],
-  "totalRecords": 54
+  "totalRecords": 55
 }

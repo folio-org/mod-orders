@@ -7,40 +7,34 @@ import static org.folio.orders.utils.HelperUtils.getEndpointWithQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.orders.utils.ErrorCodes.*;
 
 import io.vertx.core.Context;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import io.vertx.core.json.JsonObject;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.acq.model.Piece;
+import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.*;
-import org.folio.rest.jaxrs.model.Error;
 
-public class ReceivingHelper extends AbstractHelper {
+public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
   private static final String GET_RECEIVING_HISTORY_BY_QUERY = resourcesPath(RECEIVING_HISTORY) + "?limit=%s&offset=%s%s&lang=%s";
 
   /**
-   * Map with PO line id as a key and value is map with piece id as a key and {@link Error} as a value
-   */
-  private final Map<String, Map<String, Error>> processingErrors = new HashMap<>();
-  /**
    * Map with PO line id as a key and value is map with piece id as a key and {@link ReceivedItem} as a value
    */
   private final Map<String, Map<String, ReceivedItem>> receivingItems;
-  private final CheckinReceivePiecesHelper<ReceivedItem> piecesHelper;
 
 
   ReceivingHelper(ReceivingCollection receivingCollection, Map<String, String> okapiHeaders, Context ctx, String lang) {
-    super(okapiHeaders, ctx, lang);
+    super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
 
     // Convert request to map representation
     receivingItems = groupReceivedItemsByPoLineId(receivingCollection);
-    piecesHelper = new CheckinReceivePiecesHelper<>(httpClient, okapiHeaders, ctx, lang, receivingItems, processingErrors);
 
     // Logging quantity of the piece records to be received
     if (logger.isDebugEnabled()) {
@@ -53,23 +47,22 @@ public class ReceivingHelper extends AbstractHelper {
   }
 
   ReceivingHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
-    super(okapiHeaders, ctx, lang);
+    super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
     receivingItems = null;
-    piecesHelper = null;
   }
 
   CompletableFuture<ReceivingResults> receiveItems(ReceivingCollection receivingCollection) {
 
     // 1. Get piece records from storage
-    return piecesHelper.retrievePieceRecords()
+    return this.retrievePieceRecords(receivingItems)
       // 2. Update items in the Inventory if required
-      .thenCompose(piecesHelper::updateInventoryItems)
+      .thenCompose(this::updateInventoryItems)
       // 3. Update piece records with receiving details which do not have associated item
-      .thenApply(piecesHelper::updatePieceRecordsWithoutItems)
+      .thenApply(this::updatePieceRecordsWithoutItems)
       // 4. Update received piece records in the storage
-      .thenCompose(piecesHelper::storeUpdatedPieceRecords)
+      .thenCompose(this::storeUpdatedPieceRecords)
       // 5. Update PO Line status
-      .thenCompose(piecesHelper::updatePoLinesStatus)
+      .thenCompose(this::updatePoLinesStatus)
       // 6. Return results to the client
       .thenApply(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
   }
@@ -113,7 +106,7 @@ public class ReceivingHelper extends AbstractHelper {
 
       for (ReceivedItem receivedItem : toBeReceived.getReceivedItems()) {
         String pieceId = receivedItem.getPieceId();
-        piecesHelper.calculateProcessingErrors(poLineId, result, processedPiecesForPoLine, resultCounts, pieceId);
+        calculateProcessingErrors(poLineId, result, processedPiecesForPoLine, resultCounts, pieceId);
       }
 
       result.withPoLineId(poLineId)
@@ -140,4 +133,75 @@ public class ReceivingHelper extends AbstractHelper {
               .flatMap(List::stream)
               .toMap(ReceivedItem::getPieceId, receivedItem -> receivedItem))));
   }
+
+  @Override
+  boolean isRevertToOnOrder(Piece piece) {
+    return piece.getReceivingStatus() == ReceivingStatus.RECEIVED
+        && inventoryHelper
+          .isOnOrderItemStatus(piecesByLineId.get(piece.getPoLineId()).get(piece.getId()));
+  }
+
+  @Override
+  CompletableFuture<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece) {
+    ReceivedItem receivedItem = piecesByLineId.get(piece.getPoLineId())
+      .get(piece.getId());
+    return inventoryHelper
+      // Update item records with receiving information and send updates to
+      // Inventory
+      .receiveItem(item, receivedItem)
+      // Update Piece record object with receiving details if item updated
+      // successfully
+      .thenApply(v -> {
+        updatePieceWithReceivingInfo(piece);
+        return true;
+      })
+      // Add processing error if item failed to be updated
+      .exceptionally(e -> {
+        logger.error("Item associated with piece '{}' cannot be updated", piece.getId());
+        addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
+        return false;
+      });
+  }
+
+  @Override
+  Map<String, List<Piece>> updatePieceRecordsWithoutItems(Map<String, List<Piece>> piecesGroupedByPoLine) {
+    StreamEx.ofValues(piecesGroupedByPoLine)
+      .flatMap(List::stream)
+      .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
+      .forEach(this::updatePieceWithReceivingInfo);
+
+    return piecesGroupedByPoLine;
+  }
+
+  /**
+   * Updates piece record with receiving information
+   *
+   * @param piece
+   *          piece record to be updated with receiving info
+   */
+  private void updatePieceWithReceivingInfo(Piece piece) {
+    // Get ReceivedItem corresponding to piece record
+    ReceivedItem receivedItem = piecesByLineId.get(piece.getPoLineId())
+      .get(piece.getId());
+
+    if (StringUtils.isNotEmpty(receivedItem.getCaption())) {
+      piece.setCaption(receivedItem.getCaption());
+    }
+    if (StringUtils.isNotEmpty(receivedItem.getComment())) {
+      piece.setComment(receivedItem.getComment());
+    }
+    if (StringUtils.isNotEmpty(receivedItem.getLocationId())) {
+      piece.setLocationId(receivedItem.getLocationId());
+    }
+
+    // Piece record might be received or rolled-back to Expected
+    if (inventoryHelper.isOnOrderItemStatus(receivedItem)) {
+      piece.setReceivedDate(null);
+      piece.setReceivingStatus(ReceivingStatus.EXPECTED);
+    } else {
+      piece.setReceivedDate(new Date());
+      piece.setReceivingStatus(ReceivingStatus.RECEIVED);
+    }
+  }
+
 }

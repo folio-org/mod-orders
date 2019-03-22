@@ -15,6 +15,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
+import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
@@ -32,40 +33,33 @@ import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
-public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
+public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
   static final int MAX_IDS_FOR_GET_RQ = 15;
   private static final String PIECES_WITH_QUERY_ENDPOINT = resourcesPath(PIECES) + "?limit=%d&lang=%s&query=%s";
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
   Map<String, Map<String, T>> piecesByLineId;
-  private final InventoryHelper inventoryHelper;
+  final InventoryHelper inventoryHelper;
   Map<String, Map<String, Error>> processingErrors;
   private final PurchaseOrderLineHelper poLineHelper;
-  private boolean isReceiving = false;
-  private boolean isCheckIn = false;
 
-  CheckinReceivePiecesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang,
-      Map<String, Map<String, T>> piecesByLineId, Map<String, Map<String, Error>> processingErrors) {
+  CheckinReceivePiecesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx,
+      String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
-    this.piecesByLineId = piecesByLineId;
+    processingErrors = new HashMap<>();
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
-    this.processingErrors = processingErrors;
     poLineHelper = new PurchaseOrderLineHelper(httpClient, okapiHeaders, ctx, lang);
-    isReceiving = StreamEx.ofValues(piecesByLineId)
-      .allMatch(piece -> piece.values().iterator().next().getClass().isAssignableFrom(ReceivedItem.class));
-    isCheckIn = StreamEx.ofValues(piecesByLineId)
-      .allMatch(piece -> piece.values().iterator().next().getClass().isAssignableFrom(CheckInPiece.class));
   }
 
   /**
    * Retrieves piece records from storage based on request data
-   * 
+   *
    * @return {@link CompletableFuture} which holds map with PO line id as key
    *         and list of corresponding pieces as value
    */
-  CompletableFuture<Map<String, List<Piece>>> retrievePieceRecords() {
+  CompletableFuture<Map<String, List<Piece>>> retrievePieceRecords(Map<String, Map<String, T>> piecesByLineId) {
     Map<String, List<Piece>> piecesByPoLine = new HashMap<>();
-
+    this.piecesByLineId = piecesByLineId;
     // Split all piece id's by maximum number of id's for get query
     CompletableFuture[] futures = StreamEx
       .ofSubLists(getPieceIds(), MAX_IDS_FOR_GET_RQ)
@@ -89,7 +83,7 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
   /**
    * Gets all piece id's based on request data
-   * 
+   *
    * @return extract all piece id's
    */
   private List<String> getPieceIds() {
@@ -117,8 +111,8 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
   /**
    * Validates if the piece corresponds to PO Line specified in the request and
-   * can be received. If all checks pass, adds to map
-   * 
+   * can be received/checked-in. If all checks pass, adds to map
+   *
    * @param piece
    *          {@link Piece} piece to validate and add to map
    * @param piecesByPoLine
@@ -147,25 +141,13 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   /**
    * Verifies if the current status of the piece record is "Received" and the
    * client would like to roll-back to Expected
-   * 
+   *
    * @param piece
    *          piece record to asses
    * @return {@code true} if piece record is already received and has to be
    *         rolled-back to Expected
    */
-  private boolean isRevertToOnOrder(Piece piece) {
-    if (isReceiving) {
-      return piece.getReceivingStatus() == ReceivingStatus.RECEIVED
-          && inventoryHelper
-            .isOnOrderItemStatus((ReceivedItem) piecesByLineId.get(piece.getPoLineId()).get(piece.getId()));
-    } else if (isCheckIn) {
-      return piece.getReceivingStatus() == ReceivingStatus.RECEIVED
-          && inventoryHelper
-            .isOnOrderPieceStatus((CheckInPiece) piecesByLineId.get(piece.getPoLineId()).get(piece.getId()));
-    }
-    return false;
-
-  }
+  abstract boolean isRevertToOnOrder(Piece piece);
 
   /**
    * @param pieceId
@@ -180,9 +162,9 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   }
 
   /**
-   * Checks if all expected piece records found in the storage. If any is
+   * Checks if all expected piece records found in the storage. If any are
    * missing, adds corresponding error
-   * 
+   *
    * @param pieceIds
    *          list of expected piece id's
    * @param pieces
@@ -200,9 +182,9 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   }
 
   /**
-   * Updates items in the inventory storage with receiving details if any. On
+   * Updates items in the inventory storage with receiving/check-in details if any. On
    * success updates corresponding records as received
-   * 
+   *
    * @return {@link CompletableFuture} which holds map with PO line id as key
    *         and list of corresponding pieces as value
    */
@@ -240,7 +222,7 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
   /**
    * Retrieves item records from inventory storage
-   * 
+   *
    * @param piecesWithItems
    *          map with item id as a key and piece record as a value
    * @return future with list of item records
@@ -286,7 +268,7 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   /**
    * Checks if all expected piece records found in the storage. If any is
    * missing, adds corresponding error
-   * 
+   *
    * @param expectedItemIds
    *          list of expected item id's
    * @param piecesWithItems
@@ -312,7 +294,7 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   /**
    * Collect all piece records with non-empty item ids. The result is a map with
    * item id as a key and piece record as a value
-   * 
+   *
    * @param piecesGroupedByPoLine
    *          map with PO line id as key and list of corresponding pieces as
    *          value
@@ -333,139 +315,22 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    *          piece associated with the item
    * @return future indicating if the item update is successful.
    */
-  private CompletableFuture<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece) {
-
-    if (isReceiving) {
-
-      ReceivedItem receivedItem = (ReceivedItem) piecesByLineId.get(piece.getPoLineId())
-        .get(piece.getId());
-      return inventoryHelper
-        // Update item records with receiving information and send updates to
-        // Inventory
-        .receiveItem(item, receivedItem)
-        // Update Piece record object with receiving details if item updated
-        // successfully
-        .thenApply(v -> {
-          updatePieceWithReceivingInfo(piece);
-          return true;
-        })
-        // Add processing error if item failed to be updated
-        .exceptionally(e -> {
-          logger.error("Item associated with piece '{}' cannot be updated", piece.getId());
-          addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
-          return false;
-        });
-    } else if (isCheckIn) {
-      CheckInPiece checkinPiece = (CheckInPiece) piecesByLineId.get(piece.getPoLineId())
-        .get(piece.getId());
-      return inventoryHelper
-        // Update item records with checkIn information and send updates to
-        // Inventory
-        .checkinItem(item, checkinPiece)
-        // Update Piece record object with checkIn details if item updated
-        // successfully
-        .thenApply(v -> {
-          updatePieceWithCheckinInfo(piece);
-          return true;
-        })
-        // Add processing error if item failed to be updated
-        .exceptionally(e -> {
-          logger.error("Item associated with piece '{}' cannot be updated", piece.getId());
-          addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
-          return false;
-        });
-
-    }
-    return null;
-  }
-
-  /**
-   * Updates piece record with receiving information
-   * 
-   * @param piece
-   *          piece record to be updated with receiving info
-   */
-  private void updatePieceWithReceivingInfo(Piece piece) {
-    // Get ReceivedItem corresponding to piece record
-    ReceivedItem receivedItem = (ReceivedItem) piecesByLineId.get(piece.getPoLineId())
-      .get(piece.getId());
-
-    if (StringUtils.isNotEmpty(receivedItem.getCaption())) {
-      piece.setCaption(receivedItem.getCaption());
-    }
-    if (StringUtils.isNotEmpty(receivedItem.getComment())) {
-      piece.setComment(receivedItem.getComment());
-    }
-    if (StringUtils.isNotEmpty(receivedItem.getLocationId())) {
-      piece.setLocationId(receivedItem.getLocationId());
-    }
-
-    // Piece record might be received or rolled-back to Expected
-    if (inventoryHelper.isOnOrderItemStatus(receivedItem)) {
-      piece.setReceivedDate(null);
-      piece.setReceivingStatus(ReceivingStatus.EXPECTED);
-    } else {
-      piece.setReceivedDate(new Date());
-      piece.setReceivingStatus(ReceivingStatus.RECEIVED);
-    }
-  }
-
-  private void updatePieceWithCheckinInfo(Piece piece) {
-    // Get ReceivedItem corresponding to piece record
-    CheckInPiece checkinPiece = (CheckInPiece) piecesByLineId.get(piece.getPoLineId())
-      .get(piece.getId());
-
-    if (StringUtils.isNotEmpty(checkinPiece.getCaption())) {
-      piece.setCaption(checkinPiece.getCaption());
-    }
-    if (StringUtils.isNotEmpty(checkinPiece.getComment())) {
-      piece.setComment(checkinPiece.getComment());
-    }
-    if (StringUtils.isNotEmpty(checkinPiece.getLocationId())) {
-      piece.setLocationId(checkinPiece.getLocationId());
-    }
-
-    // Piece record might be received or rolled-back to Expected
-    if (inventoryHelper.isOnOrderPieceStatus(checkinPiece)) {
-      piece.setReceivedDate(null);
-      piece.setReceivingStatus(ReceivingStatus.EXPECTED);
-    } else {
-      piece.setReceivedDate(new Date());
-      piece.setReceivingStatus(ReceivingStatus.RECEIVED);
-    }
-  }
+  abstract CompletableFuture<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece);
 
   /**
    * Updates piece records with receiving details which do not have associated
    * item
-   * 
+   *
    * @param piecesGroupedByPoLine
    *          map with PO line id as key and list of corresponding pieces as
    *          value
    * @return updated map passed as a parameter
    */
-  Map<String, List<Piece>> updatePieceRecordsWithoutItems(Map<String, List<Piece>> piecesGroupedByPoLine) {
-    // Collect all piece records without item id and update with
-    // receiving/checkin
-    // information.
-    if (isReceiving) {
-      StreamEx.ofValues(piecesGroupedByPoLine)
-        .flatMap(List::stream)
-        .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
-        .forEach(this::updatePieceWithReceivingInfo);
-    } else if (isCheckIn) {
-      StreamEx.ofValues(piecesGroupedByPoLine)
-        .flatMap(List::stream)
-        .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
-        .forEach(this::updatePieceWithCheckinInfo);
-    }
-
-    return piecesGroupedByPoLine;
-  }
+  abstract Map<String, List<Piece>> updatePieceRecordsWithoutItems(Map<String, List<Piece>> piecesGroupedByPoLine);
 
   /**
    * Stores updated piece records with receiving details into storage.
-   * 
+   *
    * @param piecesGroupedByPoLine
    *          map with PO line id as key and list of corresponding pieces as
    *          value
@@ -486,10 +351,10 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   }
 
   /**
-   * Sends request to update piece record with receiving details in the storage.
-   * In case error happens updating the piece, this is collected to return in
+   * Sends request to update piece record with receiving/check-in details in the storage.
+   * In case of an error updating the piece, this is collected to return in
    * the response to client
-   * 
+   *
    * @param piece
    *          {@link Piece} with receiving information
    */
@@ -504,8 +369,8 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   }
 
   /**
-   * Stores updated piece records with receiving details into storage.
-   * 
+   * Stores updated piece records with receiving/check-in details into storage.
+   *
    * @param piecesGroupedByPoLine
    *          map with PO line id as key and list of corresponding pieces as
    *          value
@@ -595,7 +460,7 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    * zero, otherwise checks how many received pieces. If quantity of received
    * piece records is zero, returns "Awaiting Receipt" status, otherwise -
    * "Partially Received"
-   * 
+   *
    * @param expectedPiecesQuantity
    *          expected piece records quantity
    * @param poLine
@@ -604,8 +469,8 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    */
   private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity, PoLine poLine,
       List<Piece> pieces) {
-    // Fully Received: In case there is no any expected piece remaining
-    if (isReceiving && expectedPiecesQuantity == 0) {
+    // Fully Received:If receiving and there is no expected piece remaining
+    if (!isCheckin(poLine) && expectedPiecesQuantity == 0) {
       return CompletableFuture.completedFuture(FULLY_RECEIVED);
     }
     // Partially Received: In case there is at least one successfully received
@@ -617,6 +482,10 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     // there is any Received piece in the storage
     return getPiecesQuantityByPoLineAndStatus(poLine.getId(), ReceivingStatus.RECEIVED)
       .thenApply(receivedQty -> receivedQty == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED);
+  }
+
+  boolean isCheckin(PoLine poLine) {
+    return defaultIfNull(poLine.getCheckinItems(), false);
   }
 
   private CompletableFuture<Integer> getPiecesQuantityByPoLineAndStatus(String poLineId,
@@ -634,18 +503,18 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     if (status == null || poLine.getReceiptStatus() == status) {
       return completedFuture(null);
     }
-
-    // Update receipt status and date (if fully received)
-    poLine.setReceiptStatus(status);
+    // Update receipt date and receipt status
     if (status == FULLY_RECEIVED) {
       poLine.setReceiptDate(new Date());
-    } else if (isCheckIn && status == ReceiptStatus.PARTIALLY_RECEIVED) {
-      // set the date when the first piece is checked In
+    } else if (isCheckin(poLine) && poLine.getReceiptStatus().equals(ReceiptStatus.AWAITING_RECEIPT)
+        && status == ReceiptStatus.PARTIALLY_RECEIVED) {
+      // if checking in, set the receipt date only for the first piece
       poLine.setReceiptDate(new Date());
     } else {
       poLine.setReceiptDate(null);
     }
 
+    poLine.setReceiptStatus(status);
     // Update PO Line in storage
     return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, ctx,
         okapiHeaders, logger)
@@ -660,11 +529,11 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       .get(pieceId);
   }
 
-  private void addError(String polId, String pieceId, Error error) {
+  void addError(String polId, String pieceId, Error error) {
     processingErrors.computeIfAbsent(polId, k -> new HashMap<>())
       .put(pieceId, error);
   }
-  
+
   public void calculateProcessingErrors(String poLineId, ReceivingResult result,
       Map<String, Piece> processedPiecesForPoLine, Map<String, Integer> resultCounts, String pieceId) {
     // Calculate processing status
@@ -683,6 +552,5 @@ public class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     itemResult.setProcessingStatus(status);
     result.getReceivingItemResults().add(itemResult);
   }
- 
 
 }

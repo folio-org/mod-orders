@@ -683,6 +683,7 @@
             "instanceId": "bd7a5971-af97-4974-a33f-53b7090fa13a",
             "acquisitionMethod": "Purchase At Vendor System",
             "alerts": [],
+            "checkinItems": true,
             "claims": [
                 {
                     "claimed": true,
@@ -692,9 +693,12 @@
             "collection": false,
             "contributors": [],
             "cost": {
-                "listPrice": 0,
+                "currency": "USD",
+                "listUnitPrice": 0,
+                "listUnitPriceElectronic": 2,
                 "quantityPhysical": 2,
-                "quantityElectronic": 2
+                "quantityElectronic": 2,
+                "poLineEstimatedPrice": 4
             },
             "details": {
                 "productIds": [],
@@ -729,7 +733,7 @@
                     "quantityElectronic": 2
                 }
             ],
-            "orderFormat": "Physical Resource",
+            "orderFormat": "P/E Mix",
             "owner": "8910",
             "paymentStatus": "Awaiting Payment",
             "physical": {
@@ -747,6 +751,76 @@
             },
             "tags": [],
             "title": "BEST AMERICAN SCIENCE FICTION AND FANTASY.",
+            "vendorDetail": {
+                "instructions": "Next Volume | Listed Print Serial",
+                "refNumber": "99974828485",
+                "refNumberType": "Supplier's unique order line reference number"
+            },
+            "metadata": {
+                "createdDate": "2019-03-18T18:56:45.333+0000",
+                "createdByUserId": "a564c58b-fe32-5729-ab90-12df37840a76",
+                "updatedDate": "2019-03-18T18:56:45.477+0000",
+                "updatedByUserId": "a564c58b-fe32-5729-ab90-12df37840a76"
+            }
+        },
+         {
+            "id": "7c98369b-89e4-4b2a-9793-ba36c056fc97",
+            "instanceId": "bd7a5971-af97-4974-a33f-53b7090fa13a",
+            "acquisitionMethod": "Purchase At Vendor System",
+            "alerts": [],
+            "checkinItems": true,
+            "claims": [
+                {
+                    "claimed": true,
+                    "grace": 45
+                }
+            ],
+            "collection": false,
+            "contributors": [],
+            "cost": {
+                "currency": "USD",
+                "listUnitPrice": 2,
+                "quantityPhysical": 2,
+                "poLineEstimatedPrice": 4
+            },
+            "details": {
+                "productIds": [],
+                "materialTypes": [
+                    "71fbd940-1027-40a6-8a48-49b44d795e46"
+                ]
+            },
+            "fundDistribution": [
+                {
+                    "code": "27e43081-4389-4766-ba97-ea5e8c318937",
+                    "percentage": 100
+                }
+            ],
+            "locations": [
+                {
+                    "locationId": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+                    "quantity": 4,
+                    "quantityPhysical": 2,
+                    "quantityElectronic": 2
+                }
+            ],
+            "orderFormat": "Physical Resource",
+            "owner": "8910",
+            "paymentStatus": "Awaiting Payment",
+            "physical": {
+                "expectedReceiptDate": "2019-04-17T18:56:45.237+0000",
+                "volumes": []
+            },
+            "poLineNumber": "12345-1",
+            "publisher": "MARINER BOOKS",
+            "purchaseOrderId": "707cefd7-cccd-437d-b4bf-456f9c3dde6d",
+            "receiptStatus": "Partially Received",
+            "reportingCodes": [],
+            "source": {
+                "code": "manual",
+                "description": "An order placed for reverting checkin"
+            },
+            "tags": [],
+            "title": "Country Madness",
             "vendorDetail": {
                 "instructions": "Next Volume | Listed Print Serial",
                 "refNumber": "99974828485",
