@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "3.0",
+      "version": "4.0",
       "handlers": [
         {
           "methods": ["GET"],
@@ -203,7 +203,7 @@
   "requires": [
     {
       "id": "orders-storage.purchase-orders",
-      "version": "3.0"
+      "version": "4.0"
     },
     {
       "id": "orders-storage.alerts",
@@ -215,7 +215,7 @@
     },
     {
       "id": "orders-storage.receiving-history",
-      "version": "2.0"
+      "version": "2.1"
     },
     {
       "id": "orders-storage.reporting-codes",
@@ -223,7 +223,7 @@
     },
     {
       "id": "orders-storage.po-lines",
-      "version": "3.0"
+      "version": "4.0"
     },
     {
       "id": "holdings-storage",
