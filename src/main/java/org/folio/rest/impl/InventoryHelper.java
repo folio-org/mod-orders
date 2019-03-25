@@ -97,8 +97,10 @@ public class InventoryHelper extends AbstractHelper {
    * @param compPOL   PO line to retrieve/create Item Records for. At this step PO Line must contain instance Id
    * @return future with list of pieces with item and location id's
    */
-  public CompletableFuture<List<Piece>> handleHoldingRecords(CompositePoLine compPOL) {
+  public CompletableFuture<List<Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL) {
     List<CompletableFuture<List<Piece>>> itemsPerHolding = new ArrayList<>();
+    boolean isItemsUpdateRequired = isItemsUpdateRequired(compPOL);
+
     // Group all locations by location id because the holding should be unique for different locations
     if (HelperUtils.isHoldingsUpdateRequired(compPOL)) {
       groupLocationsById(compPOL)
@@ -106,13 +108,13 @@ public class InventoryHelper extends AbstractHelper {
           // Search for or create a new holding and then create items for this holding
           getOrCreateHoldingsRecord(compPOL, locationId)
             .thenCompose(holdingId -> {
-                int expectedQuantity = calculateInventoryItemsQuantity(compPOL, locations);
-                if (isItemsUpdateRequired(compPOL) && expectedQuantity > 0) {
+                int expectedQuantity = isItemsUpdateRequired ? calculateInventoryItemsQuantity(compPOL, locations) : 0;
+                if (expectedQuantity > 0) {
                   // For some cases items might not be created e.g. resources with create inventory set to "None"
                   return handleItemRecords(compPOL, holdingId, expectedQuantity)
                     .thenApply(itemIds -> constructPieces(itemIds, compPOL.getId(), locationId));
                 } else {
-                  return completedFuture((new ArrayList<>()));
+                  return completedFuture(Collections.emptyList());
                 }
               }
             )));

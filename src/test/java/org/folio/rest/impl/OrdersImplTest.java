@@ -1363,7 +1363,7 @@ public class OrdersImplTest {
     List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
 
     assertNotNull(instancesSearches);
-    assertNull(holdingsSearches);
+    assertNotNull(holdingsSearches);
     assertNull(itemsSearches);
     assertNull(createdPieces);
   }
@@ -1705,6 +1705,7 @@ public class OrdersImplTest {
     // Verify quantity of created pieces
     int expectedPiecesQuantity = 0;
     for (CompositePoLine poLine : compositePoLines) {
+      if (poLine.getCheckinItems() != null && poLine.getCheckinItems()) continue;
       expectedPiecesQuantity += HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation(poLine, poLine.getLocations());
       expectedPiecesQuantity += HelperUtils.calculateInventoryItemsQuantity(poLine, poLine.getLocations());
     }

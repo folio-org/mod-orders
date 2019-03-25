@@ -6,8 +6,7 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static javax.ws.rs.core.Response.Status.CREATED;
-import static org.folio.orders.utils.HelperUtils.OKAPI_URL;
-import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
+import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
 import io.vertx.core.Context;
@@ -42,6 +41,7 @@ public abstract class AbstractHelper {
   protected final Map<String, String> okapiHeaders;
   protected final Context ctx;
   protected final String lang;
+  private JsonObject tenantConfiguration;
 
   AbstractHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     this.httpClient = httpClient;
@@ -196,5 +196,17 @@ public abstract class AbstractHelper {
   public Response buildCreatedResponse(Object body) {
     closeHttpClient();
     return Response.status(CREATED).header(CONTENT_TYPE, APPLICATION_JSON).entity(body).build();
+  }
+
+  public CompletableFuture<JsonObject> getTenantConfiguration() {
+    if (this.tenantConfiguration != null) {
+      return CompletableFuture.completedFuture(this.tenantConfiguration);
+    } else {
+      return loadConfiguration(okapiHeaders, ctx, logger)
+        .thenApply(config -> {
+          this.tenantConfiguration = config;
+          return config;
+        });
+    }
   }
 }

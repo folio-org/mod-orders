@@ -13,7 +13,6 @@ import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.loadConfiguration;
 import static org.folio.orders.utils.HelperUtils.operateOnObject;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
@@ -337,7 +336,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private CompletableFuture<Boolean> validatePoLineLimit(CompositePurchaseOrder compPO) {
     if (CollectionUtils.isNotEmpty(compPO.getCompositePoLines())) {
       CompletableFuture<Boolean> future = new VertxCompletableFuture<>(ctx);
-      loadConfiguration(okapiHeaders, ctx, logger)
+      getTenantConfiguration()
         .thenAccept(config -> {
           int limit = getPoLineLimit(config);
           if (compPO.getCompositePoLines().size() > limit) {

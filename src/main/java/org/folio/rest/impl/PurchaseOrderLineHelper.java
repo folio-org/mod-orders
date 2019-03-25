@@ -147,8 +147,15 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
     if ((compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() == null)
       || (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() == null)) {
-      loadConfiguration(okapiHeaders, ctx, logger)
-        .thenApply(config -> future.complete(Optional.of(config.getJsonObject(CREATE_INVENTORY)).orElse(new JsonObject())))
+      getTenantConfiguration()
+        .thenApply(config -> {
+            if (!config.isEmpty() && !config.getJsonObject(CREATE_INVENTORY).isEmpty()) {
+              return future.complete(config.getJsonObject(CREATE_INVENTORY));
+            } else {
+              return completedFuture(new JsonObject());
+            }
+          }
+        )
         .exceptionally(t -> future.complete(new JsonObject()));
       return future
         .thenAccept(jsonConfig -> updateCreateInventory(compPOL, jsonConfig));
@@ -158,7 +165,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private void updateCreateInventory(CompositePoLine compPOL, JsonObject jsonConfig) {
-    //try to set createInventory by values from mod-configuration. If empty - set default hardcoded values
+    // try to set createInventory by values from mod-configuration. If empty - set default hardcoded values
     if (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() == null) {
       String tenantDefault = jsonConfig.getString(ERESOURCE);
       Eresource.CreateInventory eresourceDefaultValue = StringUtils.isEmpty(tenantDefault) ?
@@ -255,12 +262,8 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     if (compPOL.getReceiptStatus() == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED) {
       return completedFuture(null);
     }
-    // Set InstanceId only for the checkin flow
-    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
-      return inventoryHelper.handleInstanceRecord(compPOL)
-        .thenCompose(cPOL -> completedFuture(null));
-    }
-    // create pieces only in case of no inventory updates required
+
+    // In case of no inventory updates required create pieces only
     if (inventoryUpdateNotRequired(compPOL)) {
       return createPieces(compPOL, Collections.emptyList())
         .thenRun(() ->
@@ -269,7 +272,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     }
 
     return inventoryHelper.handleInstanceRecord(compPOL)
-      .thenCompose(inventoryHelper::handleHoldingRecords)
+      .thenCompose(inventoryHelper::handleHoldingsAndItemsRecords)
       .thenCompose(piecesWithItemId -> createPieces(compPOL, piecesWithItemId));
   }
 
@@ -308,7 +311,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   private CompletableFuture<Boolean> validatePoLineLimit(CompositePoLine compPOL) {
     String query = PURCHASE_ORDER_ID + "==" + compPOL.getPurchaseOrderId();
-    return loadConfiguration(okapiHeaders, ctx, logger)
+    return getTenantConfiguration()
       .thenCombine(getPoLines(0, 0, query), (config, poLines) -> {
         boolean isValid = poLines.getTotalRecords() < getPoLineLimit(config);
         if (!isValid) {
@@ -367,22 +370,25 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    */
   private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem) {
     int expectedItemsQuantity = isItemsUpdateRequired(compPOL) ? expectedPiecesWithItem.size() : calculateInventoryItemsQuantity(compPOL);
-
+    // do not create pieces in case of checkin flow
+    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
+      return completedFuture(null);
+    }
     return searchForExistingPieces(compPOL)
       .thenCompose(existingPieces -> {
         List<Piece> piecesToCreate = new ArrayList<>();
         // For each location collect pieces that need to be created.
         groupLocationsById(compPOL)
           .forEach((locationId, locations) -> {
-              List<Piece> filteredExistingPieces = filterByLocationId(existingPieces, locationId);
-              List<Piece> filteredExpectedPiecesWithItem = filterByLocationId(expectedPiecesWithItem, locationId);
-              piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
+            List<Piece> filteredExistingPieces = filterByLocationId(existingPieces, locationId);
+            List<Piece> filteredExpectedPiecesWithItem = filterByLocationId(expectedPiecesWithItem, locationId);
+            piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
 
-              int expectedQuantityOfPiecesWithoutItem = calculateExpectedQuantityOfPiecesWithoutItemCreation(compPOL, locations);
-              int existingQuantityOfPiecesWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existingPieces);
-              int remainingPiecesQuantity = expectedQuantityOfPiecesWithoutItem - existingQuantityOfPiecesWithoutItem;
-              piecesToCreate.addAll(constructMissingPiecesWithoutItem(compPOL, remainingPiecesQuantity, locationId));
-            });
+            int expectedQuantityOfPiecesWithoutItem = calculateExpectedQuantityOfPiecesWithoutItemCreation(compPOL, locations);
+            int existingQuantityOfPiecesWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existingPieces);
+            int remainingPiecesQuantity = expectedQuantityOfPiecesWithoutItem - existingQuantityOfPiecesWithoutItem;
+            piecesToCreate.addAll(constructMissingPiecesWithoutItem(compPOL, remainingPiecesQuantity, locationId));
+          });
 
         return allOf(piecesToCreate.stream().map(this::createPiece).toArray(CompletableFuture[]::new));
       })
