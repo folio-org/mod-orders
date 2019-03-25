@@ -37,7 +37,7 @@ public enum ErrorCodes {
   POL_ACCESS_PROVIDER_NOT_FOUND("accessProviderNotFound", "Order cannot be open as the associated access provider not found"),
   COST_UNIT_PRICE_INVALID("costUnitPriceInvalid", "Cost's list unit price is invalid"),
   COST_UNIT_PRICE_ELECTRONIC_INVALID("costUnitPriceElectronicInvalid", "Cost's list unit price for Electronic resource(s) is invalid"),
-  COST_ADDITIONAL_COST_INVALID("costAdditionalCostInvalid", "Cost's list unit price must be positive number"),
+  COST_ADDITIONAL_COST_INVALID("costAdditionalCostInvalid", "Cost's additional cost must be positive number"),
   COST_DISCOUNT_INVALID("costDiscountInvalid", "Cost's discount is invalid");
 
   private final String code;
