@@ -2,8 +2,6 @@ package org.folio.rest.impl;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -12,7 +10,6 @@ import org.folio.rest.acq.model.Vendor;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,25 +29,15 @@ import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 
 
-public class VendorHelper {
-
-  private static final Logger logger = LoggerFactory.getLogger(VendorHelper.class);
-
-  private final HttpClientInterface httpClient;
-  private final Map<String, String> okapiHeaders;
-  private final Context ctx;
-  private final String lang;
+public class VendorHelper extends AbstractHelper {
 
   private static final String ID = "id";
   private static final String VENDORS = "vendors";
   private static final String VENDOR_STORAGE_VENDORS = "/vendor-storage/vendors/";
   private static final String VENDORS_WITH_QUERY_ENDPOINT = "/vendor-storage/vendors?limit=%d&lang=%s&query=%s";
 
-  public VendorHelper(String lang, HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx) {
-    this.lang = lang;
-    this.httpClient = httpClient;
-    this.okapiHeaders = okapiHeaders;
-    this.ctx = ctx;
+  public VendorHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
+    super(okapiHeaders, ctx, lang);
   }
 
   /**
@@ -71,7 +58,7 @@ public class VendorHelper {
           if(status != VendorStatus.ACTIVE) {
             errors.add(createErrorWithId(ORDER_VENDOR_IS_INACTIVE, id));
           }
-          return buildErrorsObject(errors);
+          return handleAndReturnErrors(errors);
         })
         .thenAccept(future::complete)
         .exceptionally(t -> {
@@ -81,11 +68,11 @@ public class VendorHelper {
             logger.error("Failed to validate vendor's status", t);
             errors.add(GENERIC_ERROR_CODE.toError());
           }
-          future.complete(buildErrorsObject(errors));
+          future.complete(handleAndReturnErrors(errors));
           return null;
         });
     } else {
-      future.complete(buildErrorsObject(errors));
+      future.complete(handleAndReturnErrors(errors));
     }
     return future;
   }
@@ -114,7 +101,7 @@ public class VendorHelper {
         ids.stream()
           .filter(id -> !vendorsIds.contains(id))
           .forEach(id -> errors.add(POL_ACCESS_PROVIDER_NOT_FOUND.toError().withAdditionalProperty(ID, id)));
-        return buildErrorsObject(errors);
+        return handleAndReturnErrors(errors);
       }).thenAccept(future::complete)
         .exceptionally(t -> {
           logger.error("Failed to validate access provider's status", t);
@@ -122,7 +109,7 @@ public class VendorHelper {
           return null;
         });
     } else {
-      future.complete(buildErrorsObject(errors));
+      future.complete(handleAndReturnErrors(errors));
     }
     return future;
   }
@@ -133,7 +120,9 @@ public class VendorHelper {
    * @param errors list of {@link Error}
    * @return {@link Errors} object with list of {@link Error}
    */
-  private Errors buildErrorsObject(List<Error> errors) {
+  private Errors handleAndReturnErrors(List<Error> errors) {
+    // Add errors to the helper processing errors
+    addProcessingErrors(errors);
     return new Errors()
       .withErrors(errors)
       .withTotalRecords(errors.size());
