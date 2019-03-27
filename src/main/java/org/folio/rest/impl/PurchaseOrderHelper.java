@@ -305,7 +305,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private CompletableFuture<Boolean> validateVendor(CompositePurchaseOrder compPO) {
     if (compPO.getWorkflowStatus() == WorkflowStatus.OPEN) {
-      VendorHelper vendorHelper = new VendorHelper(lang, httpClient, okapiHeaders, ctx);
+      VendorHelper vendorHelper = new VendorHelper(okapiHeaders, ctx, lang);
       return vendorHelper
         .validateVendor(compPO)
         .thenCombine(vendorHelper.validateAccessProviders(compPO), (vendorErrors, accessProvidersErrors) -> {
