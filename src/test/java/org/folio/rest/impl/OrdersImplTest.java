@@ -33,6 +33,7 @@ import static org.folio.orders.utils.ErrorCodes.ZERO_COST_QTY;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
+import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
@@ -926,14 +927,7 @@ public class OrdersImplTest {
       })
       .sum();
 
-    double expectedPrice = resp
-      .getCompositePoLines()
-      .stream()
-      .map(CompositePoLine::getCost)
-      .map(Cost::getPoLineEstimatedPrice)
-      .map(BigDecimal::valueOf)
-      .reduce(BigDecimal.ZERO, BigDecimal::add)
-      .doubleValue();
+    double expectedPrice = calculateTotalEstimatedPrice(resp.getCompositePoLines());
 
     assertThat(resp.getTotalItems(), equalTo(expectedQuantity));
     assertThat(resp.getTotalEstimatedPrice(), equalTo(expectedPrice));

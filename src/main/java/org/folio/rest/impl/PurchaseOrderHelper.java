@@ -5,6 +5,7 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
+import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.deletePoLine;
 import static org.folio.orders.utils.HelperUtils.deletePoLines;
 import static org.folio.orders.utils.HelperUtils.getCompositePoLines;
@@ -22,13 +23,11 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
@@ -42,7 +41,6 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
-import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -221,23 +219,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private int calculateTotalItemsQuantity(List<CompositePoLine> poLines) {
     return poLines.stream().mapToInt(HelperUtils::calculateTotalQuantity).sum();
-  }
-
-  /**
-   * Calculates PO's estimated price by summing the Estimated Price of the associated PO Lines.
-   * See MODORDERS-181 for more details.
-   * @param poLines list of composite PO Lines
-   * @return estimated purchase order's total price
-   */
-  private Double calculateTotalEstimatedPrice(List<CompositePoLine> poLines) {
-    return poLines
-      .stream()
-      .map(CompositePoLine::getCost)
-      .filter(Objects::nonNull)
-      .map(Cost::getPoLineEstimatedPrice)
-      .map(BigDecimal::valueOf)
-      .reduce(BigDecimal.ZERO, BigDecimal::add)
-      .doubleValue();
   }
 
   /**
