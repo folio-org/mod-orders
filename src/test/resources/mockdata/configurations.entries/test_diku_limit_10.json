@@ -12,11 +12,27 @@
         "updatedDate": "2018-12-12T08:24:34.213+0000",
         "updatedByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c"
       }
+    },
+    {
+      "id": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c",
+      "module": "ORDERS",
+      "configName": "createInventory",
+      "enabled": true,
+      "value": {
+        "physical" : "Instance, Holding, Item",
+        "eresource" : "Instance, Holding"
+      },
+      "metadata": {
+        "createdDate": "2018-12-12T08:14:32.743+0000",
+        "createdByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c",
+        "updatedDate": "2018-12-12T08:24:34.213+0000",
+        "updatedByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c"
+      }
     }
   ],
-  "totalRecords": 1,
+  "totalRecords": 2,
   "resultInfo": {
-    "totalRecords": 1,
+    "totalRecords": 2,
     "facets": [],
     "diagnostics": []
   }

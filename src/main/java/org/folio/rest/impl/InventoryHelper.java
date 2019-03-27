@@ -30,13 +30,7 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
-import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
-import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.constructPieces;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
-import static org.folio.orders.utils.HelperUtils.groupLocationsById;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.HelperUtils.*;
 
 public class InventoryHelper extends AbstractHelper {
 
@@ -100,24 +94,28 @@ public class InventoryHelper extends AbstractHelper {
    * @param compPOL   PO line to retrieve/create Item Records for. At this step PO Line must contain instance Id
    * @return future with list of pieces with item and location id's
    */
-  public CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL) {
+  public CompletableFuture<List<Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL) {
     List<CompletableFuture<List<Piece>>> itemsPerHolding = new ArrayList<>();
+    boolean isItemsUpdateRequired = isItemsUpdateRequired(compPOL);
 
     // Group all locations by location id because the holding should be unique for different locations
-    groupLocationsById(compPOL)
-      .forEach((locationId, locations) -> {
-        int expectedQuantity = calculateInventoryItemsQuantity(compPOL, locations);
-        // For some cases items might not be created e.g. Electronic resource with create inventory set to false
-        if (expectedQuantity > 0) {
-          itemsPerHolding.add(
-            // Search for or create a new holding and then create items for this holding
-            getOrCreateHoldingsRecord(compPOL, locationId)
-              .thenCompose(holdingId -> handleItemRecords(compPOL, holdingId, expectedQuantity))
-              .thenApply(itemIds -> constructPieces(itemIds, compPOL.getId(), locationId))
-          );
-        }
-      });
-
+    if (HelperUtils.isHoldingsUpdateRequired(compPOL)) {
+      groupLocationsById(compPOL)
+        .forEach((locationId, locations) -> itemsPerHolding.add(
+          // Search for or create a new holding and then create items for this holding
+          getOrCreateHoldingsRecord(compPOL, locationId)
+            .thenCompose(holdingId -> {
+                int expectedQuantity = isItemsUpdateRequired ? calculateInventoryItemsQuantity(compPOL, locations) : 0;
+                if (expectedQuantity > 0) {
+                  // For some cases items might not be created e.g. resources with create inventory set to "None"
+                  return handleItemRecords(compPOL, holdingId, expectedQuantity)
+                    .thenApply(itemIds -> constructPieces(itemIds, compPOL.getId(), locationId));
+                } else {
+                  return completedFuture(Collections.emptyList());
+                }
+              }
+            )));
+    }
     return collectResultsOnSuccess(itemsPerHolding)
       .thenApply(results -> results.stream()
         .flatMap(List::stream)

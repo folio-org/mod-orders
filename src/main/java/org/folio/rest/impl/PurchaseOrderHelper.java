@@ -14,7 +14,6 @@ import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.loadConfiguration;
 import static org.folio.orders.utils.HelperUtils.operateOnObject;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
@@ -38,20 +37,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
 
 import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import org.folio.rest.jaxrs.model.Error;
 
 public class PurchaseOrderHelper extends AbstractHelper {
 
@@ -131,6 +125,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenCompose(poFromStorage -> {
         logger.info("Order successfully retrieved from storage");
         return validatePoNumber(poFromStorage, compPO)
+          .thenCompose(v -> updateTenantDefaultCreateInventoryValues(compPO))
           .thenCompose(v -> updatePoLines(poFromStorage, compPO))
           .thenCompose(v -> {
             if (isTransitionToOpen(poFromStorage, compPO)) {
@@ -141,6 +136,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
           });
         }
       );
+  }
+
+  private CompletableFuture<Void> updateTenantDefaultCreateInventoryValues(CompositePurchaseOrder compPO) {
+    return CompletableFuture.allOf(compPO.getCompositePoLines().stream()
+      .map(orderLineHelper::setTenantDefaultCreateInventoryValues)
+      .toArray(CompletableFuture[]::new));
   }
 
   /**
@@ -320,7 +321,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private CompletableFuture<Boolean> validatePoLineLimit(CompositePurchaseOrder compPO) {
     if (CollectionUtils.isNotEmpty(compPO.getCompositePoLines())) {
       CompletableFuture<Boolean> future = new VertxCompletableFuture<>(ctx);
-      loadConfiguration(okapiHeaders, ctx, logger)
+      getTenantConfiguration()
         .thenAccept(config -> {
           int limit = getPoLineLimit(config);
           if (compPO.getCompositePoLines().size() > limit) {

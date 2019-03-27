@@ -1,24 +1,18 @@
 {
   "approved": true,
   "assignedTo": "ab18897b-0e40-4f31-896b-9c9adc979a88",
-  "manualPo": false,
   "notes": [
     "ABCDEFGHIJKLMNO",
     "ABCDEFGHIJKLMNOPQRST",
     "ABCDEFGHIJKLMNOPQRSTUV"
   ],
-  "orderType": "Ongoing",
-  "poNumber": "268758",
+  "orderType": "One-Time",
+  "poNumber": "2687001",
   "reEncumber": false,
-  "renewal": {
-     "cycle": "Manual",
-     "interval": 0,
-     "manualRenewal": true,
-     "reviewPeriod": 0,
-     "renewalDate": "2019-04-09T00:00:00.000Z"
-  },
+  "totalEstimatedPrice": 300.00,
+  "totalItems": 4,
   "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
-  "workflowStatus": "Open",
+  "workflowStatus": "Pending",
   "metadata": {
     "createdDate": "2010-10-08T03:53:00.000",
     "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
@@ -28,8 +22,7 @@
       "acquisitionMethod": "Purchase At Vendor System",
       "alerts": [
         {
-          "alert": "Receipt overdue",
-          "id": "9a665b22-9fe5-4c95-b4ee-837a5433c95d"
+          "alert": "Receipt overdue"
         }
       ],
       "cancellationRestriction": false,
@@ -60,7 +53,7 @@
         "receivingNote": "ABCDEFGHIJKL",
         "productIds": [
           {
-            "productId": "9780764354113",
+            "productId": "9780764354101",
             "productIdType": "ISBN"
           }
         ],
@@ -73,23 +66,24 @@
       },
       "donor": "ABCDEFGHIJKLM",
       "eresource": {
-        "activated": false,
-        "activationDue": 0,
-        "createInventory": "None",
-        "trial": false,
-        "userLimit": 10,
-        "accessProvider": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1"
+        "accessProvider": "858e80d2-f562-4c54-9934-6e274dee511d",
+        "createInventory": "Instance, Holding, Item"
       },
       "fundDistribution": [
         {
           "code": "HIST",
-          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3",
-          "percentage": 100
+          "percentage": 80.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3"
+        },
+        {
+          "code": "GENRL",
+          "percentage": 20.0,
+          "encumbrance": "0466cb77-0344-43c6-85eb-0a64aa2934e5"
         }
       ],
       "locations": [
         {
-          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "quantity": 2,
           "quantityElectronic": 1,
           "quantityPhysical": 1
@@ -111,7 +105,7 @@
       "publicationDate": "2017",
       "publisher": "Schiffer Publishing",
       "receiptDate": "2018-10-09T00:00:00.000Z",
-      "receiptStatus": "Awaiting Receipt",
+      "receiptStatus": "Pending",
       "reportingCodes": [
         {
           "code": "CODE1",

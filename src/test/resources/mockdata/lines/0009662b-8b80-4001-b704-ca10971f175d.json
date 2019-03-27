@@ -57,6 +57,7 @@
   "owner" : "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
   "paymentStatus" : "Awaiting Payment",
   "physical": {
+    "createInventory": "Instance, Holding, Item",
     "volumes": [
       "vol. 1"
     ],

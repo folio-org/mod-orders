@@ -49,6 +49,7 @@
       "orderFormat": "Physical Resource",
       "paymentStatus": "Fully Paid",
       "physical": {
+        "createInventory": "Instance, Holding, Item",
         "volumes": [
           "vol.1"
         ],
@@ -90,7 +91,7 @@
       },
       "eresource": {
         "accessProvider": "8be1cd0a-acab-488d-b650-65ceb96aa148",
-        "createInventory": false
+        "createInventory": "Instance"
       },
       "locations": [
         {

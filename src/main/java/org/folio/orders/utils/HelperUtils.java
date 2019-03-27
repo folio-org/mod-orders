@@ -8,9 +8,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.*;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
@@ -37,13 +35,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.client.ConfigurationsClient;
-import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -502,13 +495,16 @@ public class HelperUtils {
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) return 0;
     switch (compPOL.getOrderFormat()) {
       case P_E_MIX:
-        int quantity = getPhysicalQuantity(locations);
-        return isInventoryUpdateRequiredForEresource(compPOL) ? quantity + getElectronicQuantity(locations) : quantity;
+        int quantity = 0;
+        quantity += isItemsUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
+        quantity += isItemsUpdateRequiredForEresource(compPOL) ? getElectronicQuantity(locations) : 0;
+        return quantity;
       case PHYSICAL_RESOURCE:
-        return getPhysicalQuantity(locations);
+        return isItemsUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
       case ELECTRONIC_RESOURCE:
-        return isInventoryUpdateRequiredForEresource(compPOL) ? getElectronicQuantity(locations) : 0;
+        return isItemsUpdateRequiredForEresource(compPOL) ? getElectronicQuantity(locations) : 0;
       case OTHER:
+        return isItemsUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
       default:
         return 0;
     }
@@ -517,12 +513,16 @@ public class HelperUtils {
   public static int calculateExpectedQuantityOfPiecesWithoutItemCreation(CompositePoLine compPOL, List<Location> locations) {
     switch (compPOL.getOrderFormat()) {
       case P_E_MIX:
-        return isInventoryUpdateRequiredForEresource(compPOL) ? 0 : getElectronicQuantity(locations);
+        int quantity = 0;
+        quantity += isItemsUpdateRequiredForPhysical(compPOL) ? 0 : getPhysicalQuantity(locations);
+        quantity += isItemsUpdateRequiredForEresource(compPOL) ? 0: getElectronicQuantity(locations);
+        return quantity;
       case ELECTRONIC_RESOURCE:
-        return isInventoryUpdateRequiredForEresource(compPOL) ? 0 : getElectronicQuantity(locations);
+        return isItemsUpdateRequiredForEresource(compPOL) ? 0 : getElectronicQuantity(locations);
       case OTHER:
-        return getPhysicalQuantity(locations);
+        return isItemsUpdateRequiredForPhysical(compPOL) ? 0 : getPhysicalQuantity(locations);
       case PHYSICAL_RESOURCE:
+        return isItemsUpdateRequiredForPhysical(compPOL) ? 0 : getPhysicalQuantity(locations);
       default:
         return 0;
     }
@@ -615,10 +615,22 @@ public class HelperUtils {
     }
   }
 
-  private static boolean isInventoryUpdateRequiredForEresource(CompositePoLine compPOL) {
+  private static boolean isItemsUpdateRequiredForEresource(CompositePoLine compPOL) {
+    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
+      return false;
+    }
     return Optional.ofNullable(compPOL.getEresource())
-                   .map(Eresource::getCreateInventory)
-                   .orElse(false);
+      .map(eresource -> eresource.getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM)
+      .orElse(false);
+  }
+
+  private static boolean isItemsUpdateRequiredForPhysical(CompositePoLine compPOL) {
+    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
+      return false;
+    }
+    return Optional.ofNullable(compPOL.getPhysical())
+      .map(physical -> physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM)
+      .orElse(false);
   }
 
   /**
@@ -795,5 +807,35 @@ public class HelperUtils {
    */
   public static CompositePurchaseOrder convertToCompositePurchaseOrder(JsonObject poJson) {
     return poJson.mapTo(CompositePurchaseOrder.class);
+  }
+
+  public static boolean inventoryUpdateNotRequired(CompositePoLine compPOL) {
+    // in case of "Other" order format check Physical createInventory value only
+    if (compPOL.getOrderFormat() == OTHER) {
+      return compPOL.getPhysical() == null || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE;
+    }
+    boolean physicalUpdateNotRequired = (compPOL.getPhysical() == null || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE);
+    boolean eresourceUpdateNotRequired = (compPOL.getEresource() == null || compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.NONE);
+
+    return physicalUpdateNotRequired && eresourceUpdateNotRequired;
+  }
+
+  public static boolean isHoldingsUpdateRequired(CompositePoLine compPOL) {
+    boolean updatesRequiredForEresource = false;
+    boolean updateRequiredForPhysical = false;
+
+    if (compPOL.getEresource() != null) {
+      updatesRequiredForEresource = (compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING
+        || compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
+    }
+    if (compPOL.getPhysical() != null) {
+      updateRequiredForPhysical = (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING
+        || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
+    }
+    return updatesRequiredForEresource || updateRequiredForPhysical;
+  }
+
+  public static boolean isItemsUpdateRequired(CompositePoLine compPOL) {
+    return isItemsUpdateRequiredForPhysical(compPOL) || isItemsUpdateRequiredForEresource(compPOL);
   }
 }

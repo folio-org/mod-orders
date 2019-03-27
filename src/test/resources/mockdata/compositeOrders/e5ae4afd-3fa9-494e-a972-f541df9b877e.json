@@ -59,7 +59,7 @@
       "eresource": {
         "activated": true,
         "activationDue": 0,
-        "createInventory": false,
+        "createInventory": "Instance",
         "trial": false,
         "expectedActivation": "2014-07-06T00:00:00.000Z",
         "userLimit": 1,
@@ -87,6 +87,12 @@
       "orderFormat": "Electronic Resource",
       "owner": "LTS E-Resources & Serials",
       "paymentStatus": "Awaiting Payment",
+      "physical": {
+        "createInventory": "Instance, Holding, Item",
+        "materialSupplier": "36dd6d62-c55e-4b19-a3a0-a870da57610a",
+        "receiptDue": "2018-09-29T00:00:00.000Z",
+        "volumes": []
+      },
       "poLineDescription": "",
       "poLineNumber": "268758-03",
       "publicationDate": "2017",

@@ -34,6 +34,7 @@
   "orderFormat": "Physical Resource",
   "paymentStatus": "Fully Paid",
   "physical": {
+    "createInventory": "Instance, Holding, Item",
     "volumes": [
       "vol.1"
     ],

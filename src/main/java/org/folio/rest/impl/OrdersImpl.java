@@ -1,8 +1,6 @@
 package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
-import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
-import static org.folio.orders.utils.HelperUtils.loadConfiguration;
 import static org.folio.orders.utils.HelperUtils.validatePoLine;
 
 import java.util.ArrayList;

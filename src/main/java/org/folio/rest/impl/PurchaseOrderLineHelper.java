@@ -5,23 +5,7 @@ import static java.util.concurrent.CompletableFuture.allOf;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.completedFuture;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
-import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
-import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
-import static org.folio.orders.utils.HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation;
-import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
-import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.constructPiece;
-import static org.folio.orders.utils.HelperUtils.deletePoLine;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
-import static org.folio.orders.utils.HelperUtils.getPoLineById;
-import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
-import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
-import static org.folio.orders.utils.HelperUtils.groupLocationsById;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.loadConfiguration;
-import static org.folio.orders.utils.HelperUtils.operateOnObject;
-import static org.folio.orders.utils.HelperUtils.validatePoLine;
+import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
@@ -32,11 +16,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -52,15 +32,8 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.SequenceNumber;
-import org.folio.rest.jaxrs.model.Alert;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
-import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.PoLineCollection;
-import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.Context;
@@ -78,6 +51,9 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private static final String LOOKUP_PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId==%s&limit=%d&lang=%s";
   private static final String PO_LINE_NUMBER_ENDPOINT = resourcesPath(PO_LINE_NUMBER) + "?" + PURCHASE_ORDER_ID + "=";
   private static final Pattern PO_LINE_NUMBER_PATTERN = Pattern.compile("([a-zA-Z0-9]{5,16}-)([0-9]{1,3})");
+  private static final String CREATE_INVENTORY = "createInventory";
+  private static final String ERESOURCE = "eresource";
+  private static final String PHYSICAL = "physical";
 
   private final InventoryHelper inventoryHelper;
 
@@ -134,7 +110,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private CompositePurchaseOrder validateOrderState(CompositePurchaseOrder po) {
-    WorkflowStatus poStatus = po.getWorkflowStatus();
+    CompositePurchaseOrder.WorkflowStatus poStatus = po.getWorkflowStatus();
     if (poStatus != PENDING) {
       throw new HttpException(422, poStatus == OPEN ? ErrorCodes.ORDER_OPEN : ErrorCodes.ORDER_CLOSED);
     }
@@ -160,9 +136,48 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     subObjFuts.add(createReportingCodes(compPoLine, line));
 
     return allOf(subObjFuts.toArray(new CompletableFuture[0]))
+      .thenCompose(v -> setTenantDefaultCreateInventoryValues(compPoLine))
       .thenCompose(v -> generateLineNumber(compOrder))
       .thenAccept(lineNumber -> line.put(PO_LINE_NUMBER, lineNumber))
       .thenCompose(v -> createPoLineSummary(compPoLine, line));
+  }
+
+  CompletableFuture<Void> setTenantDefaultCreateInventoryValues(CompositePoLine compPOL) {
+    CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
+
+    if ((compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() == null)
+      || (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() == null)) {
+      getTenantConfiguration()
+        .thenApply(config -> {
+            if (!config.isEmpty() && !config.getJsonObject(CREATE_INVENTORY).isEmpty()) {
+              return future.complete(config.getJsonObject(CREATE_INVENTORY));
+            } else {
+              return completedFuture(new JsonObject());
+            }
+          }
+        )
+        .exceptionally(t -> future.complete(new JsonObject()));
+      return future
+        .thenAccept(jsonConfig -> updateCreateInventory(compPOL, jsonConfig));
+    } else {
+      return completedFuture(null);
+    }
+  }
+
+  private void updateCreateInventory(CompositePoLine compPOL, JsonObject jsonConfig) {
+    // try to set createInventory by values from mod-configuration. If empty - set default hardcoded values
+    if (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() == null) {
+      String tenantDefault = jsonConfig.getString(ERESOURCE);
+      Eresource.CreateInventory eresourceDefaultValue = StringUtils.isEmpty(tenantDefault) ?
+        Eresource.CreateInventory.INSTANCE_HOLDING : Eresource.CreateInventory.fromValue(tenantDefault);
+      compPOL.getEresource().setCreateInventory(eresourceDefaultValue);
+    }
+    if (compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() == null) {
+      String tenantDefault = jsonConfig.getString(PHYSICAL);
+      Physical.CreateInventory createInventoryDefaultValue = StringUtils.isEmpty(tenantDefault) ?
+        Physical.CreateInventory.INSTANCE_HOLDING_ITEM : Physical.CreateInventory.fromValue(tenantDefault);
+      compPOL.getPhysical().setCreateInventory(createInventoryDefaultValue);
+    }
   }
 
   CompletableFuture<CompositePoLine> getCompositePoLine(String polineId) {
@@ -204,10 +219,11 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    */
   CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-
     // The estimated price should be always recalculated
     updateEstimatedPrice(compOrderLine);
-    updatePoLineSubObjects(compOrderLine, lineFromStorage)
+
+    setTenantDefaultCreateInventoryValues(compOrderLine)
+      .thenCompose(v -> updatePoLineSubObjects(compOrderLine, lineFromStorage))
       .thenCompose(poLine -> updateOrderLineSummary(compOrderLine.getId(), poLine))
       .thenAccept(json -> {
         if (getErrors().isEmpty()) {
@@ -246,14 +262,9 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     if (compPOL.getReceiptStatus() == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED) {
       return completedFuture(null);
     }
-    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
-      return inventoryHelper.handleInstanceRecord(compPOL)
-        .thenCompose(cPOL -> completedFuture(null));
-    }
 
-    int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
-    if (expectedItemsQuantity == 0) {
-      // Create pieces if items does not exists
+    // In case of no inventory updates required create pieces only
+    if (inventoryUpdateNotRequired(compPOL)) {
       return createPieces(compPOL, Collections.emptyList())
         .thenRun(() ->
           logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId())
@@ -261,7 +272,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     }
 
     return inventoryHelper.handleInstanceRecord(compPOL)
-      .thenCompose(inventoryHelper::handleItemRecords)
+      .thenCompose(inventoryHelper::handleHoldingsAndItemsRecords)
       .thenCompose(piecesWithItemId -> createPieces(compPOL, piecesWithItemId));
   }
 
@@ -300,7 +311,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   private CompletableFuture<Boolean> validatePoLineLimit(CompositePoLine compPOL) {
     String query = PURCHASE_ORDER_ID + "==" + compPOL.getPurchaseOrderId();
-    return loadConfiguration(okapiHeaders, ctx, logger)
+    return getTenantConfiguration()
       .thenCombine(getPoLines(0, 0, query), (config, poLines) -> {
         boolean isValid = poLines.getTotalRecords() < getPoLineLimit(config);
         if (!isValid) {
@@ -358,23 +369,26 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * @return void future
    */
   private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem) {
-    int expectedItemsQuantity = expectedPiecesWithItem.size();
-
+    int expectedItemsQuantity = isItemsUpdateRequired(compPOL) ? expectedPiecesWithItem.size() : calculateInventoryItemsQuantity(compPOL);
+    // do not create pieces in case of checkin flow
+    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
+      return completedFuture(null);
+    }
     return searchForExistingPieces(compPOL)
       .thenCompose(existingPieces -> {
         List<Piece> piecesToCreate = new ArrayList<>();
         // For each location collect pieces that need to be created.
         groupLocationsById(compPOL)
           .forEach((locationId, locations) -> {
-              List<Piece> filteredExistingPieces = filterByLocationId(existingPieces, locationId);
-              List<Piece> filteredExpectedPiecesWithItem = filterByLocationId(expectedPiecesWithItem, locationId);
-              piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
+            List<Piece> filteredExistingPieces = filterByLocationId(existingPieces, locationId);
+            List<Piece> filteredExpectedPiecesWithItem = filterByLocationId(expectedPiecesWithItem, locationId);
+            piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
 
-              int expectedQuantityOfPiecesWithoutItem = calculateExpectedQuantityOfPiecesWithoutItemCreation(compPOL, locations);
-              int existingQuantityOfPiecesWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existingPieces);
-              int remainingPiecesQuantity = expectedQuantityOfPiecesWithoutItem - existingQuantityOfPiecesWithoutItem;
-              piecesToCreate.addAll(constructMissingPiecesWithoutItem(compPOL, remainingPiecesQuantity, locationId));
-            });
+            int expectedQuantityOfPiecesWithoutItem = calculateExpectedQuantityOfPiecesWithoutItemCreation(compPOL, locations);
+            int existingQuantityOfPiecesWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existingPieces);
+            int remainingPiecesQuantity = expectedQuantityOfPiecesWithoutItem - existingQuantityOfPiecesWithoutItem;
+            piecesToCreate.addAll(constructMissingPiecesWithoutItem(compPOL, remainingPiecesQuantity, locationId));
+          });
 
         return allOf(piecesToCreate.stream().map(this::createPiece).toArray(CompletableFuture[]::new));
       })
@@ -473,7 +487,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     logger.debug("Updating PO line sub-objects...");
 
     List<CompletableFuture<Void>> futures = new ArrayList<>();
-    
+
     futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage));
 

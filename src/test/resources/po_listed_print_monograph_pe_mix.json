@@ -59,7 +59,7 @@
       },
       "donor": "",
       "eresource": {
-        "createInventory": false
+        "createInventory": "Instance"
       },
       "fundDistribution": [
         {
