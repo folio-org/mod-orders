@@ -68,6 +68,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -327,12 +328,12 @@ public class OrdersImplTest {
     // Prepare cost details for the second PO Line (see MODORDERS-180 and MODORDERS-181)
     cost = reqData.getCompositePoLines().get(1).getCost();
     cost.setAdditionalCost(2d);
-    cost.setDiscount(5d);
+    cost.setDiscount(4.99d);
     cost.setDiscountType(Cost.DiscountType.AMOUNT);
     cost.setQuantityElectronic(3);
     cost.setListUnitPriceElectronic(11.99d);
     cost.setPoLineEstimatedPrice(null);
-    double expectedTotalPoLine2 = 32.97d;
+    double expectedTotalPoLine2 = 32.98d;
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
@@ -363,7 +364,12 @@ public class OrdersImplTest {
     CompositePoLine compositePoLine2 = resp.getCompositePoLines().get(1);
     assertThat(compositePoLine1.getCost().getPoLineEstimatedPrice(), equalTo(expectedTotalPoLine1));
     assertThat(compositePoLine2.getCost().getPoLineEstimatedPrice(), equalTo(expectedTotalPoLine2));
-    assertThat(resp.getTotalEstimatedPrice(), equalTo(expectedTotalPoLine1 + expectedTotalPoLine2));
+
+    // the sum might be wrong if using regular double e.g. 44.41d + 32.98d results to 77.38999999999999
+    double expectedTotal = BigDecimal.valueOf(expectedTotalPoLine1)
+                                     .add(BigDecimal.valueOf(expectedTotalPoLine2))
+                                     .doubleValue();
+    assertThat(resp.getTotalEstimatedPrice(), equalTo(expectedTotal));
 
     List<JsonObject> poLines = MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST);
     assertThat(poLines, hasSize(2));
@@ -924,8 +930,10 @@ public class OrdersImplTest {
       .getCompositePoLines()
       .stream()
       .map(CompositePoLine::getCost)
-      .mapToDouble(Cost::getPoLineEstimatedPrice)
-      .sum();
+      .map(Cost::getPoLineEstimatedPrice)
+      .map(BigDecimal::valueOf)
+      .reduce(BigDecimal.ZERO, BigDecimal::add)
+      .doubleValue();
 
     assertThat(resp.getTotalItems(), equalTo(expectedQuantity));
     assertThat(resp.getTotalEstimatedPrice(), equalTo(expectedPrice));

@@ -22,6 +22,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
@@ -233,8 +234,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .stream()
       .map(CompositePoLine::getCost)
       .filter(Objects::nonNull)
-      .mapToDouble(Cost::getPoLineEstimatedPrice)
-      .sum();
+      .map(Cost::getPoLineEstimatedPrice)
+      .map(BigDecimal::valueOf)
+      .reduce(BigDecimal.ZERO, BigDecimal::add)
+      .doubleValue();
   }
 
   /**
