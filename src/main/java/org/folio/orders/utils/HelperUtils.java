@@ -560,6 +560,23 @@ public class HelperUtils {
     return total.setScale(currency.getDefaultFractionDigits(), RoundingMode.HALF_UP).doubleValue();
   }
 
+  /**
+   * Calculates PO's estimated price by summing the Estimated Price of the associated PO Lines.
+   * See MODORDERS-181 for more details. At the moment assumption is that all prices are in the same currency.
+   * @param poLines list of composite PO Lines
+   * @return estimated purchase order's total price
+   */
+  public static double calculateTotalEstimatedPrice(List<CompositePoLine> poLines) {
+    return poLines
+      .stream()
+      .map(CompositePoLine::getCost)
+      .filter(Objects::nonNull)
+      .map(Cost::getPoLineEstimatedPrice)
+      .map(BigDecimal::valueOf)
+      .reduce(BigDecimal.ZERO, BigDecimal::add)
+      .doubleValue();
+  }
+
   public static List<Piece> constructPieces(List<String> itemIds, String poLineId, String locationId) {
     return itemIds.stream()
       .map(itemId -> constructPiece(locationId, poLineId, itemId))
