@@ -1870,7 +1870,6 @@ public class OrdersImplTest {
 
     // Verify pieces were created
     assertEquals(calculateTotalQuantity(reqData.getCompositePoLines().get(0)), createdPieces.size());
-
     verifyPiecesCreated(items, reqData.getCompositePoLines().subList(0, 1), createdPieces);
   }
 
