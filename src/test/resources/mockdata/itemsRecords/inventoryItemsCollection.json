@@ -1524,7 +1524,87 @@
         "id": "758258bc-ecc1-41b8-abca-f7b610822ffd",
         "name": "ORWIG ETHNO CD"
       }
+    },
+    {
+      "id": "14428ffb-3c2e-4ccc-94dc-820d67f5d534",
+      "status": {
+        "name": "On Order"
+      },
+      "title": "BEST AMERICAN SCIENCE FICTION AND FANTASY.",
+      "hrid": "it00001229",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "73499948-6b8d-45bb-ad81-c25fda22ced2",
+      "barcode": "",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "f6328932-cca2-4758-8547-b9435b783fbb",
+      "materialType": {
+        "id": "615b8413-82d5-4203-aa6e-e37984cb5ac3",
+        "name": "Physical resource"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-03-05T07:52:48.657+0000",
+        "createdByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9",
+        "updatedDate": "2019-03-05T08:43:38.089+0000",
+        "updatedByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/14428ffb-3c2e-4ccc-94dc-820d67f5d534"
+      },
+      "effectiveLocation": {
+        "id": "758258bc-ecc1-41b8-abca-f7b610822ffd",
+        "name": "ORWIG ETHNO CD"
+      }
+    },
+    {
+      "id": "86481a22-633e-4b97-8061-0dc9fdaaeaca",
+      "status": {
+        "name": "Received"
+      },
+      "title": "Country Madness",
+      "hrid": "it00001229",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "73499948-6b8d-45bb-ad81-c25fda22ced2",
+      "barcode": "",
+      "copyNumbers": [],
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "707cefd7-cccd-437d-b4bf-456f9c3dde6d",
+      "materialType": {
+        "id": "615b8413-82d5-4203-aa6e-e37984cb5ac3",
+        "name": "Physical resource"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-03-05T07:52:48.657+0000",
+        "createdByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9",
+        "updatedDate": "2019-03-05T08:43:38.089+0000",
+        "updatedByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/14428ffb-3c2e-4ccc-94dc-820d67f5d534"
+      },
+      "effectiveLocation": {
+        "id": "758258bc-ecc1-41b8-abca-f7b610822ffd",
+        "name": "ORWIG ETHNO CD"
+      }
     }
   ],
-  "totalRecords": 39
+  "totalRecords": 41
 }

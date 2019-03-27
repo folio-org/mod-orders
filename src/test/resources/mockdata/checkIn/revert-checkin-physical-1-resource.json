@@ -1,0 +1,17 @@
+{
+  "toBeCheckedIn": [
+    {
+      "poLineId": "7c98369b-89e4-4b2a-9793-ba36c056fc97",
+      "checkedIn": 1,
+      "checkInPieces": [
+        {
+          "id": "bf3c14fe-6eac-450a-90ca-391d0788a5a4",
+          "locationId": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+          "comment": "Revert the checked in piece",
+          "itemStatus": "On order"
+        }
+      ]
+    }
+  ],
+  "totalRecords": 1
+}

@@ -33,6 +33,7 @@ import static org.folio.orders.utils.ErrorCodes.ZERO_COST_QTY;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
+import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
@@ -68,6 +69,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -228,6 +230,7 @@ public class OrdersImplTest {
   private static final String ORDERS_RECEIVING_HISTORY_ENDPOINT = "/orders/receiving-history";
   private static final String ORDERS_RECEIVING_ENDPOINT = "/orders/receive";
   private static final String PIECES_ENDPOINT = "/orders/pieces";
+  private static final String ORDERS_CHECKIN_ENDPOINT = "/orders/check-in";
 
   // Mock data paths
   private static final String BASE_MOCK_DATA_PATH = "mockdata/";
@@ -257,6 +260,7 @@ public class OrdersImplTest {
   /** The PO Line with minimal required content */
   private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "minimalContent.json";
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
+  private static final String CHECKIN_RQ_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "checkIn/";
 
   private static final String QUERY_PARAM_NAME = "query";
   private static final String ID = "id";
@@ -326,12 +330,12 @@ public class OrdersImplTest {
     // Prepare cost details for the second PO Line (see MODORDERS-180 and MODORDERS-181)
     cost = reqData.getCompositePoLines().get(1).getCost();
     cost.setAdditionalCost(2d);
-    cost.setDiscount(5d);
+    cost.setDiscount(4.99d);
     cost.setDiscountType(Cost.DiscountType.AMOUNT);
     cost.setQuantityElectronic(3);
     cost.setListUnitPriceElectronic(11.99d);
     cost.setPoLineEstimatedPrice(null);
-    double expectedTotalPoLine2 = 32.97d;
+    double expectedTotalPoLine2 = 32.98d;
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
@@ -362,7 +366,12 @@ public class OrdersImplTest {
     CompositePoLine compositePoLine2 = resp.getCompositePoLines().get(1);
     assertThat(compositePoLine1.getCost().getPoLineEstimatedPrice(), equalTo(expectedTotalPoLine1));
     assertThat(compositePoLine2.getCost().getPoLineEstimatedPrice(), equalTo(expectedTotalPoLine2));
-    assertThat(resp.getTotalEstimatedPrice(), equalTo(expectedTotalPoLine1 + expectedTotalPoLine2));
+
+    // the sum might be wrong if using regular double e.g. 44.41d + 32.98d results to 77.38999999999999
+    double expectedTotal = BigDecimal.valueOf(expectedTotalPoLine1)
+                                     .add(BigDecimal.valueOf(expectedTotalPoLine2))
+                                     .doubleValue();
+    assertThat(resp.getTotalEstimatedPrice(), equalTo(expectedTotal));
 
     List<JsonObject> poLines = MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST);
     assertThat(poLines, hasSize(2));
@@ -495,7 +504,7 @@ public class OrdersImplTest {
     // Set status to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
-	  LocalDate now = LocalDate.now();
+    LocalDate now = LocalDate.now();
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
@@ -604,7 +613,7 @@ public class OrdersImplTest {
       location.setQuantityPhysical(1);
     });
 
-	  LocalDate now = LocalDate.now();
+          LocalDate now = LocalDate.now();
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
@@ -920,12 +929,7 @@ public class OrdersImplTest {
       })
       .sum();
 
-    double expectedPrice = resp
-      .getCompositePoLines()
-      .stream()
-      .map(CompositePoLine::getCost)
-      .mapToDouble(Cost::getPoLineEstimatedPrice)
-      .sum();
+    double expectedPrice = calculateTotalEstimatedPrice(resp.getCompositePoLines());
 
     assertThat(resp.getTotalItems(), equalTo(expectedQuantity));
     assertThat(resp.getTotalEstimatedPrice(), equalTo(expectedPrice));
@@ -1696,7 +1700,8 @@ public class OrdersImplTest {
     }
   }
 
-	private void verifyPiecesCreated(List<JsonObject> inventoryItems, List<CompositePoLine> compositePoLines, List<JsonObject> pieces) {
+  private void verifyPiecesCreated(List<JsonObject> inventoryItems, List<CompositePoLine> compositePoLines,
+      List<JsonObject> pieces) {
     // Collect all item id's
     List<String> itemIds = inventoryItems.stream()
                                     .map(item -> item.getString(ID))
@@ -1724,10 +1729,10 @@ public class OrdersImplTest {
       // Check if itemId in inventoryItems match itemId in piece record
       assertThat(locationIds, hasItem(piece.getLocationId()));
       if(piece.getItemId()!=null)
-      	assertThat(itemIds, hasItem(piece.getItemId()));
+        assertThat(itemIds, hasItem(piece.getItemId()));
       assertThat(piece.getReceivingStatus(), equalTo(Piece.ReceivingStatus.EXPECTED));
     }
-	}
+        }
 
   private void verifyHoldingsCreated(List<JsonObject> holdings, CompositePoLine pol) {
     Map<String, List<Location>> groupedLocations = groupLocationsById(pol);
@@ -2909,7 +2914,7 @@ public class OrdersImplTest {
     assertThat(polSearches, not(nullValue()));
     assertThat(polUpdates, not(nullValue()));
 
-    int expectedSearchRqQty = Math.floorDiv(receivingRq.getTotalRecords(), ReceivingHelper.MAX_IDS_FOR_GET_RQ) + 1;
+    int expectedSearchRqQty = Math.floorDiv(receivingRq.getTotalRecords(), CheckinReceivePiecesHelper.MAX_IDS_FOR_GET_RQ) + 1;
 
     // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd time to calculate expected PO Line status
     assertThat(pieceSearches, hasSize(expectedSearchRqQty + pieceIdsByPol.size()));
@@ -2958,7 +2963,7 @@ public class OrdersImplTest {
     assertThat(polSearches, not(nullValue()));
     assertThat(polUpdates, not(nullValue()));
 
-    int expectedSearchRqQty = Math.floorDiv(receiving.getTotalRecords(), ReceivingHelper.MAX_IDS_FOR_GET_RQ) + 1;
+    int expectedSearchRqQty = Math.floorDiv(receiving.getTotalRecords(), CheckinReceivePiecesHelper.MAX_IDS_FOR_GET_RQ) + 1;
 
     // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd time to calculate expected PO Line status
     assertThat(pieceSearches, hasSize(expectedSearchRqQty + pieceIdsByPol.size()));
@@ -3297,10 +3302,158 @@ public class OrdersImplTest {
     checkExpectedError(INACTIVE_ACCESS_PROVIDER_B, allInactiveErrors, 2, POL_ACCESS_PROVIDER_IS_INACTIVE);
   }
 
+
+  @Test
+  public void testPostCheckInElectronicWithNoItems() {
+    logger.info("=== Test POST Checkin - CheckIn Electronic resource");
+
+    CheckinCollection checkInRq = getMockAsJson(CHECKIN_RQ_MOCK_DATA_PATH + "checkin-pe-mix-2-electronic-resources.json").mapTo(CheckinCollection.class);
+
+    ReceivingResults results = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkInRq).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
+
+    assertThat(results.getTotalRecords(), equalTo(checkInRq.getTotalRecords()));
+
+    Map<String, Set<String>> pieceIdsByPol = verifyReceivingSuccessRs(results);
+
+    List<JsonObject> pieceSearches = MockServer.serverRqRs.get(PIECES, HttpMethod.GET);
+    List<JsonObject> pieceUpdates = MockServer.serverRqRs.get(PIECES, HttpMethod.PUT);
+    List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
+    List<JsonObject> itemUpdates = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.PUT);
+    List<JsonObject> polSearches = MockServer.serverRqRs.get(PO_LINES, HttpMethod.GET);
+    List<JsonObject> polUpdates = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
+
+    assertThat(pieceSearches, not(nullValue()));
+    assertThat(pieceUpdates, not(nullValue()));
+    assertThat(itemsSearches,is(nullValue()));
+    assertThat(itemUpdates, is(nullValue()));
+    assertThat(polSearches, not(nullValue()));
+    assertThat(polUpdates, not(nullValue()));
+
+    int expectedSearchRqQty = Math.floorDiv(checkInRq.getTotalRecords(), CheckinReceivePiecesHelper.MAX_IDS_FOR_GET_RQ) + 1;
+
+    // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd time to calculate expected PO Line status
+    assertThat(pieceSearches, hasSize(expectedSearchRqQty + pieceIdsByPol.size()));
+    assertThat(pieceUpdates, hasSize(checkInRq.getTotalRecords()));
+    assertThat(polSearches, hasSize(pieceIdsByPol.size()));
+    assertThat(polUpdates, hasSize(pieceIdsByPol.size()));
+
+    polUpdates.forEach(pol -> {
+      PoLine poLine = pol.mapTo(PoLine.class);
+      assertThat(poLine.getCheckinItems(), is(true));
+      assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.PARTIALLY_RECEIVED));
+      assertThat(poLine.getReceiptDate(), is(notNullValue()));
+    });
+  }
+
+  @Test
+  public void testPostCheckInPhysicalWithItemsPartialSuccess() {
+    logger.info("=== Test POST Checkin - CheckIn physical resource with only one item updated");
+
+    CheckinCollection checkInRq = getMockAsJson(CHECKIN_RQ_MOCK_DATA_PATH + "checkin-pe-mix-2-physical-resources.json").mapTo(CheckinCollection.class);
+
+    ReceivingResults results = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkInRq).encode(),
+        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
+
+    assertThat(results.getTotalRecords(), equalTo(checkInRq.getTotalRecords()));
+    ReceivingResult receivingResult = results.getReceivingResults().get(0);
+
+    Set<String> errorCodes = new HashSet<>();
+    for (ReceivingItemResult receivingItemResult : receivingResult.getReceivingItemResults()) {
+      assertThat(receivingItemResult.getPieceId(), not(isEmptyString()));
+      assertThat(receivingItemResult.getProcessingStatus(), not(nullValue()));
+      if (receivingItemResult.getProcessingStatus().getType() == ProcessingStatus.Type.SUCCESS) {
+        assertThat(receivingItemResult.getProcessingStatus().getError(), nullValue());
+      } else {
+        assertThat(receivingItemResult.getProcessingStatus().getError(), not(nullValue()));
+        errorCodes.add(receivingItemResult.getProcessingStatus().getError().getCode());
+      }
+    }
+
+    assertThat(errorCodes, containsInAnyOrder(ITEM_NOT_FOUND.getCode()));
+
+    List<JsonObject> pieceSearches = MockServer.serverRqRs.get(PIECES, HttpMethod.GET);
+    List<JsonObject> pieceUpdates = MockServer.serverRqRs.get(PIECES, HttpMethod.PUT);
+    List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
+    List<JsonObject> itemUpdates = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.PUT);
+    List<JsonObject> polSearches = MockServer.serverRqRs.get(PO_LINES, HttpMethod.GET);
+    List<JsonObject> polUpdates = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
+
+    assertThat(pieceSearches, not(nullValue()));
+    assertThat(pieceUpdates, not(nullValue()));
+    assertThat(itemsSearches, not(nullValue()));
+    assertThat(itemUpdates, not(nullValue()));
+    assertThat(polSearches, not(nullValue()));
+    assertThat(polUpdates, not(nullValue()));
+
+    assertThat(pieceSearches, hasSize(2));
+    assertThat(pieceUpdates, hasSize(1));
+    assertThat(itemsSearches, hasSize(1));
+    assertThat(itemUpdates, hasSize(1));
+    assertThat(polSearches, hasSize(1));
+    assertThat(polUpdates, hasSize(1));
+
+    polUpdates.forEach(pol -> {
+      PoLine poLine = pol.mapTo(PoLine.class);
+      assertThat(poLine.getCheckinItems(), is(true));
+      assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.PARTIALLY_RECEIVED));
+      assertThat(poLine.getReceiptDate(), is(notNullValue()));
+    });
+  }
+
+  @Test
+  public void testPostCheckinRevertPhysicalResource() {
+    logger.info("=== Test POST Check-in - Revert received Physical resource");
+
+    CheckinCollection checkinReq = getMockAsJson(
+        CHECKIN_RQ_MOCK_DATA_PATH + "revert-checkin-physical-1-resource.json").mapTo(CheckinCollection.class);
+
+    ReceivingResults results = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkinReq).encode(),
+        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
+
+    assertThat(results.getTotalRecords(), equalTo(checkinReq.getTotalRecords()));
+
+    verifyReceivingSuccessRs(results);
+
+    List<JsonObject> pieceSearches = MockServer.serverRqRs.get(PIECES, HttpMethod.GET);
+    List<JsonObject> pieceUpdates = MockServer.serverRqRs.get(PIECES, HttpMethod.PUT);
+    List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
+    List<JsonObject> itemUpdates = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.PUT);
+    List<JsonObject> polSearches = MockServer.serverRqRs.get(PO_LINES, HttpMethod.GET);
+    List<JsonObject> polUpdates = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
+
+    assertThat(pieceSearches, not(nullValue()));
+    assertThat(pieceUpdates, not(nullValue()));
+    assertThat(itemsSearches, not(nullValue()));
+    assertThat(itemUpdates, not(nullValue()));
+    assertThat(polSearches, not(nullValue()));
+    assertThat(polUpdates, not(nullValue()));
+
+    // The piece searches should be made 3 times: 1st time to get piece record,
+    // 2nd and 3rd times to calculate expected PO Line status
+    assertThat(pieceSearches, hasSize(3));
+    assertThat(pieceUpdates, hasSize(1));
+    assertThat(itemsSearches, hasSize(1));
+    assertThat(itemUpdates, hasSize(1));
+    assertThat(polSearches, hasSize(1));
+    assertThat(polUpdates, hasSize(1));
+
+    itemUpdates.forEach(item -> {
+      assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
+      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_ON_ORDER));
+    });
+    polUpdates.forEach(pol -> {
+      PoLine poLine = pol.mapTo(PoLine.class);
+      assertThat(poLine.getCheckinItems(), is(true));
+      assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.AWAITING_RECEIPT));
+      assertThat(poLine.getReceiptDate(), is(nullValue()));
+    });
+  }
+
   private Errors verifyPostResponseErrors(int expectedErrorsNumber, String vendorId, String... accessProviderIds) throws Exception {
     Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, getPoWithVendorId(vendorId, accessProviderIds),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
-    assertEquals(errors.getTotalRecords(), new Integer(expectedErrorsNumber));
+    assertThat(errors.getTotalRecords(), equalTo(expectedErrorsNumber));
     assertThat(errors.getErrors(), hasSize(expectedErrorsNumber));
     return errors;
   }
@@ -4046,6 +4199,7 @@ public class OrdersImplTest {
 
         } catch (Exception e) {
           pieces = new PieceCollection();
+          pieces.setTotalRecords(0);
         }
 
         JsonObject data = JsonObject.mapFrom(pieces);
@@ -4260,6 +4414,5 @@ public class OrdersImplTest {
           .end(JsonObject.mapFrom(seqNumber).encodePrettily());
       }
     }
-
   }
 }
