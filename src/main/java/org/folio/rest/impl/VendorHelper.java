@@ -10,7 +10,6 @@ import org.folio.rest.acq.model.Vendor;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +35,7 @@ public class VendorHelper extends AbstractHelper {
   private static final String VENDORS = "vendors";
   private static final String VENDOR_STORAGE_VENDORS = "/vendor-storage/vendors/";
   private static final String VENDORS_WITH_QUERY_ENDPOINT = "/vendor-storage/vendors?limit=%d&lang=%s&query=%s";
-  
+
   public VendorHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
   }
