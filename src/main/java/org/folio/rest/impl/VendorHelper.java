@@ -10,6 +10,7 @@ import org.folio.rest.acq.model.Vendor;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Parameter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,11 +20,11 @@ import java.util.concurrent.CompletableFuture;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
-import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
@@ -31,8 +32,7 @@ import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 
 public class VendorHelper extends AbstractHelper {
 
-  private static final String ID = "id";
-  private static final String VENDORS = "vendors";
+  static final String VENDORS = "vendors";
   private static final String VENDOR_STORAGE_VENDORS = "/vendor-storage/vendors/";
   private static final String VENDORS_WITH_QUERY_ENDPOINT = "/vendor-storage/vendors?limit=%d&lang=%s&query=%s";
 
@@ -51,7 +51,7 @@ public class VendorHelper extends AbstractHelper {
     String id = compPO.getVendor();
     CompletableFuture<Errors> future = new VertxCompletableFuture<>(ctx);
     List<Error> errors = new ArrayList<>();
-    if(id != null) {
+    if (id != null) {
       getVendorById(id)
         .thenApply(vendor -> {
           VendorStatus status = VendorStatus.valueOf(vendor.getVendorStatus().toUpperCase());
@@ -62,11 +62,12 @@ public class VendorHelper extends AbstractHelper {
         })
         .thenAccept(future::complete)
         .exceptionally(t -> {
-          if(HttpStatus.HTTP_NOT_FOUND.toInt() == (((HttpException) t.getCause()).getCode())) {
+          Throwable cause = t.getCause();
+          if(cause instanceof HttpException && HttpStatus.HTTP_NOT_FOUND.toInt() == (((HttpException) cause).getCode())) {
             errors.add(createErrorWithId(ORDER_VENDOR_NOT_FOUND, id));
           } else {
-            logger.error("Failed to validate vendor's status", t);
-            errors.add(GENERIC_ERROR_CODE.toError());
+            logger.error("Failed to validate vendor's status", cause);
+            errors.add(createErrorWithId(VENDOR_ISSUE, id).withMessage(cause.getMessage()));
           }
           future.complete(handleAndReturnErrors(errors));
           return null;
@@ -100,12 +101,14 @@ public class VendorHelper extends AbstractHelper {
           .collect(toList());
         ids.stream()
           .filter(id -> !vendorsIds.contains(id))
-          .forEach(id -> errors.add(POL_ACCESS_PROVIDER_NOT_FOUND.toError().withAdditionalProperty(ID, id)));
+          .forEach(id -> errors.add(createErrorWithId(POL_ACCESS_PROVIDER_NOT_FOUND, id)));
         return handleAndReturnErrors(errors);
       }).thenAccept(future::complete)
         .exceptionally(t -> {
-          logger.error("Failed to validate access provider's status", t);
-          future.completeExceptionally(t);
+          Throwable cause = t.getCause();
+          logger.error("Failed to validate access provider's status", cause);
+          errors.add(VENDOR_ISSUE.toError().withMessage(cause.getMessage()));
+          future.complete(handleAndReturnErrors(errors));
           return null;
         });
     } else {
@@ -136,8 +139,9 @@ public class VendorHelper extends AbstractHelper {
    * @return {@link Error} with id of failed vendor/access provider
    */
   private Error createErrorWithId(ErrorCodes errorCodes, String id) {
-    return errorCodes.toError()
-      .withAdditionalProperty(ID, id);
+    Error error = errorCodes.toError();
+    error.getParameters().add(new Parameter().withKey(ID).withValue(id));
+    return error;
   }
 
   /**
@@ -157,14 +161,14 @@ public class VendorHelper extends AbstractHelper {
    * @param accessProviderIds - {@link Set<String>} of access providers id
    * @return CompletableFuture with {@link List<Vendor>} of vendors
    */
-  private CompletableFuture<Set<Vendor>> getAccessProvidersByIds(Set<String> accessProviderIds) {
+  private CompletableFuture<List<Vendor>> getAccessProvidersByIds(Set<String> accessProviderIds) {
     String query = convertIdsToCqlQuery(new ArrayList<>(accessProviderIds));
     String endpoint = String.format(VENDORS_WITH_QUERY_ENDPOINT, accessProviderIds.size(), lang, encodeQuery(query, logger));
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(jsons -> jsons.getJsonArray(VENDORS)
         .stream()
         .map(obj -> ((JsonObject) obj).mapTo(Vendor.class))
-        .collect(toSet())
+        .collect(toList())
       );
   }
 
