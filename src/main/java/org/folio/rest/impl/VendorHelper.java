@@ -48,8 +48,11 @@ public class VendorHelper extends AbstractHelper {
    * @return CompletableFuture with {@link Errors} object
    */
   public CompletableFuture<Errors> validateVendor(CompositePurchaseOrder compPO) {
-    String id = compPO.getVendor();
     CompletableFuture<Errors> future = new VertxCompletableFuture<>(ctx);
+    String id = compPO.getVendor();
+
+    logger.debug("Validating vendor with id={}", id);
+
     List<Error> errors = new ArrayList<>();
     if (id != null) {
       getVendorById(id)
@@ -63,7 +66,7 @@ public class VendorHelper extends AbstractHelper {
         .thenAccept(future::complete)
         .exceptionally(t -> {
           Throwable cause = t.getCause();
-          if(cause instanceof HttpException && HttpStatus.HTTP_NOT_FOUND.toInt() == (((HttpException) cause).getCode())) {
+          if (cause instanceof HttpException && HttpStatus.HTTP_NOT_FOUND.toInt() == (((HttpException) cause).getCode())) {
             errors.add(createErrorWithId(ORDER_VENDOR_NOT_FOUND, id));
           } else {
             logger.error("Failed to validate vendor's status", cause);
@@ -88,6 +91,8 @@ public class VendorHelper extends AbstractHelper {
     Set<String> ids = verifyAndGetAccessProvidersIdsList(compPO);
     List<Error> errors = new ArrayList<>();
     if (!ids.isEmpty()) {
+      logger.debug("Validating {} access provider(s) for order with id={}", ids.size(), compPO.getId());
+
       getAccessProvidersByIds(ids).thenApply(vendors -> {
         // Validate access provider status Active
         vendors.forEach(vendor -> {
@@ -112,6 +117,7 @@ public class VendorHelper extends AbstractHelper {
           return null;
         });
     } else {
+      logger.debug("Order with id={} does not have any access provider to validate", compPO.getId());
       future.complete(handleAndReturnErrors(errors));
     }
     return future;
@@ -181,7 +187,8 @@ public class VendorHelper extends AbstractHelper {
   private Set<String> verifyAndGetAccessProvidersIdsList(CompositePurchaseOrder compPO) {
     return compPO.getCompositePoLines().stream()
       .filter(p -> (p.getEresource() != null && p.getEresource().getAccessProvider() != null))
-      .map(p -> p.getEresource().getAccessProvider()).collect(toSet());
+      .map(p -> p.getEresource().getAccessProvider())
+      .collect(toSet());
   }
 
   public enum VendorStatus {

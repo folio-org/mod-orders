@@ -3321,6 +3321,15 @@ public class OrdersImplTest {
       JsonObject.mapFrom(reqData).toString(), EMPTY, 422).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(2));
+
+    int errorsWithParam = (int) errors
+      .getErrors()
+      .stream()
+      .filter(error -> !error.getParameters().isEmpty())
+      .count();
+
+    assertThat(errorsWithParam, is(1));
+
     errors.getErrors().forEach(error -> {
       assertThat(error.getCode(), equalTo(VENDOR_ISSUE.getCode()));
       if (!error.getParameters().isEmpty()) {
@@ -3815,6 +3824,7 @@ public class OrdersImplTest {
           extractIdsFromQuery(query)
             .stream()
             .map(this::getVendorById)
+            .filter(Objects::nonNull)
             .forEach(vendors::add);
 
           if (!vendors.isEmpty()) {
@@ -3855,6 +3865,7 @@ public class OrdersImplTest {
     }
 
     private JsonObject getVendorById(String vendorId) {
+      logger.debug("Searching for vendor by id={}", vendorId);
       JsonObject body;
       try {
         switch (vendorId) {
@@ -3866,6 +3877,10 @@ public class OrdersImplTest {
             break;
           case PENDING_VENDOR_ID:
             body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "pending_vendor.json"));
+            break;
+          case ACTIVE_ACCESS_PROVIDER_B:
+            body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "one_access_providers_active.json"))
+              .getJsonArray(VendorHelper.VENDORS).getJsonObject(0);
             break;
           case VENDOR_WITH_BAD_CONTENT:
             body = new JsonObject(getMockData(VENDORS_MOCK_DATA_PATH + "vendor_bad_content.json"));
