@@ -3230,7 +3230,8 @@ public class OrdersImplTest {
 
     // Internal mod-vendor error
     Errors internalServerError = verifyPostResponseErrors(1, MOD_VENDOR_INTERNAL_ERROR_ID, ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B);
-    assertEquals(VENDOR_ISSUE.getCode(), internalServerError.getErrors().get(0).getCode());
+    assertThat(internalServerError.getErrors().get(0).getCode(), equalTo(VENDOR_ISSUE.getCode()));
+    assertThat(internalServerError.getErrors().get(0).getAdditionalProperties().get(VendorHelper.ERROR_CAUSE), notNullValue());
 
     // Non-existed vendor
     Errors nonExistedVendorError = verifyPostResponseErrors(1, NON_EXIST_VENDOR_ID, ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B);
@@ -3332,6 +3333,7 @@ public class OrdersImplTest {
 
     errors.getErrors().forEach(error -> {
       assertThat(error.getCode(), equalTo(VENDOR_ISSUE.getCode()));
+      assertThat(error.getAdditionalProperties().get(VendorHelper.ERROR_CAUSE), notNullValue());
       if (!error.getParameters().isEmpty()) {
         assertThat(error.getParameters(), hasSize(1));
         assertThat(error.getParameters().get(0).getKey(), equalTo(ID));

@@ -70,7 +70,7 @@ public class VendorHelper extends AbstractHelper {
             errors.add(createErrorWithId(ORDER_VENDOR_NOT_FOUND, id));
           } else {
             logger.error("Failed to validate vendor's status", cause);
-            errors.add(createErrorWithId(VENDOR_ISSUE, id).withMessage(cause.getMessage()));
+            errors.add(createErrorWithId(VENDOR_ISSUE, id).withAdditionalProperty(ERROR_CAUSE, cause.getMessage()));
           }
           future.complete(handleAndReturnErrors(errors));
           return null;
@@ -112,7 +112,7 @@ public class VendorHelper extends AbstractHelper {
         .exceptionally(t -> {
           Throwable cause = t.getCause();
           logger.error("Failed to validate access provider's status", cause);
-          errors.add(VENDOR_ISSUE.toError().withMessage(cause.getMessage()));
+          errors.add(VENDOR_ISSUE.toError().withAdditionalProperty(ERROR_CAUSE, cause.getMessage()));
           future.complete(handleAndReturnErrors(errors));
           return null;
         });
