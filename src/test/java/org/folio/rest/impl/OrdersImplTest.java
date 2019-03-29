@@ -809,7 +809,7 @@ public class OrdersImplTest {
     final Errors error = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
       prepareHeaders(INVALID_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 500).body().as(Errors.class);
 
-    ctx.assertEquals(error.getErrors().get(0).getMessage(), "Invalid limit value in configuration.");
+    ctx.assertEquals(error.getErrors().get(0).getAdditionalProperties().get(PurchaseOrderHelper.ERROR_CAUSE), "Invalid limit value in configuration.");
   }
 
   @Test
