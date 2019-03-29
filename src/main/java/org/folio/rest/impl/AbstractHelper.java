@@ -6,6 +6,7 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static javax.ws.rs.core.Response.Status.CREATED;
+import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
@@ -32,6 +33,7 @@ import org.folio.rest.tools.utils.TenantTool;
 
 public abstract class AbstractHelper {
   public static final String ID = "id";
+  public static final String ERROR_CAUSE = "cause";
 
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -145,14 +147,17 @@ public abstract class AbstractHelper {
   protected int handleProcessingError(Throwable throwable) {
     final Throwable cause = throwable.getCause();
     logger.error("Exception encountered", cause);
-    final Error error = new Error().withMessage(cause.getMessage());
+    final Error error;
     final int code;
 
     if (cause instanceof HttpException) {
       code = ((HttpException) cause).getCode();
+      error = new Error();
       error.withCode(((HttpException) cause).getErrorCode());
+      error.withMessage(cause.getMessage());
     } else {
       code = INTERNAL_SERVER_ERROR.getStatusCode();
+      error = GENERIC_ERROR_CODE.toError().withAdditionalProperty(ERROR_CAUSE, cause.getMessage());
     }
 
     addProcessingError(error);
