@@ -225,7 +225,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
     return fetchCompositePoLines(compPO)
-      .thenCompose(v -> updateInventory(compPO))
+      .thenCompose(this::updateInventory)
       .thenCompose(v -> updateOrderSummary(compPO))
       .thenAccept(v -> changePoLineReceiptStatuses(compPO))
       .thenCompose(v -> updateCompositePoLines(compPO));
@@ -303,11 +303,14 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private CompletableFuture<Boolean> validateVendor(CompositePurchaseOrder compPO) {
     if (compPO.getWorkflowStatus() == WorkflowStatus.OPEN) {
       VendorHelper vendorHelper = new VendorHelper(okapiHeaders, ctx, lang);
-      return vendorHelper
-        .validateVendor(compPO)
-        .thenCombine(vendorHelper.validateAccessProviders(compPO), (vendorErrors, accessProvidersErrors) -> {
-          addProcessingErrors(vendorErrors.getErrors());
-          addProcessingErrors(accessProvidersErrors.getErrors());
+      return fetchCompositePoLines(compPO)
+        .thenCompose(vendorHelper::validateVendor)
+        .thenCompose(errors -> {
+          addProcessingErrors(errors.getErrors());
+          return vendorHelper.validateAccessProviders(compPO);
+        })
+        .thenApply(errors -> {
+          addProcessingErrors(errors.getErrors());
           return getErrors().isEmpty();
         });
     }
@@ -366,12 +369,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return HelperUtils.collectResultsOnSuccess(futures);
   }
 
-  private CompletableFuture<Void> fetchCompositePoLines(CompositePurchaseOrder compPO) {
+  private CompletableFuture<CompositePurchaseOrder> fetchCompositePoLines(CompositePurchaseOrder compPO) {
     if (isEmpty(compPO.getCompositePoLines())) {
       return getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
-        .thenAccept(compPO::setCompositePoLines);
+        .thenApply(compPO::withCompositePoLines);
     }
-    return completedFuture(null);
+    return completedFuture(compPO);
   }
 
   private void changePoLineReceiptStatuses(CompositePurchaseOrder compPO) {
