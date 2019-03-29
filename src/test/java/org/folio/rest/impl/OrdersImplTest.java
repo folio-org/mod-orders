@@ -31,6 +31,7 @@ import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_QTY;
+import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
@@ -426,7 +427,7 @@ public class OrdersImplTest {
     final Errors response = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(10));
+    assertThat(response.getErrors(), hasSize(11));
     Set<String> errorCodes = response.getErrors()
                                      .stream()
                                      .map(Error::getCode)
@@ -438,7 +439,8 @@ public class OrdersImplTest {
                                               ELECTRONIC_LOC_QTY_EXCEEDS_COST.getCode(),
                                               PHYSICAL_LOC_QTY_EXCEEDS_COST.getCode(),
                                               COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
-                                              COST_UNIT_PRICE_INVALID.getCode()));
+                                              COST_UNIT_PRICE_INVALID.getCode(),
+                                              MISSING_MATERIAL_TYPE.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());

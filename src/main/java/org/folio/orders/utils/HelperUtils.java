@@ -411,7 +411,7 @@ public class HelperUtils {
       errors.add(ErrorCodes.PHYSICAL_COST_QTY_EXCEEDS_LOC);
     }
 
-    if (compPOL.getPhysical().getCreateInventory() == (Physical.CreateInventory.INSTANCE_HOLDING_ITEM)
+    if (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM
         && isEmpty(compPOL.getPhysical().getMaterialType())) {
       errors.add(ErrorCodes.MISSING_MATERIAL_TYPE);
     }

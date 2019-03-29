@@ -237,14 +237,19 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @return completable future which might be completed with {@code true} if order is valid, {@code false} if not valid or an exception if processing fails
    */
   public CompletableFuture<Boolean> validateOrder(CompositePurchaseOrder compPO) {
-    compPO.getCompositePoLines()
-      .forEach(orderLineHelper::setTenantDefaultCreateInventoryValues);
 
-      addProcessingErrors(HelperUtils.validateOrder(compPO));
-        // If static validation has failed, no need to call other services
-        if (!getErrors().isEmpty()) {
-          return completedFuture(false);
-        }
+    compPO.getCompositePoLines()
+      .forEach(poLine ->
+        orderLineHelper.setTenantDefaultCreateInventoryValues(poLine)
+          .thenApply(v -> {
+          addProcessingErrors(HelperUtils.validateOrder(compPO));
+          // If static validation has failed, no need to call other services
+          if (!getErrors().isEmpty()) {
+            return completedFuture(false);
+          }
+            return true;
+          })
+      );
 
     return validatePoLineLimit(compPO)
       .thenCompose(isStillValid -> isStillValid ? validateVendor(compPO) : completedFuture(false));
