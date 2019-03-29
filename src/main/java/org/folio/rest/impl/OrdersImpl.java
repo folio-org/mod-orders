@@ -231,13 +231,17 @@ public class OrdersImpl implements Orders {
                                       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Handling PUT Order Line operation...");
 
+    PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
     // Set id if this is available only in path
     if (StringUtils.isEmpty(poLine.getId())) {
       poLine.setId(lineId);
     }
 
     // First validate content of the PO Line and proceed only if all is okay
-    List<Error> errors = new ArrayList<>(validatePoLine(poLine));
+    List<Error> errors = new ArrayList<>();
+    helper.setTenantDefaultCreateInventoryValues(poLine).thenAccept(empty -> {
+      errors.addAll(validatePoLine(poLine));
+
     if (!lineId.equals(poLine.getId())) {
       errors.add(ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
     }
@@ -247,10 +251,11 @@ public class OrdersImpl implements Orders {
       return;
     }
 
-    PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
+
     helper.updateOrderLine(poLine)
       .thenAccept(v -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+    });
   }
 
   @Override

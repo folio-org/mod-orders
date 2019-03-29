@@ -36,6 +36,7 @@ import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
+import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantityByMaterial;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.ResourcePathResolver.*;
@@ -66,6 +67,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static java.util.stream.Collectors.toMap;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -112,6 +114,7 @@ import org.folio.rest.acq.model.ReceivingHistoryCollection;
 import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
+import org.folio.rest.jaxrs.model.Physical.CreateInventory;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
@@ -601,8 +604,13 @@ public class OrdersImplTest {
     // Prepare second POL
     CompositePoLine secondPol = reqData.getCompositePoLines().get(1);
     List<Location> secondPolLocations = secondPol.getLocations();
-    // MODORDERS-117 Setting OrderFormat to OTHER which means create nothing in inventory for the second PO Line
+    // MODORDERS-117 Setting OrderFormat to OTHER which means it behaves similar
+    // to Physical order
     secondPol.setOrderFormat(CompositePoLine.OrderFormat.OTHER);
+    Physical physical = new Physical();
+    physical.setMaterialType("db3d71da-fcc1-43af-ae6d-061b3e13c160");
+    physical.setCreateInventory(CreateInventory.NONE);
+    secondPol.setPhysical(physical);
     // Specify correct quantities for OTHER format
     secondPol.getCost().setQuantityElectronic(0);
     secondPol.getCost().setListUnitPriceElectronic(null);
@@ -1556,7 +1564,7 @@ public class OrdersImplTest {
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     // Emulate items creation issue
-    reqData.getCompositePoLines().get(0).getDetails().getMaterialTypes().set(0, ID_FOR_INTERNAL_SERVER_ERROR);
+    reqData.getCompositePoLines().get(0).getPhysical().setMaterialType(ID_FOR_INTERNAL_SERVER_ERROR);
     // Let's have only one PO Line
     reqData.getCompositePoLines().remove(1);
     // Set status to Open
@@ -1622,7 +1630,7 @@ public class OrdersImplTest {
     for (CompositePoLine pol : reqData.getCompositePoLines()) {
       verifyInstanceCreated(createdInstances, pol);
       verifyHoldingsCreated(createdHoldings, pol);
-      verifyItemsCreated(items, pol, calculateInventoryItemsQuantity(pol));
+      verifyItemsCreated(items, pol, calculateInventoryItemsQuantityByMaterial(pol));
       verifyPiecesCreated(items, reqData.getCompositePoLines(), createdPieces);
     }
   }
@@ -1670,6 +1678,7 @@ public class OrdersImplTest {
 
   private List<JsonObject> joinExistingAndNewItems() {
     List<JsonObject> items = new ArrayList<>(CollectionUtils.emptyIfNull(MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.POST)));
+    System.err.println("^^^^^^^^^^^^^^^^" + items.size());
     MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET).forEach(json -> {
       JsonArray existingItems = json.getJsonArray("items");
       if (existingItems != null) {
@@ -1758,18 +1767,31 @@ public class OrdersImplTest {
     }
   }
 
-  private void verifyItemsCreated(List<JsonObject> inventoryItems, CompositePoLine pol, int expectedQuantity) {
-    int actualQuantity = 0;
+  private void verifyItemsCreated(List<JsonObject> inventoryItems, CompositePoLine pol,
+      Map<String, Integer> expectedItemsByMaterial) {
 
-    for (JsonObject item : inventoryItems) {
-      if (pol.getId().equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER))) {
-        verifyItemRecordRequest(item, pol);
-        actualQuantity++;
-      }
-    }
+    Map<String, List<JsonObject>> itemsByMaterial = inventoryItems.stream()
+      .filter(item -> pol.getId().equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER)))
+      .collect(toMap(item -> item.getString(ITEM_MATERIAL_TYPE_ID), item -> {
+        List<JsonObject> items = new ArrayList<>();
+        items.add(item);
+        return items;
+      }, (k1, k2) -> {
+        k1.addAll(k2);
+        return k1;
+      }));
 
-    if (expectedQuantity != actualQuantity) {
-      fail(String.format("Actual items quantity is %d but expected %d", actualQuantity, expectedQuantity));
+    itemsByMaterial.forEach((material, items) -> {
+      assertThat(items.size(), equalTo(expectedItemsByMaterial.get(material)));
+      items.forEach(item -> {
+        verifyItemRecordRequest(item, pol, material);
+      });
+    });
+
+    int expectedItemsQuantity = expectedItemsByMaterial.values().stream().mapToInt(Integer::intValue).sum();
+    int actualItemsQuantity = itemsByMaterial.values().stream().mapToInt(List::size).sum();
+    if (expectedItemsQuantity != actualItemsQuantity) {
+      fail(String.format("Actual items quantity is %d but expected %d", actualItemsQuantity, expectedItemsQuantity));
     }
   }
 
@@ -1786,9 +1808,9 @@ public class OrdersImplTest {
     }
   }
 
-  private void verifyItemRecordRequest(JsonObject item, CompositePoLine line) {
+  private void verifyItemRecordRequest(JsonObject item, CompositePoLine line, String material) {
     assertThat(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER), not(isEmptyOrNullString()));
-    assertThat(line.getDetails().getMaterialTypes(), hasItem(item.getString(ITEM_MATERIAL_TYPE_ID)));
+    assertThat(material, is(item.getString(ITEM_MATERIAL_TYPE_ID)));
     assertThat(item.getString(ITEM_HOLDINGS_RECORD_ID), not(isEmptyOrNullString()));
     assertThat(item.getString(ITEM_PERMANENT_LOAN_TYPE_ID), not(isEmptyOrNullString()));
     assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
@@ -1836,7 +1858,7 @@ public class OrdersImplTest {
     }
 
     // Set material type id to one which emulates item creation failure
-    reqData.getCompositePoLines().get(1).getDetails().getMaterialTypes().set(0, ID_FOR_INTERNAL_SERVER_ERROR);
+    reqData.getCompositePoLines().get(1).getEresource().setMaterialType(ID_FOR_INTERNAL_SERVER_ERROR);
 
     String path = String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId());
 
@@ -3690,20 +3712,10 @@ public class OrdersImplTest {
     private void handleGetItemRecordsFromStorage(RoutingContext ctx) {
       logger.info("handleGetItemRecordsFromStorage got: " + ctx.request().path());
 
-      try {
-        JsonObject items;
-        if (ctx.request().getParam("query").contains(PO_LINE_ID_FOR_SUCCESS_CASE)) {
-          items = new JsonObject(getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "itemsRecords-1.json"));
-        } else {
-          items = new JsonObject().put("items", new JsonArray());
-        }
-        addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
-        serverResponse(ctx, 200, APPLICATION_JSON, items.encodePrettily());
-      } catch (IOException e) {
-        ctx.response()
-           .setStatusCode(404)
-           .end();
-      }
+      JsonObject items;
+      items = new JsonObject().put("items", new JsonArray());
+      addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
+      serverResponse(ctx, 200, APPLICATION_JSON, items.encodePrettily());
     }
 
     private void handleGetInventoryItemRecords(RoutingContext ctx) {

@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
@@ -342,6 +343,16 @@ public class HelperUtils {
       errors.add(ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST);
     }
 
+    if (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM
+        && isEmpty(compPOL.getPhysical().getMaterialType())) {
+      errors.add(ErrorCodes.MISSING_MATERIAL_TYPE);
+    }
+
+    if (compPOL.getEresource().getCreateInventory() == (Eresource.CreateInventory.INSTANCE_HOLDING_ITEM)
+        && isEmpty(compPOL.getEresource().getMaterialType())) {
+      errors.add(ErrorCodes.MISSING_MATERIAL_TYPE);
+    }
+
     validateCostPrices(compPOL.getCost(), P_E_MIX, errors);
 
     return convertErrorCodesToErrors(compPOL, errors);
@@ -400,6 +411,11 @@ public class HelperUtils {
       errors.add(ErrorCodes.PHYSICAL_COST_QTY_EXCEEDS_LOC);
     }
 
+    if (compPOL.getPhysical().getCreateInventory() == (Physical.CreateInventory.INSTANCE_HOLDING_ITEM)
+        && isEmpty(compPOL.getPhysical().getMaterialType())) {
+      errors.add(ErrorCodes.MISSING_MATERIAL_TYPE);
+    }
+
     validateCostPrices(compPOL.getCost(), PHYSICAL_RESOURCE, errors);
 
     return convertErrorCodesToErrors(compPOL, errors);
@@ -420,6 +436,11 @@ public class HelperUtils {
     // The total quantity of the electronic resources of all locations must not exceed specified in the cost
     if (getElectronicQuantity(compPOL.getLocations()) > costElectronicQuantity) {
       errors.add(ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST);
+    }
+
+    if (compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM
+        && isEmpty(compPOL.getEresource().getMaterialType())) {
+      errors.add(ErrorCodes.MISSING_MATERIAL_TYPE);
     }
 
     validateCostPrices(compPOL.getCost(), ELECTRONIC_RESOURCE, errors);
@@ -507,6 +528,61 @@ public class HelperUtils {
         return isItemsUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
       default:
         return 0;
+    }
+  }
+
+  /**
+   * Calculates total items quantity for all locations grouped By Material Type.
+   * The quantity is based on Order Format (please see MODORDERS-117):<br/>
+   * If format equals Physical the associated quantities will result in item
+   * records<br/>
+   * If format equals Other the associated quantities will result in item
+   * records<br/>
+   * If format = Electronic and CreateInventory = Instance,Holding,Item, the
+   * associated electronic quantities will result in item records being created
+   * in inventory<br/>
+   *
+   * @param compPOL
+   *          composite PO Line
+   * @return quantity of items per Material expected in the inventory for PO Line
+   */
+  public static Map<String, Integer> calculateInventoryItemsQuantityByMaterial(CompositePoLine compPOL) {
+    return calculateInventoryItemsQuantityByMaterial(compPOL, compPOL.getLocations());
+  }
+
+  /**
+   * Calculates item quantity per material type for specified locations
+   *
+   * @param compPOL
+   *          composite PO Line
+   * @param locations
+   *          list of locations to calculate quantity for
+   * @return quantity of items per MaterialType expected in the inventory for PO Line
+   * @see #calculateInventoryItemsQuantityByMaterial(CompositePoLine)
+   */
+  public static Map<String, Integer> calculateInventoryItemsQuantityByMaterial(CompositePoLine compPOL,
+      List<Location> locations) {
+    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems())
+      return Collections.emptyMap();
+
+    Map<String, Integer> quantityByMaterial = new HashMap<>();
+    int eresourceQuantity = isItemsUpdateRequiredForEresource(compPOL) ? getElectronicQuantity(locations) : 0;
+    int physicalQuantity = isItemsUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
+
+    switch (compPOL.getOrderFormat()) {
+    case P_E_MIX:
+      quantityByMaterial.put(compPOL.getPhysical().getMaterialType(), physicalQuantity);
+      quantityByMaterial.put(compPOL.getEresource().getMaterialType(), eresourceQuantity);
+      return quantityByMaterial;
+    case PHYSICAL_RESOURCE:
+    case OTHER:
+      quantityByMaterial.put(compPOL.getPhysical().getMaterialType(), physicalQuantity);
+      return quantityByMaterial;
+    case ELECTRONIC_RESOURCE:
+      quantityByMaterial.put(compPOL.getEresource().getMaterialType(), eresourceQuantity);
+      return quantityByMaterial;
+    default:
+      return Collections.emptyMap();
     }
   }
 

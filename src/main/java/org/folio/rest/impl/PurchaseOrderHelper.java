@@ -125,7 +125,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenCompose(poFromStorage -> {
         logger.info("Order successfully retrieved from storage");
         return validatePoNumber(poFromStorage, compPO)
-          .thenCompose(v -> updateTenantDefaultCreateInventoryValues(compPO))
           .thenCompose(v -> updatePoLines(poFromStorage, compPO))
           .thenCompose(v -> {
             if (isTransitionToOpen(poFromStorage, compPO)) {
@@ -136,12 +135,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
           });
         }
       );
-  }
-
-  private CompletableFuture<Void> updateTenantDefaultCreateInventoryValues(CompositePurchaseOrder compPO) {
-    return CompletableFuture.allOf(compPO.getCompositePoLines().stream()
-      .map(orderLineHelper::setTenantDefaultCreateInventoryValues)
-      .toArray(CompletableFuture[]::new));
   }
 
   /**
@@ -244,12 +237,14 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @return completable future which might be completed with {@code true} if order is valid, {@code false} if not valid or an exception if processing fails
    */
   public CompletableFuture<Boolean> validateOrder(CompositePurchaseOrder compPO) {
-    addProcessingErrors(HelperUtils.validateOrder(compPO));
+    compPO.getCompositePoLines()
+      .forEach(orderLineHelper::setTenantDefaultCreateInventoryValues);
 
-    // If static validation has failed, no need to call other services
-    if (!getErrors().isEmpty()) {
-      return completedFuture(false);
-    }
+      addProcessingErrors(HelperUtils.validateOrder(compPO));
+        // If static validation has failed, no need to call other services
+        if (!getErrors().isEmpty()) {
+          return completedFuture(false);
+        }
 
     return validatePoLineLimit(compPO)
       .thenCompose(isStillValid -> isStillValid ? validateVendor(compPO) : completedFuture(false));
@@ -286,6 +281,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
         }
       });
     }
+    compPO.getCompositePoLines().forEach(orderLineHelper::setTenantDefaultCreateInventoryValues);
 
     return validateOrder(compPO);
   }

@@ -29,7 +29,6 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
-import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
 import static org.folio.orders.utils.HelperUtils.*;
 
 public class InventoryHelper extends AbstractHelper {
@@ -68,7 +67,7 @@ public class InventoryHelper extends AbstractHelper {
   private static final String LOOKUP_IDENTIFIER_TYPES_ENDPOINT = "/identifier-types?query=%s&limit=%d&lang=%s";
   private static final String LOOKUP_INSTANCES_ENDPOINT = "/inventory/instances?query=%s&lang=%s";
   private static final String CREATE_INSTANCE_ENDPOINT = "/inventory/instances?lang=%s";
-  private static final String LOOKUP_ITEM_STOR_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
+  private static final String LOOKUP_ITEM_STOR_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s and materialTypeId==%s";
   private static final String LOOKUP_ITEM_STOR_ENDPOINT = "/item-storage/items?query=%s&limit=%d&lang=%s";
   private static final String CREATE_ITEM_STOR_ENDPOINT = "/item-storage/items?lang=%s";
   private static final String LOOKUP_ITEMS_ENDPOINT = "/inventory/items?query=%s&limit=%d&lang=%s";
@@ -98,29 +97,32 @@ public class InventoryHelper extends AbstractHelper {
     List<CompletableFuture<List<Piece>>> itemsPerHolding = new ArrayList<>();
     boolean isItemsUpdateRequired = isItemsUpdateRequired(compPOL);
 
-    // Group all locations by location id because the holding should be unique for different locations
+    // Group all locations by location id because the holding should be unique
+    // for different locations
     if (HelperUtils.isHoldingsUpdateRequired(compPOL)) {
       groupLocationsById(compPOL)
         .forEach((locationId, locations) -> itemsPerHolding.add(
-          // Search for or create a new holding and then create items for this holding
-          getOrCreateHoldingsRecord(compPOL, locationId)
-            .thenCompose(holdingId -> {
-                int expectedQuantity = isItemsUpdateRequired ? calculateInventoryItemsQuantity(compPOL, locations) : 0;
-                if (expectedQuantity > 0) {
-                  // For some cases items might not be created e.g. resources with create inventory set to "None"
-                  return handleItemRecords(compPOL, holdingId, expectedQuantity)
+            // Search for or create a new holding and then create items for this
+            // holding
+            getOrCreateHoldingsRecord(compPOL, locationId)
+              .thenCompose(holdingId -> {
+                Map<String, Integer> expectedQuantityPerMaterial = isItemsUpdateRequired
+                    ? calculateInventoryItemsQuantityByMaterial(compPOL, locations)
+                    : Collections.emptyMap();
+                if (!expectedQuantityPerMaterial.isEmpty()) {
+                  // For some cases items might not be created e.g. resources
+                  // with create inventory set to "None"
+                  return handleItemRecords(compPOL, holdingId, expectedQuantityPerMaterial)
                     .thenApply(itemIds -> constructPieces(itemIds, compPOL.getId(), locationId));
                 } else {
                   return completedFuture(Collections.emptyList());
                 }
-              }
-            )));
+              })));
     }
     return collectResultsOnSuccess(itemsPerHolding)
       .thenApply(results -> results.stream()
         .flatMap(List::stream)
-        .collect(toList())
-      );
+        .collect(toList()));
   }
 
   /**
@@ -208,34 +210,44 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   /**
-   * Returns list of item id's corresponding to given PO line.
+   * Returns list of item id's corresponding to given PO line and holding Id
    * Items are either retrieved from Inventory or new ones are created if no corresponding item records exist yet.
    *
    * @param compPOL   PO line to retrieve/create Item Records for
    * @param holdingId holding uuid from the inventory
-   * @param expectedQuantity expected items quantity for the holding
+   * @param expectedQuantityPerMaterial expected items quantity for the holding per materialType
    * @return future with list of item id's
    */
-  private CompletableFuture<List<String>> handleItemRecords(CompositePoLine compPOL, String holdingId, int expectedQuantity) {
+  private CompletableFuture<List<String>> handleItemRecords(CompositePoLine compPOL, String holdingId,
+      Map<String, Integer> expectedQuantityPerMaterial) {
+    List<CompletableFuture<List<String>>> itemsIds = new ArrayList<>();
     // Search for already existing items
-    return searchForExistingItems(compPOL, holdingId, expectedQuantity)
-      .thenCompose(existingItemIds -> {
-        // Create only missing items
-        int remainingItemsQuantity = expectedQuantity - existingItemIds.size();
-        return createMissingItems(compPOL, holdingId, remainingItemsQuantity)
-          .thenApply(createdItemIds -> {
-            List<String> allItemIds = ListUtils.union(existingItemIds, createdItemIds);
-
-            // In case no items created, return an exception because nothing can be done at this stage
-            if (allItemIds.isEmpty()) {
-              throw new InventoryException(String.format("No items created for PO Line with %s id", compPOL.getId()));
-            }
-
-            return allItemIds;
-          });
+    return searchForExistingItemsByMaterialType(compPOL, holdingId, expectedQuantityPerMaterial)
+      .thenCompose(existingItemsByMaterialId -> {
+        expectedQuantityPerMaterial.forEach((material, itemsToCreate) -> itemsIds.add(
+         // Create only missing items
+            createMissingItems(compPOL, holdingId, material,
+                itemsToCreate - existingItemsByMaterialId.getOrDefault(material, Collections.emptyList()).size())
+              .thenApply(createdItemIds -> {
+                    return ListUtils.union(existingItemsByMaterialId.getOrDefault(material, Collections.emptyList()),
+                        createdItemIds);
+              }))
+        );
+     // In case no items created, return an exception because nothing can be done at this stage
+        if (itemsIds.isEmpty()) {
+          throw new InventoryException(String.format("No items created for PO Line with %s id", compPOL.getId()));
         }
-      );
+        
+        return collectResultsOnSuccess(itemsIds)
+          .thenApply(results -> results.stream()
+            .flatMap(List::stream)
+            .collect(toList()));
+
+      });
+
+
   }
+
 
   /**
    * Retrieves product type details associated with given PO line
@@ -386,19 +398,32 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   /**
-   * Search for items which might be already created for the PO line
-   * @param compPOL PO line to retrieve Item Records for
-   * @param holdingId holding uuid from the inventory
-   * @param expectedQuantity expected quantity of the items for combination of the holding and PO Line uuid's from the inventory
+   * Search for items which might be already created for the PO line per Material Type
+   * 
+   * @param compPOL
+   *          PO line to retrieve Item Records for
+   * @param holdingId
+   *          holding uuid from the inventory
+   * @param expectedQuantityPerMaterial
+   *          expected quantity of the items for combination of the holding and
+   *          PO Line uuid's from the inventory grouped by MaterialType
    * @return future with list of item id's
    */
-  private CompletableFuture<List<String>> searchForExistingItems(CompositePoLine compPOL, String holdingId, int expectedQuantity) {
-    String query = encodeQuery(String.format(LOOKUP_ITEM_STOR_QUERY, compPOL.getId(), holdingId), logger);
-    String endpoint = String.format(LOOKUP_ITEM_STOR_ENDPOINT, query, expectedQuantity, lang);
+  private CompletableFuture<Map<String, List<String>>> searchForExistingItemsByMaterialType(CompositePoLine compPOL,
+      String holdingId, Map<String, Integer> expectedQuantityPerMaterial) {
+
+    String materialQuery = expectedQuantityPerMaterial.keySet().stream().collect(joining(" OR "));
+    String query = encodeQuery(String.format(LOOKUP_ITEM_STOR_QUERY, compPOL.getId(), holdingId, materialQuery),
+        logger);
+    int expectedItemsQuantity = expectedQuantityPerMaterial.values().stream().mapToInt(Integer::intValue).sum();
+    String endpoint = String.format(LOOKUP_ITEM_STOR_ENDPOINT, query,
+        expectedItemsQuantity, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(items -> {
-        List<String> itemIds = collectItemIds(items);
-        logger.debug("{} existing items found out of {} for PO Line with '{}' id", itemIds.size(), expectedQuantity, compPOL.getId());
+        Map<String, List<String>> itemIds = collectItemIds(items);
+        logger.debug("{} existing items found out of {} for PO Line with '{}' id", itemIds.size(),
+            expectedItemsQuantity,
+            compPOL.getId());
         return itemIds;
       });
   }
@@ -417,34 +442,53 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   /**
-   * Validates if the json object contains items and extracts ids or returns empty list
-   * @param itemEntries {@link JsonObject} representing item storage response
+   * Validates if the json object contains items and extracts ids grouped by
+   * materialType or returns empty list
+   * 
+   * @param itemEntries
+   *          {@link JsonObject} representing item storage response
    * @return list of the item ids if any item returned
    */
-  private List<String> collectItemIds(JsonObject itemEntries) {
+  private Map<String, List<String>> collectItemIds(JsonObject itemEntries) {
     List<JsonObject> jsonObjects = extractItems(itemEntries);
     if (jsonObjects.isEmpty()) {
-      return Collections.emptyList();
+      return Collections.emptyMap();
     } else {
       return jsonObjects.stream()
-                        .map(this::extractId)
-                        .collect(toList());
+        .collect(toMap(jsonObj -> jsonObj.getString(ITEM_MATERIAL_TYPE_ID),
+            jsonObj -> {
+              List<String> itemIds = new ArrayList<>();
+              itemIds.add(jsonObj.getString("id"));
+              return itemIds;
+            },
+            //group the item ids for each materialType
+            (k1, k2) -> {
+              k1.addAll(k2);
+              return k1;
+            }));
+
     }
   }
 
   /**
    * Creates Items in the inventory based on the PO line data.
    *
-   * @param compPOL PO line to create Instance Record for
-   * @param holdingId holding id
-   * @param quantity expected number of items to create
+   * @param compPOL
+   *          PO line to create Instance Record for
+   * @param holdingId
+   *          holding id
+   * @param remainingItemsQuantity
+   * @param quantity
+   *          expected number of items to create
    * @return id of newly created Instance Record
    */
-  private CompletableFuture<List<String>> createMissingItems(CompositePoLine compPOL, String holdingId, int quantity) {
+  private CompletableFuture<List<String>> createMissingItems(CompositePoLine compPOL, String holdingId,
+      String materialId, int quantity) {
     if (quantity > 0) {
-      return buildItemRecordJsonObject(compPOL, holdingId)
+      return buildItemRecordJsonObject(compPOL, holdingId, materialId)
         .thenCompose(itemData -> {
-          logger.debug("Creating {} items for PO Line with '{}' id", quantity, compPOL.getId());
+          logger.debug("Creating {} items for PO Line with '{}' id and '{}' holdingId ", quantity, compPOL.getId(),
+              holdingId);
           return createItemRecords(itemData, quantity);
         });
     } else {
@@ -480,14 +524,18 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   /**
-   * Builds JsonObject representing inventory item minimal data. The schema is located directly in 'mod-inventory-storage' module.
+   * Builds JsonObject representing inventory item minimal data. The schema is
+   * located directly in 'mod-inventory-storage' module.
    *
-   * @param compPOL   PO line to create Item Records for
-   * @param holdingId holding uuid from the inventory
+   * @param compPOL
+   *          PO line to create Item Records for
+   * @param holdingId
+   *          holding uuid from the inventory
+   * @param materialId
    * @return item data to be used as request body for POST operation
    */
-  private CompletableFuture<JsonObject> buildItemRecordJsonObject(CompositePoLine compPOL, String holdingId) {
-    String materialTypeId = getMaterialTypeId(compPOL);
+  private CompletableFuture<JsonObject> buildItemRecordJsonObject(CompositePoLine compPOL, String holdingId,
+      String materialTypeId) {
     return getLoanTypeId(DEFAULT_LOAN_TYPE_NAME)
       .thenApply(loanTypeId -> {
         JsonObject itemRecord = new JsonObject();
@@ -498,14 +546,6 @@ public class InventoryHelper extends AbstractHelper {
         itemRecord.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
         return itemRecord;
       });
-  }
-
-  private String getMaterialTypeId(CompositePoLine compPOL) {
-    return Optional.ofNullable(compPOL.getDetails())
-                   .map(Details::getMaterialTypes)
-                   .flatMap(ids -> ids.stream().findFirst())
-                   .orElseThrow(() -> new CompletionException(
-                     new HttpException(422, MISSING_MATERIAL_TYPE)));
   }
 
   String extractId(JsonObject json) {
