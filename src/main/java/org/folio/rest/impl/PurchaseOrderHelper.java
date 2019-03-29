@@ -242,7 +242,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .forEach(poLine ->
         orderLineHelper.setTenantDefaultCreateInventoryValues(poLine)
           .thenApply(v -> {
-          addProcessingErrors(HelperUtils.validateOrder(compPO));
+          addProcessingErrors(HelperUtils.validatePoLine(poLine));
           // If static validation has failed, no need to call other services
           if (!getErrors().isEmpty()) {
             return completedFuture(false);
@@ -286,7 +286,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
         }
       });
     }
-    compPO.getCompositePoLines().forEach(orderLineHelper::setTenantDefaultCreateInventoryValues);
 
     return validateOrder(compPO);
   }
