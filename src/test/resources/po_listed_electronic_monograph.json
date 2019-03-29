@@ -56,9 +56,6 @@
             "productIdType": "ISBN"
           }
         ],
-        "materialTypes": [
-          "1a54b431-2e4f-452d-9cae-9cee66c9a892"
-        ],
         "subscriptionFrom": "2018-10-09T00:00:00.000Z",
         "subscriptionInterval": 824,
         "subscriptionTo": "2020-10-09T00:00:00.000Z"
@@ -73,7 +70,8 @@
         "expectedActivation": "2018-10-09T00:00:00.000Z",
         "userLimit": 10,
         "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
-        "license": "7c063655-b384-4a6f-b367-3c2f95f7a49c"
+        "license": "7c063655-b384-4a6f-b367-3c2f95f7a49c",
+        "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
       },
       "fundDistribution": [
         "d10879e8-8c2d-4850-bcb9-0ec8e2e10021"
