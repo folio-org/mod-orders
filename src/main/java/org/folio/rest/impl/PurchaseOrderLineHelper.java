@@ -20,6 +20,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -128,6 +129,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     compPoLine.setId(UUID.randomUUID().toString());
     compPoLine.setPurchaseOrderId(compOrder.getId());
     updateEstimatedPrice(compPoLine);
+    updateLocationsQuantity(compPoLine);
 
     JsonObject line = mapFrom(compPoLine);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
@@ -221,6 +223,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
     // The estimated price should be always recalculated
     updateEstimatedPrice(compOrderLine);
+    updateLocationsQuantity(compOrderLine);
 
     setTenantDefaultCreateInventoryValues(compOrderLine)
       .thenCompose(v -> updatePoLineSubObjects(compOrderLine, lineFromStorage))
@@ -359,6 +362,37 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     if (cost != null) {
       cost.setPoLineEstimatedPrice(calculateEstimatedPrice(cost));
     }
+  }
+
+  /**
+   * See MODORDERS-189 for more details.
+   * @param compPOL composite PO Line
+   */
+  private void updateLocationsQuantity(CompositePoLine compPOL) {
+    List<Location> locations = compPOL.getLocations();
+    switch (compPOL.getOrderFormat()) {
+      case P_E_MIX:
+        updateLocationsQuantity(locations, location -> {
+          int quantity = 0;
+          quantity += location.getQuantityElectronic() == null ? 0 : location.getQuantityElectronic();
+          quantity += location.getQuantityPhysical() == null ? 0 : location.getQuantityPhysical();
+          return quantity;
+        });
+        break;
+      case ELECTRONIC_RESOURCE:
+        updateLocationsQuantity(locations, Location::getQuantityElectronic);
+        break;
+      case OTHER:
+        updateLocationsQuantity(locations, Location::getQuantityPhysical);
+        break;
+      case PHYSICAL_RESOURCE:
+        updateLocationsQuantity(locations, Location::getQuantityPhysical);
+        break;
+    }
+  }
+
+  private void updateLocationsQuantity(List<Location> locations, Function<Location, Integer> calculateLocationQuantity) {
+    locations.forEach(location -> location.setQuantity(calculateLocationQuantity.apply(location)));
   }
 
   /**

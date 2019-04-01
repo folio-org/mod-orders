@@ -373,7 +373,7 @@ public class HelperUtils {
     }
 
     double discount = defaultIfNull(cost.getDiscount(), 0d);
-    if (discount < 0d || (cost.getDiscountType() == Cost.DiscountType.PERCENTAGE && discount > 100d)
+    if ((cost.getDiscountType() == Cost.DiscountType.PERCENTAGE && discount > 100d)
       // validate that discount does not exceed total price
       || (discount > 0d && cost.getDiscountType() == Cost.DiscountType.AMOUNT && calculateEstimatedPrice(cost) < 0d)) {
       errors.add(ErrorCodes.COST_DISCOUNT_INVALID);
@@ -392,8 +392,21 @@ public class HelperUtils {
     if (defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0) > 0) {
       errors.add(ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY);
     }
+
+    List<Location> locations = compPOL.getLocations();
+
+    //The quantity of the electronic resources in the locations must not be specified
+    if (getElectronicQuantity(locations) > 0) {
+      errors.add(ErrorCodes.NON_ZERO_LOCATION_ELECTRONIC_QTY);
+    }
+
+    // The quantity of the physical resources in the locations must be specified
+    if (locations.stream().anyMatch(location -> defaultIfNull(location.getQuantityPhysical(), 0) == 0)) {
+      errors.add(ErrorCodes.ZERO_LOCATION_PHYSICAL_QTY);
+    }
+
     // The total quantity of the physical resources of all locations must not exceed specified in the cost
-    int locationsPhysicalQuantity = getPhysicalQuantity(compPOL.getLocations());
+    int locationsPhysicalQuantity = getPhysicalQuantity(locations);
     if (locationsPhysicalQuantity > costPhysicalQuantity) {
       errors.add(ErrorCodes.PHYSICAL_LOC_QTY_EXCEEDS_COST);
     } else if (locationsPhysicalQuantity < costPhysicalQuantity) {
@@ -417,9 +430,26 @@ public class HelperUtils {
     if (defaultIfNull(compPOL.getCost().getQuantityPhysical(), 0) > 0) {
       errors.add(ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY);
     }
-    // The total quantity of the electronic resources of all locations must not exceed specified in the cost
-    if (getElectronicQuantity(compPOL.getLocations()) > costElectronicQuantity) {
+
+
+    List<Location> locations = compPOL.getLocations();
+
+    //The quantity of the physical resources in the locations must not be specified
+    if (getPhysicalQuantity(locations) > 0) {
+      errors.add(ErrorCodes.NON_ZERO_LOCATION_PHYSICAL_QTY);
+    }
+
+    // The quantity of the electronic resources in the locations must be specified
+    if (locations.stream().anyMatch(location -> defaultIfNull(location.getQuantityElectronic(), 0) == 0)) {
+      errors.add(ErrorCodes.ZERO_LOCATION_ELECTRONIC_QTY);
+    }
+
+    // The total quantity of the electronic resources of all locations must match specified in the cost
+    if (getElectronicQuantity(locations) > costElectronicQuantity) {
       errors.add(ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST);
+    }
+    if (getElectronicQuantity(locations) < costElectronicQuantity) {
+      errors.add(ErrorCodes.ELECTRONIC_COST_QTY_EXCEEDS_LOC);
     }
 
     validateCostPrices(compPOL.getCost(), ELECTRONIC_RESOURCE, errors);
@@ -838,4 +868,5 @@ public class HelperUtils {
   public static boolean isItemsUpdateRequired(CompositePoLine compPOL) {
     return isItemsUpdateRequiredForPhysical(compPOL) || isItemsUpdateRequiredForEresource(compPOL);
   }
+
 }

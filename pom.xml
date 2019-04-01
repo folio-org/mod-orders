@@ -136,6 +136,11 @@
       <version>0.6.8</version>
     </dependency>
     <dependency>
+      <groupId>org.glassfish</groupId>
+      <artifactId>javax.el</artifactId>
+      <version>3.0.0</version>
+    </dependency>
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
@@ -212,6 +217,7 @@
               <sourceDirectory>${basedir}/ramls/acq-models/mod-orders-storage/schemas</sourceDirectory>
               <targetPackage>org.folio.rest.acq.model</targetPackage>
               <generateBuilders>true</generateBuilders>
+              <includeJsr303Annotations>true</includeJsr303Annotations>
             </configuration>
           </execution>
           <execution>

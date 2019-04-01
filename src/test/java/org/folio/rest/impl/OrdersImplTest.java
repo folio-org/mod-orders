@@ -6,14 +6,15 @@ import static org.folio.orders.utils.ErrorCodes.COST_ADDITIONAL_COST_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_DISCOUNT_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
+import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_QTY_EXCEEDS_LOC;
 import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST;
-import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
+import static org.folio.orders.utils.ErrorCodes.NON_ZERO_LOCATION_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
 import static org.folio.orders.utils.ErrorCodes.ORDER_OPEN;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
@@ -361,6 +362,7 @@ public class OrdersImplTest {
       assertThat(polNumber, notNullValue());
       assertThat(polNumber, startsWith(poNumber));
       assertThat(line.getInstanceId(), nullValue());
+      line.getLocations().forEach(location -> verifyLocationQuantity(location, line));
     }
 
     // see MODORDERS-180 and MODORDERS-181
@@ -401,8 +403,8 @@ public class OrdersImplTest {
     firstPoLine.setOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
     firstPoLine.getCost().setQuantityPhysical(1);
     firstPoLine.getCost().setQuantityElectronic(0);
-    firstPoLine.getCost().setListUnitPrice(-10d);
-    firstPoLine.getCost().setListUnitPriceElectronic(-5d);
+    firstPoLine.getCost().setListUnitPrice(null);
+    firstPoLine.getCost().setListUnitPriceElectronic(null);
     firstPoLine.getLocations().forEach(location -> {
       location.setQuantityElectronic(1);
       location.setQuantityPhysical(2);
@@ -413,7 +415,7 @@ public class OrdersImplTest {
     secondPoLine.setOrderFormat(CompositePoLine.OrderFormat.OTHER);
     secondPoLine.getCost().setQuantityPhysical(0);
     secondPoLine.getCost().setQuantityElectronic(1);
-    secondPoLine.getCost().setListUnitPrice(-1d);
+    secondPoLine.getCost().setListUnitPrice(null);
     secondPoLine.getCost().setListUnitPriceElectronic(10d);
     secondPoLine.getLocations().forEach(location -> {
       location.setQuantityElectronic(0);
@@ -491,7 +493,7 @@ public class OrdersImplTest {
     int totalQty = 0;
     for (int i = 0; i < firstPoLine.getLocations().size(); i++) {
       Location location = firstPoLine.getLocations().get(i);
-      int quantityPhysical = i * (i + 1);
+      int quantityPhysical = i * (i + 1) + 1;
 
       location.setQuantityElectronic(0);
       location.setQuantityPhysical(quantityPhysical);
@@ -534,6 +536,7 @@ public class OrdersImplTest {
       assertNotNull(polNumber);
       assertTrue(polNumber.startsWith(poNumber));
       assertNotNull(line.getInstanceId());
+      line.getLocations().forEach(location -> verifyLocationQuantity(location, line));
     }
 
     int polCount = resp.getCompositePoLines().size();
@@ -2265,6 +2268,8 @@ public class OrdersImplTest {
     assertThat(response.getPoLineNumber(), equalTo(expectedPoLineNumber));
     // See MODORDERS-180
     assertThat(response.getCost().getPoLineEstimatedPrice(), equalTo(49.98d));
+    Location location = response.getLocations().get(0);
+    assertThat(location.getQuantity(), equalTo(location.getQuantityPhysical()));
   }
 
   @Test
@@ -2289,6 +2294,35 @@ public class OrdersImplTest {
                                       .collect(Collectors.toList());
 
     assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode(), NON_ZERO_COST_ELECTRONIC_QTY.getCode(), PHYSICAL_LOC_QTY_EXCEEDS_COST.getCode()));
+
+    // Check that no any calls made by the business logic to other services
+    assertTrue(MockServer.serverRqRs.isEmpty());
+  }
+
+  @Test
+  public void testPostOrdersLineElectronicFormatIncorrectQuantity() {
+    logger.info("=== Test Post Electronic Order Line - incorrect quantity ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+
+    // Set incorrect cost and location quantities
+    reqData.setOrderFormat(OrderFormat.ELECTRONIC_RESOURCE);
+    reqData.getCost().setListUnitPrice(null);
+    reqData.getCost().setListUnitPriceElectronic(0d);
+    reqData.getCost().setQuantityPhysical(0);
+    reqData.getCost().setQuantityElectronic(4);
+    reqData.getLocations().get(0).setQuantityElectronic(3);
+
+    final Errors response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(response.getErrors(), hasSize(2));
+    List<String> errorCodes = response.getErrors()
+      .stream()
+      .map(Error::getCode)
+      .collect(Collectors.toList());
+
+    assertThat(errorCodes, containsInAnyOrder(ELECTRONIC_COST_QTY_EXCEEDS_LOC.getCode(), NON_ZERO_LOCATION_PHYSICAL_QTY.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -2331,9 +2365,8 @@ public class OrdersImplTest {
     Cost cost = reqData.getCost();
     cost.setQuantityPhysical(1);
     cost.setQuantityElectronic(0);
-    cost.setListUnitPriceElectronic(-1d);
+    cost.setListUnitPriceElectronic(null);
     cost.setListUnitPrice(1d);
-    cost.setAdditionalCost(-1d);
     cost.setDiscountType(Cost.DiscountType.PERCENTAGE);
     cost.setDiscount(100.1d);
     reqData.getLocations().get(0).setQuantityElectronic(1);
@@ -2349,9 +2382,9 @@ public class OrdersImplTest {
 
     assertThat(errorCodes, containsInAnyOrder(ZERO_COST_ELECTRONIC_QTY.getCode(),
                                               NON_ZERO_COST_PHYSICAL_QTY.getCode(),
+                                              NON_ZERO_LOCATION_PHYSICAL_QTY.getCode(),
                                               COST_UNIT_PRICE_INVALID.getCode(),
                                               COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
-                                              COST_ADDITIONAL_COST_INVALID.getCode(),
                                               COST_DISCOUNT_INVALID.getCode(),
                                               ELECTRONIC_LOC_QTY_EXCEEDS_COST.getCode()));
 
@@ -2475,6 +2508,8 @@ public class OrdersImplTest {
     // See MODORDERS-180
     PoLine poLine = column.get(PO_LINES).get(0).mapTo(PoLine.class);
     assertThat(poLine.getCost().getPoLineEstimatedPrice(), equalTo(expectedTotalPoLine));
+    Location location = poLine.getLocations().get(0);
+    assertEquals(location.getQuantity(), location.getQuantityPhysical());
   }
 
   @Test
@@ -3543,6 +3578,24 @@ public class OrdersImplTest {
           .contentType(expectedContentType)
           .extract()
             .response();
+  }
+
+
+  private void verifyLocationQuantity(Location location, CompositePoLine compPoLine) {
+    switch (compPoLine.getOrderFormat()) {
+      case P_E_MIX:
+        assertEquals(location.getQuantityPhysical() + location.getQuantityElectronic(), location.getQuantity().intValue());
+        break;
+      case ELECTRONIC_RESOURCE:
+        assertEquals(location.getQuantityElectronic(), location.getQuantity());
+        break;
+      case PHYSICAL_RESOURCE:
+        assertEquals(location.getQuantityPhysical(), location.getQuantity());
+        break;
+      case OTHER:
+        assertEquals(location.getQuantityPhysical(), location.getQuantity());
+        break;
+    }
   }
 
   private JsonObject getMockDraftOrder() throws Exception {
