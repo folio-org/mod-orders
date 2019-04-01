@@ -106,21 +106,18 @@ public class InventoryHelper extends AbstractHelper {
     // Group all locations by location id because the holding should be unique for different locations
     if (HelperUtils.isHoldingsUpdateRequired(compPOL)) {
       groupLocationsById(compPOL)
-        .forEach((locationId, locations) ->
-          itemsPerHolding.add(
-            // Search for or create a new holding and then create items for this holding
-            getOrCreateHoldingsRecord(compPOL, locationId)
-              .thenCompose(holdingId -> {
-                  if (isItemsUpdateRequired) {
-                    // For some cases items might not be created e.g. resources with create inventory set to "None"
-                    return handleItemRecords(compPOL, holdingId, locations);
-                  } else {
-                    return completedFuture(Collections.emptyList());
-                  }
+        .forEach((locationId, locations) -> itemsPerHolding.add(
+          // Search for or create a new holdings record and then create items for it if required
+          getOrCreateHoldingsRecord(compPOL, locationId)
+            .thenCompose(holdingId -> {
+                // Items are not going to be created when create inventory is "Instance, Holding"
+                if (isItemsUpdateRequired) {
+                  return handleItemRecords(compPOL, holdingId, locations);
+                } else {
+                  return completedFuture(Collections.emptyList());
                 }
-              )
-          )
-        );
+              }
+            )));
     }
     return collectResultsOnSuccess(itemsPerHolding)
       .thenApply(results -> results.stream()
@@ -214,17 +211,18 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   /**
-   * Returns list of item id's corresponding to given PO line.
-   * Items are either retrieved from Inventory or new ones are created if no corresponding item records exist yet.
+   * Handles Inventory items for passed list of locations. Items are either retrieved from Inventory or new ones are created
+   * if no corresponding item records exist yet.
+   * Returns list of {@link Piece} records with populated item id (and other info) corresponding to given PO line.
    *
    * @param compPOL   PO line to retrieve/create Item Records for
    * @param holdingId holding uuid from the inventory
    * @param locations list of locations holdingId is associated with
-   * @return future with list of item id's
+   * @return future with list of piece objects
    */
   private CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, String holdingId, List<Location> locations) {
-    Map<Piece.Format, Integer> piecesWithItems = calculatePiecesQuantity(compPOL, locations, true);
-    int piecesWithItemsQty = IntStreamEx.of(piecesWithItems.values()).sum();
+    Map<Piece.Format, Integer> piecesWithItemsQuantities = calculatePiecesQuantity(compPOL, locations, true);
+    int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
     String polId = compPOL.getId();
 
     logger.debug("Handling {} items for PO Line with id={} and holdings with id={}", piecesWithItemsQty, polId, holdingId);
@@ -238,7 +236,8 @@ public class InventoryHelper extends AbstractHelper {
         String locationId = locations.get(0).getLocationId();
         List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.Format.values().length);
 
-        piecesWithItems.forEach((pieceFormat, expectedQuantity) -> {
+        piecesWithItemsQuantities.forEach((pieceFormat, expectedQuantity) -> {
+          // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
           if (expectedQuantity > 0) {
             List<String> items;
             CompletableFuture<List<String>> newItems;

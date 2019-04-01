@@ -499,15 +499,17 @@ public class HelperUtils {
   }
 
   /**
-   * Calculates pieces quantity for specified locations.
+   * Calculates pieces quantity for list of locations and return map where piece format is a key and corresponding quantity of pieces as value.
    *
    * @param compPOL composite PO Line
    * @param locations list of locations to calculate quantity for
-   * @return quantity of items expected in the inventory for PO Line
-   * @see #calculateInventoryItemsQuantity(CompositePoLine)
+   * @return quantity of pieces per piece format either required Inventory item or not (depending on {@code withItem} parameter) for PO Line
    */
   public static Map<Piece.Format, Integer> calculatePiecesQuantity(CompositePoLine compPOL, List<Location> locations, boolean withItem) {
-    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) return Collections.emptyMap();
+    // Piece records are not going to be created for PO Line which is going to be checked-in
+    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
+      return Collections.emptyMap();
+    }
 
     EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
     switch (compPOL.getOrderFormat()) {
@@ -537,7 +539,7 @@ public class HelperUtils {
   }
 
   /**
-   * Calculates pieces quantity for specified locations.
+   * Calculates pieces quantity for specified locations based on piece format.
    *
    * @param format piece format
    * @param locations list of locations to calculate quantity for
@@ -545,10 +547,9 @@ public class HelperUtils {
    */
   public static int calculatePiecesQuantity(Piece.Format format, List<Location> locations) {
     switch (format) {
-      case PHYSICAL:
-        return getPhysicalQuantity(locations);
       case ELECTRONIC:
         return getElectronicQuantity(locations);
+      case PHYSICAL:
       case OTHER:
         return getPhysicalQuantity(locations);
       default:
@@ -556,6 +557,14 @@ public class HelperUtils {
     }
   }
 
+  /**
+   * Calculates quantity of pieces for specified locations which do not require item records in Inventory.
+   *
+   * @param compPOL composite PO Line
+   * @param locations list of locations to calculate quantity for
+   * @return quantity of pieces without items in the inventory for PO Line
+   * @see #calculatePiecesQuantity(CompositePoLine, List, boolean)
+   */
   public static int calculateExpectedQuantityOfPiecesWithoutItemCreation(CompositePoLine compPOL, List<Location> locations) {
     return IntStreamEx.of(calculatePiecesQuantity(compPOL, locations, false).values()).sum();
   }

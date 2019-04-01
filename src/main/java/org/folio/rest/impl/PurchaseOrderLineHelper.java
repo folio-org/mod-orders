@@ -388,7 +388,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
             piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
 
             Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = calculatePiecesQuantity(compPOL, locations, false);
-            Map<Piece.Format, Integer> quantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existingPieces);
+            Map<Piece.Format, Integer> quantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(filteredExistingPieces);
             expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
               int remainingPiecesQuantity = expectedQty - quantityWithoutItem.getOrDefault(format, 0);
               if (remainingPiecesQuantity > 0) {
