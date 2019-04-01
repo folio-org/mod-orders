@@ -2,6 +2,8 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.json.JsonObject.mapFrom;
 import static java.util.concurrent.CompletableFuture.allOf;
+import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.toList;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.completedFuture;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
@@ -41,6 +43,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import one.util.streamex.StreamEx;
 
 import javax.ws.rs.core.Response;
 
@@ -369,7 +372,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * @return void future
    */
   private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem) {
-    int expectedItemsQuantity = isItemsUpdateRequired(compPOL) ? expectedPiecesWithItem.size() : calculateInventoryItemsQuantity(compPOL);
+    int createdItemsQuantity = expectedPiecesWithItem.size();
     // do not create pieces in case of checkin flow
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
       return completedFuture(null);
@@ -384,15 +387,21 @@ class PurchaseOrderLineHelper extends AbstractHelper {
             List<Piece> filteredExpectedPiecesWithItem = filterByLocationId(expectedPiecesWithItem, locationId);
             piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
 
-            int expectedQuantityOfPiecesWithoutItem = calculateExpectedQuantityOfPiecesWithoutItemCreation(compPOL, locations);
-            int existingQuantityOfPiecesWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existingPieces);
-            int remainingPiecesQuantity = expectedQuantityOfPiecesWithoutItem - existingQuantityOfPiecesWithoutItem;
-            piecesToCreate.addAll(constructMissingPiecesWithoutItem(compPOL, remainingPiecesQuantity, locationId));
+            Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = calculatePiecesQuantity(compPOL, locations, false);
+            Map<Piece.Format, Integer> quantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existingPieces);
+            expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
+              int remainingPiecesQuantity = expectedQty - quantityWithoutItem.getOrDefault(format, 0);
+              if (remainingPiecesQuantity > 0) {
+                for (int i = 0; i < remainingPiecesQuantity; i++) {
+                  piecesToCreate.add(new Piece().withFormat(format).withLocationId(locationId).withPoLineId(compPOL.getId()));
+                }
+              }
+            });
           });
 
         return allOf(piecesToCreate.stream().map(this::createPiece).toArray(CompletableFuture[]::new));
       })
-      .thenAccept(v -> validateItemsCreation(compPOL, expectedItemsQuantity));
+      .thenAccept(v -> validateItemsCreation(compPOL, createdItemsQuantity));
   }
 
   /**
@@ -430,26 +439,10 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       .collect(Collectors.toList());
   }
 
-  /**
-   * Creates Piece objects associated with compPOL for which do not need to create an item.
-   *
-   * @param compPOL PO line to construct Piece Records for
-   * @param remainingPiecesQuantity quantity of pieces to create
-   * @param locationId UUID of the (inventory) location record
-   * @return List of pieces not requiring item creation
-   */
-  private List<Piece> constructMissingPiecesWithoutItem(CompositePoLine compPOL, int remainingPiecesQuantity, String locationId) {
-    List<Piece> pieces = new ArrayList<>();
-    for (int i = 0; i < remainingPiecesQuantity; i++) {
-      pieces.add(constructPiece(locationId, compPOL.getId(), null));
-    }
-    return pieces;
-  }
-
-  private int calculateQuantityOfExistingPiecesWithoutItem(List<Piece> pieces) {
-    return Math.toIntExact(pieces.stream()
+  private Map<Piece.Format, Integer> calculateQuantityOfExistingPiecesWithoutItem(List<Piece> pieces) {
+    return StreamEx.of(pieces)
       .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
-      .count());
+      .groupingBy(Piece::getFormat, collectingAndThen(toList(), List::size));
   }
 
   private void validateItemsCreation(CompositePoLine compPOL, int itemsSize) {

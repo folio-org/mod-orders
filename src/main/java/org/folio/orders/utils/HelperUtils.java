@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Currency;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -28,6 +29,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
@@ -37,6 +39,7 @@ import org.folio.rest.acq.model.Piece;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -492,40 +495,69 @@ public class HelperUtils {
    * @see #calculateInventoryItemsQuantity(CompositePoLine)
    */
   public static int calculateInventoryItemsQuantity(CompositePoLine compPOL, List<Location> locations) {
-    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) return 0;
+    return IntStreamEx.of(calculatePiecesQuantity(compPOL, locations, true).values()).sum();
+  }
+
+  /**
+   * Calculates pieces quantity for specified locations.
+   *
+   * @param compPOL composite PO Line
+   * @param locations list of locations to calculate quantity for
+   * @return quantity of items expected in the inventory for PO Line
+   * @see #calculateInventoryItemsQuantity(CompositePoLine)
+   */
+  public static Map<Piece.Format, Integer> calculatePiecesQuantity(CompositePoLine compPOL, List<Location> locations, boolean withItem) {
+    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) return Collections.emptyMap();
+
+    EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
     switch (compPOL.getOrderFormat()) {
       case P_E_MIX:
-        int quantity = 0;
-        quantity += isItemsUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
-        quantity += isItemsUpdateRequiredForEresource(compPOL) ? getElectronicQuantity(locations) : 0;
-        return quantity;
+        if (withItem == isItemsUpdateRequiredForPhysical(compPOL)) {
+          quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
+        }
+        if (withItem == isItemsUpdateRequiredForEresource(compPOL)) {
+          quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
+        }
+        return quantities;
       case PHYSICAL_RESOURCE:
-        return isItemsUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
+        int pQty = (withItem == isItemsUpdateRequiredForPhysical(compPOL)) ? calculatePiecesQuantity(Piece.Format.PHYSICAL, locations) : 0;
+        quantities.put(Piece.Format.PHYSICAL, pQty);
+        return quantities;
       case ELECTRONIC_RESOURCE:
-        return isItemsUpdateRequiredForEresource(compPOL) ? getElectronicQuantity(locations) : 0;
+        int eQty = (withItem == isItemsUpdateRequiredForEresource(compPOL)) ? calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations) : 0;
+        quantities.put(Piece.Format.ELECTRONIC, eQty);
+        return quantities;
       case OTHER:
-        return isItemsUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
+        int oQty = (withItem == isItemsUpdateRequiredForPhysical(compPOL)) ? calculatePiecesQuantity(Piece.Format.OTHER, locations) : 0;
+        quantities.put(Piece.Format.OTHER, oQty);
+        return quantities;
+      default:
+        return Collections.emptyMap();
+    }
+  }
+
+  /**
+   * Calculates pieces quantity for specified locations.
+   *
+   * @param format piece format
+   * @param locations list of locations to calculate quantity for
+   * @return quantity of items expected in the inventory for PO Line
+   */
+  public static int calculatePiecesQuantity(Piece.Format format, List<Location> locations) {
+    switch (format) {
+      case PHYSICAL:
+        return getPhysicalQuantity(locations);
+      case ELECTRONIC:
+        return getElectronicQuantity(locations);
+      case OTHER:
+        return getPhysicalQuantity(locations);
       default:
         return 0;
     }
   }
 
   public static int calculateExpectedQuantityOfPiecesWithoutItemCreation(CompositePoLine compPOL, List<Location> locations) {
-    switch (compPOL.getOrderFormat()) {
-      case P_E_MIX:
-        int quantity = 0;
-        quantity += isItemsUpdateRequiredForPhysical(compPOL) ? 0 : getPhysicalQuantity(locations);
-        quantity += isItemsUpdateRequiredForEresource(compPOL) ? 0: getElectronicQuantity(locations);
-        return quantity;
-      case ELECTRONIC_RESOURCE:
-        return isItemsUpdateRequiredForEresource(compPOL) ? 0 : getElectronicQuantity(locations);
-      case OTHER:
-        return isItemsUpdateRequiredForPhysical(compPOL) ? 0 : getPhysicalQuantity(locations);
-      case PHYSICAL_RESOURCE:
-        return isItemsUpdateRequiredForPhysical(compPOL) ? 0 : getPhysicalQuantity(locations);
-      default:
-        return 0;
-    }
+    return IntStreamEx.of(calculatePiecesQuantity(compPOL, locations, false).values()).sum();
   }
 
   /**
@@ -575,20 +607,6 @@ public class HelperUtils {
       .map(BigDecimal::valueOf)
       .reduce(BigDecimal.ZERO, BigDecimal::add)
       .doubleValue();
-  }
-
-  public static List<Piece> constructPieces(List<String> itemIds, String poLineId, String locationId) {
-    return itemIds.stream()
-      .map(itemId -> constructPiece(locationId, poLineId, itemId))
-      .collect(toList());
-  }
-
-  public static Piece constructPiece(String locationId, String poLineId, String itemId) {
-    Piece piece = new Piece();
-    piece.setItemId(itemId);
-    piece.setPoLineId(poLineId);
-    piece.setLocationId(locationId);
-    return piece;
   }
 
   private static int getPhysicalQuantity(List<Location> locations) {
