@@ -22,7 +22,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
-import java.util.function.Function;
+import java.util.function.ToIntFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -389,8 +389,8 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     }
   }
 
-  private void updateLocationsQuantity(List<Location> locations, Function<Location, Integer> calculateLocationQuantity) {
-    locations.forEach(location -> location.setQuantity(calculateLocationQuantity.apply(location)));
+  private void updateLocationsQuantity(List<Location> locations, ToIntFunction<Location> calculateLocationQuantity) {
+    locations.forEach(location -> location.setQuantity(calculateLocationQuantity.applyAsInt(location)));
   }
 
   /**
