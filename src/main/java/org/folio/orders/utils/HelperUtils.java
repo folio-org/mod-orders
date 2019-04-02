@@ -18,17 +18,18 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Currency;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
@@ -38,6 +39,7 @@ import org.folio.rest.acq.model.Piece;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -492,9 +494,8 @@ public class HelperUtils {
   /**
    * Calculates total items quantity for all locations.
    * The quantity is based on Order Format (please see MODORDERS-117):<br/>
-   * If format equals Physical the associated quantities will result in item records<br/>
-   * If format equals Other the associated quantities will NOT result in item records<br/>
-   * If format = Electronic and Create Item = True, the associated electronic quantities will result in item records being created in inventory<br/>
+   * If format equals Physical or Other the associated quantities will result in item records<br/>
+   * If format = Electronic and Create Inventory = Instance,Holding,Item, the associated electronic quantities will result in item records being created in inventory<br/>
    * If format = Electronic and Create Item = False, the associated electronic quantities will NOT result in item records being created in inventory
    *
    * @param compPOL composite PO Line
@@ -634,20 +635,6 @@ public class HelperUtils {
       .map(BigDecimal::valueOf)
       .reduce(BigDecimal.ZERO, BigDecimal::add)
       .doubleValue();
-  }
-
-  public static List<Piece> constructPieces(List<String> itemIds, String poLineId, String locationId) {
-    return itemIds.stream()
-      .map(itemId -> constructPiece(locationId, poLineId, itemId))
-      .collect(toList());
-  }
-
-  public static Piece constructPiece(String locationId, String poLineId, String itemId) {
-    Piece piece = new Piece();
-    piece.setItemId(itemId);
-    piece.setPoLineId(poLineId);
-    piece.setLocationId(locationId);
-    return piece;
   }
 
   private static int getPhysicalQuantity(List<Location> locations) {

@@ -157,7 +157,7 @@ public class InventoryHelper extends AbstractHelper {
 
     return handlePutRequest(endpoint, itemRecord, httpClient, ctx, okapiHeaders, logger);
   }
-  
+
   public CompletableFuture<Void> checkinItem(JsonObject itemRecord, CheckInPiece checkinPiece) {
     String endpoint = String.format(UPDATE_ITEM_ENDPOINT, itemRecord.getString(ID), lang);
 
@@ -178,7 +178,7 @@ public class InventoryHelper extends AbstractHelper {
   public boolean isOnOrderItemStatus(ReceivedItem receivedItem) {
     return ITEM_STATUS_ON_ORDER.equalsIgnoreCase(receivedItem.getItemStatus());
   }
-  
+
   /**
    * Checks if the {@link ReceivedItem} has item status as "On order"
    * @param checkinPiece details specified by user upon check-in flow
@@ -276,6 +276,21 @@ public class InventoryHelper extends AbstractHelper {
       );
   }
 
+  private List<String> getPhysicalItems(CompositePoLine compPOL, List<JsonObject> existingItems) {
+    return getItemsByMaterialType(existingItems, getPhysicalMaterialTypeId(compPOL));
+  }
+
+  private List<String> getElectronicItems(CompositePoLine compPOL, List<JsonObject> existingItems) {
+    return getItemsByMaterialType(existingItems, getElectronicMaterialTypeId(compPOL));
+  }
+
+  private List<String> getItemsByMaterialType(List<JsonObject> existingItems, String materialTypeId) {
+    return existingItems
+      .stream()
+      .filter(item -> materialTypeId.equals(item.getString(ITEM_MATERIAL_TYPE_ID)))
+      .map(this::extractId)
+      .collect(toList());
+  }
 
   /**
    * Retrieves product type details associated with given PO line
@@ -570,15 +585,15 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   private String getPhysicalMaterialTypeId(CompositePoLine compPOL) {
-    // the logic will be updated in scope of MODORDERS-195
-    return getElectronicMaterialTypeId(compPOL);
+    return Optional.ofNullable(compPOL.getPhysical())
+        .map(physical -> physical.getMaterialType())
+        .orElseThrow(() -> new CompletionException(
+          new HttpException(422, MISSING_MATERIAL_TYPE)));
   }
 
   private String getElectronicMaterialTypeId(CompositePoLine compPOL) {
-    // the logic will be updated in scope of MODORDERS-195
-    return Optional.ofNullable(compPOL.getDetails())
-                   .map(Details::getMaterialTypes)
-                   .flatMap(ids -> ids.stream().findFirst())
+    return Optional.ofNullable(compPOL.getEresource())
+                   .map(eresource -> eresource.getMaterialType())
                    .orElseThrow(() -> new CompletionException(
                      new HttpException(422, MISSING_MATERIAL_TYPE)));
   }

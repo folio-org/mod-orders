@@ -34,10 +34,11 @@ import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
+import static org.folio.orders.utils.HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation;
+import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
-import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantityByMaterial;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.ResourcePathResolver.*;
@@ -98,6 +99,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import io.restassured.http.Headers;
+import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
@@ -107,6 +109,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
@@ -115,6 +118,7 @@ import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Physical.CreateInventory;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -143,7 +147,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-
+import javax.swing.plaf.synth.SynthSeparatorUI;
 import javax.ws.rs.core.Response.Status;
 
 
@@ -1805,15 +1809,42 @@ public class OrdersImplTest {
   }
 
   private void verifyItemsCreated(List<JsonObject> inventoryItems, CompositePoLine pol, int expectedQuantity) {
-    int actualQuantity = 0;
+    Map<Piece.Format, Integer> expectedItemsPerResourceType = HelperUtils.calculatePiecesQuantity(pol,
+        pol.getLocations(), true);
 
-    for (JsonObject item : inventoryItems) {
-      if (pol.getId().equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER))) {
-        verifyItemRecordRequest(item, pol);
-        actualQuantity++;
+    Map<String, List<JsonObject>> itemsByMaterial = inventoryItems.stream()
+      .filter(item -> pol.getId().equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER)))
+      .collect(toMap(item -> item.getString(ITEM_MATERIAL_TYPE_ID), item -> {
+        List<JsonObject> items = new ArrayList<>();
+        items.add(item);
+        return items;
+      }, (k1, k2) -> {
+        k1.addAll(k2);
+        return k1;
+      }));
+
+    expectedItemsPerResourceType.forEach((resourceType, quantity) -> {
+      if (quantity < 1) {
+        return;
       }
-    }
+      if (resourceType.equals(Piece.Format.ELECTRONIC)) {
+        assertThat(quantity, is(itemsByMaterial.get(pol.getEresource().getMaterialType()).size()));
+        itemsByMaterial.get(pol.getEresource().getMaterialType()).forEach(item -> {
+          verifyItemRecordRequest(item, pol, pol.getEresource().getMaterialType());
+        });
+      } else {
+        assertThat(quantity, is(itemsByMaterial.get(pol.getPhysical().getMaterialType()).size()));
+        itemsByMaterial.get(pol.getPhysical().getMaterialType()).forEach(item -> {
+          verifyItemRecordRequest(item, pol, pol.getPhysical().getMaterialType());
+        });
 
+      }
+    });
+
+    long actualQuantity = itemsByMaterial.values()
+      .stream()
+      .mapToInt(List::size)
+      .sum();
     if (expectedQuantity != actualQuantity) {
       fail(String.format("Actual items quantity is %d but expected %d", actualQuantity, expectedQuantity));
     }
@@ -1832,7 +1863,7 @@ public class OrdersImplTest {
     }
   }
 
-  private void verifyItemRecordRequest(JsonObject item, CompositePoLine line) {
+  private void verifyItemRecordRequest(JsonObject item, CompositePoLine line, String material) {
     assertThat(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER), not(isEmptyOrNullString()));
     assertThat(material, is(item.getString(ITEM_MATERIAL_TYPE_ID)));
     assertThat(item.getString(ITEM_HOLDINGS_RECORD_ID), not(isEmptyOrNullString()));
