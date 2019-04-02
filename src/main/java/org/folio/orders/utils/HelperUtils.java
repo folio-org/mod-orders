@@ -38,6 +38,7 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.Response;
@@ -345,13 +346,7 @@ public class HelperUtils {
       errors.add(ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST);
     }
 
-    if (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM
-        && isEmpty(compPOL.getPhysical().getMaterialType())) {
-      errors.add(ErrorCodes.MISSING_MATERIAL_TYPE);
-    }
-
-    if (compPOL.getEresource().getCreateInventory() == (Eresource.CreateInventory.INSTANCE_HOLDING_ITEM)
-        && isEmpty(compPOL.getEresource().getMaterialType())) {
+    if (isMaterialMissing(compPOL)) {
       errors.add(ErrorCodes.MISSING_MATERIAL_TYPE);
     }
 
@@ -413,8 +408,7 @@ public class HelperUtils {
       errors.add(ErrorCodes.PHYSICAL_COST_QTY_EXCEEDS_LOC);
     }
 
-    if (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM
-        && isEmpty(compPOL.getPhysical().getMaterialType())) {
+    if (isMaterialMissing(compPOL)) {
       errors.add(ErrorCodes.MISSING_MATERIAL_TYPE);
     }
 
@@ -440,8 +434,7 @@ public class HelperUtils {
       errors.add(ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST);
     }
 
-    if (compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM
-        && isEmpty(compPOL.getEresource().getMaterialType())) {
+    if (isMaterialMissing(compPOL)) {
       errors.add(ErrorCodes.MISSING_MATERIAL_TYPE);
     }
 
@@ -883,5 +876,16 @@ public class HelperUtils {
 
   public static boolean isItemsUpdateRequired(CompositePoLine compPOL) {
     return isItemsUpdateRequiredForPhysical(compPOL) || isItemsUpdateRequiredForEresource(compPOL);
+  }
+
+  private static boolean isMaterialMissing(CompositePoLine compPOL) {
+    if (compPOL.getOrderFormat().equals(OrderFormat.ELECTRONIC_RESOURCE)
+        || compPOL.getOrderFormat().equals(OrderFormat.P_E_MIX))
+      return compPOL.getEresource().getCreateInventory() == (Eresource.CreateInventory.INSTANCE_HOLDING_ITEM)
+          && isEmpty(compPOL.getEresource().getMaterialType());
+    if (!compPOL.getOrderFormat().equals(OrderFormat.ELECTRONIC_RESOURCE))
+      return compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM
+          && isEmpty(compPOL.getPhysical().getMaterialType());
+    return false;
   }
 }
