@@ -372,12 +372,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     List<Location> locations = compPOL.getLocations();
     switch (compPOL.getOrderFormat()) {
       case P_E_MIX:
-        updateLocationsQuantity(locations, location -> {
-          int quantity = 0;
-          quantity += location.getQuantityElectronic() == null ? 0 : location.getQuantityElectronic();
-          quantity += location.getQuantityPhysical() == null ? 0 : location.getQuantityPhysical();
-          return quantity;
-        });
+        updateLocationsQuantity(locations, HelperUtils::calculateTotalLocationQuantity);
         break;
       case ELECTRONIC_RESOURCE:
         updateLocationsQuantity(locations, Location::getQuantityElectronic);

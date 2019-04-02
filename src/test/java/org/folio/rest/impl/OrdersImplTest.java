@@ -6,8 +6,7 @@ import static org.folio.orders.utils.ErrorCodes.COST_ADDITIONAL_COST_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_DISCOUNT_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
-import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_QTY_EXCEEDS_LOC;
-import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST;
+import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
@@ -19,7 +18,7 @@ import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
 import static org.folio.orders.utils.ErrorCodes.ORDER_OPEN;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.PHYSICAL_LOC_QTY_EXCEEDS_COST;
+import static org.folio.orders.utils.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
 import static org.folio.orders.utils.ErrorCodes.PIECE_ALREADY_RECEIVED;
 import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_RETRIEVED;
@@ -31,7 +30,6 @@ import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
 import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
-import static org.folio.orders.utils.ErrorCodes.ZERO_COST_QTY;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
@@ -403,8 +401,8 @@ public class OrdersImplTest {
     firstPoLine.setOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
     firstPoLine.getCost().setQuantityPhysical(1);
     firstPoLine.getCost().setQuantityElectronic(0);
-    firstPoLine.getCost().setListUnitPrice(null);
-    firstPoLine.getCost().setListUnitPriceElectronic(null);
+    firstPoLine.getCost().setListUnitPrice(-10d);
+    firstPoLine.getCost().setListUnitPriceElectronic(-5d);
     firstPoLine.getLocations().forEach(location -> {
       location.setQuantityElectronic(1);
       location.setQuantityPhysical(2);
@@ -415,7 +413,7 @@ public class OrdersImplTest {
     secondPoLine.setOrderFormat(CompositePoLine.OrderFormat.OTHER);
     secondPoLine.getCost().setQuantityPhysical(0);
     secondPoLine.getCost().setQuantityElectronic(1);
-    secondPoLine.getCost().setListUnitPrice(null);
+    secondPoLine.getCost().setListUnitPrice(-1d);
     secondPoLine.getCost().setListUnitPriceElectronic(10d);
     secondPoLine.getLocations().forEach(location -> {
       location.setQuantityElectronic(0);
@@ -434,8 +432,8 @@ public class OrdersImplTest {
     assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode(),
                                               ZERO_COST_ELECTRONIC_QTY.getCode(),
                                               NON_ZERO_COST_ELECTRONIC_QTY.getCode(),
-                                              ELECTRONIC_LOC_QTY_EXCEEDS_COST.getCode(),
-                                              PHYSICAL_LOC_QTY_EXCEEDS_COST.getCode(),
+                                              PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
+                                              ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
                                               COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
                                               COST_UNIT_PRICE_INVALID.getCode()));
 
@@ -463,15 +461,16 @@ public class OrdersImplTest {
     final Errors response = verifyPut(COMPOSITE_ORDERS_PATH + "/" + reqData.getId(), JsonObject.mapFrom(reqData).encode(),
       APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(3));
+    assertThat(response.getErrors(), hasSize(4));
     Set<String> errorCodes = response.getErrors()
                                      .stream()
                                      .map(Error::getCode)
                                      .collect(Collectors.toSet());
 
-    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_QTY.getCode(),
-                                              ELECTRONIC_LOC_QTY_EXCEEDS_COST.getCode(),
-                                              PHYSICAL_LOC_QTY_EXCEEDS_COST.getCode()));
+    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_ELECTRONIC_QTY.getCode(),
+                                              ZERO_COST_PHYSICAL_QTY.getCode(),
+                                              ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
+                                              PHYSICAL_COST_LOC_QTY_MISMATCH.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -2293,7 +2292,7 @@ public class OrdersImplTest {
                                       .map(Error::getCode)
                                       .collect(Collectors.toList());
 
-    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode(), NON_ZERO_COST_ELECTRONIC_QTY.getCode(), PHYSICAL_LOC_QTY_EXCEEDS_COST.getCode()));
+    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode(), NON_ZERO_COST_ELECTRONIC_QTY.getCode(), PHYSICAL_COST_LOC_QTY_MISMATCH.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -2322,7 +2321,7 @@ public class OrdersImplTest {
       .map(Error::getCode)
       .collect(Collectors.toList());
 
-    assertThat(errorCodes, containsInAnyOrder(ELECTRONIC_COST_QTY_EXCEEDS_LOC.getCode(), NON_ZERO_LOCATION_PHYSICAL_QTY.getCode()));
+    assertThat(errorCodes, containsInAnyOrder(ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(), NON_ZERO_LOCATION_PHYSICAL_QTY.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -2365,8 +2364,9 @@ public class OrdersImplTest {
     Cost cost = reqData.getCost();
     cost.setQuantityPhysical(1);
     cost.setQuantityElectronic(0);
-    cost.setListUnitPriceElectronic(null);
+    cost.setListUnitPriceElectronic(-1d);
     cost.setListUnitPrice(1d);
+    cost.setAdditionalCost(-1d);
     cost.setDiscountType(Cost.DiscountType.PERCENTAGE);
     cost.setDiscount(100.1d);
     reqData.getLocations().get(0).setQuantityElectronic(1);
@@ -2385,8 +2385,9 @@ public class OrdersImplTest {
                                               NON_ZERO_LOCATION_PHYSICAL_QTY.getCode(),
                                               COST_UNIT_PRICE_INVALID.getCode(),
                                               COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
+                                              COST_ADDITIONAL_COST_INVALID.getCode(),
                                               COST_DISCOUNT_INVALID.getCode(),
-                                              ELECTRONIC_LOC_QTY_EXCEEDS_COST.getCode()));
+                                              ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());

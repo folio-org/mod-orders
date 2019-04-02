@@ -5,6 +5,7 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
@@ -54,9 +55,9 @@ public class HelperUtils {
   public static final String DEFAULT_POLINE_LIMIT = "1";
   private static final String MAX_POLINE_LIMIT = "500";
   public static final String OKAPI_URL = "X-Okapi-Url";
-  public static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
+  private static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
   public static final String URL_WITH_LANG_PARAM = "%s?lang=%s";
-  public static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = resourcesPath(PO_LINES) + "?limit=%s&query=purchaseOrderId==%s&lang=%s";
+  private static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = resourcesPath(PO_LINES) + "?limit=%s&query=purchaseOrderId==%s&lang=%s";
   private static final String GET_PURCHASE_ORDER_BYID = resourceByIdPath(PURCHASE_ORDER) + URL_WITH_LANG_PARAM;
   private static final String GET_PURCHASE_ORDER_BYPONUMBER_QUERY = resourcesPath(PURCHASE_ORDER) + "?query=poNumber==%s&lang=%s";
 
@@ -324,30 +325,42 @@ public class HelperUtils {
 
     List<ErrorCodes> errors = new ArrayList<>();
     // The quantity of the physical and electronic resources in the cost must be specified
-    if (costPhysicalQuantity + costElectronicQuantity == 0) {
-      errors.add(ErrorCodes.ZERO_COST_QTY);
-    } else if (costPhysicalQuantity == 0) {
+    if (costPhysicalQuantity == 0) {
       errors.add(ErrorCodes.ZERO_COST_PHYSICAL_QTY);
-    } else if (costElectronicQuantity == 0) {
+    }
+    if (costElectronicQuantity == 0) {
       errors.add(ErrorCodes.ZERO_COST_ELECTRONIC_QTY);
     }
-    // The total quantity of the physical resources of all locations must not exceed specified in the cost
-    if (locPhysicalQuantity > costPhysicalQuantity) {
-      errors.add(ErrorCodes.PHYSICAL_LOC_QTY_EXCEEDS_COST);
-    } else if (locPhysicalQuantity < costPhysicalQuantity) {
-      errors.add(ErrorCodes.PHYSICAL_COST_QTY_EXCEEDS_LOC);
+    // The total quantity of the physical and electronic resources of all locations must match specified in the cost
+    if (locPhysicalQuantity != costPhysicalQuantity) {
+      errors.add(ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH);
     }
-    // The total quantity of the electronic resources of all locations must not exceed specified in the cost
-    if (locElectronicQuantity > costElectronicQuantity) {
-      errors.add(ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST);
+    if (locElectronicQuantity != costElectronicQuantity) {
+      errors.add(ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH);
     }
 
-    validateCostPrices(compPOL.getCost(), P_E_MIX, errors);
+    // The total quantity of the physical and electronic resources of all locations must exceed 0
+    List<Location> locations = compPOL.getLocations();
+    if (locations.stream().anyMatch(location -> calculateTotalLocationQuantity(location) == 0)) {
+      errors.add(ZERO_LOCATION_QTY);
+    }
+
+    errors.addAll(validateCostPrices(compPOL));
 
     return convertErrorCodesToErrors(compPOL, errors);
   }
 
-  private static void validateCostPrices(Cost cost, CompositePoLine.OrderFormat orderFormat, List<ErrorCodes> errors) {
+  public static Integer calculateTotalLocationQuantity(Location location) {
+    int quantity = 0;
+    quantity += defaultIfNull(location.getQuantityElectronic(), 0);
+    quantity += defaultIfNull(location.getQuantityPhysical(), 0);
+    return quantity;
+  }
+
+  private static List<ErrorCodes> validateCostPrices(CompositePoLine compLine) {
+    List<ErrorCodes> errors = new ArrayList<>();
+    Cost cost = compLine.getCost();
+    CompositePoLine.OrderFormat orderFormat = compLine.getOrderFormat();
     // Using default value as -1 to avoid null checks
     double unitPrice = defaultIfNull(cost.getListUnitPrice(), -1d);
     if (orderFormat == ELECTRONIC_RESOURCE) {
@@ -372,12 +385,16 @@ public class HelperUtils {
       errors.add(ErrorCodes.COST_ADDITIONAL_COST_INVALID);
     }
 
-    double discount = defaultIfNull(cost.getDiscount(), 0d);
-    if ((cost.getDiscountType() == Cost.DiscountType.PERCENTAGE && discount > 100d)
-      // validate that discount does not exceed total price
-      || (discount > 0d && cost.getDiscountType() == Cost.DiscountType.AMOUNT && calculateEstimatedPrice(cost) < 0d)) {
+    if (isDiscountExceedTotalPrice(cost)) {
       errors.add(ErrorCodes.COST_DISCOUNT_INVALID);
     }
+    return errors;
+  }
+
+  private static boolean isDiscountExceedTotalPrice(Cost cost) {
+    double discount = defaultIfNull(cost.getDiscount(), 0d);
+    return (discount < 0d || cost.getDiscountType() == Cost.DiscountType.PERCENTAGE && discount > 100d)
+      || (discount > 0d && cost.getDiscountType() == Cost.DiscountType.AMOUNT && calculateEstimatedPrice(cost) < 0d);
   }
 
   private static List<Error> validatePoLineWithPhysicalFormat(CompositePoLine compPOL) {
@@ -405,15 +422,13 @@ public class HelperUtils {
       errors.add(ErrorCodes.ZERO_LOCATION_PHYSICAL_QTY);
     }
 
-    // The total quantity of the physical resources of all locations must not exceed specified in the cost
+    // The total quantity of the physical resources of all locations must match specified in the cost
     int locationsPhysicalQuantity = getPhysicalQuantity(locations);
-    if (locationsPhysicalQuantity > costPhysicalQuantity) {
-      errors.add(ErrorCodes.PHYSICAL_LOC_QTY_EXCEEDS_COST);
-    } else if (locationsPhysicalQuantity < costPhysicalQuantity) {
-      errors.add(ErrorCodes.PHYSICAL_COST_QTY_EXCEEDS_LOC);
+    if (locationsPhysicalQuantity != costPhysicalQuantity) {
+      errors.add(ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH);
     }
 
-    validateCostPrices(compPOL.getCost(), PHYSICAL_RESOURCE, errors);
+    errors.addAll(validateCostPrices(compPOL));
 
     return convertErrorCodesToErrors(compPOL, errors);
   }
@@ -431,7 +446,6 @@ public class HelperUtils {
       errors.add(ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY);
     }
 
-
     List<Location> locations = compPOL.getLocations();
 
     //The quantity of the physical resources in the locations must not be specified
@@ -439,20 +453,17 @@ public class HelperUtils {
       errors.add(ErrorCodes.NON_ZERO_LOCATION_PHYSICAL_QTY);
     }
 
-    // The quantity of the electronic resources in the locations must be specified
+    // The quantity of the electronic resources in all locations must be specified
     if (locations.stream().anyMatch(location -> defaultIfNull(location.getQuantityElectronic(), 0) == 0)) {
       errors.add(ErrorCodes.ZERO_LOCATION_ELECTRONIC_QTY);
     }
 
     // The total quantity of the electronic resources of all locations must match specified in the cost
-    if (getElectronicQuantity(locations) > costElectronicQuantity) {
-      errors.add(ErrorCodes.ELECTRONIC_LOC_QTY_EXCEEDS_COST);
-    }
-    if (getElectronicQuantity(locations) < costElectronicQuantity) {
-      errors.add(ErrorCodes.ELECTRONIC_COST_QTY_EXCEEDS_LOC);
+    if (getElectronicQuantity(locations) != costElectronicQuantity) {
+      errors.add(ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH);
     }
 
-    validateCostPrices(compPOL.getCost(), ELECTRONIC_RESOURCE, errors);
+    errors.addAll(validateCostPrices(compPOL));
 
     return convertErrorCodesToErrors(compPOL, errors);
   }
