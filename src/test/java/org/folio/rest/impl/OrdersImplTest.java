@@ -30,6 +30,9 @@ import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
 import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
+import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_ELECTRONIC_QTY;
+import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_PHYSICAL_QTY;
+import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
@@ -361,7 +364,7 @@ public class OrdersImplTest {
       assertThat(polNumber, notNullValue());
       assertThat(polNumber, startsWith(poNumber));
       assertThat(line.getInstanceId(), nullValue());
-      line.getLocations().forEach(location -> verifyLocationQuantity(location, line));
+      line.getLocations().forEach(location -> verifyLocationQuantity(location, line.getOrderFormat()));
     }
 
     // see MODORDERS-180 and MODORDERS-181
@@ -458,11 +461,11 @@ public class OrdersImplTest {
       location.setQuantityElectronic(1);
       location.setQuantityPhysical(1);
     });
-
+    firstPoLine.getLocations().add(new Location().withQuantityElectronic(0).withQuantityPhysical(0));
     final Errors response = verifyPut(COMPOSITE_ORDERS_PATH + "/" + reqData.getId(), JsonObject.mapFrom(reqData),
       APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(4));
+    assertThat(response.getErrors(), hasSize(5));
     Set<String> errorCodes = response.getErrors()
                                      .stream()
                                      .map(Error::getCode)
@@ -471,7 +474,8 @@ public class OrdersImplTest {
     assertThat(errorCodes, containsInAnyOrder(ZERO_COST_ELECTRONIC_QTY.getCode(),
                                               ZERO_COST_PHYSICAL_QTY.getCode(),
                                               ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
-                                              PHYSICAL_COST_LOC_QTY_MISMATCH.getCode()));
+                                              PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
+                                              ZERO_LOCATION_QTY.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -536,7 +540,7 @@ public class OrdersImplTest {
       assertNotNull(polNumber);
       assertTrue(polNumber.startsWith(poNumber));
       assertNotNull(line.getInstanceId());
-      line.getLocations().forEach(location -> verifyLocationQuantity(location, line));
+      line.getLocations().forEach(location -> verifyLocationQuantity(location, line.getOrderFormat()));
     }
 
     int polCount = resp.getCompositePoLines().size();
@@ -940,9 +944,7 @@ public class OrdersImplTest {
     assertThat(resp.getTotalItems(), equalTo(expectedQuantity));
     assertThat(resp.getTotalEstimatedPrice(), equalTo(expectedPrice));
 
-    resp.getCompositePoLines().forEach(line -> {
-      assertThat(line.getCost().getPoLineEstimatedPrice(), greaterThan(0d));
-    });
+    resp.getCompositePoLines().forEach(line -> assertThat(line.getCost().getPoLineEstimatedPrice(), greaterThan(0d)));
   }
 
   @Test
@@ -1580,8 +1582,6 @@ public class OrdersImplTest {
 
     // All existing and created items
     List<JsonObject> items = joinExistingAndNewItems();
-    // All created pieces
-    List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
 
     // Verify that not all expected items created
     assertThat(items.size(), lessThan(calculateInventoryItemsQuantity(reqData.getCompositePoLines().get(0))));
@@ -2302,7 +2302,7 @@ public class OrdersImplTest {
     // See MODORDERS-180
     assertThat(response.getCost().getPoLineEstimatedPrice(), equalTo(49.98d));
     Location location = response.getLocations().get(0);
-    assertThat(location.getQuantity(), equalTo(location.getQuantityPhysical()));
+    verifyLocationQuantity(location, response.getOrderFormat());
   }
 
   @Test
@@ -2316,17 +2316,21 @@ public class OrdersImplTest {
     reqData.getCost().setQuantityPhysical(0);
     reqData.getCost().setQuantityElectronic(1);
     reqData.getLocations().get(0).setQuantityPhysical(1);
+    reqData.getLocations().add(new Location().withQuantityPhysical(0));
 
     final Errors response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(3));
+    assertThat(response.getErrors(), hasSize(4));
     List<String> errorCodes = response.getErrors()
                                       .stream()
                                       .map(Error::getCode)
                                       .collect(Collectors.toList());
 
-    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode(), NON_ZERO_COST_ELECTRONIC_QTY.getCode(), PHYSICAL_COST_LOC_QTY_MISMATCH.getCode()));
+    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode(),
+                                              NON_ZERO_COST_ELECTRONIC_QTY.getCode(),
+                                              PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
+                                              ZERO_LOCATION_PHYSICAL_QTY.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -2345,17 +2349,20 @@ public class OrdersImplTest {
     reqData.getCost().setQuantityPhysical(0);
     reqData.getCost().setQuantityElectronic(4);
     reqData.getLocations().get(0).setQuantityElectronic(3);
+    reqData.getLocations().add(new Location().withQuantityElectronic(0));
 
     final Errors response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(2));
+    assertThat(response.getErrors(), hasSize(3));
     List<String> errorCodes = response.getErrors()
       .stream()
       .map(Error::getCode)
       .collect(Collectors.toList());
 
-    assertThat(errorCodes, containsInAnyOrder(ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(), NON_ZERO_LOCATION_PHYSICAL_QTY.getCode()));
+    assertThat(errorCodes, containsInAnyOrder(ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
+                                              NON_ZERO_LOCATION_PHYSICAL_QTY.getCode(),
+                                              ZERO_LOCATION_ELECTRONIC_QTY.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -2408,7 +2415,7 @@ public class OrdersImplTest {
     final Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData),
       APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(7));
+    assertThat(response.getErrors(), hasSize(8));
     List<String> errorCodes = response.getErrors()
                                       .stream()
                                       .map(Error::getCode)
@@ -2544,7 +2551,7 @@ public class OrdersImplTest {
     PoLine poLine = column.get(PO_LINES).get(0).mapTo(PoLine.class);
     assertThat(poLine.getCost().getPoLineEstimatedPrice(), equalTo(expectedTotalPoLine));
     Location location = poLine.getLocations().get(0);
-    assertEquals(location.getQuantity(), location.getQuantityPhysical());
+    assertEquals(location.getQuantityPhysical(), location.getQuantity());
   }
 
   @Test
@@ -3620,8 +3627,8 @@ public class OrdersImplTest {
   }
 
 
-  private void verifyLocationQuantity(Location location, CompositePoLine compPoLine) {
-    switch (compPoLine.getOrderFormat()) {
+  private void verifyLocationQuantity(Location location, CompositePoLine.OrderFormat orderFormat) {
+    switch (orderFormat) {
       case P_E_MIX:
         assertEquals(location.getQuantityPhysical() + location.getQuantityElectronic(), location.getQuantity().intValue());
         break;

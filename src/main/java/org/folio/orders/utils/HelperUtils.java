@@ -5,7 +5,6 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
@@ -345,7 +344,7 @@ public class HelperUtils {
     // The total quantity of the physical and electronic resources of all locations must exceed 0
     List<Location> locations = compPOL.getLocations();
     if (locations.stream().anyMatch(location -> calculateTotalLocationQuantity(location) == 0)) {
-      errors.add(ZERO_LOCATION_QTY);
+      errors.add(ErrorCodes.ZERO_LOCATION_QTY);
     }
 
     errors.addAll(validateCostPrices(compPOL));
@@ -906,5 +905,4 @@ public class HelperUtils {
   public static boolean isItemsUpdateRequired(CompositePoLine compPOL) {
     return isItemsUpdateRequiredForPhysical(compPOL) || isItemsUpdateRequiredForEresource(compPOL);
   }
-
 }

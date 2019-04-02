@@ -368,7 +368,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   /**
-   * See MODORDERS-189 for more details.
+   * Update locations quantity depending on orderFormat
    * @param compPOL composite PO Line
    */
   private void updateLocationsQuantity(CompositePoLine compPOL) {
