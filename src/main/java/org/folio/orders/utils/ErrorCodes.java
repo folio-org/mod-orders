@@ -18,6 +18,7 @@ public enum ErrorCodes {
   PIECE_NOT_FOUND("pieceNotFound", "The piece record is not found"),
   PIECE_NOT_RETRIEVED("pieceNotRetrieved", "The piece record is not retrieved"),
   PIECE_UPDATE_FAILED("pieceUpdateFailed", "The piece record failed to be updated"),
+  ITEM_CREATION_FAILED("itemCreationFailed", "The item record failed to be created"),
   ITEM_UPDATE_FAILED("itemUpdateFailed", "The item record failed to be updated"),
   ITEM_NOT_FOUND("itemNotFound", "The item record is not found"),
   ITEM_NOT_RETRIEVED("itemNotRetrieved", "The item record is not retrieved"),

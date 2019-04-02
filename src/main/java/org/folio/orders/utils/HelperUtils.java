@@ -513,95 +513,78 @@ public class HelperUtils {
    * @see #calculateInventoryItemsQuantity(CompositePoLine)
    */
   public static int calculateInventoryItemsQuantity(CompositePoLine compPOL, List<Location> locations) {
-    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) return 0;
+    return IntStreamEx.of(calculatePiecesQuantity(compPOL, locations, true).values()).sum();
+  }
+
+  /**
+   * Calculates pieces quantity for list of locations and return map where piece format is a key and corresponding quantity of pieces as value.
+   *
+   * @param compPOL composite PO Line
+   * @param locations list of locations to calculate quantity for
+   * @return quantity of pieces per piece format either required Inventory item or not (depending on {@code withItem} parameter) for PO Line
+   */
+  public static Map<Piece.Format, Integer> calculatePiecesQuantity(CompositePoLine compPOL, List<Location> locations, boolean withItem) {
+    // Piece records are not going to be created for PO Line which is going to be checked-in
+    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
+      return Collections.emptyMap();
+    }
+
+    EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
     switch (compPOL.getOrderFormat()) {
       case P_E_MIX:
-        int quantity = 0;
-        quantity += isItemsUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
-        quantity += isItemsUpdateRequiredForEresource(compPOL) ? getElectronicQuantity(locations) : 0;
-        return quantity;
+        if (withItem == isItemsUpdateRequiredForPhysical(compPOL)) {
+          quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
+        }
+        if (withItem == isItemsUpdateRequiredForEresource(compPOL)) {
+          quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
+        }
+        return quantities;
       case PHYSICAL_RESOURCE:
-        return isItemsUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
+        int pQty = (withItem == isItemsUpdateRequiredForPhysical(compPOL)) ? calculatePiecesQuantity(Piece.Format.PHYSICAL, locations) : 0;
+        quantities.put(Piece.Format.PHYSICAL, pQty);
+        return quantities;
       case ELECTRONIC_RESOURCE:
-        return isItemsUpdateRequiredForEresource(compPOL) ? getElectronicQuantity(locations) : 0;
+        int eQty = (withItem == isItemsUpdateRequiredForEresource(compPOL)) ? calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations) : 0;
+        quantities.put(Piece.Format.ELECTRONIC, eQty);
+        return quantities;
       case OTHER:
-        return isItemsUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
+        int oQty = (withItem == isItemsUpdateRequiredForPhysical(compPOL)) ? calculatePiecesQuantity(Piece.Format.OTHER, locations) : 0;
+        quantities.put(Piece.Format.OTHER, oQty);
+        return quantities;
+      default:
+        return Collections.emptyMap();
+    }
+  }
+
+  /**
+   * Calculates pieces quantity for specified locations based on piece format.
+   *
+   * @param format piece format
+   * @param locations list of locations to calculate quantity for
+   * @return quantity of items expected in the inventory for PO Line
+   */
+  public static int calculatePiecesQuantity(Piece.Format format, List<Location> locations) {
+    switch (format) {
+      case ELECTRONIC:
+        return getElectronicQuantity(locations);
+      case PHYSICAL:
+      case OTHER:
+        return getPhysicalQuantity(locations);
       default:
         return 0;
     }
   }
 
   /**
-   * Calculates total items quantity for all locations grouped By Material Type.
-   * The quantity is based on Order Format (please see MODORDERS-117):<br/>
-   * If format equals Physical the associated quantities will result in item
-   * records<br/>
-   * If format equals Other the associated quantities will result in item
-   * records<br/>
-   * If format = Electronic and CreateInventory = Instance,Holding,Item, the
-   * associated electronic quantities will result in item records being created
-   * in inventory<br/>
+   * Calculates quantity of pieces for specified locations which do not require item records in Inventory.
    *
-   * @param compPOL
-   *          composite PO Line
-   * @return quantity of items per Material expected in the inventory for PO Line
+   * @param compPOL composite PO Line
+   * @param locations list of locations to calculate quantity for
+   * @return quantity of pieces without items in the inventory for PO Line
+   * @see #calculatePiecesQuantity(CompositePoLine, List, boolean)
    */
-  public static Map<String, Integer> calculateInventoryItemsQuantityByMaterial(CompositePoLine compPOL) {
-    return calculateInventoryItemsQuantityByMaterial(compPOL, compPOL.getLocations());
-  }
-
-  /**
-   * Calculates item quantity per material type for specified locations
-   *
-   * @param compPOL
-   *          composite PO Line
-   * @param locations
-   *          list of locations to calculate quantity for
-   * @return quantity of items per MaterialType expected in the inventory for PO Line
-   * @see #calculateInventoryItemsQuantityByMaterial(CompositePoLine)
-   */
-  public static Map<String, Integer> calculateInventoryItemsQuantityByMaterial(CompositePoLine compPOL,
-      List<Location> locations) {
-    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems())
-      return Collections.emptyMap();
-
-    Map<String, Integer> quantityByMaterial = new HashMap<>();
-    int eresourceQuantity = isItemsUpdateRequiredForEresource(compPOL) ? getElectronicQuantity(locations) : 0;
-    int physicalQuantity = isItemsUpdateRequiredForPhysical(compPOL) ? getPhysicalQuantity(locations) : 0;
-
-    switch (compPOL.getOrderFormat()) {
-    case P_E_MIX:
-      quantityByMaterial.put(compPOL.getPhysical().getMaterialType(), physicalQuantity);
-      quantityByMaterial.put(compPOL.getEresource().getMaterialType(), eresourceQuantity);
-      return quantityByMaterial;
-    case PHYSICAL_RESOURCE:
-    case OTHER:
-      quantityByMaterial.put(compPOL.getPhysical().getMaterialType(), physicalQuantity);
-      return quantityByMaterial;
-    case ELECTRONIC_RESOURCE:
-      quantityByMaterial.put(compPOL.getEresource().getMaterialType(), eresourceQuantity);
-      return quantityByMaterial;
-    default:
-      return Collections.emptyMap();
-    }
-  }
-
   public static int calculateExpectedQuantityOfPiecesWithoutItemCreation(CompositePoLine compPOL, List<Location> locations) {
-    switch (compPOL.getOrderFormat()) {
-      case P_E_MIX:
-        int quantity = 0;
-        quantity += isItemsUpdateRequiredForPhysical(compPOL) ? 0 : getPhysicalQuantity(locations);
-        quantity += isItemsUpdateRequiredForEresource(compPOL) ? 0: getElectronicQuantity(locations);
-        return quantity;
-      case ELECTRONIC_RESOURCE:
-        return isItemsUpdateRequiredForEresource(compPOL) ? 0 : getElectronicQuantity(locations);
-      case OTHER:
-        return isItemsUpdateRequiredForPhysical(compPOL) ? 0 : getPhysicalQuantity(locations);
-      case PHYSICAL_RESOURCE:
-        return isItemsUpdateRequiredForPhysical(compPOL) ? 0 : getPhysicalQuantity(locations);
-      default:
-        return 0;
-    }
+    return IntStreamEx.of(calculatePiecesQuantity(compPOL, locations, false).values()).sum();
   }
 
   /**
