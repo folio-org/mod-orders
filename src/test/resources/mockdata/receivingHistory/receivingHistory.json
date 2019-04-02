@@ -10,15 +10,31 @@
         "dateOrdered": "2018-09-09T00:00:00.000",
         "itemId": "1c92433e-916d-452e-ac76-5268d0ec3f66",
         "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
+        "pieceFormat": "Physical",
         "poLineId": "c1498090-538a-4470-9525-27e4e0c74b07",
         "poLineNumber": "268758-03",
         "poLineReceiptStatus": "Partially Received",
         "purchaseOrderId": "0804ddec-6545-404a-b54d-a693f505681d",
-        "receivedDate": "2018-10-09T00:00:00.000Z",
         "receivingNote": "ASD FGH ABCDEFGHIJKLMNOPQ",
         "receivingStatus": "Expected",
         "supplement": true,
         "title": "Kayak Fishing in the Northern Gulf Coast"
+      },
+      {
+        "id": "2b9fc1d9-2a8a-48fa-9192-44c97964854c",
+        "checkin": false,
+        "instanceId": "e263278e-a464-4b1b-bba3-675074925a25",
+        "dateOrdered": "2018-09-09T00:00:00.000",
+        "itemId": "ed280cce-4354-4f01-a195-5d50189d6440",
+        "locationId": "b241764c-1466-4e1d-a028-1a3684a5da87",
+        "pieceFormat": "Electronic",
+        "poLineId": "ce1813c0-bdf2-4ab9-9e16-6fd497b825e7",
+        "poLineNumber": "12345678-1",
+        "poLineReceiptStatus": "Fully Received",
+        "purchaseOrderId": "6eee8eb9-db1a-46e2-a8ad-780f19974efa",
+        "receivedDate": "2018-10-09T00:00:00.000Z",
+        "receivingStatus": "Received",
+        "title": "Harry Potter and the Sorcerer's Stone"
       }
     ],
   "totalRecords": 1
