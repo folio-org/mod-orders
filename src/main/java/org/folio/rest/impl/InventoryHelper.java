@@ -99,7 +99,7 @@ public class InventoryHelper extends AbstractHelper {
    * @param compPOL   PO line to retrieve/create Item Records for. At this step PO Line must contain instance Id
    * @return future with list of pieces with item and location id's
    */
- public CompletableFuture<List<Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL) {
+  public CompletableFuture<List<Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL) {
     List<CompletableFuture<List<Piece>>> itemsPerHolding = new ArrayList<>();
     boolean isItemsUpdateRequired = isItemsUpdateRequired(compPOL);
 
@@ -157,7 +157,7 @@ public class InventoryHelper extends AbstractHelper {
 
     return handlePutRequest(endpoint, itemRecord, httpClient, ctx, okapiHeaders, logger);
   }
-
+  
   public CompletableFuture<Void> checkinItem(JsonObject itemRecord, CheckInPiece checkinPiece) {
     String endpoint = String.format(UPDATE_ITEM_ENDPOINT, itemRecord.getString(ID), lang);
 
@@ -178,7 +178,7 @@ public class InventoryHelper extends AbstractHelper {
   public boolean isOnOrderItemStatus(ReceivedItem receivedItem) {
     return ITEM_STATUS_ON_ORDER.equalsIgnoreCase(receivedItem.getItemStatus());
   }
-
+  
   /**
    * Checks if the {@link ReceivedItem} has item status as "On order"
    * @param checkinPiece details specified by user upon check-in flow
@@ -210,7 +210,7 @@ public class InventoryHelper extends AbstractHelper {
     return createRecordInStorage(holdingsRecJson, String.format(HOLDINGS_CREATE_ENDPOINT, lang));
   }
 
- /**
+  /**
    * Handles Inventory items for passed list of locations. Items are either retrieved from Inventory or new ones are created
    * if no corresponding item records exist yet.
    * Returns list of {@link Piece} records with populated item id (and other info) corresponding to given PO line.
