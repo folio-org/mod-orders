@@ -132,7 +132,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     compPoLine.setId(UUID.randomUUID().toString());
     compPoLine.setPurchaseOrderId(compOrder.getId());
     updateEstimatedPrice(compPoLine);
-    updateLocationsQuantity(compPoLine);
+    updateLocationsQuantityBasedOnOrderFormat(compPoLine);
 
     JsonObject line = mapFrom(compPoLine);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
@@ -226,7 +226,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
     // The estimated price should be always recalculated
     updateEstimatedPrice(compOrderLine);
-    updateLocationsQuantity(compOrderLine);
+    updateLocationsQuantityBasedOnOrderFormat(compOrderLine);
 
     setTenantDefaultCreateInventoryValues(compOrderLine)
       .thenCompose(v -> updatePoLineSubObjects(compOrderLine, lineFromStorage))
@@ -371,7 +371,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * Update locations quantity depending on orderFormat
    * @param compPOL composite PO Line
    */
-  private void updateLocationsQuantity(CompositePoLine compPOL) {
+  private void updateLocationsQuantityBasedOnOrderFormat(CompositePoLine compPOL) {
     List<Location> locations = compPOL.getLocations();
     switch (compPOL.getOrderFormat()) {
       case P_E_MIX:
