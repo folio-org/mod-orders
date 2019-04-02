@@ -18,10 +18,7 @@
       "module": "ORDERS",
       "configName": "createInventory",
       "enabled": true,
-      "value": {
-        "physical" : "Instance, Holding, Item",
-        "eresource" : "Instance, Holding"
-      },
+      "value": "{\"eresource\":\"Instance, Holding, Item\",\"physical\":\"Instance, Holding, Item\",\"other\":\"Instance, Holding, Item\"}",
       "metadata": {
         "createdDate": "2018-12-12T08:14:32.743+0000",
         "createdByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c",
