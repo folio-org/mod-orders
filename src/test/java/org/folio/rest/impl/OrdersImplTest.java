@@ -33,6 +33,8 @@ import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
+import static org.folio.orders.utils.HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation;
+import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
@@ -104,7 +106,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
@@ -458,7 +459,7 @@ public class OrdersImplTest {
       location.setQuantityPhysical(1);
     });
 
-    final Errors response = verifyPut(COMPOSITE_ORDERS_PATH + "/" + reqData.getId(), JsonObject.mapFrom(reqData).encode(),
+    final Errors response = verifyPut(COMPOSITE_ORDERS_PATH + "/" + reqData.getId(), JsonObject.mapFrom(reqData),
       APPLICATION_JSON, 422).as(Errors.class);
 
     assertThat(response.getErrors(), hasSize(4));
@@ -648,29 +649,30 @@ public class OrdersImplTest {
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
 
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
-    // Make sure that mock PO has 1 po lines
+    // Make sure that mock PO has 1 po line
     assertEquals(1, reqData.getCompositePoLines().size());
 
     CompositePoLine compositePoLine = reqData.getCompositePoLines().get(0);
 
+    compositePoLine.setId(PO_LINE_ID_FOR_SUCCESS_CASE);
     compositePoLine.getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
     compositePoLine.getCost().setQuantityPhysical(3);
     compositePoLine.getCost().setQuantityElectronic(2);
     compositePoLine.setOrderFormat(OrderFormat.P_E_MIX);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
     List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
     List<JsonObject> createdItems = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.POST);
-    int piecesSize = createdPieces != null ? createdPieces.size() : 0;
-    int itemSize = createdItems != null ? createdItems.size() : 0;
-    logger.debug("------------------- piecesSize, itemSize --------------------\n" + piecesSize + " " + itemSize);
+    assertThat(createdItems, notNullValue());
+    assertThat(createdPieces, notNullValue());
+
+    int piecesSize = createdPieces.size();
+    logger.debug("------------------- piecesSize, itemSize --------------------\n" + piecesSize + " " + createdItems.size());
     // Verify total number of pieces created should be equal to total quantity
     assertEquals(calculateTotalQuantity(compositePoLine), piecesSize);
 
-    if (createdItems != null) {
-      verifyPiecesCreated(createdItems, reqData.getCompositePoLines(), createdPieces);
-    }
+    verifyPiecesCreated(createdItems, reqData.getCompositePoLines(), createdPieces);
   }
 
   @Test
@@ -684,7 +686,7 @@ public class OrdersImplTest {
 
     reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
     List<JsonObject> items = joinExistingAndNewItems();
     List<JsonObject> createdPieces = MockServer.serverRqRs.get(PIECES, HttpMethod.POST);
     verifyPiecesQuantityForSuccessCase(reqData, createdPieces);
@@ -1114,7 +1116,7 @@ public class OrdersImplTest {
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_PO_LINES_JSON));
     JsonObject storageData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id);
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData.toString(), "", 204);
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData, "", 204);
 
     storageData.put("workflowStatus", "Open");
     reqData.put("workflowStatus", "Open");
@@ -1152,8 +1154,7 @@ public class OrdersImplTest {
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
 
     String url = COMPOSITE_ORDERS_PATH + "/" + reqData.getId();
-    String body = JsonObject.mapFrom(reqData).encode();
-    verifyPut(url, body, "", 204);
+    verifyPut(url, JsonObject.mapFrom(reqData), "", 204);
 
     List<JsonObject> orderRetrievals = MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET);
     assertNotNull(orderRetrievals);
@@ -1181,7 +1182,7 @@ public class OrdersImplTest {
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON));
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData.toString(), APPLICATION_JSON, 422);
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData, APPLICATION_JSON, 422);
   }
 
   @Test
@@ -1196,7 +1197,7 @@ public class OrdersImplTest {
     reqData.put(PO_NUMBER, newPoNumber);
     Pattern poLinePattern = Pattern.compile(String.format("(%s)(-[0-9]{1,3})", newPoNumber));
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData.toString(), "", 204);
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData, "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).size(), storData.getJsonArray(COMPOSITE_PO_LINES).size());
@@ -1218,7 +1219,7 @@ public class OrdersImplTest {
     reqData.put(PO_NUMBER, newPoNumber);
     Pattern poLinePattern = Pattern.compile(String.format("(%s)(-[0-9]{1,3})", newPoNumber));
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData.toString(), "", 204);
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData, "", 204);
     verifyPoWithPoLinesUpdate(reqData, storageData);
     MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).forEach(poLine -> {
       Matcher matcher = poLinePattern.matcher(poLine.getString(PO_LINE_NUMBER));
@@ -1235,7 +1236,7 @@ public class OrdersImplTest {
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_PO_LINES_JSON));
     reqData.remove(PO_NUMBER);
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData.toString(), APPLICATION_JSON, 422);
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData, APPLICATION_JSON, 422);
   }
 
   @Test
@@ -1246,9 +1247,8 @@ public class OrdersImplTest {
 
     JsonObject request = new JsonObject();
     request.put("poNumber", "1234");
-    String body= request.toString();
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, body, APPLICATION_JSON, 422);
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, request, APPLICATION_JSON, 422);
 
   }
 
@@ -1261,10 +1261,8 @@ public class OrdersImplTest {
 
     JsonObject request = new JsonObject();
     request.put("poNumber", EXISTING_PO_NUMBER);
-    String body= request.toString();
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, body, APPLICATION_JSON, 400);
-
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, request, APPLICATION_JSON, 400);
   }
 
   @Test
@@ -1336,7 +1334,7 @@ public class OrdersImplTest {
     reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
     reqData.getCompositePoLines().forEach(s -> s.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING));
 
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
     int polCount = reqData.getCompositePoLines().size();
 
@@ -1524,7 +1522,7 @@ public class OrdersImplTest {
     reqData.getCompositePoLines().get(1).setCheckinItems(true);
     reqData.getCompositePoLines().forEach(s -> s.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING));
 
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
     int polCount = reqData.getCompositePoLines().size();
     verifyInstanceLinksForUpdatedOrder(reqData);
@@ -1541,7 +1539,7 @@ public class OrdersImplTest {
     reqData.getCompositePoLines().clear();
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), "", 204);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value());
   }
 
@@ -1558,9 +1556,12 @@ public class OrdersImplTest {
   public void testUpdateOrderToOpenWithPartialItemsCreation() throws Exception {
     logger.info("=== Test Order update to Open status - Inventory items expected to be created partially ===");
 
+    // One item for each location will be found
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     // Emulate items creation issue
-    reqData.getCompositePoLines().get(0).getDetails().getMaterialTypes().set(0, ID_FOR_INTERNAL_SERVER_ERROR);
+    assertThat(reqData.getCompositePoLines().get(0).getLocations(), hasSize(3));
+    // Second location has 2 physical resources
+    reqData.getCompositePoLines().get(0).getLocations().get(1).setLocationId(ID_FOR_INTERNAL_SERVER_ERROR);
     // Let's have only one PO Line
     reqData.getCompositePoLines().remove(1);
     // Set status to Open
@@ -1572,7 +1573,7 @@ public class OrdersImplTest {
     // Assert that only one PO line presents
     assertEquals(1, polCount);
 
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), APPLICATION_JSON, 500);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), APPLICATION_JSON, 500);
 
     // Verify inventory GET and POST requests for instance, holding and item records
     verifyInventoryInteraction(false);
@@ -1704,39 +1705,75 @@ public class OrdersImplTest {
     }
   }
 
-  private void verifyPiecesCreated(List<JsonObject> inventoryItems, List<CompositePoLine> compositePoLines,
-      List<JsonObject> pieces) {
+  private void verifyPiecesCreated(List<JsonObject> inventoryItems, List<CompositePoLine> compositePoLines, List<JsonObject> pieceJsons) {
     // Collect all item id's
     List<String> itemIds = inventoryItems.stream()
                                     .map(item -> item.getString(ID))
                                     .collect(Collectors.toList());
-
-    // Verify quantity of created pieces
-    int expectedPiecesQuantity = 0;
-    for (CompositePoLine poLine : compositePoLines) {
-      if (poLine.getCheckinItems() != null && poLine.getCheckinItems()) continue;
-      expectedPiecesQuantity += HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation(poLine, poLine.getLocations());
-      expectedPiecesQuantity += calculateInventoryItemsQuantity(poLine, poLine.getLocations());
-    }
-    assertEquals(expectedPiecesQuantity, pieces.size());
-
-    List<String> locationIds = compositePoLines.stream()
-      .flatMap(compositePoLine -> compositePoLine.getLocations().stream())
-      .map(Location::getLocationId)
-      .distinct()
+    List<Piece> pieces = pieceJsons
+      .stream()
+      .map(pieceObj -> pieceObj.mapTo(Piece.class))
       .collect(Collectors.toList());
 
-    for (JsonObject pieceObj : pieces) {
-      // Make sure piece data corresponds to schema content
-      Piece piece = pieceObj.mapTo(Piece.class);
+    // Verify quantity of created pieces
+    int totalForAllPoLines = 0;
+    for (CompositePoLine poLine : compositePoLines) {
+      List<Location> locations = poLine.getLocations();
 
-      // Check if itemId in inventoryItems match itemId in piece record
-      assertThat(locationIds, hasItem(piece.getLocationId()));
-      if(piece.getItemId()!=null)
-        assertThat(itemIds, hasItem(piece.getItemId()));
-      assertThat(piece.getReceivingStatus(), equalTo(Piece.ReceivingStatus.EXPECTED));
-    }
+      // Prepare data first
+
+      // Calculated quantities
+      int expectedElQty = 0;
+      int expectedPhysQty = 0;
+      int expectedOthQty = 0;
+      if (poLine.getCheckinItems() == null || !poLine.getCheckinItems()) {
+        if (poLine.getOrderFormat() == OrderFormat.OTHER) {
+          expectedOthQty += calculatePiecesQuantity(Piece.Format.OTHER, locations);
+        } else {
+          expectedPhysQty += calculatePiecesQuantity(Piece.Format.PHYSICAL, locations);
         }
+        expectedElQty = calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations);
+      }
+
+      int expectedWithItemQty = calculateExpectedQuantityOfPiecesWithoutItemCreation(poLine, locations);
+      int expectedWithoutItemQty = calculateInventoryItemsQuantity(poLine, locations);
+
+      // Prepare pieces for PO Line
+      List<Piece> piecesByPoLine = pieces
+        .stream()
+        .filter(piece -> piece.getPoLineId().equals(poLine.getId()))
+        .collect(Collectors.toList());
+
+      // Get all PO Line's locations' ids
+      List<String> locationIds = locations
+        .stream()
+        .map(Location::getLocationId)
+        .distinct()
+        .collect(Collectors.toList());
+
+      // Make sure that quantities by piece type and by item presence are the same
+      assertThat(expectedPhysQty + expectedElQty + expectedOthQty, is(expectedWithItemQty + expectedWithoutItemQty));
+
+      int expectedTotal = expectedWithItemQty + expectedWithoutItemQty;
+      assertThat(piecesByPoLine, hasSize(expectedTotal));
+
+      // Verify each piece individually
+      piecesByPoLine.forEach(piece -> {
+        // Check if itemId in inventoryItems match itemId in piece record
+        assertThat(locationIds, hasItem(piece.getLocationId()));
+        assertThat(piece.getReceivingStatus(), equalTo(Piece.ReceivingStatus.EXPECTED));
+        if (piece.getItemId() != null) {
+          assertThat(itemIds, hasItem(piece.getItemId()));
+        }
+        assertThat(piece.getFormat(), notNullValue());
+      });
+
+      totalForAllPoLines += expectedTotal;
+    }
+
+    // Make sure that none of pieces missed
+    assertThat(pieceJsons, hasSize(totalForAllPoLines));
+  }
 
   private void verifyHoldingsCreated(List<JsonObject> holdings, CompositePoLine pol) {
     Map<String, List<Location>> groupedLocations = groupLocationsById(pol);
@@ -1806,11 +1843,8 @@ public class OrdersImplTest {
     CompositePurchaseOrder reqData = new JsonObject(getMockData(ORDER_FOR_FAILURE_CASE_MOCK_DATA_PATH)).mapTo(CompositePurchaseOrder.class);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
-    final Errors errors = verifyPut(
-      String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()),
-      JsonObject.mapFrom(reqData).toString(),
-      APPLICATION_JSON,
-      500)
+    final Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData),
+      APPLICATION_JSON, 500)
         .body()
           .as(Errors.class);
 
@@ -1839,15 +1873,15 @@ public class OrdersImplTest {
       assertTrue(calculateInventoryItemsQuantity(pol) > 0);
     }
 
-    // Set material type id to one which emulates item creation failure
-    reqData.getCompositePoLines().get(1).getDetails().getMaterialTypes().set(0, ID_FOR_INTERNAL_SERVER_ERROR);
+    // Set location ids to one which emulates item creation failure
+    reqData.getCompositePoLines().get(1).getLocations().forEach(location -> location.setLocationId(ID_FOR_INTERNAL_SERVER_ERROR));
 
     String path = String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId());
 
     /*==============  Assert result ==============*/
 
     // Server Error expected as a result because not all items created
-    verifyPut(path, JsonObject.mapFrom(reqData).toString(), APPLICATION_JSON, 500);
+    verifyPut(path, JsonObject.mapFrom(reqData), APPLICATION_JSON, 500);
 
     // Check that search of the existing instances and items was done for each PO line
     List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
@@ -1900,7 +1934,7 @@ public class OrdersImplTest {
     JsonObject reqData = getMockDraftOrder();
     String poNumber = reqData.getString(PO_NUMBER);
 
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_ID_WITHOUT_PO_LINES), reqData.toString(), "", 204);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_ID_WITHOUT_PO_LINES), reqData, "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     List<JsonObject> createdPoLines = MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST);
@@ -1917,7 +1951,7 @@ public class OrdersImplTest {
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITHOUT_PO_LINES));
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData.toString(), "", 204);
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData, "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     assertNull(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE));
@@ -1928,7 +1962,7 @@ public class OrdersImplTest {
     logger.info("=== Test Put Order By Id for 404 with Invalid Id or Order not found ===");
 
     JsonObject reqData = getMockAsJson(LISTED_PRINT_SERIAL_PATH);
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, "93f612a9-9a05-4eef-aac5-435be131454b"), reqData.encodePrettily(), APPLICATION_JSON, 404);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, "93f612a9-9a05-4eef-aac5-435be131454b"), reqData, APPLICATION_JSON, 404);
   }
 
   @Test
@@ -1939,7 +1973,7 @@ public class OrdersImplTest {
     reqData.setId(PO_ID);
 
     Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID_FOR_FAILURE_CASE),
-      JsonObject.mapFrom(reqData).encodePrettily(), APPLICATION_JSON, 422).as(Errors.class);
+      JsonObject.mapFrom(reqData), APPLICATION_JSON, 422).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(1));
     assertThat(errors.getErrors().get(0).getCode(), equalTo(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.getCode()));
@@ -1953,7 +1987,7 @@ public class OrdersImplTest {
     reqData.getCompositePoLines().forEach(line -> line.setPurchaseOrderId(PO_ID_FOR_FAILURE_CASE));
 
     Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID),
-      JsonObject.mapFrom(reqData).encodePrettily(), APPLICATION_JSON, 422).as(Errors.class);
+      JsonObject.mapFrom(reqData), APPLICATION_JSON, 422).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(reqData.getCompositePoLines().size()));
     errors.getErrors().forEach(error -> {
@@ -1982,7 +2016,7 @@ public class OrdersImplTest {
     // Delete PO Line id emulating case when new PO Line is being added
     reqData.getCompositePoLines().forEach(line -> line.setId(null));
 
-    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(), APPLICATION_JSON, 422).as(Errors.class);
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), APPLICATION_JSON, 422).as(Errors.class);
     validatePoLineCreationErrorForNonPendingOrder(errorCode, errors);
   }
 
@@ -2371,7 +2405,7 @@ public class OrdersImplTest {
     cost.setDiscount(100.1d);
     reqData.getLocations().get(0).setQuantityElectronic(1);
 
-    final Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encodePrettily(),
+    final Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData),
       APPLICATION_JSON, 422).as(Errors.class);
 
     assertThat(response.getErrors(), hasSize(7));
@@ -2489,7 +2523,7 @@ public class OrdersImplTest {
 
     String url = String.format(LINE_BY_ID_PATH, lineId);
 
-    final Response resp = verifyPut(url, JsonObject.mapFrom(body).encodePrettily(), "", 204);
+    final Response resp = verifyPut(url, JsonObject.mapFrom(body), "", 204);
 
     assertTrue(StringUtils.isEmpty(resp.getBody().asString()));
 
@@ -3300,15 +3334,15 @@ public class OrdersImplTest {
     // Positive cases
     reqData.setVendor(ACTIVE_VENDOR_ID);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), EMPTY, 204);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), EMPTY, 204);
 
     reqData.setVendor(INACTIVE_VENDOR_ID);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), EMPTY, 204);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), EMPTY, 204);
 
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     reqData.setVendor(ACTIVE_VENDOR_ID);
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), EMPTY, 204);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), EMPTY, 204);
 
     // Negative cases
     // Non-existed vendor
@@ -3317,7 +3351,7 @@ public class OrdersImplTest {
     reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
     reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
     Errors nonExistedVendorErrors
-      = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), EMPTY, 422).as(Errors.class);
+      = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), EMPTY, 422).as(Errors.class);
     checkExpectedError(NON_EXIST_VENDOR_ID, nonExistedVendorErrors, 0, ORDER_VENDOR_NOT_FOUND);
 
     // Inactive access provider
@@ -3326,7 +3360,7 @@ public class OrdersImplTest {
     reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
     reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
     Errors inactiveAccessProviderErrors
-      = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), EMPTY, 422).as(Errors.class);
+      = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), EMPTY, 422).as(Errors.class);
     checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, inactiveAccessProviderErrors, 0, POL_ACCESS_PROVIDER_IS_INACTIVE);
 
     // Inactive vendor and inactive access providers
@@ -3335,7 +3369,7 @@ public class OrdersImplTest {
     reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
     reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_B);
     Errors allInactiveErrors
-      = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).toString(), EMPTY, 422).as(Errors.class);
+      = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), EMPTY, 422).as(Errors.class);
     checkExpectedError(INACTIVE_VENDOR_ID, allInactiveErrors, 0, ORDER_VENDOR_IS_INACTIVE);
     checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, allInactiveErrors, 1, POL_ACCESS_PROVIDER_IS_INACTIVE);
     checkExpectedError(INACTIVE_ACCESS_PROVIDER_B, allInactiveErrors, 2, POL_ACCESS_PROVIDER_IS_INACTIVE);
@@ -3355,7 +3389,7 @@ public class OrdersImplTest {
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
     Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()),
-      JsonObject.mapFrom(reqData).toString(), EMPTY, 422).as(Errors.class);
+      JsonObject.mapFrom(reqData), EMPTY, 422).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(2));
 
@@ -3565,6 +3599,10 @@ public class OrdersImplTest {
     return new JsonObject();
   }
 
+  private Response verifyPut(String url, JsonObject body, String expectedContentType, int expectedCode) {
+    return verifyPut(url, body.encodePrettily(), expectedContentType, expectedCode);
+  }
+
   private Response verifyPut(String url, String body, String expectedContentType, int expectedCode) {
     return RestAssured
       .with()
@@ -3730,10 +3768,15 @@ public class OrdersImplTest {
       JsonObject body = ctx.getBodyAsJson();
       addServerRqRsData(HttpMethod.POST, HOLDINGS_RECORD, body);
 
+      // the case when item creation is expected to fail for particular holding
+      String id = body.getString(HOLDING_PERMANENT_LOCATION_ID).equals(ID_FOR_INTERNAL_SERVER_ERROR)
+        ? ID_FOR_INTERNAL_SERVER_ERROR
+        : UUID.randomUUID().toString();
+
       ctx.response()
         .setStatusCode(201)
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .putHeader(HttpHeaders.LOCATION, ctx.request().absoluteURI() + "/" + UUID.randomUUID().toString())
+        .putHeader(HttpHeaders.LOCATION, ctx.request().absoluteURI() + "/" + id)
         .end();
     }
 
