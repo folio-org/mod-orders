@@ -57,6 +57,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private static final String CREATE_INVENTORY = "createInventory";
   private static final String ERESOURCE = "eresource";
   private static final String PHYSICAL = "physical";
+  private static final String OTHER = "other";
 
   private final InventoryHelper inventoryHelper;
 
@@ -151,8 +152,8 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     if (isCreateInventoryNull(compPOL)) {
       getTenantConfiguration()
         .thenApply(config -> {
-          if (!config.isEmpty() && !config.getJsonObject(CREATE_INVENTORY).isEmpty()) {
-            return future.complete(config.getJsonObject(CREATE_INVENTORY));
+          if (!config.isEmpty() && !config.getString(CREATE_INVENTORY).isEmpty()) {
+            return future.complete(new JsonObject(config.getString(CREATE_INVENTORY)));
           } else {
             return completedFuture(new JsonObject());
           }
@@ -171,48 +172,76 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     }
     switch (compPOL.getOrderFormat()) {
     case P_E_MIX:
-      return (compPOL.getEresource() == null)
-          || (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() == null)
-          || (compPOL.getPhysical() == null)
-          || (compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() == null);
+      return isEresourceInventoryNotPresent(compPOL)
+          || isPhysicalInventoryNotPresent(compPOL);
     case ELECTRONIC_RESOURCE:
-      return Optional.ofNullable(compPOL.getEresource())
-        .map(eresource -> eresource.getCreateInventory() == null)
-        .orElse(true);
+      return isEresourceInventoryNotPresent(compPOL);
     case OTHER:
     case PHYSICAL_RESOURCE:
-      return Optional.ofNullable(compPOL.getPhysical())
-        .map(physical -> physical.getCreateInventory() == null)
-        .orElse(true);
+      return isPhysicalInventoryNotPresent(compPOL);
     default:
       return false;
     }
   }
 
+  private static Boolean isPhysicalInventoryNotPresent(CompositePoLine compPOL) {
+    return Optional.ofNullable(compPOL.getPhysical())
+      .map(physical -> physical.getCreateInventory() == null)
+      .orElse(true);
+  }
+
+  private static Boolean isEresourceInventoryNotPresent(CompositePoLine compPOL) {
+    return Optional.ofNullable(compPOL.getEresource())
+      .map(eresource -> eresource.getCreateInventory() == null)
+      .orElse(true);
+  }
+
+  /**
+   * get the tenant configuration for the orderFormat, if not present assign the defaults
+   * Default values:
+   * Physical : CreateInventory.INSTANCE_HOLDING_ITEM
+   * Eresource: CreateInventory.INSTANCE_HOLDING
+   *
+   * @param compPOL
+   * @param jsonConfig
+   */
   private void updateCreateInventory(CompositePoLine compPOL, JsonObject jsonConfig) {
     // try to set createInventory by values from mod-configuration. If empty -
     // set default hardcoded values
     if (compPOL.getOrderFormat().equals(OrderFormat.ELECTRONIC_RESOURCE)
         || compPOL.getOrderFormat().equals(OrderFormat.P_E_MIX)) {
       String tenantDefault = jsonConfig.getString(ERESOURCE);
-      Eresource.CreateInventory eresourceDefaultValue = StringUtils.isEmpty(tenantDefault)
-          ? Eresource.CreateInventory.INSTANCE_HOLDING
-          : Eresource.CreateInventory.fromValue(tenantDefault);
+      Eresource.CreateInventory eresourceDefaultValue = getEresourceInventoryDefault(tenantDefault);
       if (compPOL.getEresource() == null) {
         compPOL.setEresource(new Eresource());
       }
-      compPOL.getEresource().setCreateInventory(eresourceDefaultValue);
+      if(isEresourceInventoryNotPresent(compPOL)) {
+        compPOL.getEresource().setCreateInventory(eresourceDefaultValue);
+      }
     }
     if (!compPOL.getOrderFormat().equals(OrderFormat.ELECTRONIC_RESOURCE)) {
-      String tenantDefault = jsonConfig.getString(PHYSICAL);
-      Physical.CreateInventory createInventoryDefaultValue = StringUtils.isEmpty(tenantDefault)
-          ? Physical.CreateInventory.INSTANCE_HOLDING_ITEM
-          : Physical.CreateInventory.fromValue(tenantDefault);
+      String tenantDefault = compPOL.getOrderFormat().equals(OrderFormat.OTHER) ? jsonConfig.getString(OTHER)
+          : jsonConfig.getString(PHYSICAL);
+      Physical.CreateInventory createInventoryDefaultValue = getPhysicalInventoryDefault(tenantDefault);
       if (compPOL.getPhysical() == null) {
         compPOL.setPhysical(new Physical());
       }
-      compPOL.getPhysical().setCreateInventory(createInventoryDefaultValue);
+      if (isPhysicalInventoryNotPresent(compPOL)) {
+        compPOL.getPhysical().setCreateInventory(createInventoryDefaultValue);
+      }
     }
+  }
+
+  private Physical.CreateInventory getPhysicalInventoryDefault(String tenantDefault) {
+   return StringUtils.isEmpty(tenantDefault)
+        ? Physical.CreateInventory.INSTANCE_HOLDING_ITEM
+        : Physical.CreateInventory.fromValue(tenantDefault);
+  }
+
+  private Eresource.CreateInventory getEresourceInventoryDefault(String tenantDefault) {
+    return StringUtils.isEmpty(tenantDefault)
+        ? Eresource.CreateInventory.INSTANCE_HOLDING
+        : Eresource.CreateInventory.fromValue(tenantDefault);
   }
 
   CompletableFuture<CompositePoLine> getCompositePoLine(String polineId) {
