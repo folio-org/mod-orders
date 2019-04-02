@@ -2413,7 +2413,7 @@ public class OrdersImplTest {
     final Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData),
       APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(7));
+    assertThat(response.getErrors(), hasSize(8));
     List<String> errorCodes = response.getErrors()
                                       .stream()
                                       .map(Error::getCode)
@@ -2425,7 +2425,8 @@ public class OrdersImplTest {
                                               COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
                                               COST_ADDITIONAL_COST_INVALID.getCode(),
                                               COST_DISCOUNT_INVALID.getCode(),
-                                              ELECTRONIC_LOC_QTY_EXCEEDS_COST.getCode()));
+                                              ELECTRONIC_LOC_QTY_EXCEEDS_COST.getCode(),
+                                              MISSING_MATERIAL_TYPE.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
