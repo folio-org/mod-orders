@@ -227,7 +227,8 @@ public class OrdersImpl implements Orders {
 
   @Override
   @Validate
-  public void putOrdersOrderLinesById(String lineId, String lang, CompositePoLine poLine, Map<String, String> okapiHeaders,
+  public void putOrdersOrderLinesById(String lineId, String lang, CompositePoLine poLine,
+      Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Handling PUT Order Line operation...");
 

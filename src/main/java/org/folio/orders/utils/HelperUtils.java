@@ -879,13 +879,19 @@ public class HelperUtils {
   }
 
   private static boolean isMaterialMissing(CompositePoLine compPOL) {
+    boolean isMissing = false;
     if (compPOL.getOrderFormat().equals(OrderFormat.ELECTRONIC_RESOURCE)
-        || compPOL.getOrderFormat().equals(OrderFormat.P_E_MIX))
-      return compPOL.getEresource().getCreateInventory() == (Eresource.CreateInventory.INSTANCE_HOLDING_ITEM)
+        || compPOL.getOrderFormat().equals(OrderFormat.P_E_MIX)) {
+      isMissing = compPOL.getEresource().getCreateInventory() == (Eresource.CreateInventory.INSTANCE_HOLDING_ITEM)
           && isEmpty(compPOL.getEresource().getMaterialType());
-    if (!compPOL.getOrderFormat().equals(OrderFormat.ELECTRONIC_RESOURCE))
-      return compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM
-          && isEmpty(compPOL.getPhysical().getMaterialType());
-    return false;
+    }
+
+    if (!compPOL.getOrderFormat().equals(OrderFormat.ELECTRONIC_RESOURCE)) {
+      isMissing = isMissing
+          || (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM
+          && isEmpty(compPOL.getPhysical().getMaterialType()));
+    }
+
+    return isMissing;
   }
 }
