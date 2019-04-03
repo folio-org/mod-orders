@@ -379,7 +379,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    */
   private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem) {
     int createdItemsQuantity = expectedPiecesWithItem.size();
-    // do not create pieces in case of checkin flow
+    // do not create pieces in case of check-in flow
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
       return completedFuture(null);
     }
@@ -405,10 +405,23 @@ class PurchaseOrderLineHelper extends AbstractHelper {
             });
           });
 
+          Map<Piece.Format, Integer> expectedQuantitiesWithoutLocation = calculatePiecesQuantityWithoutLocation(compPOL);
+          Map<Piece.Format, Integer> existingPiecesQuantities = calculateQuantityOfExistingPieces(existingPieces);
+          expectedQuantitiesWithoutLocation.forEach((format, expectedQty) -> {
+            int remainingPiecesQuantity = expectedQty - existingPiecesQuantities.getOrDefault(format, 0);
+            if (remainingPiecesQuantity > 0) {
+              for (int i = 0; i < remainingPiecesQuantity; i++) {
+                piecesToCreate.add(new Piece().withFormat(format).withPoLineId(compPOL.getId()));
+              }
+            }
+          });
+
+
         return allOf(piecesToCreate.stream().map(this::createPiece).toArray(CompletableFuture[]::new));
       })
       .thenAccept(v -> validateItemsCreation(compPOL, createdItemsQuantity));
   }
+
 
   /**
    * Search for pieces which might be already created for the PO line
@@ -448,6 +461,11 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private Map<Piece.Format, Integer> calculateQuantityOfExistingPiecesWithoutItem(List<Piece> pieces) {
     return StreamEx.of(pieces)
       .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
+      .groupingBy(Piece::getFormat, collectingAndThen(toList(), List::size));
+  }
+
+  private Map<Piece.Format, Integer> calculateQuantityOfExistingPieces(List<Piece> pieces) {
+    return StreamEx.of(pieces)
       .groupingBy(Piece::getFormat, collectingAndThen(toList(), List::size));
   }
 

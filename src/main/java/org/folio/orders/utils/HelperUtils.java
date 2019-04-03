@@ -320,36 +320,51 @@ public class HelperUtils {
   }
 
   private static List<Error> validatePoLineWithMixedFormat(CompositePoLine compPOL) {
-    int costPhysicalQuantity = defaultIfNull(compPOL.getCost().getQuantityPhysical(), 0);
-    int costElectronicQuantity = defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0);
-    int locPhysicalQuantity = getPhysicalQuantity(compPOL.getLocations());
-    int locElectronicQuantity = getElectronicQuantity(compPOL.getLocations());
 
     List<ErrorCodes> errors = new ArrayList<>();
     // The quantity of the physical and electronic resources in the cost must be specified
-    if (costPhysicalQuantity == 0) {
+    if (getPhysicalCostQuantity(compPOL) == 0) {
       errors.add(ErrorCodes.ZERO_COST_PHYSICAL_QTY);
     }
-    if (costElectronicQuantity == 0) {
+    if (getElectronicCostQuantity(compPOL) == 0) {
       errors.add(ErrorCodes.ZERO_COST_ELECTRONIC_QTY);
     }
-    // The total quantity of the physical and electronic resources of all locations must match specified in the cost
-    if (locPhysicalQuantity != costPhysicalQuantity) {
-      errors.add(ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH);
-    }
-    if (locElectronicQuantity != costElectronicQuantity) {
-      errors.add(ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH);
-    }
-
-    // The total quantity of the physical and electronic resources of all locations must exceed 0
-    List<Location> locations = compPOL.getLocations();
-    if (locations.stream().anyMatch(location -> calculateTotalLocationQuantity(location) == 0)) {
-      errors.add(ErrorCodes.ZERO_LOCATION_QTY);
-    }
+    errors.addAll(validateLocations(compPOL));
 
     errors.addAll(validateCostPrices(compPOL));
 
     return convertErrorCodesToErrors(compPOL, errors);
+  }
+
+  private static int getPhysicalCostQuantity(CompositePoLine compPOL) {
+    return defaultIfNull(compPOL.getCost().getQuantityPhysical(), 0);
+  }
+
+  private static int getElectronicCostQuantity(CompositePoLine compPOL) {
+    return defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0);
+  }
+
+  private static List<ErrorCodes> validateLocations(CompositePoLine compPOL) {
+    if (isLocationsValidationRequired(compPOL)) {
+      List<ErrorCodes> errors = new ArrayList<>();
+      List<Location> locations = compPOL.getLocations();
+
+      // The total quantity of the physical and electronic resources of all locations must match specified in the cost
+      if (getPhysicalLocationsQuantity(locations) != getPhysicalCostQuantity(compPOL)) {
+        errors.add(ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH);
+      }
+      if (getElectronicLocationsQuantity(locations) != getElectronicCostQuantity(compPOL)) {
+        errors.add(ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH);
+      }
+
+      // The total quantity of any location must exceed 0
+      if (locations.stream().anyMatch(location -> calculateTotalLocationQuantity(location) == 0)) {
+        errors.add(ErrorCodes.ZERO_LOCATION_QTY);
+      }
+
+      return errors;
+    }
+    return Collections.emptyList();
   }
 
   public static Integer calculateTotalLocationQuantity(Location location) {
@@ -357,6 +372,10 @@ public class HelperUtils {
     quantity += defaultIfNull(location.getQuantityElectronic(), 0);
     quantity += defaultIfNull(location.getQuantityPhysical(), 0);
     return quantity;
+  }
+
+  private static boolean isLocationsValidationRequired(CompositePoLine compPOL) {
+    return !CollectionUtils.isEmpty(compPOL.getLocations()) || isHoldingsUpdateRequired(compPOL);
   }
 
   private static List<ErrorCodes> validateCostPrices(CompositePoLine compLine) {
@@ -402,33 +421,16 @@ public class HelperUtils {
   private static List<Error> validatePoLineWithPhysicalFormat(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
 
-    int costPhysicalQuantity = defaultIfNull(compPOL.getCost().getQuantityPhysical(), 0);
     // The quantity of the physical resources in the cost must be specified
-    if (costPhysicalQuantity == 0) {
+    if (getPhysicalCostQuantity(compPOL) == 0) {
       errors.add(ErrorCodes.ZERO_COST_PHYSICAL_QTY);
     }
     // The quantity of the electronic resources in the cost must not be specified
-    if (defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0) > 0) {
+    if (getElectronicCostQuantity(compPOL) > 0) {
       errors.add(ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY);
     }
 
-    List<Location> locations = compPOL.getLocations();
-
-    //The quantity of the electronic resources in the locations must not be specified
-    if (getElectronicQuantity(locations) > 0) {
-      errors.add(ErrorCodes.NON_ZERO_LOCATION_ELECTRONIC_QTY);
-    }
-
-    // The quantity of the physical resources in the locations must be specified
-    if (locations.stream().anyMatch(location -> defaultIfNull(location.getQuantityPhysical(), 0) == 0)) {
-      errors.add(ErrorCodes.ZERO_LOCATION_PHYSICAL_QTY);
-    }
-
-    // The total quantity of the physical resources of all locations must match specified in the cost
-    int locationsPhysicalQuantity = getPhysicalQuantity(locations);
-    if (locationsPhysicalQuantity != costPhysicalQuantity) {
-      errors.add(ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH);
-    }
+    errors.addAll(validateLocations(compPOL));
 
     errors.addAll(validateCostPrices(compPOL));
 
@@ -438,32 +440,16 @@ public class HelperUtils {
   private static List<Error> validatePoLineWithElectronicFormat(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
 
-    int costElectronicQuantity = defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0);
     // The quantity of the electronic resources in the cost must be specified
-    if (costElectronicQuantity == 0) {
+    if (getElectronicCostQuantity(compPOL) == 0) {
       errors.add(ErrorCodes.ZERO_COST_ELECTRONIC_QTY);
     }
     // The quantity of the physical resources in the cost must not be specified
-    if (defaultIfNull(compPOL.getCost().getQuantityPhysical(), 0) > 0) {
+    if (getPhysicalCostQuantity(compPOL) > 0) {
       errors.add(ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY);
     }
 
-    List<Location> locations = compPOL.getLocations();
-
-    //The quantity of the physical resources in the locations must not be specified
-    if (getPhysicalQuantity(locations) > 0) {
-      errors.add(ErrorCodes.NON_ZERO_LOCATION_PHYSICAL_QTY);
-    }
-
-    // The quantity of the electronic resources in all locations must be specified
-    if (locations.stream().anyMatch(location -> defaultIfNull(location.getQuantityElectronic(), 0) == 0)) {
-      errors.add(ErrorCodes.ZERO_LOCATION_ELECTRONIC_QTY);
-    }
-
-    // The total quantity of the electronic resources of all locations must match specified in the cost
-    if (getElectronicQuantity(locations) != costElectronicQuantity) {
-      errors.add(ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH);
-    }
+    errors.addAll(validateLocations(compPOL));
 
     errors.addAll(validateCostPrices(compPOL));
 
@@ -578,6 +564,41 @@ public class HelperUtils {
     }
   }
 
+  public static Map<Piece.Format, Integer> calculatePiecesQuantityWithoutLocation(CompositePoLine compPOL) {
+    EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
+    Optional.ofNullable(compPOL.getPhysical())
+      .map(physical -> physical.getCreateInventory() == Physical.CreateInventory.NONE || physical.getCreateInventory() == Physical.CreateInventory.INSTANCE);
+    if (compPOL.getOrderFormat() == OTHER && (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE)) {
+      Physical.CreateInventory physicalCreateInventory = compPOL.getPhysical().getCreateInventory();
+      if (physicalCreateInventory == Physical.CreateInventory.NONE || physicalCreateInventory == Physical.CreateInventory.INSTANCE) {
+        quantities.put(Piece.Format.OTHER, getPhysicalCostQuantity(compPOL));
+      }
+    } else {
+      quantities.putAll(calculatePhysicalPiecesQuantityWithoutLocation(compPOL));
+      quantities.putAll(calculateElectronicPiecesQuantityWithoutLocation(compPOL));
+    }
+    return quantities;
+  }
+
+  private static EnumMap<Piece.Format, Integer> calculatePhysicalPiecesQuantityWithoutLocation(CompositePoLine compPOL) {
+    EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
+    Physical.CreateInventory physicalCreateInventory = compPOL.getPhysical().getCreateInventory();
+    if (physicalCreateInventory == Physical.CreateInventory.NONE || physicalCreateInventory == Physical.CreateInventory.INSTANCE) {
+      quantities.put(Piece.Format.PHYSICAL, getPhysicalCostQuantity(compPOL));
+    }
+    return quantities;
+  }
+
+  private static EnumMap<Piece.Format, Integer> calculateElectronicPiecesQuantityWithoutLocation(CompositePoLine compPOL) {
+    EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
+    Eresource.CreateInventory eresourceCreateInventory = compPOL.getEresource().getCreateInventory();
+    if (eresourceCreateInventory == Eresource.CreateInventory.NONE || eresourceCreateInventory == Eresource.CreateInventory.INSTANCE) {
+      quantities.put(Piece.Format.ELECTRONIC, getElectronicCostQuantity(compPOL));
+    }
+    return quantities;
+  }
+
+
   /**
    * Calculates pieces quantity for specified locations based on piece format.
    *
@@ -588,10 +609,10 @@ public class HelperUtils {
   public static int calculatePiecesQuantity(Piece.Format format, List<Location> locations) {
     switch (format) {
       case ELECTRONIC:
-        return getElectronicQuantity(locations);
+        return getElectronicLocationsQuantity(locations);
       case PHYSICAL:
       case OTHER:
-        return getPhysicalQuantity(locations);
+        return getPhysicalLocationsQuantity(locations);
       default:
         return 0;
     }
@@ -658,7 +679,7 @@ public class HelperUtils {
       .doubleValue();
   }
 
-  private static int getPhysicalQuantity(List<Location> locations) {
+  private static int getPhysicalLocationsQuantity(List<Location> locations) {
     if (CollectionUtils.isNotEmpty(locations)) {
       return locations.stream()
                       .map(Location::getQuantityPhysical)
@@ -670,7 +691,7 @@ public class HelperUtils {
     }
   }
 
-  private static int getElectronicQuantity(List<Location> locations) {
+  private static int getElectronicLocationsQuantity(List<Location> locations) {
     if (CollectionUtils.isNotEmpty(locations)) {
       return locations.stream()
                       .map(Location::getQuantityElectronic)
@@ -712,7 +733,18 @@ public class HelperUtils {
 
     return compPOL.getLocations()
                   .stream()
+                  .filter(location -> isHoldingCreationRequiredForLocation(compPOL, location))
                   .collect(Collectors.groupingBy(Location::getLocationId));
+  }
+
+  private static boolean isHoldingCreationRequiredForLocation(CompositePoLine compPOL, Location location) {
+    if (compPOL.getPhysical() != null
+      && (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM)
+      && ObjectUtils.defaultIfNull(location.getQuantityPhysical(), 0) > 0) return true;
+    if (compPOL.getEresource() != null
+      && (compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING || compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM)
+      && ObjectUtils.defaultIfNull(location.getQuantityElectronic(), 0) > 0) return true;
+    return false;
   }
 
   /**
@@ -888,18 +920,18 @@ public class HelperUtils {
   }
 
   public static boolean isHoldingsUpdateRequired(CompositePoLine compPOL) {
-    boolean updatesRequiredForEresource = false;
+    boolean updateRequiredForEresource = false;
     boolean updateRequiredForPhysical = false;
 
     if (compPOL.getEresource() != null) {
-      updatesRequiredForEresource = (compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING
+      updateRequiredForEresource = (compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING
         || compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
     }
     if (compPOL.getPhysical() != null) {
       updateRequiredForPhysical = (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING
         || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
     }
-    return updatesRequiredForEresource || updateRequiredForPhysical;
+    return updateRequiredForEresource || updateRequiredForPhysical;
   }
 
   public static boolean isItemsUpdateRequired(CompositePoLine compPOL) {

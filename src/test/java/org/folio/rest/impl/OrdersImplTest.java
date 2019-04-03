@@ -13,7 +13,6 @@ import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
-import static org.folio.orders.utils.ErrorCodes.NON_ZERO_LOCATION_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
 import static org.folio.orders.utils.ErrorCodes.ORDER_OPEN;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
@@ -30,8 +29,6 @@ import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
 import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
-import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_ELECTRONIC_QTY;
-import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
@@ -427,7 +424,7 @@ public class OrdersImplTest {
     final Errors response = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(10));
+    assertThat(response.getErrors(), hasSize(11));
     Set<String> errorCodes = response.getErrors()
                                      .stream()
                                      .map(Error::getCode)
@@ -2321,7 +2318,7 @@ public class OrdersImplTest {
     final Errors response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(4));
+    assertThat(response.getErrors(), hasSize(5));
     List<String> errorCodes = response.getErrors()
                                       .stream()
                                       .map(Error::getCode)
@@ -2330,7 +2327,8 @@ public class OrdersImplTest {
     assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode(),
                                               NON_ZERO_COST_ELECTRONIC_QTY.getCode(),
                                               PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
-                                              ZERO_LOCATION_PHYSICAL_QTY.getCode()));
+                                              ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
+                                              ZERO_LOCATION_QTY.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -2361,8 +2359,8 @@ public class OrdersImplTest {
       .collect(Collectors.toList());
 
     assertThat(errorCodes, containsInAnyOrder(ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
-                                              NON_ZERO_LOCATION_PHYSICAL_QTY.getCode(),
-                                              ZERO_LOCATION_ELECTRONIC_QTY.getCode()));
+                                              PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
+                                              ZERO_LOCATION_QTY.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -2423,12 +2421,12 @@ public class OrdersImplTest {
 
     assertThat(errorCodes, containsInAnyOrder(ZERO_COST_ELECTRONIC_QTY.getCode(),
                                               NON_ZERO_COST_PHYSICAL_QTY.getCode(),
-                                              NON_ZERO_LOCATION_PHYSICAL_QTY.getCode(),
                                               COST_UNIT_PRICE_INVALID.getCode(),
                                               COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
                                               COST_ADDITIONAL_COST_INVALID.getCode(),
                                               COST_DISCOUNT_INVALID.getCode(),
-                                              ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode()));
+                                              ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
+                                              PHYSICAL_COST_LOC_QTY_MISMATCH.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
