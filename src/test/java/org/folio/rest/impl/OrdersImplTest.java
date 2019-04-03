@@ -30,16 +30,7 @@ import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
-import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
-import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
-import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
-import static org.folio.orders.utils.HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation;
-import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantity;
-import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
-import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
-import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
-import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.orders.utils.HelperUtils.groupLocationsById;
+import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
@@ -1744,6 +1735,7 @@ public class OrdersImplTest {
       // Get all PO Line's locations' ids
       List<String> locationIds = locations
         .stream()
+        .filter(location -> isHoldingCreationRequiredForLocation(poLine, location))
         .map(Location::getLocationId)
         .distinct()
         .collect(Collectors.toList());
@@ -1757,7 +1749,9 @@ public class OrdersImplTest {
       // Verify each piece individually
       piecesByPoLine.forEach(piece -> {
         // Check if itemId in inventoryItems match itemId in piece record
-        assertThat(locationIds, hasItem(piece.getLocationId()));
+        if (CollectionUtils.isNotEmpty(locationIds)) {
+          assertThat(locationIds, hasItem(piece.getLocationId()));
+        }
         assertThat(piece.getReceivingStatus(), equalTo(Piece.ReceivingStatus.EXPECTED));
         if (piece.getItemId() != null) {
           assertThat(itemIds, hasItem(piece.getItemId()));

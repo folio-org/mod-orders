@@ -566,8 +566,7 @@ public class HelperUtils {
 
   public static Map<Piece.Format, Integer> calculatePiecesQuantityWithoutLocation(CompositePoLine compPOL) {
     EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
-    Optional.ofNullable(compPOL.getPhysical())
-      .map(physical -> physical.getCreateInventory() == Physical.CreateInventory.NONE || physical.getCreateInventory() == Physical.CreateInventory.INSTANCE);
+
     if (compPOL.getOrderFormat() == OTHER && (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE)) {
       Physical.CreateInventory physicalCreateInventory = compPOL.getPhysical().getCreateInventory();
       if (physicalCreateInventory == Physical.CreateInventory.NONE || physicalCreateInventory == Physical.CreateInventory.INSTANCE) {
@@ -582,7 +581,7 @@ public class HelperUtils {
 
   private static EnumMap<Piece.Format, Integer> calculatePhysicalPiecesQuantityWithoutLocation(CompositePoLine compPOL) {
     EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
-    Physical.CreateInventory physicalCreateInventory = compPOL.getPhysical().getCreateInventory();
+    Physical.CreateInventory physicalCreateInventory = Optional.ofNullable(compPOL.getPhysical()).map(Physical::getCreateInventory).orElse(null);
     if (physicalCreateInventory == Physical.CreateInventory.NONE || physicalCreateInventory == Physical.CreateInventory.INSTANCE) {
       quantities.put(Piece.Format.PHYSICAL, getPhysicalCostQuantity(compPOL));
     }
@@ -591,7 +590,7 @@ public class HelperUtils {
 
   private static EnumMap<Piece.Format, Integer> calculateElectronicPiecesQuantityWithoutLocation(CompositePoLine compPOL) {
     EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
-    Eresource.CreateInventory eresourceCreateInventory = compPOL.getEresource().getCreateInventory();
+    Eresource.CreateInventory eresourceCreateInventory = Optional.ofNullable(compPOL.getEresource()).map(Eresource::getCreateInventory).orElse(null);
     if (eresourceCreateInventory == Eresource.CreateInventory.NONE || eresourceCreateInventory == Eresource.CreateInventory.INSTANCE) {
       quantities.put(Piece.Format.ELECTRONIC, getElectronicCostQuantity(compPOL));
     }
@@ -737,7 +736,7 @@ public class HelperUtils {
                   .collect(Collectors.groupingBy(Location::getLocationId));
   }
 
-  private static boolean isHoldingCreationRequiredForLocation(CompositePoLine compPOL, Location location) {
+  public static boolean isHoldingCreationRequiredForLocation(CompositePoLine compPOL, Location location) {
     if (compPOL.getPhysical() != null
       && (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM)
       && ObjectUtils.defaultIfNull(location.getQuantityPhysical(), 0) > 0) return true;
