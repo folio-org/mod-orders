@@ -228,7 +228,7 @@ public class OrdersImpl implements Orders {
   @Override
   @Validate
   public void putOrdersOrderLinesById(String lineId, String lang, CompositePoLine poLine, Map<String, String> okapiHeaders,
-                                      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Handling PUT Order Line operation...");
 
     PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
@@ -242,19 +242,19 @@ public class OrdersImpl implements Orders {
     helper.setTenantDefaultCreateInventoryValues(poLine).thenAccept(empty -> {
       errors.addAll(validatePoLine(poLine));
 
-    if (!lineId.equals(poLine.getId())) {
-      errors.add(ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
-    }
-    if (!errors.isEmpty()) {
-      PutOrdersOrderLinesByIdResponse response = PutOrdersOrderLinesByIdResponse.respond422WithApplicationJson(new Errors().withErrors(errors));
-      asyncResultHandler.handle(succeededFuture(response));
-      return;
-    }
+      if (!lineId.equals(poLine.getId())) {
+        errors.add(ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
+      }
+      if (!errors.isEmpty()) {
+        PutOrdersOrderLinesByIdResponse response = PutOrdersOrderLinesByIdResponse
+          .respond422WithApplicationJson(new Errors().withErrors(errors));
+        asyncResultHandler.handle(succeededFuture(response));
+        return;
+      }
 
-
-    helper.updateOrderLine(poLine)
-      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+      helper.updateOrderLine(poLine)
+        .thenAccept(v -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
+        .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
     });
   }
 

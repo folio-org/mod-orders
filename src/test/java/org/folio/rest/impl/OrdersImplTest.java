@@ -99,7 +99,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import io.restassured.http.Headers;
-import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
@@ -147,7 +146,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import javax.swing.plaf.synth.SynthSeparatorUI;
 import javax.ws.rs.core.Response.Status;
 
 
@@ -1814,14 +1812,7 @@ public class OrdersImplTest {
 
     Map<String, List<JsonObject>> itemsByMaterial = inventoryItems.stream()
       .filter(item -> pol.getId().equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER)))
-      .collect(toMap(item -> item.getString(ITEM_MATERIAL_TYPE_ID), item -> {
-        List<JsonObject> items = new ArrayList<>();
-        items.add(item);
-        return items;
-      }, (k1, k2) -> {
-        k1.addAll(k2);
-        return k1;
-      }));
+      .collect(Collectors.groupingBy(item -> item.getString(ITEM_MATERIAL_TYPE_ID)));
 
     expectedItemsPerResourceType.forEach((resourceType, quantity) -> {
       if (quantity < 1) {

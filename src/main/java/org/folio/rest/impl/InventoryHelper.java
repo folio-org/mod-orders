@@ -277,11 +277,11 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   private List<String> getPhysicalItems(CompositePoLine compPOL, List<JsonObject> existingItems) {
-    return getItemsByMaterialType(existingItems, getPhysicalMaterialTypeId(compPOL));
+    return getItemsByMaterialType(existingItems,compPOL.getPhysical().getMaterialType());
   }
 
   private List<String> getElectronicItems(CompositePoLine compPOL, List<JsonObject> existingItems) {
-    return getItemsByMaterialType(existingItems, getElectronicMaterialTypeId(compPOL));
+    return getItemsByMaterialType(existingItems, compPOL.getEresource().getMaterialType());
   }
 
   private List<String> getItemsByMaterialType(List<JsonObject> existingItems, String materialTypeId) {
@@ -569,7 +569,7 @@ public class InventoryHelper extends AbstractHelper {
    */
   private CompletableFuture<JsonObject> buildElectronicItemRecordJsonObject(CompositePoLine compPOL, String holdingId) {
     return buildBaseItemRecordJsonObject(compPOL, holdingId)
-      .thenApply(itemRecord -> itemRecord.put(ITEM_MATERIAL_TYPE_ID, getElectronicMaterialTypeId(compPOL)));
+      .thenApply(itemRecord -> itemRecord.put(ITEM_MATERIAL_TYPE_ID, compPOL.getEresource().getMaterialType()));
   }
 
   /**
@@ -581,22 +581,9 @@ public class InventoryHelper extends AbstractHelper {
    */
   private CompletableFuture<JsonObject> buildPhysicalItemRecordJsonObject(CompositePoLine compPOL, String holdingId) {
     return buildBaseItemRecordJsonObject(compPOL, holdingId)
-      .thenApply(itemRecord -> itemRecord.put(ITEM_MATERIAL_TYPE_ID, getPhysicalMaterialTypeId(compPOL)));
+      .thenApply(itemRecord -> itemRecord.put(ITEM_MATERIAL_TYPE_ID, compPOL.getPhysical().getMaterialType()));
   }
 
-  private String getPhysicalMaterialTypeId(CompositePoLine compPOL) {
-    return Optional.ofNullable(compPOL.getPhysical())
-        .map(physical -> physical.getMaterialType())
-        .orElseThrow(() -> new CompletionException(
-          new HttpException(422, MISSING_MATERIAL_TYPE)));
-  }
-
-  private String getElectronicMaterialTypeId(CompositePoLine compPOL) {
-    return Optional.ofNullable(compPOL.getEresource())
-                   .map(eresource -> eresource.getMaterialType())
-                   .orElseThrow(() -> new CompletionException(
-                     new HttpException(422, MISSING_MATERIAL_TYPE)));
-  }
 
   String extractId(JsonObject json) {
     return json.getString(ID);
