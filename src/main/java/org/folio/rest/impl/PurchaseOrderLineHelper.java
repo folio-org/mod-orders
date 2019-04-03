@@ -22,7 +22,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
-import java.util.function.ToIntFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -132,7 +131,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     compPoLine.setId(UUID.randomUUID().toString());
     compPoLine.setPurchaseOrderId(compOrder.getId());
     updateEstimatedPrice(compPoLine);
-    updateLocationsQuantityBasedOnOrderFormat(compPoLine);
+    updateLocationsQuantity(compPoLine.getLocations());
 
     JsonObject line = mapFrom(compPoLine);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
@@ -226,7 +225,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
     // The estimated price should be always recalculated
     updateEstimatedPrice(compOrderLine);
-    updateLocationsQuantityBasedOnOrderFormat(compOrderLine);
+    updateLocationsQuantity(compOrderLine.getLocations());
 
     setTenantDefaultCreateInventoryValues(compOrderLine)
       .thenCompose(v -> updatePoLineSubObjects(compOrderLine, lineFromStorage))
@@ -367,30 +366,8 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     }
   }
 
-  /**
-   * Update locations quantity depending on orderFormat
-   * @param compPOL composite PO Line
-   */
-  private void updateLocationsQuantityBasedOnOrderFormat(CompositePoLine compPOL) {
-    List<Location> locations = compPOL.getLocations();
-    switch (compPOL.getOrderFormat()) {
-      case P_E_MIX:
-        updateLocationsQuantity(locations, HelperUtils::calculateTotalLocationQuantity);
-        break;
-      case ELECTRONIC_RESOURCE:
-        updateLocationsQuantity(locations, Location::getQuantityElectronic);
-        break;
-      case OTHER:
-        updateLocationsQuantity(locations, Location::getQuantityPhysical);
-        break;
-      case PHYSICAL_RESOURCE:
-        updateLocationsQuantity(locations, Location::getQuantityPhysical);
-        break;
-    }
-  }
-
-  private void updateLocationsQuantity(List<Location> locations, ToIntFunction<Location> calculateLocationQuantity) {
-    locations.forEach(location -> location.setQuantity(calculateLocationQuantity.applyAsInt(location)));
+  private void updateLocationsQuantity(List<Location> locations) {
+    locations.forEach(location -> location.setQuantity(calculateTotalLocationQuantity(location)));
   }
 
   /**
