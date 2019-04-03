@@ -1830,7 +1830,7 @@ public class OrdersImplTest {
     Object[] expected = line.getContributors().stream()
       .collect(Collectors.toMap(Contributor::getContributor, Contributor::getContributorType))
       .entrySet().toArray();
-    assertArrayEquals(actual, expected);
+    assertArrayEquals(expected, actual);
   }
 
   private void verifyItemRecordRequest(JsonObject item, CompositePoLine line) {
