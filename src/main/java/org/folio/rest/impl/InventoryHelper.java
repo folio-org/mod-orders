@@ -45,6 +45,7 @@ public class InventoryHelper extends AbstractHelper {
   static final String INSTANCE_STATUS_ID = "statusId";
   static final String INSTANCE_TYPE_ID = "instanceTypeId";
   static final String INSTANCE_PUBLISHER = "publisher";
+  static final String INSTANCE_CONTRIBUTORS = "contributors";
   static final String INSTANCE_DATE_OF_PUBLICATION = "dateOfPublication";
   static final String INSTANCE_PUBLICATION = "publication";
   static final String INSTANCE_IDENTIFIER_TYPE_ID = "identifierTypeId";
@@ -60,6 +61,8 @@ public class InventoryHelper extends AbstractHelper {
   static final String ITEM_MATERIAL_TYPE_ID = "materialTypeId";
   static final String ITEM_PERMANENT_LOAN_TYPE_ID = "permanentLoanTypeId";
   static final String ITEM_PURCHASE_ORDER_LINE_IDENTIFIER = "purchaseOrderLineIdentifier";
+  static final String CONTRIBUTOR_NAME = "name";
+  static final String CONTRIBUTOR_NAME_TYPE_ID = "contributorNameTypeId";
 
   static final String ITEMS = "items";
   private static final String HOLDINGS_RECORDS = "holdingsRecords";
@@ -420,6 +423,16 @@ public class InventoryHelper extends AbstractHelper {
       publication.put(INSTANCE_PUBLISHER, compPOL.getPublisher());
       publication.put(INSTANCE_DATE_OF_PUBLICATION, compPOL.getPublicationDate());
       instance.put(INSTANCE_PUBLICATION, new JsonArray(singletonList(publication)));
+    }
+
+    if(compPOL.getContributors() != null && !compPOL.getContributors().isEmpty()) {
+      List<JsonObject> contributors = compPOL.getContributors().stream().map(compPolContributor -> {
+        JsonObject invContributor = new JsonObject();
+        invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, compPolContributor.getContributorType());
+        invContributor.put(CONTRIBUTOR_NAME, compPolContributor.getContributor());
+        return invContributor;
+      }).collect(toList());
+      instance.put(INSTANCE_CONTRIBUTORS, contributors);
     }
 
     if (compPOL.getDetails() != null && compPOL.getDetails().getProductIds() != null) {

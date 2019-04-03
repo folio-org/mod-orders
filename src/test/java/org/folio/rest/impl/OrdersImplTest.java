@@ -62,6 +62,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -1822,6 +1823,14 @@ public class OrdersImplTest {
       assertThat(instance.getJsonArray(INSTANCE_IDENTIFIERS).getJsonObject(0).getString(INSTANCE_IDENTIFIER_TYPE_ID), equalTo("8261054f-be78-422d-bd51-4ed9f33c3422"));
       assertThat(instance.getJsonArray(INSTANCE_IDENTIFIERS).getJsonObject(0).getString(INSTANCE_IDENTIFIER_TYPE_VALUE), equalTo(line.getDetails().getProductIds().get(0).getProductId()));
     }
+    Object[] actual = instance.getJsonArray(INSTANCE_CONTRIBUTORS).stream()
+      .map(o -> (JsonObject) o)
+      .collect(Collectors.toMap(c -> c.getString(CONTRIBUTOR_NAME), c -> c.getString(CONTRIBUTOR_NAME_TYPE_ID)))
+      .entrySet().toArray();
+    Object[] expected = line.getContributors().stream()
+      .collect(Collectors.toMap(Contributor::getContributor, Contributor::getContributorType))
+      .entrySet().toArray();
+    assertArrayEquals(actual, expected);
   }
 
   private void verifyItemRecordRequest(JsonObject item, CompositePoLine line) {
