@@ -57,6 +57,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private static final String CREATE_INVENTORY = "createInventory";
   private static final String ERESOURCE = "eresource";
   private static final String PHYSICAL = "physical";
+  private static final String OTHER = "other";
 
   private final InventoryHelper inventoryHelper;
 
@@ -153,8 +154,8 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       || (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() == null)) {
       getTenantConfiguration()
         .thenApply(config -> {
-            if (!config.isEmpty() && !config.getJsonObject(CREATE_INVENTORY).isEmpty()) {
-              return future.complete(config.getJsonObject(CREATE_INVENTORY));
+            if (!config.isEmpty() && !config.getString(CREATE_INVENTORY).isEmpty()) {
+              return future.complete(new JsonObject(config.getString(CREATE_INVENTORY)));
             } else {
               return completedFuture(new JsonObject());
             }
@@ -177,10 +178,18 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       compPOL.getEresource().setCreateInventory(eresourceDefaultValue);
     }
     if (compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() == null) {
-      String tenantDefault = jsonConfig.getString(PHYSICAL);
-      Physical.CreateInventory createInventoryDefaultValue = StringUtils.isEmpty(tenantDefault) ?
-        Physical.CreateInventory.INSTANCE_HOLDING_ITEM : Physical.CreateInventory.fromValue(tenantDefault);
-      compPOL.getPhysical().setCreateInventory(createInventoryDefaultValue);
+      String tenantDefault;
+      if (compPOL.getOrderFormat() == CompositePoLine.OrderFormat.OTHER) {
+        tenantDefault = jsonConfig.getString(OTHER);
+        Physical.CreateInventory createInventoryDefaultValue = StringUtils.isEmpty(tenantDefault) ?
+          Physical.CreateInventory.NONE : Physical.CreateInventory.fromValue(tenantDefault);
+        compPOL.getPhysical().setCreateInventory(createInventoryDefaultValue);
+      } else {
+        tenantDefault = jsonConfig.getString(PHYSICAL);
+        Physical.CreateInventory createInventoryDefaultValue = StringUtils.isEmpty(tenantDefault) ?
+          Physical.CreateInventory.INSTANCE_HOLDING_ITEM : Physical.CreateInventory.fromValue(tenantDefault);
+        compPOL.getPhysical().setCreateInventory(createInventoryDefaultValue);
+      }
     }
   }
 
