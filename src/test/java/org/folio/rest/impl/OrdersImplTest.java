@@ -2381,7 +2381,7 @@ public class OrdersImplTest {
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
   }
-
+  
   @Test
   public void testPutOrderLineElectronicFormatIncorrectQuantityAndPrice() {
     logger.info("=== Test Put Electronic Order Line - incorrect quantity and Price ===");

@@ -1,3 +1,6 @@
 {
-  "source": { "code": "FOLIO" }
+  "orderFormat": "Other",
+  "source": 
+  { 
+   "code": "FOLIO" }
 }
