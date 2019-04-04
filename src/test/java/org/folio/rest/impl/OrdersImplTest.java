@@ -107,6 +107,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
@@ -260,6 +261,7 @@ public class OrdersImplTest {
   private static final String poCreationFailurePath = "po_creation_failure.json";
   private static final String poLineCreationFailurePath = "po_line_creation_failure.json";
   private static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
+  private static final String CONTRIBUTOR_NAME_TYPES_PATH = BASE_MOCK_DATA_PATH + "contributorNameTypes/contributorPersonalNameType.json";
   /** The PO Line with minimal required content */
   private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "minimalContent.json";
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
@@ -3672,6 +3674,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(this::handleGetPieces);
       router.route(HttpMethod.GET, resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
       router.route(HttpMethod.GET, resourcesPath(PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
+      router.route(HttpMethod.GET, "/contributor-name-types").handler(this::handleGetContributorNameTypes);
 
       router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
       router.route(HttpMethod.PUT, resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -4535,6 +4538,20 @@ public class OrdersImplTest {
           .setStatusCode(200)
           .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
           .end(JsonObject.mapFrom(seqNumber).encodePrettily());
+      }
+    }
+
+    private void handleGetContributorNameTypes(RoutingContext ctx) {
+      String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+      final String prefix = "name==";
+      try {
+        if((prefix + HelperUtils.ContributorNameTypeName.PERSONAL_NAME.getContributorNameTypeName()).equals(queryParam)) {
+          serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, getMockData(CONTRIBUTOR_NAME_TYPES_PATH));
+        } else {
+          serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Illegal query");
+        }
+      } catch (IOException e) {
+        serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Mock-server error");
       }
     }
   }

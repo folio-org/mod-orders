@@ -63,6 +63,7 @@ public class InventoryHelper extends AbstractHelper {
   static final String ITEM_PURCHASE_ORDER_LINE_IDENTIFIER = "purchaseOrderLineIdentifier";
   static final String CONTRIBUTOR_NAME = "name";
   static final String CONTRIBUTOR_NAME_TYPE_ID = "contributorNameTypeId";
+  static final String CONTRIBUTOR_NAME_TYPES = "contributorNameTypes";
 
   static final String ITEMS = "items";
   private static final String HOLDINGS_RECORDS = "holdingsRecords";
@@ -84,6 +85,7 @@ public class InventoryHelper extends AbstractHelper {
   private static final String HOLDINGS_LOOKUP_QUERY = "instanceId==%s and permanentLocationId==%s";
   private static final String HOLDINGS_LOOKUP_ENDPOINT = "/holdings-storage/holdings?query=%s&limit=1&lang=%s";
   private static final String HOLDINGS_CREATE_ENDPOINT = "/holdings-storage/holdings?lang=%s";
+  public static final String ID = "id";
 
   InventoryHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -381,8 +383,10 @@ public class InventoryHelper extends AbstractHelper {
       .thenAccept(lookupObj::mergeIn);
     CompletableFuture<Void> statusFuture = getStatus(DEFAULT_STATUS_CODE)
       .thenAccept(lookupObj::mergeIn);
+    CompletableFuture<Void> contributorNameTypeIdFuture = getContributorNameTypeId(ContributorNameTypeName.PERSONAL_NAME)
+      .thenAccept(lookupObj::mergeIn);
 
-    return allOf(ctx, instanceTypeFuture, statusFuture)
+    return allOf(ctx, instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
       .thenApply(v -> buildInstanceRecordJsonObject(compPOL, productTypesMap, lookupObj))
       .thenCompose(instanceRecJson -> createRecordInStorage(instanceRecJson, String.format(CREATE_INSTANCE_ENDPOINT, lang)));
   }
@@ -428,7 +432,8 @@ public class InventoryHelper extends AbstractHelper {
     if(compPOL.getContributors() != null && !compPOL.getContributors().isEmpty()) {
       List<JsonObject> contributors = compPOL.getContributors().stream().map(compPolContributor -> {
         JsonObject invContributor = new JsonObject();
-        invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, compPolContributor.getContributorType());
+        // According MODORDERS-204 default value for all the contributors is "Personal name".
+        invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, lookupObj.getString(CONTRIBUTOR_NAME_TYPE_ID));
         invContributor.put(CONTRIBUTOR_NAME, compPolContributor.getContributor());
         return invContributor;
       }).collect(toList());
@@ -638,5 +643,29 @@ public class InventoryHelper extends AbstractHelper {
                    .flatMap(items -> items.stream().findFirst())
                    .map(item -> (JsonObject) item)
                    .orElseThrow(() -> new CompletionException(new InventoryException(String.format("No records of '%s' can be found", propertyName))));
+  }
+
+  /**
+   * Returns JsonObject with id of ContributorNameType retrieved from inventory-storage.
+   *
+   * @param contributorNameTypeName ContributorNameType
+   * @return JsonObject ContributorNameTypeId
+   */
+  private CompletableFuture<JsonObject> getContributorNameTypeId(ContributorNameTypeName contributorNameTypeName) {
+    String name = contributorNameTypeName.getContributorNameTypeName();
+    String endpoint = String.format("/contributor-name-types?query=name==%s", encodeQuery(name, logger));
+    if(ctx.get(name) == null) {
+      return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+        .thenApply(response -> {
+          JsonObject contributorPersonalNameType = new JsonObject();
+          contributorPersonalNameType.put(CONTRIBUTOR_NAME_TYPE_ID, getFirstObjectFromResponse(response, CONTRIBUTOR_NAME_TYPES).getString(ID));
+          ctx.put(name, contributorPersonalNameType);
+          return contributorPersonalNameType;
+        });
+    } else {
+      CompletableFuture<JsonObject> future = new CompletableFuture<>();
+      future.complete(ctx.get(name));
+      return future;
+    }
   }
 }
