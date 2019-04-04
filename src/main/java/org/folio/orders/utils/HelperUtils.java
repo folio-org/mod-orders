@@ -336,11 +336,11 @@ public class HelperUtils {
     return convertErrorCodesToErrors(compPOL, errors);
   }
 
-  private static int getPhysicalCostQuantity(CompositePoLine compPOL) {
+  public static int getPhysicalCostQuantity(CompositePoLine compPOL) {
     return defaultIfNull(compPOL.getCost().getQuantityPhysical(), 0);
   }
 
-  private static int getElectronicCostQuantity(CompositePoLine compPOL) {
+  public static int getElectronicCostQuantity(CompositePoLine compPOL) {
     return defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0);
   }
 
@@ -721,7 +721,7 @@ public class HelperUtils {
   }
 
   /**
-   * Groups all PO Line's locations by location id
+   * Group all PO Line's locations for which the holding should be created by location identifier
    * @param compPOL PO line with locations to group
    * @return map of grouped locations where key is location id and value is list of locations with the same id
    */
@@ -737,13 +737,8 @@ public class HelperUtils {
   }
 
   public static boolean isHoldingCreationRequiredForLocation(CompositePoLine compPOL, Location location) {
-    if (compPOL.getPhysical() != null
-      && (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM)
-      && ObjectUtils.defaultIfNull(location.getQuantityPhysical(), 0) > 0) return true;
-    if (compPOL.getEresource() != null
-      && (compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING || compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM)
-      && ObjectUtils.defaultIfNull(location.getQuantityElectronic(), 0) > 0) return true;
-    return false;
+    return (isHoldingUpdateRequiredForPhysical(compPOL) && ObjectUtils.defaultIfNull(location.getQuantityPhysical(), 0) > 0)
+      || (isHoldingUpdateRequiredForEresource(compPOL) && ObjectUtils.defaultIfNull(location.getQuantityElectronic(), 0) > 0);
   }
 
   /**
@@ -919,18 +914,17 @@ public class HelperUtils {
   }
 
   public static boolean isHoldingsUpdateRequired(CompositePoLine compPOL) {
-    boolean updateRequiredForEresource = false;
-    boolean updateRequiredForPhysical = false;
+    return isHoldingUpdateRequiredForEresource(compPOL) || isHoldingUpdateRequiredForPhysical(compPOL);
+  }
 
-    if (compPOL.getEresource() != null) {
-      updateRequiredForEresource = (compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING
-        || compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
-    }
-    if (compPOL.getPhysical() != null) {
-      updateRequiredForPhysical = (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING
+  private static boolean isHoldingUpdateRequiredForPhysical(CompositePoLine compPOL) {
+     return compPOL.getPhysical() != null && (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING
         || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
-    }
-    return updateRequiredForEresource || updateRequiredForPhysical;
+  }
+
+  private static boolean isHoldingUpdateRequiredForEresource(CompositePoLine compPOL) {
+    return compPOL.getEresource() != null && (compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING
+        || compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
   }
 
   public static boolean isItemsUpdateRequired(CompositePoLine compPOL) {

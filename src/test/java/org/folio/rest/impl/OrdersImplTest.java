@@ -578,7 +578,7 @@ public class OrdersImplTest {
   }
 
   @Test
-  public void testPostOpenOrderInventoryUpdateOnlyForFirstPOL() throws Exception {
+  public void testPostOpenOrderInventoryUpdateWithOrderFormatOther() throws Exception {
     logger.info("=== Test POST Order By Id to change status of Order to Open - inventory interaction required only for first POL ===");
 
     // Get Open Order
@@ -628,12 +628,67 @@ public class OrdersImplTest {
     assertNotNull(holdingsSearches);
     assertNotNull(itemsSearches);
 
-    //TODO clarify should inventory records be created for poLoine with orderFormat=Other and createInventory=Instance,Holdings,Items
     assertEquals(2, instancesSearches.size());
     assertEquals(3, holdingsSearches.size());
     assertEquals(3, itemsSearches.size());
 
     verifyInventoryInteraction(resp, 2);
+    verifyCalculatedData(resp);
+  }
+
+  @Test
+  public void testPostOpenOrderInventoryUpdateOnlyForFirstPOL() throws Exception {
+    logger.info("=== Test POST Order By Id to change status of Order to Open - inventory interaction required only for first POL ===");
+
+    // Get Open Order
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    // Make sure that mock po has 2 po lines
+    assertEquals(2, reqData.getCompositePoLines().size());
+    // Make sure that mock po has the first PO line with 3 locations
+    assertEquals(3, reqData.getCompositePoLines().get(0).getLocations().size());
+
+    // Make sure that Order moves to Open
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    // Set the same location id for all locations of the first PO Line to confirm that only one holding created
+    String locationId = reqData.getCompositePoLines().get(0).getLocations().get(0).getLocationId();
+    reqData.getCompositePoLines().get(0).getLocations().forEach(location -> location.setLocationId(locationId));
+
+    // Prepare second POL
+    CompositePoLine secondPol = reqData.getCompositePoLines().get(1);
+    // MODORDERS-117 Setting OrderFormat to OTHER which means create nothing in inventory for the second PO Line
+    secondPol.setOrderFormat(CompositePoLine.OrderFormat.OTHER);
+    // Specify correct quantities for OTHER format
+    secondPol.getCost().setQuantityElectronic(0);
+    secondPol.getCost().setListUnitPriceElectronic(null);
+    secondPol.getCost().setListUnitPrice(10d);
+    secondPol.getCost().setQuantityPhysical(3);
+    secondPol.setPhysical(new Physical());
+    secondPol.getPhysical().setCreateInventory(Physical.CreateInventory.NONE);
+    secondPol.setEresource(null);
+    secondPol.getLocations().clear();
+
+    LocalDate now = LocalDate.now();
+
+    final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+    LocalDate dateOrdered = resp.getDateOrdered().toInstant().atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDate();
+    assertThat(dateOrdered.getMonth(), equalTo(now.getMonth()));
+    assertThat(dateOrdered.getYear(), equalTo(now.getYear()));
+
+    // Check that search of the existing instances and items was done for first PO line only
+    List<JsonObject> instancesSearches = MockServer.serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
+    List<JsonObject> holdingsSearches = MockServer.serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
+    List<JsonObject> itemsSearches = MockServer.serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
+    assertNotNull(instancesSearches);
+    assertNotNull(holdingsSearches);
+    assertNotNull(itemsSearches);
+
+    assertEquals(1, instancesSearches.size());
+    assertEquals(1, holdingsSearches.size());
+    assertEquals(1, itemsSearches.size());
+
+    verifyInventoryInteraction(resp, 1);
     verifyCalculatedData(resp);
   }
 
@@ -652,6 +707,7 @@ public class OrdersImplTest {
 
     compositePoLine.setId(PO_LINE_ID_FOR_SUCCESS_CASE);
     compositePoLine.getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
+    compositePoLine.setPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM));
     compositePoLine.getCost().setQuantityPhysical(3);
     compositePoLine.getCost().setQuantityElectronic(2);
     compositePoLine.setOrderFormat(OrderFormat.P_E_MIX);
@@ -1710,7 +1766,9 @@ public class OrdersImplTest {
     // Verify quantity of created pieces
     int totalForAllPoLines = 0;
     for (CompositePoLine poLine : compositePoLines) {
-      List<Location> locations = poLine.getLocations();
+      List<Location> locations = poLine.getLocations().stream()
+        .filter(location -> isHoldingCreationRequiredForLocation(poLine, location))
+        .collect(Collectors.toList());
 
       // Prepare data first
 
@@ -1720,15 +1778,16 @@ public class OrdersImplTest {
       int expectedOthQty = 0;
       if (poLine.getCheckinItems() == null || !poLine.getCheckinItems()) {
         if (poLine.getOrderFormat() == OrderFormat.OTHER) {
-          expectedOthQty += calculatePiecesQuantity(Piece.Format.OTHER, locations);
+          expectedOthQty += getPhysicalCostQuantity(poLine);//calculatePiecesQuantity(Piece.Format.OTHER, locations);
         } else {
-          expectedPhysQty += calculatePiecesQuantity(Piece.Format.PHYSICAL, locations);
+          expectedPhysQty += getPhysicalCostQuantity(poLine);//calculatePiecesQuantity(Piece.Format.PHYSICAL, locations);
         }
-        expectedElQty = calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations);
+        expectedElQty = getElectronicCostQuantity(poLine);//calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations);
       }
 
       int expectedWithItemQty = calculateExpectedQuantityOfPiecesWithoutItemCreation(poLine, locations);
       int expectedWithoutItemQty = calculateInventoryItemsQuantity(poLine, locations);
+      int expectedWithoutLocation = calculatePiecesQuantityWithoutLocation(poLine).values().stream().mapToInt(Integer::intValue).sum();
 
       // Prepare pieces for PO Line
       List<Piece> piecesByPoLine = pieces
@@ -1739,21 +1798,20 @@ public class OrdersImplTest {
       // Get all PO Line's locations' ids
       List<String> locationIds = locations
         .stream()
-        .filter(location -> isHoldingCreationRequiredForLocation(poLine, location))
         .map(Location::getLocationId)
         .distinct()
         .collect(Collectors.toList());
 
+      int expectedTotal = expectedWithItemQty + expectedWithoutItemQty + expectedWithoutLocation;
       // Make sure that quantities by piece type and by item presence are the same
-      assertThat(expectedPhysQty + expectedElQty + expectedOthQty, is(expectedWithItemQty + expectedWithoutItemQty));
+      assertThat(expectedPhysQty + expectedElQty + expectedOthQty, is(expectedTotal));
 
-      int expectedTotal = expectedWithItemQty + expectedWithoutItemQty;
       assertThat(piecesByPoLine, hasSize(expectedTotal));
 
       // Verify each piece individually
       piecesByPoLine.forEach(piece -> {
         // Check if itemId in inventoryItems match itemId in piece record
-        if (CollectionUtils.isNotEmpty(locationIds)) {
+        if (piece.getLocationId() != null) {
           assertThat(locationIds, hasItem(piece.getLocationId()));
         }
         assertThat(piece.getReceivingStatus(), equalTo(Piece.ReceivingStatus.EXPECTED));
