@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -392,13 +393,11 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   private CompletableFuture<JsonObject> getInstanceType(String typeName) {
-    String endpoint = String.format("/instance-types?query=code==%s", typeName);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
+    return cacheAndGet(typeName, String.format("/instance-types?query=code==%s", typeName), entries -> entries);
   }
 
   private CompletableFuture<JsonObject> getStatus(String statusCode) {
-    String endpoint = String.format("/instance-statuses?query=code==%s", statusCode);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
+    return cacheAndGet(statusCode, String.format("/instance-statuses?query=code==%s", statusCode), entries -> entries);
   }
 
   private String buildProductIdQuery(ProductId productId, Map<String, String> productTypes) {
@@ -652,20 +651,53 @@ public class InventoryHelper extends AbstractHelper {
    * @return JsonObject ContributorNameTypeId
    */
   private CompletableFuture<JsonObject> getContributorNameTypeId(ContributorNameTypeName contributorNameTypeName) {
-    String name = contributorNameTypeName.getContributorNameTypeName();
-    String endpoint = String.format("/contributor-name-types?query=name==%s", encodeQuery(name, logger));
-    if(ctx.get(name) == null) {
-      return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-        .thenApply(response -> {
-          JsonObject contributorPersonalNameType = new JsonObject();
-          contributorPersonalNameType.put(CONTRIBUTOR_NAME_TYPE_ID, getFirstObjectFromResponse(response, CONTRIBUTOR_NAME_TYPES).getString(ID));
-          ctx.put(name, contributorPersonalNameType);
-          return contributorPersonalNameType;
-        });
+    return cacheAndGet(contributorNameTypeName.getName(),
+      String.format("/contributor-name-types?query=name==%s", encodeQuery(contributorNameTypeName.getName(), logger)),
+      entries -> {
+        JsonObject contributorPersonalNameType = new JsonObject();
+        contributorPersonalNameType.put(CONTRIBUTOR_NAME_TYPE_ID, getFirstObjectFromResponse(entries, CONTRIBUTOR_NAME_TYPES).getString(ID));
+        return contributorPersonalNameType;
+      });
+  }
+
+  /**
+   * Caches value in Vert.X Context and returns it by key.
+   *
+   * @param key key for retrieving value from cache
+   * @param endpoint endpoint for GET request to retrieve value
+   * @param fn Function<JsonObject, JsonObject> for transformation JsonObject to new one if needed
+   *
+   * @return value from cache
+   */
+  private CompletableFuture<JsonObject> cacheAndGet(String key, String endpoint, Function<JsonObject, JsonObject> fn) {
+    JsonObject response = ctx.get(key);
+    if(response == null) {
+      return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger).thenApply(json -> {
+        JsonObject result = fn.apply(json);
+        ctx.put(key, result);
+        return result;
+      });
     } else {
       CompletableFuture<JsonObject> future = new CompletableFuture<>();
-      future.complete(ctx.get(name));
+      future.complete(ctx.get(key));
       return future;
+    }
+  }
+
+  private enum ContributorNameTypeName {
+
+    CORPORATE_NAME("Corporate name"),
+    MEETING_NAME("Meeting name"),
+    PERSONAL_NAME("Personal name");
+
+    ContributorNameTypeName(String name) {
+      this.name = name;
+    }
+
+    private String name;
+
+    public String getName() {
+      return name;
     }
   }
 }

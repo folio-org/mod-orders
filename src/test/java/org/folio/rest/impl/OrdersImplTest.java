@@ -4543,9 +4543,8 @@ public class OrdersImplTest {
 
     private void handleGetContributorNameTypes(RoutingContext ctx) {
       String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
-      final String prefix = "name==";
       try {
-        if((prefix + HelperUtils.ContributorNameTypeName.PERSONAL_NAME.getContributorNameTypeName()).equals(queryParam)) {
+        if(("name==Personal name").equals(queryParam)) {
           serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, getMockData(CONTRIBUTOR_NAME_TYPES_PATH));
         } else {
           serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Illegal query");

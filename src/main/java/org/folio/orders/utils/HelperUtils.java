@@ -865,21 +865,4 @@ public class HelperUtils {
   public static boolean isItemsUpdateRequired(CompositePoLine compPOL) {
     return isItemsUpdateRequiredForPhysical(compPOL) || isItemsUpdateRequiredForEresource(compPOL);
   }
-
-  public enum ContributorNameTypeName {
-
-    CORPORATE_NAME("Corporate name"),
-    MEETING_NAME("Meeting name"),
-    PERSONAL_NAME("Personal name");
-
-    ContributorNameTypeName(String name) {
-      this.name = name;
-    }
-
-    private String name;
-
-    public String getContributorNameTypeName() {
-      return name;
-    }
-  }
 }
