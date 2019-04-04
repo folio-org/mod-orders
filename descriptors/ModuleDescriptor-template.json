@@ -27,6 +27,7 @@
             "orders-storage.po-number.get",
             "orders-storage.alerts.item.post",
             "orders-storage.reporting-codes.item.post",
+            "orders-storage.po-line-number.get",
             "configuration.entries.collection.get",
             "inventory-storage.identifier-types.collection.get",
             "inventory.instances.collection.get",
