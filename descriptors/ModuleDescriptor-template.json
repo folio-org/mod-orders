@@ -21,7 +21,10 @@
           "modulePermissions": [
             "orders-storage.purchase-orders.collection.get",
             "orders-storage.purchase-orders.item.post",
+            "orders-storage.purchase-orders.item.put",
             "orders-storage.po-lines.item.post",
+            "orders-storage.po-lines.item.put",
+            "orders-storage.po-lines.collection.get",
             "orders-storage.pieces.item.post",
             "orders-storage.pieces.collection.get",
             "orders-storage.po-number.get",
@@ -38,6 +41,7 @@
             "inventory-storage.holdings.collection.get",
             "inventory-storage.items.collection.get",
             "inventory-storage.items.item.post",
+            "inventory-storage.instances.item.get",
             "inventory-storage.loan-types.collection.get",
             "vendor-storage.vendors.collection.get",
             "vendor-storage.vendors.item.get"
