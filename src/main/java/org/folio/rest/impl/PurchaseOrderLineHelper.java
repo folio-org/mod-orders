@@ -167,9 +167,6 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   public static boolean isCreateInventoryNull(CompositePoLine compPOL) {
-    if (null == compPOL.getOrderFormat()) {
-      return false;
-    }
     switch (compPOL.getOrderFormat()) {
     case P_E_MIX:
       return isEresourceInventoryNotPresent(compPOL)
