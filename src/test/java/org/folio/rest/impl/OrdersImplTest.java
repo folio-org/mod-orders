@@ -711,6 +711,10 @@ public class OrdersImplTest {
     compositePoLine.getCost().setQuantityPhysical(3);
     compositePoLine.getCost().setQuantityElectronic(2);
     compositePoLine.setOrderFormat(OrderFormat.P_E_MIX);
+    compositePoLine.getLocations().stream()
+      .filter(location -> ObjectUtils.defaultIfNull(location.getQuantityPhysical(), 0) > 0)
+      .forEach(location -> location.setQuantityElectronic(null));
+
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
@@ -2374,7 +2378,7 @@ public class OrdersImplTest {
     final Errors response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(5));
+    assertThat(response.getErrors(), hasSize(4));
     List<String> errorCodes = response.getErrors()
                                       .stream()
                                       .map(Error::getCode)
@@ -2383,7 +2387,6 @@ public class OrdersImplTest {
     assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode(),
                                               NON_ZERO_COST_ELECTRONIC_QTY.getCode(),
                                               PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
-                                              ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
                                               ZERO_LOCATION_QTY.getCode()));
 
     // Check that no any calls made by the business logic to other services

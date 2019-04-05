@@ -345,26 +345,22 @@ public class HelperUtils {
   }
 
   private static List<ErrorCodes> validateLocations(CompositePoLine compPOL) {
-    if (isLocationsValidationRequired(compPOL)) {
-      List<ErrorCodes> errors = new ArrayList<>();
-      List<Location> locations = compPOL.getLocations();
+    List<ErrorCodes> errors = new ArrayList<>();
+    List<Location> locations = compPOL.getLocations();
 
-      // The total quantity of the physical and electronic resources of all locations must match specified in the cost
-      if (getPhysicalLocationsQuantity(locations) != getPhysicalCostQuantity(compPOL)) {
-        errors.add(ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH);
-      }
-      if (getElectronicLocationsQuantity(locations) != getElectronicCostQuantity(compPOL)) {
-        errors.add(ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH);
-      }
-
-      // The total quantity of any location must exceed 0
-      if (locations.stream().anyMatch(location -> calculateTotalLocationQuantity(location) == 0)) {
-        errors.add(ErrorCodes.ZERO_LOCATION_QTY);
-      }
-
-      return errors;
+    // The total quantity of the physical and electronic resources of all locations must match specified in the cost
+    if (isLocationsValidationRequiredForEresource(compPOL) && getElectronicLocationsQuantity(locations) != getElectronicCostQuantity(compPOL)) {
+      errors.add(ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH);
     }
-    return Collections.emptyList();
+    if (isLocationsValidationRequiredForPhysical(compPOL) && getPhysicalLocationsQuantity(locations) != getPhysicalCostQuantity(compPOL)) {
+      errors.add(ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH);
+    }
+
+    // The total quantity of any location must exceed 0
+    if (locations.stream().anyMatch(location -> calculateTotalLocationQuantity(location) == 0)) {
+      errors.add(ErrorCodes.ZERO_LOCATION_QTY);
+    }
+    return errors;
   }
 
   public static Integer calculateTotalLocationQuantity(Location location) {
@@ -374,8 +370,12 @@ public class HelperUtils {
     return quantity;
   }
 
-  private static boolean isLocationsValidationRequired(CompositePoLine compPOL) {
-    return !CollectionUtils.isEmpty(compPOL.getLocations()) || isHoldingsUpdateRequired(compPOL);
+  private static boolean isLocationsValidationRequiredForPhysical(CompositePoLine compPOL) {
+    return getPhysicalLocationsQuantity(compPOL.getLocations()) > 0 || isHoldingUpdateRequiredForPhysical(compPOL);
+  }
+
+  private static boolean isLocationsValidationRequiredForEresource(CompositePoLine compPOL) {
+    return getElectronicLocationsQuantity(compPOL.getLocations()) > 0 || isHoldingUpdateRequiredForEresource(compPOL);
   }
 
   private static List<ErrorCodes> validateCostPrices(CompositePoLine compLine) {
@@ -406,13 +406,20 @@ public class HelperUtils {
       errors.add(ErrorCodes.COST_ADDITIONAL_COST_INVALID);
     }
 
-    if (isDiscountExceedTotalPrice(cost)) {
+    if (isDiscountNotValid(cost)) {
       errors.add(ErrorCodes.COST_DISCOUNT_INVALID);
     }
+
     return errors;
   }
 
-  private static boolean isDiscountExceedTotalPrice(Cost cost) {
+  /**
+   * Checks if discount is negative or exceed cost totalPrice
+   *
+   * @param cost for which discount is checked
+   * @return true if cost.discount not valid
+   */
+  private static boolean isDiscountNotValid(Cost cost) {
     double discount = defaultIfNull(cost.getDiscount(), 0d);
     return (discount < 0d || cost.getDiscountType() == Cost.DiscountType.PERCENTAGE && discount > 100d)
       || (discount > 0d && cost.getDiscountType() == Cost.DiscountType.AMOUNT && calculateEstimatedPrice(cost) < 0d);
@@ -596,7 +603,6 @@ public class HelperUtils {
     }
     return quantities;
   }
-
 
   /**
    * Calculates pieces quantity for specified locations based on piece format.
