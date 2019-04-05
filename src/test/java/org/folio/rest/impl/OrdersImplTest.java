@@ -53,6 +53,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -97,6 +98,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
@@ -250,6 +252,7 @@ public class OrdersImplTest {
   private static final String poCreationFailurePath = "po_creation_failure.json";
   private static final String poLineCreationFailurePath = "po_line_creation_failure.json";
   private static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
+  private static final String CONTRIBUTOR_NAME_TYPES_PATH = BASE_MOCK_DATA_PATH + "contributorNameTypes/contributorPersonalNameType.json";
   /** The PO Line with minimal required content */
   private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "minimalContent.json";
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
@@ -1882,6 +1885,14 @@ public class OrdersImplTest {
       assertThat(instance.getJsonArray(INSTANCE_IDENTIFIERS).getJsonObject(0).getString(INSTANCE_IDENTIFIER_TYPE_ID), equalTo("8261054f-be78-422d-bd51-4ed9f33c3422"));
       assertThat(instance.getJsonArray(INSTANCE_IDENTIFIERS).getJsonObject(0).getString(INSTANCE_IDENTIFIER_TYPE_VALUE), equalTo(line.getDetails().getProductIds().get(0).getProductId()));
     }
+    Object[] actual = instance.getJsonArray(INSTANCE_CONTRIBUTORS).stream()
+      .map(o -> (JsonObject) o)
+      .collect(Collectors.toMap(c -> c.getString(CONTRIBUTOR_NAME), c -> c.getString(CONTRIBUTOR_NAME_TYPE_ID)))
+      .entrySet().toArray();
+    Object[] expected = line.getContributors().stream()
+      .collect(Collectors.toMap(Contributor::getContributor, Contributor::getContributorType))
+      .entrySet().toArray();
+    assertArrayEquals(expected, actual);
   }
 
   private void verifyItemRecordRequest(JsonObject item, CompositePoLine line) {
@@ -3782,6 +3793,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(this::handleGetPieces);
       router.route(HttpMethod.GET, resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
       router.route(HttpMethod.GET, resourcesPath(PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
+      router.route(HttpMethod.GET, "/contributor-name-types").handler(this::handleGetContributorNameTypes);
 
       router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
       router.route(HttpMethod.PUT, resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -4645,6 +4657,19 @@ public class OrdersImplTest {
           .setStatusCode(200)
           .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
           .end(JsonObject.mapFrom(seqNumber).encodePrettily());
+      }
+    }
+
+    private void handleGetContributorNameTypes(RoutingContext ctx) {
+      String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+      try {
+        if(("name==Personal name").equals(queryParam)) {
+          serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, getMockData(CONTRIBUTOR_NAME_TYPES_PATH));
+        } else {
+          serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Illegal query");
+        }
+      } catch (IOException e) {
+        serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Mock-server error");
       }
     }
   }
