@@ -13,9 +13,17 @@
     {
       "acquisitionMethod": "Purchase At Vendor System",
       "cost": {
-        "currency": "USD"
+        "currency": "USD",
+        "listUnitPrice": 0,
+        "quantityPhysical": 1
       },
+      "locations": [
+        {
+          "quantityPhysical": 1
+        }
+      ],
       "description": "ABCDEFGH",
+      "orderFormat": "Physical Resource",
       "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
       "poLineNumber": "268758-03",
       "source": { "code": "FOLIO" },
