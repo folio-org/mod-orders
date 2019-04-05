@@ -349,10 +349,10 @@ public class HelperUtils {
     List<Location> locations = compPOL.getLocations();
 
     // The total quantity of the physical and electronic resources of all locations must match specified in the cost
-    if (isLocationsValidationRequiredForEresource(compPOL) && getElectronicLocationsQuantity(locations) != getElectronicCostQuantity(compPOL)) {
+    if (isLocationsEresourceQuantityNotValid(compPOL)) {
       errors.add(ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH);
     }
-    if (isLocationsValidationRequiredForPhysical(compPOL) && getPhysicalLocationsQuantity(locations) != getPhysicalCostQuantity(compPOL)) {
+    if (isLocationsPhysicalQuantityNotValid(compPOL)) {
       errors.add(ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH);
     }
 
@@ -370,12 +370,14 @@ public class HelperUtils {
     return quantity;
   }
 
-  private static boolean isLocationsValidationRequiredForPhysical(CompositePoLine compPOL) {
-    return getPhysicalLocationsQuantity(compPOL.getLocations()) > 0 || isHoldingUpdateRequiredForPhysical(compPOL);
+  private static boolean isLocationsPhysicalQuantityNotValid(CompositePoLine compPOL) {
+    int physicalQuantity = getPhysicalLocationsQuantity(compPOL.getLocations());
+    return (isHoldingUpdateRequiredForPhysical(compPOL) || physicalQuantity > 0) && (physicalQuantity != getPhysicalCostQuantity(compPOL));
   }
 
-  private static boolean isLocationsValidationRequiredForEresource(CompositePoLine compPOL) {
-    return getElectronicLocationsQuantity(compPOL.getLocations()) > 0 || isHoldingUpdateRequiredForEresource(compPOL);
+  private static boolean isLocationsEresourceQuantityNotValid(CompositePoLine compPOL) {
+    int electronicQuantity = getElectronicLocationsQuantity(compPOL.getLocations());
+    return (isHoldingUpdateRequiredForEresource(compPOL) || electronicQuantity > 0) && (electronicQuantity != getElectronicCostQuantity(compPOL));
   }
 
   private static List<ErrorCodes> validateCostPrices(CompositePoLine compLine) {
