@@ -395,12 +395,12 @@ public class InventoryHelper extends AbstractHelper {
 
   private CompletableFuture<JsonObject> getInstanceType(String typeName) {
     UnaryOperator<String> endpoint = query -> String.format("/instance-types?query=code==%s", encodeQuery(query, logger));
-    return cacheAndGet(typeName, endpoint, entries -> entries);
+    return getAndCache(typeName, endpoint, entries -> entries);
   }
 
   private CompletableFuture<JsonObject> getStatus(String statusCode) {
     UnaryOperator<String> endpoint = query -> String.format("/instance-statuses?query=code==%s", encodeQuery(query, logger));
-    return cacheAndGet(statusCode, endpoint, entries -> entries);
+    return getAndCache(statusCode, endpoint, entries -> entries);
   }
 
   private String buildProductIdQuery(ProductId productId, Map<String, String> productTypes) {
@@ -655,7 +655,7 @@ public class InventoryHelper extends AbstractHelper {
    */
   private CompletableFuture<JsonObject> getContributorNameTypeId(ContributorNameTypeName contributorNameTypeName) {
     UnaryOperator<String> endpoint = query -> String.format("/contributor-name-types?query=name==%s", encodeQuery(query, logger));
-    return cacheAndGet(contributorNameTypeName.getName(),
+    return getAndCache(contributorNameTypeName.getName(),
       endpoint,
       entries -> {
         JsonObject contributorPersonalNameType = new JsonObject();
@@ -673,7 +673,7 @@ public class InventoryHelper extends AbstractHelper {
    *
    * @return value from cache
    */
-  private CompletableFuture<JsonObject> cacheAndGet(String key, UnaryOperator<String> endpointConstructor, Function<JsonObject, JsonObject> fn) {
+  private CompletableFuture<JsonObject> getAndCache(String key, UnaryOperator<String> endpointConstructor, Function<JsonObject, JsonObject> fn) {
     JsonObject response = ctx.get(key);
     if(response == null) {
       return handleGetRequest(endpointConstructor.apply(key), httpClient, ctx, okapiHeaders, logger).thenApply(json -> {
