@@ -25,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -393,11 +394,13 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   private CompletableFuture<JsonObject> getInstanceType(String typeName) {
-    return cacheAndGet(typeName, String.format("/instance-types?query=code==%s", typeName), entries -> entries);
+    UnaryOperator<String> endpoint = query -> String.format("/instance-types?query=code==%s", encodeQuery(query, logger));
+    return cacheAndGet(typeName, endpoint, entries -> entries);
   }
 
   private CompletableFuture<JsonObject> getStatus(String statusCode) {
-    return cacheAndGet(statusCode, String.format("/instance-statuses?query=code==%s", statusCode), entries -> entries);
+    UnaryOperator<String> endpoint = query -> String.format("/instance-statuses?query=code==%s", encodeQuery(query, logger));
+    return cacheAndGet(statusCode, endpoint, entries -> entries);
   }
 
   private String buildProductIdQuery(ProductId productId, Map<String, String> productTypes) {
@@ -651,8 +654,9 @@ public class InventoryHelper extends AbstractHelper {
    * @return JsonObject ContributorNameTypeId
    */
   private CompletableFuture<JsonObject> getContributorNameTypeId(ContributorNameTypeName contributorNameTypeName) {
+    UnaryOperator<String> endpoint = query -> String.format("/contributor-name-types?query=name==%s", encodeQuery(query, logger));
     return cacheAndGet(contributorNameTypeName.getName(),
-      String.format("/contributor-name-types?query=name==%s", encodeQuery(contributorNameTypeName.getName(), logger)),
+      endpoint,
       entries -> {
         JsonObject contributorPersonalNameType = new JsonObject();
         contributorPersonalNameType.put(CONTRIBUTOR_NAME_TYPE_ID, getFirstObjectFromResponse(entries, CONTRIBUTOR_NAME_TYPES).getString(ID));
@@ -664,23 +668,21 @@ public class InventoryHelper extends AbstractHelper {
    * Caches value in Vert.X Context and returns it by key.
    *
    * @param key key for retrieving value from cache
-   * @param endpoint endpoint for GET request to retrieve value
+   * @param endpointConstructor endpoint for GET request to retrieve value
    * @param fn Function<JsonObject, JsonObject> for transformation JsonObject to new one if needed
    *
    * @return value from cache
    */
-  private CompletableFuture<JsonObject> cacheAndGet(String key, String endpoint, Function<JsonObject, JsonObject> fn) {
+  private CompletableFuture<JsonObject> cacheAndGet(String key, UnaryOperator<String> endpointConstructor, Function<JsonObject, JsonObject> fn) {
     JsonObject response = ctx.get(key);
     if(response == null) {
-      return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger).thenApply(json -> {
+      return handleGetRequest(endpointConstructor.apply(key), httpClient, ctx, okapiHeaders, logger).thenApply(json -> {
         JsonObject result = fn.apply(json);
         ctx.put(key, result);
         return result;
       });
     } else {
-      CompletableFuture<JsonObject> future = new CompletableFuture<>();
-      future.complete(ctx.get(key));
-      return future;
+      return completedFuture(ctx.get(key));
     }
   }
 
