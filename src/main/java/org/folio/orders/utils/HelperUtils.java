@@ -330,8 +330,12 @@ public class HelperUtils {
     if (getElectronicCostQuantity(compPOL) == 0) {
       errors.add(ErrorCodes.ZERO_COST_ELECTRONIC_QTY);
     }
-    errors.addAll(validateLocations(compPOL));
 
+    if (isMaterialMissing(compPOL)) {
+      errors.add(ErrorCodes.MISSING_MATERIAL_TYPE);
+    }
+
+    errors.addAll(validateLocations(compPOL));
     errors.addAll(validateCostPrices(compPOL));
 
     return convertErrorCodesToErrors(compPOL, errors);
@@ -356,12 +360,6 @@ public class HelperUtils {
     if (isLocationsPhysicalQuantityNotValid(compPOL)) {
       errors.add(ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH);
     }
-
-    if (isMaterialMissing(compPOL)) {
-      errors.add(ErrorCodes.MISSING_MATERIAL_TYPE);
-    }
-
-    validateCostPrices(compPOL.getCost(), P_E_MIX, errors);
 
     // The total quantity of any location must exceed 0
     if (locations.stream().anyMatch(location -> calculateTotalLocationQuantity(location) == 0)) {
@@ -452,7 +450,6 @@ public class HelperUtils {
     }
 
     errors.addAll(validateLocations(compPOL));
-
     errors.addAll(validateCostPrices(compPOL));
 
     return convertErrorCodesToErrors(compPOL, errors);
