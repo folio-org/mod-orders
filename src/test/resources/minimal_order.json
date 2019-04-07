@@ -13,10 +13,15 @@
     {
       "acquisitionMethod": "Purchase At Vendor System",
       "cost": {
-        "quantityPhysical":1,
         "currency": "USD",
-        "listUnitPrice":1
+        "listUnitPrice": 0,
+        "quantityPhysical": 1
       },
+      "locations": [
+        {
+          "quantityPhysical": 1
+        }
+      ],
       "description": "ABCDEFGH",
       "locations":[
       {

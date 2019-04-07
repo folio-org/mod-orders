@@ -133,6 +133,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     compPoLine.setId(UUID.randomUUID().toString());
     compPoLine.setPurchaseOrderId(compOrder.getId());
     updateEstimatedPrice(compPoLine);
+    updateLocationsQuantity(compPoLine.getLocations());
 
     JsonObject line = mapFrom(compPoLine);
     List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
@@ -282,6 +283,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
     // The estimated price should be always recalculated
     updateEstimatedPrice(compOrderLine);
+    updateLocationsQuantity(compOrderLine.getLocations());
 
     updatePoLineSubObjects(compOrderLine, lineFromStorage)
       .thenCompose(poLine -> updateOrderLineSummary(compOrderLine.getId(), poLine))
@@ -421,6 +423,10 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     }
   }
 
+  private void updateLocationsQuantity(List<Location> locations) {
+    locations.forEach(location -> location.setQuantity(calculateTotalLocationQuantity(location)));
+  }
+
   /**
    * Creates pieces that are not yet in storage
    *
@@ -430,36 +436,60 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    */
   private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem) {
     int createdItemsQuantity = expectedPiecesWithItem.size();
-    // do not create pieces in case of checkin flow
+    // do not create pieces in case of check-in flow
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
       return completedFuture(null);
     }
     return searchForExistingPieces(compPOL)
       .thenCompose(existingPieces -> {
         List<Piece> piecesToCreate = new ArrayList<>();
-        // For each location collect pieces that need to be created.
-        groupLocationsById(compPOL)
-          .forEach((locationId, locations) -> {
-            List<Piece> filteredExistingPieces = filterByLocationId(existingPieces, locationId);
-            List<Piece> filteredExpectedPiecesWithItem = filterByLocationId(expectedPiecesWithItem, locationId);
-            piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
 
-            Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = calculatePiecesQuantity(compPOL, locations, false);
-            Map<Piece.Format, Integer> quantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(filteredExistingPieces);
-            expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
-              int remainingPiecesQuantity = expectedQty - quantityWithoutItem.getOrDefault(format, 0);
-              if (remainingPiecesQuantity > 0) {
-                for (int i = 0; i < remainingPiecesQuantity; i++) {
-                  piecesToCreate.add(new Piece().withFormat(format).withLocationId(locationId).withPoLineId(compPOL.getId()));
-                }
-              }
-            });
-          });
+        piecesToCreate.addAll(createPiecesByLocationId(compPOL, expectedPiecesWithItem, existingPieces));
+        piecesToCreate.addAll(createPiecesWithoutLocationId(compPOL, existingPieces));
 
         return allOf(piecesToCreate.stream().map(this::createPiece).toArray(CompletableFuture[]::new));
       })
       .thenAccept(v -> validateItemsCreation(compPOL, createdItemsQuantity));
   }
+
+  private List<Piece> createPiecesWithoutLocationId(CompositePoLine compPOL, List<Piece> existingPieces) {
+    List<Piece> piecesToCreate = new ArrayList<>();
+    Map<Piece.Format, Integer> expectedQuantitiesWithoutLocation = calculatePiecesQuantityWithoutLocation(compPOL);
+    Map<Piece.Format, Integer> existingPiecesQuantities = calculateQuantityOfExistingPiecesWithoutLocation(existingPieces);
+    expectedQuantitiesWithoutLocation.forEach((format, expectedQty) -> {
+      int remainingPiecesQuantity = expectedQty - existingPiecesQuantities.getOrDefault(format, 0);
+      if (remainingPiecesQuantity > 0) {
+        for (int i = 0; i < remainingPiecesQuantity; i++) {
+          piecesToCreate.add(new Piece().withFormat(format).withPoLineId(compPOL.getId()));
+        }
+      }
+    });
+    return piecesToCreate;
+  }
+
+  private List<Piece> createPiecesByLocationId(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem, List<Piece> existingPieces) {
+    List<Piece> piecesToCreate = new ArrayList<>();
+    // For each location collect pieces that need to be created.
+    groupLocationsById(compPOL)
+      .forEach((locationId, locations) -> {
+        List<Piece> filteredExistingPieces = filterByLocationId(existingPieces, locationId);
+        List<Piece> filteredExpectedPiecesWithItem = filterByLocationId(expectedPiecesWithItem, locationId);
+        piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
+
+        Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = calculatePiecesQuantity(compPOL, locations, false);
+        Map<Piece.Format, Integer> quantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(filteredExistingPieces);
+        expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
+          int remainingPiecesQuantity = expectedQty - quantityWithoutItem.getOrDefault(format, 0);
+          if (remainingPiecesQuantity > 0) {
+            for (int i = 0; i < remainingPiecesQuantity; i++) {
+              piecesToCreate.add(new Piece().withFormat(format).withLocationId(locationId).withPoLineId(compPOL.getId()));
+            }
+          }
+        });
+      });
+    return piecesToCreate;
+  }
+
 
   /**
    * Search for pieces which might be already created for the PO line
@@ -499,6 +529,12 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private Map<Piece.Format, Integer> calculateQuantityOfExistingPiecesWithoutItem(List<Piece> pieces) {
     return StreamEx.of(pieces)
       .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
+      .groupingBy(Piece::getFormat, collectingAndThen(toList(), List::size));
+  }
+
+  private Map<Piece.Format, Integer> calculateQuantityOfExistingPiecesWithoutLocation(List<Piece> pieces) {
+    return StreamEx.of(pieces)
+      .filter(piece -> StringUtils.isEmpty(piece.getLocationId()))
       .groupingBy(Piece::getFormat, collectingAndThen(toList(), List::size));
   }
 
