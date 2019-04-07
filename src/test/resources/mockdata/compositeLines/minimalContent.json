@@ -1,6 +1,14 @@
 {
-  "orderFormat": "Other",
-  "source": 
-  { 
-   "code": "FOLIO" }
+	"orderFormat": "Other",
+	"source": {
+		"code": "FOLIO"
+	},
+	"cost": {
+		"listUnitPrice": 0,
+		"currency": "USD",
+		"quantityPhysical": 1
+	},
+	"physical": {
+		"createInventory": "None"
+	}
 }

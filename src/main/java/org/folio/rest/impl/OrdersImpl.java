@@ -35,7 +35,7 @@ public class OrdersImpl implements Orders {
   @Override
   @Validate
   public void deleteOrdersCompositeOrdersById(String id, String lang, Map<String, String> okapiHeaders,
-                                              Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     PurchaseOrderHelper helper = new PurchaseOrderHelper(okapiHeaders, vertxContext, lang);
     helper
@@ -47,7 +47,7 @@ public class OrdersImpl implements Orders {
   @Override
   @Validate
   public void getOrdersOrderLines(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders,
-                                  Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
     helper
       .getPoLines(limit, offset, query)
@@ -58,7 +58,7 @@ public class OrdersImpl implements Orders {
   @Override
   @Validate
   public void getOrdersCompositeOrdersById(String id, String lang, Map<String, String> okapiHeaders,
-                                           Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     PurchaseOrderHelper helper = new PurchaseOrderHelper(okapiHeaders, vertxContext, lang);
     helper
@@ -70,7 +70,7 @@ public class OrdersImpl implements Orders {
   @Override
   @Validate
   public void postOrdersCompositeOrders(String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
-                                        Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     PurchaseOrderHelper helper = new PurchaseOrderHelper(okapiHeaders, vertxContext, lang);
 
@@ -88,8 +88,8 @@ public class OrdersImpl implements Orders {
                   logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withFunds).encodePrettily());
                   helper.closeHttpClient();
                   Response response = PostOrdersCompositeOrdersResponse.respond201WithApplicationJson(withFunds,
-                    PostOrdersCompositeOrdersResponse.headersFor201()
-                                                     .withLocation(String.format(ORDERS_LOCATION_PREFIX, withFunds.getId())));
+                      PostOrdersCompositeOrdersResponse.headersFor201()
+                        .withLocation(String.format(ORDERS_LOCATION_PREFIX, withFunds.getId())));
                   asyncResultHandler.handle(succeededFuture(response));
                 })
                 .exceptionally(t -> {
@@ -112,8 +112,9 @@ public class OrdersImpl implements Orders {
 
   @Override
   @Validate
-  public void putOrdersCompositeOrdersById(String orderId, String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
-                                           Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void putOrdersCompositeOrdersById(String orderId, String lang, CompositePurchaseOrder compPO,
+      Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     // Set order id from path if not specified in body
     populateOrderId(orderId, compPO);
@@ -159,13 +160,14 @@ public class OrdersImpl implements Orders {
   @Override
   @Validate
   public void postOrdersOrderLines(String lang, CompositePoLine poLine, Map<String, String> okapiHeaders,
-                                   Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
 
     logger.info("Creating POLine to an existing order...");
 
-    // The validation of the PO Line content and its order state is done in scope of the 'createPoLine' method logic
+    // The validation of the PO Line content and its order state is done in
+    // scope of the 'createPoLine' method logic
     helper
       .createPoLine(poLine)
       .thenAccept(pol -> {
@@ -175,8 +177,8 @@ public class OrdersImpl implements Orders {
             logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
           }
           response = PostOrdersOrderLinesResponse.respond201WithApplicationJson(pol,
-            PostOrdersOrderLinesResponse.headersFor201()
-                                        .withLocation(String.format(ORDER_LINE_LOCATION_PREFIX, pol.getId())));
+              PostOrdersOrderLinesResponse.headersFor201()
+                .withLocation(String.format(ORDER_LINE_LOCATION_PREFIX, pol.getId())));
         } else {
           response = helper.buildErrorResponse(422);
         }
@@ -188,7 +190,7 @@ public class OrdersImpl implements Orders {
   @Override
   @Validate
   public void getOrdersOrderLinesById(String lineId, String lang, Map<String, String> okapiHeaders,
-                                      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Started Invocation of POLine Request with id = {}", lineId);
     PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
 
@@ -206,7 +208,7 @@ public class OrdersImpl implements Orders {
   @Override
   @Validate
   public void deleteOrdersOrderLinesById(String lineId, String lang, Map<String, String> okapiHeaders,
-                                         Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
     helper
@@ -217,7 +219,8 @@ public class OrdersImpl implements Orders {
 
   @Override
   @Validate
-  public void getOrdersPoNumber(String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOrdersPoNumber(String lang, Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Receiving generated poNumber ...");
 
     new PoNumberHelper(okapiHeaders, vertxContext, lang)
@@ -240,41 +243,47 @@ public class OrdersImpl implements Orders {
 
     // First validate content of the PO Line and proceed only if all is okay
     List<Error> errors = new ArrayList<>();
-    helper.setTenantDefaultCreateInventoryValues(poLine).thenAccept(empty -> {
-      errors.addAll(validatePoLine(poLine));
 
-      if (!lineId.equals(poLine.getId())) {
-        errors.add(ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
-      }
-      if (!errors.isEmpty()) {
-        PutOrdersOrderLinesByIdResponse response = PutOrdersOrderLinesByIdResponse
-          .respond422WithApplicationJson(new Errors().withErrors(errors));
-        asyncResultHandler.handle(succeededFuture(response));
-        return;
-      }
+    if (!lineId.equals(poLine.getId())) {
+      errors.add(ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
+    }
 
-      helper.updateOrderLine(poLine)
-        .thenAccept(v -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
-        .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
-    });
+    helper.setTenantDefaultCreateInventoryValues(poLine)
+      .thenAccept(empty -> {
+        errors.addAll(validatePoLine(poLine));
+
+        if (!errors.isEmpty()) {
+          PutOrdersOrderLinesByIdResponse response = PutOrdersOrderLinesByIdResponse
+            .respond422WithApplicationJson(new Errors().withErrors(errors));
+          asyncResultHandler.handle(succeededFuture(response));
+          return;
+        }
+
+        helper.updateOrderLine(poLine)
+          .thenAccept(v -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
+          .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+
+      })
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
   @Validate
   public void postOrdersPoNumberValidate(String lang, PoNumber poNumber, Map<String, String> okapiHeaders,
-                                         Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     PoNumberHelper helper = new PoNumberHelper(okapiHeaders, vertxContext, lang);
     logger.info("Validating a PO Number");
 
-    //@Validate asserts the pattern of a PO Number, the below method is used to check for uniqueness
+    // @Validate asserts the pattern of a PO Number, the below method is used to
+    // check for uniqueness
     helper.checkPONumberUnique(poNumber)
-          .thenAccept(response -> asyncResultHandler.handle(succeededFuture(response)));
+      .thenAccept(response -> asyncResultHandler.handle(succeededFuture(response)));
   }
 
   @Override
   @Validate
   public void postOrdersReceive(String lang, ReceivingCollection entity, Map<String, String> okapiHeaders,
-                                Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Receiving {} items", entity.getTotalRecords());
     ReceivingHelper helper = new ReceivingHelper(entity, okapiHeaders, vertxContext, lang);
     helper
@@ -286,7 +295,7 @@ public class OrdersImpl implements Orders {
   @Override
   @Validate
   public void postOrdersCheckIn(String lang, CheckinCollection entity, Map<String, String> okapiHeaders,
-                                Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Checkin {} items", entity.getTotalRecords());
     CheckinHelper helper = new CheckinHelper(entity, okapiHeaders, vertxContext, lang);
     helper
@@ -297,7 +306,8 @@ public class OrdersImpl implements Orders {
 
   @Override
   @Validate
-  public void getOrdersCompositeOrders(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOrdersCompositeOrders(int offset, int limit, String query, String lang,
+      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     PurchaseOrderHelper helper = new PurchaseOrderHelper(okapiHeaders, vertxContext, lang);
     helper
       .getPurchaseOrders(limit, offset, query)
@@ -312,8 +322,9 @@ public class OrdersImpl implements Orders {
 
   @Override
   @Validate
-  public void getOrdersReceivingHistory(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders,
-                                        Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOrdersReceivingHistory(int offset, int limit, String query, String lang,
+      Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     ReceivingHelper helper = new ReceivingHelper(okapiHeaders, vertxContext, lang);
 
@@ -321,21 +332,24 @@ public class OrdersImpl implements Orders {
       .getReceivingHistory(limit, offset, query)
       .thenAccept(receivingHistory -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved receiving history: " + JsonObject.mapFrom(receivingHistory).encodePrettily());
+          logger
+            .info("Successfully retrieved receiving history: " + JsonObject.mapFrom(receivingHistory).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(receivingHistory)));
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
-  private Void handleErrorResponse(Handler<AsyncResult<Response>> asyncResultHandler, AbstractHelper helper, Throwable t) {
+  private Void handleErrorResponse(Handler<AsyncResult<Response>> asyncResultHandler, AbstractHelper helper,
+      Throwable t) {
     asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(t)));
     return null;
   }
 
   @Override
   @Validate
-  public void postOrdersPieces(String lang, Piece entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void postOrdersPieces(String lang, Piece entity, Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     PiecesHelper helper = new PiecesHelper(okapiHeaders, vertxContext, lang);
     helper
       .createRecordInStorage(entity)
