@@ -13,12 +13,23 @@
     {
       "acquisitionMethod": "Purchase At Vendor System",
       "cost": {
-        "currency": "USD"
+        "quantityPhysical":1,
+        "currency": "USD",
+        "listUnitPrice":1
       },
       "description": "ABCDEFGH",
-      "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
+      "locations":[
+      {
+         "locationId":"bab00694-a87c-4607-9daf-346cd820aba2",
+         "quantityPhysical":1
+      }
+      ],
       "orderFormat" : "Physical Resource",
+      "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
       "poLineNumber": "268758-03",
+      "physical":{
+        "createInventory":"None"
+      },
       "source": { "code": "FOLIO" },
       "title": "Kayak Fishing in the Northern Gulf Coast",
       "metadata": {

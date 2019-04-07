@@ -2617,6 +2617,8 @@ public class OrdersImplTest {
     Response resp = verifyPut(url, body, APPLICATION_JSON, 422);
 
     assertEquals(1, resp.as(Errors.class).getErrors().size());
+    //the idmismatch is the first check in the code, before validating for other orders
+    assertThat(resp.as(Errors.class).getErrors().get(0).getCode(),is("idMismatch"));
     assertNotNull(resp.as(Errors.class).getErrors().get(0).getMessage());
 
     // Verify that no calls reached mock server
