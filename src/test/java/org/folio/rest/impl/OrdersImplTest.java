@@ -419,7 +419,6 @@ public class OrdersImplTest {
 
     final Errors response = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
-// change this to 11 once issue with validating location electronic quantity is for physical is fixed
     assertThat(response.getErrors(), hasSize(12));
     Set<String> errorCodes = response.getErrors()
                                      .stream()
@@ -2516,7 +2515,6 @@ public class OrdersImplTest {
     final Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData),
       APPLICATION_JSON, 422).as(Errors.class);
 
-    //change this to 8 once physicalLocCostQtyMismatch error is fixed
     assertThat(response.getErrors(), hasSize(9));
     List<String> errorCodes = response.getErrors()
                                       .stream()

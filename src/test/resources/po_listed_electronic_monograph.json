@@ -48,7 +48,6 @@
       },
       "description": "ABCDEFGH",
       "details": {
-        "id": "349d9438-12bd-4e2e-9eb6-dfa830ab99a4",
         "receivingNote": "ABCDEFGHIJKL",
         "productIds": [
           {
@@ -62,7 +61,6 @@
       },
       "donor": "ABCDEFGHIJKLM",
       "eresource": {
-        "id": "468b679c-378b-4009-9a17-a6711cefc85f",
         "activated": false,
         "activationDue": 10,
         "createInventory": "Instance, Holding, Item",
@@ -74,7 +72,11 @@
         "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
       },
       "fundDistribution": [
-        "d10879e8-8c2d-4850-bcb9-0ec8e2e10021"
+        {
+          "code": "EUROHIST-FY19",
+          "percentage": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08003"
+        }
       ],
       "locations": [
         {
@@ -124,7 +126,6 @@
       ],
       "title": "Kayak Fishing in the Northern Gulf Coast",
       "vendorDetail": {
-        "id": "d5065f0d-fb88-4d23-b0c1-57e754fba40e",
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
         "refNumber": "123456-78",
