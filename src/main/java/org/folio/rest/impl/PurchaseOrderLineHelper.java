@@ -156,7 +156,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
           if (!config.isEmpty() && !config.getString(CREATE_INVENTORY).isEmpty()) {
             return future.complete(new JsonObject(config.getString(CREATE_INVENTORY)));
           } else {
-            return completedFuture(new JsonObject());
+            return future.complete(new JsonObject());
           }
         })
         .exceptionally(t -> future.complete(new JsonObject()));
