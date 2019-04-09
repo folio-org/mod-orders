@@ -125,7 +125,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenCompose(poFromStorage -> {
         logger.info("Order successfully retrieved from storage");
         return validatePoNumber(poFromStorage, compPO)
-          .thenCompose(v -> updateTenantDefaultCreateInventoryValues(compPO))
           .thenCompose(v -> updatePoLines(poFromStorage, compPO))
           .thenCompose(v -> {
             if (isTransitionToOpen(poFromStorage, compPO)) {
@@ -136,12 +135,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
           });
         }
       );
-  }
-
-  private CompletableFuture<Void> updateTenantDefaultCreateInventoryValues(CompositePurchaseOrder compPO) {
-    return CompletableFuture.allOf(compPO.getCompositePoLines().stream()
-      .map(orderLineHelper::setTenantDefaultCreateInventoryValues)
-      .toArray(CompletableFuture[]::new));
   }
 
   /**
@@ -239,20 +232,40 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   /**
-   * Validates purchase order content. If content is okay, checks if allowed PO Lines limit is not exceeded and validates vendors.
-   * @param compPO Purchase Order to validate
-   * @return completable future which might be completed with {@code true} if order is valid, {@code false} if not valid or an exception if processing fails
+   * Sets the tenant default values and validates the order. Checks if Orders has
+   * PO Lines within limit and validates vendors and access providers.
+   *
+   * @param compPO
+   *          Purchase Order to validate
+   * @return completable future which might be completed with {@code true} if
+   *         order is valid, {@code false} if not valid or an exception if
+   *         processing fails
    */
   public CompletableFuture<Boolean> validateOrder(CompositePurchaseOrder compPO) {
-    addProcessingErrors(HelperUtils.validateOrder(compPO));
 
-    // If static validation has failed, no need to call other services
-    if (!getErrors().isEmpty()) {
-      return completedFuture(false);
-    }
+    return setCreateInventoryDefaultValues(compPO)
+      .thenAccept(v -> addProcessingErrors(HelperUtils.validateOrder(compPO)))
+      .thenCompose(v -> validatePoLineLimit(compPO))
+      .thenCompose(isLimitValid -> {
+        if (!getErrors().isEmpty()) {
+          return completedFuture(false);
+        }
+        if (isLimitValid) {
+          return validateVendor(compPO);
+        }
 
-    return validatePoLineLimit(compPO)
-      .thenCompose(isStillValid -> isStillValid ? validateVendor(compPO) : completedFuture(false));
+        return completedFuture(isLimitValid);
+      });
+
+  }
+
+  CompletableFuture<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO) {
+    CompletableFuture[] futures = compPO.getCompositePoLines()
+      .stream()
+      .map(orderLineHelper::setTenantDefaultCreateInventoryValues)
+      .toArray(CompletableFuture[]::new);
+
+    return VertxCompletableFuture.allOf(ctx, futures);
   }
 
   /**
@@ -468,7 +481,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
         return orderLineHelper
           .updateOrderLineSummary(lineFromStorage.getString(ID), lineFromStorage);
       })
-      .toArray(CompletableFuture[]::new);
+       .toArray(CompletableFuture[]::new);
 
     return VertxCompletableFuture.allOf(ctx, futures);
   }

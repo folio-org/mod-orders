@@ -38,6 +38,7 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.Response;
@@ -329,8 +330,12 @@ public class HelperUtils {
     if (getElectronicCostQuantity(compPOL) == 0) {
       errors.add(ErrorCodes.ZERO_COST_ELECTRONIC_QTY);
     }
-    errors.addAll(validateLocations(compPOL));
 
+    if (isMaterialMissing(compPOL)) {
+      errors.add(ErrorCodes.MISSING_MATERIAL_TYPE);
+    }
+
+    errors.addAll(validateLocations(compPOL));
     errors.addAll(validateCostPrices(compPOL));
 
     return convertErrorCodesToErrors(compPOL, errors);
@@ -362,6 +367,7 @@ public class HelperUtils {
     }
     return errors;
   }
+
 
   public static Integer calculateTotalLocationQuantity(Location location) {
     int quantity = 0;
@@ -439,8 +445,11 @@ public class HelperUtils {
       errors.add(ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY);
     }
 
-    errors.addAll(validateLocations(compPOL));
+    if (isMaterialMissing(compPOL)) {
+      errors.add(ErrorCodes.MISSING_MATERIAL_TYPE);
+    }
 
+    errors.addAll(validateLocations(compPOL));
     errors.addAll(validateCostPrices(compPOL));
 
     return convertErrorCodesToErrors(compPOL, errors);
@@ -458,8 +467,12 @@ public class HelperUtils {
       errors.add(ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY);
     }
 
-    errors.addAll(validateLocations(compPOL));
 
+    if (isMaterialMissing(compPOL)) {
+      errors.add(ErrorCodes.MISSING_MATERIAL_TYPE);
+    }
+
+    errors.addAll(validateLocations(compPOL));
     errors.addAll(validateCostPrices(compPOL));
 
     return convertErrorCodesToErrors(compPOL, errors);
@@ -509,9 +522,8 @@ public class HelperUtils {
   /**
    * Calculates total items quantity for all locations.
    * The quantity is based on Order Format (please see MODORDERS-117):<br/>
-   * If format equals Physical the associated quantities will result in item records<br/>
-   * If format equals Other the associated quantities will NOT result in item records<br/>
-   * If format = Electronic and Create Item = True, the associated electronic quantities will result in item records being created in inventory<br/>
+   * If format equals Physical or Other the associated quantities will result in item records<br/>
+   * If format = Electronic and Create Inventory = Instance,Holding,Item, the associated electronic quantities will result in item records being created in inventory<br/>
    * If format = Electronic and Create Item = False, the associated electronic quantities will NOT result in item records being created in inventory
    *
    * @param compPOL composite PO Line
@@ -937,5 +949,22 @@ public class HelperUtils {
 
   public static boolean isItemsUpdateRequired(CompositePoLine compPOL) {
     return isItemsUpdateRequiredForPhysical(compPOL) || isItemsUpdateRequiredForEresource(compPOL);
+  }
+
+  private static boolean isMaterialMissing(CompositePoLine compPOL) {
+    boolean isMissing = false;
+    if (compPOL.getOrderFormat().equals(OrderFormat.ELECTRONIC_RESOURCE)
+        || compPOL.getOrderFormat().equals(OrderFormat.P_E_MIX)) {
+      isMissing = compPOL.getEresource().getCreateInventory() == (Eresource.CreateInventory.INSTANCE_HOLDING_ITEM)
+          && isEmpty(compPOL.getEresource().getMaterialType());
+    }
+
+    if (!compPOL.getOrderFormat().equals(OrderFormat.ELECTRONIC_RESOURCE)) {
+      isMissing = isMissing
+          || (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM
+          && isEmpty(compPOL.getPhysical().getMaterialType()));
+    }
+
+    return isMissing;
   }
 }

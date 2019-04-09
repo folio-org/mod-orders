@@ -35,7 +35,6 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.folio.orders.utils.ErrorCodes.ITEM_CREATION_FAILED;
-import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
 import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.rest.acq.model.Piece.Format.ELECTRONIC;
 
@@ -164,7 +163,7 @@ public class InventoryHelper extends AbstractHelper {
 
     return handlePutRequest(endpoint, itemRecord, httpClient, ctx, okapiHeaders, logger);
   }
-  
+
   public CompletableFuture<Void> checkinItem(JsonObject itemRecord, CheckInPiece checkinPiece) {
     String endpoint = String.format(UPDATE_ITEM_ENDPOINT, itemRecord.getString(ID), lang);
 
@@ -185,7 +184,7 @@ public class InventoryHelper extends AbstractHelper {
   public boolean isOnOrderItemStatus(ReceivedItem receivedItem) {
     return ITEM_STATUS_ON_ORDER.equalsIgnoreCase(receivedItem.getItemStatus());
   }
-  
+
   /**
    * Checks if the {@link ReceivedItem} has item status as "On order"
    * @param checkinPiece details specified by user upon check-in flow
@@ -284,11 +283,11 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   private List<String> getPhysicalItems(CompositePoLine compPOL, List<JsonObject> existingItems) {
-    return getItemsByMaterialType(existingItems, getPhysicalMaterialTypeId(compPOL));
+    return getItemsByMaterialType(existingItems,compPOL.getPhysical().getMaterialType());
   }
 
   private List<String> getElectronicItems(CompositePoLine compPOL, List<JsonObject> existingItems) {
-    return getItemsByMaterialType(existingItems, getElectronicMaterialTypeId(compPOL));
+    return getItemsByMaterialType(existingItems, compPOL.getEresource().getMaterialType());
   }
 
   private List<String> getItemsByMaterialType(List<JsonObject> existingItems, String materialTypeId) {
@@ -491,7 +490,7 @@ public class InventoryHelper extends AbstractHelper {
                    .orElseGet(Collections::emptyList);
   }
 
-  /**
+/**
    * Creates Items in the inventory based on the PO line data.
    *
    * @param compPOL PO line to create Instance Record for
@@ -589,7 +588,7 @@ public class InventoryHelper extends AbstractHelper {
    */
   private CompletableFuture<JsonObject> buildElectronicItemRecordJsonObject(CompositePoLine compPOL, String holdingId) {
     return buildBaseItemRecordJsonObject(compPOL, holdingId)
-      .thenApply(itemRecord -> itemRecord.put(ITEM_MATERIAL_TYPE_ID, getElectronicMaterialTypeId(compPOL)));
+      .thenApply(itemRecord -> itemRecord.put(ITEM_MATERIAL_TYPE_ID, compPOL.getEresource().getMaterialType()));
   }
 
   /**
@@ -601,22 +600,9 @@ public class InventoryHelper extends AbstractHelper {
    */
   private CompletableFuture<JsonObject> buildPhysicalItemRecordJsonObject(CompositePoLine compPOL, String holdingId) {
     return buildBaseItemRecordJsonObject(compPOL, holdingId)
-      .thenApply(itemRecord -> itemRecord.put(ITEM_MATERIAL_TYPE_ID, getPhysicalMaterialTypeId(compPOL)));
+      .thenApply(itemRecord -> itemRecord.put(ITEM_MATERIAL_TYPE_ID, compPOL.getPhysical().getMaterialType()));
   }
 
-  private String getPhysicalMaterialTypeId(CompositePoLine compPOL) {
-    // the logic will be updated in scope of MODORDERS-195
-    return getElectronicMaterialTypeId(compPOL);
-  }
-
-  private String getElectronicMaterialTypeId(CompositePoLine compPOL) {
-    // the logic will be updated in scope of MODORDERS-195
-    return Optional.ofNullable(compPOL.getDetails())
-                   .map(Details::getMaterialTypes)
-                   .flatMap(ids -> ids.stream().findFirst())
-                   .orElseThrow(() -> new CompletionException(
-                     new HttpException(422, MISSING_MATERIAL_TYPE)));
-  }
 
   String extractId(JsonObject json) {
     return json.getString(ID);

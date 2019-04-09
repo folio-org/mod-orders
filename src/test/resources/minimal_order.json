@@ -23,9 +23,18 @@
         }
       ],
       "description": "ABCDEFGH",
-      "orderFormat": "Physical Resource",
+      "locations":[
+      {
+         "locationId":"bab00694-a87c-4607-9daf-346cd820aba2",
+         "quantityPhysical":1
+      }
+      ],
+      "orderFormat" : "Physical Resource",
       "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
       "poLineNumber": "268758-03",
+      "physical":{
+        "createInventory":"None"
+      },
       "source": { "code": "FOLIO" },
       "title": "Kayak Fishing in the Northern Gulf Coast",
       "metadata": {
