@@ -227,7 +227,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return fetchCompositePoLines(compPO)
       .thenCompose(this::updateInventory)
       .thenCompose(v -> updateOrderSummary(compPO))
-      .thenAccept(v -> changePoLineReceiptStatuses(compPO))
+      .thenAccept(v -> changePoLineStatuses(compPO))
       .thenCompose(v -> updateCompositePoLines(compPO));
   }
 
@@ -394,12 +394,23 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return completedFuture(compPO);
   }
 
-  private void changePoLineReceiptStatuses(CompositePurchaseOrder compPO) {
+  private void changePoLineStatuses(CompositePurchaseOrder compPO) {
     compPO.getCompositePoLines().forEach(poLine -> {
-      if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.PENDING) {
-        poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
-      }
+      changeReceiptStatus(poLine);
+      changePaymentStatus(poLine);
     });
+  }
+
+  private void changePaymentStatus(CompositePoLine poLine) {
+    if (poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.PENDING) {
+      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.AWAITING_PAYMENT);
+    }
+  }
+
+  private void changeReceiptStatus(CompositePoLine poLine) {
+    if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.PENDING) {
+      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
+    }
   }
 
   private CompletionStage<Void> validatePoNumber(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
