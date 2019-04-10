@@ -299,7 +299,7 @@ public class HelperUtils {
 
     List<Error> errors = new ArrayList<>();
     
-	  if (compositeOrder.getVendor() == null || StringUtils.isEmpty(compositeOrder.getVendor())) {
+	  if (compositeOrder.getVendor() == null) {
 	  	errors.add(ErrorCodes.VENDOR_ID_REQUIRED.toError());
 	  }
     for (CompositePoLine compositePoLine : compositeOrder.getCompositePoLines()) {
