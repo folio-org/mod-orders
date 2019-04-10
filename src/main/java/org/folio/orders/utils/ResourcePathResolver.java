@@ -12,6 +12,7 @@ public class ResourcePathResolver {
 
   public static final String PO_LINES = "poLines";
   public static final String PO_NUMBER = "poNumber";
+  public static final String VENDOR_ID = "vendor";
   public static final String PO_LINE_NUMBER = "poLineNumber";
 
   public static final String ALERTS = "alerts";

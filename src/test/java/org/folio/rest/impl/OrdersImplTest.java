@@ -98,7 +98,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
@@ -259,7 +258,6 @@ public class OrdersImplTest {
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
   private static final String CHECKIN_RQ_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "checkIn/";
 
-  private static final String VENDOR_ID_REQUIRED = "vendorIdRequired";
   private static final String QUERY_PARAM_NAME = "query";
   private static final String ID = "id";
   private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
@@ -1279,6 +1277,7 @@ public class OrdersImplTest {
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_PO_LINES_JSON));
     String newPoNumber = reqData.getString(PO_NUMBER) + "A";
     reqData.put(PO_NUMBER, newPoNumber);
+    reqData.put(VENDOR_ID, EXISTING_REQUIRED_VENDOR_UUID);
     Pattern poLinePattern = Pattern.compile(String.format("(%s)(-[0-9]{1,3})", newPoNumber));
 
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData, "", 204);
@@ -2527,7 +2526,6 @@ public class OrdersImplTest {
       prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);   
     
     ctx.assertEquals(1, resp.getErrors().size());
-    ctx.assertEquals(ErrorCodes.VENDOR_ID_REQUIRED.getCode(), VENDOR_ID_REQUIRED);
   }
   
   @Test
