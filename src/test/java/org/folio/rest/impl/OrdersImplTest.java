@@ -260,6 +260,7 @@ public class OrdersImplTest {
 
   private static final String QUERY_PARAM_NAME = "query";
   private static final String ID = "id";
+  private static final String NULL = "null";
   private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
   private static final String INCORRECT_LANG_PARAMETER = "'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\"";
   private static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
@@ -2526,6 +2527,8 @@ public class OrdersImplTest {
       prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);   
     
     ctx.assertEquals(1, resp.getErrors().size());
+    ctx.assertEquals(resp.getErrors().get(0).getParameters().get(0).getKey(), VENDOR_ID);
+    ctx.assertEquals(resp.getErrors().get(0).getParameters().get(0).getValue(), NULL);
   }
   
   @Test
