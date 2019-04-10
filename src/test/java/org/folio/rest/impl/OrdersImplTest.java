@@ -259,6 +259,7 @@ public class OrdersImplTest {
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
   private static final String CHECKIN_RQ_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "checkIn/";
 
+  private static final String VENDOR_ID_REQUIRED = "vendorIdRequired";
   private static final String QUERY_PARAM_NAME = "query";
   private static final String ID = "id";
   private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
@@ -819,7 +820,6 @@ public class OrdersImplTest {
 
     JsonObject request = new JsonObject();
     request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
-    
     String body= request.toString();
     
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
@@ -2524,10 +2524,10 @@ public class OrdersImplTest {
     logger.info("=== Test Post Order with missing Vendor Id ===");
 
     Errors resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, getMockData(ORDER_WITHOUT_VENDOR_ID),
-      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
+      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);   
     
     ctx.assertEquals(1, resp.getErrors().size());
-    ctx.assertEquals(ErrorCodes.VENDOR_ID_REQUIRED.getCode(), "vendorIdRequired");
+    ctx.assertEquals(ErrorCodes.VENDOR_ID_REQUIRED.getCode(), VENDOR_ID_REQUIRED);
   }
   
   @Test
