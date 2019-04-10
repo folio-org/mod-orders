@@ -153,10 +153,10 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     if (isCreateInventoryNull(compPOL)) {
       getTenantConfiguration()
         .thenApply(config -> {
-          if (!config.isEmpty() && !config.getString(CREATE_INVENTORY).isEmpty()) {
+          if (StringUtils.isNotEmpty(config.getString(CREATE_INVENTORY))) {
             return future.complete(new JsonObject(config.getString(CREATE_INVENTORY)));
           } else {
-            return completedFuture(new JsonObject());
+            return future.complete(new JsonObject());
           }
         })
         .exceptionally(t -> future.complete(new JsonObject()));
