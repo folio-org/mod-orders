@@ -482,6 +482,10 @@ public class OrdersImplTest {
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    reqData.getCompositePoLines().forEach(poLine -> {
+      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
+      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED);
+    });
     CompositePoLine firstPoLine = reqData.getCompositePoLines().get(0);
     // remove productId from PO line to test scenario when it's not provided so there is no check for existing instance but new one will be created
     firstPoLine.getDetails().getProductIds().clear();
@@ -547,6 +551,8 @@ public class OrdersImplTest {
 
     verifyInventoryInteraction(resp, polCount);
     verifyCalculatedData(resp);
+    verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED.value(), reqData.getCompositePoLines().size());
+    verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
   }
 
   @Test
