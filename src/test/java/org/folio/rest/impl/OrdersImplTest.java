@@ -109,7 +109,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import org.junit.runners.Parameterized;
 
 import javax.ws.rs.core.Response.Status;
 
