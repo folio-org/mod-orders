@@ -3705,7 +3705,6 @@ public class OrdersImplTest {
   }
 
   @Test
-  @Parameterized.Parameters
   public void testPostCheckInLocationId() {
     logger.info("=== Test POST Checkin - locationId checking");
 
