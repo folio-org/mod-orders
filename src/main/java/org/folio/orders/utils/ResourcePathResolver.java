@@ -21,6 +21,7 @@ public class ResourcePathResolver {
   public static final String PIECES = "pieces";
   public static final String RECEIVING_HISTORY = "receiving-history";
   public static final String RECEIPT_STATUS = "receiptStatus";
+  public static final String PAYMENT_STATUS = "paymentStatus";
 
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;

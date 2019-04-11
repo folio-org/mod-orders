@@ -47,9 +47,6 @@
             "productIdType": "Vendor Item Number"
           }
         ],
-        "materialTypes": [
-          "fde2dc42-cde3-11e8-a8d5-f2801f1b9fd1"
-        ],
         "subscriptionFrom": null,
         "subscriptionInterval": 0,
         "subscriptionTo": null
@@ -79,7 +76,8 @@
         "receiptDue": "2018-09-29T00:00:00.000Z",
         "volumes": [
           "vol. 1"
-        ]
+        ],
+        "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8"
       },
       "poLineDescription": "",
       "poLineNumber": "268758-01",
@@ -141,9 +139,6 @@
             "productIdType": "ISBN"
           }
         ],
-        "materialTypes": [
-          "fde2dc42-cde3-11e8-a8d5-f2801f1b9fd1"
-        ],
         "subscriptionFrom": null,
         "subscriptionInterval": 0,
         "subscriptionTo": null
@@ -173,7 +168,8 @@
         "receiptDue": "2018-09-29T00:00:00.000Z",
         "volumes": [
           "vol. 1"
-        ]
+        ],
+        "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8"
       },
       "poLineDescription": "",
       "poLineNumber": "268758-02",
@@ -235,9 +231,6 @@
             "productIdType": "ISBN"
           }
         ],
-        "materialTypes": [
-          "fde2dc42-cde3-11e8-a8d5-f2801f1b9fd1"
-        ],
         "subscriptionFrom": null,
         "subscriptionInterval": 0,
         "subscriptionTo": null
@@ -267,7 +260,8 @@
         "receiptDue": "2018-09-29T00:00:00.000Z",
         "volumes": [
           "vol. 1"
-        ]
+        ],
+        "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8"
       },
       "poLineDescription": "",
       "poLineNumber": "268758-03",

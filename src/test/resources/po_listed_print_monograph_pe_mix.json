@@ -50,16 +50,14 @@
             "productIdType": "ISBN"
           }
         ],
-        "materialTypes": [
-          "615b8413-82d5-4203-aa6e-e37984cb5ac3"
-        ],
         "subscriptionFrom": null,
         "subscriptionInterval": 0,
         "subscriptionTo": null
       },
       "donor": "",
       "eresource": {
-        "createInventory": "Instance"
+        "createInventory": "Instance",
+        "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
       },
       "fundDistribution": [
         {
@@ -90,6 +88,7 @@
           "vol.1"
         ],
         "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8",
         "receiptDue": "2018-10-10T00:00:00.000Z"
       },
       "poLineDescription": "",

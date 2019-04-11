@@ -25,7 +25,6 @@ import java.util.concurrent.CompletionStage;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -35,6 +34,7 @@ import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -100,7 +100,8 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    */
   CompletableFuture<CompositePoLine> createPoLine(CompositePoLine compPOL) {
     // Validate PO Line content and retrieve order only if this operation is allowed
-    return validateNewPoLine(compPOL)
+    return setTenantDefaultCreateInventoryValues(compPOL)
+      .thenCompose(v -> validateNewPoLine(compPOL))
       .thenCompose(isValid -> {
         if (isValid) {
           return getCompositePurchaseOrder(compPOL)
@@ -141,7 +142,6 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     subObjFuts.add(createReportingCodes(compPoLine, line));
 
     return allOf(subObjFuts.toArray(new CompletableFuture[0]))
-      .thenCompose(v -> setTenantDefaultCreateInventoryValues(compPoLine))
       .thenCompose(v -> generateLineNumber(compOrder))
       .thenAccept(lineNumber -> line.put(PO_LINE_NUMBER, lineNumber))
       .thenCompose(v -> createPoLineSummary(compPoLine, line));
@@ -150,17 +150,15 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   CompletableFuture<Void> setTenantDefaultCreateInventoryValues(CompositePoLine compPOL) {
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
 
-    if ((compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() == null)
-      || (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() == null)) {
+    if (isCreateInventoryNull(compPOL)) {
       getTenantConfiguration()
         .thenApply(config -> {
-            if (!config.isEmpty() && !config.getString(CREATE_INVENTORY).isEmpty()) {
-              return future.complete(new JsonObject(config.getString(CREATE_INVENTORY)));
-            } else {
-              return completedFuture(new JsonObject());
-            }
+          if (StringUtils.isNotEmpty(config.getString(CREATE_INVENTORY))) {
+            return future.complete(new JsonObject(config.getString(CREATE_INVENTORY)));
+          } else {
+            return future.complete(new JsonObject());
           }
-        )
+        })
         .exceptionally(t -> future.complete(new JsonObject()));
       return future
         .thenAccept(jsonConfig -> updateCreateInventory(compPOL, jsonConfig));
@@ -169,28 +167,79 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     }
   }
 
-  private void updateCreateInventory(CompositePoLine compPOL, JsonObject jsonConfig) {
-    // try to set createInventory by values from mod-configuration. If empty - set default hardcoded values
-    if (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() == null) {
-      String tenantDefault = jsonConfig.getString(ERESOURCE);
-      Eresource.CreateInventory eresourceDefaultValue = StringUtils.isEmpty(tenantDefault) ?
-        Eresource.CreateInventory.INSTANCE_HOLDING : Eresource.CreateInventory.fromValue(tenantDefault);
-      compPOL.getEresource().setCreateInventory(eresourceDefaultValue);
+  public static boolean isCreateInventoryNull(CompositePoLine compPOL) {
+    switch (compPOL.getOrderFormat()) {
+    case P_E_MIX:
+      return isEresourceInventoryNotPresent(compPOL)
+          || isPhysicalInventoryNotPresent(compPOL);
+    case ELECTRONIC_RESOURCE:
+      return isEresourceInventoryNotPresent(compPOL);
+    case OTHER:
+    case PHYSICAL_RESOURCE:
+      return isPhysicalInventoryNotPresent(compPOL);
+    default:
+      return false;
     }
-    if (compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() == null) {
-      String tenantDefault;
-      if (compPOL.getOrderFormat() == CompositePoLine.OrderFormat.OTHER) {
-        tenantDefault = jsonConfig.getString(OTHER);
-        Physical.CreateInventory createInventoryDefaultValue = StringUtils.isEmpty(tenantDefault) ?
-          Physical.CreateInventory.NONE : Physical.CreateInventory.fromValue(tenantDefault);
-        compPOL.getPhysical().setCreateInventory(createInventoryDefaultValue);
-      } else {
-        tenantDefault = jsonConfig.getString(PHYSICAL);
-        Physical.CreateInventory createInventoryDefaultValue = StringUtils.isEmpty(tenantDefault) ?
-          Physical.CreateInventory.INSTANCE_HOLDING_ITEM : Physical.CreateInventory.fromValue(tenantDefault);
+  }
+
+  private static Boolean isPhysicalInventoryNotPresent(CompositePoLine compPOL) {
+    return Optional.ofNullable(compPOL.getPhysical())
+      .map(physical -> physical.getCreateInventory() == null)
+      .orElse(true);
+  }
+
+  private static Boolean isEresourceInventoryNotPresent(CompositePoLine compPOL) {
+    return Optional.ofNullable(compPOL.getEresource())
+      .map(eresource -> eresource.getCreateInventory() == null)
+      .orElse(true);
+  }
+
+  /**
+   * get the tenant configuration for the orderFormat, if not present assign the defaults
+   * Default values:
+   * Physical : CreateInventory.INSTANCE_HOLDING_ITEM
+   * Eresource: CreateInventory.INSTANCE_HOLDING
+   *
+   * @param compPOL
+   * @param jsonConfig
+   */
+  private void updateCreateInventory(CompositePoLine compPOL, JsonObject jsonConfig) {
+    // try to set createInventory by values from mod-configuration. If empty -
+    // set default hardcoded values
+    if (compPOL.getOrderFormat().equals(OrderFormat.ELECTRONIC_RESOURCE)
+        || compPOL.getOrderFormat().equals(OrderFormat.P_E_MIX)) {
+      String tenantDefault = jsonConfig.getString(ERESOURCE);
+      Eresource.CreateInventory eresourceDefaultValue = getEresourceInventoryDefault(tenantDefault);
+      if (compPOL.getEresource() == null) {
+        compPOL.setEresource(new Eresource());
+      }
+      if(isEresourceInventoryNotPresent(compPOL)) {
+        compPOL.getEresource().setCreateInventory(eresourceDefaultValue);
+      }
+    }
+    if (!compPOL.getOrderFormat().equals(OrderFormat.ELECTRONIC_RESOURCE)) {
+      String tenantDefault = compPOL.getOrderFormat().equals(OrderFormat.OTHER) ? jsonConfig.getString(OTHER)
+          : jsonConfig.getString(PHYSICAL);
+      Physical.CreateInventory createInventoryDefaultValue = getPhysicalInventoryDefault(tenantDefault);
+      if (compPOL.getPhysical() == null) {
+        compPOL.setPhysical(new Physical());
+      }
+      if (isPhysicalInventoryNotPresent(compPOL)) {
         compPOL.getPhysical().setCreateInventory(createInventoryDefaultValue);
       }
     }
+  }
+
+  private Physical.CreateInventory getPhysicalInventoryDefault(String tenantDefault) {
+   return StringUtils.isEmpty(tenantDefault)
+        ? Physical.CreateInventory.INSTANCE_HOLDING_ITEM
+        : Physical.CreateInventory.fromValue(tenantDefault);
+  }
+
+  private Eresource.CreateInventory getEresourceInventoryDefault(String tenantDefault) {
+    return StringUtils.isEmpty(tenantDefault)
+        ? Eresource.CreateInventory.INSTANCE_HOLDING
+        : Eresource.CreateInventory.fromValue(tenantDefault);
   }
 
   CompletableFuture<CompositePoLine> getCompositePoLine(String polineId) {
@@ -236,8 +285,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     updateEstimatedPrice(compOrderLine);
     updateLocationsQuantity(compOrderLine.getLocations());
 
-    setTenantDefaultCreateInventoryValues(compOrderLine)
-      .thenCompose(v -> updatePoLineSubObjects(compOrderLine, lineFromStorage))
+    updatePoLineSubObjects(compOrderLine, lineFromStorage)
       .thenCompose(poLine -> updateOrderLineSummary(compOrderLine.getId(), poLine))
       .thenAccept(json -> {
         if (getErrors().isEmpty()) {
@@ -493,7 +541,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private void validateItemsCreation(CompositePoLine compPOL, int itemsSize) {
     int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
     if (itemsSize != expectedItemsQuantity) {
-      String message = String.format("The issue happened creating items for PO Line with '%s' id. Expected %d but %d created",
+      String message = String.format("Error creating items for PO Line with '%s' id. Expected %d but %d created",
         compPOL.getId(), expectedItemsQuantity, itemsSize);
       throw new InventoryException(message);
     }

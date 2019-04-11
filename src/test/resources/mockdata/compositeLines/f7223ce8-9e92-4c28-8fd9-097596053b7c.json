@@ -28,7 +28,6 @@
       "productId" : "9780764354113",
       "productIdType" : "ISBN"
     } ],
-    "materialTypes" : [ "1a54b431-2e4f-452d-9cae-9cee66c9a892" ],
     "subscriptionFrom" : "2018-10-09T00:00:00.000+0000",
     "subscriptionInterval" : 824,
     "subscriptionTo" : "2020-10-09T00:00:00.000+0000"
@@ -53,7 +52,8 @@
   "physical" : {
     "materialSupplier" : "36dd6d62-c55e-4b19-a3a0-a870da57610a",
     "receiptDue" : "2019-10-10T00:00:00.000+0000",
-    "volumes" : [ "vol.1", "vol.2", "vol.4" ]
+    "volumes" : [ "vol.1", "vol.2", "vol.4" ],
+    "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8"
   },
   "poLineDescription" : "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
   "poLineNumber" : "22CE2F0035E-1",

@@ -43,9 +43,6 @@
             "productIdType": "ISBN"
           }
         ],
-        "materialTypes": [
-          "fde2e958-cde3-11e8-a8d5-f2801f1b9fd1"
-        ],
         "subscriptionFrom": null,
         "subscriptionInterval": 0,
         "subscriptionTo": null
@@ -62,7 +59,8 @@
         "license": {
           "code": "Code 1",
           "description": "License Agreement 1"
-        }
+        },
+        "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
       },
       "fundDistribution": [
         {

@@ -1,3 +1,21 @@
 {
-  "source": { "code": "FOLIO" }
+	"orderFormat": "Other",
+	"source": {
+		"code": "FOLIO"
+	},
+	"cost": {
+		"listUnitPrice": 0,
+		"currency": "USD",
+		"quantityPhysical": 1
+	},
+	"physical": {
+		"createInventory": "None"
+	},
+	"locations": [
+		{
+			"locationId": "bab00694-a87c-4607-9daf-346cd820aba2",
+			"quantityPhysical": 1
+		}
+
+	]
 }
