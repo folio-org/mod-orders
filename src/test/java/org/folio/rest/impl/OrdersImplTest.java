@@ -482,6 +482,10 @@ public class OrdersImplTest {
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    reqData.getCompositePoLines().forEach(poLine -> {
+      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
+      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED);
+    });
     CompositePoLine firstPoLine = reqData.getCompositePoLines().get(0);
     // remove productId from PO line to test scenario when it's not provided so there is no check for existing instance but new one will be created
     firstPoLine.getDetails().getProductIds().clear();
@@ -547,6 +551,8 @@ public class OrdersImplTest {
 
     verifyInventoryInteraction(resp, polCount);
     verifyCalculatedData(resp);
+    verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED.value(), reqData.getCompositePoLines().size());
+    verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
   }
 
   @Test
@@ -1398,6 +1404,7 @@ public class OrdersImplTest {
     reqData.getCompositePoLines().get(1).setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
     reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
     reqData.getCompositePoLines().forEach(s -> s.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING));
+    reqData.getCompositePoLines().forEach(s -> s.setPaymentStatus(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED));
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
@@ -1405,7 +1412,8 @@ public class OrdersImplTest {
 
     verifyInstanceLinksForUpdatedOrder(reqData);
     verifyInventoryInteraction(reqData, polCount - 1);
-    verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value());
+    verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), reqData.getCompositePoLines().size());
+    verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED.value(), reqData.getCompositePoLines().size());
   }
 
   @Test
@@ -1620,7 +1628,8 @@ public class OrdersImplTest {
     int polCount = reqData.getCompositePoLines().size();
     verifyInstanceLinksForUpdatedOrder(reqData);
     verifyInventoryInteraction(reqData, polCount);
-    verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value());
+    verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), reqData.getCompositePoLines().size());
+    verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
   }
 
   @Test
@@ -1633,15 +1642,25 @@ public class OrdersImplTest {
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
-    verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value());
+    verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), reqData.getCompositePoLines().size());
+    verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
   }
 
-  private void verifyReceiptStatusChangedTo(String expectedStatus) {
+  private void verifyReceiptStatusChangedTo(String expectedStatus, int poLinesQuantity) {
     List<JsonObject> polUpdates = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
     assertNotNull(polUpdates);
-    // check receipt status of the last 2 updated polines
-    for (JsonObject jsonObj : polUpdates.subList(polUpdates.size() - 2, polUpdates.size())) {
+    // check receipt status of the last poLinesQuantity updated polines
+    for (JsonObject jsonObj : polUpdates.subList(polUpdates.size() - poLinesQuantity, polUpdates.size())) {
       assertEquals(expectedStatus, jsonObj.getString(RECEIPT_STATUS));
+    }
+  }
+
+  private void verifyPaymentStatusChangedTo(String expectedStatus, int poLinesQuantity) {
+    List<JsonObject> polUpdates = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
+    assertNotNull(polUpdates);
+
+    for (JsonObject jsonObj : polUpdates.subList(polUpdates.size() - poLinesQuantity, polUpdates.size())) {
+      assertEquals(expectedStatus, jsonObj.getString(PAYMENT_STATUS));
     }
   }
 
