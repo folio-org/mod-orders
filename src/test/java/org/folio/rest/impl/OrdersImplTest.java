@@ -150,6 +150,7 @@ public class OrdersImplTest {
   private static final String ITEM_RECORDS = "itemRecords";
   private static final String PIECES = "pieces";
   private static final String ORDER_WITHOUT_PO_LINES = "order_without_po_lines.json";
+  private static final String ORDER_WITHOUT_VENDOR_ID = "order_without_vendor_id.json";
   private static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
   private static final String ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON = "put_order_with_mismatch_id_in_po_lines.json";
   private static final String PO_NUMBER_VALUE = "228D126";
@@ -262,10 +263,12 @@ public class OrdersImplTest {
 
   private static final String QUERY_PARAM_NAME = "query";
   private static final String ID = "id";
+  private static final String NULL = "null";
   private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
   private static final String INCORRECT_LANG_PARAMETER = "'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\"";
   private static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
   private static final String EXISTING_PO_NUMBER = "oldPoNumber";
+  private static final String EXISTING_REQUIRED_VENDOR_UUID = "168f8a86-d26c-406e-813f-c7527f241ac3";
   private static final String NONEXISTING_PO_NUMBER = "newPoNumber";
   private static final String BAD_QUERY = "unprocessableQuery";
 
@@ -817,6 +820,7 @@ public class OrdersImplTest {
 
     JsonObject request = new JsonObject();
     request.put("poNumber", EXISTING_PO_NUMBER);
+    request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
     String body= request.toString();
 
      verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
@@ -829,8 +833,9 @@ public class OrdersImplTest {
     logger.info("=== Test Placement of Empty order with Auto Generated PO Number===");
 
     JsonObject request = new JsonObject();
+    request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
     String body= request.toString();
-
+    
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
       prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
@@ -1288,6 +1293,7 @@ public class OrdersImplTest {
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_PO_LINES_JSON));
     String newPoNumber = reqData.getString(PO_NUMBER) + "A";
     reqData.put(PO_NUMBER, newPoNumber);
+    reqData.put(VENDOR_ID, EXISTING_REQUIRED_VENDOR_UUID);
     Pattern poLinePattern = Pattern.compile(String.format("(%s)(-[0-9]{1,3})", newPoNumber));
 
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData, "", 204);
@@ -1332,6 +1338,7 @@ public class OrdersImplTest {
 
     JsonObject request = new JsonObject();
     request.put("poNumber", EXISTING_PO_NUMBER);
+    request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
 
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, request, APPLICATION_JSON, 400);
   }
@@ -2594,6 +2601,18 @@ public class OrdersImplTest {
     ctx.assertEquals(ErrorCodes.MISSING_ORDER_ID_IN_POL.getCode(), resp.getErrors().get(0).getCode());
   }
 
+  @Test
+  public void testPostOrdersWithMissingVendorId(TestContext ctx) throws IOException {
+    logger.info("=== Test Post Order with missing Vendor Id ===");
+
+    Errors resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, getMockData(ORDER_WITHOUT_VENDOR_ID),
+      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);   
+    
+    ctx.assertEquals(1, resp.getErrors().size());
+    ctx.assertEquals(resp.getErrors().get(0).getParameters().get(0).getKey(), VENDOR_ID);
+    ctx.assertEquals(resp.getErrors().get(0).getParameters().get(0).getValue(), NULL);
+  }
+  
   @Test
   public void testPostOrdersLinesByIdPoLineWithNonExistPurchaseOrder(TestContext ctx) {
     logger.info("=== Test Post Order Lines By Id (empty id in body) ===");
