@@ -2,35 +2,7 @@ package org.folio.rest.impl;
 
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.folio.orders.utils.ErrorCodes.COST_ADDITIONAL_COST_INVALID;
-import static org.folio.orders.utils.ErrorCodes.COST_DISCOUNT_INVALID;
-import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
-import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
-import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
-import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
-import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
-import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
-import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
-import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
-import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
-import static org.folio.orders.utils.ErrorCodes.ORDER_OPEN;
-import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
-import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
-import static org.folio.orders.utils.ErrorCodes.PIECE_ALREADY_RECEIVED;
-import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_RETRIEVED;
-import static org.folio.orders.utils.ErrorCodes.PIECE_POL_MISMATCH;
-import static org.folio.orders.utils.ErrorCodes.PIECE_UPDATE_FAILED;
-import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
-import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
-import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
-import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
-import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
-import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
-import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
+import static org.folio.orders.utils.ErrorCodes.*;
 import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
@@ -61,7 +33,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static java.util.stream.Collectors.toMap;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -138,6 +109,8 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import org.junit.runners.Parameterized;
+
 import javax.ws.rs.core.Response.Status;
 
 
@@ -3714,6 +3687,83 @@ public class OrdersImplTest {
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.AWAITING_RECEIPT));
       assertThat(poLine.getReceiptDate(), is(nullValue()));
     });
+  }
+
+  private CheckinCollection createCheckinCollectionRq(String poLineId, CheckInPiece... checkInPieces) {
+
+    List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
+    toBeCheckedInList.add(new ToBeCheckedIn()
+      .withPoLineId(poLineId)
+      .withCheckedIn(checkInPieces.length)
+      .withCheckInPieces(Arrays.stream(checkInPieces)
+        .map(p -> p.withItemStatus("In process"))
+        .collect(Collectors.toList())));
+
+    return new CheckinCollection()
+      .withToBeCheckedIn(toBeCheckedInList)
+      .withTotalRecords(checkInPieces.length);
+  }
+
+  @Test
+  @Parameterized.Parameters
+  public void testPostCheckInLocationId() {
+    logger.info("=== Test POST Checkin - locationId checking");
+
+    String poLineId = "cf447221-29b9-481e-947c-9ad545f22888";
+    String pieceId1 = "2884f2cd-ccab-47e1-a021-9b22a05230d9";
+    String pieceId2 = "8c057872-9c75-4fb1-879d-de3b089b0387";
+
+    CheckinCollection checkinReq = createCheckinCollectionRq(poLineId,
+      new CheckInPiece().withId(pieceId1).withLocationId(UUID.randomUUID().toString()),
+      new CheckInPiece().withId(pieceId2).withLocationId(UUID.randomUUID().toString()));
+
+    // Successful case
+    // Both pieces with locationId & createInventory = "Instance, Holding, Item"
+    ReceivingResult success = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkinReq).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt())
+      .as(ReceivingResults.class).getReceivingResults().get(0);
+    assertThat(success.getProcessedSuccessfully(), is(2));
+    assertThat(success.getProcessedWithError(), is(0));
+
+    // Negative cases
+    // 1st piece without locationId & createInventory = "Instance, Holding, Item"
+    checkinReq.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(null);
+
+    ReceivingResult oneLocIdMissing = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkinReq).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt())
+      .as(ReceivingResults.class).getReceivingResults().get(0);
+    assertThat(oneLocIdMissing.getPoLineId(), equalTo(poLineId));
+    assertThat(oneLocIdMissing.getProcessedSuccessfully(), is(1));
+    assertThat(oneLocIdMissing.getProcessedWithError(), is(1));
+    assertThat(oneLocIdMissing.getReceivingItemResults().get(0).getPieceId(), equalTo(pieceId1));
+    assertThat(oneLocIdMissing.getReceivingItemResults().get(0).getProcessingStatus().getError().getCode(), equalTo(LOC_NOT_PROVIDED.getCode()));
+    assertThat(oneLocIdMissing.getReceivingItemResults().get(0).getProcessingStatus().getError().getMessage(), equalTo(LOC_NOT_PROVIDED.getDescription()));
+
+    // Both pieces without locationId & createInventory = "Instance, Holding, Item"
+    checkinReq.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(null);
+
+    ReceivingResult bothLocIdMissing = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkinReq).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt())
+      .as(ReceivingResults.class).getReceivingResults().get(0);
+    assertThat(bothLocIdMissing.getPoLineId(), equalTo(poLineId));
+    assertThat(bothLocIdMissing.getProcessedSuccessfully(), is(0));
+    assertThat(bothLocIdMissing.getProcessedWithError(), is(2));
+    assertThat(bothLocIdMissing.getReceivingItemResults().get(0).getPieceId(), equalTo(pieceId1));
+    assertThat(bothLocIdMissing.getReceivingItemResults().get(0).getProcessingStatus().getError().getCode(), equalTo(LOC_NOT_PROVIDED.getCode()));
+    assertThat(bothLocIdMissing.getReceivingItemResults().get(0).getProcessingStatus().getError().getMessage(), equalTo(LOC_NOT_PROVIDED.getDescription()));
+    assertThat(bothLocIdMissing.getReceivingItemResults().get(1).getPieceId(), equalTo(pieceId2));
+    assertThat(bothLocIdMissing.getReceivingItemResults().get(1).getProcessingStatus().getError().getCode(), equalTo(LOC_NOT_PROVIDED.getCode()));
+    assertThat(bothLocIdMissing.getReceivingItemResults().get(1).getProcessingStatus().getError().getMessage(), equalTo(LOC_NOT_PROVIDED.getDescription()));
+
+    // Both pieces without locationId & createInventory = "Instance"
+    CheckinCollection checkinReqInstance = createCheckinCollectionRq("daa9cfd1-b330-4b65-8c2a-3663aaae5130",
+      new CheckInPiece().withId("7fb84824-4f37-421e-bca4-ab966e517021").withLocationId(null));
+    ReceivingResult checkinRespInstance = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkinReqInstance).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt())
+      .as(ReceivingResults.class).getReceivingResults().get(0);
+    assertThat(checkinRespInstance.getProcessedSuccessfully(), is(1));
+    assertThat(checkinRespInstance.getProcessedWithError(), is(0));
+
   }
 
   private Errors verifyPostResponseErrors(int expectedErrorsNumber, String vendorId, String... accessProviderIds) throws Exception {

@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Date;
 import java.util.concurrent.CompletableFuture;
+
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.acq.model.Piece;
@@ -47,17 +49,46 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
     // 1. Get piece records from storage
     return retrievePieceRecords(checkinPieces)
-      // 2. Update items in the Inventory if required
+      // 2. Check locationId presence for pieces related to
+      // POLine with createInventory "Instance, Holding" or "Instance, Holding, Item"
+      .thenCompose(this::checkLocationId)
+      // 3. Update items in the Inventory if required
       .thenCompose(this::updateInventoryItems)
-      // 3. Update piece records with checkIn details which do not have
+      // 4. Update piece records with checkIn details which do not have
       // associated item
       .thenApply(this::updatePieceRecordsWithoutItems)
-      // 4. Update received piece records in the storage
+      // 5. Update received piece records in the storage
       .thenCompose(this::storeUpdatedPieceRecords)
-      // 5. Update PO Line status
+      // 6. Update PO Line status
       .thenCompose(this::updatePoLinesStatus)
-      // 6. Return results to the client
+      // 7. Return results to the client
       .thenApply(piecesGroupedByPoLine -> prepareResponseBody(checkinCollection, piecesGroupedByPoLine));
+  }
+
+  /**
+   * Checks locationId presence for pieces related to POLine with
+   * createInventory = "Instance, Holding" or "Instance, Holding, Item".
+   *
+   * @return {@link CompletableFuture} which holds map with PO line id as key
+   *         and list of corresponding pieces as value
+   */
+  private CompletableFuture<Map<String, List<Piece>>> checkLocationId(Map<String, List<Piece>> piecesRecords) {
+    getPoLines(piecesRecords)
+      .thenAccept(poLinesReply -> {
+        for (PoLine poLine : poLinesReply) {
+          Eresource.CreateInventory eci = poLine.getEresource() != null ? poLine.getEresource().getCreateInventory() : null;
+          Physical.CreateInventory pci = poLine.getPhysical() != null ? poLine.getPhysical().getCreateInventory() : null;
+          if (Eresource.CreateInventory.INSTANCE_HOLDING.equals(eci) || Eresource.CreateInventory.INSTANCE_HOLDING_ITEM.equals(eci)
+            || Physical.CreateInventory.INSTANCE_HOLDING.equals(pci) || Physical.CreateInventory.INSTANCE_HOLDING_ITEM.equals(pci)) {
+            for (CheckInPiece cip : checkinPieces.get(poLine.getId()).values()) {
+              if (cip.getLocationId() == null) {
+                addError(poLine.getId(), cip.getId(), LOC_NOT_PROVIDED.toError());
+              }
+            }
+          }
+        }
+      });
+    return VertxCompletableFuture.completedFuture(piecesRecords);
   }
 
   private ReceivingResults prepareResponseBody(CheckinCollection checkinCollection,

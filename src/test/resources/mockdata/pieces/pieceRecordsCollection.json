@@ -249,6 +249,12 @@
       "receivingStatus": "Expected"
     },
     {
+      "id": "8c057872-9c75-4fb1-879d-de3b089b0387",
+      "itemId": "c0ac82e3-e53f-48d1-a435-86d965250e47",
+      "poLineId": "cf447221-29b9-481e-947c-9ad545f22888",
+      "receivingStatus": "Expected"
+    },
+    {
       "id": "8c057872-9c75-4fb1-879d-de3b089b0388",
       "itemId": "c0ac82e3-e53f-48d1-a435-86d965250e47",
       "poLineId": "cf447221-29b9-481e-947c-9ad545f22888",

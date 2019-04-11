@@ -21,6 +21,8 @@ import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.EntryStream;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
@@ -42,6 +44,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   final InventoryHelper inventoryHelper;
   Map<String, Map<String, Error>> processingErrors;
   private final PurchaseOrderLineHelper poLineHelper;
+  private List<PoLine> poLineList;
 
   CheckinReceivePiecesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx,
       String lang) {
@@ -368,6 +371,25 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
           });
   }
 
+  CompletableFuture<List<PoLine>> getPoLines(Map<String, List<Piece>> piecesGroupedByPoLine) {
+    if(poLineList == null) {
+      return collectResultsOnSuccess(StreamEx
+        .ofSubLists(getPoLineIdsForUpdatedPieces(piecesGroupedByPoLine), MAX_IDS_FOR_GET_RQ)
+        // Transform piece id's to CQL query
+        .map(HelperUtils::convertIdsToCqlQuery)
+        // Send get request for each CQL query
+        .map(this::getPoLinesByQuery)
+        .toList())
+        .thenApply(lists -> StreamEx.of(lists).toFlatList(poLines -> poLines))
+        .thenApply(list -> {
+          poLineList = list;
+          return list;
+        });
+    } else {
+      return VertxCompletableFuture.completedFuture(poLineList);
+    }
+  }
+
   /**
    * Stores updated piece records with receiving/check-in details into storage.
    *
@@ -377,23 +399,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    * @return map passed as a parameter
    */
   CompletableFuture<Map<String, List<Piece>>> updatePoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine) {
-    // Get all PO Line id's which potentially require receipt status update
     List<String> poLineIdsForUpdatedPieces = getPoLineIdsForUpdatedPieces(piecesGroupedByPoLine);
-
-    // Get all PO Lines from storage which potentially require receipt status
-    // update
-    List<CompletableFuture<List<PoLine>>> polFutures = StreamEx
-      .ofSubLists(poLineIdsForUpdatedPieces, MAX_IDS_FOR_GET_RQ)
-      // Transform piece id's to CQL query
-      .map(HelperUtils::convertIdsToCqlQuery)
-      // Send get request for each CQL query
-      .map(this::getPoLinesByQuery)
-      .toList();
-
     // Once all PO Lines are retrieved from storage check if receipt status
     // requires update and persist in storage
-    return collectResultsOnSuccess(polFutures)
-      .thenApply(lists -> StreamEx.of(lists).toFlatList(poLines -> poLines))
+    return getPoLines(piecesGroupedByPoLine)
       .thenCompose(poLines -> {
         // Calculate expected status for each PO Line and update with new one if
         // required
@@ -525,7 +534,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   }
 
   private Error getError(String polId, String pieceId) {
-    return processingErrors.computeIfAbsent(polId, k -> Collections.emptyMap())
+    return processingErrors.computeIfAbsent(polId, k -> new HashMap<>())
       .get(pieceId);
   }
 
