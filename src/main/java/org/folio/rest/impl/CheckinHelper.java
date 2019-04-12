@@ -74,15 +74,26 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
    */
   private CompletableFuture<Map<String, List<Piece>>> checkLocationId(Map<String, List<Piece>> piecesRecords) {
     getPoLines(piecesRecords)
-      .thenAccept(poLinesReply -> {
-        for (PoLine poLine : poLinesReply) {
-          Eresource.CreateInventory eci = poLine.getEresource() != null ? poLine.getEresource().getCreateInventory() : null;
-          Physical.CreateInventory pci = poLine.getPhysical() != null ? poLine.getPhysical().getCreateInventory() : null;
-          if (Eresource.CreateInventory.INSTANCE_HOLDING.equals(eci) || Eresource.CreateInventory.INSTANCE_HOLDING_ITEM.equals(eci)
-            || Physical.CreateInventory.INSTANCE_HOLDING.equals(pci) || Physical.CreateInventory.INSTANCE_HOLDING_ITEM.equals(pci)) {
-            for (CheckInPiece cip : checkinPieces.get(poLine.getId()).values()) {
-              if (cip.getLocationId() == null) {
-                addError(poLine.getId(), cip.getId(), LOC_NOT_PROVIDED.toError());
+      .thenAccept(poLines -> {
+        for(PoLine poLine : poLines) {
+          List<Piece> pieces = piecesRecords.get(poLine.getId());
+          for (Piece piece : pieces) {
+            // Check if locationId doesn't presented in piece from request and retrieved from storage
+            // Corresponding piece from collection
+            CheckInPiece pieceFromRq = checkinPieces.get(poLine.getId()).get(piece.getId());
+            if (pieceFromRq.getLocationId() == null && piece.getLocationId() == null) {
+              if (piece.getFormat() == Piece.Format.ELECTRONIC) {
+                // Check Eresource
+                if (poLine.getEresource() != null && poLine.getEresource().getCreateInventory() != Eresource.CreateInventory.NONE
+                  && poLine.getEresource().getCreateInventory() != Eresource.CreateInventory.INSTANCE) {
+                  addError(poLine.getId(), piece.getId(), LOC_NOT_PROVIDED.toError());
+                }
+              } else {
+                // Check Physical
+                if (poLine.getPhysical() != null && poLine.getPhysical().getCreateInventory() != Physical.CreateInventory.NONE
+                  && poLine.getPhysical().getCreateInventory() != Physical.CreateInventory.INSTANCE) {
+                  addError(poLine.getId(), piece.getId(), LOC_NOT_PROVIDED.toError());
+                }
               }
             }
           }
