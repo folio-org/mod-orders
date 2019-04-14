@@ -10,22 +10,7 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.InventoryHelper.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.hasKey;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.isEmptyOrNullString;
-import static org.hamcrest.Matchers.isEmptyString;
-import static org.hamcrest.Matchers.lessThan;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
-import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -3707,80 +3692,81 @@ public class OrdersImplTest {
     });
   }
 
-  private CheckinCollection createCheckinCollectionRq(String poLineId, CheckInPiece... checkInPieces) {
-
-    List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
-    toBeCheckedInList.add(new ToBeCheckedIn()
-      .withPoLineId(poLineId)
-      .withCheckedIn(checkInPieces.length)
-      .withCheckInPieces(Arrays.stream(checkInPieces)
-        .map(p -> p.withItemStatus("In process"))
-        .collect(Collectors.toList())));
-
-    return new CheckinCollection()
-      .withToBeCheckedIn(toBeCheckedInList)
-      .withTotalRecords(checkInPieces.length);
-  }
-
   @Test
   public void testPostCheckInLocationId() {
     logger.info("=== Test POST Checkin - locationId checking");
 
-    String poLineId = "cf447221-29b9-481e-947c-9ad545f22888";
-    String pieceId1 = "2884f2cd-ccab-47e1-a021-9b22a05230d9";
-    String pieceId2 = "8c057872-9c75-4fb1-879d-de3b089b0387";
+    String poLineId = "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56";
 
-    CheckinCollection checkinReq = createCheckinCollectionRq(poLineId,
-      new CheckInPiece().withId(pieceId1).withLocationId(UUID.randomUUID().toString()),
-      new CheckInPiece().withId(pieceId2).withLocationId(UUID.randomUUID().toString()));
+    List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
+    toBeCheckedInList.add(new ToBeCheckedIn()
+      .withCheckedIn(1)
+      .withPoLineId(poLineId)
+      .withCheckInPieces(Arrays.asList(new CheckInPiece().withItemStatus("In process"), new CheckInPiece().withItemStatus("In process"))));
 
-    // Successful case
-    // Both pieces with locationId & createInventory = "Instance, Holding, Item"
-    ReceivingResult success = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkinReq).encode(),
+    CheckinCollection request = new CheckinCollection()
+      .withToBeCheckedIn(toBeCheckedInList)
+      .withTotalRecords(2);
+
+    String physicalPieceWithLocationId = "6689da99-8256-448c-8a28-db3b4d9e4017";
+    String electronicPieceWithLocationId = "fe51ae61-52f1-40ce-8236-825d4710a8b7";
+    String physicalPieceWithoutLocationId = "90894300-5285-4d83-80f4-76cf621e555e";
+    String electronicPieceWithoutLocationId = "1a247602-c51a-4221-9a07-27d075d03625";
+
+    // Positive cases:
+    // 1. Both CheckInPieces don't contain LocationId but corresponding Pieces contain locationId
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setId(physicalPieceWithLocationId);
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(null);
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setId(electronicPieceWithLocationId);
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(null);
+
+    checkResultWithErrors(request, 0);
+
+    // 2. Both CheckInPiece with locationId
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setId(physicalPieceWithoutLocationId);
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(UUID.randomUUID().toString());
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setId(electronicPieceWithoutLocationId);
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(UUID.randomUUID().toString());
+
+    checkResultWithErrors(request, 0);
+
+    // Negative cases:
+    // 1. One CheckInPiece and corresponding Piece without locationId
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(null);
+
+    checkResultWithErrors(request, 1);
+
+    // 2. All CheckInPieces and corresponding Pieces without locationId
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(null);
+
+    checkResultWithErrors(request, 2);
+  }
+
+  private void checkResultWithErrors(CheckinCollection request, int expectedNumOfErrors) {
+
+    ReceivingResult response = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(request).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt())
       .as(ReceivingResults.class).getReceivingResults().get(0);
-    assertThat(success.getProcessedSuccessfully(), is(2));
-    assertThat(success.getProcessedWithError(), is(0));
 
-    // Negative cases
-    // 1st piece without locationId & createInventory = "Instance, Holding, Item"
-    checkinReq.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(null);
+    assertThat(request.getToBeCheckedIn().get(0).getPoLineId(), equalTo(response.getPoLineId()));
+    assertThat(response.getProcessedSuccessfully(), is(response.getReceivingItemResults().size() - expectedNumOfErrors));
+    assertThat(response.getProcessedWithError(), is(expectedNumOfErrors));
 
-    ReceivingResult oneLocIdMissing = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkinReq).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt())
-      .as(ReceivingResults.class).getReceivingResults().get(0);
-    assertThat(oneLocIdMissing.getPoLineId(), equalTo(poLineId));
-    assertThat(oneLocIdMissing.getProcessedSuccessfully(), is(1));
-    assertThat(oneLocIdMissing.getProcessedWithError(), is(1));
-    assertThat(oneLocIdMissing.getReceivingItemResults().get(0).getPieceId(), equalTo(pieceId1));
-    assertThat(oneLocIdMissing.getReceivingItemResults().get(0).getProcessingStatus().getError().getCode(), equalTo(LOC_NOT_PROVIDED.getCode()));
-    assertThat(oneLocIdMissing.getReceivingItemResults().get(0).getProcessingStatus().getError().getMessage(), equalTo(LOC_NOT_PROVIDED.getDescription()));
+    List<String> pieceIds
+      = request.getToBeCheckedIn().stream()
+      .flatMap(toBeCheckedIn -> toBeCheckedIn.getCheckInPieces().stream())
+      .map(CheckInPiece::getId).collect(Collectors.toList());
 
-    // Both pieces without locationId & createInventory = "Instance, Holding, Item"
-    checkinReq.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(null);
 
-    ReceivingResult bothLocIdMissing = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkinReq).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt())
-      .as(ReceivingResults.class).getReceivingResults().get(0);
-    assertThat(bothLocIdMissing.getPoLineId(), equalTo(poLineId));
-    assertThat(bothLocIdMissing.getProcessedSuccessfully(), is(0));
-    assertThat(bothLocIdMissing.getProcessedWithError(), is(2));
-    assertThat(bothLocIdMissing.getReceivingItemResults().get(0).getPieceId(), equalTo(pieceId1));
-    assertThat(bothLocIdMissing.getReceivingItemResults().get(0).getProcessingStatus().getError().getCode(), equalTo(LOC_NOT_PROVIDED.getCode()));
-    assertThat(bothLocIdMissing.getReceivingItemResults().get(0).getProcessingStatus().getError().getMessage(), equalTo(LOC_NOT_PROVIDED.getDescription()));
-    assertThat(bothLocIdMissing.getReceivingItemResults().get(1).getPieceId(), equalTo(pieceId2));
-    assertThat(bothLocIdMissing.getReceivingItemResults().get(1).getProcessingStatus().getError().getCode(), equalTo(LOC_NOT_PROVIDED.getCode()));
-    assertThat(bothLocIdMissing.getReceivingItemResults().get(1).getProcessingStatus().getError().getMessage(), equalTo(LOC_NOT_PROVIDED.getDescription()));
-
-    // Both pieces without locationId & createInventory = "Instance"
-    CheckinCollection checkinReqInstance = createCheckinCollectionRq("daa9cfd1-b330-4b65-8c2a-3663aaae5130",
-      new CheckInPiece().withId("7fb84824-4f37-421e-bca4-ab966e517021").withLocationId(null));
-    ReceivingResult checkinRespInstance = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkinReqInstance).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt())
-      .as(ReceivingResults.class).getReceivingResults().get(0);
-    assertThat(checkinRespInstance.getProcessedSuccessfully(), is(1));
-    assertThat(checkinRespInstance.getProcessedWithError(), is(0));
-
+    List<ReceivingItemResult> results = response.getReceivingItemResults();
+    for(ReceivingItemResult r : results) {
+      Error error = r.getProcessingStatus().getError();
+      if(error != null) {
+        assertThat(r.getProcessingStatus().getError().getCode(), equalTo(LOC_NOT_PROVIDED.getCode()));
+        assertThat(r.getProcessingStatus().getError().getMessage(), equalTo(LOC_NOT_PROVIDED.getDescription()));
+        assertThat(r.getPieceId(), isIn(pieceIds));
+      }
+    }
   }
 
   private Errors verifyPostResponseErrors(int expectedErrorsNumber, String vendorId, String... accessProviderIds) throws Exception {
