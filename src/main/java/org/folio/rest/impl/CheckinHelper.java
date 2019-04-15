@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.acq.model.Piece;
@@ -49,9 +48,8 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
     // 1. Get piece records from storage
     return retrievePieceRecords(checkinPieces)
-      // 2. Check locationId presence for pieces related to
-      // POLine with createInventory "Instance, Holding" or "Instance, Holding, Item"
-      .thenCompose(this::checkLocationId)
+      // 2. Filter locationId
+      .thenCompose(this::filterMissingLocations)
       // 3. Update items in the Inventory if required
       .thenCompose(this::updateInventoryItems)
       // 4. Update piece records with checkIn details which do not have
@@ -63,43 +61,6 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       .thenCompose(this::updatePoLinesStatus)
       // 7. Return results to the client
       .thenApply(piecesGroupedByPoLine -> prepareResponseBody(checkinCollection, piecesGroupedByPoLine));
-  }
-
-  /**
-   * Checks locationId presence for pieces related to POLine with
-   * createInventory = "Instance, Holding" or "Instance, Holding, Item".
-   *
-   * @return {@link CompletableFuture} which holds map with PO line id as key
-   *         and list of corresponding pieces as value
-   */
-  private CompletableFuture<Map<String, List<Piece>>> checkLocationId(Map<String, List<Piece>> piecesRecords) {
-    getPoLines(piecesRecords)
-      .thenAccept(poLines -> {
-        for(PoLine poLine : poLines) {
-          List<Piece> pieces = piecesRecords.get(poLine.getId());
-          for (Piece piece : pieces) {
-            // Check if locationId doesn't presented in piece from request and retrieved from storage
-            // Corresponding piece from collection
-            CheckInPiece pieceFromRq = checkinPieces.get(poLine.getId()).get(piece.getId());
-            if (pieceFromRq.getLocationId() == null && piece.getLocationId() == null) {
-              if (piece.getFormat() == Piece.Format.ELECTRONIC) {
-                // Check Eresource
-                if (poLine.getEresource() != null && poLine.getEresource().getCreateInventory() != Eresource.CreateInventory.NONE
-                  && poLine.getEresource().getCreateInventory() != Eresource.CreateInventory.INSTANCE) {
-                  addError(poLine.getId(), piece.getId(), LOC_NOT_PROVIDED.toError());
-                }
-              } else {
-                // Check Physical
-                if (poLine.getPhysical() != null && poLine.getPhysical().getCreateInventory() != Physical.CreateInventory.NONE
-                  && poLine.getPhysical().getCreateInventory() != Physical.CreateInventory.INSTANCE) {
-                  addError(poLine.getId(), piece.getId(), LOC_NOT_PROVIDED.toError());
-                }
-              }
-            }
-          }
-        }
-      });
-    return VertxCompletableFuture.completedFuture(piecesRecords);
   }
 
   private ReceivingResults prepareResponseBody(CheckinCollection checkinCollection,
@@ -216,6 +177,11 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       .forEach(this::updatePieceWithCheckinInfo);
 
     return piecesGroupedByPoLine;
+  }
+
+  @Override
+  String getLocationId(PoLine poLine, Piece piece) {
+    return checkinPieces.get(poLine.getId()).get(piece.getId()).getLocationId();
   }
 
 }

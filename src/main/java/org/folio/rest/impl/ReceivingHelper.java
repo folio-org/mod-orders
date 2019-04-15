@@ -55,15 +55,17 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
     // 1. Get piece records from storage
     return this.retrievePieceRecords(receivingItems)
-      // 2. Update items in the Inventory if required
+      // 2. Filter locationId
+      .thenCompose(this::filterMissingLocations)
+      // 3. Update items in the Inventory if required
       .thenCompose(this::updateInventoryItems)
-      // 3. Update piece records with receiving details which do not have associated item
+      // 4. Update piece records with receiving details which do not have associated item
       .thenApply(this::updatePieceRecordsWithoutItems)
-      // 4. Update received piece records in the storage
+      // 5. Update received piece records in the storage
       .thenCompose(this::storeUpdatedPieceRecords)
-      // 5. Update PO Line status
+      // 6. Update PO Line status
       .thenCompose(this::updatePoLinesStatus)
-      // 6. Return results to the client
+      // 7. Return results to the client
       .thenApply(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
   }
 
@@ -202,6 +204,11 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       piece.setReceivedDate(new Date());
       piece.setReceivingStatus(ReceivingStatus.RECEIVED);
     }
+  }
+
+  @Override
+  String getLocationId(PoLine poLine, Piece piece) {
+    return receivingItems.get(poLine.getId()).get(piece.getId()).getLocationId();
   }
 
 }

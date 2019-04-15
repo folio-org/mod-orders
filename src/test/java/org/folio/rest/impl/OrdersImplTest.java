@@ -3303,7 +3303,7 @@ public class OrdersImplTest {
     assertThat(itemsSearches, not(nullValue()));
     assertThat(pieceUpdates, is(nullValue()));
     assertThat(itemUpdates, is(nullValue()));
-    assertThat(polSearches, is(nullValue()));
+    assertThat(polSearches, not(nullValue()));
     assertThat(polUpdates, is(nullValue()));
   }
 
