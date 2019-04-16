@@ -61,7 +61,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static java.util.stream.Collectors.toMap;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -215,7 +214,6 @@ public class OrdersImplTest {
   private static final String PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED = "0009662b-8b80-4001-b704-ca10971f175d";
   private static final String ORDER_ID_WITHOUT_PO_LINES = "50fb922c-3fa9-494e-a972-f2801f1b9fd1";
   private static final String ORDER_ID_WITH_PO_LINES = "ab18897b-0e40-4f31-896b-9c9adc979a87";
-  private static final String ORDER_ID_WITH_MINIMAL_PO_LINE = "11111111-dddd-4444-9999-ffffffffffff";
   private static final String ORDER_WITHOUT_WORKFLOW_STATUS = "41d56e59-46db-4d5e-a1ad-a178228913e5";
   private static final String RECEIVING_HISTORY_PURCHASE_ORDER_ID = "0804ddec-6545-404a-b54d-a693f505681d";
 
@@ -253,7 +251,6 @@ public class OrdersImplTest {
   private static final String LISTED_PRINT_SERIAL_PATH = "po_listed_print_serial.json";
   private static final String MINIMAL_ORDER_PATH = "minimal_order.json";
   private static final String poCreationFailurePath = "po_creation_failure.json";
-  private static final String poLineCreationFailurePath = "po_line_creation_failure.json";
   private static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
   private static final String CONTRIBUTOR_NAME_TYPES_PATH = BASE_MOCK_DATA_PATH + "contributorNameTypes/contributorPersonalNameType.json";
   /** The PO Line with minimal required content */
@@ -820,6 +817,7 @@ public class OrdersImplTest {
 
     JsonObject request = new JsonObject();
     request.put("poNumber", EXISTING_PO_NUMBER);
+    request.put("orderType", "Ongoing");
     request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
     String body= request.toString();
 
@@ -834,6 +832,7 @@ public class OrdersImplTest {
 
     JsonObject request = new JsonObject();
     request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
+    request.put("orderType", "Ongoing");
     String body= request.toString();
     
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
@@ -926,28 +925,6 @@ public class OrdersImplTest {
     ctx.assertEquals(POL_LINES_LIMIT_EXCEEDED.getCode(), errors.getErrors().get(0).getCode());
   }
 
-
-  @Test
-  public void testPoLineCreationFailure(TestContext ctx) throws Exception {
-    logger.info("=== Test POLine creation failure ===");
-
-    String body = getMockData(poLineCreationFailurePath);
-
-    final Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
-      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).body().as(Errors.class);
-
-
-    logger.info(JsonObject.mapFrom(errors).encodePrettily());
-
-    ctx.assertFalse(errors.getErrors().isEmpty());
-    ctx.assertNotNull(errors.getErrors().get(0));
-    ctx.assertEquals("must match \"^[a-zA-Z0-9]{5,16}-[0-9]{1,3}$\"", errors.getErrors().get(0).getMessage());
-    ctx.assertFalse(errors.getErrors().get(0).getParameters().isEmpty());
-    ctx.assertNotNull(errors.getErrors().get(0).getParameters().get(0));
-    ctx.assertEquals("compositePoLines[1].poLineNumber", errors.getErrors().get(0).getParameters().get(0).getKey());
-    ctx.assertEquals("invalid", errors.getErrors().get(0).getParameters().get(0).getValue());
-  }
-
   @Test
   public void testSubObjectCreationFailure() throws Exception {
     logger.info("=== Test Details creation failure ===");
@@ -1019,30 +996,6 @@ public class OrdersImplTest {
     assertThat(resp.getTotalEstimatedPrice(), equalTo(expectedPrice));
 
     resp.getCompositePoLines().forEach(line -> assertThat(line.getCost().getPoLineEstimatedPrice(), greaterThan(0d)));
-  }
-
-  @Test
-  public void testGetOrderByIdWithOnePoLineWithNullCost() {
-    logger.info("=== Test Get Order By Id with one PO Line without cost totalItems value is 0 ===");
-
-    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, ORDER_ID_WITH_MINIMAL_PO_LINE));
-
-    final CompositePurchaseOrder resp = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .get(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITH_MINIMAL_PO_LINE)
-        .then()
-          .contentType(APPLICATION_JSON)
-          .statusCode(200)
-          .extract()
-            .response()
-              .as(CompositePurchaseOrder.class);
-
-    logger.info(JsonObject.mapFrom(resp).encodePrettily());
-
-    assertEquals(ORDER_ID_WITH_MINIMAL_PO_LINE, resp.getId());
-    assertEquals(0, resp.getTotalItems().intValue());
   }
 
   @Test
@@ -1338,6 +1291,7 @@ public class OrdersImplTest {
 
     JsonObject request = new JsonObject();
     request.put("poNumber", EXISTING_PO_NUMBER);
+    request.put("orderType", "Ongoing");
     request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
 
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, request, APPLICATION_JSON, 400);
@@ -1936,14 +1890,12 @@ public class OrdersImplTest {
       }
       if (resourceType.equals(Piece.Format.ELECTRONIC)) {
         assertThat(quantity, is(itemsByMaterial.get(pol.getEresource().getMaterialType()).size()));
-        itemsByMaterial.get(pol.getEresource().getMaterialType()).forEach(item -> {
-          verifyItemRecordRequest(item, pol, pol.getEresource().getMaterialType());
-        });
+        itemsByMaterial.get(pol.getEresource().getMaterialType())
+          .forEach(item -> verifyItemRecordRequest(item, pol.getEresource().getMaterialType()));
       } else {
         assertThat(quantity, is(itemsByMaterial.get(pol.getPhysical().getMaterialType()).size()));
-        itemsByMaterial.get(pol.getPhysical().getMaterialType()).forEach(item -> {
-          verifyItemRecordRequest(item, pol, pol.getPhysical().getMaterialType());
-        });
+        itemsByMaterial.get(pol.getPhysical().getMaterialType())
+          .forEach(item -> verifyItemRecordRequest(item, pol.getPhysical().getMaterialType()));
 
       }
     });
@@ -1978,7 +1930,7 @@ public class OrdersImplTest {
     assertArrayEquals(expected, actual);
   }
 
-  private void verifyItemRecordRequest(JsonObject item, CompositePoLine line, String material) {
+  private void verifyItemRecordRequest(JsonObject item, String material) {
     assertThat(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER), not(isEmptyOrNullString()));
     assertThat(material, is(item.getString(ITEM_MATERIAL_TYPE_ID)));
     assertThat(item.getString(ITEM_HOLDINGS_RECORD_ID), not(isEmptyOrNullString()));
