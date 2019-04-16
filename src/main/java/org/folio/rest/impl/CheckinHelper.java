@@ -180,8 +180,8 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   @Override
-  String getLocationId(PoLine poLine, Piece piece) {
-    return checkinPieces.get(poLine.getId()).get(piece.getId()).getLocationId();
+  String getLocationId(Piece piece) {
+    return checkinPieces.get(piece.getPoLineId()).get(piece.getId()).getLocationId();
   }
 
 }

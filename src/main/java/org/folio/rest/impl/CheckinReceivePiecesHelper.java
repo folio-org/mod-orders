@@ -582,9 +582,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   private boolean isMissingLocation(PoLine poLine, Piece piece) {
     // Check if locationId doesn't presented in piece from request and retrieved from storage
     // Corresponding piece from collection
-    if (getLocationId(poLine, piece) == null && !isRevertToOnOrder(piece)) {
+    if (getLocationId(piece) == null && !isRevertToOnOrder(piece)) {
       if (piece.getFormat() == Piece.Format.ELECTRONIC) {
-        // Check Eresource
+        // Check E-Resource
         if (poLine.getEresource() != null && poLine.getEresource().getCreateInventory() != Eresource.CreateInventory.NONE
           && poLine.getEresource().getCreateInventory() != Eresource.CreateInventory.INSTANCE) {
           addError(poLine.getId(), piece.getId(), LOC_NOT_PROVIDED.toError());
@@ -602,6 +602,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     return false;
   }
 
-  abstract String getLocationId(PoLine poLine, Piece piece);
+  abstract String getLocationId(Piece piece);
 
 }
