@@ -3708,21 +3708,12 @@ public class OrdersImplTest {
       .withToBeCheckedIn(toBeCheckedInList)
       .withTotalRecords(2);
 
-    String physicalPieceWithLocationId = "6689da99-8256-448c-8a28-db3b4d9e4017";
-    String electronicPieceWithLocationId = "fe51ae61-52f1-40ce-8236-825d4710a8b7";
     String physicalPieceWithoutLocationId = "90894300-5285-4d83-80f4-76cf621e555e";
     String electronicPieceWithoutLocationId = "1a247602-c51a-4221-9a07-27d075d03625";
 
     // Positive cases:
-    // 1. Both CheckInPieces don't contain LocationId but corresponding Pieces contain locationId
-    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setId(physicalPieceWithLocationId);
-    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(null);
-    request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setId(electronicPieceWithLocationId);
-    request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(null);
 
-    checkResultWithErrors(request, 0);
-
-    // 2. Both CheckInPiece with locationId
+    // 1. Both CheckInPiece with locationId
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setId(physicalPieceWithoutLocationId);
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(UUID.randomUUID().toString());
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setId(electronicPieceWithoutLocationId);
