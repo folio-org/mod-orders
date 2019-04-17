@@ -2,35 +2,7 @@ package org.folio.rest.impl;
 
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.folio.orders.utils.ErrorCodes.COST_ADDITIONAL_COST_INVALID;
-import static org.folio.orders.utils.ErrorCodes.COST_DISCOUNT_INVALID;
-import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
-import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
-import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
-import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
-import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
-import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
-import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
-import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
-import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
-import static org.folio.orders.utils.ErrorCodes.ORDER_OPEN;
-import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
-import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
-import static org.folio.orders.utils.ErrorCodes.PIECE_ALREADY_RECEIVED;
-import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_RETRIEVED;
-import static org.folio.orders.utils.ErrorCodes.PIECE_POL_MISMATCH;
-import static org.folio.orders.utils.ErrorCodes.PIECE_UPDATE_FAILED;
-import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
-import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
-import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
-import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
-import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
-import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
-import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
+import static org.folio.orders.utils.ErrorCodes.*;
 import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
@@ -38,22 +10,7 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.InventoryHelper.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.hasKey;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.isEmptyOrNullString;
-import static org.hamcrest.Matchers.isEmptyString;
-import static org.hamcrest.Matchers.lessThan;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
-import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -137,6 +94,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+
 import javax.ws.rs.core.Response.Status;
 
 
@@ -3305,7 +3263,7 @@ public class OrdersImplTest {
     assertThat(itemsSearches, not(nullValue()));
     assertThat(pieceUpdates, is(nullValue()));
     assertThat(itemUpdates, is(nullValue()));
-    assertThat(polSearches, is(nullValue()));
+    assertThat(polSearches, not(nullValue()));
     assertThat(polUpdates, is(nullValue()));
   }
 
@@ -3692,6 +3650,74 @@ public class OrdersImplTest {
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.AWAITING_RECEIPT));
       assertThat(poLine.getReceiptDate(), is(nullValue()));
     });
+  }
+
+  @Test
+  public void testPostCheckInLocationId() {
+    logger.info("=== Test POST Checkin - locationId checking");
+
+    String poLineId = "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56";
+
+    List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
+    toBeCheckedInList.add(new ToBeCheckedIn()
+      .withCheckedIn(1)
+      .withPoLineId(poLineId)
+      .withCheckInPieces(Arrays.asList(new CheckInPiece().withItemStatus("In process"), new CheckInPiece().withItemStatus("In process"))));
+
+    CheckinCollection request = new CheckinCollection()
+      .withToBeCheckedIn(toBeCheckedInList)
+      .withTotalRecords(2);
+
+    String physicalPieceWithoutLocationId = "90894300-5285-4d83-80f4-76cf621e555e";
+    String electronicPieceWithoutLocationId = "1a247602-c51a-4221-9a07-27d075d03625";
+
+    // Positive cases:
+
+    // 1. Both CheckInPiece with locationId
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setId(physicalPieceWithoutLocationId);
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(UUID.randomUUID().toString());
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setId(electronicPieceWithoutLocationId);
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(UUID.randomUUID().toString());
+
+    checkResultWithErrors(request, 0);
+
+    // Negative cases:
+    // 1. One CheckInPiece and corresponding Piece without locationId
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(null);
+
+    checkResultWithErrors(request, 1);
+
+    // 2. All CheckInPieces and corresponding Pieces without locationId
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(null);
+
+    checkResultWithErrors(request, 2);
+  }
+
+  private void checkResultWithErrors(CheckinCollection request, int expectedNumOfErrors) {
+
+    ReceivingResult response = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(request).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt())
+      .as(ReceivingResults.class).getReceivingResults().get(0);
+
+    assertThat(request.getToBeCheckedIn().get(0).getPoLineId(), equalTo(response.getPoLineId()));
+    assertThat(response.getProcessedSuccessfully(), is(response.getReceivingItemResults().size() - expectedNumOfErrors));
+    assertThat(response.getProcessedWithError(), is(expectedNumOfErrors));
+
+    List<String> pieceIds
+      = request.getToBeCheckedIn().stream()
+      .flatMap(toBeCheckedIn -> toBeCheckedIn.getCheckInPieces().stream())
+      .map(CheckInPiece::getId).collect(Collectors.toList());
+
+
+    List<ReceivingItemResult> results = response.getReceivingItemResults();
+    for(ReceivingItemResult r : results) {
+      Error error = r.getProcessingStatus().getError();
+      if(error != null) {
+        assertThat(r.getProcessingStatus().getError().getCode(), equalTo(LOC_NOT_PROVIDED.getCode()));
+        assertThat(r.getProcessingStatus().getError().getMessage(), equalTo(LOC_NOT_PROVIDED.getDescription()));
+        assertThat(r.getPieceId(), isIn(pieceIds));
+      }
+    }
   }
 
   private Errors verifyPostResponseErrors(int expectedErrorsNumber, String vendorId, String... accessProviderIds) throws Exception {
