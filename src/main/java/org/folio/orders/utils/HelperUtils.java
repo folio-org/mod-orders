@@ -511,9 +511,6 @@ public class HelperUtils {
    */
   public static int calculateTotalQuantity(CompositePoLine compPOL) {
     Cost cost = compPOL.getCost();
-    if (cost == null) {
-      return 0;
-    }
   	int eQuantity = ObjectUtils.defaultIfNull(cost.getQuantityElectronic(), 0);
     int physicalQuantity = ObjectUtils.defaultIfNull(cost.getQuantityPhysical(), 0);
     return eQuantity + physicalQuantity;
@@ -691,7 +688,6 @@ public class HelperUtils {
     return poLines
       .stream()
       .map(CompositePoLine::getCost)
-      .filter(Objects::nonNull)
       .map(Cost::getPoLineEstimatedPrice)
       .map(BigDecimal::valueOf)
       .reduce(BigDecimal.ZERO, BigDecimal::add)

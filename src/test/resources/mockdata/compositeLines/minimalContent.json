@@ -1,4 +1,5 @@
 {
+  "acquisitionMethod": "Purchase",
 	"orderFormat": "Other",
 	"source": {
 		"code": "FOLIO"
@@ -11,11 +12,5 @@
 	"physical": {
 		"createInventory": "None"
 	},
-	"locations": [
-		{
-			"locationId": "bab00694-a87c-4607-9daf-346cd820aba2",
-			"quantityPhysical": 1
-		}
-
-	]
+	"title": "Test title"
 }
