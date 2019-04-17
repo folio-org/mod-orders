@@ -455,7 +455,10 @@ public class OrdersImplTest {
       location.setQuantityPhysical(1);
     });
 
-    firstPoLine.getLocations().add(new Location().withQuantityElectronic(0).withQuantityPhysical(0));
+    firstPoLine.getLocations().add(new Location()
+                                    .withQuantityElectronic(0)
+                                    .withQuantityPhysical(0)
+                                    .withLocationId(firstPoLine.getLocations().get(0).getLocationId()));
     final Errors response = verifyPut(COMPOSITE_ORDERS_PATH + "/" + reqData.getId(), JsonObject.mapFrom(reqData),
 
       APPLICATION_JSON, 422).as(Errors.class);
@@ -2419,7 +2422,9 @@ public class OrdersImplTest {
     reqData.getCost().setQuantityPhysical(0);
     reqData.getCost().setQuantityElectronic(1);
     reqData.getLocations().get(0).setQuantityPhysical(1);
-    reqData.getLocations().add(new Location().withQuantityPhysical(0));
+    reqData.getLocations().add(new Location()
+                                .withQuantityPhysical(0)
+                                .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
     final Errors response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
@@ -2452,7 +2457,9 @@ public class OrdersImplTest {
     reqData.getCost().setQuantityPhysical(0);
     reqData.getCost().setQuantityElectronic(4);
     reqData.getLocations().get(0).setQuantityElectronic(3);
-    reqData.getLocations().add(new Location().withQuantityElectronic(0));
+    reqData.getLocations().add(new Location()
+                                  .withQuantityElectronic(0)
+                                  .withLocationId(reqData.getLocations().get(0).getLocationId()));
     Eresource eresource = new  Eresource();
     eresource.setCreateInventory(org.folio.rest.jaxrs.model.Eresource.CreateInventory.NONE);
     reqData.setEresource(eresource);
