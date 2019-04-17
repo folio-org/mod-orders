@@ -48,7 +48,7 @@
     <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
     <ramlfiles_util_path>${ramlfiles_path}/raml-util</ramlfiles_util_path>
     <ramlfiles_acq_models_path>${ramlfiles_path}/acq-models</ramlfiles_acq_models_path>
-    <raml-module-builder.version>23.3.0</raml-module-builder.version>
+    <raml-module-builder.version>23.12.0</raml-module-builder.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
@@ -260,6 +260,10 @@
                   <key>raml_files</key>
                   <value>${ramlfiles_path}</value>
                 </systemProperty>
+                <systemProperty>
+                  <key>schema_paths</key>
+                  <value>${jsonschema_paths}</value>
+                </systemProperty>                
               </systemProperties>
             </configuration>
           </execution>
