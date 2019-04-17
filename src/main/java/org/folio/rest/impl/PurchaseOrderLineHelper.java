@@ -418,9 +418,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    */
   private void updateEstimatedPrice(CompositePoLine compPoLine) {
     Cost cost = compPoLine.getCost();
-    if (cost != null) {
-      cost.setPoLineEstimatedPrice(calculateEstimatedPrice(cost));
-    }
+    cost.setPoLineEstimatedPrice(calculateEstimatedPrice(cost));
   }
 
   private void updateLocationsQuantity(List<Location> locations) {
