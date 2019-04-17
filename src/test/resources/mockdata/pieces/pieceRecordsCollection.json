@@ -249,6 +249,12 @@
       "receivingStatus": "Expected"
     },
     {
+      "id": "8c057872-9c75-4fb1-879d-de3b089b0387",
+      "itemId": "c0ac82e3-e53f-48d1-a435-86d965250e47",
+      "poLineId": "cf447221-29b9-481e-947c-9ad545f22888",
+      "receivingStatus": "Expected"
+    },
+    {
       "id": "8c057872-9c75-4fb1-879d-de3b089b0388",
       "itemId": "c0ac82e3-e53f-48d1-a435-86d965250e47",
       "poLineId": "cf447221-29b9-481e-947c-9ad545f22888",
@@ -342,7 +348,18 @@
       "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
       "poLineId": "7c98369b-89e4-4b2a-9793-ba36c056fc97",
       "receivingStatus": "Received"
+    },
+    {
+      "id": "90894300-5285-4d83-80f4-76cf621e555e",
+      "poLineId": "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56",
+      "receivingStatus": "Expected"
+    },
+    {
+      "id": "1a247602-c51a-4221-9a07-27d075d03625",
+      "poLineId": "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56",
+      "format": "Electronic",
+      "receivingStatus": "Expected"
     }
   ],
-  "totalRecords": 55
+  "totalRecords": 58
 }

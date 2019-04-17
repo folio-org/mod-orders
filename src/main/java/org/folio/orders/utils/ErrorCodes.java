@@ -39,7 +39,8 @@ public enum ErrorCodes {
   COST_UNIT_PRICE_INVALID("costUnitPriceInvalid", "Cost's list unit price is invalid"),
   COST_UNIT_PRICE_ELECTRONIC_INVALID("costUnitPriceElectronicInvalid", "Cost's list unit price for Electronic resource(s) is invalid"),
   COST_ADDITIONAL_COST_INVALID("costAdditionalCostInvalid", "Cost's additional cost must be positive number"),
-  COST_DISCOUNT_INVALID("costDiscountInvalid", "Cost's discount is invalid");
+  COST_DISCOUNT_INVALID("costDiscountInvalid", "Cost's discount is invalid"),
+  LOC_NOT_PROVIDED("locNotProvided", "Location not provided");
 
   private final String code;
   private final String description;

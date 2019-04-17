@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Date;
 import java.util.concurrent.CompletableFuture;
+
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.acq.model.Piece;
@@ -47,16 +48,18 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
     // 1. Get piece records from storage
     return retrievePieceRecords(checkinPieces)
-      // 2. Update items in the Inventory if required
+      // 2. Filter locationId
+      .thenCompose(this::filterMissingLocations)
+      // 3. Update items in the Inventory if required
       .thenCompose(this::updateInventoryItems)
-      // 3. Update piece records with checkIn details which do not have
+      // 4. Update piece records with checkIn details which do not have
       // associated item
       .thenApply(this::updatePieceRecordsWithoutItems)
-      // 4. Update received piece records in the storage
+      // 5. Update received piece records in the storage
       .thenCompose(this::storeUpdatedPieceRecords)
-      // 5. Update PO Line status
+      // 6. Update PO Line status
       .thenCompose(this::updatePoLinesStatus)
-      // 6. Return results to the client
+      // 7. Return results to the client
       .thenApply(piecesGroupedByPoLine -> prepareResponseBody(checkinCollection, piecesGroupedByPoLine));
   }
 
@@ -174,6 +177,11 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       .forEach(this::updatePieceWithCheckinInfo);
 
     return piecesGroupedByPoLine;
+  }
+
+  @Override
+  String getLocationId(Piece piece) {
+    return checkinPieces.get(piece.getPoLineId()).get(piece.getId()).getLocationId();
   }
 
 }
