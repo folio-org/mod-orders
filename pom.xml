@@ -43,7 +43,7 @@
     <aspectj.version>1.8.13</aspectj.version>
     <module_name>mod-orders</module_name>
     <http.port>8081</http.port>
-    <jsonschema_paths>acq-models/mod-orders/schemas</jsonschema_paths>
+    <jsonschema_paths>acq-models/mod-orders/schemas,acq-models/mod-orders-storage/schemas,raml-util/**</jsonschema_paths>
     <generated_sources_dir>${project.build.directory}/generated-sources</generated_sources_dir>
     <jsonschema2pojo_output_dir>${generated_sources_dir}/jsonschema2pojo</jsonschema2pojo_output_dir>
     <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
@@ -264,7 +264,7 @@
                 <systemProperty>
                   <key>schema_paths</key>
                   <value>${jsonschema_paths}</value>
-                </systemProperty>                
+                </systemProperty>
               </systemProperties>
             </configuration>
           </execution>

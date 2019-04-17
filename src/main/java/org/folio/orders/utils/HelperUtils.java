@@ -807,6 +807,8 @@ public class HelperUtils {
           future.complete(body);
         })
         .exceptionally(t -> {
+        	System.err.println("ENDPOINT: " + endpoint);
+        	 
           logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, HttpMethod.GET, endpoint);
           future.completeExceptionally(t);
           return null;
