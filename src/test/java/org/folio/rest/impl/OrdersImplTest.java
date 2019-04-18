@@ -3679,18 +3679,34 @@ public class OrdersImplTest {
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setId(electronicPieceWithoutLocationId);
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(UUID.randomUUID().toString());
 
+    MockServer.serverRqRs.clear();
     checkResultWithErrors(request, 0);
+    assertThat(MockServer.serverRqRs.get(PIECES, HttpMethod.GET), hasSize(2));
+    assertThat(MockServer.serverRqRs.get(PIECES, HttpMethod.PUT), hasSize(2));
+    assertThat(MockServer.serverRqRs.get(PO_LINES, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT), hasSize(1));
 
     // Negative cases:
     // 1. One CheckInPiece and corresponding Piece without locationId
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(null);
 
+    MockServer.serverRqRs.clear();
     checkResultWithErrors(request, 1);
+    assertThat(MockServer.serverRqRs.get(PIECES, HttpMethod.GET), hasSize(2));
+    assertThat(MockServer.serverRqRs.get(PIECES, HttpMethod.PUT), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(PO_LINES, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT), hasSize(1));
 
     // 2. All CheckInPieces and corresponding Pieces without locationId
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(null);
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(null);
 
+    MockServer.serverRqRs.clear();
     checkResultWithErrors(request, 2);
+    assertThat(MockServer.serverRqRs.get(PIECES, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(PIECES, HttpMethod.PUT), nullValue());
+    assertThat(MockServer.serverRqRs.get(PO_LINES, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT), nullValue());
   }
 
   private void checkResultWithErrors(CheckinCollection request, int expectedNumOfErrors) {

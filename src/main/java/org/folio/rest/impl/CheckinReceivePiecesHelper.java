@@ -455,12 +455,15 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    */
   private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine, List<Piece> pieces) {
     // Search for pieces with Expected status
-    return getPiecesQuantityByPoLineAndStatus(poLine.getId(), ReceivingStatus.EXPECTED)
-      // Calculate receipt status
-      .thenCompose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, poLine, pieces))
-      .exceptionally(e -> {
-        logger.error("The expected receipt status for PO Line '{}' cannot be calculated", e, poLine.getId());
-        return null;
+    return pieces.isEmpty()
+      // No successfully pieces processed - receipt status unchanged
+      ? completedFuture(poLine.getReceiptStatus())
+      : getPiecesQuantityByPoLineAndStatus(poLine.getId(), ReceivingStatus.EXPECTED)
+        // Calculate receipt status
+        .thenCompose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, poLine, pieces))
+        .exceptionally(e -> {
+          logger.error("The expected receipt status for PO Line '{}' cannot be calculated", e, poLine.getId());
+          return null;
       });
   }
 
