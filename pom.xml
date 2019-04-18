@@ -43,12 +43,13 @@
     <aspectj.version>1.8.13</aspectj.version>
     <module_name>mod-orders</module_name>
     <http.port>8081</http.port>
+    <jsonschema_paths>acq-models/common/schemas,acq-models/mod-orders/schemas,acq-models/mod-orders-storage/schemas,raml-util/schemas</jsonschema_paths>
     <generated_sources_dir>${project.build.directory}/generated-sources</generated_sources_dir>
     <jsonschema2pojo_output_dir>${generated_sources_dir}/jsonschema2pojo</jsonschema2pojo_output_dir>
     <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
     <ramlfiles_util_path>${ramlfiles_path}/raml-util</ramlfiles_util_path>
     <ramlfiles_acq_models_path>${ramlfiles_path}/acq-models</ramlfiles_acq_models_path>
-    <raml-module-builder.version>23.3.0</raml-module-builder.version>
+    <raml-module-builder.version>23.12.0</raml-module-builder.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
@@ -259,6 +260,10 @@
                 <systemProperty>
                   <key>raml_files</key>
                   <value>${ramlfiles_path}</value>
+                </systemProperty>
+                <systemProperty>
+                  <key>schema_paths</key>
+                  <value>${jsonschema_paths}</value>
                 </systemProperty>
               </systemProperties>
             </configuration>
