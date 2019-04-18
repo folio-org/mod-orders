@@ -570,13 +570,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    *         and list of corresponding pieces as value
    */
   CompletableFuture<Map<String, List<Piece>>> filterMissingLocations(Map<String, List<Piece>> piecesRecords) {
-    getPoLines(piecesRecords)
-      .thenAccept(poLines -> {
+    return getPoLines(piecesRecords)
+      .thenApply(poLines -> {
         for(PoLine poLine : poLines) {
           piecesRecords.get(poLine.getId()).removeIf(piece -> isMissingLocation(poLine, piece));
         }
+        return piecesRecords;
       });
-    return VertxCompletableFuture.completedFuture(piecesRecords);
   }
 
   private boolean isMissingLocation(PoLine poLine, Piece piece) {
