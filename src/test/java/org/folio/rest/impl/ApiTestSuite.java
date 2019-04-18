@@ -1,0 +1,63 @@
+package org.folio.rest.impl;
+
+import io.restassured.RestAssured;
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+import org.folio.rest.RestVerticle;
+import org.folio.rest.tools.utils.NetworkUtils;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+
+@RunWith(Suite.class)
+@Suite.SuiteClasses({
+  PurchaseOrdersApiApiTest.class,
+  PurchaseOrderLinesApiApiTest.class,
+  CheckinReceivingApiApiTest.class,
+  PieceApiApiTest.class,
+  ReceivingHistoryApiApiTest.class,
+  PoNumberApiApiTest.class
+})
+public class ApiTestSuite {
+
+  private static final int okapiPort = NetworkUtils.nextFreePort();
+  static final int mockPort = NetworkUtils.nextFreePort();
+  private static Vertx vertx;
+  private static MockServer mockServer;
+  private static boolean initialised;
+
+  @BeforeClass
+  public static void before() {
+    if (vertx == null) {
+      vertx = Vertx.vertx();
+    }
+
+    mockServer = new MockServer(mockPort);
+    mockServer.start();
+
+    RestAssured.baseURI = "http://localhost:" + okapiPort;
+    RestAssured.port = okapiPort;
+    RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
+
+    final JsonObject conf = new JsonObject();
+    conf.put("http.port", okapiPort);
+
+    final DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
+    vertx.deployVerticle(RestVerticle.class.getName(), opt);
+    initialised = true;
+  }
+
+  @AfterClass
+  public static void after() {
+    vertx.close();
+    mockServer.close();
+    initialised = false;
+  }
+
+  public static boolean isNotInitialised() {
+    return !initialised;
+  }
+
+}
