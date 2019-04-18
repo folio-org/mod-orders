@@ -414,9 +414,8 @@ public class InventoryHelper extends AbstractHelper {
 
     // MODORDERS-145 The Source and source code are required by schema
     instance.put(INSTANCE_SOURCE, compPOL.getSource().getCode());
-    if (compPOL.getTitle() != null) {
-      instance.put(INSTANCE_TITLE, compPOL.getTitle());
-    }
+    instance.put(INSTANCE_TITLE, compPOL.getTitle());
+
     if (compPOL.getEdition() != null) {
       instance.put(INSTANCE_EDITIONS, new JsonArray(singletonList(compPOL.getEdition())));
     }
