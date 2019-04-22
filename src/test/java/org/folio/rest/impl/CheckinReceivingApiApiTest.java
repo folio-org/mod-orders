@@ -44,7 +44,7 @@ import static org.folio.rest.impl.MockServer.getItemsSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPieceUpdates;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
-import static org.folio.rest.impl.MockServer.getPolSearches;
+import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.PurchaseOrdersApiApiTest.APPLICATION_JSON;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -81,7 +81,7 @@ public class CheckinReceivingApiApiTest extends ApiTestBase {
 
     List<JsonObject> pieceSearches = getPieceSearches();
     List<JsonObject> pieceUpdates = getPieceUpdates();
-    List<JsonObject> polSearches = getPolSearches();
+    List<JsonObject> polSearches = getPoLineSearches();
     List<JsonObject> polUpdates = getPoLineUpdates();
 
     assertThat(pieceSearches, not(nullValue()));
@@ -137,7 +137,7 @@ public class CheckinReceivingApiApiTest extends ApiTestBase {
     List<JsonObject> pieceUpdates = getPieceUpdates();
     List<JsonObject> itemsSearches = getItemsSearches();
     List<JsonObject> itemUpdates = getItemUpdates();
-    List<JsonObject> polSearches = getPolSearches();
+    List<JsonObject> polSearches = getPoLineSearches();
     List<JsonObject> polUpdates = getPoLineUpdates();
 
     assertThat(pieceSearches, not(nullValue()));
@@ -180,7 +180,7 @@ public class CheckinReceivingApiApiTest extends ApiTestBase {
     List<JsonObject> pieceUpdates = getPieceUpdates();
     List<JsonObject> itemsSearches = getItemsSearches();
     List<JsonObject> itemUpdates = getItemUpdates();
-    List<JsonObject> polSearches = getPolSearches();
+    List<JsonObject> polSearches = getPoLineSearches();
     List<JsonObject> polUpdates = getPoLineUpdates();
 
     assertThat(pieceSearches, not(nullValue()));
@@ -238,18 +238,36 @@ public class CheckinReceivingApiApiTest extends ApiTestBase {
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setId(electronicPieceWithoutLocationId);
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(UUID.randomUUID().toString());
 
+    MockServer.serverRqRs.clear();
     checkResultWithErrors(request, 0);
+    assertThat(getPieceSearches(), hasSize(2));
+    assertThat(getPieceUpdates(), hasSize(2));
+    assertThat(getPoLineSearches(), hasSize(1));
+    assertThat(getPoLineUpdates(), hasSize(1));
+
 
     // Negative cases:
     // 1. One CheckInPiece and corresponding Piece without locationId
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(null);
 
+    MockServer.serverRqRs.clear();
     checkResultWithErrors(request, 1);
+    assertThat(getPieceSearches(), hasSize(2));
+    assertThat(getPieceUpdates(), hasSize(1));
+    assertThat(getPoLineSearches(), hasSize(1));
+    assertThat(getPoLineUpdates(), hasSize(1));
+
 
     // 2. All CheckInPieces and corresponding Pieces without locationId
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(null);
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(null);
 
+    MockServer.serverRqRs.clear();
     checkResultWithErrors(request, 2);
+    assertThat(getPieceSearches(), hasSize(1));
+    assertThat(getPieceUpdates(), nullValue());
+    assertThat(getPoLineSearches(), hasSize(1));
+    assertThat(getPoLineUpdates(), nullValue());
   }
 
   @Test
@@ -269,7 +287,7 @@ public class CheckinReceivingApiApiTest extends ApiTestBase {
     List<JsonObject> pieceUpdates = getPieceUpdates();
     List<JsonObject> itemsSearches = getItemsSearches();
     List<JsonObject> itemUpdates = getItemUpdates();
-    List<JsonObject> polSearches = getPolSearches();
+    List<JsonObject> polSearches = getPoLineSearches();
     List<JsonObject> polUpdates = getPoLineUpdates();
 
     assertThat(pieceSearches, not(nullValue()));
@@ -316,7 +334,7 @@ public class CheckinReceivingApiApiTest extends ApiTestBase {
 
     List<JsonObject> pieceSearches = getPieceSearches();
     List<JsonObject> pieceUpdates = getPieceUpdates();
-    List<JsonObject> polSearches = getPolSearches();
+    List<JsonObject> polSearches = getPoLineSearches();
     List<JsonObject> polUpdates = getPoLineUpdates();
 
     assertThat(pieceSearches, not(nullValue()));
@@ -376,7 +394,7 @@ public class CheckinReceivingApiApiTest extends ApiTestBase {
       PIECE_UPDATE_FAILED.getCode()));
 
     List<JsonObject> polUpdates = getPoLineUpdates();
-    assertThat(getPolSearches(), hasSize(1));
+    assertThat(getPoLineSearches(), hasSize(1));
     assertThat(polUpdates, hasSize(1));
 
     polUpdates.forEach(pol -> {
@@ -414,7 +432,7 @@ public class CheckinReceivingApiApiTest extends ApiTestBase {
     assertThat(getPieceUpdates(), is(nullValue()));
     assertThat(getItemsSearches(), is(nullValue()));
     assertThat(getItemUpdates(), is(nullValue()));
-    assertThat(getPolSearches(), is(nullValue()));
+    assertThat(getPoLineSearches(), is(nullValue()));
     assertThat(getPoLineUpdates(), is(nullValue()));
   }
 
@@ -446,7 +464,7 @@ public class CheckinReceivingApiApiTest extends ApiTestBase {
     assertThat(getItemsSearches(), not(nullValue()));
     assertThat(getPieceUpdates(), is(nullValue()));
     assertThat(getItemUpdates(), is(nullValue()));
-    assertThat(getPolSearches(), not(nullValue()));
+    assertThat(getPoLineSearches(), not(nullValue()));
     assertThat(getPoLineUpdates(), is(nullValue()));
   }
 
@@ -467,7 +485,7 @@ public class CheckinReceivingApiApiTest extends ApiTestBase {
     List<JsonObject> pieceUpdates = getPieceUpdates();
     List<JsonObject> itemsSearches = getItemsSearches();
     List<JsonObject> itemUpdates = getItemUpdates();
-    List<JsonObject> polSearches = getPolSearches();
+    List<JsonObject> polSearches = getPoLineSearches();
     List<JsonObject> polUpdates = getPoLineUpdates();
 
     assertThat(pieceSearches, not(nullValue()));
@@ -515,7 +533,7 @@ public class CheckinReceivingApiApiTest extends ApiTestBase {
     List<JsonObject> pieceUpdates = getPieceUpdates();
     List<JsonObject> itemsSearches = getItemsSearches();
     List<JsonObject> itemUpdates = getItemUpdates();
-    List<JsonObject> polSearches = getPolSearches();
+    List<JsonObject> polSearches = getPoLineSearches();
     List<JsonObject> polUpdates = getPoLineUpdates();
 
     assertThat(pieceSearches, not(nullValue()));

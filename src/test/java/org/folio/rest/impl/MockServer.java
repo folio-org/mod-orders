@@ -151,7 +151,7 @@ public class MockServer {
     return serverRqRs.get(PO_LINES, HttpMethod.PUT);
   }
 
-  static List<JsonObject> getPolSearches() {
+  static List<JsonObject> getPoLineSearches() {
     return serverRqRs.get(PO_LINES, HttpMethod.GET);
   }
 

@@ -30,7 +30,7 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
-import static org.folio.rest.impl.MockServer.getPolSearches;
+import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.PurchaseOrdersApiApiTest.APPLICATION_JSON;
 import static org.folio.rest.impl.ApiTestSuite.mockPort;
 import static org.junit.Assert.assertEquals;
@@ -181,7 +181,7 @@ public class ApiTestBase {
     assertEquals(2, MockServer.serverRqRs.size());
     assertEquals(2, MockServer.serverRqRs.rowKeySet().size());
     assertEquals(1, MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET).size());
-    assertEquals(1, getPolSearches().size());
+    assertEquals(1, getPoLineSearches().size());
   }
 
   void verifyLocationQuantity(Location location, CompositePoLine.OrderFormat orderFormat) {
