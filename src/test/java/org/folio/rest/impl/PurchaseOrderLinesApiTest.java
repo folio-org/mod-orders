@@ -1,6 +1,5 @@
 package org.folio.rest.impl;
 
-import io.restassured.RestAssured;
 import io.restassured.response.Response;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
@@ -23,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.orders.utils.ErrorCodes.COST_ADDITIONAL_COST_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_DISCOUNT_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
@@ -41,13 +42,11 @@ import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
+import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.PO_NUMBER_ERROR_X_OKAPI_TENANT;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.APPLICATION_JSON;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.INCORRECT_LANG_PARAMETER;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.PURCHASE_ORDER_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
@@ -58,13 +57,15 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class PurchaseOrderLinesApiApiTest extends ApiTestBase {
+public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
-  private static final Logger logger = LoggerFactory.getLogger(PurchaseOrderLinesApiApiTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(PurchaseOrderLinesApiTest.class);
 
   private static final String PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED = "0009662b-8b80-4001-b704-ca10971f175d";
   private static final String ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   private final static String LINES_PATH = "/orders/order-lines";
+  private static final String LINE_BY_ID_PATH = "/orders/order-lines/%s";
+  private static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "minimalContent.json";
 
   @Test
@@ -315,44 +316,19 @@ public class PurchaseOrderLinesApiApiTest extends ApiTestBase {
   @Test
   public void testValidationOnPutLineWithoutBody() {
     logger.info("=== Test validation on PUT line with no body ===");
-    RestAssured
-      .with()
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .contentType(APPLICATION_JSON)
-      .put(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST))
-        .then()
-          .statusCode(400)
-          .body(containsString("Json content error HV000116: The object to be validated must not be null"));
+    verifyPut(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST), "", TEXT_PLAIN, 400);
   }
 
   @Test
   public void testValidationOnPutWithIncorrectLang() throws IOException {
     logger.info("=== Test validation on PUT line with invalid lang query parameter ===");
-    RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .contentType(APPLICATION_JSON)
-        .body(getMockData(PO_LINE_MIN_CONTENT_PATH))
-      .put(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST) + INVALID_LANG)
-        .then()
-          .statusCode(400)
-          .body(containsString(INCORRECT_LANG_PARAMETER));
+    verifyPut(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST) + INVALID_LANG, getMockData(PO_LINE_MIN_CONTENT_PATH), TEXT_PLAIN, 400);
   }
 
   @Test
   public void testValidationOnPutWithIncorrectLineId() throws IOException {
     logger.info("=== Test validation on PUT line with invalid line ID path parameter ===");
-    RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .contentType(APPLICATION_JSON)
-        .body(getMockData(PO_LINE_MIN_CONTENT_PATH))
-      .put(String.format(LINE_BY_ID_PATH, ID_BAD_FORMAT))
-        .then()
-          .statusCode(400)
-          .body(containsString("parameter is incorrect"));
+    verifyPut(String.format(LINE_BY_ID_PATH, ID_BAD_FORMAT), getMockData(PO_LINE_MIN_CONTENT_PATH), TEXT_PLAIN, 400);
   }
 
   @Test
@@ -417,16 +393,7 @@ public class PurchaseOrderLinesApiApiTest extends ApiTestBase {
     String url = String.format(LINE_BY_ID_PATH, lineId);
     String body = getPoLineWithMinContentAndIds(lineId, ID_DOES_NOT_EXIST);
 
-    RestAssured
-      .with()
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .contentType(APPLICATION_JSON)
-        .body(body)
-      .put(url)
-        .then()
-          .statusCode(500)
-          .contentType(APPLICATION_JSON);
-
+    verifyPut(url, body, prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 500);
 
     // Verify that no calls reached mock server
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -543,12 +510,9 @@ public class PurchaseOrderLinesApiApiTest extends ApiTestBase {
   @Test
   public void testDeleteOrderLineByIdWithoutOkapiUrlHeader() {
     logger.info("=== Test Delete Order Line By Id - 500 due to missing Okapi URL header ===");
-    RestAssured
-      .with()
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .delete(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST))
-        .then()
-          .statusCode(500);
+
+    verifyDeleteResponse(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST), prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON,500);
+
   }
 
   @Test
@@ -575,16 +539,7 @@ public class PurchaseOrderLinesApiApiTest extends ApiTestBase {
   public void testGetOrderLineById() {
     logger.info("=== Test Get Orderline By Id ===");
 
-    final CompositePoLine resp = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .get(String.format(LINE_BY_ID_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE))
-        .then()
-          .statusCode(200)
-          .extract()
-            .response()
-              .as(CompositePoLine.class);
+    final CompositePoLine resp = verifySuccessGet(String.format(LINE_BY_ID_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE), CompositePoLine.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
@@ -597,15 +552,7 @@ public class PurchaseOrderLinesApiApiTest extends ApiTestBase {
 
     String lineId = ID_DOES_NOT_EXIST;
 
-    final Response resp = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .get(String.format(LINE_BY_ID_PATH, lineId))
-        .then()
-          .statusCode(404)
-          .extract()
-            .response();
+    final Response resp = verifyGet(String.format(LINE_BY_ID_PATH, lineId), APPLICATION_JSON, 404);
 
     assertEquals(lineId, resp.getBody().as(Errors.class).getErrors().get(0).getMessage());
   }
@@ -614,15 +561,7 @@ public class PurchaseOrderLinesApiApiTest extends ApiTestBase {
   public void testGetOrderLineByIdWith500() {
     logger.info("=== Test Get Orderline By Id - With 500 ===");
 
-    final Response resp = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .get(String.format(LINE_BY_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR))
-        .then()
-          .statusCode(500)
-          .extract()
-            .response();
+    final Response resp = verifyGet(String.format(LINE_BY_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), APPLICATION_JSON, 500);
 
     assertEquals("Internal Server Error", resp.getBody().as(Errors.class).getErrors().get(0).getMessage());
   }

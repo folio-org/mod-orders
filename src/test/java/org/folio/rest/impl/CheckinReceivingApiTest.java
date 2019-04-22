@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
@@ -39,13 +40,13 @@ import static org.folio.rest.impl.InventoryHelper.ITEM_BARCODE;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_NAME;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_ON_ORDER;
+import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getItemUpdates;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPieceUpdates;
-import static org.folio.rest.impl.MockServer.getPoLineUpdates;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.APPLICATION_JSON;
+import static org.folio.rest.impl.MockServer.getPoLineUpdates;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
@@ -57,14 +58,14 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
-public class CheckinReceivingApiApiTest extends ApiTestBase {
+public class CheckinReceivingApiTest extends ApiTestBase {
 
-  private static final Logger logger = LoggerFactory.getLogger(CheckinReceivingApiApiTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(CheckinReceivingApiTest.class);
 
-  private static final String RECEIVING_RQ_MOCK_DATA_PATH = MockServer.BASE_MOCK_DATA_PATH + "receiving/";
+  private static final String RECEIVING_RQ_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receiving/";
   private static final String ORDERS_RECEIVING_ENDPOINT = "/orders/receive";
   private static final String ORDERS_CHECKIN_ENDPOINT = "/orders/check-in";
-  private static final String CHECKIN_RQ_MOCK_DATA_PATH = MockServer.BASE_MOCK_DATA_PATH + "checkIn/";
+  private static final String CHECKIN_RQ_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "checkIn/";
 
   @Test
   public void testPostCheckInElectronicWithNoItems() {

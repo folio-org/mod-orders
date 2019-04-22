@@ -45,6 +45,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
@@ -62,48 +63,41 @@ import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
-import static org.folio.rest.impl.InventoryHelper.ITEMS;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.ACTIVE_ACCESS_PROVIDER_A;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.ACTIVE_ACCESS_PROVIDER_B;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.ACTIVE_VENDOR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.APPLICATION_JSON;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.BAD_QUERY;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.BAD_REQUEST;
 import static org.folio.rest.impl.ApiTestBase.COMP_ORDER_MOCK_DATA_PATH;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.EMPTY_CONFIG_TENANT;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.EXISTING_PO_NUMBER;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.ID;
+import static org.folio.rest.impl.ApiTestBase.ID;
 import static org.folio.rest.impl.ApiTestBase.ID_DOES_NOT_EXIST;
 import static org.folio.rest.impl.ApiTestBase.ID_FOR_INTERNAL_SERVER_ERROR;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.ID_FOR_PRINT_MONOGRAPH_ORDER;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.INACTIVE_ACCESS_PROVIDER_A;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.INACTIVE_ACCESS_PROVIDER_B;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.INACTIVE_VENDOR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.LISTED_PRINT_MONOGRAPH_PATH;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.MOD_VENDOR_INTERNAL_ERROR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.NONEXISTING_PO_NUMBER;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.NON_EXIST_ACCESS_PROVIDER_A;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.NON_EXIST_VENDOR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.PURCHASE_ORDER_ID;
-import static org.folio.rest.impl.ReceivingHistoryApiApiTest.RECEIVING_HISTORY_PURCHASE_ORDER_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.VENDOR_WITH_BAD_CONTENT;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.X_ECHO_STATUS;
 import static org.folio.rest.impl.ApiTestBase.PO_LINE_NUMBER_VALUE;
-import static org.junit.Assert.assertTrue;
+import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
+import static org.folio.rest.impl.InventoryHelper.ITEMS;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_A;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_B;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_VENDOR_ID;
+import static org.folio.rest.impl.ApiTestBase.BAD_QUERY;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.EMPTY_CONFIG_TENANT;
+import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ID_FOR_PRINT_MONOGRAPH_ORDER;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_ACCESS_PROVIDER_A;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_ACCESS_PROVIDER_B;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_VENDOR_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.LISTED_PRINT_MONOGRAPH_PATH;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.MOD_VENDOR_INTERNAL_ERROR_ID;
+import static org.folio.rest.impl.PoNumberApiTest.NONEXISTING_PO_NUMBER;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_ACCESS_PROVIDER_A;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_VENDOR_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.VENDOR_WITH_BAD_CONTENT;
+import static org.folio.rest.impl.ApiTestBase.X_ECHO_STATUS;
+import static org.folio.rest.impl.ReceivingHistoryApiTest.RECEIVING_HISTORY_PURCHASE_ORDER_ID;
 import static org.junit.Assert.fail;
 
 public class MockServer {
 
   private static final Logger logger = LoggerFactory.getLogger(MockServer.class);
 
-  static final String PO_NUMBER_VALUE = "228D126";
   // Mock data paths
   static final String BASE_MOCK_DATA_PATH = "mockdata/";
-  private static final String ITEM_RECORDS = "itemRecords";
-  private static final String INSTANCE_RECORD = "instanceRecord";
-  private static final String HOLDINGS_RECORD = "holdingRecord";
   private static final String CONTRIBUTOR_NAME_TYPES_PATH = BASE_MOCK_DATA_PATH + "contributorNameTypes/contributorPersonalNameType.json";
   private static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
   private static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
@@ -113,20 +107,25 @@ public class MockServer {
   private static final String INSTANCE_IDENTIFIERS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
   static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
+  private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
+  private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
+  private static final String VENDORS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "vendors/";
+  private static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "/po_line_collection.json";
+
   static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";
   private static final String ORDER_ID_WITH_PO_LINES = "ab18897b-0e40-4f31-896b-9c9adc979a87";
-  private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
-  private static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "/po_line_collection.json";
-  /** The PO Line with minimal required content */
+  static final String PO_NUMBER_VALUE = "228D126";
 
-  private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
-  private static final String VENDORS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "vendors/";
   private static final String PO_NUMBER_ERROR_TENANT = "po_number_error_tenant";
   static final Header PO_NUMBER_ERROR_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, PO_NUMBER_ERROR_TENANT);
-  private static final String TOTAL_RECORDS = "totalRecords";
-  static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
 
+  private static final String TOTAL_RECORDS = "totalRecords";
+  private static final String ITEM_RECORDS = "itemRecords";
+  private static final String INSTANCE_RECORD = "instanceRecord";
+  private static final String HOLDINGS_RECORD = "holdingRecord";
+
+  static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
 
   private final int port;
   private final Vertx vertx;
@@ -134,6 +133,21 @@ public class MockServer {
   MockServer(int port) {
     this.port = port;
     this.vertx = Vertx.vertx();
+  }
+
+  void start() throws InterruptedException, ExecutionException, TimeoutException {
+    // Setup Mock Server...
+    HttpServer server = vertx.createHttpServer();
+    CompletableFuture<HttpServer> deploymentComplete = new CompletableFuture<>();
+    server.requestHandler(defineRoutes()::accept).listen(port, result -> {
+      if(result.succeeded()) {
+        deploymentComplete.complete(result.result());
+      }
+      else {
+        deploymentComplete.completeExceptionally(result.cause());
+      }
+    });
+    deploymentComplete.get(60, TimeUnit.SECONDS);
   }
 
   void close() {
@@ -548,7 +562,7 @@ public class MockServer {
       } else if(queryParam.contains(INTERNAL_SERVER_ERROR)) {
         throw new HttpException(500, "Exception in orders-storage module");
       }
-      else if(queryParam.contains(BAD_REQUEST)) {
+      else if(queryParam.contains(BAD_QUERY)) {
         throw new HttpException(400, "QueryValidationException");
       }
       else {
@@ -600,21 +614,6 @@ public class MockServer {
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
         .end();
     }
-  }
-
-  void start() throws InterruptedException, ExecutionException, TimeoutException {
-    // Setup Mock Server...
-    HttpServer server = vertx.createHttpServer();
-    CompletableFuture<HttpServer> deploymentComplete = new CompletableFuture<>();
-    server.requestHandler(defineRoutes()::accept).listen(port, result -> {
-      if(result.succeeded()) {
-        deploymentComplete.complete(result.result());
-      }
-      else {
-        deploymentComplete.completeExceptionally(result.cause());
-      }
-    });
-    deploymentComplete.get(60, TimeUnit.SECONDS);
   }
 
   private void handleGetPoLines(RoutingContext ctx) {

@@ -8,16 +8,15 @@ import org.folio.HttpStatus;
 import org.folio.rest.acq.model.Piece;
 import org.junit.Test;
 
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.APPLICATION_JSON;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.X_ECHO_STATUS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
-public class PieceApiApiTest extends ApiTestBase {
+public class PieceApiTest extends ApiTestBase {
 
-  private static final Logger logger = LoggerFactory.getLogger(PieceApiApiTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(PieceApiTest.class);
 
   private static final String PIECES_ENDPOINT = "/orders/pieces";
 

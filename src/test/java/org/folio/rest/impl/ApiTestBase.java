@@ -25,43 +25,51 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
+import static org.folio.rest.impl.ApiTestSuite.mockPort;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.APPLICATION_JSON;
-import static org.folio.rest.impl.ApiTestSuite.mockPort;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 public class ApiTestBase {
 
+  static {
+    System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, "io.vertx.core.logging.Log4j2LogDelegateFactory");
+  }
+
   private static final Logger logger = LoggerFactory.getLogger(ApiTestBase.class);
 
   static final String PO_LINE_NUMBER_VALUE = "1";
+
   static final String INVALID_LANG = "?lang=english";
+  static final String BAD_QUERY = "unprocessableQuery";
+  static final String ID = "id";
+
   static final String ID_BAD_FORMAT = "123-45-678-90-abc";
   static final String ID_DOES_NOT_EXIST = "d25498e7-3ae6-45fe-9612-ec99e2700d2f";
   static final String ID_FOR_INTERNAL_SERVER_ERROR = "168f8a86-d26c-406e-813f-c7527f241ac3";
   static final String PO_ID = "e5ae4afd-3fa9-494e-a972-f541df9b877e";
   static final String PO_ID_OPEN_STATUS = "c1465131-ed35-4308-872c-d7cdf0afc5f7";
   static final String PO_ID_CLOSED_STATUS = "07f65192-44a4-483d-97aa-b137bbd96390";
+  static final String PO_LINE_ID_FOR_SUCCESS_CASE = "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47";
+
   static final String COMP_ORDER_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/";
 
+  static final String X_ECHO_STATUS = "X-Okapi-Echo-Status";
+  static final String EMPTY_CONFIG_TENANT = "config_empty";
   static final Header X_OKAPI_URL = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
   static final Header NON_EXIST_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "ordersimpltest");
   static final Header X_OKAPI_USER_ID = new Header(OKAPI_USERID_HEADER, "440c89e3-7f6c-578a-9ea8-310dad23605e");
   static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
-  static final String EMPTY_CONFIG_TENANT = "config_empty";
   static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_10");
   static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_1");
   static final Header INVALID_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "invalid_config");
   static final Header EMPTY_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, EMPTY_CONFIG_TENANT);
-  static final String LINE_BY_ID_PATH = "/orders/order-lines/%s";
-  static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
-  static final String PO_LINE_ID_FOR_SUCCESS_CASE = "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47";
 
   private static boolean runningOnOwn;
 
@@ -89,9 +97,9 @@ public class ApiTestBase {
     }
   }
 
-  public static String getMockData(String path) throws IOException {
+  static String getMockData(String path) throws IOException {
     logger.info("Using mock datafile: {}", path);
-    try (InputStream resourceAsStream = PurchaseOrdersApiApiTest.class.getClassLoader().getResourceAsStream(path)) {
+    try (InputStream resourceAsStream = PurchaseOrdersApiTest.class.getClassLoader().getResourceAsStream(path)) {
       if (resourceAsStream != null) {
         return IOUtils.toString(resourceAsStream, StandardCharsets.UTF_8);
       } else {
@@ -128,26 +136,29 @@ public class ApiTestBase {
         .body(body)
       .post(url)
         .then()
-        .log()
-        .all()
-        .statusCode(expectedCode)
-        .contentType(expectedContentType)
-        .extract()
-          .response();
+          .log()
+          .all()
+          .statusCode(expectedCode)
+          .contentType(expectedContentType)
+          .extract()
+            .response();
   }
+
 
   Response verifyPut(String url, JsonObject body, String expectedContentType, int expectedCode) {
     return verifyPut(url, body.encodePrettily(), expectedContentType, expectedCode);
   }
 
   Response verifyPut(String url, String body, String expectedContentType, int expectedCode) {
+    return verifyPut(url, body, prepareHeaders(X_OKAPI_URL, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_TOKEN), expectedContentType, expectedCode);
+  }
+
+  Response verifyPut(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
     return RestAssured
       .with()
-        .header(X_OKAPI_URL)
-        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
-        .header(X_OKAPI_TOKEN)
-        .contentType(APPLICATION_JSON)
+        .headers(headers)
         .body(body)
+        .contentType(APPLICATION_JSON)
       .put(url)
         .then()
           .statusCode(expectedCode)
@@ -156,12 +167,36 @@ public class ApiTestBase {
             .response();
   }
 
+  Response verifyGet(String url, String expectedContentType, int expectedCode) {
+    Headers headers = prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT);
+    return verifyGet(url, headers,expectedContentType, expectedCode);
+  }
 
-  Response verifyDeleteResponse(String url, String expectedContentType, int expectedCode) {
+  Response verifyGet(String url, Headers headers, String expectedContentType, int expectedCode) {
     return RestAssured
       .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
+        .headers(headers)
+      .get(url)
+        .then()
+          .statusCode(expectedCode)
+          .contentType(expectedContentType)
+          .extract()
+            .response();
+  }
+
+  <T> T verifySuccessGet(String url, Class<T> clazz) {
+    return verifyGet(url, APPLICATION_JSON, 200).as(clazz);
+  }
+
+  Response verifyDeleteResponse(String url, String expectedContentType, int expectedCode) {
+    Headers headers =  prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT);
+    return verifyDeleteResponse(url, headers, expectedContentType, expectedCode);
+  }
+
+  Response verifyDeleteResponse(String url, Headers headers, String expectedContentType, int expectedCode) {
+    return RestAssured
+      .with()
+        .headers(headers)
       .delete(url)
         .then()
           .statusCode(expectedCode)

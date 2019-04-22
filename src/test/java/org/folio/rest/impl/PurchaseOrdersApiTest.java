@@ -1,6 +1,5 @@
 package org.folio.rest.impl;
 
-import io.restassured.RestAssured;
 import io.restassured.http.Header;
 import io.restassured.http.Headers;
 import io.restassured.response.Response;
@@ -39,6 +38,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
@@ -69,6 +70,11 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIPT_STATUS;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
+import static org.folio.rest.impl.InventoryInteractionTestHelper.joinExistingAndNewItems;
+import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInstanceLinksForUpdatedOrder;
+import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInventoryInteraction;
+import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesCreated;
+import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesQuantityForSuccessCase;
 import static org.folio.rest.impl.MockServer.getCreatedInstances;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
 import static org.folio.rest.impl.MockServer.getCreatedPieces;
@@ -76,14 +82,8 @@ import static org.folio.rest.impl.MockServer.getHoldingsSearches;
 import static org.folio.rest.impl.MockServer.getInstancesSearches;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
-import static org.folio.rest.impl.InventoryInteractionTestHelper.joinExistingAndNewItems;
-import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInstanceLinksForUpdatedOrder;
-import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInventoryInteraction;
-import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesCreated;
-import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesQuantityForSuccessCase;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -100,15 +100,10 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 
-public class PurchaseOrdersApiApiTest extends ApiTestBase {
+public class PurchaseOrdersApiTest extends ApiTestBase {
 
-  static {
-    System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, "io.vertx.core.logging.Log4j2LogDelegateFactory");
-  }
+  private static final Logger logger = LoggerFactory.getLogger(PurchaseOrdersApiTest.class);
 
-  private static final Logger logger = LoggerFactory.getLogger(PurchaseOrdersApiApiTest.class);
-
-  static final String BAD_REQUEST = "BadRequest";
   private static final String ORDER_WITHOUT_PO_LINES = "order_without_po_lines.json";
   private static final String ORDER_WITHOUT_VENDOR_ID = "order_without_vendor_id.json";
   private static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
@@ -119,6 +114,7 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
   static final String NON_EXIST_VENDOR_ID = "bba87500-6e71-4057-a2a9-a091bac7e0c1";
   static final String MOD_VENDOR_INTERNAL_ERROR_ID = "bba81500-6e41-4057-a2a9-a081bac7e0c1";
   static final String VENDOR_WITH_BAD_CONTENT = "5a34ae0e-5a11-4337-be95-1a20cfdc3161";
+  private static final String EXISTING_REQUIRED_VENDOR_UUID = "168f8a86-d26c-406e-813f-c7527f241ac3";
 
   static final String ACTIVE_ACCESS_PROVIDER_A = "858e80d2-f562-4c54-9934-6e274dee511d";
   static final String ACTIVE_ACCESS_PROVIDER_B = "d1b79c8d-4950-482f-8e42-04f9aae3cb40";
@@ -126,12 +122,8 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
   static final String INACTIVE_ACCESS_PROVIDER_B = "f64bbcae-e5ea-42b6-8236-55fefed0fb8f";
   static final String NON_EXIST_ACCESS_PROVIDER_A = "160501b3-52dd-31ec-a0ce-17762e6a9b47";
 
-  static final String APPLICATION_JSON = "application/json";
-  static final String X_ECHO_STATUS = "X-Okapi-Echo-Status";
-
   static final String ID_FOR_PRINT_MONOGRAPH_ORDER = "00000000-1111-2222-8888-999999999999";
   private static final String PO_ID_FOR_FAILURE_CASE = "bad500aa-aaaa-500a-aaaa-aaaaaaaaaaaa";
-
   private static final String ORDER_ID_WITHOUT_PO_LINES = "50fb922c-3fa9-494e-a972-f2801f1b9fd1";
   private static final String ORDER_WITHOUT_WORKFLOW_STATUS = "41d56e59-46db-4d5e-a1ad-a178228913e5";
 
@@ -139,24 +131,17 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
   private final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
   private final static String COMPOSITE_ORDERS_BY_ID_PATH = "/orders/composite-orders/%s";
 
+  static final String LISTED_PRINT_MONOGRAPH_PATH = "po_listed_print_monograph.json";
   private static final String ORDERS_MOCK_DATA_PATH = COMP_ORDER_MOCK_DATA_PATH + "getOrders.json";
   private static final String ORDER_FOR_FAILURE_CASE_MOCK_DATA_PATH = COMP_ORDER_MOCK_DATA_PATH + PO_ID_FOR_FAILURE_CASE + ".json";
-  static final String LISTED_PRINT_MONOGRAPH_PATH = "po_listed_print_monograph.json";
   private static final String PE_MIX_PATH = "po_listed_print_monograph_pe_mix.json";
   private static final String MONOGRAPH_FOR_CREATE_INVENTORY_TEST = "print_monograph_for_create_inventory_test.json";
   private static final String LISTED_PRINT_SERIAL_PATH = "po_listed_print_serial.json";
   private static final String MINIMAL_ORDER_PATH = "minimal_order.json";
-  private static final String poCreationFailurePath = "po_creation_failure.json";
+  private static final String PO_CREATION_FAILURE_PATH = "po_creation_failure.json";
 
-  private static final String QUERY_PARAM_NAME = "query";
-  static final String ID = "id";
   private static final String NULL = "null";
   static final String PURCHASE_ORDER_ID = "purchaseOrderId";
-  static final String INCORRECT_LANG_PARAMETER = "'lang' parameter is incorrect. parameter value {english} is not valid: must match \"[a-zA-Z]{2}\"";
-  static final String EXISTING_PO_NUMBER = "oldPoNumber";
-  private static final String EXISTING_REQUIRED_VENDOR_UUID = "168f8a86-d26c-406e-813f-c7527f241ac3";
-  static final String NONEXISTING_PO_NUMBER = "newPoNumber";
-  static final String BAD_QUERY = "unprocessableQuery";
 
 
   @Test
@@ -676,7 +661,7 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
     logger.info("=== Test Placement of minimal order failure with Existing PO Number===");
 
     JsonObject request = new JsonObject();
-    request.put("poNumber", EXISTING_PO_NUMBER);
+    request.put("poNumber", PoNumberApiTest.EXISTING_PO_NUMBER);
     request.put("orderType", "Ongoing");
     request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
     String body= request.toString();
@@ -709,7 +694,7 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
   public void testPoCreationFailure() throws Exception {
     logger.info("=== Test PO creation failure ===");
 
-    String body = getMockData(poCreationFailurePath);
+    String body = getMockData(PO_CREATION_FAILURE_PATH);
 
     final Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
       prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).body().as(Errors.class);
@@ -776,25 +761,19 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
 
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("compositePurchaseOrders").getJsonObject(0).getString(ID);
+    String url = COMPOSITE_ORDERS_PATH + "/" + id;
+
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
 
-    final CompositePurchaseOrder resp = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .get(COMPOSITE_ORDERS_PATH + "/" + id)
-        .then()
-          .contentType(APPLICATION_JSON)
-          .statusCode(200)
-          .extract()
-            .response()
-              .as(CompositePurchaseOrder.class);
+   // final CompositePurchaseOrder resp = verifyGet(url, APPLICATION_JSON, 200).as(CompositePurchaseOrder.class);
+    final CompositePurchaseOrder resp = verifySuccessGet(url, CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
     assertEquals(id, resp.getId());
     verifyCalculatedData(resp);
   }
+
 
   private void verifyCalculatedData(CompositePurchaseOrder resp) {
     Integer expectedQuantity = resp
@@ -820,18 +799,7 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
     logger.info("=== Test Get Order By Id without PO Line totalItems value is 0 ===");
 
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, ORDER_ID_WITHOUT_PO_LINES));
-
-    final CompositePurchaseOrder resp = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .get(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES)
-        .then()
-          .contentType(APPLICATION_JSON)
-          .statusCode(200)
-          .extract()
-            .response()
-              .as(CompositePurchaseOrder.class);
+    final CompositePurchaseOrder resp = verifySuccessGet(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES, CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
@@ -845,18 +813,7 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
 
     String id = PO_ID_CLOSED_STATUS;
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
-
-    final CompositePurchaseOrder resp = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .get(COMPOSITE_ORDERS_PATH + "/" + id)
-        .then()
-          .contentType(APPLICATION_JSON)
-          .statusCode(200)
-          .extract()
-            .response()
-              .as(CompositePurchaseOrder.class);
+    final CompositePurchaseOrder resp = verifySuccessGet(COMPOSITE_ORDERS_PATH + "/" + id, CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
@@ -870,17 +827,7 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
     logger.info("=== Test Get Order By Id - Incorrect Id format - 400 ===");
 
     String id = ID_BAD_FORMAT;
-
-    final Response resp = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .get(COMPOSITE_ORDERS_PATH + "/" + id)
-        .then()
-          // The status code should be 400 once Pattern validation annotation is added to Orders interface methods
-          .statusCode(400)
-          .extract()
-            .response();
+    final Response resp = verifyGet(COMPOSITE_ORDERS_PATH + "/" + id, TEXT_PLAIN, 400);
 
     String actual = resp.getBody().asString();
     logger.info(actual);
@@ -894,17 +841,7 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
     logger.info("=== Test Get Order By Id - Not Found ===");
 
     String id = ID_DOES_NOT_EXIST;
-
-    final Response resp = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .get(COMPOSITE_ORDERS_PATH + "/" + id)
-        .then()
-          .contentType(APPLICATION_JSON)
-          .statusCode(404)
-          .extract()
-            .response();
+    final Response resp = verifyGet(COMPOSITE_ORDERS_PATH + "/" + id, APPLICATION_JSON, 404);
 
     String actual = resp.getBody().as(Errors.class).getErrors().get(0).getMessage();
     logger.info(actual);
@@ -939,12 +876,7 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
   public void testDeleteByIdWithoutOkapiUrlHeader() {
     logger.info("=== Test Delete Order By Id - 500 due to missing Okapi URL header ===");
 
-   RestAssured
-      .with()
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-      .delete(COMPOSITE_ORDERS_PATH + "/" + ID_DOES_NOT_EXIST)
-        .then()
-          .statusCode(500);
+    verifyDeleteResponse(COMPOSITE_ORDERS_PATH + "/" + ID_DOES_NOT_EXIST, prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON,500);
   }
 
   @Test
@@ -1101,7 +1033,7 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
     String id = ordersList.getJsonArray("compositePurchaseOrders").getJsonObject(0).getString(ID);
 
     JsonObject request = new JsonObject();
-    request.put("poNumber", EXISTING_PO_NUMBER);
+    request.put("poNumber", PoNumberApiTest.EXISTING_PO_NUMBER);
     request.put("orderType", "Ongoing");
     request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
 
@@ -1112,22 +1044,10 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
   public void testPoUpdateWithOverLimitPOLines() throws Exception {
     logger.info("=== Test PUT PO, with over limit lines quantity ===");
 
+    String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_ID_WITHOUT_PO_LINES);
     String body = getMockData(LISTED_PRINT_MONOGRAPH_PATH);
-    final Errors errors = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1)
-        .header(X_OKAPI_TOKEN)
-        .header(X_OKAPI_USER_ID)
-        .contentType(APPLICATION_JSON)
-        .body(body)
-      .put(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_ID_WITHOUT_PO_LINES))
-        .then()
-          .statusCode(422)
-            .extract()
-              .response()
-                .body()
-                  .as(Errors.class);
+    Headers headers = prepareHeaders(X_OKAPI_URL, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1, X_OKAPI_TOKEN, X_OKAPI_USER_ID);
+    final Errors errors = verifyPut(url, body, headers, APPLICATION_JSON, 422).body().as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     assertFalse(errors.getErrors().isEmpty());
@@ -1139,21 +1059,10 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
   public void testPoUpdateWithOverLimitPOLinesWithDefaultLimit() throws Exception {
     logger.info("=== Test PUT PO, with over limit lines quantity with default limit ===");
 
+    String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_ID_WITHOUT_PO_LINES);
     String body = getMockData(LISTED_PRINT_MONOGRAPH_PATH);
-    final Errors errors = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .header(X_OKAPI_USER_ID)
-        .contentType(APPLICATION_JSON)
-        .body(body)
-      .put(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_ID_WITHOUT_PO_LINES))
-        .then()
-          .statusCode(422)
-            .extract()
-              .response()
-                .body()
-                  .as(Errors.class);
+    Headers headers = prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID);
+    final Errors errors = verifyPut(url, body, headers, APPLICATION_JSON, 422).body().as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     assertFalse(errors.getErrors().isEmpty());
@@ -1623,29 +1532,13 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
 
     logger.info("=== Test validation with no body ===");
 
-    RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .header(X_OKAPI_USER_ID)
-        .contentType(APPLICATION_JSON)
-      .post(COMPOSITE_ORDERS_PATH)
-        .then()
-          .statusCode(400)
-          .body(containsString("Json content error HV000116: The object to be validated must not be null"));
+    Headers headers = prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID);
+
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, "", headers, TEXT_PLAIN, 400);
 
     logger.info("=== Test validation on invalid lang query parameter ===");
-    RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .header(X_OKAPI_TOKEN)
-        .contentType(APPLICATION_JSON)
-        .body(getMockData(MINIMAL_ORDER_PATH))
-      .post(COMPOSITE_ORDERS_PATH +INVALID_LANG)
-        .then()
-          .statusCode(400)
-          .body(containsString(INCORRECT_LANG_PARAMETER));
+
+    verifyPostResponse(COMPOSITE_ORDERS_PATH +INVALID_LANG, getMockData(MINIMAL_ORDER_PATH), headers, TEXT_PLAIN, 400);
 
   }
 
@@ -1655,16 +1548,7 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
     String id = "non-existent-po-id";
 
     logger.info("=== Test validation on invalid lang query parameter ===");
-    RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .header(X_OKAPI_TOKEN)
-        .contentType(APPLICATION_JSON)
-      .get(COMPOSITE_ORDERS_PATH +"/"+id+INVALID_LANG)
-        .then()
-          .statusCode(400)
-          .body(containsString(INCORRECT_LANG_PARAMETER));
+    verifyGet(COMPOSITE_ORDERS_PATH +"/"+id+INVALID_LANG, TEXT_PLAIN, 400);
   }
 
   @Test
@@ -1672,15 +1556,7 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
     logger.info("=== Test validation Annotation on DELETE API ===");
 
     logger.info("=== Test validation on invalid lang query parameter ===");
-    RestAssured
-     .with()
-       .header(X_OKAPI_URL)
-       .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-       .contentType(APPLICATION_JSON)
-      .delete(String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID_CLOSED_STATUS) + INVALID_LANG)
-       .then()
-         .statusCode(400)
-         .body(containsString(INCORRECT_LANG_PARAMETER));
+    verifyDeleteResponse(String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID_CLOSED_STATUS) + INVALID_LANG, TEXT_PLAIN, 400);
 
   }
 
@@ -1689,39 +1565,12 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
     logger.info("=== Test validation Annotation on PUT API ===");
     String id = "non-existent-po-id";
     logger.info("=== Test validation with no body ===");
-    RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-        .contentType(APPLICATION_JSON)
-      .put(COMPOSITE_ORDERS_PATH +"/"+id)
-        .then()
-          .statusCode(400)
-          .body(containsString("Json content error HV000116: The object to be validated must not be null"));
 
-     logger.info("=== Test validation on invalid lang query parameter ===");
-     RestAssured
-       .with()
-         .header(X_OKAPI_URL)
-         .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-         .contentType(APPLICATION_JSON)
-         .body(getMockData(MINIMAL_ORDER_PATH))
-       .put(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id) + INVALID_LANG)
-         .then()
-           .statusCode(400)
-           .body(containsString(INCORRECT_LANG_PARAMETER));
+    verifyPut(COMPOSITE_ORDERS_PATH +"/"+id, "", TEXT_PLAIN, 400);
 
-     logger.info("=== Test validation on no Content-type parameter ===");
-     RestAssured
-       .with()
-         .header(X_OKAPI_URL)
-         .header(NON_EXIST_CONFIG_X_OKAPI_TENANT)
-         .body(getMockData(MINIMAL_ORDER_PATH))
-       .put(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id) + INVALID_LANG)
-         .then()
-           .statusCode(400)
-           .body(containsString("Content-type"));
+    logger.info("=== Test validation on invalid lang query parameter ===");
 
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id) + INVALID_LANG, getMockData(MINIMAL_ORDER_PATH), TEXT_PLAIN, 400);
   }
 
   @Test
@@ -1741,50 +1590,32 @@ public class PurchaseOrdersApiApiTest extends ApiTestBase {
   public void testGetOrdersNoParameters() {
     logger.info("=== Test Get Orders - With empty query ===");
 
-    final Response resp = RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
-      .get(COMPOSITE_ORDERS_PATH)
-        .then()
-          .statusCode(200)
-          .extract()
-            .response();
+    final PurchaseOrders purchaseOrders = verifySuccessGet(COMPOSITE_ORDERS_PATH, PurchaseOrders.class);
 
-    assertEquals(3, resp.getBody().as(PurchaseOrders.class).getTotalRecords().intValue());
+    assertEquals(3, purchaseOrders.getTotalRecords().intValue());
   }
 
   @Test
   public void testGetOrdersBadQuery() {
     logger.info("=== Test Get Orders by query - unprocessable query to emulate 400 from storage ===");
 
-    RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
-        .param(QUERY_PARAM_NAME, BAD_QUERY)
-      .get(COMPOSITE_ORDERS_PATH)
-        .then()
-          .statusCode(400)
-          .contentType(APPLICATION_JSON);
+    String endpointQuery = String.format("%s?query=%s", COMPOSITE_ORDERS_PATH, BAD_QUERY);
+
+    verifyGet(endpointQuery, APPLICATION_JSON, 400);
+
   }
 
   @Test
   public void testGetOrdersInternalServerError() {
     logger.info("=== Test Get Orders by query - emulating 500 from storage ===");
 
-    RestAssured
-      .with()
-        .header(X_OKAPI_URL)
-        .header(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10)
-        .param(QUERY_PARAM_NAME, ID_FOR_INTERNAL_SERVER_ERROR)
-      .get(COMPOSITE_ORDERS_PATH)
-        .then()
-          .statusCode(500)
-          .contentType(APPLICATION_JSON);
+    String endpointQuery = String.format("%s?query=%s", COMPOSITE_ORDERS_PATH, ID_FOR_INTERNAL_SERVER_ERROR);
+
+    verifyGet(endpointQuery, APPLICATION_JSON, 500);
+
   }
 
-   @Test
+  @Test
   public void testCreatePoWithDifferentVendorStatus() throws Exception {
 
     logger.info("=== Test POST PO with vendor's status ===");

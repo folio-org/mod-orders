@@ -58,7 +58,7 @@ import static org.folio.rest.impl.MockServer.getInstancesSearches;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
-import static org.folio.rest.impl.PurchaseOrdersApiApiTest.ID;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
