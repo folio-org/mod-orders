@@ -15,6 +15,7 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -43,6 +44,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
+import static org.folio.rest.impl.MockServer.ORDER_ID_WITH_PO_LINES;
 import static org.folio.rest.impl.MockServer.PO_NUMBER_ERROR_X_OKAPI_TENANT;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -441,6 +443,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertTrue(MockServer.serverRqRs.isEmpty());
   }
 
+
   @Test
   public void testPutOrderLineByIdWithIdMismatch() throws IOException {
     logger.info("=== Test PUT Order Line By Id - Ids mismatch ===");
@@ -564,6 +567,36 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     final Response resp = verifyGet(String.format(LINE_BY_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), APPLICATION_JSON, 500);
 
     assertEquals("Internal Server Error", resp.getBody().as(Errors.class).getErrors().get(0).getMessage());
+  }
+
+  @Test
+  public void testGetOrderLinesInternalServerError() {
+    logger.info("=== Test Get Order Lines by query - emulating 500 from storage ===");
+
+    String endpointQuery = String.format("%s?query=%s", LINES_PATH, ID_FOR_INTERNAL_SERVER_ERROR);
+
+    verifyGet(endpointQuery, APPLICATION_JSON, 500);
+  }
+
+  @Test
+  public void testGetOrderLinesBadQuery() {
+    logger.info("=== Test Get Order Lines by query - unprocessable query to emulate 400 from storage ===");
+
+    String endpointQuery = String.format("%s?query=%s", LINES_PATH, BAD_QUERY);
+
+    verifyGet(endpointQuery, APPLICATION_JSON, 400);
+
+  }
+
+  @Test
+  public void testGetOrderPOLinesByPoId() {
+    logger.info("=== Test Get Orders lines - With empty query ===");
+
+    String endpointQuery = String.format("%s?query=%s", LINES_PATH, PURCHASE_ORDER_ID + "==" + ORDER_ID_WITH_PO_LINES);
+
+    final PoLineCollection poLineCollection = verifySuccessGet(endpointQuery, PoLineCollection.class);
+
+    assertEquals(2, poLineCollection.getTotalRecords().intValue());
   }
 
   private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {
