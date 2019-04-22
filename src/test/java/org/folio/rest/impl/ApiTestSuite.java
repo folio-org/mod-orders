@@ -11,6 +11,11 @@ import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
   PurchaseOrdersApiApiTest.class,
@@ -29,7 +34,7 @@ public class ApiTestSuite {
   private static boolean initialised;
 
   @BeforeClass
-  public static void before() {
+  public static void before() throws InterruptedException, ExecutionException, TimeoutException {
     if (vertx == null) {
       vertx = Vertx.vertx();
     }
@@ -45,7 +50,16 @@ public class ApiTestSuite {
     conf.put("http.port", okapiPort);
 
     final DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
-    vertx.deployVerticle(RestVerticle.class.getName(), opt);
+    CompletableFuture<String> deploymentComplete = new CompletableFuture<>();
+    vertx.deployVerticle(RestVerticle.class.getName(), opt, res -> {
+      if(res.succeeded()) {
+        deploymentComplete.complete(res.result());
+      }
+      else {
+        deploymentComplete.completeExceptionally(res.cause());
+      }
+    });
+    deploymentComplete.get(60, TimeUnit.SECONDS);
     initialised = true;
   }
 

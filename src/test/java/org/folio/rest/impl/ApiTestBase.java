@@ -21,6 +21,8 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
@@ -64,7 +66,7 @@ public class ApiTestBase {
   private static boolean runningOnOwn;
 
   @BeforeClass
-  public static void before() {
+  public static void before() throws InterruptedException, ExecutionException, TimeoutException {
 
     if(ApiTestSuite.isNotInitialised()) {
       System.out.println("Running test on own, initialising suite manually");

@@ -39,6 +39,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
@@ -598,17 +602,19 @@ public class MockServer {
     }
   }
 
-  void start() {
+  void start() throws InterruptedException, ExecutionException, TimeoutException {
     // Setup Mock Server...
     HttpServer server = vertx.createHttpServer();
-
+    CompletableFuture<HttpServer> deploymentComplete = new CompletableFuture<>();
     server.requestHandler(defineRoutes()::accept).listen(port, result -> {
-      if (result.failed()) {
-        logger.warn(result.cause());
+      if(result.succeeded()) {
+        deploymentComplete.complete(result.result());
       }
-      assertTrue(result.succeeded());
-
+      else {
+        deploymentComplete.completeExceptionally(result.cause());
+      }
     });
+    deploymentComplete.get(60, TimeUnit.SECONDS);
   }
 
   private void handleGetPoLines(RoutingContext ctx) {

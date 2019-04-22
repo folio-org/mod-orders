@@ -541,10 +541,10 @@
             <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.Log4j2LogDelegateFactory</vertx.logger-delegate-factory-class-name>
           </systemPropertyVariables>
           <excludes>
-            <exclude>**/org/folio/rest/impl/**Test.class</exclude>
+            <exclude>org/folio/rest/impl/**Test.class</exclude>
           </excludes>
           <includes>
-            <include>**/org/folio/rest/impl/ApiTestSuite.class</include>
+            <include>org/folio/rest/impl/ApiTestSuite.class</include>
           </includes>
           <!-- TODO: update to version 3.0.0 and remove useSystemClassLoader
                https://issues.folio.org/browse/FOLIO-1609
