@@ -57,6 +57,7 @@ import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.ResourcePathResolver;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
@@ -125,6 +126,7 @@ public class OrdersImplTest {
   private static final String INACTIVE_ACCESS_PROVIDER_A = "f6cd1850-2587-4f6c-b680-9b27ff26d619";
   private static final String INACTIVE_ACCESS_PROVIDER_B = "f64bbcae-e5ea-42b6-8236-55fefed0fb8f";
   private static final String NON_EXIST_ACCESS_PROVIDER_A = "160501b3-52dd-31ec-a0ce-17762e6a9b47";
+  private static final String PO_LINE_NUMBER = "poLineNumber";
 
   static {
     System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, "io.vertx.core.logging.Log4j2LogDelegateFactory");
@@ -1192,7 +1194,7 @@ public class OrdersImplTest {
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     assertEquals(MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).size(), storData.getJsonArray(COMPOSITE_PO_LINES).size());
     MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).forEach(poLine -> {
-      Matcher matcher = poLinePattern.matcher(poLine.getString(PO_LINE_NUMBER));
+      Matcher matcher = poLinePattern.matcher(poLine.getString(ResourcePathResolver.PO_LINE_NUMBER));
       assertTrue(matcher.find());
     });
     assertNull(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE));
@@ -1213,7 +1215,7 @@ public class OrdersImplTest {
     verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData, "", 204);
     verifyPoWithPoLinesUpdate(reqData, storageData);
     MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).forEach(poLine -> {
-      Matcher matcher = poLinePattern.matcher(poLine.getString(PO_LINE_NUMBER));
+      Matcher matcher = poLinePattern.matcher(poLine.getString(ResourcePathResolver.PO_LINE_NUMBER));
       assertTrue(matcher.find());
     });
   }
@@ -2003,7 +2005,7 @@ public class OrdersImplTest {
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     List<JsonObject> createdPoLines = MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST);
     assertEquals(createdPoLines.size(), reqData.getJsonArray(COMPOSITE_PO_LINES).size());
-    createdPoLines.forEach(poLine -> assertEquals(poNumber + "-" + PO_LINE_NUMBER_VALUE, poLine.getString(PO_LINE_NUMBER)));
+    createdPoLines.forEach(poLine -> assertEquals(poNumber + "-" + PO_LINE_NUMBER_VALUE, poLine.getString(ResourcePathResolver.PO_LINE_NUMBER)));
   }
 
   @Test
@@ -3767,6 +3769,8 @@ public class OrdersImplTest {
     assertThat(error.getParameters(), hasSize((int) purchaseOrder.getCompositePoLines().stream().filter(poLine -> poLine.getPoLineNumber() != null).count() + 1));
     assertThat(error.getParameters().get(0).getKey(), equalTo(ID));
     assertThat(error.getParameters().get(0).getValue(), equalTo(id));
+    assertThat(error.getParameters().get(1).getKey(), equalTo(PO_LINE_NUMBER));
+    assertThat(error.getParameters().get(1).getValue(), equalTo(purchaseOrder.getCompositePoLines().get(0).getPoLineNumber()));
   }
 
   private JsonObject getMockAsJson(String path, String id) {
@@ -3900,7 +3904,7 @@ public class OrdersImplTest {
       router.route(HttpMethod.GET, resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
       router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(this::handleGetPieces);
       router.route(HttpMethod.GET, resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
-      router.route(HttpMethod.GET, resourcesPath(PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
+      router.route(HttpMethod.GET, resourcesPath(ResourcePathResolver.PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
       router.route(HttpMethod.GET, "/contributor-name-types").handler(this::handleGetContributorNameTypes);
 
       router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
