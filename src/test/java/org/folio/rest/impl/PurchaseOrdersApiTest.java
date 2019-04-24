@@ -1615,6 +1615,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
   }
 
+  @Test
   public void testCreatePoWithDifferentVendorStatus() throws Exception {
 
     logger.info("=== Test POST PO with vendor's status ===");
