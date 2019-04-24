@@ -7,6 +7,7 @@ import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.rest.acq.model.Vendor;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -35,6 +36,7 @@ public class VendorHelper extends AbstractHelper {
   static final String VENDORS = "vendors";
   private static final String VENDOR_STORAGE_VENDORS = "/vendor-storage/vendors/";
   private static final String VENDORS_WITH_QUERY_ENDPOINT = "/vendor-storage/vendors?limit=%d&lang=%s&query=%s";
+  private static final String PO_LINE_NUMBER = "poLineNumber";
 
   public VendorHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
@@ -50,6 +52,7 @@ public class VendorHelper extends AbstractHelper {
   public CompletableFuture<Errors> validateVendor(CompositePurchaseOrder compPO) {
     CompletableFuture<Errors> future = new VertxCompletableFuture<>(ctx);
     String id = compPO.getVendor();
+    List<CompositePoLine> poLines = compPO.getCompositePoLines();
 
     logger.debug("Validating vendor with id={}", id);
 
@@ -59,7 +62,7 @@ public class VendorHelper extends AbstractHelper {
         .thenApply(vendor -> {
           VendorStatus status = VendorStatus.valueOf(vendor.getVendorStatus().toUpperCase());
           if(status != VendorStatus.ACTIVE) {
-            errors.add(createErrorWithId(ORDER_VENDOR_IS_INACTIVE, id));
+            errors.add(createErrorWithId(ORDER_VENDOR_IS_INACTIVE, id, poLines));
           }
           return handleAndReturnErrors(errors);
         })
@@ -67,7 +70,7 @@ public class VendorHelper extends AbstractHelper {
         .exceptionally(t -> {
           Throwable cause = t.getCause();
           if (cause instanceof HttpException && HttpStatus.HTTP_NOT_FOUND.toInt() == (((HttpException) cause).getCode())) {
-            errors.add(createErrorWithId(ORDER_VENDOR_NOT_FOUND, id));
+            errors.add(createErrorWithId(ORDER_VENDOR_NOT_FOUND, id, poLines));
           } else {
             logger.error("Failed to validate vendor's status", cause);
             errors.add(createErrorWithId(VENDOR_ISSUE, id).withAdditionalProperty(ERROR_CAUSE, cause.getMessage()));
@@ -89,6 +92,7 @@ public class VendorHelper extends AbstractHelper {
   public CompletableFuture<Errors> validateAccessProviders(CompositePurchaseOrder compPO) {
     CompletableFuture<Errors> future = new VertxCompletableFuture<>(ctx);
     Set<String> ids = verifyAndGetAccessProvidersIdsList(compPO);
+    List<CompositePoLine> poLines = compPO.getCompositePoLines();
     List<Error> errors = new ArrayList<>();
     if (!ids.isEmpty()) {
       logger.debug("Validating {} access provider(s) for order with id={}", ids.size(), compPO.getId());
@@ -97,7 +101,7 @@ public class VendorHelper extends AbstractHelper {
         // Validate access provider status Active
         vendors.forEach(vendor -> {
           if(VendorStatus.valueOf(vendor.getVendorStatus().toUpperCase()) != VendorStatus.ACTIVE) {
-            errors.add(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, vendor.getId()));
+            errors.add(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, vendor.getId(), poLines));
           }
         });
         // Validate access provider existence
@@ -106,7 +110,7 @@ public class VendorHelper extends AbstractHelper {
           .collect(toList());
         ids.stream()
           .filter(id -> !vendorsIds.contains(id))
-          .forEach(id -> errors.add(createErrorWithId(POL_ACCESS_PROVIDER_NOT_FOUND, id)));
+          .forEach(id -> errors.add(createErrorWithId(POL_ACCESS_PROVIDER_NOT_FOUND, id, poLines)));
         return handleAndReturnErrors(errors);
       }).thenAccept(future::complete)
         .exceptionally(t -> {
@@ -147,6 +151,24 @@ public class VendorHelper extends AbstractHelper {
   private Error createErrorWithId(ErrorCodes errorCodes, String id) {
     Error error = errorCodes.toError();
     error.getParameters().add(new Parameter().withKey(ID).withValue(id));
+    return error;
+  }
+
+  /**
+   * Creates {@link Error} with id of corresponding vendor/access provider and poLines ids
+   *
+   * @param id vendor's/access provider's identifier
+   * @param errorCodes error code
+   * @param poLines list of composite PoLines
+   * @return {@link Error} with id of failed vendor/access provider
+   */
+  private Error createErrorWithId(ErrorCodes errorCodes, String id, List<CompositePoLine> poLines) {
+    Error error = createErrorWithId(errorCodes, id);
+    for (CompositePoLine poLine : poLines) {
+      if (poLine.getPoLineNumber() != null) {
+        error.getParameters().add(new Parameter().withKey(PO_LINE_NUMBER).withValue(poLine.getPoLineNumber()));
+      }
+    }
     return error;
   }
 
