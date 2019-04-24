@@ -23,6 +23,8 @@ public class ResourcePathResolver {
   public static final String RECEIPT_STATUS = "receiptStatus";
   public static final String PAYMENT_STATUS = "paymentStatus";
 
+  public static final String SEARCH_ORDER = "searchOrder";
+
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
   private static final Map<String, String> SUB_OBJECT_COLLECTION_APIS;
@@ -37,6 +39,7 @@ public class ResourcePathResolver {
     apis.put(PIECES, "/orders-storage/pieces");
     apis.put(RECEIVING_HISTORY, "/orders-storage/receiving-history");
     apis.put(PO_LINE_NUMBER, "/orders-storage/po-line-number");
+    apis.put(SEARCH_ORDER, "/orders-storage/orders");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);
     SUB_OBJECT_ITEM_APIS = Collections.unmodifiableMap(

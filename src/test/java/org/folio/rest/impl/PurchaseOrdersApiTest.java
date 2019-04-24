@@ -63,6 +63,7 @@ import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
+import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.PAYMENT_STATUS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
@@ -82,6 +83,7 @@ import static org.folio.rest.impl.MockServer.getHoldingsSearches;
 import static org.folio.rest.impl.MockServer.getInstancesSearches;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
+import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
@@ -129,7 +131,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
   // API paths
   private final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
-  private final static String COMPOSITE_ORDERS_BY_ID_PATH = "/orders/composite-orders/%s";
+  private final static String COMPOSITE_ORDERS_BY_ID_PATH = COMPOSITE_ORDERS_PATH + "/%s";
 
   static final String LISTED_PRINT_MONOGRAPH_PATH = "po_listed_print_monograph.json";
   private static final String ORDERS_MOCK_DATA_PATH = COMP_ORDER_MOCK_DATA_PATH + "getOrders.json";
@@ -761,11 +763,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("compositePurchaseOrders").getJsonObject(0).getString(ID);
-    String url = COMPOSITE_ORDERS_PATH + "/" + id;
+    String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, id);
 
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
 
-   // final CompositePurchaseOrder resp = verifyGet(url, APPLICATION_JSON, 200).as(CompositePurchaseOrder.class);
     final CompositePurchaseOrder resp = verifySuccessGet(url, CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
@@ -799,7 +800,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("=== Test Get Order By Id without PO Line totalItems value is 0 ===");
 
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, ORDER_ID_WITHOUT_PO_LINES));
-    final CompositePurchaseOrder resp = verifySuccessGet(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES, CompositePurchaseOrder.class);
+    String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_ID_WITHOUT_PO_LINES);
+    final CompositePurchaseOrder resp = verifySuccessGet(url, CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
@@ -813,7 +815,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     String id = PO_ID_CLOSED_STATUS;
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
-    final CompositePurchaseOrder resp = verifySuccessGet(COMPOSITE_ORDERS_PATH + "/" + id, CompositePurchaseOrder.class);
+    final CompositePurchaseOrder resp = verifySuccessGet(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
@@ -827,7 +829,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("=== Test Get Order By Id - Incorrect Id format - 400 ===");
 
     String id = ID_BAD_FORMAT;
-    final Response resp = verifyGet(COMPOSITE_ORDERS_PATH + "/" + id, TEXT_PLAIN, 400);
+    final Response resp = verifyGet(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), TEXT_PLAIN, 400);
 
     String actual = resp.getBody().asString();
     logger.info(actual);
@@ -841,7 +843,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("=== Test Get Order By Id - Not Found ===");
 
     String id = ID_DOES_NOT_EXIST;
-    final Response resp = verifyGet(COMPOSITE_ORDERS_PATH + "/" + id, APPLICATION_JSON, 404);
+    final Response resp = verifyGet(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), APPLICATION_JSON, 404);
 
     String actual = resp.getBody().as(Errors.class).getErrors().get(0).getMessage();
     logger.info(actual);
@@ -857,7 +859,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     String id = ordersList.getJsonArray("compositePurchaseOrders").getJsonObject(0).getString(ID);
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
 
-    verifyDeleteResponse(COMPOSITE_ORDERS_PATH + "/" + id, "", 204);
+    verifyDeleteResponse(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), "", 204);
   }
 
   @Test
@@ -888,7 +890,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_PO_LINES_JSON));
     JsonObject storageData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id);
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData, "", 204);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), reqData, "", 204);
 
     storageData.put("workflowStatus", "Open");
     reqData.put("workflowStatus", "Open");
@@ -954,7 +956,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON));
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData, APPLICATION_JSON, 422);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), reqData, APPLICATION_JSON, 422);
   }
 
   @Test
@@ -969,7 +971,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.put(PO_NUMBER, newPoNumber);
     Pattern poLinePattern = Pattern.compile(String.format("(%s)(-[0-9]{1,3})", newPoNumber));
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData, "", 204);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), reqData, "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     assertEquals(MockServer.getPoLineUpdates().size(), storData.getJsonArray(COMPOSITE_PO_LINES).size());
@@ -992,7 +994,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.put(VENDOR_ID, EXISTING_REQUIRED_VENDOR_UUID);
     Pattern poLinePattern = Pattern.compile(String.format("(%s)(-[0-9]{1,3})", newPoNumber));
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData, "", 204);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), reqData, "", 204);
     verifyPoWithPoLinesUpdate(reqData, storageData);
     MockServer.getPoLineUpdates().forEach(poLine -> {
       Matcher matcher = poLinePattern.matcher(poLine.getString(PO_LINE_NUMBER));
@@ -1009,7 +1011,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITH_PO_LINES_JSON));
     reqData.remove(PO_NUMBER);
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData, APPLICATION_JSON, 422);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), reqData, APPLICATION_JSON, 422);
   }
 
   @Test
@@ -1021,7 +1023,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     JsonObject request = new JsonObject();
     request.put("poNumber", "1234");
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, request, APPLICATION_JSON, 422);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), request, APPLICATION_JSON, 422);
 
   }
 
@@ -1037,7 +1039,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     request.put("orderType", "Ongoing");
     request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, request, APPLICATION_JSON, 400);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), request, APPLICATION_JSON, 400);
   }
 
   @Test
@@ -1457,7 +1459,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITHOUT_PO_LINES));
 
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + id, reqData, "", 204);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), reqData, "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     assertNull(MockServer.serverRqRs.get(PO_LINES, HttpMethod.DELETE));
@@ -1548,7 +1550,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     String id = "non-existent-po-id";
 
     logger.info("=== Test validation on invalid lang query parameter ===");
-    verifyGet(COMPOSITE_ORDERS_PATH +"/"+id+INVALID_LANG, TEXT_PLAIN, 400);
+    verifyGet(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id) + INVALID_LANG, TEXT_PLAIN, 400);
   }
 
   @Test
@@ -1591,8 +1593,19 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("=== Test Get Orders - With empty query ===");
 
     final PurchaseOrders purchaseOrders = verifySuccessGet(COMPOSITE_ORDERS_PATH, PurchaseOrders.class);
-
+    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET));
+    assertNull(MockServer.serverRqRs.get(SEARCH_ORDER, HttpMethod.GET));
     assertEquals(3, purchaseOrders.getTotalRecords().intValue());
+  }
+
+  @Test
+  public void testGetOrdersWithParameters() {
+    logger.info("=== Test Get Orders - With empty query ===");
+    String endpointQuery = String.format("%s?query=%s", COMPOSITE_ORDERS_PATH, "poNumber==" + EXISTING_PO_NUMBER);
+    final PurchaseOrders purchaseOrders = verifySuccessGet(endpointQuery, PurchaseOrders.class);
+    assertNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET));
+    assertNotNull(MockServer.serverRqRs.get(SEARCH_ORDER, HttpMethod.GET));
+    assertEquals(1, purchaseOrders.getTotalRecords().intValue());
   }
 
   @Test

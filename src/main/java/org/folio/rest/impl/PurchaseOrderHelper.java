@@ -2,19 +2,19 @@ package org.folio.rest.impl;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
-import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.deletePoLine;
 import static org.folio.orders.utils.HelperUtils.deletePoLines;
 import static org.folio.orders.utils.HelperUtils.getCompositePoLines;
-import static org.folio.orders.utils.HelperUtils.getEndpointWithQuery;
+import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.operateOnObject;
+import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
@@ -49,7 +49,8 @@ import org.folio.rest.jaxrs.model.Error;
 
 public class PurchaseOrderHelper extends AbstractHelper {
 
-  private static final String GET_PURCHASE_ORDERS_BY_QUERY = resourcesPath(PURCHASE_ORDER) + "?limit=%s&offset=%s%s&lang=%s";
+  private static final String SEARCH_PURCHASE_ORDERS = resourcesPath(SEARCH_ORDER) + "?limit=%s&offset=%s%s&lang=%s";
+  private static final String GET_PURCHASE_ORDERS = resourcesPath(PURCHASE_ORDER) + "?limit=%s&offset=%s&lang=%s";
 
   private final PoNumberHelper poNumberHelper;
   private final PurchaseOrderLineHelper orderLineHelper;
@@ -73,8 +74,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     CompletableFuture<PurchaseOrders> future = new VertxCompletableFuture<>(ctx);
 
     try {
-      String queryParam = getEndpointWithQuery(query, logger);
-      String endpoint = String.format(GET_PURCHASE_ORDERS_BY_QUERY, limit, offset, queryParam, lang);
+      String endpoint = buildGetOrdersPath(limit, offset, query);
       handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
         .thenAccept(jsonOrders -> {
           logger.info("Successfully retrieved orders: " + jsonOrders.encodePrettily());
@@ -89,6 +89,15 @@ public class PurchaseOrderHelper extends AbstractHelper {
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private String buildGetOrdersPath(int limit, int offset, String query) {
+    String queryParam = buildQuery(query, logger);
+    if (StringUtils.isEmpty(queryParam)) {
+      return String.format(GET_PURCHASE_ORDERS, limit, offset, lang);
+    } else {
+      return String.format(SEARCH_PURCHASE_ORDERS, limit, offset, queryParam, lang);
+    }
   }
 
   /**
@@ -387,7 +396,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<CompositePurchaseOrder> fetchCompositePoLines(CompositePurchaseOrder compPO) {
-    if (isEmpty(compPO.getCompositePoLines())) {
+    if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
       return getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
         .thenApply(compPO::withCompositePoLines);
     }
