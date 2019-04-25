@@ -43,8 +43,8 @@
             "inventory-storage.items.item.post",
             "inventory-storage.instances.item.get",
             "inventory-storage.loan-types.collection.get",
-            "vendor-storage.vendors.collection.get",
-            "vendor-storage.vendors.item.get"
+            "organizations-storage.organizations.collection.get",
+            "organizations-storage.organizations.item.get"
           ]
         },
         {
@@ -79,8 +79,8 @@
             "inventory-storage.items.collection.get",
             "inventory-storage.items.item.post",
             "inventory-storage.loan-types.collection.get",
-            "vendor-storage.vendors.collection.get",
-            "vendor-storage.vendors.item.get"
+            "organizations-storage.organizations.collection.get",
+            "organizations-storage.organizations.item.get"
           ]
         },
         {
@@ -275,7 +275,7 @@
       "version": "2.2"
     },
     {
-      "id":"vendor-storage.vendors",
+      "id":"organizations-storage.organizations",
       "version": "1.0"
     }
   ],

@@ -3,6 +3,6 @@
   "name": "Naxos of America, Inc.",
   "code": "NAXO",
   "description": "AV streaming services, other onilne content",
-  "vendor_status": "Pending",
+  "status": "Pending",
   "language": "en-us"
 }

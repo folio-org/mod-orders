@@ -1,15 +1,13 @@
 {
-  "vendors": [
+  "organizations": [
     {
       "id": "858e80d2-f562-4c54-9934-6e274dee511d",
       "name": "Alexander Street Press",
       "code": "ALEXS",
       "description": "AV streaming services",
-      "vendor_status": "Active",
+      "status": "Active",
       "language": "en-us"
     }
   ],
-  "total_records": 1,
-  "first": 1,
-  "last": 1
+  "totalRecords": 1
 }
