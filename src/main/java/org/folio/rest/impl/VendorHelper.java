@@ -52,7 +52,6 @@ public class VendorHelper extends AbstractHelper {
   public CompletableFuture<Errors> validateVendor(CompositePurchaseOrder compPO) {
     CompletableFuture<Errors> future = new VertxCompletableFuture<>(ctx);
     String id = compPO.getVendor();
-    List<CompositePoLine> poLines = compPO.getCompositePoLines();
 
     logger.debug("Validating vendor with id={}", id);
 
@@ -62,7 +61,7 @@ public class VendorHelper extends AbstractHelper {
         .thenApply(vendor -> {
           VendorStatus status = VendorStatus.valueOf(vendor.getVendorStatus().toUpperCase());
           if(status != VendorStatus.ACTIVE) {
-            errors.add(createErrorWithId(ORDER_VENDOR_IS_INACTIVE, id, poLines));
+            errors.add(createErrorWithId(ORDER_VENDOR_IS_INACTIVE, id));
           }
           return handleAndReturnErrors(errors);
         })
@@ -70,7 +69,7 @@ public class VendorHelper extends AbstractHelper {
         .exceptionally(t -> {
           Throwable cause = t.getCause();
           if (cause instanceof HttpException && HttpStatus.HTTP_NOT_FOUND.toInt() == (((HttpException) cause).getCode())) {
-            errors.add(createErrorWithId(ORDER_VENDOR_NOT_FOUND, id, poLines));
+            errors.add(createErrorWithId(ORDER_VENDOR_NOT_FOUND, id));
           } else {
             logger.error("Failed to validate vendor's status", cause);
             errors.add(createErrorWithId(VENDOR_ISSUE, id).withAdditionalProperty(ERROR_CAUSE, cause.getMessage()));
