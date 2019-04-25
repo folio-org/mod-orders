@@ -21,7 +21,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
@@ -91,12 +90,13 @@ public class VendorHelper extends AbstractHelper {
    */
   public CompletableFuture<Errors> validateAccessProviders(CompositePurchaseOrder compPO) {
     CompletableFuture<Errors> future = new VertxCompletableFuture<>(ctx);
-    Set<String> ids = verifyAndGetAccessProvidersIdsList(compPO);
 
     Map<String, List<CompositePoLine>> poLinesMap =
       compPO.getCompositePoLines().stream()
         .filter(p -> (p.getEresource() != null && p.getEresource().getAccessProvider() != null))
         .collect(Collectors.groupingBy(p -> p.getEresource().getAccessProvider()));
+
+    Set<String> ids = poLinesMap.keySet();
 
     List<Error> errors = new ArrayList<>();
     if (!ids.isEmpty()) {
@@ -169,7 +169,9 @@ public class VendorHelper extends AbstractHelper {
    */
   private Error createErrorWithId(ErrorCodes errorCodes, String id, List<CompositePoLine> poLines) {
     Error error = createErrorWithId(errorCodes, id);
-    poLines.forEach(p -> error.getParameters().add(new Parameter().withKey(PO_LINE_NUMBER).withValue(p.getPoLineNumber())));
+    poLines.stream()
+      .filter(p -> p.getPoLineNumber() != null)
+      .forEach(p -> error.getParameters().add(new Parameter().withKey(PO_LINE_NUMBER).withValue(p.getPoLineNumber())));
     return error;
   }
 
@@ -199,19 +201,6 @@ public class VendorHelper extends AbstractHelper {
         .map(obj -> ((JsonObject) obj).mapTo(Vendor.class))
         .collect(toList())
       );
-  }
-
-  /**
-   * Returns set of access providers ids for composite purchase order
-   *
-   * @param compPO composite purchase order
-   * @return {@link Set<String>} of access providers ids
-   */
-  private Set<String> verifyAndGetAccessProvidersIdsList(CompositePurchaseOrder compPO) {
-    return compPO.getCompositePoLines().stream()
-      .filter(p -> (p.getEresource() != null && p.getEresource().getAccessProvider() != null))
-      .map(p -> p.getEresource().getAccessProvider())
-      .collect(toSet());
   }
 
   public enum VendorStatus {
