@@ -3,7 +3,7 @@ package org.folio.rest.impl;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.HelperUtils.getEndpointWithQuery;
+import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -73,7 +73,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     CompletableFuture<ReceivingHistoryCollection> future = new VertxCompletableFuture<>(ctx);
 
     try {
-      String queryParam = getEndpointWithQuery(query, logger);
+      String queryParam = buildQuery(query, logger);
       String endpoint = String.format(GET_RECEIVING_HISTORY_BY_QUERY, limit, offset, queryParam, lang);
       handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
         .thenAccept(jsonReceivingHistory -> future.complete(jsonReceivingHistory.mapTo(ReceivingHistoryCollection.class)))
