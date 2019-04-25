@@ -124,7 +124,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
   static final String ID_FOR_PRINT_MONOGRAPH_ORDER = "00000000-1111-2222-8888-999999999999";
   private static final String PO_ID_FOR_FAILURE_CASE = "bad500aa-aaaa-500a-aaaa-aaaaaaaaaaaa";
-  private static final String ORDER_ID_WITHOUT_PO_LINES = "50fb922c-3fa9-494e-a972-f2801f1b9fd1";
   private static final String ORDER_WITHOUT_WORKFLOW_STATUS = "41d56e59-46db-4d5e-a1ad-a178228913e5";
 
   // API paths
@@ -798,12 +797,12 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testGetPOByIdTotalItemsWithoutPOLines() {
     logger.info("=== Test Get Order By Id without PO Line totalItems value is 0 ===");
 
-    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, ORDER_ID_WITHOUT_PO_LINES));
-    final CompositePurchaseOrder resp = verifySuccessGet(COMPOSITE_ORDERS_PATH + "/" + ORDER_ID_WITHOUT_PO_LINES, CompositePurchaseOrder.class);
+    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, PO_ID_PENDING_STATUS_WITHOUT_PO_LINES));
+    final CompositePurchaseOrder resp = verifySuccessGet(COMPOSITE_ORDERS_PATH + "/" + PO_ID_PENDING_STATUS_WITHOUT_PO_LINES, CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
-    assertEquals(ORDER_ID_WITHOUT_PO_LINES, resp.getId());
+    assertEquals(PO_ID_PENDING_STATUS_WITHOUT_PO_LINES, resp.getId());
     assertEquals(0, resp.getTotalItems().intValue());
   }
 
@@ -1044,7 +1043,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testPoUpdateWithOverLimitPOLines() throws Exception {
     logger.info("=== Test PUT PO, with over limit lines quantity ===");
 
-    String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_ID_WITHOUT_PO_LINES);
+    String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID_PENDING_STATUS_WITHOUT_PO_LINES);
     String body = getMockData(LISTED_PRINT_MONOGRAPH_PATH);
     Headers headers = prepareHeaders(X_OKAPI_URL, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1, X_OKAPI_TOKEN, X_OKAPI_USER_ID);
     final Errors errors = verifyPut(url, body, headers, APPLICATION_JSON, 422).body().as(Errors.class);
@@ -1059,7 +1058,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testPoUpdateWithOverLimitPOLinesWithDefaultLimit() throws Exception {
     logger.info("=== Test PUT PO, with over limit lines quantity with default limit ===");
 
-    String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_ID_WITHOUT_PO_LINES);
+    String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID_PENDING_STATUS_WITHOUT_PO_LINES);
     String body = getMockData(LISTED_PRINT_MONOGRAPH_PATH);
     Headers headers = prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID);
     final Errors errors = verifyPut(url, body, headers, APPLICATION_JSON, 422).body().as(Errors.class);
@@ -1440,7 +1439,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     JsonObject reqData = getMockDraftOrder();
     String poNumber = reqData.getString(PO_NUMBER);
 
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_ID_WITHOUT_PO_LINES), reqData, "", 204);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID_PENDING_STATUS_WITHOUT_PO_LINES), reqData, "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     List<JsonObject> createdPoLines = MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST);
@@ -1476,7 +1475,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("=== Test Put Order By Id for 422 with Invalid Id in the Order ===");
 
     CompositePurchaseOrder reqData = getMockAsJson(LISTED_PRINT_SERIAL_PATH).mapTo(CompositePurchaseOrder.class);
-    reqData.setId(PO_ID);
+    reqData.setId(PO_ID_PENDING_STATUS_WITH_PO_LINES);
 
     Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID_FOR_FAILURE_CASE),
       JsonObject.mapFrom(reqData), APPLICATION_JSON, 422).as(Errors.class);
@@ -1492,7 +1491,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     CompositePurchaseOrder reqData = getMockAsJson(LISTED_PRINT_SERIAL_PATH).mapTo(CompositePurchaseOrder.class);
     reqData.getCompositePoLines().forEach(line -> line.setPurchaseOrderId(PO_ID_FOR_FAILURE_CASE));
 
-    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID),
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID_PENDING_STATUS_WITH_PO_LINES),
       JsonObject.mapFrom(reqData), APPLICATION_JSON, 422).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(reqData.getCompositePoLines().size()));

@@ -1,0 +1,38 @@
+{
+  "id": "9d56b621-202d-414b-9e7f-5fefe4422ab3",
+  "dateOrdered": "2019-04-24T14:21:16.958+0000",
+  "poNumber": "10000",
+  "orderType": "One-Time",
+  "vendor": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "workflowStatus": "Open",
+  "compositePoLines": [
+    {
+      "id": "4132b641-df5d-4970-8328-566e0c3ac889",
+      "checkinItems": false,
+      "instanceId": "b475cb53-97a6-4112-9712-64e5e3ca4c00",
+      "acquisitionMethod": "Purchase At Vendor System",
+      "cost": {
+        "listUnitPrice": 1.0,
+        "currency": "USD",
+        "discount": 10.0,
+        "discountType": "percentage",
+        "quantityPhysical": 1,
+        "poLineEstimatedPrice": 0.9
+      },
+      "orderFormat": "Physical Resource",
+      "paymentStatus": "Payment Not Required",
+      "physical": {
+        "createInventory": "None",
+        "materialSupplier": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "poLineNumber": "10000-1",
+      "purchaseOrderId": "9d56b621-202d-414b-9e7f-5fefe4422ab3",
+      "receiptDate": "2019-04-24T14:22:29.087+0000",
+      "receiptStatus": "Fully Received",
+      "source": {
+        "code": "FOLIO"
+      },
+      "title": "Title"
+    }
+  ]
+}

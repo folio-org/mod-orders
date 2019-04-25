@@ -26,6 +26,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
@@ -264,8 +265,13 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       .thenCompose(lineFromStorage -> {
         // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line update
         compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
-        return updateOrderLine(compOrderLine, lineFromStorage);
+        return updateOrderLine(compOrderLine, lineFromStorage)
+          .thenAccept(ok -> sendEvent(MessageAddress.ORDER_STATUS, createUpdateOrderMessage(compOrderLine)));
       });
+  }
+
+  private JsonObject createUpdateOrderMessage(CompositePoLine compOrderLine) {
+    return new JsonObject().put(ORDER_IDS, new JsonArray().add(compOrderLine.getPurchaseOrderId()));
   }
 
   /**

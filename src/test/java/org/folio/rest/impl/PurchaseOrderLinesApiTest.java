@@ -384,6 +384,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertThat(poLine.getCost().getPoLineEstimatedPrice(), equalTo(expectedTotalPoLine));
     Location location = poLine.getLocations().get(0);
     assertEquals(location.getQuantityPhysical(), location.getQuantity());
+
+    // Verify messages sent via event bus
+    verifyOrderStatusUpdateEvent(1);
   }
 
   @Test
@@ -407,7 +410,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     String lineId = ID_DOES_NOT_EXIST;
     String url = String.format(LINE_BY_ID_PATH, lineId);
-    String body = getPoLineWithMinContentAndIds(lineId, PO_ID);
+    String body = getPoLineWithMinContentAndIds(lineId, PO_ID_PENDING_STATUS_WITH_PO_LINES);
 
     Response actual = verifyPut(url, body, APPLICATION_JSON, 404);
 
@@ -432,7 +435,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     logger.info("=== Test PUT Order Line By Id - Body Validation Error ===");
 
     String url = String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST);
-    String body = getPoLineWithMinContentAndIds(ID_BAD_FORMAT, PO_ID);
+    String body = getPoLineWithMinContentAndIds(ID_BAD_FORMAT, PO_ID_PENDING_STATUS_WITH_PO_LINES);
 
     Response resp = verifyPut(url, body, APPLICATION_JSON, 422);
 
@@ -449,7 +452,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     logger.info("=== Test PUT Order Line By Id - Ids mismatch ===");
 
     String url = String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST);
-    String body = getPoLineWithMinContentAndIds(PO_LINE_ID_FOR_SUCCESS_CASE, PO_ID);
+    String body = getPoLineWithMinContentAndIds(PO_LINE_ID_FOR_SUCCESS_CASE, PO_ID_PENDING_STATUS_WITH_PO_LINES);
 
     Response resp = verifyPut(url, body, APPLICATION_JSON, 422);
 
@@ -468,7 +471,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     String lineId = ID_FOR_INTERNAL_SERVER_ERROR;
 
     String url = String.format(LINE_BY_ID_PATH, lineId);
-    String body = getPoLineWithMinContentAndIds(lineId, PO_ID);
+    String body = getPoLineWithMinContentAndIds(lineId, PO_ID_PENDING_STATUS_WITH_PO_LINES);
 
     Response actual = verifyPut(url, body, APPLICATION_JSON, 500);
 
