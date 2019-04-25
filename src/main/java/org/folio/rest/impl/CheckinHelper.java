@@ -51,6 +51,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       // 2. Filter locationId
       .thenCompose(this::filterMissingLocations)
       // 3. Update items in the Inventory if required
+      .thenCompose(filteredPieces -> this.updatePiecesAndHoldingsOnCheckin(checkinPieces, filteredPieces))
       .thenCompose(this::updateInventoryItems)
       // 4. Update piece records with checkIn details which do not have
       // associated item

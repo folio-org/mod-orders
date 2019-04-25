@@ -57,7 +57,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     return this.retrievePieceRecords(receivingItems)
       // 2. Filter locationId
       .thenCompose(this::filterMissingLocations)
-      .thenCompose(filteredPieces -> this.updatePiecesAndHoldings(receivingItems, filteredPieces))
+      .thenCompose(filteredPieces -> this.updatePiecesAndHoldingsOnReceive(receivingItems, filteredPieces))
       // 3. Update items in the Inventory if required
       .thenCompose(this::updateInventoryItems)
       // 4. Update piece records with receiving details which do not have associated item

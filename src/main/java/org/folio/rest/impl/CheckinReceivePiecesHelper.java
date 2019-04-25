@@ -176,79 +176,72 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     }
   }
 
-  CompletableFuture<Map<String, List<Piece>>> updatePiecesAndHoldings(Map<String, Map<String, ReceivedItem>> receivingCollection, Map<String, List<Piece>> filteredPieces) {
+  CompletableFuture<Map<String, List<Piece>>> updatePiecesAndHoldingsOnReceive(Map<String, Map<String, ReceivedItem>> receivingCollection, Map<String, List<Piece>> filteredPieces) {
     List<CompletableFuture<Boolean>> futuresForPiecesUpdates = new ArrayList<>();
-    //check If locations Changed
-    Map<String, Piece> piecesWithItems = collectPiecesWithItemId(filteredPieces);
 
-    StreamEx.ofValues(piecesWithItems)
-      .forEach(piece -> {
-
-        ReceivedItem receivedItem = receivingCollection.get(piece.getPoLineId()).get(piece.getId());
-        // update holdings if piece location not equal to received item location
-        if (StringUtils.isNotEmpty(receivedItem.getLocationId()) && !receivedItem.getLocationId().equals(piece.getLocationId())) {
-          futuresForPiecesUpdates.add(
-            poLineHelper.getCompositePoLine(piece.getPoLineId())
-              .thenCompose(compPOL -> updateHoldings(receivedItem.getLocationId(), compPOL))
-              // modify piece locationId
-              .thenApply(holdingId -> {
-                piece.setLocationId(receivedItem.getLocationId());
-                logger.info("Location has been changed for the piece: " + piece.getId());
-                return true;
-              }));
-        }
-      });
+    getPoLines(filteredPieces)
+      .thenAccept(poLines -> poLines.forEach(poLine ->
+        filteredPieces.get(poLine.getId())
+          .forEach(piece -> {
+            ReceivedItem receivedItem = receivingCollection.get(poLine.getId()).get(piece.getId());
+            if (holdingUpdateOnReceiveRequired(piece, receivedItem)) {
+              futuresForPiecesUpdates.add(updateHoldings(poLine, receivedItem.getLocationId())
+                .thenApply(holdingId -> {
+                  piece.setLocationId(receivedItem.getLocationId());
+                  logger.info("Location has been changed for the piece: " + piece.getId());
+                  return true;
+                }));
+            }
+          })
+      ));
 
     return collectResultsOnSuccess(futuresForPiecesUpdates)
-      .thenApply(results -> {
-        if (logger.isDebugEnabled()) {
-          long successQty = results.stream()
-            .filter(result -> result)
-            .count();
-          logger.debug("{} out of {} inventory item(s) successfully updated", successQty, results.size());
-        }
-        return filteredPieces;
-      });
+      .thenApply(results -> filteredPieces);
   }
 
-  CompletableFuture<Map<String, List<Piece>>> updateCheckinPiecesAndHoldings(Map<String, Map<String, CheckInPiece>> checkinCollection, Map<String, List<Piece>> filteredPieces) {
+  CompletableFuture<Map<String, List<Piece>>> updatePiecesAndHoldingsOnCheckin(Map<String, Map<String, CheckInPiece>> checkinCollection, Map<String, List<Piece>> filteredPieces) {
     List<CompletableFuture<Boolean>> futuresForPiecesUpdates = new ArrayList<>();
-    //check If locations Changed
-    Map<String, Piece> piecesWithItems = collectPiecesWithItemId(filteredPieces);
 
-    StreamEx.ofValues(piecesWithItems)
-      .forEach(piece -> {
-        CheckInPiece checkInPiece = checkinCollection.get(piece.getPoLineId()).get(piece.getId());
-        // update holdings if piece location not equal to received item location
-        if (!checkInPiece.getLocationId().equals(piece.getLocationId())) {
-          futuresForPiecesUpdates.add(
-            poLineHelper.getCompositePoLine(piece.getPoLineId())
-              .thenCompose(compPOL -> updateHoldings(checkInPiece.getLocationId(), compPOL))
-              // modify piece locationId
-              .thenApply(holdingId -> {
-                piece.setLocationId(checkInPiece.getLocationId());
-                return true;
-              }));
-        }
-      });
+    getPoLines(filteredPieces)
+      .thenAccept(poLines -> poLines.forEach(poLine ->
+        filteredPieces.get(poLine.getId())
+          .forEach(piece -> {
+            CheckInPiece checkInPiece = checkinCollection.get(poLine.getId()).get(piece.getId());
+            if (holdingUpdateOnCheckinRequired(piece, checkInPiece)) {
+              futuresForPiecesUpdates.add(updateHoldings(poLine, checkInPiece.getLocationId())
+                .thenApply(holdingId -> {
+                  if (StringUtils.isNotEmpty(holdingId)) {
+                    piece.setLocationId(checkInPiece.getLocationId());
+                    logger.info("Location has been changed for the piece: " + piece.getId());
+                  }
+                  return true;
+                }));
+            }
+          })
+      ));
 
     return collectResultsOnSuccess(futuresForPiecesUpdates)
-      .thenApply(results -> {
-        if (logger.isDebugEnabled()) {
-          long successQty = results.stream()
-            .filter(result -> result)
-            .count();
-          logger.debug("{} out of {} inventory item(s) successfully updated", successQty, results.size());
-        }
-        return filteredPieces;
-      });
+      .thenApply(results -> filteredPieces);
   }
 
-  private CompletableFuture<String> updateHoldings(String location, CompositePoLine compPOL) {
-    if (isHoldingsUpdateRequired(compPOL)) {
-      return inventoryHelper.getOrCreateHoldingsRecord(compPOL, location);
-    } else
+  private boolean holdingUpdateOnReceiveRequired(Piece piece, ReceivedItem receivedItem) {
+    return StringUtils.isNotEmpty(receivedItem.getLocationId())
+      && !receivedItem.getLocationId().equals(piece.getLocationId())
+      && receivedItem.getItemStatus().equals("Received");
+  }
+
+  private boolean holdingUpdateOnCheckinRequired(Piece piece, CheckInPiece checkInPiece) {
+    return StringUtils.isNotEmpty(checkInPiece.getLocationId())
+      && !checkInPiece.getLocationId().equals(piece.getLocationId())
+      && checkInPiece.getItemStatus().equals("Received");
+  }
+
+  private CompletableFuture<String> updateHoldings(PoLine poLine, String location) {
+    if (isHoldingsUpdateRequired(poLine.getEresource(), poLine.getPhysical())) {
+      return inventoryHelper.getOrCreateHoldingsRecord(poLine.getInstanceId(), location);
+    } else {
       return completedFuture(null);
+    }
   }
 
   /**
