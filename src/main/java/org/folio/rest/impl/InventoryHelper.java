@@ -194,7 +194,7 @@ public class InventoryHelper extends AbstractHelper {
     return ITEM_STATUS_ON_ORDER.equalsIgnoreCase(checkinPiece.getItemStatus());
   }
 
-  private CompletableFuture<String> getOrCreateHoldingsRecord(CompositePoLine compPOL, String locationId) {
+  CompletableFuture<String> getOrCreateHoldingsRecord(CompositePoLine compPOL, String locationId) {
     String instanceId = compPOL.getInstanceId();
 
     String query = encodeQuery(String.format(HOLDINGS_LOOKUP_QUERY, instanceId, locationId), logger);

@@ -1,39 +1,31 @@
 package org.folio.rest.impl;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.folio.orders.utils.ErrorCodes.*;
-import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.handlePutRequest;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
-import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
-
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.EntryStream;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
-import org.folio.rest.acq.model.PieceCollection;
-import org.folio.rest.jaxrs.model.*;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
+import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
+import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.folio.orders.utils.ErrorCodes.*;
+import static org.folio.orders.utils.HelperUtils.*;
+import static org.folio.orders.utils.ResourcePathResolver.*;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.*;
 
 public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
@@ -182,6 +174,81 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
         .filter(pieceId -> !foundPieces.contains(pieceId))
         .forEach(pieceId -> addError(getPoLineIdByPieceId(pieceId), pieceId, PIECE_NOT_FOUND.toError()));
     }
+  }
+
+  CompletableFuture<Map<String, List<Piece>>> updatePiecesAndHoldings(Map<String, Map<String, ReceivedItem>> receivingCollection, Map<String, List<Piece>> filteredPieces) {
+    List<CompletableFuture<Boolean>> futuresForPiecesUpdates = new ArrayList<>();
+    //check If locations Changed
+    Map<String, Piece> piecesWithItems = collectPiecesWithItemId(filteredPieces);
+
+    StreamEx.ofValues(piecesWithItems)
+      .forEach(piece -> {
+
+        ReceivedItem receivedItem = receivingCollection.get(piece.getPoLineId()).get(piece.getId());
+        // update holdings if piece location not equal to received item location
+        if (StringUtils.isNotEmpty(receivedItem.getLocationId()) && !receivedItem.getLocationId().equals(piece.getLocationId())) {
+          futuresForPiecesUpdates.add(
+            poLineHelper.getCompositePoLine(piece.getPoLineId())
+              .thenCompose(compPOL -> updateHoldings(receivedItem.getLocationId(), compPOL))
+              // modify piece locationId
+              .thenApply(holdingId -> {
+                piece.setLocationId(receivedItem.getLocationId());
+                logger.info("Location has been changed for the piece: " + piece.getId());
+                return true;
+              }));
+        }
+      });
+
+    return collectResultsOnSuccess(futuresForPiecesUpdates)
+      .thenApply(results -> {
+        if (logger.isDebugEnabled()) {
+          long successQty = results.stream()
+            .filter(result -> result)
+            .count();
+          logger.debug("{} out of {} inventory item(s) successfully updated", successQty, results.size());
+        }
+        return filteredPieces;
+      });
+  }
+
+  CompletableFuture<Map<String, List<Piece>>> updateCheckinPiecesAndHoldings(Map<String, Map<String, CheckInPiece>> checkinCollection, Map<String, List<Piece>> filteredPieces) {
+    List<CompletableFuture<Boolean>> futuresForPiecesUpdates = new ArrayList<>();
+    //check If locations Changed
+    Map<String, Piece> piecesWithItems = collectPiecesWithItemId(filteredPieces);
+
+    StreamEx.ofValues(piecesWithItems)
+      .forEach(piece -> {
+        CheckInPiece checkInPiece = checkinCollection.get(piece.getPoLineId()).get(piece.getId());
+        // update holdings if piece location not equal to received item location
+        if (!checkInPiece.getLocationId().equals(piece.getLocationId())) {
+          futuresForPiecesUpdates.add(
+            poLineHelper.getCompositePoLine(piece.getPoLineId())
+              .thenCompose(compPOL -> updateHoldings(checkInPiece.getLocationId(), compPOL))
+              // modify piece locationId
+              .thenApply(holdingId -> {
+                piece.setLocationId(checkInPiece.getLocationId());
+                return true;
+              }));
+        }
+      });
+
+    return collectResultsOnSuccess(futuresForPiecesUpdates)
+      .thenApply(results -> {
+        if (logger.isDebugEnabled()) {
+          long successQty = results.stream()
+            .filter(result -> result)
+            .count();
+          logger.debug("{} out of {} inventory item(s) successfully updated", successQty, results.size());
+        }
+        return filteredPieces;
+      });
+  }
+
+  private CompletableFuture<String> updateHoldings(String location, CompositePoLine compPOL) {
+    if (isHoldingsUpdateRequired(compPOL)) {
+      return inventoryHelper.getOrCreateHoldingsRecord(compPOL, location);
+    } else
+      return completedFuture(null);
   }
 
   /**
