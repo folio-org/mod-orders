@@ -6,7 +6,8 @@
       "code": "USGS",
       "description": "Maps and materials from the USGS",
       "status": "Inactive",
-      "language": "en-us"
+      "language": "en-us",
+      "isVendor": true
     },
     {
       "id": "f64bbcae-e5ea-42b6-8236-55fefed0fb8f",
@@ -14,7 +15,8 @@
       "code": "HARRA",
       "description": "Use for monographs, approval plans, firms orders, and standing orders",
       "status": "Inactive",
-      "language": "en-us"
+      "language": "en-us",
+      "isVendor": true
     }
   ],
   "totalRecords": 2

@@ -6,7 +6,8 @@
       "code": "ALEXS",
       "description": "AV streaming services",
       "status": "Active",
-      "language": "en-us"
+      "language": "en-us",
+      "isVendor": true
     }
   ],
   "totalRecords": 1

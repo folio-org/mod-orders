@@ -6,7 +6,8 @@
       "code": "SJEAN",
       "description": "Individual donor to library archives",
       "status": "Active",
-      "language": "en-us"
+      "language": "en-us",
+      "isVendor": true
     }
   ],
   "totalRecords": 1

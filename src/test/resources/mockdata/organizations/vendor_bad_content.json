@@ -3,6 +3,7 @@
   "name": "Vendor with Contacts as object",
   "code": "VCONOBJ",
   "status": "Active",
+  "isVendor": true,
   "contacts": [
     {
       "prefix": "Prof.",

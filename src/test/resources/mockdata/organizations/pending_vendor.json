@@ -4,5 +4,6 @@
   "code": "NAXO",
   "description": "AV streaming services, other onilne content",
   "status": "Pending",
-  "language": "en-us"
+  "language": "en-us",
+  "isVendor": true
 }

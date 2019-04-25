@@ -6,7 +6,8 @@
       "code": "ALEXS",
       "description": "AV streaming services",
       "status": "Active",
-      "language": "en-us"
+      "language": "en-us",
+      "isVendor": true
     },
     {
       "id": "d1b79c8d-4950-482f-8e42-04f9aae3cb40",
@@ -14,7 +15,8 @@
       "code": "SJEAN",
       "description": "Individual donor to library archives",
       "status": "Active",
-      "language": "en-us"
+      "language": "en-us",
+      "isVendor": true
     }
   ],
   "totalRecords": 2

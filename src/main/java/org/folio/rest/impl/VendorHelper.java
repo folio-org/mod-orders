@@ -42,9 +42,9 @@ public class VendorHelper extends AbstractHelper {
   }
 
   /**
-   * Checks if vendor in {@link CompositePurchaseOrder} exists and has status
-   * "Active" and has vendor flag enabled. If not, adds corresponding error
-   * to {@link Errors} object.
+   * Checks if vendor in {@link CompositePurchaseOrder} exists in Organizations
+   * and has status "Active" with isvendor flag enabled. If not, adds
+   * corresponding error to {@link Errors} object.
    *
    * @param compPO
    *          composite purchase order
@@ -59,12 +59,12 @@ public class VendorHelper extends AbstractHelper {
     List<Error> errors = new ArrayList<>();
     if (id != null) {
       getVendorById(id)
-        .thenApply(vendor -> {
-          VendorStatus status = VendorStatus.valueOf(vendor.getStatus().toUpperCase());
+        .thenApply(organization -> {
+          VendorStatus status = VendorStatus.valueOf(organization.getStatus().toUpperCase());
           if(status != VendorStatus.ACTIVE) {
             errors.add(createErrorWithId(ORDER_VENDOR_IS_INACTIVE, id));
           }
-          if (!vendor.getIsVendor()) {
+          if (null != organization.getIsVendor() && !organization.getIsVendor()) {
             errors.add(createErrorWithId(ORGANIZATION_NOT_A_VENDOR, id));
           }
           return handleAndReturnErrors(errors);
@@ -105,7 +105,7 @@ public class VendorHelper extends AbstractHelper {
           if(VendorStatus.valueOf(organization.getStatus().toUpperCase()) != VendorStatus.ACTIVE) {
             errors.add(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, organization.getId()));
           }
-          if(!organization.getIsVendor()) {
+          if (null != organization.getIsVendor() && !organization.getIsVendor()) {
             errors.add(createErrorWithId(ORGANIZATION_NOT_A_VENDOR, organization.getId()));
           }
         });

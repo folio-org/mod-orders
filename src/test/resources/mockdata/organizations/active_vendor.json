@@ -4,5 +4,6 @@
   "code": "GOBI",
   "description": "Use for print and eBooks, approval plans, firm orders, standing orders, DDA",
   "status": "Active",
-  "language": "en-us"
+  "language": "en-us",
+  "isVendor": true
 }

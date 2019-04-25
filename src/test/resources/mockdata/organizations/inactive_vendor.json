@@ -4,5 +4,6 @@
   "code": "AMAZ",
   "description": "Use for rush orders, replacement requests, and second hand market",
   "status": "Inactive",
-  "language": "en-us"
+  "language": "en-us",
+  "isVendor": true
 }
