@@ -1,6 +1,7 @@
 package org.folio.orders.events.handlers;
 
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
+import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
@@ -76,9 +77,8 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
           } else {
             // Get purchase order lines to check if order status needs to be changed.
             getPoLines(orderId, lang, httpClient, ctx, okapiHeaders, logger)
-              .thenAccept(linesArray -> {
-                List<PoLine> poLines = convertToPoLines(linesArray);
-
+              .thenCompose(linesArray -> supplyBlockingAsync(ctx, () -> convertToPoLines(linesArray)))
+              .thenAccept(poLines -> {
                 if (changeOrderStatus(purchaseOrder, poLines)) {
                   logger.debug("Workflow status update required for order with id={}", orderId);
 

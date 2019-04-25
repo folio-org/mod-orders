@@ -40,6 +40,7 @@ import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
+import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
@@ -387,6 +388,28 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     // Verify messages sent via event bus
     verifyOrderStatusUpdateEvent(1);
+  }
+
+  @Test
+  public void testPutOrderLineByIdWithoutOrderUpdate() {
+    logger.info("=== Test PUT Order Line By Id - No Order update event sent on success ===");
+
+    String lineId = ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE;
+    JsonObject body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId);
+    String url = String.format(LINE_BY_ID_PATH, lineId);
+
+    verifyPut(url, JsonObject.mapFrom(body), "", 204);
+
+    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(1, column.size());
+    assertThat(column, hasKey(PO_LINES));
+
+    column = MockServer.serverRqRs.column(HttpMethod.PUT);
+    assertEquals(3, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(PO_LINES, ALERTS, REPORTING_CODES));
+
+    // Verify no message sent via event bus
+    verifyOrderStatusUpdateEvent(0);
   }
 
   @Test

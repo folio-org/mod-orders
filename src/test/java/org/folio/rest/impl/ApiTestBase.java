@@ -34,6 +34,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.awaitility.Awaitility.await;
@@ -309,7 +310,9 @@ public class ApiTestBase {
   void verifyOrderStatusUpdateEvent(int msgQty) {
     logger.debug("Verifying event bus messages");
     // Wait until event bus registers message
-    await().atMost(1, SECONDS).until(() -> eventMessages, hasSize(msgQty));
+    await().atLeast(50, MILLISECONDS)
+           .atMost(1, SECONDS)
+           .until(() -> eventMessages, hasSize(msgQty));
     for (int i = 0; i < msgQty; i++) {
       Message<JsonObject> message = eventMessages.get(i);
       assertThat(message.address(), equalTo(MessageAddress.ORDER_STATUS.address));

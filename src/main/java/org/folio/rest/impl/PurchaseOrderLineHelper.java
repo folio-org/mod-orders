@@ -5,6 +5,7 @@ import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.completedFuture;
+import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.*;
@@ -266,7 +267,18 @@ class PurchaseOrderLineHelper extends AbstractHelper {
         // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line update
         compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
         return updateOrderLine(compOrderLine, lineFromStorage)
-          .thenAccept(ok -> sendEvent(MessageAddress.ORDER_STATUS, createUpdateOrderMessage(compOrderLine)));
+          .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage));
+      });
+  }
+
+  private void updateOrderStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
+    supplyBlockingAsync(ctx, () -> lineFromStorage.mapTo(PoLine.class))
+      .thenAccept(poLine -> {
+        // See MODORDERS-218
+        if (!StringUtils.equals(poLine.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value())
+          || !StringUtils.equals(poLine.getPaymentStatus().value(), compOrderLine.getPaymentStatus().value())) {
+          sendEvent(MessageAddress.ORDER_STATUS, createUpdateOrderMessage(compOrderLine));
+        }
       });
   }
 
