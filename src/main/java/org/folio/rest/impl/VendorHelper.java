@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -91,7 +92,12 @@ public class VendorHelper extends AbstractHelper {
   public CompletableFuture<Errors> validateAccessProviders(CompositePurchaseOrder compPO) {
     CompletableFuture<Errors> future = new VertxCompletableFuture<>(ctx);
     Set<String> ids = verifyAndGetAccessProvidersIdsList(compPO);
-    List<CompositePoLine> poLines = compPO.getCompositePoLines();
+
+    Map<String, List<CompositePoLine>> poLinesMap =
+      compPO.getCompositePoLines().stream()
+        .filter(p -> (p.getEresource() != null && p.getEresource().getAccessProvider() != null))
+        .collect(Collectors.groupingBy(p -> p.getEresource().getAccessProvider()));
+
     List<Error> errors = new ArrayList<>();
     if (!ids.isEmpty()) {
       logger.debug("Validating {} access provider(s) for order with id={}", ids.size(), compPO.getId());
@@ -100,7 +106,7 @@ public class VendorHelper extends AbstractHelper {
         // Validate access provider status Active
         vendors.forEach(vendor -> {
           if(VendorStatus.valueOf(vendor.getVendorStatus().toUpperCase()) != VendorStatus.ACTIVE) {
-            errors.add(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, vendor.getId(), poLines));
+            errors.add(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, vendor.getId(), poLinesMap.get(vendor.getId())));
           }
         });
         // Validate access provider existence
@@ -109,7 +115,7 @@ public class VendorHelper extends AbstractHelper {
           .collect(toList());
         ids.stream()
           .filter(id -> !vendorsIds.contains(id))
-          .forEach(id -> errors.add(createErrorWithId(POL_ACCESS_PROVIDER_NOT_FOUND, id, poLines)));
+          .forEach(id -> errors.add(createErrorWithId(POL_ACCESS_PROVIDER_NOT_FOUND, id, poLinesMap.get(id))));
         return handleAndReturnErrors(errors);
       }).thenAccept(future::complete)
         .exceptionally(t -> {
@@ -163,11 +169,7 @@ public class VendorHelper extends AbstractHelper {
    */
   private Error createErrorWithId(ErrorCodes errorCodes, String id, List<CompositePoLine> poLines) {
     Error error = createErrorWithId(errorCodes, id);
-    for (CompositePoLine poLine : poLines) {
-      if (poLine.getPoLineNumber() != null) {
-        error.getParameters().add(new Parameter().withKey(PO_LINE_NUMBER).withValue(poLine.getPoLineNumber()));
-      }
-    }
+    poLines.forEach(p -> error.getParameters().add(new Parameter().withKey(PO_LINE_NUMBER).withValue(p.getPoLineNumber())));
     return error;
   }
 

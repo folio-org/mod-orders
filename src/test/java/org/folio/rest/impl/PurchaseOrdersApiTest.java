@@ -20,11 +20,13 @@ import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Physical.CreateInventory;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
+import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -34,10 +36,12 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -1620,35 +1624,49 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     logger.info("=== Test POST PO with vendor's status ===");
 
-    // Purchase order is OK
     CompositePurchaseOrder reqData = getPoWithVendorId(ACTIVE_VENDOR_ID, ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B);
+    for (int i = 0; i < reqData.getCompositePoLines().size(); i++) {
+      reqData.getCompositePoLines().get(i).setPoLineNumber("number-" + i);
+    }
+
+    // Purchase order is OK
     Errors activeVendorActiveAccessProviderErrors = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(Errors.class);
     assertThat(activeVendorActiveAccessProviderErrors.getErrors(), empty());
 
     // Internal mod-vendor error
-    reqData = getPoWithVendorId(MOD_VENDOR_INTERNAL_ERROR_ID, ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B);
+    reqData.setVendor(MOD_VENDOR_INTERNAL_ERROR_ID);
+    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
+    reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
     Errors internalServerError = verifyPostResponseErrors(1, JsonObject.mapFrom(reqData).toString());
     assertThat(internalServerError.getErrors().get(0).getCode(), equalTo(VENDOR_ISSUE.getCode()));
     assertThat(internalServerError.getErrors().get(0).getAdditionalProperties().get(VendorHelper.ERROR_CAUSE), notNullValue());
 
     // Non-existed vendor
-    reqData = getPoWithVendorId(NON_EXIST_VENDOR_ID, ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B);
+    reqData.setVendor(NON_EXIST_VENDOR_ID);
+    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
+    reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
     Errors nonExistedVendorError = verifyPostResponseErrors(1, JsonObject.mapFrom(reqData).toString());
     checkExpectedError(NON_EXIST_VENDOR_ID, nonExistedVendorError, 0, ORDER_VENDOR_NOT_FOUND, reqData, 0);
 
     // Active vendor and non-existed access provider
-    reqData = getPoWithVendorId(ACTIVE_VENDOR_ID, ACTIVE_ACCESS_PROVIDER_A, NON_EXIST_ACCESS_PROVIDER_A);
+    reqData.setVendor(ACTIVE_VENDOR_ID);
+    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
+    reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(NON_EXIST_ACCESS_PROVIDER_A);
     Errors inactiveAccessProviderErrors = verifyPostResponseErrors(1, JsonObject.mapFrom(reqData).toString());
     checkExpectedError(NON_EXIST_ACCESS_PROVIDER_A, inactiveAccessProviderErrors, 0, POL_ACCESS_PROVIDER_NOT_FOUND, reqData, 1);
 
     // Inactive access provider
-    reqData = getPoWithVendorId(ACTIVE_VENDOR_ID, ACTIVE_ACCESS_PROVIDER_A, INACTIVE_ACCESS_PROVIDER_A);
+    reqData.setVendor(ACTIVE_VENDOR_ID);
+    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
+    reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
     Errors nonExistedAccessProviderErrors = verifyPostResponseErrors(1, JsonObject.mapFrom(reqData).toString());
     checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, nonExistedAccessProviderErrors, 0, POL_ACCESS_PROVIDER_IS_INACTIVE, reqData, 1);
 
     // Inactive vendor and inactive access providers
-    reqData = getPoWithVendorId(INACTIVE_VENDOR_ID, INACTIVE_ACCESS_PROVIDER_A, INACTIVE_ACCESS_PROVIDER_B);
+    reqData.setVendor(INACTIVE_VENDOR_ID);
+    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
+    reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_B);
     Errors allInactiveErrors = verifyPostResponseErrors(3, JsonObject.mapFrom(reqData).toString());
     checkExpectedError(INACTIVE_VENDOR_ID, allInactiveErrors, 0, ORDER_VENDOR_IS_INACTIVE, reqData, 0);
     checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, allInactiveErrors, 1, POL_ACCESS_PROVIDER_IS_INACTIVE, reqData, 1);
@@ -1663,6 +1681,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    for (int i = 0; i < reqData.getCompositePoLines().size(); i++) {
+      reqData.getCompositePoLines().get(i).setPoLineNumber("number-" + i);
+    }
 
     // Positive cases
     reqData.setVendor(ACTIVE_VENDOR_ID);
@@ -1772,8 +1793,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(error.getParameters().get(0).getKey(), equalTo(ID));
     assertThat(error.getParameters().get(0).getValue(), equalTo(id));
     if(expectedPoLineEntriesinErrors > 0) {
-      assertThat(error.getParameters().get(1).getKey(), equalTo(PO_LINE_NUMBER));
-      assertThat(error.getParameters().get(1).getValue(), equalTo(purchaseOrder.getCompositePoLines().get(0).getPoLineNumber()));
+      List<String> poLineNumbersFromError = error.getParameters().stream().filter(p -> p.getKey().equals("poLineNumber")).map(Parameter::getValue).collect(toList());
+      List<String> poLineNumbers = purchaseOrder.getCompositePoLines().stream().map(CompositePoLine::getPoLineNumber).collect(toList());
+      poLineNumbersFromError.forEach(p -> assertThat(poLineNumbers.contains(p), is(true)));
     }
   }
 
