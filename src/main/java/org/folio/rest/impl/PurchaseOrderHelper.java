@@ -14,7 +14,7 @@ import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.operateOnObject;
-import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
@@ -49,7 +49,7 @@ import org.folio.rest.jaxrs.model.Error;
 
 public class PurchaseOrderHelper extends AbstractHelper {
 
-  private static final String SEARCH_PURCHASE_ORDERS = resourcesPath(SEARCH_ORDER) + "?limit=%s&offset=%s%s&lang=%s";
+  private static final String SEARCH_PURCHASE_ORDERS = resourcesPath(SEARCH_ORDERS) + "?limit=%s&offset=%s%s&lang=%s";
   private static final String GET_PURCHASE_ORDERS = resourcesPath(PURCHASE_ORDER) + "?limit=%s&offset=%s&lang=%s";
 
   private final PoNumberHelper poNumberHelper;

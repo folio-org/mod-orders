@@ -63,7 +63,7 @@ import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
-import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.PAYMENT_STATUS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
@@ -1594,7 +1594,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     final PurchaseOrders purchaseOrders = verifySuccessGet(COMPOSITE_ORDERS_PATH, PurchaseOrders.class);
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET));
-    assertNull(MockServer.serverRqRs.get(SEARCH_ORDER, HttpMethod.GET));
+    assertNull(MockServer.serverRqRs.get(SEARCH_ORDERS, HttpMethod.GET));
     assertEquals(3, purchaseOrders.getTotalRecords().intValue());
   }
 
@@ -1604,7 +1604,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     String endpointQuery = String.format("%s?query=%s", COMPOSITE_ORDERS_PATH, "poNumber==" + EXISTING_PO_NUMBER);
     final PurchaseOrders purchaseOrders = verifySuccessGet(endpointQuery, PurchaseOrders.class);
     assertNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET));
-    assertNotNull(MockServer.serverRqRs.get(SEARCH_ORDER, HttpMethod.GET));
+    assertNotNull(MockServer.serverRqRs.get(SEARCH_ORDERS, HttpMethod.GET));
     assertEquals(1, purchaseOrders.getTotalRecords().intValue());
   }
 

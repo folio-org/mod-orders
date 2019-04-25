@@ -53,7 +53,7 @@ import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
@@ -226,7 +226,7 @@ public class MockServer {
 
     router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)+"/:id").handler(this::handleGetPurchaseOrderById);
     router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, PURCHASE_ORDER));
-    router.route(HttpMethod.GET, resourcesPath(SEARCH_ORDER)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, SEARCH_ORDER));
+    router.route(HttpMethod.GET, resourcesPath(SEARCH_ORDERS)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, SEARCH_ORDERS));
     router.route(HttpMethod.GET, "/instance-types").handler(this::handleGetInstanceType);
     router.route(HttpMethod.GET, "/instance-statuses").handler(this::handleGetInstanceStatus);
     router.route(HttpMethod.GET, "/identifier-types").handler(this::handleGetIdentifierType);
