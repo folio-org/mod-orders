@@ -6,7 +6,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
-import org.folio.rest.acq.model.Vendor;
+import org.folio.rest.acq.model.Organization;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -25,6 +25,7 @@ import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
+import static org.folio.orders.utils.ErrorCodes.ORGANIZATION_NOT_A_VENDOR;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
@@ -32,19 +33,21 @@ import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 
 public class VendorHelper extends AbstractHelper {
 
-  static final String VENDORS = "vendors";
-  private static final String VENDOR_STORAGE_VENDORS = "/vendor-storage/vendors/";
-  private static final String VENDORS_WITH_QUERY_ENDPOINT = "/vendor-storage/vendors?limit=%d&lang=%s&query=%s";
+  static final String ORGANIZATIONS = "organizations";
+  private static final String ORGANIZATIONS_STORAGE_VENDORS = "/organizations-storage/organizations/";
+  private static final String ORGANIZATIONS_WITH_QUERY_ENDPOINT = "/organizations-storage/organizations?limit=%d&lang=%s&query=%s";
 
   public VendorHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
   }
 
   /**
-   * Checks if vendor in {@link CompositePurchaseOrder} exists and has status Active.
-   * If any false, adds corresponding error to {@link Errors} object.
+   * Checks if vendor in {@link CompositePurchaseOrder} exists and has status
+   * "Active" and has vendor flag enabled. If not, adds corresponding error
+   * to {@link Errors} object.
    *
-   * @param compPO composite purchase order
+   * @param compPO
+   *          composite purchase order
    * @return CompletableFuture with {@link Errors} object
    */
   public CompletableFuture<Errors> validateVendor(CompositePurchaseOrder compPO) {
@@ -57,9 +60,12 @@ public class VendorHelper extends AbstractHelper {
     if (id != null) {
       getVendorById(id)
         .thenApply(vendor -> {
-          VendorStatus status = VendorStatus.valueOf(vendor.getVendorStatus().toUpperCase());
+          VendorStatus status = VendorStatus.valueOf(vendor.getStatus().toUpperCase());
           if(status != VendorStatus.ACTIVE) {
             errors.add(createErrorWithId(ORDER_VENDOR_IS_INACTIVE, id));
+          }
+          if (!vendor.getIsVendor()) {
+            errors.add(createErrorWithId(ORGANIZATION_NOT_A_VENDOR, id));
           }
           return handleAndReturnErrors(errors);
         })
@@ -93,16 +99,19 @@ public class VendorHelper extends AbstractHelper {
     if (!ids.isEmpty()) {
       logger.debug("Validating {} access provider(s) for order with id={}", ids.size(), compPO.getId());
 
-      getAccessProvidersByIds(ids).thenApply(vendors -> {
+      getAccessProvidersByIds(ids).thenApply(organizations -> {
         // Validate access provider status Active
-        vendors.forEach(vendor -> {
-          if(VendorStatus.valueOf(vendor.getVendorStatus().toUpperCase()) != VendorStatus.ACTIVE) {
-            errors.add(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, vendor.getId()));
+        organizations.forEach(organization -> {
+          if(VendorStatus.valueOf(organization.getStatus().toUpperCase()) != VendorStatus.ACTIVE) {
+            errors.add(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, organization.getId()));
+          }
+          if(!organization.getIsVendor()) {
+            errors.add(createErrorWithId(ORGANIZATION_NOT_A_VENDOR, organization.getId()));
           }
         });
         // Validate access provider existence
-        List<String> vendorsIds = vendors.stream()
-          .map(Vendor::getId)
+        List<String> vendorsIds = organizations.stream()
+          .map(Organization::getId)
           .collect(toList());
         ids.stream()
           .filter(id -> !vendorsIds.contains(id))
@@ -154,11 +163,11 @@ public class VendorHelper extends AbstractHelper {
    * Retrieves vendor by id
    *
    * @param vendorId vendor's id
-   * @return CompletableFuture with {@link Vendor} object
+   * @return CompletableFuture with {@link Organization} object
    */
-  private CompletableFuture<Vendor> getVendorById(String vendorId) {
-    return handleGetRequest(VENDOR_STORAGE_VENDORS + vendorId, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(json -> json.mapTo(Vendor.class));
+  private CompletableFuture<Organization> getVendorById(String vendorId) {
+    return handleGetRequest(ORGANIZATIONS_STORAGE_VENDORS + vendorId, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(json -> json.mapTo(Organization.class));
   }
 
   /**
@@ -167,13 +176,13 @@ public class VendorHelper extends AbstractHelper {
    * @param accessProviderIds - {@link Set<String>} of access providers id
    * @return CompletableFuture with {@link List<Vendor>} of vendors
    */
-  private CompletableFuture<List<Vendor>> getAccessProvidersByIds(Set<String> accessProviderIds) {
+  private CompletableFuture<List<Organization>> getAccessProvidersByIds(Set<String> accessProviderIds) {
     String query = convertIdsToCqlQuery(new ArrayList<>(accessProviderIds));
-    String endpoint = String.format(VENDORS_WITH_QUERY_ENDPOINT, accessProviderIds.size(), lang, encodeQuery(query, logger));
+    String endpoint = String.format(ORGANIZATIONS_WITH_QUERY_ENDPOINT, accessProviderIds.size(), lang, encodeQuery(query, logger));
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(jsons -> jsons.getJsonArray(VENDORS)
+      .thenApply(jsons -> jsons.getJsonArray(ORGANIZATIONS)
         .stream()
-        .map(obj -> ((JsonObject) obj).mapTo(Vendor.class))
+        .map(obj -> ((JsonObject) obj).mapTo(Organization.class))
         .collect(toList())
       );
   }
