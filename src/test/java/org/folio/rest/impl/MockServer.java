@@ -442,7 +442,7 @@ public class MockServer {
       else {
         JsonArray organizations = new JsonArray();
 
-        // Search for vendors by id
+        // Search for Organizations by id
         extractIdsFromQuery(query)
           .stream()
           .map(this::getOrganizationById)
