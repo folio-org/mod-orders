@@ -89,6 +89,7 @@ import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_ACCESS_PROVIDE
 import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_VENDOR_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.VENDOR_WITH_BAD_CONTENT;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ORGANIZATION_NOT_VENDOR;
 import static org.folio.rest.impl.ApiTestBase.X_ECHO_STATUS;
 import static org.folio.rest.impl.ReceivingHistoryApiTest.RECEIVING_HISTORY_PURCHASE_ORDER_ID;
 import static org.junit.Assert.fail;
@@ -434,7 +435,11 @@ public class MockServer {
         body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_provider_not_found.json"));
       } else if (getQuery(ACTIVE_ACCESS_PROVIDER_B).equals(query)) {
         body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_providers_active.json"));
-      } else {
+      } else if (getQuery(ORGANIZATION_NOT_VENDOR).equals(query)) {
+        body = new JsonObject(
+            ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "not_vendor.json"));
+      }
+      else {
         JsonArray organizations = new JsonArray();
 
         // Search for vendors by id
@@ -498,6 +503,9 @@ public class MockServer {
         case ACTIVE_ACCESS_PROVIDER_B:
           body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_providers_active.json"))
             .getJsonArray(VendorHelper.ORGANIZATIONS).getJsonObject(0);
+          break;
+        case ORGANIZATION_NOT_VENDOR:
+          body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "not_vendor.json"));
           break;
         case VENDOR_WITH_BAD_CONTENT:
           body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "vendor_bad_content.json"));

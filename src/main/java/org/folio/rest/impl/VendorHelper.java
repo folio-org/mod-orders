@@ -26,6 +26,7 @@ import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
 import static org.folio.orders.utils.ErrorCodes.ORGANIZATION_NOT_A_VENDOR;
+import static org.folio.orders.utils.ErrorCodes.ACCESSPROVIDER_NOT_A_VENDOR;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
@@ -64,7 +65,7 @@ public class VendorHelper extends AbstractHelper {
           if(status != VendorStatus.ACTIVE) {
             errors.add(createErrorWithId(ORDER_VENDOR_IS_INACTIVE, id));
           }
-          if (null != organization.getIsVendor() && !organization.getIsVendor()) {
+          if (null == organization.getIsVendor() || !organization.getIsVendor()) {
             errors.add(createErrorWithId(ORGANIZATION_NOT_A_VENDOR, id));
           }
           return handleAndReturnErrors(errors);
@@ -105,8 +106,8 @@ public class VendorHelper extends AbstractHelper {
           if(VendorStatus.valueOf(organization.getStatus().toUpperCase()) != VendorStatus.ACTIVE) {
             errors.add(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, organization.getId()));
           }
-          if (null != organization.getIsVendor() && !organization.getIsVendor()) {
-            errors.add(createErrorWithId(ORGANIZATION_NOT_A_VENDOR, organization.getId()));
+          if (null == organization.getIsVendor() || !organization.getIsVendor()) {
+            errors.add(createErrorWithId(ACCESSPROVIDER_NOT_A_VENDOR, organization.getId()));
           }
         });
         // Validate access provider existence
