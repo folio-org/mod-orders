@@ -61,7 +61,7 @@
       ],
       "locations": [
         {
-          "locationId": "07c5d9ea-cabe-11e8-a8d5-f2901f1b9fd1",
+          "locationId": "758258bc-ecc1-41b8-abca-f7b610822ffd",
           "quantity": 1,
           "quantityElectronic": 0,
           "quantityPhysical": 1
@@ -153,7 +153,7 @@
       ],
       "locations": [
         {
-          "locationId": "07c5d9ea-cabe-11e8-a8d5-f5901f1b9fd1",
+          "locationId": "758258bc-ecc1-41b8-abca-f7b610822ffd",
           "quantity": 1,
           "quantityElectronic": 0,
           "quantityPhysical": 1
@@ -245,7 +245,7 @@
       ],
       "locations": [
         {
-          "locationId": "07cvd9ea-cabe-11e8-a8d5-f2901f1b9fd1",
+          "locationId": "758258bc-ecc1-41b8-abca-f7b610822ffd",
           "quantity": 1,
           "quantityElectronic": 0,
           "quantityPhysical": 1

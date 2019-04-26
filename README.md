@@ -97,7 +97,7 @@ Sample of the requests:
             {
               "barcode": "0987654111",
               "itemStatus": "Received",
-              "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+              "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
               "pieceId": "cb9b0468-f2b4-4a13-b64c-662c4c9ec3ed"
             }
           ]
@@ -109,7 +109,7 @@ Sample of the requests:
             {
               "barcode": "0987654333",
               "itemStatus": "In transit",
-              "locationId": "279f42ce-17d1-463e-b890-deeebd1baeee",
+              "locationId": "758258bc-ecc1-41b8-abca-f7b610822ffd",
               "pieceId": "20241b8c-9076-4cf5-817b-f2c1e2cb242f"
             }
           ]
