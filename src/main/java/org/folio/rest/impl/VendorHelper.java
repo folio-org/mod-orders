@@ -8,8 +8,6 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.rest.acq.model.Organization;
 import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.acq.model.Vendor;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -29,7 +27,6 @@ import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
 import static org.folio.orders.utils.ErrorCodes.ORGANIZATION_NOT_A_VENDOR;
-import static org.folio.orders.utils.ErrorCodes.ACCESSPROVIDER_NOT_A_VENDOR;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
@@ -67,8 +64,7 @@ public class VendorHelper extends AbstractHelper {
     if (id != null) {
       getVendorById(id)
         .thenApply(organization -> {
-          VendorStatus status = VendorStatus.valueOf(organization.getStatus().toUpperCase());
-          if(status != VendorStatus.ACTIVE) {
+          if(!organization.getStatus().equals(Organization.Status.ACTIVE)) {
             errors.add(createErrorWithId(ORDER_VENDOR_IS_INACTIVE, id));
           }
           if (null == organization.getIsVendor() || !organization.getIsVendor()) {
@@ -116,11 +112,8 @@ public class VendorHelper extends AbstractHelper {
       getAccessProvidersByIds(ids).thenApply(organizations -> {
         // Validate access provider status Active
         organizations.forEach(organization -> {
-          if(VendorStatus.valueOf(organization.getStatus().toUpperCase()) != VendorStatus.ACTIVE) {
+          if(!organization.getStatus().equals(Organization.Status.ACTIVE)) {
             errors.add(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, organization.getId(), poLinesMap.get(organization.getId())));
-          }
-          if (null == organization.getIsVendor() || !organization.getIsVendor()) {
-            errors.add(createErrorWithId(ACCESSPROVIDER_NOT_A_VENDOR, organization.getId()));
           }
         });
         // Validate access provider existence
@@ -216,9 +209,4 @@ public class VendorHelper extends AbstractHelper {
         .collect(toList())
       );
   }
-
-  public enum VendorStatus {
-    INACTIVE, ACTIVE, PENDING,
-  }
-
 }

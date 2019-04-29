@@ -64,7 +64,6 @@ import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.orders.utils.ErrorCodes.ORGANIZATION_NOT_A_VENDOR;
-import static org.folio.orders.utils.ErrorCodes.ACCESSPROVIDER_NOT_A_VENDOR;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
@@ -688,7 +687,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
     request.put("orderType", "Ongoing");
     String body= request.toString();
-    
+
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
       prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
@@ -1797,15 +1796,13 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
     Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()),
-      JsonObject.mapFrom(reqData), EMPTY, 422).as(Errors.class);
+        JsonObject.mapFrom(reqData), EMPTY, 422).as(Errors.class);
 
-    assertThat(errors.getErrors(), hasSize(2));
+    assertThat(errors.getErrors(), hasSize(1));
 
+    checkExpectedError(ORGANIZATION_NOT_VENDOR, errors, 0, ORGANIZATION_NOT_A_VENDOR, reqData, 0);
 
-    checkExpectedError(ORGANIZATION_NOT_VENDOR, errors, 0, ORGANIZATION_NOT_A_VENDOR);
-    checkExpectedError(ORGANIZATION_NOT_VENDOR, errors, 1, ACCESSPROVIDER_NOT_A_VENDOR);
-
-}
+  }
 
   private Errors verifyPostResponseErrors(int expectedErrorsNumber, String body) {
     Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
