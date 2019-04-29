@@ -32,6 +32,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   static final int MAX_IDS_FOR_GET_RQ = 15;
   private static final String PIECES_WITH_QUERY_ENDPOINT = resourcesPath(PIECES) + "?limit=%d&lang=%s&query=%s";
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
+  public static final String HOLDINGS_GET_ENDPOINT = "/holdings-storage/holdings/%s?lang=%s";
   Map<String, Map<String, T>> piecesByLineId;
   final InventoryHelper inventoryHelper;
   Map<String, Map<String, Error>> processingErrors;
@@ -176,111 +177,35 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     }
   }
 
-  CompletableFuture<Map<String, List<Piece>>> updatePiecesAndHoldingsOnReceive(Map<String, Map<String, ReceivedItem>> receivingCollection, Map<String, List<Piece>> filteredPieces) {
-    List<CompletableFuture<Boolean>> futuresForPiecesUpdates = new ArrayList<>();
-
-    getPoLines(filteredPieces)
-      .thenAccept(poLines -> poLines.forEach(poLine ->
-        filteredPieces.get(poLine.getId())
-          .forEach(piece -> {
-            ReceivedItem receivedItem = receivingCollection.get(poLine.getId()).get(piece.getId());
-            if (holdingUpdateOnReceiveRequired(piece, receivedItem)) {
-              futuresForPiecesUpdates.add(updateHoldings(poLine, receivedItem.getLocationId())
-                .thenApply(holdingId -> {
-                  piece.setLocationId(receivedItem.getLocationId());
-                  logger.info("Location has been changed for the piece: " + piece.getId());
-                  return true;
-                }));
-            }
-          })
-      ));
-
-    return collectResultsOnSuccess(futuresForPiecesUpdates)
-      .thenApply(results -> filteredPieces);
+  PoLine searchPoLineById(List<PoLine> poLines, String polineId) {
+    for (PoLine  poline: poLines){
+      if (poline.getId().equals(polineId)){
+        return poline;
+      }
+    } return null;
   }
 
-  CompletableFuture<Map<String, List<Piece>>> updatePiecesAndHoldingsOnCheckin(Map<String, Map<String, CheckInPiece>> checkinCollection, Map<String, List<Piece>> filteredPieces) {
-    List<CompletableFuture<Boolean>> futuresForPiecesUpdates = new ArrayList<>();
-
-    getPoLines(filteredPieces)
-      .thenAccept(poLines -> poLines.forEach(poLine ->
-        filteredPieces.get(poLine.getId())
-          .forEach(piece -> {
-            CheckInPiece checkInPiece = checkinCollection.get(poLine.getId()).get(piece.getId());
-            if (holdingUpdateOnCheckinRequired(piece, checkInPiece)) {
-              futuresForPiecesUpdates.add(updateHoldings(poLine, checkInPiece.getLocationId())
-                .thenApply(holdingId -> {
-                  if (StringUtils.isNotEmpty(holdingId)) {
-                    piece.setLocationId(checkInPiece.getLocationId());
-                    logger.info("Location has been changed for the piece: " + piece.getId());
-                  }
-                  return true;
-                }));
-            }
-          })
-      ));
-
-    return collectResultsOnSuccess(futuresForPiecesUpdates)
-      .thenApply(results -> filteredPieces);
-  }
-
-  private boolean holdingUpdateOnReceiveRequired(Piece piece, ReceivedItem receivedItem) {
-    return StringUtils.isNotEmpty(receivedItem.getLocationId())
-      && !receivedItem.getLocationId().equals(piece.getLocationId())
-      && receivedItem.getItemStatus().equals("Received");
-  }
-
-  private boolean holdingUpdateOnCheckinRequired(Piece piece, CheckInPiece checkInPiece) {
-    return StringUtils.isNotEmpty(checkInPiece.getLocationId())
-      && !checkInPiece.getLocationId().equals(piece.getLocationId())
-      && checkInPiece.getItemStatus().equals("Received");
-  }
-
-  private CompletableFuture<String> updateHoldings(PoLine poLine, String location) {
-    if (isHoldingsUpdateRequired(poLine.getEresource(), poLine.getPhysical())) {
-      return inventoryHelper.getOrCreateHoldingsRecord(poLine.getInstanceId(), location);
+  CompletableFuture<Boolean> updateHoldingsAndItems(JsonObject item, Piece piece, PoLine poLine, String locationId) {
+    if (holdingUpdateOnCheckinReceiveRequired(piece, locationId, poLine)) {
+      return inventoryHelper.getOrCreateHoldingsRecord(poLine.getInstanceId(), locationId)
+        .thenCompose(holdingId -> {
+          String endpoint = String.format(HOLDINGS_GET_ENDPOINT, holdingId, lang);
+          return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
+        })
+        .thenCompose(holding -> {
+          item.put("holdingsRecordId", holding.getString(ID));
+          return receiveInventoryItemAndUpdatePiece(item, piece);
+        })
+        .exceptionally(t -> false);
     } else {
-      return completedFuture(null);
+      return receiveInventoryItemAndUpdatePiece(item, piece);
     }
   }
 
-  /**
-   * Updates items in the inventory storage with receiving/check-in details if any. On
-   * success updates corresponding records as received
-   *
-   * @return {@link CompletableFuture} which holds map with PO line id as key
-   *         and list of corresponding pieces as value
-   */
-  CompletableFuture<Map<String, List<Piece>>> updateInventoryItems(Map<String, List<Piece>> piecesGroupedByPoLine) {
-    // Collect all piece records with non-empty item ids. The result is a map
-    // with item id as a key and piece record as a value
-    Map<String, Piece> piecesWithItems = collectPiecesWithItemId(piecesGroupedByPoLine);
-
-    // If there are no pieces with ItemId, continue
-    if (piecesWithItems.isEmpty()) {
-      return completedFuture(piecesGroupedByPoLine);
-    }
-
-    return getItemRecords(piecesWithItems)
-      .thenCompose(items -> {
-        List<CompletableFuture<Boolean>> futuresForItemUpdates = new ArrayList<>();
-        for (JsonObject item : items) {
-          String itemId = item.getString(ID);
-          Piece piece = piecesWithItems.get(itemId);
-          futuresForItemUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece));
-        }
-
-        return collectResultsOnSuccess(futuresForItemUpdates)
-          .thenApply(results -> {
-            if (logger.isDebugEnabled()) {
-              long successQty = results.stream()
-                .filter(result -> result)
-                .count();
-              logger.debug("{} out of {} inventory item(s) successfully updated", successQty, results.size());
-            }
-            return piecesGroupedByPoLine;
-          });
-      });
+  boolean holdingUpdateOnCheckinReceiveRequired(Piece piece, String locationId, PoLine poLine) {
+    return isHoldingsUpdateRequired(poLine.getEresource(), poLine.getPhysical())
+      && StringUtils.isNotEmpty(locationId)
+      && !locationId.equals(piece.getLocationId());
   }
 
   /**
@@ -290,7 +215,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    *          map with item id as a key and piece record as a value
    * @return future with list of item records
    */
-  private CompletableFuture<List<JsonObject>> getItemRecords(Map<String, Piece> piecesWithItems) {
+  CompletableFuture<List<JsonObject>> getItemRecords(Map<String, Piece> piecesWithItems) {
     // Split all id's by maximum number of id's for get query
     List<CompletableFuture<List<JsonObject>>> futures = StreamEx
       .ofSubLists(new ArrayList<>(piecesWithItems.keySet()), MAX_IDS_FOR_GET_RQ)
@@ -363,7 +288,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    *          value
    * @return map with item id as key and piece record as a value
    */
-  private Map<String, Piece> collectPiecesWithItemId(Map<String, List<Piece>> piecesGroupedByPoLine) {
+  Map<String, Piece> collectPiecesWithItemId(Map<String, List<Piece>> piecesGroupedByPoLine) {
     return StreamEx
       .ofValues(piecesGroupedByPoLine)
       .flatMap(List::stream)
@@ -472,7 +397,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       .toList();
   }
 
-  private CompletableFuture<List<PoLine>> getPoLines(Map<String, List<Piece>> piecesGroupedByPoLine) {
+  CompletableFuture<List<PoLine>> getPoLines(Map<String, List<Piece>> piecesGroupedByPoLine) {
     if(poLineList == null) {
       return collectResultsOnSuccess(StreamEx
         .ofSubLists(getPoLineIdsForUpdatedPieces(piecesGroupedByPoLine), MAX_IDS_FOR_GET_RQ)

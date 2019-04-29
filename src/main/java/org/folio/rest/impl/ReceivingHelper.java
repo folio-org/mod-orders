@@ -1,24 +1,24 @@
 package org.folio.rest.impl;
 
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.HelperUtils.buildQuery;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.orders.utils.ErrorCodes.*;
-
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.*;
+
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.stream.Collectors.*;
+import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
+import static org.folio.orders.utils.HelperUtils.*;
+import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
@@ -57,9 +57,8 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     return this.retrievePieceRecords(receivingItems)
       // 2. Filter locationId
       .thenCompose(this::filterMissingLocations)
-      .thenCompose(filteredPieces -> this.updatePiecesAndHoldingsOnReceive(receivingItems, filteredPieces))
       // 3. Update items in the Inventory if required
-      .thenCompose(this::updateInventoryItems)
+      .thenCompose(pieces -> updateInventoryItemsOnReceiving(receivingItems, pieces))
       // 4. Update piece records with receiving details which do not have associated item
       .thenApply(this::updatePieceRecordsWithoutItems)
       // 5. Update received piece records in the storage
@@ -68,6 +67,50 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       .thenCompose(this::updatePoLinesStatus)
       // 7. Return results to the client
       .thenApply(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
+  }
+
+  /**
+   * Updates items in the inventory storage with receiving details if any. On
+   * success updates corresponding records as received
+   *
+   * @return {@link CompletableFuture} which holds map with PO line id as key
+   *         and list of corresponding pieces as value
+   */
+  CompletableFuture<Map<String, List<Piece>>> updateInventoryItemsOnReceiving(Map<String, Map<String, ReceivedItem>> receivingCollection, Map<String, List<Piece>> piecesGroupedByPoLine) {
+    // Collect all piece records with non-empty item ids. The result is a map
+    // with item id as a key and piece record as a value
+    Map<String, Piece> piecesWithItems = collectPiecesWithItemId(piecesGroupedByPoLine);
+
+    // If there are no pieces with ItemId, continue
+    if (piecesWithItems.isEmpty()) {
+      return completedFuture(piecesGroupedByPoLine);
+    }
+
+    return getItemRecords(piecesWithItems)
+      .thenCombine(getPoLines(piecesGroupedByPoLine), (items, poLines) -> {
+        List<CompletableFuture<Boolean>> futuresForItemUpdates = new ArrayList<>();
+        for (JsonObject item : items) {
+          String itemId = item.getString(ID);
+          Piece piece = piecesWithItems.get(itemId);
+
+          PoLine poLine = searchPoLineById(poLines, piece.getPoLineId());
+          ReceivedItem receivedItem = receivingCollection.get(poLine.getId()).get(piece.getId());
+
+          futuresForItemUpdates.add(updateHoldingsAndItems(item, piece, poLine, receivedItem.getLocationId()));
+        }
+
+        return futuresForItemUpdates;
+      })
+      .thenCompose(HelperUtils::collectResultsOnSuccess)
+      .thenApply(results -> {
+        if (logger.isDebugEnabled()) {
+          long successQty = results.stream()
+            .filter(result -> result)
+            .count();
+          logger.debug("{} out of {} inventory item(s) successfully updated", successQty, results.size());
+        }
+        return piecesGroupedByPoLine;
+      });
   }
 
   CompletableFuture<ReceivingHistoryCollection> getReceivingHistory(int limit, int offset, String query) {
