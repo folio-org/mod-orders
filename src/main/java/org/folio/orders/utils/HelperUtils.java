@@ -289,7 +289,7 @@ public class HelperUtils {
     }
   }
 
-  public static String getEndpointWithQuery(String query, Logger logger) {
+  public static String buildQuery(String query, Logger logger) {
     return isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
   }
 
