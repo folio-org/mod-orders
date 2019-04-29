@@ -20,11 +20,13 @@ import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Physical.CreateInventory;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
+import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -34,10 +36,12 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -1633,33 +1637,53 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     logger.info("=== Test POST PO with vendor's status ===");
 
+    CompositePurchaseOrder reqData = getPoWithVendorId(ACTIVE_VENDOR_ID, ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B);
+    for (int i = 0; i < reqData.getCompositePoLines().size(); i++) {
+      reqData.getCompositePoLines().get(i).setPoLineNumber("number-" + i);
+    }
+
     // Purchase order is OK
-    Errors activeVendorActiveAccessProviderErrors = verifyPostResponse(COMPOSITE_ORDERS_PATH, getPoWithVendorId(ACTIVE_VENDOR_ID, ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B),
+    Errors activeVendorActiveAccessProviderErrors = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(Errors.class);
     assertThat(activeVendorActiveAccessProviderErrors.getErrors(), empty());
 
     // Internal mod-vendor error
-    Errors internalServerError = verifyPostResponseErrors(1, MOD_VENDOR_INTERNAL_ERROR_ID, ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B);
+    reqData.setVendor(MOD_VENDOR_INTERNAL_ERROR_ID);
+    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
+    reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
+    Errors internalServerError = verifyPostResponseErrors(1, JsonObject.mapFrom(reqData).toString());
     assertThat(internalServerError.getErrors().get(0).getCode(), equalTo(VENDOR_ISSUE.getCode()));
     assertThat(internalServerError.getErrors().get(0).getAdditionalProperties().get(VendorHelper.ERROR_CAUSE), notNullValue());
 
     // Non-existed vendor
-    Errors nonExistedVendorError = verifyPostResponseErrors(1, NON_EXIST_VENDOR_ID, ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B);
-    checkExpectedError(NON_EXIST_VENDOR_ID, nonExistedVendorError, 0, ORDER_VENDOR_NOT_FOUND);
+    reqData.setVendor(NON_EXIST_VENDOR_ID);
+    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
+    reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
+    Errors nonExistedVendorError = verifyPostResponseErrors(1, JsonObject.mapFrom(reqData).toString());
+    checkExpectedError(NON_EXIST_VENDOR_ID, nonExistedVendorError, 0, ORDER_VENDOR_NOT_FOUND, reqData, 0);
 
     // Active vendor and non-existed access provider
-    Errors inactiveAccessProviderErrors = verifyPostResponseErrors(1, ACTIVE_VENDOR_ID, ACTIVE_ACCESS_PROVIDER_A, NON_EXIST_ACCESS_PROVIDER_A);
-    checkExpectedError(NON_EXIST_ACCESS_PROVIDER_A, inactiveAccessProviderErrors, 0, POL_ACCESS_PROVIDER_NOT_FOUND);
+    reqData.setVendor(ACTIVE_VENDOR_ID);
+    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
+    reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(NON_EXIST_ACCESS_PROVIDER_A);
+    Errors inactiveAccessProviderErrors = verifyPostResponseErrors(1, JsonObject.mapFrom(reqData).toString());
+    checkExpectedError(NON_EXIST_ACCESS_PROVIDER_A, inactiveAccessProviderErrors, 0, POL_ACCESS_PROVIDER_NOT_FOUND, reqData, 1);
 
     // Inactive access provider
-    Errors nonExistedAccessProviderErrors = verifyPostResponseErrors(1, ACTIVE_VENDOR_ID, ACTIVE_ACCESS_PROVIDER_A, INACTIVE_ACCESS_PROVIDER_A);
-    checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, nonExistedAccessProviderErrors, 0, POL_ACCESS_PROVIDER_IS_INACTIVE);
+    reqData.setVendor(ACTIVE_VENDOR_ID);
+    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
+    reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
+    Errors nonExistedAccessProviderErrors = verifyPostResponseErrors(1, JsonObject.mapFrom(reqData).toString());
+    checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, nonExistedAccessProviderErrors, 0, POL_ACCESS_PROVIDER_IS_INACTIVE, reqData, 1);
 
     // Inactive vendor and inactive access providers
-    Errors allInactiveErrors = verifyPostResponseErrors(3, INACTIVE_VENDOR_ID, INACTIVE_ACCESS_PROVIDER_A, INACTIVE_ACCESS_PROVIDER_B);
-    checkExpectedError(INACTIVE_VENDOR_ID, allInactiveErrors, 0, ORDER_VENDOR_IS_INACTIVE);
-    checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, allInactiveErrors, 1, POL_ACCESS_PROVIDER_IS_INACTIVE);
-    checkExpectedError(INACTIVE_ACCESS_PROVIDER_B, allInactiveErrors, 2, POL_ACCESS_PROVIDER_IS_INACTIVE);
+    reqData.setVendor(INACTIVE_VENDOR_ID);
+    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
+    reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_B);
+    Errors allInactiveErrors = verifyPostResponseErrors(3, JsonObject.mapFrom(reqData).toString());
+    checkExpectedError(INACTIVE_VENDOR_ID, allInactiveErrors, 0, ORDER_VENDOR_IS_INACTIVE, reqData, 0);
+    checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, allInactiveErrors, 1, POL_ACCESS_PROVIDER_IS_INACTIVE, reqData, 1);
+    checkExpectedError(INACTIVE_ACCESS_PROVIDER_B, allInactiveErrors, 2, POL_ACCESS_PROVIDER_IS_INACTIVE, reqData, 1);
 
   }
 
@@ -1670,6 +1694,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    for (int i = 0; i < reqData.getCompositePoLines().size(); i++) {
+      reqData.getCompositePoLines().get(i).setPoLineNumber("number-" + i);
+    }
 
     // Positive cases
     reqData.setVendor(ACTIVE_VENDOR_ID);
@@ -1692,7 +1719,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
     Errors nonExistedVendorErrors
       = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), EMPTY, 422).as(Errors.class);
-    checkExpectedError(NON_EXIST_VENDOR_ID, nonExistedVendorErrors, 0, ORDER_VENDOR_NOT_FOUND);
+    checkExpectedError(NON_EXIST_VENDOR_ID, nonExistedVendorErrors, 0, ORDER_VENDOR_NOT_FOUND, reqData, 0);
 
     // Inactive access provider
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
@@ -1701,7 +1728,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
     Errors inactiveAccessProviderErrors
       = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), EMPTY, 422).as(Errors.class);
-    checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, inactiveAccessProviderErrors, 0, POL_ACCESS_PROVIDER_IS_INACTIVE);
+    checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, inactiveAccessProviderErrors, 0, POL_ACCESS_PROVIDER_IS_INACTIVE, reqData, 1);
 
     // Inactive vendor and inactive access providers
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
@@ -1710,9 +1737,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_B);
     Errors allInactiveErrors
       = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), EMPTY, 422).as(Errors.class);
-    checkExpectedError(INACTIVE_VENDOR_ID, allInactiveErrors, 0, ORDER_VENDOR_IS_INACTIVE);
-    checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, allInactiveErrors, 1, POL_ACCESS_PROVIDER_IS_INACTIVE);
-    checkExpectedError(INACTIVE_ACCESS_PROVIDER_B, allInactiveErrors, 2, POL_ACCESS_PROVIDER_IS_INACTIVE);
+    checkExpectedError(INACTIVE_VENDOR_ID, allInactiveErrors, 0, ORDER_VENDOR_IS_INACTIVE, reqData, 0);
+    checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, allInactiveErrors, 1, POL_ACCESS_PROVIDER_IS_INACTIVE, reqData, 1);
+    checkExpectedError(INACTIVE_ACCESS_PROVIDER_B, allInactiveErrors, 2, POL_ACCESS_PROVIDER_IS_INACTIVE, reqData, 1);
   }
 
   @Test
@@ -1752,31 +1779,37 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     });
   }
 
-  private Errors verifyPostResponseErrors(int expectedErrorsNumber, String vendorId, String... accessProviderIds) throws Exception {
-    Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, getPoWithVendorId(vendorId, accessProviderIds),
+  private Errors verifyPostResponseErrors(int expectedErrorsNumber, String body) {
+    Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
     assertThat(errors.getTotalRecords(), equalTo(expectedErrorsNumber));
     assertThat(errors.getErrors(), hasSize(expectedErrorsNumber));
     return errors;
   }
 
-  private String getPoWithVendorId(String vendorId, String... accessProviderIds) throws Exception {
+
+  private CompositePurchaseOrder getPoWithVendorId(String vendorId, String... accessProviderIds) throws Exception {
     CompositePurchaseOrder comPo = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     comPo.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     comPo.setVendor(vendorId);
     for(int i = 0; i < accessProviderIds.length; i++) {
       comPo.getCompositePoLines().get(i).getEresource().setAccessProvider(accessProviderIds[i]);
     }
-    return JsonObject.mapFrom(comPo).toString();
+    return comPo;
   }
 
-  private void checkExpectedError(String id, Errors errors, int index, ErrorCodes expectedErrorCodes) {
+  private void checkExpectedError(String id, Errors errors, int index, ErrorCodes expectedErrorCodes, CompositePurchaseOrder purchaseOrder, int expectedPoLineEntriesinErrors) {
     Error error = errors.getErrors().get(index);
     assertThat(error.getCode(), equalTo(expectedErrorCodes.getCode()));
     assertThat(error.getMessage(), equalTo(expectedErrorCodes.getDescription()));
-    assertThat(error.getParameters(), hasSize(1));
+    assertThat(error.getParameters(), hasSize(expectedPoLineEntriesinErrors + 1));
     assertThat(error.getParameters().get(0).getKey(), equalTo(ID));
     assertThat(error.getParameters().get(0).getValue(), equalTo(id));
+    if(expectedPoLineEntriesinErrors > 0) {
+      List<String> poLineNumbersFromError = error.getParameters().stream().filter(p -> p.getKey().equals("poLineNumber")).map(Parameter::getValue).collect(toList());
+      List<String> poLineNumbers = purchaseOrder.getCompositePoLines().stream().map(CompositePoLine::getPoLineNumber).collect(toList());
+      poLineNumbersFromError.forEach(p -> assertThat(poLineNumbers.contains(p), is(true)));
+    }
   }
 
   private static JsonObject getMockDraftOrder() throws Exception {
