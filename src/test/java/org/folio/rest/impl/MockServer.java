@@ -61,6 +61,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
@@ -246,6 +247,7 @@ public class MockServer {
     router.route(HttpMethod.GET, resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
     router.route(HttpMethod.GET, resourcesPath(PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
     router.route(HttpMethod.GET, "/contributor-name-types").handler(this::handleGetContributorNameTypes);
+    router.route(HttpMethod.GET, resourcesPath(ORDER_LINES)).handler(this::handleGetOrderLines);
 
     router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
     router.route(HttpMethod.PUT, resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -1098,6 +1100,47 @@ public class MockServer {
       }
     } catch (IOException e) {
       serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Mock-server error");
+    }
+  }
+
+  private void handleGetOrderLines(RoutingContext ctx) {
+    logger.info("handleGetOrderLines got: {}?{}", ctx.request().path(), ctx.request().query());
+
+    String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+    if (queryParam.contains(BAD_QUERY)) {
+      serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
+    }
+    String poId = null;
+    if (queryParam.contains(PURCHASE_ORDER_ID)) {
+      poId = queryParam.split(PURCHASE_ORDER_ID + "==")[1];
+    }
+
+    try {
+      PoLineCollection poLineCollection = null;
+      if (poId.equals(ORDER_ID_WITH_PO_LINES)) {
+        poLineCollection = new JsonObject(ApiTestBase.getMockData(POLINES_COLLECTION)).mapTo(PoLineCollection.class);
+        Iterator<PoLine> iterator = poLineCollection.getPoLines().iterator();
+        while (iterator.hasNext()) {
+          PoLine poLine = iterator.next();
+          if (!poId.equals(poLine.getPurchaseOrderId())) {
+            iterator.remove();
+          }
+        }
+        poLineCollection.setTotalRecords(poLineCollection.getPoLines().size());
+      }
+
+      // Update calculated data
+      updatePoLineCalculatedData(poLineCollection);
+
+      JsonObject po_lines = JsonObject.mapFrom(poLineCollection);
+      logger.info(po_lines.encodePrettily());
+
+      addServerRqRsData(HttpMethod.GET, PO_LINES, po_lines);
+      serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encode());
+    } catch (IOException e) {
+      PoLineCollection poLineCollection = new PoLineCollection();
+      poLineCollection.setTotalRecords(0);
+      serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(poLineCollection).encodePrettily());
     }
   }
 }
