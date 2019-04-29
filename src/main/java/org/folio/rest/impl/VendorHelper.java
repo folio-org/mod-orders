@@ -7,6 +7,9 @@ import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.rest.acq.model.Organization;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.acq.model.Vendor;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -17,9 +20,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
@@ -34,9 +37,12 @@ import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 
 public class VendorHelper extends AbstractHelper {
 
+
   static final String ORGANIZATIONS = "organizations";
   private static final String ORGANIZATIONS_STORAGE_VENDORS = "/organizations-storage/organizations/";
   private static final String ORGANIZATIONS_WITH_QUERY_ENDPOINT = "/organizations-storage/organizations?limit=%d&lang=%s&query=%s";
+  private static final String PO_LINE_NUMBER = "poLineNumber";
+
 
   public VendorHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
@@ -95,7 +101,14 @@ public class VendorHelper extends AbstractHelper {
    */
   public CompletableFuture<Errors> validateAccessProviders(CompositePurchaseOrder compPO) {
     CompletableFuture<Errors> future = new VertxCompletableFuture<>(ctx);
-    Set<String> ids = verifyAndGetAccessProvidersIdsList(compPO);
+
+    Map<String, List<CompositePoLine>> poLinesMap =
+      compPO.getCompositePoLines().stream()
+        .filter(p -> (p.getEresource() != null && p.getEresource().getAccessProvider() != null))
+        .collect(Collectors.groupingBy(p -> p.getEresource().getAccessProvider()));
+
+    Set<String> ids = poLinesMap.keySet();
+
     List<Error> errors = new ArrayList<>();
     if (!ids.isEmpty()) {
       logger.debug("Validating {} access provider(s) for order with id={}", ids.size(), compPO.getId());
@@ -104,7 +117,7 @@ public class VendorHelper extends AbstractHelper {
         // Validate access provider status Active
         organizations.forEach(organization -> {
           if(VendorStatus.valueOf(organization.getStatus().toUpperCase()) != VendorStatus.ACTIVE) {
-            errors.add(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, organization.getId()));
+            errors.add(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, organization.getId(), poLinesMap.get(organization.getId())));
           }
           if (null == organization.getIsVendor() || !organization.getIsVendor()) {
             errors.add(createErrorWithId(ACCESSPROVIDER_NOT_A_VENDOR, organization.getId()));
@@ -116,7 +129,7 @@ public class VendorHelper extends AbstractHelper {
           .collect(toList());
         ids.stream()
           .filter(id -> !vendorsIds.contains(id))
-          .forEach(id -> errors.add(createErrorWithId(POL_ACCESS_PROVIDER_NOT_FOUND, id)));
+          .forEach(id -> errors.add(createErrorWithId(POL_ACCESS_PROVIDER_NOT_FOUND, id, poLinesMap.get(id))));
         return handleAndReturnErrors(errors);
       }).thenAccept(future::complete)
         .exceptionally(t -> {
@@ -161,6 +174,22 @@ public class VendorHelper extends AbstractHelper {
   }
 
   /**
+   * Creates {@link Error} with id of corresponding vendor/access provider and poLines ids
+   *
+   * @param id vendor's/access provider's identifier
+   * @param errorCodes error code
+   * @param poLines list of composite PoLines
+   * @return {@link Error} with id of failed vendor/access provider
+   */
+  private Error createErrorWithId(ErrorCodes errorCodes, String id, List<CompositePoLine> poLines) {
+    Error error = createErrorWithId(errorCodes, id);
+    poLines.stream()
+      .filter(p -> p.getPoLineNumber() != null)
+      .forEach(p -> error.getParameters().add(new Parameter().withKey(PO_LINE_NUMBER).withValue(p.getPoLineNumber())));
+    return error;
+  }
+
+  /**
    * Retrieves vendor by id
    *
    * @param vendorId vendor's id
@@ -186,19 +215,6 @@ public class VendorHelper extends AbstractHelper {
         .map(obj -> ((JsonObject) obj).mapTo(Organization.class))
         .collect(toList())
       );
-  }
-
-  /**
-   * Returns set of access providers ids for composite purchase order
-   *
-   * @param compPO composite purchase order
-   * @return {@link Set<String>} of access providers ids
-   */
-  private Set<String> verifyAndGetAccessProvidersIdsList(CompositePurchaseOrder compPO) {
-    return compPO.getCompositePoLines().stream()
-      .filter(p -> (p.getEresource() != null && p.getEresource().getAccessProvider() != null))
-      .map(p -> p.getEresource().getAccessProvider())
-      .collect(toSet());
   }
 
   public enum VendorStatus {
