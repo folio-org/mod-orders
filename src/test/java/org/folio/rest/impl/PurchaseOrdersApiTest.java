@@ -63,6 +63,7 @@ import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
+import static org.folio.orders.utils.ErrorCodes.ORGANIZATION_NOT_A_VENDOR;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
@@ -120,6 +121,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   static final String NON_EXIST_VENDOR_ID = "bba87500-6e71-4057-a2a9-a091bac7e0c1";
   static final String MOD_VENDOR_INTERNAL_ERROR_ID = "bba81500-6e41-4057-a2a9-a081bac7e0c1";
   static final String VENDOR_WITH_BAD_CONTENT = "5a34ae0e-5a11-4337-be95-1a20cfdc3161";
+  static final String ORGANIZATION_NOT_VENDOR = "52a7669b-0e6d-4513-92be-14086c7d10e6";
   private static final String EXISTING_REQUIRED_VENDOR_UUID = "168f8a86-d26c-406e-813f-c7527f241ac3";
 
   static final String ACTIVE_ACCESS_PROVIDER_A = "858e80d2-f562-4c54-9934-6e274dee511d";
@@ -685,7 +687,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
     request.put("orderType", "Ongoing");
     String body= request.toString();
-    
+
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
       prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
@@ -1777,6 +1779,29 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
         assertThat(error.getParameters().get(0).getValue(), equalTo(VENDOR_WITH_BAD_CONTENT));
       }
     });
+  }
+
+
+  @Test
+  public void testPutOrderToChangeStatusToOpenwithOrganizationNotVendor() throws Exception {
+
+    logger.info("=== Test Put Order to change status of Order to Open - organization which is not vendor ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+
+    // Prepare order
+    reqData.setVendor(ORGANIZATION_NOT_VENDOR);
+    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ORGANIZATION_NOT_VENDOR);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()),
+        JsonObject.mapFrom(reqData), EMPTY, 422).as(Errors.class);
+
+    assertThat(errors.getErrors(), hasSize(1));
+
+    checkExpectedError(ORGANIZATION_NOT_VENDOR, errors, 0, ORGANIZATION_NOT_A_VENDOR, reqData, 0);
+
   }
 
   private Errors verifyPostResponseErrors(int expectedErrorsNumber, String body) {

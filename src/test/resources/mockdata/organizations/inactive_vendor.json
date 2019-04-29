@@ -3,6 +3,7 @@
   "name": "Amazon.com",
   "code": "AMAZ",
   "description": "Use for rush orders, replacement requests, and second hand market",
-  "vendor_status": "Inactive",
-  "language": "en-us"
+  "status": "Inactive",
+  "language": "en-us",
+  "isVendor": true
 }
