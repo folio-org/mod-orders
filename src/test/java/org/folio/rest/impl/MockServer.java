@@ -53,6 +53,7 @@ import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
@@ -233,7 +234,8 @@ public class MockServer {
     router.route(HttpMethod.POST, resourcesPath(PIECES)).handler(ctx -> handlePostGenericSubObj(ctx, PIECES));
 
     router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)+"/:id").handler(this::handleGetPurchaseOrderById);
-    router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)).handler(this::handleGetPurchaseOrderByQuery);
+    router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, PURCHASE_ORDER));
+    router.route(HttpMethod.GET, resourcesPath(SEARCH_ORDERS)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, SEARCH_ORDERS));
     router.route(HttpMethod.GET, "/instance-types").handler(this::handleGetInstanceType);
     router.route(HttpMethod.GET, "/instance-statuses").handler(this::handleGetInstanceStatus);
     router.route(HttpMethod.GET, "/identifier-types").handler(this::handleGetIdentifierType);
@@ -956,7 +958,7 @@ public class MockServer {
     }
   }
 
-  private void handleGetPurchaseOrderByQuery(RoutingContext ctx) {
+  private void handleGetPurchaseOrderByQuery(RoutingContext ctx, String orderType) {
 
     String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
     if (queryParam.contains(BAD_QUERY)) {
@@ -965,7 +967,7 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       JsonObject po = new JsonObject();
-      addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
+      addServerRqRsData(HttpMethod.GET, orderType, po);
       final String PO_NUMBER_QUERY = "poNumber==";
       switch (queryParam) {
         case PO_NUMBER_QUERY + EXISTING_PO_NUMBER:
@@ -981,7 +983,7 @@ public class MockServer {
           //modify later as needed
           po.put(TOTAL_RECORDS, 0);
       }
-      addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
+      addServerRqRsData(HttpMethod.GET, orderType, po);
       serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
     }
   }
