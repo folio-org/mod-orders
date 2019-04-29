@@ -61,7 +61,7 @@ Upon receiving a request to update a PO Line, it does the following:
     For example, to add `reportingCode` sub-object `POST` request should be sent to [/orders-storage/reporting-codes](https://s3.amazonaws.com/foliodocs/api/mod-orders-storage/reporting-code.html#orders_storage_reporting-codess_post) endpoint.
 * Final step is to store the updated PO Line content with references to the created/updated sub-objects. The `PUT` request is being sent to [/orders-storage/po-lines/{id}](https://s3.amazonaws.com/foliodocs/api/mod-orders-storage/po-line.html#orders_storage_po_lines__id__put) endpoint.
 
-Note: the PO Line update might lead to Order's workflow status update(see [MODORDERS-218](https://issues.folio.org/browse/MODORDERS-218) for more details)
+Note: the PO Line update might lead to Order's workflow status update (see [MODORDERS-218](https://issues.folio.org/browse/MODORDERS-218) for more details)
 
 Upon receiving a request to delete a PO Line, it does the following:
 * Retrieve PO line by the `id` of the PO and delete them; then
@@ -139,7 +139,7 @@ Sample of the requests:
     }
     ```
 
-Note: receiving might lead to Order's workflow status update(see [MODORDERS-218](https://issues.folio.org/browse/MODORDERS-218) for more details)
+Note: receiving might lead to Order's workflow status update (see [MODORDERS-218](https://issues.folio.org/browse/MODORDERS-218) for more details)
 
 ### Issue tracker
 
