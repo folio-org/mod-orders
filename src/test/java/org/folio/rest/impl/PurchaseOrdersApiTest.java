@@ -63,6 +63,7 @@ import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
+import static org.folio.orders.utils.ErrorCodes.ORGANIZATION_NOT_A_VENDOR;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
@@ -120,6 +121,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   static final String NON_EXIST_VENDOR_ID = "bba87500-6e71-4057-a2a9-a091bac7e0c1";
   static final String MOD_VENDOR_INTERNAL_ERROR_ID = "bba81500-6e41-4057-a2a9-a081bac7e0c1";
   static final String VENDOR_WITH_BAD_CONTENT = "5a34ae0e-5a11-4337-be95-1a20cfdc3161";
+  static final String ORGANIZATION_NOT_VENDOR = "52a7669b-0e6d-4513-92be-14086c7d10e6";
   private static final String EXISTING_REQUIRED_VENDOR_UUID = "168f8a86-d26c-406e-813f-c7527f241ac3";
 
   static final String ACTIVE_ACCESS_PROVIDER_A = "858e80d2-f562-4c54-9934-6e274dee511d";
@@ -685,7 +687,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
     request.put("orderType", "Ongoing");
     String body= request.toString();
-    
+
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
       prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
@@ -806,10 +808,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, ORDER_ID_WITHOUT_PO_LINES));
     String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_ID_WITHOUT_PO_LINES);
     final CompositePurchaseOrder resp = verifySuccessGet(url, CompositePurchaseOrder.class);
-
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
-    assertEquals(ORDER_ID_WITHOUT_PO_LINES, resp.getId());
+    assertEquals(PO_ID_PENDING_STATUS_WITHOUT_PO_LINES, resp.getId());
     assertEquals(0, resp.getTotalItems().intValue());
   }
 
@@ -1050,7 +1051,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testPoUpdateWithOverLimitPOLines() throws Exception {
     logger.info("=== Test PUT PO, with over limit lines quantity ===");
 
-    String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_ID_WITHOUT_PO_LINES);
+    String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID_PENDING_STATUS_WITHOUT_PO_LINES);
     String body = getMockData(LISTED_PRINT_MONOGRAPH_PATH);
     Headers headers = prepareHeaders(X_OKAPI_URL, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1, X_OKAPI_TOKEN, X_OKAPI_USER_ID);
     final Errors errors = verifyPut(url, body, headers, APPLICATION_JSON, 422).body().as(Errors.class);
@@ -1065,7 +1066,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testPoUpdateWithOverLimitPOLinesWithDefaultLimit() throws Exception {
     logger.info("=== Test PUT PO, with over limit lines quantity with default limit ===");
 
-    String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_ID_WITHOUT_PO_LINES);
+    String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID_PENDING_STATUS_WITHOUT_PO_LINES);
     String body = getMockData(LISTED_PRINT_MONOGRAPH_PATH);
     Headers headers = prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID);
     final Errors errors = verifyPut(url, body, headers, APPLICATION_JSON, 422).body().as(Errors.class);
@@ -1446,7 +1447,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     JsonObject reqData = getMockDraftOrder();
     String poNumber = reqData.getString(PO_NUMBER);
 
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_ID_WITHOUT_PO_LINES), reqData, "", 204);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID_PENDING_STATUS_WITHOUT_PO_LINES), reqData, "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT));
     List<JsonObject> createdPoLines = MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST);
@@ -1482,7 +1483,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("=== Test Put Order By Id for 422 with Invalid Id in the Order ===");
 
     CompositePurchaseOrder reqData = getMockAsJson(LISTED_PRINT_SERIAL_PATH).mapTo(CompositePurchaseOrder.class);
-    reqData.setId(PO_ID);
+    reqData.setId(PO_ID_PENDING_STATUS_WITH_PO_LINES);
 
     Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID_FOR_FAILURE_CASE),
       JsonObject.mapFrom(reqData), APPLICATION_JSON, 422).as(Errors.class);
@@ -1498,7 +1499,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     CompositePurchaseOrder reqData = getMockAsJson(LISTED_PRINT_SERIAL_PATH).mapTo(CompositePurchaseOrder.class);
     reqData.getCompositePoLines().forEach(line -> line.setPurchaseOrderId(PO_ID_FOR_FAILURE_CASE));
 
-    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID),
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID_PENDING_STATUS_WITH_PO_LINES),
       JsonObject.mapFrom(reqData), APPLICATION_JSON, 422).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(reqData.getCompositePoLines().size()));
@@ -1777,6 +1778,29 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
         assertThat(error.getParameters().get(0).getValue(), equalTo(VENDOR_WITH_BAD_CONTENT));
       }
     });
+  }
+
+
+  @Test
+  public void testPutOrderToChangeStatusToOpenwithOrganizationNotVendor() throws Exception {
+
+    logger.info("=== Test Put Order to change status of Order to Open - organization which is not vendor ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+
+    // Prepare order
+    reqData.setVendor(ORGANIZATION_NOT_VENDOR);
+    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ORGANIZATION_NOT_VENDOR);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()),
+        JsonObject.mapFrom(reqData), EMPTY, 422).as(Errors.class);
+
+    assertThat(errors.getErrors(), hasSize(1));
+
+    checkExpectedError(ORGANIZATION_NOT_VENDOR, errors, 0, ORGANIZATION_NOT_A_VENDOR, reqData, 0);
+
   }
 
   private Errors verifyPostResponseErrors(int expectedErrorsNumber, String body) {

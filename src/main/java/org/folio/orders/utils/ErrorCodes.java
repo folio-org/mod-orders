@@ -40,7 +40,8 @@ public enum ErrorCodes {
   COST_UNIT_PRICE_ELECTRONIC_INVALID("costUnitPriceElectronicInvalid", "Cost's list unit price for Electronic resource(s) is invalid"),
   COST_ADDITIONAL_COST_INVALID("costAdditionalCostInvalid", "Cost's additional cost must be positive number"),
   COST_DISCOUNT_INVALID("costDiscountInvalid", "Cost's discount is invalid"),
-  LOC_NOT_PROVIDED("locNotProvided", "Location not provided");
+  LOC_NOT_PROVIDED("locNotProvided", "Location not provided"),
+  ORGANIZATION_NOT_A_VENDOR("organizationNotAVendor", "Order cannot be opened as the associated vendorId belongs to an organization not vendor");
 
   private final String code;
   private final String description;
