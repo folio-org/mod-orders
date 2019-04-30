@@ -211,6 +211,10 @@ public class MockServer {
     return serverRqRs.get(PIECES, HttpMethod.GET);
   }
 
+  static List<JsonObject> getOrderLineSearches() {
+    return serverRqRs.get(ORDER_LINES, HttpMethod.GET);
+  }
+
   private Router defineRoutes() {
     Router router = Router.router(vertx);
 
@@ -1135,7 +1139,7 @@ public class MockServer {
       JsonObject po_lines = JsonObject.mapFrom(poLineCollection);
       logger.info(po_lines.encodePrettily());
 
-      addServerRqRsData(HttpMethod.GET, PO_LINES, po_lines);
+      addServerRqRsData(HttpMethod.GET, ORDER_LINES, po_lines);
       serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encode());
     } catch (IOException e) {
       PoLineCollection poLineCollection = new PoLineCollection();

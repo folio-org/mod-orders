@@ -46,6 +46,8 @@ import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ORDER_ID_WITH_PO_LINES;
 import static org.folio.rest.impl.MockServer.PO_NUMBER_ERROR_X_OKAPI_TENANT;
+import static org.folio.rest.impl.MockServer.getPoLineSearches;
+import static org.folio.rest.impl.MockServer.getOrderLineSearches;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -54,10 +56,7 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
@@ -547,6 +546,8 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
     assertEquals(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE, resp.getId());
+    assertEquals(1, getPoLineSearches().size());
+    assertNull(getOrderLineSearches());
   }
 
   @Test
@@ -588,6 +589,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
   }
 
+
   @Test
   public void testGetOrderPOLinesByPoId() {
     logger.info("=== Test Get Orders lines - With empty query ===");
@@ -597,6 +599,8 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     final PoLineCollection poLineCollection = verifySuccessGet(endpointQuery, PoLineCollection.class);
 
     assertEquals(2, poLineCollection.getTotalRecords().intValue());
+    assertEquals(1, getOrderLineSearches().size());
+    assertNull(getPoLineSearches());
   }
 
   private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {
