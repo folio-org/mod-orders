@@ -238,12 +238,12 @@
             </configuration>
           </execution>
           <execution>
-            <id>mod-vendors</id>
+            <id>mod-orgs</id>
             <goals>
               <goal>generate</goal>
             </goals>
             <configuration>
-              <sourceDirectory>${basedir}/ramls/acq-models/mod-vendors/schemas</sourceDirectory>
+              <sourceDirectory>${basedir}/ramls/acq-models/mod-orgs/schemas</sourceDirectory>
               <targetPackage>org.folio.rest.acq.model</targetPackage>
             </configuration>
           </execution>
