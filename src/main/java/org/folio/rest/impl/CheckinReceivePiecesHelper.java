@@ -34,7 +34,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   static final int MAX_IDS_FOR_GET_RQ = 15;
   private static final String PIECES_WITH_QUERY_ENDPOINT = resourcesPath(PIECES) + "?limit=%d&lang=%s&query=%s";
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
-  public static final String HOLDINGS_GET_ENDPOINT = "/holdings-storage/holdings/%s?lang=%s";
   Map<String, Map<String, T>> piecesByLineId;
   final InventoryHelper inventoryHelper;
   Map<String, Map<String, Error>> processingErrors;
@@ -179,7 +178,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     }
   }
 
-  PoLine searchPoLineById(List<PoLine> poLines, String polineId) {
+  private PoLine searchPoLineById(List<PoLine> poLines, String polineId) {
     for (PoLine  poline: poLines){
       if (poline.getId().equals(polineId)){
         return poline;
@@ -187,7 +186,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     } return null;
   }
 
-  CompletableFuture<Boolean> updateHoldingAndItem(JsonObject item, Piece piece, PoLine poLine, String locationId) {
+  private CompletableFuture<Boolean> updateHoldingAndItem(JsonObject item, Piece piece, PoLine poLine, String locationId) {
     if (holdingUpdateOnCheckinReceiveRequired(piece, locationId, poLine)) {
       return inventoryHelper.getOrCreateHoldingsRecord(poLine.getInstanceId(), locationId)
         .thenCompose(holdingId -> {
@@ -200,7 +199,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     }
   }
 
-  boolean holdingUpdateOnCheckinReceiveRequired(Piece piece, String locationId, PoLine poLine) {
+  private boolean holdingUpdateOnCheckinReceiveRequired(Piece piece, String locationId, PoLine poLine) {
     return isHoldingsUpdateRequired(poLine.getEresource(), poLine.getPhysical())
       && StringUtils.isNotEmpty(locationId)
       && !locationId.equals(piece.getLocationId());
@@ -286,7 +285,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    *          value
    * @return map with item id as key and piece record as a value
    */
-  Map<String, Piece> collectPiecesWithItemId(Map<String, List<Piece>> piecesGroupedByPoLine) {
+  private Map<String, Piece> collectPiecesWithItemId(Map<String, List<Piece>> piecesGroupedByPoLine) {
     return StreamEx
       .ofValues(piecesGroupedByPoLine)
       .flatMap(List::stream)
@@ -421,7 +420,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       .toList();
   }
 
-  CompletableFuture<List<PoLine>> getPoLines(List<String> poLineIds) {
+  private CompletableFuture<List<PoLine>> getPoLines(List<String> poLineIds) {
     if(poLineList == null) {
       return collectResultsOnSuccess(StreamEx
           .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ)
@@ -638,4 +637,48 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
   abstract String getLocationId(Piece piece);
 
+  /**
+   * Updates items in the inventory storage with check-in/receiving details if any. On
+   * success updates corresponding records as received
+   *
+   * @return {@link CompletableFuture} which holds map with PO line id as key
+   *         and list of corresponding pieces as value
+   */
+  CompletableFuture<Map<String, List<Piece>>> updateInventoryItems(Map<String, Map<String, String>> pieceLocationsGroupedByPoLine, Map<String, List<Piece>> piecesGroupedByPoLine) {
+    // Collect all piece records with non-empty item ids. The result is a map
+    // with item id as a key and piece record as a value
+    Map<String, Piece> piecesWithItems = collectPiecesWithItemId(piecesGroupedByPoLine);
+    List<String> polineIds = new ArrayList<>(piecesGroupedByPoLine.keySet());
+
+    // If there are no pieces with ItemId, continue
+    if (piecesWithItems.isEmpty()) {
+      return completedFuture(piecesGroupedByPoLine);
+    }
+
+    return getItemRecords(piecesWithItems)
+      .thenCombine(getPoLines(polineIds), (items, poLines) -> {
+        List<CompletableFuture<Boolean>> futuresForItemUpdates = new ArrayList<>();
+        for (JsonObject item : items) {
+          String itemId = item.getString(ID);
+          Piece piece = piecesWithItems.get(itemId);
+
+          PoLine poLine = searchPoLineById(poLines, piece.getPoLineId());
+          String pieceLocation = pieceLocationsGroupedByPoLine.get(poLine.getId()).get(piece.getId());
+
+          futuresForItemUpdates.add(updateHoldingAndItem(item, piece, poLine, pieceLocation));
+        }
+
+        return futuresForItemUpdates;
+      })
+      .thenCompose(HelperUtils::collectResultsOnSuccess)
+      .thenApply(results -> {
+        if (logger.isDebugEnabled()) {
+          long successQty = results.stream()
+            .filter(result -> result)
+            .count();
+          logger.debug("{} out of {} inventory item(s) successfully updated", successQty, results.size());
+        }
+        return piecesGroupedByPoLine;
+      });
+  }
 }

@@ -5,7 +5,6 @@ import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.*;
@@ -13,10 +12,10 @@ import org.folio.rest.jaxrs.model.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.*;
 import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
-import static org.folio.orders.utils.HelperUtils.*;
+import static org.folio.orders.utils.HelperUtils.buildQuery;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
@@ -52,13 +51,13 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   }
 
   CompletableFuture<ReceivingResults> receiveItems(ReceivingCollection receivingCollection) {
-
+    Map<String, Map<String, String>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnReceiving(receivingCollection);
     // 1. Get piece records from storage
     return this.retrievePieceRecords(receivingItems)
       // 2. Filter locationId
       .thenCompose(this::filterMissingLocations)
       // 3. Update items in the Inventory if required
-      .thenCompose(pieces -> updateInventoryItemsOnReceiving(receivingItems, pieces))
+      .thenCompose(pieces -> updateInventoryItems(pieceLocationsGroupedByPoLine, pieces))
       // 4. Update piece records with receiving details which do not have associated item
       .thenApply(this::updatePieceRecordsWithoutItems)
       // 5. Update received piece records in the storage
@@ -69,49 +68,16 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       .thenApply(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
   }
 
-  /**
-   * Updates items in the inventory storage with receiving details if any. On
-   * success updates corresponding records as received
-   *
-   * @return {@link CompletableFuture} which holds map with PO line id as key
-   *         and list of corresponding pieces as value
-   */
-  CompletableFuture<Map<String, List<Piece>>> updateInventoryItemsOnReceiving(Map<String, Map<String, ReceivedItem>> receivingCollection, Map<String, List<Piece>> piecesGroupedByPoLine) {
-    // Collect all piece records with non-empty item ids. The result is a map
-    // with item id as a key and piece record as a value
-    Map<String, Piece> piecesWithItems = collectPiecesWithItemId(piecesGroupedByPoLine);
-    List<String> polineIds = new ArrayList<>(piecesGroupedByPoLine.keySet());
-
-    // If there are no pieces with ItemId, continue
-    if (piecesWithItems.isEmpty()) {
-      return completedFuture(piecesGroupedByPoLine);
-    }
-
-    return getItemRecords(piecesWithItems)
-      .thenCombine(getPoLines(polineIds), (items, poLines) -> {
-        List<CompletableFuture<Boolean>> futuresForItemUpdates = new ArrayList<>();
-        for (JsonObject item : items) {
-          String itemId = item.getString(ID);
-          Piece piece = piecesWithItems.get(itemId);
-
-          PoLine poLine = searchPoLineById(poLines, piece.getPoLineId());
-          ReceivedItem receivedItem = receivingCollection.get(poLine.getId()).get(piece.getId());
-
-          futuresForItemUpdates.add(updateHoldingAndItem(item, piece, poLine, receivedItem.getLocationId()));
-        }
-
-        return futuresForItemUpdates;
-      })
-      .thenCompose(HelperUtils::collectResultsOnSuccess)
-      .thenApply(results -> {
-        if (logger.isDebugEnabled()) {
-          long successQty = results.stream()
-            .filter(result -> result)
-            .count();
-          logger.debug("{} out of {} inventory item(s) successfully updated", successQty, results.size());
-        }
-        return piecesGroupedByPoLine;
-      });
+  private Map<String, Map<String, String>> groupLocationsByPoLineIdOnReceiving(ReceivingCollection receivingCollection) {
+    return StreamEx
+      .of(receivingCollection.getToBeReceived())
+      .groupingBy(ToBeReceived::getPoLineId,
+        mapping(ToBeReceived::getReceivedItems,
+          collectingAndThen(toList(),
+            lists -> StreamEx.of(lists)
+              .flatMap(List::stream)
+              .filter(receivedItem -> receivedItem.getLocationId() != null)
+              .toMap(ReceivedItem::getPieceId, ReceivedItem::getLocationId))));
   }
 
   CompletableFuture<ReceivingHistoryCollection> getReceivingHistory(int limit, int offset, String query) {
