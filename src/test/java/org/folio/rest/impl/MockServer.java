@@ -68,6 +68,7 @@ import static org.folio.rest.impl.ApiTestBase.COMP_ORDER_MOCK_DATA_PATH;
 import static org.folio.rest.impl.ApiTestBase.ID;
 import static org.folio.rest.impl.ApiTestBase.ID_DOES_NOT_EXIST;
 import static org.folio.rest.impl.ApiTestBase.ID_FOR_INTERNAL_SERVER_ERROR;
+import static org.folio.rest.impl.ApiTestBase.PO_ID_GET_LINES_INTERNAL_SERVER_ERROR;
 import static org.folio.rest.impl.ApiTestBase.PO_LINE_NUMBER_VALUE;
 import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEMS;
@@ -167,8 +168,16 @@ public class MockServer {
     return serverRqRs.get(PO_LINES, HttpMethod.PUT);
   }
 
-  static List<JsonObject> getPoLineSearches() {
+  public static List<JsonObject> getPoLineSearches() {
     return serverRqRs.get(PO_LINES, HttpMethod.GET);
+  }
+
+  public static List<JsonObject> getPurchaseOrderRetrievals() {
+    return serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET);
+  }
+
+  public static List<JsonObject> getPurchaseOrderUpdates() {
+    return serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT);
   }
 
   static List<JsonObject> getPieceUpdates() {
@@ -632,7 +641,7 @@ public class MockServer {
     String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
     if (queryParam.contains(BAD_QUERY)) {
       serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
-    } else if (queryParam.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
+    } else if (queryParam.contains(ID_FOR_INTERNAL_SERVER_ERROR) || queryParam.contains(PO_ID_GET_LINES_INTERNAL_SERVER_ERROR)) {
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       String poId = EMPTY;
@@ -952,7 +961,7 @@ public class MockServer {
       serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
     } catch (IOException e) {
       ctx.response()
-        .setStatusCode(404)
+        .setStatusCode(ID_FOR_INTERNAL_SERVER_ERROR.equals(id) ? 500 : 404)
         .end(id);
     }
   }

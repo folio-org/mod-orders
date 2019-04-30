@@ -1,6 +1,6 @@
 package org.folio.rest.impl;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.completedFuture;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.orders.utils.ErrorCodes.*;
@@ -18,14 +18,16 @@ import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 
 import io.vertx.core.Context;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.EntryStream;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
@@ -345,7 +347,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     CompletableFuture[] futures = StreamEx
       .ofValues(piecesGroupedByPoLine)
       .flatMap(List::stream)
-      .filter(piece -> getError(piece.getPoLineId(), piece.getId()) == null)
+      .filter(this::isSuccessfullyProcessedPiece)
       .map(this::storeUpdatedPieceRecord)
       .toArray(new CompletableFuture[0]);
 
@@ -383,21 +385,47 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     List<String> poLineIdsForUpdatedPieces = getPoLineIdsForUpdatedPieces(piecesGroupedByPoLine);
     // Once all PO Lines are retrieved from storage check if receipt status
     // requires update and persist in storage
-    return getPoLines(piecesGroupedByPoLine)
+    return getPoLines(poLineIdsForUpdatedPieces)
       .thenCompose(poLines -> {
         // Calculate expected status for each PO Line and update with new one if
         // required
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        List<CompletableFuture<String>> futures = new ArrayList<>();
         for (PoLine poLine : poLines) {
-          futures.add(calculatePoLineReceiptStatus(poLine,
-              getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine))
+          List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
+          futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces)
                 .thenCompose(status -> updatePoLineReceiptStatus(poLine, status)));
         }
+
         return collectResultsOnSuccess(futures)
-          .thenAccept(result -> logger.debug("{} out of {} PO Line(s) updated with new status", result.size(),
-              poLineIdsForUpdatedPieces.size()));
+          .thenAccept(updatedPoLines -> {
+            logger.debug("{} out of {} PO Line(s) updated with new status", updatedPoLines.size(), piecesGroupedByPoLine.size());
+
+            // Send event to check order status for successfully processed PO Lines
+            updateOrderStatus(StreamEx
+              .of(poLines)
+              // Leave only successfully updated PO Lines
+              .filter(line -> updatedPoLines.contains(line.getId()))
+              .toList());
+          });
       })
-      .thenApply(v -> piecesGroupedByPoLine);
+      .thenApply(ok -> piecesGroupedByPoLine);
+  }
+
+  private void updateOrderStatus(List<PoLine> poLines) {
+    if (!poLines.isEmpty()) {
+      logger.debug("Sending event to verify order status");
+
+      // Collect order ids which should be processed
+      List<String> poIds = StreamEx
+        .of(poLines)
+        .map(PoLine::getPurchaseOrderId)
+        .distinct()
+        .toList();
+
+      sendEvent(MessageAddress.ORDER_STATUS, new JsonObject().put(ORDER_IDS, new JsonArray(poIds)));
+
+      logger.debug("Event to verify order status - sent");
+    }
   }
 
   private List<String> getPoLineIdsForUpdatedPieces(Map<String, List<Piece>> piecesGroupedByPoLine) {
@@ -407,27 +435,30 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
         .stream()
         // Check if there is at least one piece record which processed
         // successfully
-        .anyMatch(piece -> getError(entry.getKey(), piece.getId()) == null))
+        .anyMatch(this::isSuccessfullyProcessedPiece))
       .keys()
       .toList();
   }
 
-  private CompletableFuture<List<PoLine>> getPoLines(Map<String, List<Piece>> piecesGroupedByPoLine) {
+  private CompletableFuture<List<PoLine>> getPoLines(List<String> poLineIds) {
     if(poLineList == null) {
       return collectResultsOnSuccess(StreamEx
-        .ofSubLists(getPoLineIdsForUpdatedPieces(piecesGroupedByPoLine), MAX_IDS_FOR_GET_RQ)
-        // Transform piece id's to CQL query
-        .map(HelperUtils::convertIdsToCqlQuery)
-        // Send get request for each CQL query
-        .map(this::getPoLinesByQuery)
-        .toList())
+          .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ)
+          // Transform piece id's to CQL query
+          .map(HelperUtils::convertIdsToCqlQuery)
+          // Send get request for each CQL query
+          .map(this::getPoLinesByQuery)
+          .toList())
         .thenApply(lists -> StreamEx.of(lists).toFlatList(poLines -> poLines))
         .thenApply(list -> {
           poLineList = list;
           return list;
         });
     } else {
-      return VertxCompletableFuture.completedFuture(poLineList);
+      return completedFuture(poLineList
+        .stream()
+        .filter(poLine -> poLineIds.contains(poLine.getId()))
+        .collect(Collectors.toList()));
     }
   }
 
@@ -442,7 +473,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
   private List<Piece> getSuccessfullyProcessedPieces(String poLineId, Map<String, List<Piece>> piecesGroupedByPoLine) {
     return StreamEx.of(piecesGroupedByPoLine.get(poLineId))
-      .filter(piece -> getError(poLineId, piece.getId()) == null)
+      .filter(this::isSuccessfullyProcessedPiece)
       .toList();
   }
 
@@ -451,7 +482,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    *          PO Line record from storage
    * @param pieces
    *          list of pieces
-   * @return
+   * @return resulting PO Line status
    */
   private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine, List<Piece> pieces) {
     // Search for pieces with Expected status
@@ -511,10 +542,11 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       .thenApply(json -> json.mapTo(PieceCollection.class).getTotalRecords());
   }
 
-  private CompletableFuture<Void> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status) {
+  private CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status) {
     if (status == null || poLine.getReceiptStatus() == status) {
       return completedFuture(null);
     }
+
     // Update receipt date and receipt status
     if (status == FULLY_RECEIVED) {
       poLine.setReceiptDate(new Date());
@@ -527,18 +559,36 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     }
 
     poLine.setReceiptStatus(status);
+
     // Update PO Line in storage
     return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, ctx,
         okapiHeaders, logger)
-          .exceptionally(e -> {
-            logger.error("The PO Line '{}' cannot be updated with new receipt status", e, poLine.getId());
-            return null;
-          });
+      .thenApply(v -> poLine.getId())
+      .exceptionally(e -> {
+        logger.error("The PO Line '{}' cannot be updated with new receipt status", e, poLine.getId());
+        return null;
+      });
   }
 
+  /**
+   * Checks if there is processing error for particular piece record
+   * @param piece piece record to get error for
+   * @return {@code true} if there is an error associated with piece record
+   */
+  private boolean isSuccessfullyProcessedPiece(Piece piece) {
+    return getError(piece.getPoLineId(), piece.getId()) == null;
+  }
+
+  /**
+   * Gets processing error for particular piece record
+   * @param polId PO Line id
+   * @param pieceId piece id
+   * @return error object if presents or null
+   */
   private Error getError(String polId, String pieceId) {
-    return processingErrors.computeIfAbsent(polId, k -> new HashMap<>())
-      .get(pieceId);
+    return Optional.ofNullable(processingErrors.get(polId))
+     .map(errors -> errors.get(pieceId))
+     .orElse(null);
   }
 
   void addError(String polId, String pieceId, Error error) {
@@ -550,12 +600,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       Map<String, Piece> processedPiecesForPoLine, Map<String, Integer> resultCounts, String pieceId) {
     // Calculate processing status
     ProcessingStatus status = new ProcessingStatus();
-    if (processedPiecesForPoLine.get(pieceId) != null && getError(poLineId, pieceId) == null) {
+    Error error = getError(poLineId, pieceId);
+    if (processedPiecesForPoLine.get(pieceId) != null && error == null) {
       status.setType(ProcessingStatus.Type.SUCCESS);
       resultCounts.merge(ProcessingStatus.Type.SUCCESS.toString(), 1, Integer::sum);
     } else {
       status.setType(ProcessingStatus.Type.FAILURE);
-      status.setError(getError(poLineId, pieceId));
+      status.setError(error);
       resultCounts.merge(ProcessingStatus.Type.FAILURE.toString(), 1, Integer::sum);
     }
 
@@ -565,7 +616,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     result.getReceivingItemResults().add(itemResult);
   }
 
-
   /**
    * Filter by locationId presence for items/pieces related to POLine.
    *
@@ -573,7 +623,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    *         and list of corresponding pieces as value
    */
   CompletableFuture<Map<String, List<Piece>>> filterMissingLocations(Map<String, List<Piece>> piecesRecords) {
-    return getPoLines(piecesRecords)
+    return getPoLines(StreamEx.ofKeys(piecesRecords).toList())
       .thenApply(poLines -> {
         for(PoLine poLine : poLines) {
           piecesRecords.get(poLine.getId()).removeIf(piece -> isMissingLocation(poLine, piece));

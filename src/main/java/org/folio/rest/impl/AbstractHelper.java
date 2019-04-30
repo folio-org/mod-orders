@@ -11,6 +11,7 @@ import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
 import io.vertx.core.Context;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -33,6 +35,7 @@ import org.folio.rest.tools.utils.TenantTool;
 
 public abstract class AbstractHelper {
   public static final String ID = "id";
+  public static final String ORDER_IDS = "orderIds";
   public static final String ERROR_CAUSE = "cause";
 
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -46,26 +49,42 @@ public abstract class AbstractHelper {
   private JsonObject tenantConfiguration;
 
   AbstractHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+    setDefaultHeaders(httpClient);
     this.httpClient = httpClient;
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
     this.lang = lang;
-    setDefaultHeaders();
   }
 
   AbstractHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
-    this.httpClient = getHttpClient(okapiHeaders);
+    this.httpClient = getHttpClient(okapiHeaders, true);
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
     this.lang = lang;
-    setDefaultHeaders();
   }
 
-  public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {
+  protected AbstractHelper(Context ctx) {
+    this.httpClient = null;
+    this.okapiHeaders = null;
+    this.lang = null;
+    this.ctx = ctx;
+  }
+
+  public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders, boolean setDefaultHeaders) {
     final String okapiURL = okapiHeaders.getOrDefault(OKAPI_URL, "");
     final String tenantId = TenantTool.calculateTenantId(okapiHeaders.get(OKAPI_HEADER_TENANT));
 
-    return HttpClientFactory.getHttpClient(okapiURL, tenantId);
+    HttpClientInterface httpClient = HttpClientFactory.getHttpClient(okapiURL, tenantId);
+
+    // Some requests do not have body and in happy flow do not produce response body. The Accept header is required for calls to storage
+    if (setDefaultHeaders) {
+      setDefaultHeaders(httpClient);
+    }
+    return httpClient;
+  }
+
+  public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {
+    return getHttpClient(okapiHeaders, false);
   }
 
   public void closeHttpClient() {
@@ -79,7 +98,7 @@ public abstract class AbstractHelper {
   /**
    * Some requests do not have body and in happy flow do not produce response body. The Accept header is required for calls to storage
    */
-  private void setDefaultHeaders() {
+  private static void setDefaultHeaders(HttpClientInterface httpClient) {
     Map<String,String> customHeader = new HashMap<>();
     customHeader.put(HttpHeaders.ACCEPT.toString(), APPLICATION_JSON  + ", " + TEXT_PLAIN);
     httpClient.setDefaultHeaders(customHeader);
@@ -213,5 +232,17 @@ public abstract class AbstractHelper {
           return config;
         });
     }
+  }
+
+  protected void sendEvent(MessageAddress messageAddress, JsonObject data) {
+    DeliveryOptions deliveryOptions = new DeliveryOptions();
+    // Add okapi headers
+    okapiHeaders.forEach(deliveryOptions::addHeader);
+
+    data.put(LANG, lang);
+
+    ctx.owner()
+       .eventBus()
+       .send(messageAddress.address, data, deliveryOptions);
   }
 }

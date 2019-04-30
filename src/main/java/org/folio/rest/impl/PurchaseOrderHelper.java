@@ -13,6 +13,7 @@ import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.HelperUtils.operateOnObject;
 import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
@@ -471,9 +472,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private CompletableFuture<Void> updateOrderSummary(CompositePurchaseOrder compPO) {
     logger.debug("Updating order...");
     JsonObject purchaseOrder = convertToPurchaseOrder(compPO);
-    return HelperUtils.operateOnObject(HttpMethod.PUT, resourceByIdPath(PURCHASE_ORDER, compPO.getId()), purchaseOrder, httpClient, ctx, okapiHeaders, logger)
-                      .thenAccept(json -> {
-      });
+    return handlePutRequest(resourceByIdPath(PURCHASE_ORDER, compPO.getId()), purchaseOrder, httpClient, ctx, okapiHeaders, logger);
   }
 
   /**
