@@ -1,9 +1,15 @@
 package org.folio.rest.impl;
 
+import static org.awaitility.Awaitility.await;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+
 import io.restassured.RestAssured;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+
+import org.folio.orders.events.handlers.OrderStatusTest;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
@@ -23,7 +29,8 @@ import java.util.concurrent.TimeoutException;
   CheckinReceivingApiTest.class,
   PieceApiTest.class,
   ReceivingHistoryApiTest.class,
-  PoNumberApiTest.class
+  PoNumberApiTest.class,
+  OrderStatusTest.class
 })
 public class ApiTestSuite {
 
@@ -53,13 +60,17 @@ public class ApiTestSuite {
     CompletableFuture<String> deploymentComplete = new CompletableFuture<>();
     vertx.deployVerticle(RestVerticle.class.getName(), opt, res -> {
       if(res.succeeded()) {
-        deploymentComplete.complete(res.result());
+        // Make sure that post-deployment configs completed before test starts
+        vertx.setTimer(500, timerId -> deploymentComplete.complete(res.result()));
       }
       else {
         deploymentComplete.completeExceptionally(res.cause());
       }
     });
-    deploymentComplete.get(60, TimeUnit.SECONDS);
+
+    await().atMost(60, TimeUnit.SECONDS).until(deploymentComplete::isDone);
+    assertThat(deploymentComplete.isCompletedExceptionally(), is(false));
+
     initialised = true;
   }
 

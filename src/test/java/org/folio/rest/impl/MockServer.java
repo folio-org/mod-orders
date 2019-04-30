@@ -68,6 +68,7 @@ import static org.folio.rest.impl.ApiTestBase.COMP_ORDER_MOCK_DATA_PATH;
 import static org.folio.rest.impl.ApiTestBase.ID;
 import static org.folio.rest.impl.ApiTestBase.ID_DOES_NOT_EXIST;
 import static org.folio.rest.impl.ApiTestBase.ID_FOR_INTERNAL_SERVER_ERROR;
+import static org.folio.rest.impl.ApiTestBase.PO_ID_GET_LINES_INTERNAL_SERVER_ERROR;
 import static org.folio.rest.impl.ApiTestBase.PO_LINE_NUMBER_VALUE;
 import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEMS;
@@ -89,6 +90,7 @@ import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_ACCESS_PROVIDE
 import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_VENDOR_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.VENDOR_WITH_BAD_CONTENT;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ORGANIZATION_NOT_VENDOR;
 import static org.folio.rest.impl.ApiTestBase.X_ECHO_STATUS;
 import static org.folio.rest.impl.ReceivingHistoryApiTest.RECEIVING_HISTORY_PURCHASE_ORDER_ID;
 import static org.junit.Assert.fail;
@@ -110,7 +112,7 @@ public class MockServer {
   static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
   private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
-  private static final String VENDORS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "vendors/";
+  private static final String ORGANIZATIONS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "organizations/";
   private static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "/po_line_collection.json";
 
   static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
@@ -166,8 +168,16 @@ public class MockServer {
     return serverRqRs.get(PO_LINES, HttpMethod.PUT);
   }
 
-  static List<JsonObject> getPoLineSearches() {
+  public static List<JsonObject> getPoLineSearches() {
     return serverRqRs.get(PO_LINES, HttpMethod.GET);
+  }
+
+  public static List<JsonObject> getPurchaseOrderRetrievals() {
+    return serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET);
+  }
+
+  public static List<JsonObject> getPurchaseOrderUpdates() {
+    return serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT);
   }
 
   static List<JsonObject> getPieceUpdates() {
@@ -236,8 +246,8 @@ public class MockServer {
     router.route(HttpMethod.GET, "/holdings-storage/holdings").handler(this::handleGetHoldingsRecords);
     router.route(HttpMethod.GET, "/holdings-storage/holdings/:id").handler(this::handleGetHolding);
     router.route(HttpMethod.GET, "/loan-types").handler(this::handleGetLoanType);
-    router.route(HttpMethod.GET, "/vendor-storage/vendors/:id").handler(this::handleGetVendorById);
-    router.route(HttpMethod.GET, "/vendor-storage/vendors").handler(this::handleGetAccessProviders);
+    router.route(HttpMethod.GET, "/organizations-storage/organizations/:id").handler(this::getOrganizationById);
+    router.route(HttpMethod.GET, "/organizations-storage/organizations").handler(this::handleGetAccessProviders);
     router.route(HttpMethod.GET, resourcesPath(PO_LINES)).handler(this::handleGetPoLines);
     router.route(HttpMethod.GET, resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
     router.route(HttpMethod.GET, resourcePath(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
@@ -436,32 +446,36 @@ public class MockServer {
 
     try {
       if (getQuery(ACTIVE_ACCESS_PROVIDER_A, NON_EXIST_ACCESS_PROVIDER_A).equals(query)) {
-        body = new JsonObject(ApiTestBase.getMockData(VENDORS_MOCK_DATA_PATH + "one_access_provider_not_found.json"));
+        body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_provider_not_found.json"));
       } else if (getQuery(ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B).equals(query)
         || getQuery(ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_A).equals(query)
         || getQuery(ACTIVE_ACCESS_PROVIDER_B, ACTIVE_ACCESS_PROVIDER_A).equals(query)) {
-        body = new JsonObject(ApiTestBase.getMockData(VENDORS_MOCK_DATA_PATH + "all_access_providers_active.json"));
+        body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "all_access_providers_active.json"));
       } else if (getQuery(ACTIVE_ACCESS_PROVIDER_A, INACTIVE_ACCESS_PROVIDER_A).equals(query)) {
-        body = new JsonObject(ApiTestBase.getMockData(VENDORS_MOCK_DATA_PATH + "active_inactive_access_providers.json"));
+        body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "active_inactive_access_providers.json"));
       } else if (getQuery(INACTIVE_ACCESS_PROVIDER_A, INACTIVE_ACCESS_PROVIDER_B).equals(query)
         || getQuery(INACTIVE_ACCESS_PROVIDER_B, INACTIVE_ACCESS_PROVIDER_A).equals(query)) {
-        body = new JsonObject(ApiTestBase.getMockData(VENDORS_MOCK_DATA_PATH + "all_inactive_access_providers.json"));
+        body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "all_inactive_access_providers.json"));
       } else if (getQuery(ACTIVE_ACCESS_PROVIDER_A).equals(query)) {
-        body = new JsonObject(ApiTestBase.getMockData(VENDORS_MOCK_DATA_PATH + "one_access_provider_not_found.json"));
+        body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_provider_not_found.json"));
       } else if (getQuery(ACTIVE_ACCESS_PROVIDER_B).equals(query)) {
-        body = new JsonObject(ApiTestBase.getMockData(VENDORS_MOCK_DATA_PATH + "one_access_providers_active.json"));
-      } else {
-        JsonArray vendors = new JsonArray();
+        body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_providers_active.json"));
+      } else if (getQuery(ORGANIZATION_NOT_VENDOR).equals(query)) {
+        body = new JsonObject(
+            ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "not_vendor.json"));
+      }
+      else {
+        JsonArray organizations = new JsonArray();
 
-        // Search for vendors by id
+        // Search for Organizations by id
         extractIdsFromQuery(query)
           .stream()
-          .map(this::getVendorById)
+          .map(this::getOrganizationById)
           .filter(Objects::nonNull)
-          .forEach(vendors::add);
+          .forEach(organizations::add);
 
-        if (!vendors.isEmpty()) {
-          body = new JsonObject().put(VendorHelper.VENDORS, vendors);
+        if (!organizations.isEmpty()) {
+          body = new JsonObject().put(VendorHelper.ORGANIZATIONS, organizations);
         }
       }
     } catch(IOException e) {
@@ -479,8 +493,8 @@ public class MockServer {
     }
   }
 
-  private void handleGetVendorById(RoutingContext ctx) {
-    logger.info("handleGetVendorById got: " + ctx.request().path());
+  private void getOrganizationById(RoutingContext ctx) {
+    logger.info("handleGetOrganizationById got: " + ctx.request().path());
     String vendorId = ctx.request().getParam(ID);
     JsonObject body;
     if (NON_EXIST_VENDOR_ID.equals(vendorId)) {
@@ -488,7 +502,7 @@ public class MockServer {
     } else if (MOD_VENDOR_INTERNAL_ERROR_ID.equals(vendorId)) {
       serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), APPLICATION_JSON, "internal server error, contact administrator");
     } else {
-      body = getVendorById(vendorId);
+      body = getOrganizationById(vendorId);
       if (body != null) {
         serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
       } else {
@@ -497,26 +511,29 @@ public class MockServer {
     }
   }
 
-  private JsonObject getVendorById(String vendorId) {
-    logger.debug("Searching for vendor by id={}", vendorId);
+  private JsonObject getOrganizationById(String organizationId) {
+    logger.debug("Searching for organization by id={}", organizationId);
     JsonObject body;
     try {
-      switch (vendorId) {
+      switch (organizationId) {
         case ACTIVE_VENDOR_ID:
-          body = new JsonObject(ApiTestBase.getMockData(VENDORS_MOCK_DATA_PATH + "active_vendor.json"));
+          body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "active_vendor.json"));
           break;
         case INACTIVE_VENDOR_ID:
-          body = new JsonObject(ApiTestBase.getMockData(VENDORS_MOCK_DATA_PATH + "inactive_vendor.json"));
+          body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "inactive_vendor.json"));
           break;
         case PENDING_VENDOR_ID:
-          body = new JsonObject(ApiTestBase.getMockData(VENDORS_MOCK_DATA_PATH + "pending_vendor.json"));
+          body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "pending_vendor.json"));
           break;
         case ACTIVE_ACCESS_PROVIDER_B:
-          body = new JsonObject(ApiTestBase.getMockData(VENDORS_MOCK_DATA_PATH + "one_access_providers_active.json"))
-            .getJsonArray(VendorHelper.VENDORS).getJsonObject(0);
+          body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_providers_active.json"))
+            .getJsonArray(VendorHelper.ORGANIZATIONS).getJsonObject(0);
+          break;
+        case ORGANIZATION_NOT_VENDOR:
+          body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "not_vendor.json"));
           break;
         case VENDOR_WITH_BAD_CONTENT:
-          body = new JsonObject(ApiTestBase.getMockData(VENDORS_MOCK_DATA_PATH + "vendor_bad_content.json"));
+          body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "vendor_bad_content.json"));
           break;
         default:
           body = null;
@@ -640,7 +657,7 @@ public class MockServer {
     String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
     if (queryParam.contains(BAD_QUERY)) {
       serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
-    } else if (queryParam.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
+    } else if (queryParam.contains(ID_FOR_INTERNAL_SERVER_ERROR) || queryParam.contains(PO_ID_GET_LINES_INTERNAL_SERVER_ERROR)) {
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       String poId = EMPTY;
@@ -960,7 +977,7 @@ public class MockServer {
       serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
     } catch (IOException e) {
       ctx.response()
-        .setStatusCode(404)
+        .setStatusCode(ID_FOR_INTERNAL_SERVER_ERROR.equals(id) ? 500 : 404)
         .end(id);
     }
   }

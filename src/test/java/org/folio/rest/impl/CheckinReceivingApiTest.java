@@ -63,8 +63,6 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   private static final Logger logger = LoggerFactory.getLogger(CheckinReceivingApiTest.class);
 
   private static final String RECEIVING_RQ_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receiving/";
-  private static final String ORDERS_RECEIVING_ENDPOINT = "/orders/receive";
-  private static final String ORDERS_CHECKIN_ENDPOINT = "/orders/check-in";
   private static final String CHECKIN_RQ_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "checkIn/";
 
   @Test
@@ -106,6 +104,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.PARTIALLY_RECEIVED));
       assertThat(poLine.getReceiptDate(), is(notNullValue()));
     });
+
+    // Verify message is sent via event bus
+    verifyOrderStatusUpdateEvent(1);
   }
 
   @Test
@@ -161,6 +162,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.PARTIALLY_RECEIVED));
       assertThat(poLine.getReceiptDate(), is(notNullValue()));
     });
+
+    // Verify message is sent via event bus
+    verifyOrderStatusUpdateEvent(1);
   }
 
   @Test
@@ -210,6 +214,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.AWAITING_RECEIPT));
       assertThat(poLine.getReceiptDate(), is(nullValue()));
     });
+
+    // Verify message is sent via event bus
+    verifyOrderStatusUpdateEvent(1);
   }
 
   @Test
@@ -239,36 +246,38 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setId(electronicPieceWithoutLocationId);
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(UUID.randomUUID().toString());
 
-    MockServer.serverRqRs.clear();
     checkResultWithErrors(request, 0);
     assertThat(getPieceSearches(), hasSize(2));
     assertThat(getPieceUpdates(), hasSize(2));
     assertThat(getPoLineSearches(), hasSize(1));
     assertThat(getPoLineUpdates(), hasSize(1));
+    verifyOrderStatusUpdateEvent(1);
 
 
     // Negative cases:
     // 1. One CheckInPiece and corresponding Piece without locationId
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(null);
 
-    MockServer.serverRqRs.clear();
+    clearServiceInteractions();
     checkResultWithErrors(request, 1);
     assertThat(getPieceSearches(), hasSize(2));
     assertThat(getPieceUpdates(), hasSize(1));
     assertThat(getPoLineSearches(), hasSize(1));
     assertThat(getPoLineUpdates(), hasSize(1));
+    verifyOrderStatusUpdateEvent(1);
 
 
     // 2. All CheckInPieces and corresponding Pieces without locationId
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(null);
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(null);
 
-    MockServer.serverRqRs.clear();
+    clearServiceInteractions();
     checkResultWithErrors(request, 2);
     assertThat(getPieceSearches(), hasSize(1));
     assertThat(getPieceUpdates(), nullValue());
     assertThat(getPoLineSearches(), hasSize(1));
     assertThat(getPoLineUpdates(), nullValue());
+    verifyOrderStatusUpdateEvent(0);
   }
 
   @Test
@@ -319,6 +328,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.FULLY_RECEIVED));
       assertThat(poLine.getReceiptDate(), is(notNullValue()));
     });
+
+    // Verify messages sent via event bus
+    verifyOrderStatusUpdateEvent(1);
   }
 
   @Test
@@ -359,6 +371,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.PARTIALLY_RECEIVED));
       assertThat(poLine.getReceiptDate(), is(nullValue()));
     });
+
+    // Verify messages sent via event bus
+    verifyOrderStatusUpdateEvent(1);
   }
 
   @Test
@@ -404,6 +419,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.PARTIALLY_RECEIVED));
       assertThat(poLine.getReceiptDate(), is(nullValue()));
     });
+
+    // Verify messages sent via event bus
+    verifyOrderStatusUpdateEvent(1);
   }
 
   @Test
@@ -436,6 +454,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     assertThat(getItemUpdates(), is(nullValue()));
     assertThat(getPoLineSearches(), is(nullValue()));
     assertThat(getPoLineUpdates(), is(nullValue()));
+
+    // Verify messages sent via event bus
+    verifyOrderStatusUpdateEvent(0);
   }
 
   @Test
@@ -468,6 +489,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     assertThat(getItemUpdates(), is(nullValue()));
     assertThat(getPoLineSearches(), not(nullValue()));
     assertThat(getPoLineUpdates(), is(nullValue()));
+
+    // Verify messages sent via event bus
+    verifyOrderStatusUpdateEvent(0);
   }
 
   @Test
@@ -516,6 +540,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.PARTIALLY_RECEIVED));
       assertThat(poLine.getReceiptDate(), is(nullValue()));
     });
+
+    // Verify messages sent via event bus
+    verifyOrderStatusUpdateEvent(1);
   }
 
   @Test
@@ -562,6 +589,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.AWAITING_RECEIPT));
       assertThat(poLine.getReceiptDate(), is(nullValue()));
     });
+
+    // Verify messages sent via event bus
+    verifyOrderStatusUpdateEvent(1);
   }
 
   private void checkResultWithErrors(CheckinCollection request, int expectedNumOfErrors) {

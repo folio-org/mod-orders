@@ -2,7 +2,8 @@
   "id": "5a34ae0e-5a11-4337-be95-1a20cfdc3161",
   "name": "Vendor with Contacts as object",
   "code": "VCONOBJ",
-  "vendor_status": "Active",
+  "status": "Active",
+  "isVendor": true,
   "contacts": [
     {
       "prefix": "Prof.",

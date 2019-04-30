@@ -1,23 +1,23 @@
 {
-  "vendors": [
+  "organizations": [
     {
       "id": "858e80d2-f562-4c54-9934-6e274dee511d",
       "name": "Alexander Street Press",
       "code": "ALEXS",
       "description": "AV streaming services",
-      "vendor_status": "Active",
-      "language": "en-us"
+      "status": "Active",
+      "language": "en-us",
+      "isVendor": true
     },
     {
       "id": "f6cd1850-2587-4f6c-b680-9b27ff26d619",
       "name": "United States Geological Survey",
       "code": "USGS",
       "description": "Maps and materials from the USGS",
-      "vendor_status": "Inactive",
-      "language": "en-us"
+      "status": "Inactive",
+      "language": "en-us",
+      "isVendor": true
     }
   ],
-  "total_records": 2,
-  "first": 1,
-  "last": 2
+  "totalRecords": 2
 }
