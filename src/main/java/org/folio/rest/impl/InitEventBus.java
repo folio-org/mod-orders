@@ -13,6 +13,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -34,11 +35,22 @@ public class InitEventBus implements PostDeployVerticle {
   @Override
   public void init(Vertx vertx, Context context, Handler<AsyncResult<Boolean>> resultHandler) {
     vertx.executeBlocking(
-      handler -> {
+      blockingCodeFuture -> {
         EventBus eb = vertx.eventBus();
-        eb.consumer(MessageAddress.ORDER_STATUS.address, orderStatusHandler);
 
-        handler.complete();
+        // Create consumers and assign handlers
+        Future<Void> orderStatusRegistrationHandler = Future.future();
+        MessageConsumer<JsonObject> orderStatusConsumer = eb.localConsumer(MessageAddress.ORDER_STATUS.address);
+        orderStatusConsumer.handler(orderStatusHandler).completionHandler(orderStatusRegistrationHandler);
+
+        // Complete blocking code future. When more consumers added, the CompositeFuture.all can be used
+        orderStatusRegistrationHandler.setHandler(result -> {
+          if (result.succeeded()) {
+            blockingCodeFuture.complete();
+          } else {
+            blockingCodeFuture.fail(result.cause());
+          }
+        });
       },
       result -> {
         if (result.succeeded()) {
