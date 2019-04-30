@@ -314,7 +314,6 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     assertThat(pieceUpdates, hasSize(receivingRq.getTotalRecords()));
     assertThat(itemsSearches, hasSize(expectedSearchRqQty));
     assertThat(itemUpdates, hasSize(receivingRq.getTotalRecords()));
-    // optimize searches
     assertThat(polSearches, hasSize(pieceIdsByPol.size()));
     assertThat(polUpdates, hasSize(pieceIdsByPol.size()));
 
