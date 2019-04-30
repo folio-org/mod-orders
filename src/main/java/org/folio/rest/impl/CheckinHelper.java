@@ -87,7 +87,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
           PoLine poLine = searchPoLineById(poLines, piece.getPoLineId());
           CheckInPiece checkInPiece = checkinCollection.get(poLine.getId()).get(piece.getId());
 
-          futuresForItemUpdates.add(updateHoldingsAndItems(item, piece, poLine, checkInPiece.getLocationId()));
+          futuresForItemUpdates.add(updateHoldingAndItem(item, piece, poLine, checkInPiece.getLocationId()));
         }
         return futuresForItemUpdates;
 

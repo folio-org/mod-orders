@@ -187,15 +187,11 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     } return null;
   }
 
-  CompletableFuture<Boolean> updateHoldingsAndItems(JsonObject item, Piece piece, PoLine poLine, String locationId) {
+  CompletableFuture<Boolean> updateHoldingAndItem(JsonObject item, Piece piece, PoLine poLine, String locationId) {
     if (holdingUpdateOnCheckinReceiveRequired(piece, locationId, poLine)) {
       return inventoryHelper.getOrCreateHoldingsRecord(poLine.getInstanceId(), locationId)
         .thenCompose(holdingId -> {
-          String endpoint = String.format(HOLDINGS_GET_ENDPOINT, holdingId, lang);
-          return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
-        })
-        .thenCompose(holding -> {
-          item.put("holdingsRecordId", holding.getString(ID));
+          item.put("holdingsRecordId", holdingId);
           return receiveInventoryItemAndUpdatePiece(item, piece);
         })
         .exceptionally(t -> false);
