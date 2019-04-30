@@ -70,6 +70,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     // Collect all piece records with non-empty item ids. The result is a map
     // with item id as a key and piece record as a value
     Map<String, Piece> piecesWithItems = collectPiecesWithItemId(piecesGroupedByPoLine);
+    List<String> polineIds = new ArrayList<>(piecesGroupedByPoLine.keySet());
 
     // If there are no pieces with ItemId, continue
     if (piecesWithItems.isEmpty()) {
@@ -77,7 +78,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     }
 
     return getItemRecords(piecesWithItems)
-      .thenCombine(getPoLines(piecesGroupedByPoLine), (items, poLines) -> {
+      .thenCombine(getPoLines(polineIds), (items, poLines) -> {
         List<CompletableFuture<Boolean>> futuresForItemUpdates = new ArrayList<>();
         for (JsonObject item : items) {
           String itemId = item.getString(ID);

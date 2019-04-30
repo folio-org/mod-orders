@@ -1,29 +1,8 @@
 package org.folio.rest.impl;
 
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.completedFuture;
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.folio.orders.utils.ErrorCodes.*;
-import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.handlePutRequest;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
-import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
-
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
 import one.util.streamex.EntryStream;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
@@ -39,6 +18,7 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
@@ -445,7 +425,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       .toList();
   }
 
-  private CompletableFuture<List<PoLine>> getPoLines(List<String> poLineIds) {
+  CompletableFuture<List<PoLine>> getPoLines(List<String> poLineIds) {
     if(poLineList == null) {
       return collectResultsOnSuccess(StreamEx
           .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ)
