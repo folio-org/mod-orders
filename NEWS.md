@@ -1,4 +1,37 @@
-## 5.0.0 - Unreleased
+## 5.1.0 - Unreleased
+
+## 5.0.0 - Released
+The primary focus of this release was to implement check-in flow and accommodate increased flexibility in inventory integration.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v4.0.0...v5.0.0)
+
+### Stories
+ * [MODORDERS-228](https://issues.folio.org/browse/MODORDERS-228) - Search & Filter purchase order lines by query
+ * [MODORDERS-227](https://issues.folio.org/browse/MODORDERS-227) - Search & Filter purchase orders by query
+ * [MODORDERS-225](https://issues.folio.org/browse/MODORDERS-225) - Switch to mod-organizations-storage
+ * [MODORDERS-223](https://issues.folio.org/browse/MODORDERS-223) - Use Json API for loading module schemas
+ * [MODORDERS-222](https://issues.folio.org/browse/MODORDERS-222) - Order Line has inactive Access Provider
+ * [MODORDERS-221](https://issues.folio.org/browse/MODORDERS-221) - Ability to change locations in receiving/check-in flows
+ * [MODORDERS-218](https://issues.folio.org/browse/MODORDERS-218) - Automatically adjust order status based on poLine's paymentStatus and receivingStatus
+ * [MODORDERS-212](https://issues.folio.org/browse/MODORDERS-212) - Split up unit tests
+ * [MODORDERS-211](https://issues.folio.org/browse/MODORDERS-211) - Order Status: Align POL Payment and Receipt status with PO Status when opening order
+ * [MODORDERS-210](https://issues.folio.org/browse/MODORDERS-210) - Make locationId as not required in Check-in flow
+ * [MODORDERS-199](https://issues.folio.org/browse/MODORDERS-199) - VendorHelper refactoring in accordance with the general helpers structure
+ * [MODORDERS-195](https://issues.folio.org/browse/MODORDERS-195) - Need the ability to specify materialType for physical and eresource
+ * [MODORDERS-194](https://issues.folio.org/browse/MODORDERS-194) - Adjustments to piece and receiving-history regarding piece vs order type
+ * [MODORDERS-179](https://issues.folio.org/browse/MODORDERS-179) - Allow tenant-specific defaults for inventory integration
+ * [MODORDERS-178](https://issues.folio.org/browse/MODORDERS-178) - Increased flexibility in inventory integration
+ * [MODORDERS-164](https://issues.folio.org/browse/MODORDERS-164) - Implement receiving flow for Other
+ * [MODORDERS-136](https://issues.folio.org/browse/MODORDERS-136) - Define required fields in the schemas
+ * [MODORDERS-104](https://issues.folio.org/browse/MODORDERS-104) - Implement check-in flow
+
+### Bug Fixes
+ * [MODORDERS-209](https://issues.folio.org/browse/MODORDERS-209) - Order placement hangs if create_inventory is not set.
+ * [MODORDERS-208](https://issues.folio.org/browse/MODORDERS-208) - Vendor Id isn't required but should be
+ * [MODORDERS-206](https://issues.folio.org/browse/MODORDERS-206) - Missing modulePermission in POST /orders/composite-orders
+ * [MODORDERS-204](https://issues.folio.org/browse/MODORDERS-204) - When creating a brief order instance record in Inventory, data on Contributors are not populated
+ * [MODORDERS-201](https://issues.folio.org/browse/MODORDERS-201) - Incorrect PO total estimated cost in some cases
+ * [MODORDERS-189](https://issues.folio.org/browse/MODORDERS-189) - No correlation between location and cost quantity
 
 ## 4.0.0 - Released
 The primary focus of this release was to implement backend logic for the receiving and preparation for the check-in flows.
