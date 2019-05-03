@@ -193,7 +193,11 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
           item.put("holdingsRecordId", holdingId);
           return receiveInventoryItemAndUpdatePiece(item, piece);
         })
-        .exceptionally(t -> false);
+        .exceptionally(t -> {
+          logger.error("Cannot create holding for specified piece location ", piece.getLocationId());
+          addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
+          return false;
+        });
     } else {
       return receiveInventoryItemAndUpdatePiece(item, piece);
     }
