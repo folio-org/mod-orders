@@ -6,12 +6,10 @@ The primary focus of this release was to implement check-in flow and accommodate
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v4.0.0...v5.0.0)
 
 ### Stories
- * [MODORDERS-228](https://issues.folio.org/browse/MODORDERS-228) - Search & Filter purchase order lines by query
  * [MODORDERS-227](https://issues.folio.org/browse/MODORDERS-227) - Search & Filter purchase orders by query
  * [MODORDERS-225](https://issues.folio.org/browse/MODORDERS-225) - Switch to mod-organizations-storage
  * [MODORDERS-223](https://issues.folio.org/browse/MODORDERS-223) - Use Json API for loading module schemas
  * [MODORDERS-222](https://issues.folio.org/browse/MODORDERS-222) - Order Line has inactive Access Provider
- * [MODORDERS-221](https://issues.folio.org/browse/MODORDERS-221) - Ability to change locations in receiving/check-in flows
  * [MODORDERS-218](https://issues.folio.org/browse/MODORDERS-218) - Automatically adjust order status based on poLine's paymentStatus and receivingStatus
  * [MODORDERS-212](https://issues.folio.org/browse/MODORDERS-212) - Split up unit tests
  * [MODORDERS-211](https://issues.folio.org/browse/MODORDERS-211) - Order Status: Align POL Payment and Receipt status with PO Status when opening order
