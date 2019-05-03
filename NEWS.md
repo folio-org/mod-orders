@@ -1,7 +1,7 @@
 ## 6.0.0 - Unreleased
 
 ## 5.0.0 - Released
-The primary focus of this release was to implement check-in flow and accommodate increased flexibility in inventory integration.
+The primary focus of this release was to implement check-in flow and accommodate increased flexibility in inventory integration. Also mod-organizations storage is used now instead of deprecated mod-vendors.
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v4.0.0...v5.0.0)
 
