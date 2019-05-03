@@ -790,7 +790,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testGetOrderByIdWithPoLinesSorting() {
     logger.info("=== Test Get Order By Id - PoLines sorting ===");
 
-    String[] expectedPoLineNumbers = {"200-2", "201-1", "201-2", "1001-21", "841240-021", "ABCD32-011", "C25DE-021"};
+    String[] expectedPoLineNumbers = {"841240-001", "841240-02", "841240-3", "841240-21"};
 
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, ORDER_WIT_PO_LINES_FOR_SORTING));
     final CompositePurchaseOrder resp = verifySuccessGet(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_WIT_PO_LINES_FOR_SORTING), CompositePurchaseOrder.class);

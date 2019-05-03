@@ -52,7 +52,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private static final String SEARCH_PURCHASE_ORDERS = resourcesPath(SEARCH_ORDERS) + "?limit=%s&offset=%s%s&lang=%s";
   private static final String GET_PURCHASE_ORDERS = resourcesPath(PURCHASE_ORDER) + "?limit=%s&offset=%s&lang=%s";
-  private static final String DASH = "-";
 
   private final PoNumberHelper poNumberHelper;
   private final PurchaseOrderLineHelper orderLineHelper;
@@ -197,7 +196,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
         getCompositePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
           .thenApply(poLines -> {
-            poLines.sort(PurchaseOrderHelper::comparePoLinesByPoLineNumber);
+            orderLineHelper.sortPoLinesByPoLineNumber(poLines);
             return poLines;
           })
           .thenApply(compPO::withCompositePoLines)
@@ -566,27 +565,4 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .stream()
       .filter(poLine -> !lineIdsInStorage.contains(poLine.getId()));
   }
-
-  private static int comparePoLinesByPoLineNumber(CompositePoLine poLine1, CompositePoLine poLine2) {
-    String[] poLineNumberArray1 = poLine1.getPoLineNumber().split(DASH);
-    String[] poLineNumberArray2 = poLine2.getPoLineNumber().split(DASH);
-    int value;
-    return (value = compareStringInAlphaNumericOrder(poLineNumberArray1[0], poLineNumberArray2[0])) != 0 ? value
-      : compareStringInAlphaNumericOrder(poLineNumberArray1[1], poLineNumberArray2[1]);
-  }
-
-  private static int compareStringInAlphaNumericOrder(String str1, String str2) {
-    boolean isFirstNumeric = StringUtils.isNumeric(str1);
-    boolean isSecondNumeric = StringUtils.isNumeric(str2);
-    if(isFirstNumeric && isSecondNumeric) {
-      return Integer.parseInt(str1) - Integer.parseInt(str2);
-    } else if(isFirstNumeric) {
-      return -1;
-    } else if(isSecondNumeric) {
-      return 1;
-    } else {
-      return str1.compareTo(str2);
-    }
-  }
-
 }

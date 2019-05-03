@@ -60,6 +60,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private static final String ERESOURCE = "eresource";
   private static final String PHYSICAL = "physical";
   private static final String OTHER = "other";
+  private static final String REGEX_DASH = "-";
 
   private final InventoryHelper inventoryHelper;
 
@@ -364,6 +365,10 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     }
     logger.error("PO Line - {} has invalid or missing number.", poLineFromStorage.getString(ID));
     return oldPoLineNumber;
+  }
+
+  void sortPoLinesByPoLineNumber(List<CompositePoLine> poLines) {
+    poLines.sort(this::comparePoLinesByPoLineNumber);
   }
 
   /**
@@ -768,5 +773,11 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       }
     }
     return completedFuture(null);
+  }
+
+  private int comparePoLinesByPoLineNumber(CompositePoLine poLine1, CompositePoLine poLine2) {
+    String poLineNumberSuffix1 = poLine1.getPoLineNumber().split(REGEX_DASH)[1];
+    String poLineNumberSuffix2 = poLine2.getPoLineNumber().split(REGEX_DASH)[1];
+    return Integer.parseInt(poLineNumberSuffix1) - Integer.parseInt(poLineNumberSuffix2);
   }
 }
