@@ -14,6 +14,7 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.rest.tools.utils.TenantTool;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -72,6 +73,7 @@ public class InventoryHelper extends AbstractHelper {
   private static final String INSTANCES = "instances";
   private static final String LOAN_TYPES = "loantypes";
 
+  private static final String TENANT_SPECIFIC_KEY_FORMAT = "%s.%s";
   private static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
   private static final String DEFAULT_STATUS_CODE = "temp";
   private static final String DEFAULT_LOAN_TYPE_NAME = "Can circulate";
@@ -659,16 +661,23 @@ public class InventoryHelper extends AbstractHelper {
    * @return value from cache
    */
   private CompletableFuture<JsonObject> getAndCache(String key, UnaryOperator<String> endpointConstructor, Function<JsonObject, JsonObject> fn) {
-    JsonObject response = ctx.get(key);
+    String tenantSpecificKey = buildTenantSpecificKey(key);
+    JsonObject response = ctx.get(tenantSpecificKey);
+
     if(response == null) {
       return handleGetRequest(endpointConstructor.apply(key), httpClient, ctx, okapiHeaders, logger).thenApply(json -> {
         JsonObject result = fn.apply(json);
-        ctx.put(key, result);
+        ctx.put(tenantSpecificKey, result);
         return result;
       });
     } else {
-      return completedFuture(ctx.get(key));
+      return completedFuture(response);
     }
+  }
+
+  private String buildTenantSpecificKey(String key) {
+    String tenantId = TenantTool.tenantId(okapiHeaders);
+    return String.format(TENANT_SPECIFIC_KEY_FORMAT, tenantId, key);
   }
 
   private enum ContributorNameTypeName {

@@ -26,7 +26,6 @@ import org.folio.rest.jaxrs.model.Physical.CreateInventory;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
-import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -36,7 +35,6 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -55,6 +53,7 @@ import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
 import static org.folio.orders.utils.ErrorCodes.ORDER_OPEN;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.ORGANIZATION_NOT_A_VENDOR;
 import static org.folio.orders.utils.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_NOT_FOUND;
@@ -63,24 +62,24 @@ import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
-import static org.folio.orders.utils.ErrorCodes.ORGANIZATION_NOT_A_VENDOR;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
-import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.PAYMENT_STATUS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIPT_STATUS;
+import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.joinExistingAndNewItems;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInstanceLinksForUpdatedOrder;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInventoryInteraction;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesCreated;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesQuantityForSuccessCase;
+import static org.folio.rest.impl.MockServer.CONTRIBUTOR_NAME_TYPES;
 import static org.folio.rest.impl.MockServer.getCreatedInstances;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
 import static org.folio.rest.impl.MockServer.getCreatedPieces;
@@ -88,6 +87,7 @@ import static org.folio.rest.impl.MockServer.getHoldingsSearches;
 import static org.folio.rest.impl.MockServer.getInstancesSearches;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
+import static org.folio.rest.impl.MockServer.serverRqRs;
 import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -1780,9 +1780,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     });
   }
 
-
   @Test
-  public void testPutOrderToChangeStatusToOpenwithOrganizationNotVendor() throws Exception {
+  public void testPutOrderToChangeStatusToOpenWithOrganizationNotVendor() throws Exception {
 
     logger.info("=== Test Put Order to change status of Order to Open - organization which is not vendor ===");
 
@@ -1800,6 +1799,39 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(errors.getErrors(), hasSize(1));
 
     checkExpectedError(ORGANIZATION_NOT_VENDOR, errors, 0, ORGANIZATION_NOT_A_VENDOR, reqData, 0);
+
+  }
+
+  @Test
+  public void testPostOpenOrderCacheKayMustBeTenantSpecific() throws Exception {
+
+    MockServer.serverRqRs.clear();
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.getCompositePoLines().remove(1);
+    assertThat( reqData.getCompositePoLines(), hasSize(1));
+
+    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10);
+
+    //Create order first time for tenant, no contributor name type in cache
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
+
+    assertThat(serverRqRs.get(CONTRIBUTOR_NAME_TYPES, HttpMethod.GET), hasSize(1));
+    clearServiceInteractions();
+
+    //Create order second time for tenant, cache contains contributor name type for this tenant
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
+
+    assertThat(serverRqRs.get(CONTRIBUTOR_NAME_TYPES, HttpMethod.GET), nullValue());
+    clearServiceInteractions();
+
+    // Prepare X-Okapi-Tenant heander for tenant which has no contributor name type
+    headers = prepareHeaders(NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT_HEADER);
+
+    //Create order for another tenant, no contributor name type in cache for this tenant
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 500);
+
+    assertThat(serverRqRs.get(CONTRIBUTOR_NAME_TYPES, HttpMethod.GET), hasSize(1));
 
   }
 

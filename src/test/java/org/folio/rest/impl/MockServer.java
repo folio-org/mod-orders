@@ -69,6 +69,7 @@ import static org.folio.rest.impl.ApiTestBase.COMP_ORDER_MOCK_DATA_PATH;
 import static org.folio.rest.impl.ApiTestBase.ID;
 import static org.folio.rest.impl.ApiTestBase.ID_DOES_NOT_EXIST;
 import static org.folio.rest.impl.ApiTestBase.ID_FOR_INTERNAL_SERVER_ERROR;
+import static org.folio.rest.impl.ApiTestBase.NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT;
 import static org.folio.rest.impl.ApiTestBase.PO_ID_GET_LINES_INTERNAL_SERVER_ERROR;
 import static org.folio.rest.impl.ApiTestBase.PO_LINE_NUMBER_VALUE;
 import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
@@ -103,6 +104,7 @@ public class MockServer {
   // Mock data paths
   static final String BASE_MOCK_DATA_PATH = "mockdata/";
   private static final String CONTRIBUTOR_NAME_TYPES_PATH = BASE_MOCK_DATA_PATH + "contributorNameTypes/contributorPersonalNameType.json";
+  private static final String EMPTY_CONTRIBUTOR_NAME_TYPES_PATH = BASE_MOCK_DATA_PATH + "contributorNameTypes/emptyContributorPersonalNameType.json";
   private static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
   private static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
   private static final String ITEMS_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/";
@@ -128,6 +130,7 @@ public class MockServer {
   private static final String ITEM_RECORDS = "itemRecords";
   private static final String INSTANCE_RECORD = "instanceRecord";
   private static final String HOLDINGS_RECORD = "holdingRecord";
+  public static final String CONTRIBUTOR_NAME_TYPES = "contributor-name-types";
 
   static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
 
@@ -1113,12 +1116,23 @@ public class MockServer {
 
   private void handleGetContributorNameTypes(RoutingContext ctx) {
     String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+    String tenantId = ctx.request().getHeader(OKAPI_HEADER_TENANT);
+    String body;
     try {
-      if(("name==Personal name").equals(queryParam)) {
-        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, ApiTestBase.getMockData(CONTRIBUTOR_NAME_TYPES_PATH));
+      if (NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT.equals(tenantId)) {
+        body = ApiTestBase.getMockData(EMPTY_CONTRIBUTOR_NAME_TYPES_PATH);
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
+        addServerRqRsData(HttpMethod.GET, CONTRIBUTOR_NAME_TYPES, new JsonObject(body));
       } else {
-        serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Illegal query");
+        if (("name==Personal name").equals(queryParam)) {
+          body = ApiTestBase.getMockData(CONTRIBUTOR_NAME_TYPES_PATH);
+          serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
+          addServerRqRsData(HttpMethod.GET, CONTRIBUTOR_NAME_TYPES, new JsonObject(body));
+        } else {
+          serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Illegal query");
+        }
       }
+
     } catch (IOException e) {
       serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Mock-server error");
     }
