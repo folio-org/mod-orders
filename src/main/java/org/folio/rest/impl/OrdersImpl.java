@@ -50,7 +50,7 @@ public class OrdersImpl implements Orders {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
     helper
-      .getPoLines(limit, offset, query)
+      .getOrderLines(limit, offset, query)
       .thenAccept(lines -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(lines))))
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
