@@ -14,6 +14,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
@@ -53,6 +54,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
   private static final String GET_PO_LINES_BY_QUERY = resourcesPath(PO_LINES) + "?limit=%s&offset=%s%s&lang=%s";
+  private static final String GET_ORDER_LINES_BY_QUERY = resourcesPath(ORDER_LINES) + "?limit=%s&offset=%s%s&lang=%s";
   private static final String LOOKUP_PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId==%s&limit=%d&lang=%s";
   private static final String PO_LINE_NUMBER_ENDPOINT = resourcesPath(PO_LINE_NUMBER) + "?" + PURCHASE_ORDER_ID + "=";
   private static final Pattern PO_LINE_NUMBER_PATTERN = Pattern.compile("([a-zA-Z0-9]{5,16}-)([0-9]{1,3})");
@@ -72,11 +74,11 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     this(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
   }
 
-  CompletableFuture<PoLineCollection> getPoLines(int limit, int offset, String query) {
+  CompletableFuture<PoLineCollection> getPoLines(int limit, int offset, String query, String path) {
     CompletableFuture<PoLineCollection> future = new VertxCompletableFuture<>(ctx);
     try {
       String queryParam = isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
-      String endpoint = String.format(GET_PO_LINES_BY_QUERY, limit, offset, queryParam, lang);
+      String endpoint = String.format(path, limit, offset, queryParam, lang);
       handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
         .thenAccept(jsonOrderLines -> {
           if (logger.isInfoEnabled()) {
@@ -93,6 +95,36 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     }
 
     return future;
+  }
+
+  /**
+   * This method is used for all internal calls to fetch PO lines without or with
+   * queries that search/filter on fields present in po_line
+   *
+   * @param limit
+   * @param offset
+   * @param query
+   * @return Completable future which holds {@link PoLineCollection}
+   */
+  CompletableFuture<PoLineCollection> getPoLines(int limit, int offset, String query) {
+    return getPoLines(limit, offset, query, GET_PO_LINES_BY_QUERY);
+  }
+
+  /**
+   * This method queries a view, to limit performance implications this method
+   * must be used only when there is a necessity to search/filter on the
+   * Composite Purchase Order fields
+   *
+   * @param limit
+   * @param offset
+   * @param query
+   * @return Completable future which holds {@link PoLineCollection} on success or an exception on any error
+   */
+  CompletableFuture<PoLineCollection> getOrderLines(int limit, int offset, String query) {
+    if(isEmpty(query)) {
+      return getPoLines(limit, offset, query, GET_PO_LINES_BY_QUERY);
+    }
+    return getPoLines(limit, offset, query, GET_ORDER_LINES_BY_QUERY);
   }
 
   /**
