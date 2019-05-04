@@ -1811,7 +1811,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().remove(1);
     assertThat( reqData.getCompositePoLines(), hasSize(1));
 
-    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10);
+    Headers headers = prepareHeaders(EXIST_CONTRIBUTOR_NAME_TYPE_TENANT_HEADER);
 
     //Create order first time for tenant, no contributor name type in cache
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);

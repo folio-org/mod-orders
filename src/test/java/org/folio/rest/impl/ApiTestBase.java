@@ -89,9 +89,11 @@ public class ApiTestBase {
   static final String X_ECHO_STATUS = "X-Okapi-Echo-Status";
   static final String EMPTY_CONFIG_TENANT = "config_empty";
   static final String NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT = "nonExistContributorNameType";
+  static final String EXIST_CONTRIBUTOR_NAME_TYPE_TENANT = "existContributorNameType";
 
   protected static final Header X_OKAPI_URL = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
   static final Header NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT);
+  static final Header EXIST_CONTRIBUTOR_NAME_TYPE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, EXIST_CONTRIBUTOR_NAME_TYPE_TENANT);
   static final Header NON_EXIST_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "ordersimpltest");
   static final Header X_OKAPI_USER_ID = new Header(OKAPI_USERID_HEADER, "440c89e3-7f6c-578a-9ea8-310dad23605e");
   static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
