@@ -27,6 +27,7 @@ import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.orders.utils.ErrorCodes.*;
 import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.orders.utils.ResourcePathResolver.*;
+import static org.folio.rest.impl.InventoryHelper.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.*;
 
 public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
@@ -190,7 +191,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     if (holdingUpdateOnCheckinReceiveRequired(piece, locationId, poLine)) {
       return inventoryHelper.getOrCreateHoldingsRecord(poLine.getInstanceId(), locationId)
         .thenCompose(holdingId -> {
-          item.put("holdingsRecordId", holdingId);
+          item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
           return receiveInventoryItemAndUpdatePiece(item, piece);
         })
         .exceptionally(t -> {
@@ -205,8 +206,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
   private boolean holdingUpdateOnCheckinReceiveRequired(Piece piece, String locationId, PoLine poLine) {
     return isHoldingsUpdateRequired(poLine.getEresource(), poLine.getPhysical())
-      && StringUtils.isNotEmpty(locationId)
-      && !locationId.equals(piece.getLocationId());
+      && StringUtils.equals(locationId, piece.getLocationId());
   }
 
   /**
