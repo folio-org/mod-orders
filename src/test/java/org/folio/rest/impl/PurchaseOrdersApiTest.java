@@ -27,6 +27,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
 import org.hamcrest.Matchers;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -34,6 +35,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -100,6 +103,7 @@ import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -134,6 +138,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   private static final String PO_ID_FOR_FAILURE_CASE = "bad500aa-aaaa-500a-aaaa-aaaaaaaaaaaa";
   private static final String ORDER_ID_WITHOUT_PO_LINES = "50fb922c-3fa9-494e-a972-f2801f1b9fd1";
   private static final String ORDER_WITHOUT_WORKFLOW_STATUS = "41d56e59-46db-4d5e-a1ad-a178228913e5";
+  static final String ORDER_WIT_PO_LINES_FOR_SORTING =  "9a952cd0-842b-4e71-bddd-014eb128dc8e";
 
   // API paths
   private final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
@@ -781,6 +786,18 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     verifyCalculatedData(resp);
   }
 
+  @Test
+  public void testGetOrderByIdWithPoLinesSorting() {
+    logger.info("=== Test Get Order By Id - PoLines sorting ===");
+
+    String[] expectedPoLineNumbers = {"841240-001", "841240-02", "841240-3", "841240-21"};
+
+    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, ORDER_WIT_PO_LINES_FOR_SORTING));
+    final CompositePurchaseOrder resp = verifySuccessGet(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_WIT_PO_LINES_FOR_SORTING), CompositePurchaseOrder.class);
+    logger.info(JsonObject.mapFrom(resp).encodePrettily());
+
+    assertArrayEquals(expectedPoLineNumbers, resp.getCompositePoLines().stream().map(CompositePoLine::getPoLineNumber).toArray());
+  }
 
   private void verifyCalculatedData(CompositePurchaseOrder resp) {
     Integer expectedQuantity = resp

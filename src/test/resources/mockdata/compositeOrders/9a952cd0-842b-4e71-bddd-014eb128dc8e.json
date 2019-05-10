@@ -1,0 +1,53 @@
+{
+  "id": "9a952cd0-842b-4e71-bddd-014eb128dc8e",
+  "compositePoLines": [
+    {
+      "id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
+      "cost": {
+        "listUnitPrice": 1.0,
+        "currency": "USD",
+        "discount": 10.0,
+        "discountType": "percentage",
+        "quantityPhysical": 1,
+        "poLineEstimatedPrice": 0.9
+      },
+      "poLineNumber": "841240-02"
+    },
+    {
+      "id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
+      "cost": {
+        "listUnitPrice": 1.0,
+        "currency": "USD",
+        "discount": 10.0,
+        "discountType": "percentage",
+        "quantityPhysical": 1,
+        "poLineEstimatedPrice": 0.9
+      },
+      "poLineNumber": "841240-3"
+    },
+    {
+      "id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
+      "cost": {
+        "listUnitPrice": 1.0,
+        "currency": "USD",
+        "discount": 10.0,
+        "discountType": "percentage",
+        "quantityPhysical": 1,
+        "poLineEstimatedPrice": 0.9
+      },
+      "poLineNumber": "841240-21"
+    },
+    {
+      "id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
+      "cost": {
+        "listUnitPrice": 1.0,
+        "currency": "USD",
+        "discount": 10.0,
+        "discountType": "percentage",
+        "quantityPhysical": 1,
+        "poLineEstimatedPrice": 0.9
+      },
+      "poLineNumber": "841240-001"
+    }
+  ]
+}

@@ -62,6 +62,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private static final String ERESOURCE = "eresource";
   private static final String PHYSICAL = "physical";
   private static final String OTHER = "other";
+  private static final String DASH_SEPARATOR = "-";
 
   private final InventoryHelper inventoryHelper;
 
@@ -398,6 +399,10 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     return oldPoLineNumber;
   }
 
+  void sortPoLinesByPoLineNumber(List<CompositePoLine> poLines) {
+    poLines.sort(this::comparePoLinesByPoLineNumber);
+  }
+
   /**
    * Validates purchase order line content. If content is okay, checks if allowed PO Lines limit is not exceeded.
    * @param compPOL Purchase Order Line to validate
@@ -459,7 +464,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private String buildPoLineNumber(String poNumber, String sequence) {
-    return poNumber + "-" + sequence;
+    return poNumber + DASH_SEPARATOR + sequence;
   }
 
   /**
@@ -800,5 +805,11 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       }
     }
     return completedFuture(null);
+  }
+
+  private int comparePoLinesByPoLineNumber(CompositePoLine poLine1, CompositePoLine poLine2) {
+    String poLineNumberSuffix1 = poLine1.getPoLineNumber().split(DASH_SEPARATOR)[1];
+    String poLineNumberSuffix2 = poLine2.getPoLineNumber().split(DASH_SEPARATOR)[1];
+    return Integer.parseInt(poLineNumberSuffix1) - Integer.parseInt(poLineNumberSuffix2);
   }
 }
