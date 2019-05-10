@@ -1123,6 +1123,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testPutOrdersByIdInstanceCreation() throws Exception {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     Map<String, String> uuids = new HashMap<>();
     // Populate instanceIds
     reqData.getCompositePoLines().forEach(p -> p.setInstanceId(uuids.compute(p.getId(), (k, v) -> UUID.randomUUID().toString())));
