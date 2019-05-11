@@ -8,6 +8,7 @@
     "ABCDEFGHIJKLMNOPQRSTUV"
   ],
   "orderType": "One-Time",
+  "owner": "LTS E-Resources & Serials",
   "poNumber": "268758",
   "reEncumber": false,
   "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
@@ -86,7 +87,6 @@
         }
       ],
       "orderFormat": "Electronic Resource",
-      "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
       "paymentStatus": "Awaiting Payment",
       "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
       "poLineNumber": "268758-03",

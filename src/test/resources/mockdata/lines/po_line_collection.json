@@ -60,7 +60,6 @@
         }
       ],
       "orderFormat": "Physical Resource",
-      "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
       "paymentStatus": "Awaiting Payment",
       "physical": {
         "createInventory": "Instance, Holding, Item",
@@ -177,7 +176,6 @@
         }
       ],
       "orderFormat": "Physical Resource",
-      "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
       "paymentStatus": "Awaiting Payment",
       "physical": {
         "createInventory": "Instance, Holding, Item",
@@ -529,7 +527,6 @@
         }
       ],
       "orderFormat": "P/E Mix",
-      "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
       "paymentStatus": "Awaiting Payment",
       "physical": {
         "createInventory": "Instance, Holding, Item",
@@ -639,7 +636,6 @@
         }
       ],
       "orderFormat": "Electronic Resource",
-      "owner": "LTS E-Resources & Serials",
       "paymentStatus": "Awaiting Payment",
       "poLineDescription": "",
       "poLineNumber": "10080-2",
@@ -722,7 +718,6 @@
                 }
             ],
             "orderFormat": "P/E Mix",
-            "owner": "8910",
             "paymentStatus": "Awaiting Payment",
             "physical": {
                 "expectedReceiptDate": "2019-04-17T18:56:45.237+0000",
@@ -790,7 +785,6 @@
                 }
             ],
             "orderFormat": "Physical Resource",
-            "owner": "8910",
             "paymentStatus": "Awaiting Payment",
             "physical": {
                 "expectedReceiptDate": "2019-04-17T18:56:45.237+0000",
