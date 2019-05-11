@@ -69,6 +69,8 @@ import static org.folio.rest.impl.ApiTestBase.COMP_ORDER_MOCK_DATA_PATH;
 import static org.folio.rest.impl.ApiTestBase.ID;
 import static org.folio.rest.impl.ApiTestBase.ID_DOES_NOT_EXIST;
 import static org.folio.rest.impl.ApiTestBase.ID_FOR_INTERNAL_SERVER_ERROR;
+import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_STATUS_TENANT;
+import static org.folio.rest.impl.ApiTestBase.INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT;
 import static org.folio.rest.impl.ApiTestBase.PO_ID_GET_LINES_INTERNAL_SERVER_ERROR;
 import static org.folio.rest.impl.ApiTestBase.PO_LINE_NUMBER_VALUE;
 import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
@@ -128,6 +130,9 @@ public class MockServer {
   private static final String ITEM_RECORDS = "itemRecords";
   private static final String INSTANCE_RECORD = "instanceRecord";
   private static final String HOLDINGS_RECORD = "holdingRecord";
+  private static final String CONTRIBUTOR_NAME_TYPES = "contributor-name-types";
+  private static final String INSTANCE_TYPES = "instanceTypes";
+  private static final String INSTANCE_STATUSES = "instanceStatuses";
 
   static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
 
@@ -223,6 +228,18 @@ public class MockServer {
 
   static List<JsonObject> getOrderLineSearches() {
     return serverRqRs.get(ORDER_LINES, HttpMethod.GET);
+  }
+
+  static List<JsonObject> getContributorNameTypesSearches() {
+    return serverRqRs.get(CONTRIBUTOR_NAME_TYPES, HttpMethod.GET);
+  }
+
+  static List<JsonObject> getInstanceStatusesSearches() {
+    return serverRqRs.get(INSTANCE_STATUSES, HttpMethod.GET);
+  }
+
+  static List<JsonObject> getInstanceTypesSearches() {
+    return serverRqRs.get(INSTANCE_TYPES, HttpMethod.GET);
   }
 
   private Router defineRoutes() {
@@ -554,26 +571,42 @@ public class MockServer {
   private void handleGetInstanceStatus(RoutingContext ctx) {
     logger.info("got: " + ctx.request().path());
 
+    String tenantId = ctx.request().getHeader(OKAPI_HEADER_TENANT);
+    String body;
+
     try {
-      JsonObject po = new JsonObject(ApiTestBase.getMockData(INSTANCE_STATUSES_MOCK_DATA_PATH + "temp.json"));
-      serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+      if (NON_EXIST_INSTANCE_STATUS_TENANT.equals(tenantId)) {
+        body = ApiTestBase.getMockData(INSTANCE_STATUSES_MOCK_DATA_PATH + "empty_instance_statuses.json");
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
+        addServerRqRsData(HttpMethod.GET, INSTANCE_STATUSES, new JsonObject(body));
+      } else {
+        body = ApiTestBase.getMockData(INSTANCE_STATUSES_MOCK_DATA_PATH + "temp.json");
+        serverResponse(ctx, 200, APPLICATION_JSON, body);
+        addServerRqRsData(HttpMethod.GET, INSTANCE_STATUSES, new JsonObject(body));
+      }
     } catch (IOException e) {
-      ctx.response()
-        .setStatusCode(404)
-        .end();
+      serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Mock-server error");
     }
   }
 
   private void handleGetInstanceType(RoutingContext ctx) {
     logger.info("got: " + ctx.request().path());
 
+    String tenantId = ctx.request().getHeader(OKAPI_HEADER_TENANT);
+    String body;
+
     try {
-      JsonObject po = new JsonObject(ApiTestBase.getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "zzz.json"));
-      serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+      if (INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT.equals(tenantId)) {
+        body = ApiTestBase.getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "temp.json");
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
+        addServerRqRsData(HttpMethod.GET, INSTANCE_TYPES, new JsonObject(body));
+      } else {
+        body = ApiTestBase.getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "zzz.json");
+        serverResponse(ctx, 200, APPLICATION_JSON, body);
+        addServerRqRsData(HttpMethod.GET, INSTANCE_TYPES, new JsonObject(body));
+      }
     } catch (IOException e) {
-      ctx.response()
-        .setStatusCode(404)
-        .end();
+      serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Mock-server error");
     }
   }
 
@@ -1114,8 +1147,10 @@ public class MockServer {
   private void handleGetContributorNameTypes(RoutingContext ctx) {
     String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
     try {
-      if(("name==Personal name").equals(queryParam)) {
-        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, ApiTestBase.getMockData(CONTRIBUTOR_NAME_TYPES_PATH));
+      if (("name==Personal name").equals(queryParam)) {
+        String body = ApiTestBase.getMockData(CONTRIBUTOR_NAME_TYPES_PATH);
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
+        addServerRqRsData(HttpMethod.GET, CONTRIBUTOR_NAME_TYPES, new JsonObject(body));
       } else {
         serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Illegal query");
       }

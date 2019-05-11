@@ -195,6 +195,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
         CompositePurchaseOrder compPO = HelperUtils.convertToCompositePurchaseOrder(po);
 
         getCompositePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
+          .thenApply(poLines -> {
+            orderLineHelper.sortPoLinesByPoLineNumber(poLines);
+            return poLines;
+          })
           .thenApply(compPO::withCompositePoLines)
           .thenApply(this::populateOrderSummary)
           .thenAccept(future::complete)
