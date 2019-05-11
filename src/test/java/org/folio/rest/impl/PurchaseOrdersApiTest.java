@@ -26,8 +26,6 @@ import org.folio.rest.jaxrs.model.Physical.CreateInventory;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
-import org.hamcrest.Matchers;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -35,11 +33,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -58,6 +53,7 @@ import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
 import static org.folio.orders.utils.ErrorCodes.ORDER_OPEN;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.ORGANIZATION_NOT_A_VENDOR;
 import static org.folio.orders.utils.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_NOT_FOUND;
@@ -66,28 +62,32 @@ import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
-import static org.folio.orders.utils.ErrorCodes.ORGANIZATION_NOT_A_VENDOR;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
-import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.PAYMENT_STATUS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIPT_STATUS;
+import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_STATUS_ID;
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_TYPE_ID;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.joinExistingAndNewItems;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInstanceLinksForUpdatedOrder;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInventoryInteraction;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesCreated;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesQuantityForSuccessCase;
+import static org.folio.rest.impl.MockServer.getContributorNameTypesSearches;
 import static org.folio.rest.impl.MockServer.getCreatedInstances;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
 import static org.folio.rest.impl.MockServer.getCreatedPieces;
 import static org.folio.rest.impl.MockServer.getHoldingsSearches;
+import static org.folio.rest.impl.MockServer.getInstanceStatusesSearches;
 import static org.folio.rest.impl.MockServer.getInstancesSearches;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
@@ -100,6 +100,7 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
@@ -1797,9 +1798,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     });
   }
 
-
   @Test
-  public void testPutOrderToChangeStatusToOpenwithOrganizationNotVendor() throws Exception {
+  public void testPutOrderToChangeStatusToOpenWithOrganizationNotVendor() throws Exception {
 
     logger.info("=== Test Put Order to change status of Order to Open - organization which is not vendor ===");
 
@@ -1817,6 +1817,104 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(errors.getErrors(), hasSize(1));
 
     checkExpectedError(ORGANIZATION_NOT_VENDOR, errors, 0, ORGANIZATION_NOT_A_VENDOR, reqData, 0);
+
+  }
+
+  @Test
+  public void testPostOpenOrderCacheKayMustBeTenantSpecific() throws Exception {
+
+    MockServer.serverRqRs.clear();
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.getCompositePoLines().remove(1);
+    assertThat( reqData.getCompositePoLines(), hasSize(1));
+
+    Headers headers = prepareHeaders(new Header(OKAPI_HEADER_TENANT, "existReferenceData"));
+
+    //Create order first time for tenant, no contributor name type in cache
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
+
+    assertThat(getContributorNameTypesSearches(), hasSize(1));
+    assertThat(getInstanceStatusesSearches(), hasSize(1));
+    assertThat(MockServer.getInstanceTypesSearches(), hasSize(1));
+    clearServiceInteractions();
+
+    //Create order second time for tenant, cache contains contributor name type for this tenant
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
+
+    assertThat(getContributorNameTypesSearches(), nullValue());
+    assertThat(getInstanceStatusesSearches(), nullValue());
+    assertThat(MockServer.getInstanceTypesSearches(), nullValue());
+    clearServiceInteractions();
+
+    // Prepare X-Okapi-Tenant heander for tenant which has no contributor name type
+    headers = prepareHeaders(new Header(OKAPI_HEADER_TENANT, "anotherExistReferenceData"));
+
+    //Create order for another tenant, no contributor name type in cache for this tenant
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
+
+    assertThat(getContributorNameTypesSearches(), hasSize(1));
+    assertThat(getInstanceStatusesSearches(), hasSize(1));
+    assertThat(MockServer.getInstanceTypesSearches(), hasSize(1));
+
+  }
+
+  @Test
+  public void testInventoryHelperCacheDoesNotKeepEmptyValuesWhenFails() throws Exception {
+
+    MockServer.serverRqRs.clear();
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.getCompositePoLines().remove(1);
+    assertThat( reqData.getCompositePoLines(), hasSize(1));
+
+    Headers headers = prepareHeaders(NON_EXIST_INSTANCE_STATUS_TENANT_HEADER);
+
+    //Create order first time for tenant without instanceStatus, no instanceStatus in cache, so logic should call get /instance-types
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 500);
+
+    assertThat(getContributorNameTypesSearches(), hasSize(1));
+    assertThat(getInstanceStatusesSearches(), hasSize(1));
+    assertThat(MockServer.getInstanceTypesSearches(), hasSize(1));
+    clearServiceInteractions();
+
+    //Create order second time for same tenant, still no instanceStatus in cache, logic should call get /instance-types again
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 500);
+
+    assertThat(getContributorNameTypesSearches(), nullValue());
+    assertThat(getInstanceStatusesSearches(), hasSize(1));
+    assertThat(MockServer.getInstanceTypesSearches(), nullValue());
+
+  }
+
+  @Test
+  public void testInventoryHelperCacheContainsDifferentValuesForInstanceTypeAndInstanceStatusWithSameCode() throws Exception {
+
+    MockServer.serverRqRs.clear();
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.getCompositePoLines().remove(1);
+    assertThat( reqData.getCompositePoLines(), hasSize(1));
+
+    Headers headers = prepareHeaders(INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT_HEADER);
+
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
+
+    assertThat(getContributorNameTypesSearches(), hasSize(1));
+    assertThat(getInstanceStatusesSearches(), hasSize(1));
+    assertThat(MockServer.getInstanceTypesSearches(), hasSize(1));
+    clearServiceInteractions();
+
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
+
+    assertThat(getContributorNameTypesSearches(), nullValue());
+    assertThat(getInstanceStatusesSearches(), nullValue());
+    assertThat(MockServer.getInstanceTypesSearches(), nullValue());
+    assertThat(getCreatedInstances(), hasSize(1));
+    JsonObject instance = getCreatedInstances().get(0);
+    String instanceStatusId = instance.getString(INSTANCE_STATUS_ID);
+    String instanceTypeId = instance.getString(INSTANCE_TYPE_ID);
+    assertThat(instanceStatusId, not(equalTo(instanceTypeId)));
 
   }
 
