@@ -52,7 +52,6 @@
     }
   ],
   "orderFormat": "Physical Resource",
-  "owner": "LTS Acquisitions",
   "paymentStatus": "Awaiting Payment",
   "physical": {
     "createInventory": "Instance, Holding, Item",

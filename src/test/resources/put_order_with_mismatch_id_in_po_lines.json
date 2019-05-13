@@ -46,7 +46,6 @@
         }
       ],
       "orderFormat": "Physical Resource",
-      "owner": "LTS Acquisitions",
       "paymentStatus": "Awaiting Payment",
       "physical": {
         "createInventory": "Instance, Holding, Item",
@@ -127,7 +126,6 @@
         }
       ],
       "orderFormat": "Physical Resource",
-      "owner": "LTS Acquisitions",
       "paymentStatus": "Awaiting Payment",
       "physical": {
         "createInventory": "Instance, Holding, Item",
@@ -223,7 +221,6 @@
         }
       ],
       "orderFormat": "Physical Resource",
-      "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
       "paymentStatus": "Awaiting Payment",
       "physical": {
         "createInventory": "Instance, Holding, Item",
@@ -345,7 +342,6 @@
         }
       ],
       "orderFormat": "Electronic Resource",
-      "owner": "LTS E-Resources & Serials",
       "paymentStatus": "Awaiting Payment",
       "poLineDescription": "",
       "publicationDate": "2017",

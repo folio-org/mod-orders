@@ -52,7 +52,6 @@
     }
   ],
   "orderFormat": "Physical Resource",
-  "owner": "Acquisitions - Serials",
   "paymentStatus": "Pending",
   "physical": {
     "createInventory": "Instance, Holding, Item",

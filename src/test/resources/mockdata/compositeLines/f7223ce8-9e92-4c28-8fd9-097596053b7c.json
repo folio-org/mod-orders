@@ -47,7 +47,6 @@
     }
   ],
   "orderFormat" : "Physical Resource",
-  "owner" : "The owber is not difined",
   "paymentStatus" : "Awaiting Payment",
   "physical" : {
     "materialSupplier" : "36dd6d62-c55e-4b19-a3a0-a870da57610a",
