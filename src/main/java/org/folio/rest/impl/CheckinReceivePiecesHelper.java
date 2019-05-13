@@ -38,12 +38,14 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   Map<String, Map<String, T>> piecesByLineId;
   final InventoryHelper inventoryHelper;
   Map<String, Map<String, Error>> processingErrors;
+  Set<String> processedLocations;
   private final PurchaseOrderLineHelper poLineHelper;
   private List<PoLine> poLineList;
 
   CheckinReceivePiecesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx,
       String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
+    processedLocations = new HashSet<>();
     processingErrors = new HashMap<>();
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
     poLineHelper = new PurchaseOrderLineHelper(httpClient, okapiHeaders, ctx, lang);
@@ -204,10 +206,15 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     }
   }
 
+  private boolean ifLocationNotProcessed(String locationId) {
+    return processedLocations.add(locationId);
+  }
+
   private boolean holdingUpdateOnCheckinReceiveRequired(Piece piece, String locationId, PoLine poLine) {
     return isHoldingsUpdateRequired(poLine.getEresource(), poLine.getPhysical())
       && StringUtils.isNotEmpty(locationId)
-      && !StringUtils.equals(locationId, piece.getLocationId());
+      && !StringUtils.equals(locationId, piece.getLocationId())
+      && ifLocationNotProcessed(locationId);
   }
 
   /**
