@@ -96,6 +96,7 @@ import static org.folio.rest.impl.PurchaseOrdersApiTest.VENDOR_WITH_BAD_CONTENT;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ORGANIZATION_NOT_VENDOR;
 import static org.folio.rest.impl.ApiTestBase.X_ECHO_STATUS;
 import static org.folio.rest.impl.ReceivingHistoryApiTest.RECEIVING_HISTORY_PURCHASE_ORDER_ID;
+import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_TYPE_TENANT;
 import static org.junit.Assert.fail;
 
 public class MockServer {
@@ -598,6 +599,10 @@ public class MockServer {
     try {
       if (INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT.equals(tenantId)) {
         body = ApiTestBase.getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "temp.json");
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
+        addServerRqRsData(HttpMethod.GET, INSTANCE_TYPES, new JsonObject(body));
+      } else if (NON_EXIST_INSTANCE_TYPE_TENANT.equals(tenantId)) {
+        body = ApiTestBase.getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "empty_instance_type.json");
         serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
         addServerRqRsData(HttpMethod.GET, INSTANCE_TYPES, new JsonObject(body));
       } else {

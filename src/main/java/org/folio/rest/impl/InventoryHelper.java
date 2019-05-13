@@ -10,6 +10,7 @@ import org.apache.commons.collections4.ListUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.InventoryException;
+import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.jaxrs.model.*;
@@ -396,11 +397,14 @@ public class InventoryHelper extends AbstractHelper {
   private CompletableFuture<String> createInstanceRecord(CompositePoLine compPOL, Map<String, String> productTypesMap) {
     JsonObject lookupObj = new JsonObject();
     CompletableFuture<Void> instanceTypeFuture = getAndCache(DEFAULT_INSTANCE_TYPE_CODE, INSTANCE_TYPES)
-      .thenAccept(lookupObj::mergeIn);
-    CompletableFuture<Void> statusFuture = getAndCache(DEFAULT_STATUS_CODE, INSTANCE_STATUSES)
-      .thenAccept(lookupObj::mergeIn);
-    CompletableFuture<Void> contributorNameTypeIdFuture =  getAndCache(ContributorNameTypeName.PERSONAL_NAME.getName(), CONTRIBUTOR_NAME_TYPES)
-      .thenAccept(lookupObj::mergeIn);
+      .thenAccept(lookupObj::mergeIn)
+      .exceptionally(throwable -> {
+        throw new CompletionException(new HttpException(500, ErrorCodes.MISSING_INSTANCE_TYPE));
+      });
+    CompletableFuture<Void> statusFuture = getAndCache(DEFAULT_STATUS_CODE, INSTANCE_STATUSES).thenAccept(lookupObj::mergeIn);
+
+    CompletableFuture<Void> contributorNameTypeIdFuture = getAndCache(ContributorNameTypeName.PERSONAL_NAME.getName(),
+        CONTRIBUTOR_NAME_TYPES).thenAccept(lookupObj::mergeIn);
 
     return allOf(ctx, instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
       .thenApply(v -> buildInstanceRecordJsonObject(compPOL, productTypesMap, lookupObj))
