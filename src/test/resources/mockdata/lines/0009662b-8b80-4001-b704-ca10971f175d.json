@@ -51,7 +51,6 @@
     }
   ],
   "orderFormat" : "Physical Resource",
-  "owner" : "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
   "paymentStatus" : "Awaiting Payment",
   "physical": {
     "createInventory": "Instance, Holding, Item",

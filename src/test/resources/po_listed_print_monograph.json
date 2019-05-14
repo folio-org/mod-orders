@@ -102,7 +102,6 @@
         }
       ],
       "orderFormat": "P/E Mix",
-      "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
       "paymentStatus": "Awaiting Payment",
       "physical": {
         "createInventory": "Instance, Holding, Item",
@@ -230,7 +229,6 @@
         }
       ],
       "orderFormat": "Electronic Resource",
-      "owner": "LTS E-Resources & Serials",
       "paymentStatus": "Awaiting Payment",
       "poLineDescription": "",
       "publicationDate": "2017",
