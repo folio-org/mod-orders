@@ -33,8 +33,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -1120,6 +1123,23 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     verifyInventoryInteraction(reqData, polCount - 1);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED.value(), reqData.getCompositePoLines().size());
+  }
+
+  @Test
+  public void testPutOrdersByIdInstanceCreation() throws Exception {
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    Map<String, String> uuids = new HashMap<>();
+    // Populate instanceIds
+    reqData.getCompositePoLines().forEach(p -> p.setInstanceId(uuids.compute(p.getId(), (k, v) -> UUID.randomUUID().toString())));
+    // Update order
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
+    verifyInstanceLinksForUpdatedOrder(reqData);
+    // Verify instanceIds conformity
+    reqData.getCompositePoLines().forEach(p -> assertThat(uuids.get(p.getId()), is(p.getInstanceId())));
+    // Verify that new instances didn't created
+    assertThat(MockServer.getCreatedInstances(), nullValue());
   }
 
   @Test

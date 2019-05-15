@@ -109,9 +109,13 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   public CompletableFuture<CompositePoLine> handleInstanceRecord(CompositePoLine compPOL) {
-    return getProductTypesMap(compPOL)
-      .thenCompose(productTypesMap -> getInstanceRecord(compPOL, productTypesMap))
-      .thenApply(compPOL::withInstanceId);
+    if(compPOL.getInstanceId() != null) {
+      return CompletableFuture.completedFuture(compPOL);
+    } else {
+      return getProductTypesMap(compPOL)
+        .thenCompose(productTypesMap -> getInstanceRecord(compPOL, productTypesMap))
+        .thenApply(compPOL::withInstanceId);
+    }
   }
 
   /**
