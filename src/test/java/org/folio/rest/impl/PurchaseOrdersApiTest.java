@@ -33,8 +33,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -1123,6 +1126,23 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
+  public void testPutOrdersByIdInstanceCreation() throws Exception {
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    Map<String, String> uuids = new HashMap<>();
+    // Populate instanceIds
+    reqData.getCompositePoLines().forEach(p -> p.setInstanceId(uuids.compute(p.getId(), (k, v) -> UUID.randomUUID().toString())));
+    // Update order
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
+    verifyInstanceLinksForUpdatedOrder(reqData);
+    // Verify instanceIds conformity
+    reqData.getCompositePoLines().forEach(p -> assertThat(uuids.get(p.getId()), is(p.getInstanceId())));
+    // Verify that new instances didn't created
+    assertThat(MockServer.getCreatedInstances(), nullValue());
+  }
+
+  @Test
   public void testPostOrdersWithOpenStatusAndCheckinItems() throws Exception {
     logger.info("=== Test POST Order By Id to change status of Order to Open - inventory interaction required only for first POL ===");
 
@@ -1916,6 +1936,34 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     String instanceTypeId = instance.getString(INSTANCE_TYPE_ID);
     assertThat(instanceStatusId, not(equalTo(instanceTypeId)));
 
+  }
+
+  @Test
+  public void testInventoryHelperEmptyInstanceTypeThrowsProperError() throws Exception {
+
+    MockServer.serverRqRs.clear();
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.getCompositePoLines()
+      .remove(1);
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
+
+    Headers headers = prepareHeaders(NON_EXIST_INSTANCE_TYPE_TENANT_HEADER);
+
+    Response resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
+      .encodePrettily(), headers, APPLICATION_JSON, 500);
+
+    Error err = resp.getBody()
+      .as(Errors.class)
+      .getErrors()
+      .get(0);
+
+    assertThat(err.getCode(), equalTo(ErrorCodes.MISSING_INSTANCE_TYPE.getCode()));
+    assertThat(err.getMessage(), equalTo(ErrorCodes.MISSING_INSTANCE_TYPE.getDescription()));
+
+    assertThat(getContributorNameTypesSearches(), hasSize(1));
+    assertThat(getInstanceStatusesSearches(), hasSize(1));
+    assertThat(MockServer.getInstanceTypesSearches(), hasSize(1));
   }
 
   private Errors verifyPostResponseErrors(int expectedErrorsNumber, String body) {
