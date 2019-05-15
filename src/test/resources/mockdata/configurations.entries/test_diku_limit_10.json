@@ -25,12 +25,27 @@
         "updatedDate": "2018-12-12T08:24:34.213+0000",
         "updatedByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c"
       }
+    },
+    {
+      "id": "5534ca06-b395-41b3-9bfa-8df54bc93800",
+      "module": "ORDERS",
+      "configName": "inventory-instanceTypeCode",
+      "enabled": true,
+      "value": "customInstanceType"
+    },
+    {
+      "id": "5fd9dea2-57b0-43e1-951d-dc460fa63622",
+      "module": "ORDERS",
+      "configName": "inventory-instanceStatusCode",
+      "enabled": true,
+      "value": "customInstanceStatus"
+    },
+    {
+      "id": "c19bf0dd-0d82-4c6e-9ff0-774568f937de",
+      "module": "ORDERS",
+      "configName": "inventory-loanTypeName",
+      "enabled": true,
+      "value": "customLoanType"
     }
-  ],
-  "totalRecords": 2,
-  "resultInfo": {
-    "totalRecords": 2,
-    "facets": [],
-    "diagnostics": []
-  }
+  ]
 }

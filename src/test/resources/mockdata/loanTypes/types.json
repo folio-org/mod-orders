@@ -1,0 +1,12 @@
+{
+  "loantypes": [
+    {
+      "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+      "name": "Can circulate"
+    },
+    {
+      "id": "79661913-60d8-4e59-ad22-bc37ce11da01",
+      "name": "customLoanType"
+    }
+  ]
+}
