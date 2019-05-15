@@ -1938,6 +1938,34 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
   }
 
+  @Test
+  public void testInventoryHelperEmptyInstanceTypeThrowsProperError() throws Exception {
+
+    MockServer.serverRqRs.clear();
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.getCompositePoLines()
+      .remove(1);
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
+
+    Headers headers = prepareHeaders(NON_EXIST_INSTANCE_TYPE_TENANT_HEADER);
+
+    Response resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
+      .encodePrettily(), headers, APPLICATION_JSON, 500);
+
+    Error err = resp.getBody()
+      .as(Errors.class)
+      .getErrors()
+      .get(0);
+
+    assertThat(err.getCode(), equalTo(ErrorCodes.MISSING_INSTANCE_TYPE.getCode()));
+    assertThat(err.getMessage(), equalTo(ErrorCodes.MISSING_INSTANCE_TYPE.getDescription()));
+
+    assertThat(getContributorNameTypesSearches(), hasSize(1));
+    assertThat(getInstanceStatusesSearches(), hasSize(1));
+    assertThat(MockServer.getInstanceTypesSearches(), hasSize(1));
+  }
+
   private Errors verifyPostResponseErrors(int expectedErrorsNumber, String body) {
     Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
