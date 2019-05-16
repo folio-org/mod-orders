@@ -171,9 +171,7 @@ public abstract class AbstractHelper {
 
     if (cause instanceof HttpException) {
       code = ((HttpException) cause).getCode();
-      error = new Error();
-      error.withCode(((HttpException) cause).getErrorCode());
-      error.withMessage(cause.getMessage());
+      error = ((HttpException) cause).getError();
     } else {
       code = INTERNAL_SERVER_ERROR.getStatusCode();
       error = GENERIC_ERROR_CODE.toError().withAdditionalProperty(ERROR_CAUSE, cause.getMessage());
