@@ -1,0 +1,16 @@
+{
+  "instanceStatuses": [
+    {
+      "id": "daf2681c-25af-4202-a3fa-e58fdf806183",
+      "code": "temp",
+      "name": "Temporary",
+      "source": "folio"
+    },
+    {
+      "id": "9ed2bae0-7306-4407-bc65-e25f9f673df1",
+      "code": "customInstanceStatus",
+      "name": "Custom Status",
+      "source": "folio"
+    }
+  ]
+}

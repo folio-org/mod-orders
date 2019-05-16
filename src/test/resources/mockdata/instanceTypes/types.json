@@ -1,0 +1,16 @@
+{
+  "instanceTypes": [
+    {
+      "id": "30fffe0e-e985-4144-b2e2-1e8179bdb41f",
+      "name": "Custom Type",
+      "code": "customInstanceType",
+      "source": "unitTest"
+    },
+    {
+      "id": "15fc2a66-ac00-4d32-a967-e098b1711a56",
+      "name": "unspecified",
+      "code": "zzz",
+      "source": "rdacontent"
+    }
+  ]
+}

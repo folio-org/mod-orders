@@ -68,41 +68,48 @@ public class InventoryHelper extends AbstractHelper {
   static final String CONTRIBUTOR_NAME_TYPES = "contributorNameTypes";
   static final String INSTANCE_STATUSES = "instanceStatuses";
   static final String INSTANCE_TYPES = "instanceTypes";
-
   static final String ITEMS = "items";
+  static final String LOAN_TYPES = "loantypes";
+
+  // mod-configuration: config names and default values
+  static final String CONFIG_NAME_CONTRIBUTOR_NAME_TYPE = "inventory-contributorNameType";
+  static final String CONFIG_NAME_INSTANCE_TYPE_CODE = "inventory-instanceTypeCode";
+  static final String CONFIG_NAME_INSTANCE_STATUS_CODE = "inventory-instanceStatusCode";
+  static final String CONFIG_NAME_LOAN_TYPE_NAME = "inventory-loanTypeName";
+  static final String DEFAULT_CONTRIBUTOR_NAME = "Personal name";
+  static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
+  static final String DEFAULT_INSTANCE_STATUS_CODE = "temp";
+  static final String DEFAULT_LOAN_TYPE_NAME = "Can circulate";
+
   private static final String HOLDINGS_RECORDS = "holdingsRecords";
   private static final String IDENTIFIER_TYPES = "identifierTypes";
   private static final String INSTANCES = "instances";
-  private static final String LOAN_TYPES = "loantypes";
 
   private static final String TENANT_SPECIFIC_KEY_FORMAT = "%s.%s.%s";
-  private static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
-  private static final String DEFAULT_STATUS_CODE = "temp";
-  private static final String DEFAULT_LOAN_TYPE_NAME = "Can circulate";
-  private static final String LOOKUP_IDENTIFIER_TYPES_ENDPOINT = "/identifier-types?query=%s&limit=%d&lang=%s";
-  private static final String LOOKUP_INSTANCES_ENDPOINT = "/inventory/instances?query=%s&lang=%s";
   private static final String CREATE_INSTANCE_ENDPOINT = "/inventory/instances?lang=%s";
   private static final String LOOKUP_ITEM_STOR_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
   private static final String LOOKUP_ITEM_STOR_ENDPOINT = "/item-storage/items?query=%s&limit=%d&lang=%s";
   private static final String CREATE_ITEM_STOR_ENDPOINT = "/item-storage/items?lang=%s";
-  private static final String LOOKUP_ITEMS_ENDPOINT = "/inventory/items?query=%s&limit=%d&lang=%s";
   private static final String UPDATE_ITEM_ENDPOINT = "/inventory/items/%s?lang=%s";
   private static final String HOLDINGS_LOOKUP_QUERY = "instanceId==%s and permanentLocationId==%s";
-  private static final String HOLDINGS_LOOKUP_ENDPOINT = "/holdings-storage/holdings?query=%s&limit=1&lang=%s";
   private static final String HOLDINGS_CREATE_ENDPOINT = "/holdings-storage/holdings?lang=%s";
   public static final String ID = "id";
 
-  private static final Map<String, String> INVENTORY_REFERENCE_DATA_LOOKUP_ENDPOINTS;
+  private static final Map<String, String> INVENTORY_LOOKUP_ENDPOINTS;
 
   static {
     Map<String, String> apis = new HashMap<>();
-    apis.put(INSTANCE_STATUSES ,"/instance-statuses?query=code==%s");
-    apis.put(INSTANCE_TYPES ,"/instance-types?query=code==%s");
-    apis.put(CONTRIBUTOR_NAME_TYPES ,"/contributor-name-types?query=name==%s");
+    apis.put(CONTRIBUTOR_NAME_TYPES, "/contributor-name-types?limit=1&query=name==%s&lang=%s");
+    apis.put(HOLDINGS_RECORDS, "/holdings-storage/holdings?query=%s&limit=1&lang=%s");
+    apis.put(LOAN_TYPES, "/loan-types?query=name==%s&limit=1&lang=%s");
+    apis.put(IDENTIFIER_TYPES, "/identifier-types?query=%s&limit=%d&lang=%s");
+    apis.put(INSTANCE_STATUSES, "/instance-statuses?query=code==%s&limit=1&lang=%s");
+    apis.put(INSTANCE_TYPES, "/instance-types?query=code==%s&lang=%s");
+    apis.put(INSTANCES, "/inventory/instances?query=%s&lang=%s");
+    apis.put(ITEMS, "/inventory/items?query=%s&limit=%d&lang=%s");
 
-    INVENTORY_REFERENCE_DATA_LOOKUP_ENDPOINTS = Collections.unmodifiableMap(apis);
+    INVENTORY_LOOKUP_ENDPOINTS = Collections.unmodifiableMap(apis);
   }
-
 
   InventoryHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -160,7 +167,7 @@ public class InventoryHelper extends AbstractHelper {
    */
   public CompletableFuture<List<JsonObject>> getItemRecordsByIds(List<String> ids) {
     String query = encodeQuery(HelperUtils.convertIdsToCqlQuery(ids), logger);
-    String endpoint = String.format(LOOKUP_ITEMS_ENDPOINT, query, ids.size(), lang);
+    String endpoint = buildLookupEndpoint(ITEMS, query, ids.size(), lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(this::extractItems);
   }
@@ -218,7 +225,7 @@ public class InventoryHelper extends AbstractHelper {
     String instanceId = compPOL.getInstanceId();
 
     String query = encodeQuery(String.format(HOLDINGS_LOOKUP_QUERY, instanceId, locationId), logger);
-    String endpoint = String.format(HOLDINGS_LOOKUP_ENDPOINT, query, lang);
+    String endpoint = buildLookupEndpoint(HOLDINGS_RECORDS, query, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
           .thenCompose(holdings -> {
             if (!holdings.getJsonArray(HOLDINGS_RECORDS).isEmpty()) {
@@ -226,6 +233,10 @@ public class InventoryHelper extends AbstractHelper {
             }
             return createHoldingsRecord(instanceId, locationId);
           });
+  }
+
+  private String buildLookupEndpoint(String type, Object... params) {
+    return String.format(INVENTORY_LOOKUP_ENDPOINTS.get(type), params);
   }
 
   private CompletableFuture<String> createHoldingsRecord(String instanceId, String locationId) {
@@ -346,7 +357,7 @@ public class InventoryHelper extends AbstractHelper {
       .map(productType -> "name==" + productType)
       .collect(joining(" or "));
 
-    String endpoint = String.format(LOOKUP_IDENTIFIER_TYPES_ENDPOINT, encodeQuery(query, logger), prodTypesQty, lang);
+    String endpoint = buildLookupEndpoint(IDENTIFIER_TYPES, encodeQuery(query, logger), prodTypesQty, lang);
 
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(productTypes -> {
@@ -380,8 +391,7 @@ public class InventoryHelper extends AbstractHelper {
       .collect(joining(" or "));
 
     // query contains special characters so must be encoded before submitting
-    String endpoint = String.format(LOOKUP_INSTANCES_ENDPOINT, encodeQuery(query, logger), lang);
-
+    String endpoint = buildLookupEndpoint(INSTANCES, encodeQuery(query, logger), lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(instances -> {
         if (!instances.getJsonArray(INSTANCES).isEmpty()) {
@@ -400,15 +410,14 @@ public class InventoryHelper extends AbstractHelper {
    */
   private CompletableFuture<String> createInstanceRecord(CompositePoLine compPOL, Map<String, String> productTypesMap) {
     JsonObject lookupObj = new JsonObject();
-    CompletableFuture<Void> instanceTypeFuture = getAndCache(DEFAULT_INSTANCE_TYPE_CODE, INSTANCE_TYPES)
+    CompletableFuture<Void> instanceTypeFuture = getAndCache(INSTANCE_TYPES)
       .thenAccept(lookupObj::mergeIn)
       .exceptionally(throwable -> {
         throw new CompletionException(new HttpException(500, ErrorCodes.MISSING_INSTANCE_TYPE));
       });
-    CompletableFuture<Void> statusFuture = getAndCache(DEFAULT_STATUS_CODE, INSTANCE_STATUSES).thenAccept(lookupObj::mergeIn);
+    CompletableFuture<Void> statusFuture = getAndCache(INSTANCE_STATUSES).thenAccept(lookupObj::mergeIn);
 
-    CompletableFuture<Void> contributorNameTypeIdFuture = getAndCache(ContributorNameTypeName.PERSONAL_NAME.getName(),
-        CONTRIBUTOR_NAME_TYPES).thenAccept(lookupObj::mergeIn);
+    CompletableFuture<Void> contributorNameTypeIdFuture = getAndCache(CONTRIBUTOR_NAME_TYPES).thenAccept(lookupObj::mergeIn);
 
     return allOf(ctx, instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
       .thenApply(v -> buildInstanceRecordJsonObject(compPOL, productTypesMap, lookupObj))
@@ -580,7 +589,7 @@ public class InventoryHelper extends AbstractHelper {
    * @return item data to be used as request body for POST operation
    */
   private CompletableFuture<JsonObject> buildBaseItemRecordJsonObject(CompositePoLine compPOL, String holdingId) {
-    return getLoanTypeId(DEFAULT_LOAN_TYPE_NAME)
+    return getLoanTypeId()
       .thenApply(loanTypeId -> {
         JsonObject itemRecord = new JsonObject();
         itemRecord.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
@@ -620,15 +629,9 @@ public class InventoryHelper extends AbstractHelper {
     return json.getString(ID);
   }
 
-  private CompletableFuture<String> getLoanTypeId(String typeName) {
-    return getLoanType(typeName)
-      .thenApply(this::extractId);
-  }
-
-  private CompletableFuture<JsonObject> getLoanType(String typeName) {
-    String endpoint = "/loan-types?query=name==" + encodeQuery(typeName, logger);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(response -> getFirstObjectFromResponse(response, LOAN_TYPES));
+  private CompletableFuture<String> getLoanTypeId() {
+    return getAndCache(LOAN_TYPES)
+      .thenApply(jsonObject -> jsonObject.getString(LOAN_TYPES));
   }
 
   /**
@@ -646,49 +649,57 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   /**
-   * Caches id's in Vert.X Context and returns it by tenantId.entryTitle.key.
+   * Caches id's in Vert.X Context and returns it by tenantId.entryType.key.
    *
-   * @param key key for retrieving id from cache
-   * @param entryTitle name of object whose id we want to get from cache
+   * @param entryType name of object whose id we want to get from cache
    *
    * @return value from cache
    */
-  private CompletableFuture<JsonObject> getAndCache(String key, String entryTitle) {
-    String tenantSpecificKey = buildTenantSpecificKey(key, entryTitle);
-    JsonObject response = ctx.get(tenantSpecificKey);
-    if(response == null) {
-      String endpoint = INVENTORY_REFERENCE_DATA_LOOKUP_ENDPOINTS.get(entryTitle);
-      return handleGetRequest(String.format(endpoint, encodeQuery(key, logger)), httpClient, ctx, okapiHeaders, logger)
-        .thenApply(entries -> {
-          JsonObject result = new JsonObject();
-          result.put(entryTitle, getFirstObjectFromResponse(entries, entryTitle).getString(ID));
-          ctx.put(tenantSpecificKey, result);
-          return result;
-        });
-    } else {
-      return completedFuture(response);
-    }
+  private CompletableFuture<JsonObject> getAndCache(String entryType) {
+    return getEntryTypeValue(entryType)
+      .thenCompose(key -> {
+        String tenantSpecificKey = buildTenantSpecificKey(key, entryType);
+        JsonObject response = ctx.get(tenantSpecificKey);
+        if(response == null) {
+          String endpoint = buildLookupEndpoint(entryType, encodeQuery(key, logger), lang);
+          return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+            .thenApply(entries -> {
+              JsonObject result = new JsonObject();
+              result.put(entryType, getFirstObjectFromResponse(entries, entryType).getString(ID));
+              ctx.put(tenantSpecificKey, result);
+              return result;
+            });
+        } else {
+          return completedFuture(response);
+        }
+      });
   }
 
-  private String buildTenantSpecificKey(String key, String entryTitle) {
+  private String buildTenantSpecificKey(String key, String entryType) {
     String tenantId = TenantTool.tenantId(okapiHeaders);
-    return String.format(TENANT_SPECIFIC_KEY_FORMAT, tenantId, entryTitle, key);
+    return String.format(TENANT_SPECIFIC_KEY_FORMAT, tenantId, entryType, key);
   }
 
-  private enum ContributorNameTypeName {
-
-    CORPORATE_NAME("Corporate name"),
-    MEETING_NAME("Meeting name"),
-    PERSONAL_NAME("Personal name");
-
-    ContributorNameTypeName(String name) {
-      this.name = name;
-    }
-
-    private String name;
-
-    public String getName() {
-      return name;
-    }
+  /**
+   * Loads configuration and gets tenant specific value
+   * @param entryType type of the entry
+   * @return tenant specific value or system default one
+   */
+  private CompletableFuture<String> getEntryTypeValue(String entryType) {
+    return getTenantConfiguration()
+      .thenApply(configs -> {
+        switch (entryType) {
+          case CONTRIBUTOR_NAME_TYPES:
+            return configs.getString(CONFIG_NAME_CONTRIBUTOR_NAME_TYPE, DEFAULT_CONTRIBUTOR_NAME);
+          case INSTANCE_STATUSES:
+            return configs.getString(CONFIG_NAME_INSTANCE_STATUS_CODE, DEFAULT_INSTANCE_STATUS_CODE);
+          case INSTANCE_TYPES:
+            return configs.getString(CONFIG_NAME_INSTANCE_TYPE_CODE, DEFAULT_INSTANCE_TYPE_CODE);
+          case LOAN_TYPES:
+            return configs.getString(CONFIG_NAME_LOAN_TYPE_NAME, DEFAULT_LOAN_TYPE_NAME);
+          default:
+            throw new IllegalArgumentException("Unexpected inventory entry type: " + entryType);
+        }
+      });
   }
 }
