@@ -75,6 +75,7 @@ import static org.folio.rest.impl.ApiTestBase.PO_ID_GET_LINES_INTERNAL_SERVER_ER
 import static org.folio.rest.impl.ApiTestBase.PO_LINE_NUMBER_VALUE;
 import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEMS;
+import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_A;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_B;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_VENDOR_ID;
@@ -106,11 +107,11 @@ public class MockServer {
   // Mock data paths
   static final String BASE_MOCK_DATA_PATH = "mockdata/";
   private static final String CONTRIBUTOR_NAME_TYPES_PATH = BASE_MOCK_DATA_PATH + "contributorNameTypes/contributorPersonalNameType.json";
-  private static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
-  private static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
+  static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
+  static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
   private static final String ITEMS_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/";
-  private static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
-  private static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
+  static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
+  static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
   private static final String INSTANCE_IDENTIFIERS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
   static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
@@ -454,8 +455,13 @@ public class MockServer {
     logger.info("handleGetLoanType got: " + ctx.request().path());
 
     try {
-      JsonObject po = new JsonObject(ApiTestBase.getMockData(LOAN_TYPES_MOCK_DATA_PATH + "Can circulate.json"));
-      serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+      // Filter result based on name from query
+      String name = ctx.request().getParam("query").split("==")[1];
+      JsonObject entries = new JsonObject(ApiTestBase.getMockData(LOAN_TYPES_MOCK_DATA_PATH + "types.json"));
+      filterByKeyValue("name", name, entries.getJsonArray(LOAN_TYPES));
+
+      serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+      addServerRqRsData(HttpMethod.GET, LOAN_TYPES, entries);
     } catch (IOException e) {
       ctx.response()
         .setStatusCode(404)
@@ -589,17 +595,19 @@ public class MockServer {
     logger.info("got: " + ctx.request().path());
 
     String tenantId = ctx.request().getHeader(OKAPI_HEADER_TENANT);
-    String body;
-
     try {
       if (NON_EXIST_INSTANCE_STATUS_TENANT.equals(tenantId)) {
-        body = ApiTestBase.getMockData(INSTANCE_STATUSES_MOCK_DATA_PATH + "empty_instance_statuses.json");
+        String body = ApiTestBase.getMockData(INSTANCE_STATUSES_MOCK_DATA_PATH + "empty_instance_statuses.json");
         serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
         addServerRqRsData(HttpMethod.GET, INSTANCE_STATUSES, new JsonObject(body));
       } else {
-        body = ApiTestBase.getMockData(INSTANCE_STATUSES_MOCK_DATA_PATH + "temp.json");
-        serverResponse(ctx, 200, APPLICATION_JSON, body);
-        addServerRqRsData(HttpMethod.GET, INSTANCE_STATUSES, new JsonObject(body));
+        // Filter result based on code from query
+        String code = ctx.request().getParam("query").split("==")[1];
+        JsonObject entries = new JsonObject(ApiTestBase.getMockData(INSTANCE_STATUSES_MOCK_DATA_PATH + "types.json"));
+        filterByKeyValue("code", code, entries.getJsonArray(INSTANCE_STATUSES));
+
+        serverResponse(ctx, 200, APPLICATION_JSON, entries.encode());
+        addServerRqRsData(HttpMethod.GET, INSTANCE_STATUSES, entries);
       }
     } catch (IOException e) {
       serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Mock-server error");
@@ -610,24 +618,36 @@ public class MockServer {
     logger.info("got: " + ctx.request().path());
 
     String tenantId = ctx.request().getHeader(OKAPI_HEADER_TENANT);
-    String body;
-
     try {
       if (INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT.equals(tenantId)) {
-        body = ApiTestBase.getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "temp.json");
+        String body = ApiTestBase.getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "temp.json");
         serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
         addServerRqRsData(HttpMethod.GET, INSTANCE_TYPES, new JsonObject(body));
       } else if (NON_EXIST_INSTANCE_TYPE_TENANT.equals(tenantId)) {
-        body = ApiTestBase.getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "empty_instance_type.json");
+        String body = ApiTestBase.getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "empty_instance_type.json");
         serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
         addServerRqRsData(HttpMethod.GET, INSTANCE_TYPES, new JsonObject(body));
       } else {
-        body = ApiTestBase.getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "zzz.json");
-        serverResponse(ctx, 200, APPLICATION_JSON, body);
-        addServerRqRsData(HttpMethod.GET, INSTANCE_TYPES, new JsonObject(body));
+        // Filter result based on code from query
+        String code = ctx.request().getParam("query").split("==")[1];
+        JsonObject entries = new JsonObject(ApiTestBase.getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "types.json"));
+        filterByKeyValue("code", code, entries.getJsonArray(INSTANCE_TYPES));
+
+        serverResponse(ctx, 200, APPLICATION_JSON, entries.encode());
+        addServerRqRsData(HttpMethod.GET, INSTANCE_TYPES, entries);
       }
     } catch (IOException e) {
       serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Mock-server error");
+    }
+  }
+
+  private void filterByKeyValue(String key, String value, JsonArray entries) {
+    Iterator<Object> iterator = entries.iterator();
+    while (iterator.hasNext()) {
+      JsonObject obj = (JsonObject) iterator.next();
+      if (!StringUtils.equals(value, obj.getString(key))) {
+        iterator.remove();
+      }
     }
   }
 
