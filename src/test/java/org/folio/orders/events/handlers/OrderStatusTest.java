@@ -17,6 +17,7 @@ import java.util.concurrent.TimeoutException;
 
 import javax.ws.rs.core.Response;
 
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.impl.AbstractHelper;
 import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
@@ -67,7 +68,7 @@ public class OrderStatusTest extends ApiTestBase {
       PurchaseOrder purchaseOrder = getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class);
       assertThat(purchaseOrder.getWorkflowStatus(), is(WorkflowStatus.CLOSED));
       assertThat(purchaseOrder.getCloseReason(), notNullValue());
-      assertThat(purchaseOrder.getCloseReason().getReason(), equalTo(OrderStatus.REASON_COMPLETE));
+      assertThat(purchaseOrder.getCloseReason().getReason(), equalTo(HelperUtils.REASON_COMPLETE));
       assertThat(result.body(), equalTo(Response.Status.OK.getReasonPhrase()));
     }));
   }
@@ -178,7 +179,7 @@ public class OrderStatusTest extends ApiTestBase {
       PurchaseOrder purchaseOrder = getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class);
       assertThat(purchaseOrder.getWorkflowStatus(), is(WorkflowStatus.CLOSED));
       assertThat(purchaseOrder.getCloseReason(), notNullValue());
-      assertThat(purchaseOrder.getCloseReason().getReason(), equalTo(OrderStatus.REASON_COMPLETE));
+      assertThat(purchaseOrder.getCloseReason().getReason(), equalTo(HelperUtils.REASON_COMPLETE));
     }));
   }
 

@@ -7,10 +7,6 @@ import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
-import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
-import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +19,6 @@ import javax.ws.rs.core.Response;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.impl.AbstractHelper;
-import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -39,8 +34,6 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 @Component("orderStatusHandler")
 public class OrderStatus extends AbstractHelper implements Handler<Message<JsonObject>> {
-
-  static final String REASON_COMPLETE = "Complete";
 
   @Autowired
   public OrderStatus(Vertx vertx) {
@@ -78,21 +71,8 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
             // Get purchase order lines to check if order status needs to be changed.
             getPoLines(orderId, lang, httpClient, ctx, okapiHeaders, logger)
               .thenCompose(linesArray -> supplyBlockingAsync(ctx, () -> convertToPoLines(linesArray)))
-              .thenAccept(poLines -> {
-                if (changeOrderStatus(purchaseOrder, poLines)) {
-                  logger.debug("Workflow status update required for order with id={}", orderId);
-
-                  handlePutRequest(resourceByIdPath(PURCHASE_ORDER, orderId), JsonObject.mapFrom(purchaseOrder),
-                    httpClient, ctx, okapiHeaders, logger)
-                    .thenAccept(future::complete)
-                    .exceptionally(e -> {
-                      future.completeExceptionally(e);
-                      return null;
-                    });
-                } else {
-                  future.complete(null);
-                }
-              })
+              .thenCompose(poLines -> updateOrderStatus(okapiHeaders, httpClient, purchaseOrder, poLines))
+              .thenAccept(future::complete)
               .exceptionally(e -> {
                 logger.error("The error happened processing workflow status update logic for order {}", orderId, e);
                 future.completeExceptionally(e);
@@ -121,17 +101,15 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
       });
   }
 
-  private boolean changeOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
-    boolean isUpdateRequired = false;
-    if (toBeClosed(purchaseOrder, poLines)) {
-      isUpdateRequired = true;
-      purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
-      purchaseOrder.setCloseReason(new CloseReason().withReason(REASON_COMPLETE));
-    } else if (toBeReopened(purchaseOrder, poLines)) {
-      isUpdateRequired = true;
-      purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+  CompletableFuture<Void> updateOrderStatus(Map<String, String> okapiHeaders, HttpClientInterface httpClient, PurchaseOrder purchaseOrder, List<PoLine> poLines) {
+    String orderId = purchaseOrder.getId();
+    if (HelperUtils.changeOrderStatus(purchaseOrder, poLines)) {
+      logger.debug("Workflow status update required for order with id={}", orderId);
+
+      return handlePutRequest(resourceByIdPath(PURCHASE_ORDER, orderId), JsonObject.mapFrom(purchaseOrder),
+        httpClient, ctx, okapiHeaders, logger);
     }
-    return isUpdateRequired;
+    return VertxCompletableFuture.completedFuture(null);
   }
 
   private List<PoLine> convertToPoLines(JsonArray linesArray) {
@@ -146,20 +124,4 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
     return okapiHeaders;
   }
 
-  private boolean toBeClosed(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
-    return purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.OPEN
-      && poLines.stream().allMatch(this::isCompletedPoLine);
-  }
-
-  private boolean toBeReopened(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
-    return purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.CLOSED
-      && poLines.stream().anyMatch(line -> !isCompletedPoLine(line));
-  }
-
-  private boolean isCompletedPoLine(PoLine line) {
-    PoLine.PaymentStatus paymentStatus = line.getPaymentStatus();
-    PoLine.ReceiptStatus receiptStatus = line.getReceiptStatus();
-    return (paymentStatus == PAYMENT_NOT_REQUIRED || paymentStatus == FULLY_PAID)
-      && (receiptStatus == FULLY_RECEIVED || receiptStatus == RECEIPT_NOT_REQUIRED);
-  }
 }

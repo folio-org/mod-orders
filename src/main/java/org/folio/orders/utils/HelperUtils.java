@@ -8,7 +8,12 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
+import static org.folio.rest.impl.AbstractHelper.ID;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.*;
+import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
+import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
@@ -56,6 +61,7 @@ public class HelperUtils {
   public static final String COMPOSITE_PO_LINES = "compositePoLines";
 
   public static final String DEFAULT_POLINE_LIMIT = "1";
+  public static final String REASON_COMPLETE = "Complete";
   private static final String MAX_POLINE_LIMIT = "500";
   public static final String OKAPI_URL = "X-Okapi-Url";
   private static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
@@ -964,4 +970,43 @@ public class HelperUtils {
 
     return isMissing;
   }
+
+  public static boolean changeOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
+    boolean isUpdateRequired = false;
+    if (toBeClosed(purchaseOrder, poLines)) {
+      isUpdateRequired = true;
+      purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
+      purchaseOrder.setCloseReason(new CloseReason().withReason(REASON_COMPLETE));
+    } else if (toBeReopened(purchaseOrder, poLines)) {
+      isUpdateRequired = true;
+      purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+    }
+    return isUpdateRequired;
+  }
+
+  private static boolean toBeClosed(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
+    return purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.OPEN
+      && poLines.stream().allMatch(HelperUtils::isCompletedPoLine);
+  }
+
+  private static boolean toBeReopened(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
+    return purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.CLOSED
+      && poLines.stream().anyMatch(line -> !isCompletedPoLine(line));
+  }
+
+  private static boolean isCompletedPoLine(PoLine line) {
+    PoLine.PaymentStatus paymentStatus = line.getPaymentStatus();
+    PoLine.ReceiptStatus receiptStatus = line.getReceiptStatus();
+    return (paymentStatus == PAYMENT_NOT_REQUIRED || paymentStatus == FULLY_PAID)
+      && (receiptStatus == FULLY_RECEIVED || receiptStatus == RECEIPT_NOT_REQUIRED);
+  }
+
+  public static PoLine convertToPoLine(CompositePoLine compPoLine) {
+    JsonObject pol = JsonObject.mapFrom(compPoLine);
+    pol.remove(ALERTS);
+    pol.remove(REPORTING_CODES);
+    return pol.mapTo(PoLine.class);
+  }
+
+
 }

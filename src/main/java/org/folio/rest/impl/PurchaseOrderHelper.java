@@ -5,6 +5,8 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
+import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
+import static org.folio.orders.utils.HelperUtils.convertToPoLine;
 import static org.folio.orders.utils.HelperUtils.deletePoLine;
 import static org.folio.orders.utils.HelperUtils.deletePoLines;
 import static org.folio.orders.utils.HelperUtils.getCompositePoLines;
@@ -476,6 +478,15 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private CompletableFuture<Void> updateOrderSummary(CompositePurchaseOrder compPO) {
     logger.debug("Updating order...");
     JsonObject purchaseOrder = convertToPurchaseOrder(compPO);
+    List<PoLine> poLines = compPO.getCompositePoLines()
+      .stream()
+      .map(HelperUtils::convertToPoLine)
+      .collect(toList());
+
+    if (changeOrderStatus(purchaseOrder.mapTo(PurchaseOrder.class), poLines)) {
+      logger.debug("Workflow status update required for order with id={}", compPO.getId());
+    }
+
     return handlePutRequest(resourceByIdPath(PURCHASE_ORDER, compPO.getId()), purchaseOrder, httpClient, ctx, okapiHeaders, logger);
   }
 
