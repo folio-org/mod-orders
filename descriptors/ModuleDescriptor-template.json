@@ -43,6 +43,7 @@
             "inventory-storage.items.item.post",
             "inventory-storage.instances.item.get",
             "inventory-storage.loan-types.collection.get",
+            "inventory-storage.contributor-name-types.collection.get",
             "organizations-storage.organizations.collection.get",
             "organizations-storage.organizations.item.get"
           ]
@@ -79,6 +80,7 @@
             "inventory-storage.items.collection.get",
             "inventory-storage.items.item.post",
             "inventory-storage.loan-types.collection.get",
+            "inventory-storage.contributor-name-types.collection.get",
             "organizations-storage.organizations.collection.get",
             "organizations-storage.organizations.item.get"
           ]
