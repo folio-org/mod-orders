@@ -226,11 +226,12 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     return null;
   }
 
-  private CompletableFuture<Boolean> createHoldingsForChangedLocations(Piece piece, PoLine poLine, String locationId) {
-    if (holdingUpdateOnCheckinReceiveRequired(piece, locationId, poLine)) {
-      return inventoryHelper.getOrCreateHoldingsRecord(poLine.getInstanceId(), locationId)
+  private CompletableFuture<Boolean> createHoldingsForChangedLocations(Piece piece, PoLine poLine, String receivedPieceLocationId) {
+    if (ifHoldingNotProcessed(receivedPieceLocationId, poLine.getInstanceId()) && !isRevertToOnOrder(piece)) {
+      
+      return inventoryHelper.getOrCreateHoldingsRecord(poLine.getInstanceId(), receivedPieceLocationId)
         .thenCompose(holdingId -> {
-          processedHoldings.put(locationId + poLine.getInstanceId(), holdingId);
+          processedHoldings.put(receivedPieceLocationId + poLine.getInstanceId(), holdingId);
           return completedFuture(true);
         })
         .exceptionally(t -> {
@@ -697,7 +698,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     // Collect all piece records with non-empty item ids. The result is a map
     // with item id as a key and piece record as a value
     Map<String, Piece> piecesWithItems = collectPiecesWithItemId(piecesGroupedByPoLine);
-    List<String> polineIds = new ArrayList<>(piecesGroupedByPoLine.keySet());
+    List<String> poLineIds = new ArrayList<>(piecesGroupedByPoLine.keySet());
 
     // If there are no pieces with ItemId, continue
     if (piecesWithItems.isEmpty()) {
@@ -705,7 +706,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     }
 
     return getItemRecords(piecesWithItems)
-      .thenCombine(getPoLines(polineIds),
+      .thenCombine(getPoLines(poLineIds),
           (items, poLines) -> processHoldingsUpdate(pieceLocationsGroupedByPoLine, piecesGroupedByPoLine, items, poLines)
             .thenCompose(v -> processItemsUpdate(pieceLocationsGroupedByPoLine, piecesGroupedByPoLine, items, poLines)))
       .thenCompose(results -> results);
@@ -724,12 +725,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       PoLine poLine = searchPoLineById(poLines, piece);
       if (poLine == null)
         continue;
-      
+
       String pieceLocation = pieceLocationsGroupedByPoLine.get(poLine.getId())
         .get(piece.getId());
-      String holdingId = processedHoldings.get(pieceLocation + poLine.getInstanceId());
-      item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
-
+      if (holdingUpdateOnCheckinReceiveRequired(piece, pieceLocation, poLine) && !isRevertToOnOrder(piece)) {
+        String holdingId = processedHoldings.get(pieceLocation + poLine.getInstanceId());
+        item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
+      }
       futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece));
     }
     return collectResultsOnSuccess(futuresForItemsUpdates).thenApply(results -> {
@@ -757,11 +759,11 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
         logger.error("POLine associated with piece '{}' cannot be found", piece.getId());
         continue;
       }
-      String pieceLocation = pieceLocationsGroupedByPoLine.get(poLine.getId())
+      String receivedPieceLocationId = pieceLocationsGroupedByPoLine.get(poLine.getId())
         .get(piece.getId());
 
-      if (ifHoldingNotProcessed(pieceLocation, poLine.getInstanceId())) {
-        futuresForHoldingsUpdates.add(createHoldingsForChangedLocations(piece, poLine, pieceLocation));
+      if (holdingUpdateOnCheckinReceiveRequired(piece, receivedPieceLocationId, poLine)) {
+        futuresForHoldingsUpdates.add(createHoldingsForChangedLocations(piece, poLine, receivedPieceLocationId));
       }
     }
     return collectResultsOnSuccess(futuresForHoldingsUpdates).thenAccept(results -> {
