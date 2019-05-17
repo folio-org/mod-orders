@@ -152,6 +152,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   private static final String ORDERS_MOCK_DATA_PATH = COMP_ORDER_MOCK_DATA_PATH + "getOrders.json";
   private static final String ORDER_FOR_FAILURE_CASE_MOCK_DATA_PATH = COMP_ORDER_MOCK_DATA_PATH + PO_ID_FOR_FAILURE_CASE + ".json";
   private static final String PE_MIX_PATH = "po_listed_print_monograph_pe_mix.json";
+  private static final String PHYS_EL_ORDER_PATH = "po_one_physical_one_electronic_lines.json";
   private static final String MONOGRAPH_FOR_CREATE_INVENTORY_TEST = "print_monograph_for_create_inventory_test.json";
   private static final String LISTED_PRINT_SERIAL_PATH = "po_listed_print_serial.json";
   private static final String MINIMAL_ORDER_PATH = "minimal_order.json";
@@ -1293,7 +1294,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertNotNull(getInstancesSearches());
     assertNotNull(getHoldingsSearches());
     assertNotNull(getItemsSearches());
-    verifyInventoryInteraction(resp, 1);
+
+    // MODORDERS-239/240/241: default values will be used when config is empty
+    verifyInventoryInteraction(EMPTY_CONFIG_X_OKAPI_TENANT, resp, 1);
 
     assertNotNull(getCreatedPieces());
   }

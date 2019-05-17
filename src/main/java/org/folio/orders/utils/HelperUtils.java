@@ -59,6 +59,10 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 public class HelperUtils {
 
   public static final String COMPOSITE_PO_LINES = "compositePoLines";
+  public static final String CONFIGS = "configs";
+  public static final String CONFIG_NAME = "configName";
+  public static final String CONFIG_VALUE = "value";
+  private static final String CONFIG_QUERY = "module=ORDERS";
 
   public static final String DEFAULT_POLINE_LIMIT = "1";
   public static final String REASON_COMPLETE = "Complete";
@@ -71,10 +75,8 @@ public class HelperUtils {
   private static final String GET_PURCHASE_ORDER_BYID = resourceByIdPath(PURCHASE_ORDER) + URL_WITH_LANG_PARAM;
   private static final String GET_PURCHASE_ORDER_BYPONUMBER_QUERY = resourcesPath(PURCHASE_ORDER) + "?query=poNumber==%s&" + LANG + "=%s";
 
-
   private static final int DEFAULT_PORT = 9130;
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
-  private static final String QUERY = "module=ORDERS";
   private static final Pattern HOST_PORT_PATTERN = Pattern.compile("https?://([^:/]+)(?::?(\\d+)?)");
 
   private HelperUtils() {
@@ -879,27 +881,26 @@ public class HelperUtils {
       StringUtils.isNotBlank(port) ? Integer.valueOf(port) : DEFAULT_PORT, tenant, token);
 
     try {
-      configurationsClient.getEntries(QUERY, 0, 7, null, null, response ->
-        response.bodyHandler(body -> {
-
-          if (response.statusCode() != 200) {
-            logger.error(String.format("Expected status code 200, got '%s' :%s",
-              response.statusCode(), body.toString()));
-            future.complete(config);
-            return;
-          }
-
-          JsonObject entries = body.toJsonObject();
-          if (logger.isDebugEnabled()) {
-            logger.debug("The response from mod-configuration: {}", entries.encodePrettily());
-          }
-          entries.getJsonArray("configs").stream()
-            .forEach(o ->
-              config.put(((JsonObject) o).getString("configName"),
-                ((JsonObject) o).getValue("value")));
+      configurationsClient.getEntries(CONFIG_QUERY, 0, 100, null, null, response -> response.bodyHandler(body -> {
+        if (response.statusCode() != 200) {
+          logger.error(String.format("Expected status code 200, got '%s' :%s", response.statusCode(), body.toString()));
           future.complete(config);
-        })
-      );
+          return;
+        }
+
+        JsonObject entries = body.toJsonObject();
+
+        if (logger.isDebugEnabled()) {
+          logger.debug("The response from mod-configuration: {}", entries.encodePrettily());
+        }
+
+        entries.getJsonArray(CONFIGS)
+          .stream()
+          .map(o -> (JsonObject) o)
+          .forEach(entry -> config.put(entry.getString(CONFIG_NAME), entry.getValue(CONFIG_VALUE)));
+
+        future.complete(config);
+      }));
     } catch (Exception e) {
       logger.error("Error happened while getting configs", e);
       future.complete(config);
