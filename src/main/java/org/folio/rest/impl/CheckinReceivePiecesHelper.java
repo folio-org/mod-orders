@@ -1,34 +1,66 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import one.util.streamex.EntryStream;
-import one.util.streamex.StreamEx;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
+import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
+import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
+import static org.folio.orders.utils.ErrorCodes.LOC_NOT_PROVIDED;
+import static org.folio.orders.utils.ErrorCodes.PIECE_ALREADY_RECEIVED;
+import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_RETRIEVED;
+import static org.folio.orders.utils.ErrorCodes.PIECE_POL_MISMATCH;
+import static org.folio.orders.utils.ErrorCodes.PIECE_UPDATE_FAILED;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.HelperUtils.isHoldingsUpdateRequired;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.impl.InventoryHelper.ITEM_HOLDINGS_RECORD_ID;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
+import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.ProcessingStatus;
+import org.folio.rest.jaxrs.model.ReceivingItemResult;
+import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
-import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.folio.orders.utils.ErrorCodes.*;
-import static org.folio.orders.utils.HelperUtils.*;
-import static org.folio.orders.utils.ResourcePathResolver.*;
-import static org.folio.rest.impl.InventoryHelper.ITEM_HOLDINGS_RECORD_ID;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.*;
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import one.util.streamex.EntryStream;
+import one.util.streamex.StreamEx;
 
 public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
@@ -184,11 +216,12 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   }
 
   private PoLine searchPoLineById(List<PoLine> poLines, String polineId) {
-    for (PoLine  poline: poLines){
-      if (poline.getId().equals(polineId)){
+    for (PoLine poline : poLines) {
+      if (poline.getId().equals(polineId)) {
         return poline;
       }
-    } return null;
+    }
+    return null;
   }
 
   private CompletableFuture<Boolean> createHoldingsForChangedLocations(Piece piece, PoLine poLine, String locationId) {
@@ -658,7 +691,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    *         and list of corresponding pieces as value
    */
   CompletableFuture<Map<String, List<Piece>>> updateInventoryItems(Map<String, Map<String, String>> pieceLocationsGroupedByPoLine,
-                                                                   Map<String, List<Piece>> piecesGroupedByPoLine) {
+      Map<String, List<Piece>> piecesGroupedByPoLine) {
     // Collect all piece records with non-empty item ids. The result is a map
     // with item id as a key and piece record as a value
     Map<String, Piece> piecesWithItems = collectPiecesWithItemId(piecesGroupedByPoLine);
@@ -670,14 +703,15 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     }
 
     return getItemRecords(piecesWithItems)
-      .thenCombine(getPoLines(polineIds), (items, poLines) -> processHoldingsUpdate(pieceLocationsGroupedByPoLine, piecesGroupedByPoLine, items, poLines)
-        .thenCompose(v -> processItemsUpdate(pieceLocationsGroupedByPoLine, piecesGroupedByPoLine, items, poLines)))
+      .thenCombine(getPoLines(polineIds),
+          (items, poLines) -> processHoldingsUpdate(pieceLocationsGroupedByPoLine, piecesGroupedByPoLine, items, poLines)
+            .thenCompose(v -> processItemsUpdate(pieceLocationsGroupedByPoLine, piecesGroupedByPoLine, items, poLines)))
       .thenCompose(results -> results);
   }
 
-  private CompletableFuture<Map<String, List<Piece>>> processItemsUpdate(Map<String, Map<String, String>> pieceLocationsGroupedByPoLine,
-                                                     Map<String, List<Piece>> piecesGroupedByPoLine, List<JsonObject> items,
-                                                     List<PoLine> poLines) {
+  private CompletableFuture<Map<String, List<Piece>>> processItemsUpdate(
+      Map<String, Map<String, String>> pieceLocationsGroupedByPoLine, Map<String, List<Piece>> piecesGroupedByPoLine,
+      List<JsonObject> items, List<PoLine> poLines) {
     List<CompletableFuture<Boolean>> futuresForItemsUpdates = new ArrayList<>();
     Map<String, Piece> piecesWithItems = collectPiecesWithItemId(piecesGroupedByPoLine);
 
@@ -686,27 +720,31 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       Piece piece = piecesWithItems.get(itemId);
 
       PoLine poLine = searchPoLineById(poLines, piece.getPoLineId());
-      String pieceLocation = pieceLocationsGroupedByPoLine.get(poLine.getId()).get(piece.getId());
+      if (poLine == null) {
+        logger.error("POLine associated with piece '{}' cannot be found", piece.getId());
+        addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
+        continue;
+      }
+      String pieceLocation = pieceLocationsGroupedByPoLine.get(poLine.getId())
+        .get(piece.getId());
       String holdingId = processedHoldings.get(pieceLocation + poLine.getInstanceId());
       item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
 
       futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece));
     }
-    return collectResultsOnSuccess(futuresForItemsUpdates)
-      .thenApply(results -> {
-        if (logger.isDebugEnabled()) {
-          long successQty = results.stream()
-            .filter(result -> result)
-            .count();
-          logger.debug("{} out of {} inventory item(s) successfully updated", successQty, results.size());
-        }
-        return piecesGroupedByPoLine;
-      });
+    return collectResultsOnSuccess(futuresForItemsUpdates).thenApply(results -> {
+      if (logger.isDebugEnabled()) {
+        long successQty = results.stream()
+          .filter(result -> result)
+          .count();
+        logger.debug("{} out of {} inventory item(s) successfully updated", successQty, results.size());
+      }
+      return piecesGroupedByPoLine;
+    });
   }
 
   private CompletableFuture<Void> processHoldingsUpdate(Map<String, Map<String, String>> pieceLocationsGroupedByPoLine,
-                                                        Map<String, List<Piece>> piecesGroupedByPoLine, List<JsonObject> items,
-                                                        List<PoLine> poLines) {
+      Map<String, List<Piece>> piecesGroupedByPoLine, List<JsonObject> items, List<PoLine> poLines) {
     List<CompletableFuture<Boolean>> futuresForHoldingsUpdates = new ArrayList<>();
     Map<String, Piece> piecesWithItems = collectPiecesWithItemId(piecesGroupedByPoLine);
 
@@ -715,19 +753,25 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       Piece piece = piecesWithItems.get(itemId);
 
       PoLine poLine = searchPoLineById(poLines, piece.getPoLineId());
-      String pieceLocation = pieceLocationsGroupedByPoLine.get(poLine.getId()).get(piece.getId());
+      if (poLine == null) {
+        logger.error("POLine associated with piece '{}' cannot be found", piece.getId());
+        addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
+        continue;
+      }
+      String pieceLocation = pieceLocationsGroupedByPoLine.get(poLine.getId())
+        .get(piece.getId());
+
       if (ifHoldingNotProcessed(pieceLocation, poLine.getInstanceId())) {
         futuresForHoldingsUpdates.add(createHoldingsForChangedLocations(piece, poLine, pieceLocation));
       }
     }
-    return collectResultsOnSuccess(futuresForHoldingsUpdates)
-      .thenAccept(results -> {
-        if (logger.isDebugEnabled()) {
-          long successQty = results.stream()
-            .filter(result -> result)
-            .count();
-          logger.debug("{} out of {} holdings successfully processed", successQty, results.size());
-        }
-      });
+    return collectResultsOnSuccess(futuresForHoldingsUpdates).thenAccept(results -> {
+      if (logger.isDebugEnabled()) {
+        long successQty = results.stream()
+          .filter(result -> result)
+          .count();
+        logger.debug("{} out of {} holdings successfully processed", successQty, results.size());
+      }
+    });
   }
 }
