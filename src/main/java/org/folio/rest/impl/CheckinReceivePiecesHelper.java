@@ -688,14 +688,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece));
     }
     return collectResultsOnSuccess(futuresForItemsUpdates)
-      .thenApply(results -> {
+      .thenAccept(results -> {
         if (logger.isDebugEnabled()) {
           long successQty = results.stream()
             .filter(result -> result)
             .count();
           logger.debug("{} out of {} inventory item(s) successfully updated", successQty, results.size());
         }
-        return null;
       });
   }
 
@@ -714,14 +713,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       }
     }
     return collectResultsOnSuccess(futuresForHoldingsUpdates)
-      .thenApply(results -> {
+      .thenAccept(results -> {
         if (logger.isDebugEnabled()) {
           long successQty = results.stream()
             .filter(result -> result)
             .count();
           logger.debug("{} out of {} holdings successfully processed", successQty, results.size());
         }
-        return null;
       });
   }
 }
