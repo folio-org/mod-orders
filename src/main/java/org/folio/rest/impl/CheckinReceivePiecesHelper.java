@@ -191,7 +191,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     } return null;
   }
 
-  private CompletableFuture<Boolean> updateHoldings(Piece piece, PoLine poLine, String locationId) {
+  private CompletableFuture<Boolean> createHoldingsForChangedLocations(Piece piece, PoLine poLine, String locationId) {
     if (holdingUpdateOnCheckinReceiveRequired(piece, locationId, poLine)) {
       return inventoryHelper.getOrCreateHoldingsRecord(poLine.getInstanceId(), locationId)
         .thenCompose(holdingId -> {
@@ -657,7 +657,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    * @return {@link CompletableFuture} which holds map with PO line id as key
    *         and list of corresponding pieces as value
    */
-  CompletableFuture<Map<String, List<Piece>>> updateInventoryItems(Map<String, Map<String, String>> pieceLocationsGroupedByPoLine, Map<String, List<Piece>> piecesGroupedByPoLine) {
+  CompletableFuture<Map<String, List<Piece>>> updateInventoryItems(Map<String, Map<String, String>> pieceLocationsGroupedByPoLine,
+                                                                   Map<String, List<Piece>> piecesGroupedByPoLine) {
     // Collect all piece records with non-empty item ids. The result is a map
     // with item id as a key and piece record as a value
     Map<String, Piece> piecesWithItems = collectPiecesWithItemId(piecesGroupedByPoLine);
@@ -669,13 +670,17 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     }
 
     return getItemRecords(piecesWithItems)
-      .thenCombine(getPoLines(polineIds), (items, poLines) -> processHoldingsUpdate(pieceLocationsGroupedByPoLine, piecesWithItems, items, poLines)
-        .thenCompose(v -> processItemsUpdate(pieceLocationsGroupedByPoLine, piecesWithItems, items, poLines)))
-      .thenApply(results -> piecesGroupedByPoLine);
+      .thenCombine(getPoLines(polineIds), (items, poLines) -> processHoldingsUpdate(pieceLocationsGroupedByPoLine, piecesGroupedByPoLine, items, poLines)
+        .thenCompose(v -> processItemsUpdate(pieceLocationsGroupedByPoLine, piecesGroupedByPoLine, items, poLines)))
+      .thenCompose(results -> results);
   }
 
-  private CompletableFuture<Void> processItemsUpdate(Map<String, Map<String, String>> pieceLocationsGroupedByPoLine, Map<String, Piece> piecesWithItems, List<JsonObject> items, List<PoLine> poLines) {
+  private CompletableFuture<Map<String, List<Piece>>> processItemsUpdate(Map<String, Map<String, String>> pieceLocationsGroupedByPoLine,
+                                                     Map<String, List<Piece>> piecesGroupedByPoLine, List<JsonObject> items,
+                                                     List<PoLine> poLines) {
     List<CompletableFuture<Boolean>> futuresForItemsUpdates = new ArrayList<>();
+    Map<String, Piece> piecesWithItems = collectPiecesWithItemId(piecesGroupedByPoLine);
+
     for (JsonObject item : items) {
       String itemId = item.getString(ID);
       Piece piece = piecesWithItems.get(itemId);
@@ -688,20 +693,23 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece));
     }
     return collectResultsOnSuccess(futuresForItemsUpdates)
-      .thenAccept(results -> {
+      .thenApply(results -> {
         if (logger.isDebugEnabled()) {
           long successQty = results.stream()
             .filter(result -> result)
             .count();
           logger.debug("{} out of {} inventory item(s) successfully updated", successQty, results.size());
         }
+        return piecesGroupedByPoLine;
       });
   }
 
   private CompletableFuture<Void> processHoldingsUpdate(Map<String, Map<String, String>> pieceLocationsGroupedByPoLine,
-                                                        Map<String, Piece> piecesWithItems, List<JsonObject> items,
+                                                        Map<String, List<Piece>> piecesGroupedByPoLine, List<JsonObject> items,
                                                         List<PoLine> poLines) {
     List<CompletableFuture<Boolean>> futuresForHoldingsUpdates = new ArrayList<>();
+    Map<String, Piece> piecesWithItems = collectPiecesWithItemId(piecesGroupedByPoLine);
+
     for (JsonObject item : items) {
       String itemId = item.getString(ID);
       Piece piece = piecesWithItems.get(itemId);
@@ -709,7 +717,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       PoLine poLine = searchPoLineById(poLines, piece.getPoLineId());
       String pieceLocation = pieceLocationsGroupedByPoLine.get(poLine.getId()).get(piece.getId());
       if (ifHoldingNotProcessed(pieceLocation, poLine.getInstanceId())) {
-        futuresForHoldingsUpdates.add(updateHoldings(piece, poLine, pieceLocation));
+        futuresForHoldingsUpdates.add(createHoldingsForChangedLocations(piece, poLine, pieceLocation));
       }
     }
     return collectResultsOnSuccess(futuresForHoldingsUpdates)
