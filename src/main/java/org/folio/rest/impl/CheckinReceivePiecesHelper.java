@@ -215,12 +215,14 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     }
   }
 
-  private PoLine searchPoLineById(List<PoLine> poLines, String polineId) {
+  private PoLine searchPoLineById(List<PoLine> poLines, Piece piece) {
     for (PoLine poline : poLines) {
-      if (poline.getId().equals(polineId)) {
+      if (poline.getId().equals(piece.getPoLineId())) {
         return poline;
       }
     }
+    logger.error("POLine associated with piece '{}' cannot be found", piece.getId());
+    addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
     return null;
   }
 
@@ -719,12 +721,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       String itemId = item.getString(ID);
       Piece piece = piecesWithItems.get(itemId);
 
-      PoLine poLine = searchPoLineById(poLines, piece.getPoLineId());
-      if (poLine == null) {
-        logger.error("POLine associated with piece '{}' cannot be found", piece.getId());
-        addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
+      PoLine poLine = searchPoLineById(poLines, piece);
+      if (poLine == null)
         continue;
-      }
+      
       String pieceLocation = pieceLocationsGroupedByPoLine.get(poLine.getId())
         .get(piece.getId());
       String holdingId = processedHoldings.get(pieceLocation + poLine.getInstanceId());
@@ -752,10 +752,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       String itemId = item.getString(ID);
       Piece piece = piecesWithItems.get(itemId);
 
-      PoLine poLine = searchPoLineById(poLines, piece.getPoLineId());
+      PoLine poLine = searchPoLineById(poLines, piece);
       if (poLine == null) {
         logger.error("POLine associated with piece '{}' cannot be found", piece.getId());
-        addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
         continue;
       }
       String pieceLocation = pieceLocationsGroupedByPoLine.get(poLine.getId())
