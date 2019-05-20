@@ -15,20 +15,17 @@
       "cost": {
         "currency": "USD",
         "listUnitPrice": 0,
-        "quantityPhysical": 1
+        "quantityPhysical": 2
       },
       "locations": [
         {
-          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df8",
+          "locationId": "758258bc-ecc1-41b8-abca-f7b610822ffd",
+          "quantityPhysical": 1
+        },
+        {
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "quantityPhysical": 1
         }
-      ],
-      "description": "ABCDEFGH",
-      "locations":[
-      {
-         "locationId":"bab00694-a87c-4607-9daf-346cd820aba2",
-         "quantityPhysical":1
-      }
       ],
       "orderFormat" : "Physical Resource",
       "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",

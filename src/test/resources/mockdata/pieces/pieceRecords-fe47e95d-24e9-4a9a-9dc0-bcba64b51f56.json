@@ -8,7 +8,7 @@
     },
     {
       "id": "7802b94d-68b4-41e5-91ff-0cee8cd8f029",
-      "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+      "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
       "poLineId": "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56",
       "receivingStatus": "Expected"
     },
@@ -21,14 +21,14 @@
     {
       "id": "6a53eb3c-f9dd-46f5-bbf8-5768cf97ec6d",
       "itemId": "fbd41843-569b-4a15-95da-6d543fe489ad",
-      "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+      "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
       "poLineId": "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56",
       "receivingStatus": "Expected"
     },
     {
       "id": "61437764-03e4-4c75-a743-d40f71ff9161",
       "itemId": "821559ef-4ee7-4b19-a835-a6787c2bafb9",
-      "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+      "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
       "poLineId": "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56",
       "receivingStatus": "Expected"
     }

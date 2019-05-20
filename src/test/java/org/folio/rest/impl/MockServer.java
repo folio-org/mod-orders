@@ -269,7 +269,8 @@ public class MockServer {
     router.route(HttpMethod.GET, "/inventory/instances").handler(this::handleGetInstanceRecord);
     router.route(HttpMethod.GET, "/item-storage/items").handler(this::handleGetItemRecordsFromStorage);
     router.route(HttpMethod.GET, "/inventory/items").handler(this::handleGetInventoryItemRecords);
-    router.route(HttpMethod.GET, "/holdings-storage/holdings").handler(this::handleGetHoldingRecord);
+    router.route(HttpMethod.GET, "/holdings-storage/holdings").handler(this::handleGetHoldingsRecords);
+    router.route(HttpMethod.GET, "/holdings-storage/holdings/:id").handler(this::handleGetHolding);
     router.route(HttpMethod.GET, "/loan-types").handler(this::handleGetLoanType);
     router.route(HttpMethod.GET, "/organizations-storage/organizations/:id").handler(this::getOrganizationById);
     router.route(HttpMethod.GET, "/organizations-storage/organizations").handler(this::handleGetAccessProviders);
@@ -290,6 +291,7 @@ public class MockServer {
     router.route(HttpMethod.PUT, resourcePath(REPORTING_CODES)).handler(ctx -> handlePutGenericSubObj(ctx, REPORTING_CODES));
     router.route(HttpMethod.PUT, resourcePath(ALERTS)).handler(ctx -> handlePutGenericSubObj(ctx, ALERTS));
     router.route(HttpMethod.PUT, "/inventory/items/:id").handler(ctx -> handlePutGenericSubObj(ctx, ITEM_RECORDS));
+    router.route(HttpMethod.PUT, "/holdings-storage/holdings/:id").handler(ctx -> handlePutGenericSubObj(ctx, ITEM_RECORDS));
 
     router.route(HttpMethod.DELETE, resourcesPath(PURCHASE_ORDER)+"/:id").handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER));
     router.route(HttpMethod.DELETE, resourcePath(PO_LINES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES));
@@ -382,13 +384,27 @@ public class MockServer {
     }
   }
 
-  private void handleGetHoldingRecord(RoutingContext ctx) {
+  private void handleGetHoldingsRecords(RoutingContext ctx) {
     logger.info("handleGetHoldingRecord got: " + ctx.request().path());
 
     JsonObject instance = new JsonObject().put("holdingsRecords", new JsonArray());
 
     addServerRqRsData(HttpMethod.GET, HOLDINGS_RECORD, instance);
     serverResponse(ctx, 200, APPLICATION_JSON, instance.encodePrettily());
+  }
+
+  private void handleGetHolding(RoutingContext ctx) {
+    logger.info("got: " + ctx.request().path());
+    String id = ctx.request().getParam(ID);
+    logger.info("id: " + id);
+
+    JsonObject holding = new JsonObject();
+    holding.put("id", id);
+    holding.put("hrid", "ho00000001");
+    holding.put("holdingsItems", new JsonArray());
+
+    addServerRqRsData(HttpMethod.GET, HOLDINGS_RECORD, holding);
+    serverResponse(ctx, 200, APPLICATION_JSON, holding.encodePrettily());
   }
 
   private void handleGetItemRecordsFromStorage(RoutingContext ctx) {
