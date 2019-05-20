@@ -12,6 +12,7 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -98,6 +99,7 @@ import static org.folio.rest.impl.MockServer.getInstanceStatusesSearches;
 import static org.folio.rest.impl.MockServer.getInstancesSearches;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
+import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
 import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -156,7 +158,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   private static final String ORDERS_MOCK_DATA_PATH = COMP_ORDER_MOCK_DATA_PATH + "getOrders.json";
   private static final String ORDER_FOR_FAILURE_CASE_MOCK_DATA_PATH = COMP_ORDER_MOCK_DATA_PATH + PO_ID_FOR_FAILURE_CASE + ".json";
   private static final String PE_MIX_PATH = "po_listed_print_monograph_pe_mix.json";
-  private static final String PHYS_EL_ORDER_PATH = "po_one_physical_one_electronic_lines.json";
   private static final String MONOGRAPH_FOR_CREATE_INVENTORY_TEST = "print_monograph_for_create_inventory_test.json";
   private static final String LISTED_PRINT_SERIAL_PATH = "po_listed_print_serial.json";
   private static final String MINIMAL_ORDER_PATH = "minimal_order.json";
@@ -974,7 +975,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     PurchaseOrder storageUpdatedOrder = orderUpdates.get(0).mapTo(PurchaseOrder.class);
     assertNotNull(storageUpdatedOrder.getWorkflowStatus());
-    assertEquals(CompositePurchaseOrder.WorkflowStatus.CLOSED.value(), storageUpdatedOrder.getWorkflowStatus().value());
+
+    //MODORDERS-234 Status automatically changes to Open
+    assertEquals(PurchaseOrder.WorkflowStatus.OPEN, storageUpdatedOrder.getWorkflowStatus());
 
   }
 
@@ -1498,6 +1501,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     List<JsonObject> createdPoLines = MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST);
     assertEquals(createdPoLines.size(), reqData.getJsonArray(COMPOSITE_PO_LINES).size());
     createdPoLines.forEach(poLine -> assertEquals(poNumber + "-" + PO_LINE_NUMBER_VALUE, poLine.getString(PO_LINE_NUMBER)));
+    assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(), is(PurchaseOrder.WorkflowStatus.PENDING));
   }
 
   @Test
@@ -1845,6 +1849,72 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     checkExpectedError(ORGANIZATION_NOT_VENDOR, errors, 0, ORGANIZATION_NOT_A_VENDOR, reqData, 0);
 
+  }
+
+  @Test
+  public void testPutOrderToAutomaticallyChangeStatusFromOpenToClosed() {
+
+    logger.info("===  Test case when order status update is expected from Open to Closed ===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
+    reqData.setVendor("d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1");
+    assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()),
+      JsonObject.mapFrom(reqData), EMPTY, 204);
+
+    PurchaseOrder purchaseOrder = getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class);
+    assertThat(purchaseOrder.getWorkflowStatus(), is(PurchaseOrder.WorkflowStatus.CLOSED));
+    assertThat(purchaseOrder.getCloseReason(), notNullValue());
+    assertThat(purchaseOrder.getCloseReason().getReason(), equalTo(HelperUtils.REASON_COMPLETE));
+
+  }
+
+  @Test
+  public void testPutOrderToAutomaticallyChangeStatusFromClosedToOpen() {
+
+    logger.info("=== Test case when order status update is expected from Closed to Open ===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_CLOSED_STATUS).mapTo(CompositePurchaseOrder.class);
+    assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.CLOSED));
+
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()),
+      JsonObject.mapFrom(reqData), EMPTY, 204);
+
+    assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(), is(PurchaseOrder.WorkflowStatus.OPEN));
+
+  }
+
+  @Test
+  public void testUpdateNotRequiredForOpenOrder() {
+    logger.info("=== Test case when no workflowStatus update is expected for Open order ===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS).mapTo(CompositePurchaseOrder.class);
+    assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
+
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()),
+      JsonObject.mapFrom(reqData), EMPTY, 204);
+
+    assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(), is(PurchaseOrder.WorkflowStatus.OPEN));
+  }
+
+  @Test
+  public void testNoUpdatesForPendingOrderWithLines() {
+    logger.info("=== Test case when no order update is expected for Pending order with a few PO Lines ===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_PENDING_STATUS_WITH_PO_LINES).mapTo(CompositePurchaseOrder.class);
+    reqData.setAssignedTo(null);
+    reqData.setId(PO_ID_PENDING_STATUS_WITH_PO_LINES);
+    reqData.getCompositePoLines().forEach(poLine -> poLine.setPurchaseOrderId(PO_ID_PENDING_STATUS_WITH_PO_LINES));
+    assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.PENDING));
+
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()),
+      JsonObject.mapFrom(reqData), EMPTY, 204);
+
+    assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(), is(PurchaseOrder.WorkflowStatus.PENDING));
   }
 
   @Test
