@@ -387,12 +387,12 @@ public class HelperUtils {
 
   private static boolean isLocationsPhysicalQuantityNotValid(CompositePoLine compPOL) {
     int physicalQuantity = getPhysicalLocationsQuantity(compPOL.getLocations());
-    return (isHoldingUpdateRequiredForPhysical(compPOL) || physicalQuantity > 0) && (physicalQuantity != getPhysicalCostQuantity(compPOL));
+    return (isHoldingUpdateRequiredForPhysical(compPOL.getPhysical()) || physicalQuantity > 0) && (physicalQuantity != getPhysicalCostQuantity(compPOL));
   }
 
   private static boolean isLocationsEresourceQuantityNotValid(CompositePoLine compPOL) {
     int electronicQuantity = getElectronicLocationsQuantity(compPOL.getLocations());
-    return (isHoldingUpdateRequiredForEresource(compPOL) || electronicQuantity > 0) && (electronicQuantity != getElectronicCostQuantity(compPOL));
+    return (isHoldingUpdateRequiredForEresource(compPOL.getEresource()) || electronicQuantity > 0) && (electronicQuantity != getElectronicCostQuantity(compPOL));
   }
 
   private static List<ErrorCodes> validateCostPrices(CompositePoLine compLine) {
@@ -762,8 +762,8 @@ public class HelperUtils {
   }
 
   public static boolean isHoldingCreationRequiredForLocation(CompositePoLine compPOL, Location location) {
-    return (isHoldingUpdateRequiredForPhysical(compPOL) && ObjectUtils.defaultIfNull(location.getQuantityPhysical(), 0) > 0)
-      || (isHoldingUpdateRequiredForEresource(compPOL) && ObjectUtils.defaultIfNull(location.getQuantityElectronic(), 0) > 0);
+    return (isHoldingUpdateRequiredForPhysical(compPOL.getPhysical()) && ObjectUtils.defaultIfNull(location.getQuantityPhysical(), 0) > 0)
+      || (isHoldingUpdateRequiredForEresource(compPOL.getEresource()) && ObjectUtils.defaultIfNull(location.getQuantityElectronic(), 0) > 0);
   }
 
   /**
@@ -937,18 +937,18 @@ public class HelperUtils {
     return physicalUpdateNotRequired && eresourceUpdateNotRequired;
   }
 
-  public static boolean isHoldingsUpdateRequired(CompositePoLine compPOL) {
-    return isHoldingUpdateRequiredForEresource(compPOL) || isHoldingUpdateRequiredForPhysical(compPOL);
+  public static boolean isHoldingsUpdateRequired(Eresource eresource, Physical physical) {
+    return isHoldingUpdateRequiredForEresource(eresource) || isHoldingUpdateRequiredForPhysical(physical);
   }
 
-  private static boolean isHoldingUpdateRequiredForPhysical(CompositePoLine compPOL) {
-     return compPOL.getPhysical() != null && (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING
-        || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
+  private static boolean isHoldingUpdateRequiredForPhysical(Physical physical) {
+     return physical != null && (physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING
+        || physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
   }
 
-  private static boolean isHoldingUpdateRequiredForEresource(CompositePoLine compPOL) {
-    return compPOL.getEresource() != null && (compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING
-        || compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
+  private static boolean isHoldingUpdateRequiredForEresource(Eresource eresource) {
+    return eresource != null && (eresource.getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING
+        || eresource.getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
   }
 
   public static boolean isItemsUpdateRequired(CompositePoLine compPOL) {

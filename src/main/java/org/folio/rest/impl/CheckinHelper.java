@@ -1,24 +1,18 @@
 package org.folio.rest.impl;
 
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.toList;
-
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Date;
-import java.util.concurrent.CompletableFuture;
-
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.*;
-import static org.folio.orders.utils.ErrorCodes.*;
+
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+
+import static java.util.stream.Collectors.*;
+import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
 
 public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
@@ -29,7 +23,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   private final Map<String, Map<String, CheckInPiece>> checkinPieces;
 
   CheckinHelper(CheckinCollection checkinCollection, Map<String, String> okapiHeaders,
-      Context ctx, String lang) {
+                Context ctx, String lang) {
     super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
     // Convert request to map representation
     checkinPieces = groupCheckinPiecesByPoLineId(checkinCollection);
@@ -45,13 +39,14 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   CompletableFuture<ReceivingResults> checkinPieces(CheckinCollection checkinCollection) {
+    Map<String, Map<String, String>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnCheckin(checkinCollection);
 
     // 1. Get piece records from storage
     return retrievePieceRecords(checkinPieces)
       // 2. Filter locationId
       .thenCompose(this::filterMissingLocations)
       // 3. Update items in the Inventory if required
-      .thenCompose(this::updateInventoryItems)
+      .thenCompose(pieces -> updateInventoryItems(pieceLocationsGroupedByPoLine, pieces))
       // 4. Update piece records with checkIn details which do not have
       // associated item
       .thenApply(this::updatePieceRecordsWithoutItems)
@@ -63,8 +58,20 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       .thenApply(piecesGroupedByPoLine -> prepareResponseBody(checkinCollection, piecesGroupedByPoLine));
   }
 
+  private Map<String, Map<String, String>> groupLocationsByPoLineIdOnCheckin(CheckinCollection checkinCollection) {
+    return StreamEx
+      .of(checkinCollection.getToBeCheckedIn())
+      .groupingBy(ToBeCheckedIn::getPoLineId,
+        mapping(ToBeCheckedIn::getCheckInPieces,
+          collectingAndThen(toList(),
+            lists -> StreamEx.of(lists)
+              .flatMap(List::stream)
+              .filter(checkInPiece -> checkInPiece.getLocationId() != null)
+              .toMap(CheckInPiece::getId, CheckInPiece::getLocationId))));
+    }
+
   private ReceivingResults prepareResponseBody(CheckinCollection checkinCollection,
-      Map<String, List<Piece>> piecesGroupedByPoLine) {
+                                               Map<String, List<Piece>> piecesGroupedByPoLine) {
     ReceivingResults results = new ReceivingResults();
     results.setTotalRecords(checkinCollection.getTotalRecords());
     for (ToBeCheckedIn toBeCheckedIn : checkinCollection.getToBeCheckedIn()) {
@@ -98,27 +105,26 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
    * Converts {@link CheckinCollection} to map with PO line id as a key and
    * value is map with piece id as a key and {@link CheckInPiece} as a value
    *
-   * @param checkinCollection
-   *          {@link CheckinCollection} object
+   * @param checkinCollection {@link CheckinCollection} object
    * @return map with PO line id as a key and value is map with piece id as a
-   *         key and {@link CheckInPiece} as a value
+   * key and {@link CheckInPiece} as a value
    */
   private Map<String, Map<String, CheckInPiece>> groupCheckinPiecesByPoLineId(CheckinCollection checkinCollection) {
     return StreamEx
       .of(checkinCollection.getToBeCheckedIn())
       .groupingBy(ToBeCheckedIn::getPoLineId,
-          mapping(ToBeCheckedIn::getCheckInPieces,
-              collectingAndThen(toList(),
-                  lists -> StreamEx.of(lists)
-                    .flatMap(List::stream)
-                    .toMap(CheckInPiece::getId, checkInPiece -> checkInPiece))));
+        mapping(ToBeCheckedIn::getCheckInPieces,
+          collectingAndThen(toList(),
+            lists -> StreamEx.of(lists)
+              .flatMap(List::stream)
+              .toMap(CheckInPiece::getId, checkInPiece -> checkInPiece))));
   }
 
   @Override
   boolean isRevertToOnOrder(Piece piece) {
     return piece.getReceivingStatus() == ReceivingStatus.RECEIVED
-        && inventoryHelper
-          .isOnOrderPieceStatus(piecesByLineId.get(piece.getPoLineId()).get(piece.getId()));
+      && inventoryHelper
+      .isOnOrderPieceStatus(piecesByLineId.get(piece.getPoLineId()).get(piece.getId()));
   }
 
   @Override
@@ -183,5 +189,4 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   String getLocationId(Piece piece) {
     return checkinPieces.get(piece.getPoLineId()).get(piece.getId()).getLocationId();
   }
-
 }

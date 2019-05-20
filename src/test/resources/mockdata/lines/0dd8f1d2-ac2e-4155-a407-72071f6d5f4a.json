@@ -1,20 +1,10 @@
 {
+  "id": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
   "acquisitionMethod": "Purchase At Vendor System",
-  "alerts": [
-    {
-      "alert": "Receipt overdue",
-      "id": "9a665b22-9fe5-4c95-b4ee-837a5433c95d"
-    }
-  ],
+  "alerts": [],
   "cancellationRestriction": false,
   "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
-  "claims": [
-    {
-      "claimed": false,
-      "sent": "2018-10-09T00:00:00.000Z",
-      "grace": 30
-    }
-  ],
+  "claims": [],
   "collection": false,
   "contributors": [
     {
@@ -25,17 +15,17 @@
   "cost": {
     "currency": "USD",
     "listUnitPrice": 24.99,
-    "quantityPhysical": 2
+    "quantityPhysical": 1
   },
   "description": "ABCDEFGH",
   "details": {
-    "receivingNote": "ABCDEFGHIJKL",
     "productIds": [
       {
         "productId": "9780764354113",
         "productIdType": "ISBN"
       }
     ],
+    "receivingNote": "ABCDEFGHIJKL",
     "subscriptionFrom": "2018-10-09T00:00:00.000Z",
     "subscriptionInterval": 824,
     "subscriptionTo": "2020-10-09T00:00:00.000Z"
@@ -44,63 +34,53 @@
   "fundDistribution": [
     {
       "code": "HIST",
-      "percentage": 80.0,
-      "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3"
-    },
-    {
-      "code": "GENRL",
-      "percentage": 20.0,
-      "encumbrance": "0466cb77-0344-43c6-85eb-0a64aa2934e5"
+      "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3",
+      "percentage": 80.0
     }
   ],
+  "instanceId": "7fbd5d84-62d1-44c6-9c45-6cb173998bbd",
   "locations": [
     {
       "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "quantity": 1,
+      "quantityElectronic": 0,
+      "quantityPhysical": 1
+    },
+    {
+      "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
+      "quantity": 2,
+      "quantityElectronic": 0,
       "quantityPhysical": 2
     }
   ],
+  "metadata": {
+    "createdByUserId": "28d10cfc-d137-11e8-a8d5-f2801f1b9fd1",
+    "createdDate": "2014-07-06T00:00:00.000"
+  },
   "orderFormat": "Physical Resource",
+  "owner": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
   "paymentStatus": "Awaiting Payment",
   "physical": {
     "createInventory": "Instance, Holding, Item",
-    "volumes": [
-      "vol. 1"
-    ],
+    "expectedReceiptDate": "2018-10-05T00:00:00.000Z",
     "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
     "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8",
-    "receiptDue": "2018-10-10T00:00:00.000Z"
+    "receiptDue": "2018-10-10T00:00:00.000Z",
+    "volumes": [
+      "vol. 1"
+    ]
   },
   "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
-  "poLineNumber": "268758-03",
+  "poLineNumber": "1EFC97C6B7-1",
   "publicationDate": "2017",
   "publisher": "Schiffer Publishing",
-  "purchaseOrderId": "e5ae4afd-3fa9-494e-a972-f541df9b877e",
-  "receiptDate": "2018-10-09T00:00:00.000Z",
+  "purchaseOrderId": "95d29d04-34b1-4fe0-a15e-1cd129143692",
+  "receiptDate": "2018-10-09T00:00:00.000+0000",
   "receiptStatus": "Awaiting Receipt",
-  "reportingCodes": [
-    {
-      "code": "CODE1",
-      "id": "5926dcd7-85f5-4504-8283-712595ebc38b",
-      "description": "ABCDEF"
-    },
-    {
-      "code": "CODE2",
-      "id": "fa316c04-8101-4e72-8aaf-01281bac718f",
-      "description": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    },
-    {
-      "code": "CODE3",
-      "id": "ea68b696-3125-4940-bf91-1d128323473e",
-      "description": "ABCDE"
-    }
-  ],
+  "reportingCodes": [],
   "requester": "Leo Bulero",
   "rush": true,
   "selector": "ABCD",
-  "source": {
-    "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-    "description": "ABCDEFGHIJKLMNO"
-  },
   "tags": [
     "ABCDEFGHIJKLMNOPQRSTU",
     "ABCDEFG",
@@ -113,10 +93,6 @@
     "noteFromVendor": "ABCDEFGHIKJKLMNOP",
     "refNumber": "123456-78",
     "refNumberType": "Supplier's unique order line reference number",
-    "vendorAccount": "8910-10"
-  },
-  "metadata": {
-    "createdDate": "2018-06-29T00:00:00.000",
-    "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
+    "vendorAccount": "8910-25"
   }
 }

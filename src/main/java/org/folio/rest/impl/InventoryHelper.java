@@ -137,11 +137,11 @@ public class InventoryHelper extends AbstractHelper {
     boolean isItemsUpdateRequired = isItemsUpdateRequired(compPOL);
 
     // Group all locations by location id because the holding should be unique for different locations
-    if (HelperUtils.isHoldingsUpdateRequired(compPOL)) {
+    if (HelperUtils.isHoldingsUpdateRequired(compPOL.getEresource(), compPOL.getPhysical())) {
       groupLocationsById(compPOL)
         .forEach((locationId, locations) -> itemsPerHolding.add(
           // Search for or create a new holdings record and then create items for it if required
-          getOrCreateHoldingsRecord(compPOL, locationId)
+          getOrCreateHoldingsRecord(compPOL.getInstanceId(), locationId)
             .thenCompose(holdingId -> {
                 // Items are not going to be created when create inventory is "Instance, Holding"
                 if (isItemsUpdateRequired) {
@@ -221,8 +221,7 @@ public class InventoryHelper extends AbstractHelper {
     return ITEM_STATUS_ON_ORDER.equalsIgnoreCase(checkinPiece.getItemStatus());
   }
 
-  private CompletableFuture<String> getOrCreateHoldingsRecord(CompositePoLine compPOL, String locationId) {
-    String instanceId = compPOL.getInstanceId();
+  CompletableFuture<String> getOrCreateHoldingsRecord(String instanceId, String locationId) {
 
     String query = encodeQuery(String.format(HOLDINGS_LOOKUP_QUERY, instanceId, locationId), logger);
     String endpoint = buildLookupEndpoint(HOLDINGS_RECORDS, query, lang);

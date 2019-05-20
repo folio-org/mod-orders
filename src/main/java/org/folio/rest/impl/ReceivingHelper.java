@@ -1,24 +1,23 @@
 package org.folio.rest.impl;
 
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.HelperUtils.buildQuery;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.orders.utils.ErrorCodes.*;
-
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.*;
+
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+
+import static java.util.stream.Collectors.*;
+import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
+import static org.folio.orders.utils.HelperUtils.buildQuery;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
@@ -52,13 +51,13 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   }
 
   CompletableFuture<ReceivingResults> receiveItems(ReceivingCollection receivingCollection) {
-
+    Map<String, Map<String, String>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnReceiving(receivingCollection);
     // 1. Get piece records from storage
     return this.retrievePieceRecords(receivingItems)
       // 2. Filter locationId
       .thenCompose(this::filterMissingLocations)
       // 3. Update items in the Inventory if required
-      .thenCompose(this::updateInventoryItems)
+      .thenCompose(pieces -> updateInventoryItems(pieceLocationsGroupedByPoLine, pieces))
       // 4. Update piece records with receiving details which do not have associated item
       .thenApply(this::updatePieceRecordsWithoutItems)
       // 5. Update received piece records in the storage
@@ -67,6 +66,18 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       .thenCompose(this::updatePoLinesStatus)
       // 7. Return results to the client
       .thenApply(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
+  }
+
+  private Map<String, Map<String, String>> groupLocationsByPoLineIdOnReceiving(ReceivingCollection receivingCollection) {
+    return StreamEx
+      .of(receivingCollection.getToBeReceived())
+      .groupingBy(ToBeReceived::getPoLineId,
+        mapping(ToBeReceived::getReceivedItems,
+          collectingAndThen(toList(),
+            lists -> StreamEx.of(lists)
+              .flatMap(List::stream)
+              .filter(receivedItem -> receivedItem.getLocationId() != null)
+              .toMap(ReceivedItem::getPieceId, ReceivedItem::getLocationId))));
   }
 
   CompletableFuture<ReceivingHistoryCollection> getReceivingHistory(int limit, int offset, String query) {

@@ -9,7 +9,7 @@
           "comment": "Expected error pieceAlreadyReceived",
           "caption": "Vol. 1",
           "itemStatus": "Received",
-          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "8c057872-9c75-4fb1-879d-de3b089b0388"
         },
         {
@@ -17,7 +17,7 @@
           "comment": "Expected error itemNotFound",
           "caption": "Vol. 1",
           "itemStatus": "Received",
-          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "6f495150-9a7c-4104-84fa-16f3ec9ab005"
         },
         {
@@ -25,7 +25,7 @@
           "comment": "Very important note",
           "caption": "Vol. 1",
           "itemStatus": "Received",
-          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "2884f2cd-ccab-47e1-a021-9b22a05230d9"
         },
         {
@@ -33,7 +33,7 @@
           "comment": "Expected error piecePolMismatch",
           "caption": "Vol. 1",
           "itemStatus": "Received",
-          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "2f6056bd-e7f1-4e51-add2-b0c803066c74"
         },
         {
@@ -41,7 +41,7 @@
           "comment": "Expected error pieceNotFound",
           "caption": "Vol. 1",
           "itemStatus": "Received",
-          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "99e04f91-6985-48df-997d-289773fd8c44"
         },
         {
@@ -57,7 +57,7 @@
           "comment": "Very important note",
           "caption": "Vol. 1",
           "itemStatus": "Received",
-          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "f7272eb2-499f-4c29-985e-7ffc468d2360"
         },
         {
@@ -65,7 +65,7 @@
           "comment": "Very important note",
           "caption": "Vol. 1",
           "itemStatus": "Received",
-          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "70502e16-f07a-4156-a6b9-492862f1f8f3"
         },
         {
@@ -73,7 +73,7 @@
           "comment": "Very important note",
           "caption": "Vol. 1",
           "itemStatus": "Received",
-          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "5e8e29c4-801d-4e5b-a07c-3a975861db1c"
         },
         {
@@ -81,7 +81,7 @@
           "comment": "Expected error itemUpdateFailed",
           "caption": "Vol. 1",
           "itemStatus": "Received",
-          "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "5062d4d7-2164-4cc0-bbb1-aa755324b95c"
         }
       ]

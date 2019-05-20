@@ -3,7 +3,7 @@
     {
       "id": "5e317dc2-deeb-4429-b2a1-91e5cd0fd5f7",
       "itemId": "",
-      "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+      "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
       "poLineId": "9b68e7c2-8818-4387-a405-6567232c1c6f",
       "receivingStatus": "Expected",
       "receivedDate": ""
@@ -11,7 +11,7 @@
     {
       "id": "71d9322b-5cdd-45d8-ad45-c7f3044802e7",
       "itemId": "",
-      "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+      "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
       "poLineId": "9b68e7c2-8818-4387-a405-6567232c1c6f",
       "receivingStatus": "Expected",
       "receivedDate": ""
@@ -19,7 +19,7 @@
     {
       "id": "601f5e02-7f5f-44e6-8f04-f647aba9035e",
       "itemId": "14428ffb-3c2e-4ccc-94dc-820d67f5d534",
-      "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+      "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
       "poLineId": "9b68e7c2-8818-4387-a405-6567232c1c6f",
       "receivingStatus": "Expected",
       "receivedDate": ""
@@ -27,7 +27,7 @@
     {
       "id": "280d63bc-db44-49ba-b7fe-1f230a2eed19",
       "itemId": "a56aded7-8aba-48f3-8788-d3201196dce1",
-      "locationId": "eb2d063a-5b4c-4cab-8db1-5fc5c5941df6",
+      "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
       "poLineId": "9b68e7c2-8818-4387-a405-6567232c1c6f",
       "receivingStatus": "Expected",
       "receivedDate": ""
