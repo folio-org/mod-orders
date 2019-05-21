@@ -78,6 +78,10 @@ import static org.folio.orders.utils.ResourcePathResolver.RECEIPT_STATUS;
 import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.impl.InventoryHelper.DEFAULT_CONTRIBUTOR_NAME_TYPE;
+import static org.folio.rest.impl.InventoryHelper.DEFAULT_INSTANCE_STATUS_CODE;
+import static org.folio.rest.impl.InventoryHelper.DEFAULT_INSTANCE_TYPE_CODE;
+import static org.folio.rest.impl.InventoryHelper.DEFAULT_LOAN_TYPE_NAME;
 import static org.folio.rest.impl.InventoryHelper.INSTANCE_STATUS_ID;
 import static org.folio.rest.impl.InventoryHelper.INSTANCE_TYPE_ID;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.joinExistingAndNewItems;
@@ -1894,11 +1898,18 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     Headers headers = prepareHeaders(NON_EXIST_INSTANCE_STATUS_TENANT_HEADER);
 
     //Create order first time for tenant without instanceStatus, no instanceStatus in cache, so logic should call get /instance-types
-    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 500);
+    Error err = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 500).getBody()
+      .as(Errors.class)
+      .getErrors()
+      .get(0);
 
     assertThat(getContributorNameTypesSearches(), hasSize(1));
     assertThat(getInstanceStatusesSearches(), hasSize(1));
     assertThat(MockServer.getInstanceTypesSearches(), hasSize(1));
+
+    assertThat(err.getCode(), equalTo(ErrorCodes.MISSING_INSTANCE_STATUS.getCode()));
+    assertThat(err.getMessage(), equalTo(ErrorCodes.MISSING_INSTANCE_STATUS.getDescription()));
+    assertThat(err.getParameters().get(0).getValue(), equalTo(DEFAULT_INSTANCE_STATUS_CODE));
     clearServiceInteractions();
 
     //Create order second time for same tenant, still no instanceStatus in cache, logic should call get /instance-types again
@@ -1926,6 +1937,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(getContributorNameTypesSearches(), hasSize(1));
     assertThat(getInstanceStatusesSearches(), hasSize(1));
     assertThat(MockServer.getInstanceTypesSearches(), hasSize(1));
+
     clearServiceInteractions();
 
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
@@ -1943,30 +1955,52 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
   @Test
   public void testInventoryHelperEmptyInstanceTypeThrowsProperError() throws Exception {
+    Error err = verifyMissingInventoryEntryErrorHandling(NON_EXIST_INSTANCE_TYPE_TENANT_HEADER);
 
-    MockServer.serverRqRs.clear();
+    assertThat(err.getCode(), equalTo(ErrorCodes.MISSING_INSTANCE_TYPE.getCode()));
+    assertThat(err.getMessage(), equalTo(ErrorCodes.MISSING_INSTANCE_TYPE.getDescription()));
+    assertThat(err.getParameters().get(0).getValue(), equalTo(DEFAULT_INSTANCE_TYPE_CODE));
+  }
+
+  @Test
+  public void testInventoryHelperEmptyContributorNameTypeThrowsProperError() throws Exception {
+    Error err = verifyMissingInventoryEntryErrorHandling(NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT_HEADER);
+
+    assertThat(err.getCode(), equalTo(ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE.getCode()));
+    assertThat(err.getMessage(), equalTo(ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE.getDescription()));
+    assertThat(err.getParameters().get(0).getValue(), equalTo(DEFAULT_CONTRIBUTOR_NAME_TYPE));
+  }
+
+  @Test
+  public void testInventoryHelperEmptyLoanTypeThrowsProperError() throws Exception {
+
+    Error err = verifyMissingInventoryEntryErrorHandling(NON_EXIST_LOAN_TYPE_TENANT_HEADER);
+
+    assertThat(err.getCode(), equalTo(ErrorCodes.MISSING_LOAN_TYPE.getCode()));
+    assertThat(err.getMessage(), equalTo(ErrorCodes.MISSING_LOAN_TYPE.getDescription()));
+    assertThat(err.getParameters().get(0).getValue(), equalTo(DEFAULT_LOAN_TYPE_NAME));
+  }
+
+  private Error verifyMissingInventoryEntryErrorHandling(Header header) throws Exception {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     reqData.getCompositePoLines()
       .remove(1);
     assertThat(reqData.getCompositePoLines(), hasSize(1));
 
-    Headers headers = prepareHeaders(NON_EXIST_INSTANCE_TYPE_TENANT_HEADER);
+    Headers headers = prepareHeaders(header);
 
     Response resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
       .encodePrettily(), headers, APPLICATION_JSON, 500);
 
-    Error err = resp.getBody()
-      .as(Errors.class)
-      .getErrors()
-      .get(0);
-
-    assertThat(err.getCode(), equalTo(ErrorCodes.MISSING_INSTANCE_TYPE.getCode()));
-    assertThat(err.getMessage(), equalTo(ErrorCodes.MISSING_INSTANCE_TYPE.getDescription()));
-
     assertThat(getContributorNameTypesSearches(), hasSize(1));
     assertThat(getInstanceStatusesSearches(), hasSize(1));
     assertThat(MockServer.getInstanceTypesSearches(), hasSize(1));
+
+    return resp.getBody()
+      .as(Errors.class)
+      .getErrors()
+      .get(0);
   }
 
   private Errors verifyPostResponseErrors(int expectedErrorsNumber, String body) {
