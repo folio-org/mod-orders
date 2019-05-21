@@ -2,30 +2,36 @@ package org.folio.orders.rest.exceptions;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.ErrorCodes;
+import org.folio.rest.jaxrs.model.Error;
 
 public class HttpException extends RuntimeException {
   private static final long serialVersionUID = 8109197948434861504L;
 
   private final int code;
-  private final String errorCode;
+  private final transient Error error;
 
   public HttpException(int code, String message) {
     super(StringUtils.isNotEmpty(message) ? message : ErrorCodes.GENERIC_ERROR_CODE.getDescription());
     this.code = code;
-    this.errorCode = ErrorCodes.GENERIC_ERROR_CODE.getCode();
+    this.error = new Error().withCode(ErrorCodes.GENERIC_ERROR_CODE.getCode()).withMessage(message);
   }
 
   public HttpException(int code, ErrorCodes errCodes) {
     super(errCodes.getDescription());
-    this.errorCode = errCodes.getCode();
+    this.error = new Error().withCode(errCodes.getCode()).withMessage(errCodes.getDescription());
     this.code = code;
+  }
+
+  public HttpException(int code, Error error) {
+    this.code = code;
+    this.error = error;
   }
 
   public int getCode() {
     return code;
   }
 
-  public String getErrorCode() {
-    return errorCode;
+  public Error getError() {
+    return error;
   }
 }

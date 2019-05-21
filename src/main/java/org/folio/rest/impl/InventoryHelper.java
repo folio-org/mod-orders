@@ -3,6 +3,7 @@ package org.folio.rest.impl;
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
 
@@ -14,6 +15,7 @@ import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
 
@@ -36,6 +38,10 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.folio.orders.utils.ErrorCodes.ITEM_CREATION_FAILED;
+import static org.folio.orders.utils.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
+import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
+import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_TYPE;
+import static org.folio.orders.utils.ErrorCodes.MISSING_LOAN_TYPE;
 import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.rest.acq.model.Piece.Format.ELECTRONIC;
 
@@ -76,7 +82,7 @@ public class InventoryHelper extends AbstractHelper {
   static final String CONFIG_NAME_INSTANCE_TYPE_CODE = "inventory-instanceTypeCode";
   static final String CONFIG_NAME_INSTANCE_STATUS_CODE = "inventory-instanceStatusCode";
   static final String CONFIG_NAME_LOAN_TYPE_NAME = "inventory-loanTypeName";
-  static final String DEFAULT_CONTRIBUTOR_NAME = "Personal name";
+  static final String DEFAULT_CONTRIBUTOR_NAME_TYPE = "Personal name";
   static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
   static final String DEFAULT_INSTANCE_STATUS_CODE = "temp";
   static final String DEFAULT_LOAN_TYPE_NAME = "Can circulate";
@@ -409,18 +415,39 @@ public class InventoryHelper extends AbstractHelper {
    */
   private CompletableFuture<String> createInstanceRecord(CompositePoLine compPOL, Map<String, String> productTypesMap) {
     JsonObject lookupObj = new JsonObject();
-    CompletableFuture<Void> instanceTypeFuture = getAndCache(INSTANCE_TYPES)
-      .thenAccept(lookupObj::mergeIn)
-      .exceptionally(throwable -> {
-        throw new CompletionException(new HttpException(500, ErrorCodes.MISSING_INSTANCE_TYPE));
-      });
-    CompletableFuture<Void> statusFuture = getAndCache(INSTANCE_STATUSES).thenAccept(lookupObj::mergeIn);
+    CompletableFuture<Void> instanceTypeFuture = getEntryId(INSTANCE_TYPES, MISSING_INSTANCE_TYPE)
+      .thenAccept(lookupObj::mergeIn);
 
-    CompletableFuture<Void> contributorNameTypeIdFuture = getAndCache(CONTRIBUTOR_NAME_TYPES).thenAccept(lookupObj::mergeIn);
+    CompletableFuture<Void> statusFuture = getEntryId(INSTANCE_STATUSES, MISSING_INSTANCE_STATUS)
+      .thenAccept(lookupObj::mergeIn);
+
+    CompletableFuture<Void> contributorNameTypeIdFuture = getEntryId(CONTRIBUTOR_NAME_TYPES, MISSING_CONTRIBUTOR_NAME_TYPE)
+      .thenAccept(lookupObj::mergeIn);
 
     return allOf(ctx, instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
       .thenApply(v -> buildInstanceRecordJsonObject(compPOL, productTypesMap, lookupObj))
       .thenCompose(instanceRecJson -> createRecordInStorage(instanceRecJson, String.format(CREATE_INSTANCE_ENDPOINT, lang)));
+  }
+
+  private CompletableFuture<JsonObject> getEntryId(String entryType, ErrorCodes errorCode) {
+    CompletableFuture<JsonObject> future = new VertxCompletableFuture<>();
+    getAndCache(entryType)
+      .thenAccept(future::complete)
+      .exceptionally(throwable -> {
+        getEntryTypeValue(entryType)
+          .thenAccept(entryTypeValue -> future.completeExceptionally(new HttpException(500, buildErrorWithParameter(entryTypeValue, errorCode))));
+        return null;
+    });
+    return future;
+  }
+
+  private Error buildErrorWithParameter(String value, ErrorCodes errorCode) {
+    List<Parameter> parameters = new ArrayList<>();
+    parameters.add(new Parameter().withKey("missingEntry").withValue(value));
+    return new Error()
+      .withCode(errorCode.getCode())
+      .withMessage(errorCode.getDescription())
+      .withParameters(parameters);
   }
 
   private String buildProductIdQuery(ProductId productId, Map<String, String> productTypes) {
@@ -629,7 +656,7 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   private CompletableFuture<String> getLoanTypeId() {
-    return getAndCache(LOAN_TYPES)
+    return getEntryId(LOAN_TYPES, MISSING_LOAN_TYPE)
       .thenApply(jsonObject -> jsonObject.getString(LOAN_TYPES));
   }
 
@@ -689,7 +716,7 @@ public class InventoryHelper extends AbstractHelper {
       .thenApply(configs -> {
         switch (entryType) {
           case CONTRIBUTOR_NAME_TYPES:
-            return configs.getString(CONFIG_NAME_CONTRIBUTOR_NAME_TYPE, DEFAULT_CONTRIBUTOR_NAME);
+            return configs.getString(CONFIG_NAME_CONTRIBUTOR_NAME_TYPE, DEFAULT_CONTRIBUTOR_NAME_TYPE);
           case INSTANCE_STATUSES:
             return configs.getString(CONFIG_NAME_INSTANCE_STATUS_CODE, DEFAULT_INSTANCE_STATUS_CODE);
           case INSTANCE_TYPES:

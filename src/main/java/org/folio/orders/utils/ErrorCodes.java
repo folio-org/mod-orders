@@ -42,7 +42,10 @@ public enum ErrorCodes {
   COST_DISCOUNT_INVALID("costDiscountInvalid", "Cost's discount is invalid"),
   LOC_NOT_PROVIDED("locNotProvided", "Location not provided"),
   ORGANIZATION_NOT_A_VENDOR("organizationNotAVendor", "Order cannot be opened as the associated vendorId belongs to non-vendor organization"),
-  MISSING_INSTANCE_TYPE("missingInstanceType", "Instance-type is a required field for creating an Instance in Inventory");
+  MISSING_INSTANCE_TYPE("missingInstanceType", "Instance-type is a required field for creating an Instance in Inventory"),
+  MISSING_INSTANCE_STATUS("missingInstanceStatus", "Instance-status is a required field for creating an Instance in Inventory"),
+  MISSING_CONTRIBUTOR_NAME_TYPE("missingContributorNameType", "Contibutor-name-type is a required field for creating an Instance in Inventory"),
+  MISSING_LOAN_TYPE("missingLoanType", "Loan-type is a required field for creating an Item in Inventory");
 
   private final String code;
   private final String description;
