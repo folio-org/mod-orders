@@ -1,31 +1,8 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import org.folio.HttpStatus;
-import org.folio.rest.jaxrs.model.CheckInPiece;
-import org.folio.rest.jaxrs.model.CheckinCollection;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.ProcessingStatus;
-import org.folio.rest.jaxrs.model.ReceivingCollection;
-import org.folio.rest.jaxrs.model.ReceivingItemResult;
-import org.folio.rest.jaxrs.model.ReceivingResult;
-import org.folio.rest.jaxrs.model.ReceivingResults;
-import org.folio.rest.jaxrs.model.ToBeCheckedIn;
-import org.junit.Test;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
+import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
@@ -41,6 +18,9 @@ import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_NAME;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_ON_ORDER;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
+import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
+import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
+import static org.folio.rest.impl.MockServer.getCreatedHoldings;
 import static org.folio.rest.impl.MockServer.getItemUpdates;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
@@ -57,6 +37,42 @@ import static org.hamcrest.Matchers.isIn;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import org.folio.HttpStatus;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.acq.model.Piece;
+import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.jaxrs.model.CheckInPiece;
+import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.ProcessingStatus;
+import org.folio.rest.jaxrs.model.ReceivedItem;
+import org.folio.rest.jaxrs.model.ReceivingCollection;
+import org.folio.rest.jaxrs.model.ReceivingItemResult;
+import org.folio.rest.jaxrs.model.ReceivingResult;
+import org.folio.rest.jaxrs.model.ReceivingResults;
+import org.folio.rest.jaxrs.model.ToBeCheckedIn;
+import org.folio.rest.jaxrs.model.ToBeReceived;
+import org.junit.Assert;
+import org.junit.Test;
+
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import one.util.streamex.StreamEx;
 
 public class CheckinReceivingApiTest extends ApiTestBase {
 
@@ -376,7 +392,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostReceivingPhysicalWithErrors() {
+  public void testPostReceivingPhysicalWithErrors() throws IOException {
     logger.info("=== Test POST Receiving - Receive physical resources with different errors");
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-physical-resources-6-of-10-with-errors.json").mapTo(ReceivingCollection.class);
@@ -419,8 +435,56 @@ public class CheckinReceivingApiTest extends ApiTestBase {
       assertThat(poLine.getReceiptDate(), is(nullValue()));
     });
 
+    verifyProperQuantityOfHoldingsCreated(receivingRq);
+
     // Verify messages sent via event bus
     verifyOrderStatusUpdateEvent(1);
+  }
+
+  private void verifyProperQuantityOfHoldingsCreated(ReceivingCollection receivingRq) throws IOException {
+    Set<String> expectedHoldings = new HashSet<>();
+
+    // get processed poline
+    PoLineCollection poLineCollection = new JsonObject(ApiTestBase.getMockData(POLINES_COLLECTION)).mapTo(PoLineCollection.class);
+    PoLine poline = poLineCollection.getPoLines()
+      .stream()
+      .filter(poLine -> poLine.getId()
+        .equals(receivingRq.getToBeReceived()
+          .get(0)
+          .getPoLineId()))
+      .findFirst()
+      .get();
+
+    // get processed pieces for receiving
+    PieceCollection pieces = new JsonObject(ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecordsCollection.json"))
+      .mapTo(PieceCollection.class);
+
+    List<String> pieceIds = new ArrayList<>();
+
+    receivingRq.getToBeReceived()
+      .get(0)
+      .getReceivedItems()
+      .stream()
+      .forEach(recItem -> pieceIds.add(recItem.getPieceId()));
+
+    // get processed pieces from mock collection
+    pieces.getPieces()
+      .removeIf(piece -> !pieceIds.contains(piece.getId()));
+
+    for (Piece piece : pieces.getPieces()) {
+      for (ReceivedItem receivedItem : receivingRq.getToBeReceived()
+        .get(0)
+        .getReceivedItems()) {
+        if (receivedItem.getPieceId()
+          .equals(piece.getId())
+            && !receivedItem.getLocationId()
+              .equals(piece.getLocationId())
+            && HelperUtils.isHoldingsUpdateRequired(poline.getEresource(), poline.getPhysical())) {
+          expectedHoldings.add(poline.getInstanceId() + receivedItem.getLocationId());
+        }
+      }
+    }
+    Assert.assertEquals(expectedHoldings.size(), getCreatedHoldings().size());
   }
 
   @Test
@@ -638,5 +702,17 @@ public class CheckinReceivingApiTest extends ApiTestBase {
       }
     }
     return pieceIdsByPol;
+  }
+
+  private Map<String, Map<String, String>> groupLocationsByPoLineIdOnReceiving(ReceivingCollection receivingCollection) {
+    return StreamEx
+      .of(receivingCollection.getToBeReceived())
+      .groupingBy(ToBeReceived::getPoLineId,
+        mapping(ToBeReceived::getReceivedItems,
+          collectingAndThen(toList(),
+            lists -> StreamEx.of(lists)
+              .flatMap(List::stream)
+              .filter(receivedItem -> receivedItem.getLocationId() != null)
+              .toMap(ReceivedItem::getPieceId, ReceivedItem::getLocationId))));
   }
 }
