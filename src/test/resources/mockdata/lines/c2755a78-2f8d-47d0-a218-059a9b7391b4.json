@@ -29,7 +29,6 @@
     "subscriptionTo": "2020-10-09T00:00:00.000Z"
   },
   "donor" : "ABCDEFGHIJKLM",
-  "fundDistribution" : [ ],
   "locations": [
     {
       "locationId": "b241764c-1466-4e1d-a028-1a3684a5da87",

@@ -82,6 +82,7 @@
       "fundDistribution": [
         {
           "code": "HIST",
+          "fundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
           "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3",
           "percentage": 100
         }

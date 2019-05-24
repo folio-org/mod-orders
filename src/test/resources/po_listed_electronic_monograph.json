@@ -69,12 +69,12 @@
         "expectedActivation": "2018-10-09T00:00:00.000Z",
         "userLimit": 10,
         "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
-        "license": "7c063655-b384-4a6f-b367-3c2f95f7a49c",
         "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
       },
       "fundDistribution": [
         {
-          "code": "EUROHIST-FY19",
+          "code": "EUROHIST",
+          "fundId": "e9285a1c-1dfc-4380-868c-e74073003f43",
           "percentage": 100.0,
           "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08003"
         }
@@ -90,7 +90,7 @@
       "paymentStatus": "Awaiting Payment",
       "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
       "poLineNumber": "268758-03",
-      "publication_date": "2017",
+      "publicationDate": "2017",
       "publisher": "Schiffer Publishing",
       "receiptDate": "2018-10-09T00:00:00.000Z",
       "receiptStatus": "Awaiting Receipt",
