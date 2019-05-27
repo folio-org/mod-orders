@@ -484,6 +484,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
     if (changeOrderStatus(purchaseOrder, poLines)) {
       logger.debug("Workflow status update required for order with id={}", compPO.getId());
+      compPO.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.fromValue(purchaseOrder.getWorkflowStatus().value()));
+      compPO.setCloseReason(purchaseOrder.getCloseReason());
     }
 
     return handlePutRequest(resourceByIdPath(PURCHASE_ORDER, compPO.getId()), JsonObject.mapFrom(purchaseOrder), httpClient, ctx, okapiHeaders, logger);
