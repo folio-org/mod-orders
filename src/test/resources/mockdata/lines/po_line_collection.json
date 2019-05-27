@@ -48,6 +48,7 @@
       "fundDistribution": [
         {
           "code": "HIST",
+          "fundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
           "percentage": 80.0,
           "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3"
         }
@@ -157,6 +158,7 @@
       "fundDistribution": [
         {
           "code": "HIST",
+          "fundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
           "percentage": 80.0,
           "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3"
         }
@@ -252,7 +254,6 @@
         "subscriptionInterval": 824,
         "subscriptionTo": "2020-10-09T00:00:00.000Z"
       },
-      "fundDistribution": [],
       "locations": [
         {
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
@@ -325,7 +326,6 @@
         "subscriptionInterval": 824,
         "subscriptionTo": "2020-10-09T00:00:00.000Z"
       },
-      "fundDistribution": [],
       "locations": [
         {
           "locationId": "b241764c-1466-4e1d-a028-1a3684a5da87",
@@ -413,7 +413,6 @@
         },
         "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
       },
-      "fundDistribution": [],
       "locations": [
         {
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
@@ -497,11 +496,13 @@
       "fundDistribution": [
         {
           "code": "HIST",
+          "fundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
           "percentage": 80.0,
           "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3"
         },
         {
-          "code": "GENRL",
+          "code": "STATE-SUBN",
+          "fundId": "e54b1f4d-7d05-4b1a-9368-3c36b75d8ac6",
           "percentage": 20.0,
           "encumbrance": "0466cb77-0344-43c6-85eb-0a64aa2934e5"
         }
@@ -705,8 +706,9 @@
             },
             "fundDistribution": [
                 {
-                    "code": "27e43081-4389-4766-ba97-ea5e8c318937",
-                    "percentage": 100
+                  "code": "STATE-SUBN",
+                  "fundId": "e54b1f4d-7d05-4b1a-9368-3c36b75d8ac6",
+                  "percentage": 100
                 }
             ],
             "locations": [
@@ -772,8 +774,9 @@
             },
             "fundDistribution": [
                 {
-                    "code": "27e43081-4389-4766-ba97-ea5e8c318937",
-                    "percentage": 100
+                  "code": "STATE-SUBN",
+                  "fundId": "e54b1f4d-7d05-4b1a-9368-3c36b75d8ac6",
+                  "percentage": 100
                 }
             ],
             "locations": [
