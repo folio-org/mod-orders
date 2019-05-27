@@ -27,6 +27,19 @@
       }
     },
     {
+      "id": "e48f35bd-1dea-4993-ad3c-dfa7ae668c80",
+      "module": "TENANT",
+      "configName": "addresses",
+      "enabled": true,
+      "value": "[\n  {\n    \"code\": \"79d9f8f9-3c2c-4fa8-af59-efc1aa5ed3c7\",\n    \"value\": {\n      \"address\": \"sample address\",\n      \"name\": \"sample name\"\n    }\n  },\n  {\n    \"code\": \"fdef0c48-2acf-4cd6-a04e-998ad9c489bf\",\n    \"value\": {\n      \"address\": \"another address\",\n      \"name\": \"another name\"\n    }\n  }\n]",
+      "metadata": {
+        "createdDate": "2018-12-12T08:14:32.743+0000",
+        "createdByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c",
+        "updatedDate": "2018-12-12T08:24:34.213+0000",
+        "updatedByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c"
+      }
+    },
+    {
       "id": "5534ca06-b395-41b3-9bfa-8df54bc93800",
       "module": "ORDERS",
       "configName": "inventory-instanceTypeCode",
