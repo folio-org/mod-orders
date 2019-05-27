@@ -1871,6 +1871,24 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
+  public void testPostOrderToAutomaticallyChangeStatusFromOpenToClosed() {
+
+    logger.info("===  Test case when order status update is expected from Open to Closed ===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
+    reqData.setVendor("d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1");
+    assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
+
+    CompositePurchaseOrder respData = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    assertThat(respData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.CLOSED));
+    assertThat(respData.getCloseReason(), notNullValue());
+    assertThat(respData.getCloseReason().getReason(), equalTo(HelperUtils.REASON_COMPLETE));
+
+  }
+
+  @Test
   public void testPutOrderToAutomaticallyChangeStatusFromClosedToOpen() {
 
     logger.info("=== Test case when order status update is expected from Closed to Open ===");
