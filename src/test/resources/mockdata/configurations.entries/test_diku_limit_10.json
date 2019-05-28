@@ -27,6 +27,20 @@
       }
     },
     {
+      "id": "e48f35bd-1dea-4993-ad3c-dfa7ae668c80",
+      "code": "ADDRESS_12345",
+      "module": "TENANT",
+      "configName": "addresses",
+      "enabled": true,
+      "value": "{\n  \"address\": \"sample address\",\n  \"name\": \"sample name\"\n}\n",
+      "metadata": {
+        "createdDate": "2018-12-12T08:14:32.743+0000",
+        "createdByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c",
+        "updatedDate": "2018-12-12T08:24:34.213+0000",
+        "updatedByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c"
+      }
+    },
+    {
       "id": "5534ca06-b395-41b3-9bfa-8df54bc93800",
       "module": "ORDERS",
       "configName": "inventory-instanceTypeCode",
