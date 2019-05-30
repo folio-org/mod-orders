@@ -1413,7 +1413,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
           .as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
-    assertEquals(2, errors.getErrors().size());
+    assertEquals(1, errors.getErrors().size());
     assertNull(getInstancesSearches());
     assertNull(getItemsSearches());
   }
