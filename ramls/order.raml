@@ -204,3 +204,19 @@ resourceTypes:
     is: [validate]
     post:
       description: Create piece record
+    /{id}:
+      uriParameters:
+        id:
+          description: The UUID of a piece record
+          type: UUID
+      is: [validate, language]
+      put:
+        description: Update a piece record with given {id}
+        body:
+          application/json:
+            type: piece
+            example:
+              strict: false
+              value: !include acq-models/mod-orders-storage/examples/piece_get.sample
+      delete:
+        description: Delete a piece with given {id}

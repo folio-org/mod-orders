@@ -77,6 +77,7 @@ public class HelperUtils {
   private static final int DEFAULT_PORT = 9130;
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
   private static final Pattern HOST_PORT_PATTERN = Pattern.compile("https?://([^:/]+)(?::?(\\d+)?)");
+  private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
 
   private HelperUtils() {
 
@@ -854,6 +855,36 @@ public class HelperUtils {
     return future;
   }
 
+  public static void verifyResponse(Response response) {
+    if (!Response.isSuccess(response.getCode())) {
+      throw new CompletionException(
+        new HttpException(response.getCode(), response.getError().getString("errorMessage")));
+    }
+  }
+  
+  public static CompletableFuture<Void> handleDeleteRequest(String url, HttpClientInterface httpClient, Context ctx,
+      Map<String, String> okapiHeaders, Logger logger) {
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+
+    logger.debug(CALLING_ENDPOINT_MSG, HttpMethod.DELETE, url);
+
+    try {
+      httpClient.request(HttpMethod.DELETE, url, okapiHeaders)
+        .thenAccept(HelperUtils::verifyResponse)
+        .thenApply(future::complete)
+        .exceptionally(t -> {
+          logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, HttpMethod.DELETE, url);
+          future.completeExceptionally(t);
+          return null;
+        });
+    } catch (Exception e) {
+      logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, e, HttpMethod.DELETE, url);
+      future.completeExceptionally(e);
+    }
+
+    return future;
+  }
+  
   /**
    * Retrieve configuration for mod-orders from mod-configuration.
    * @param okapiHeaders the headers provided by okapi
