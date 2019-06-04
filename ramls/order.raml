@@ -226,6 +226,10 @@ resourceTypes:
             body:
               text/plain:
                 example: "Bad request"
+          404:
+              description: "Request id does not exists"
+              body:
+                application/json:
           500:
             description: "Internal server error, e.g. due to misconfiguration"
             body:
@@ -241,9 +245,12 @@ resourceTypes:
             body:
               text/plain:
                 example: "Bad request"
+          404:
+              description: "Request id does not exists"
+              body:
+                application/json:
           500:
             description: "Internal server error, e.g. due to misconfiguration"
             body:
               text/plain:
                 example: "internal server error, contact administrator"
-
