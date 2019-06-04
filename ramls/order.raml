@@ -218,5 +218,32 @@ resourceTypes:
             example:
               strict: false
               value: !include acq-models/mod-orders-storage/examples/piece_get.sample
+        responses:
+          204:
+            description: "Start value successfully updated"
+          400:
+            description: "Bad request"
+            body:
+              text/plain:
+                example: "Bad request"
+          500:
+            description: "Internal server error, e.g. due to misconfiguration"
+            body:
+              text/plain:
+                example: "internal server error, contact administrator"
       delete:
         description: Delete a piece with given {id}
+        responses:
+          204:
+            description: "Start value successfully updated"
+          400:
+            description: "Bad request"
+            body:
+              text/plain:
+                example: "Bad request"
+          500:
+            description: "Internal server error, e.g. due to misconfiguration"
+            body:
+              text/plain:
+                example: "internal server error, contact administrator"
+
