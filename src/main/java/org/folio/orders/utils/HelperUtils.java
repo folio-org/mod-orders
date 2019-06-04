@@ -62,7 +62,8 @@ public class HelperUtils {
   public static final String CONFIG_NAME = "configName";
   public static final String CONFIG_VALUE = "value";
   private static final String CONFIG_QUERY = "module=ORDERS";
-
+  private static final String ERROR_MESSAGE = "errorMessage";
+  
   public static final String DEFAULT_POLINE_LIMIT = "1";
   public static final String REASON_COMPLETE = "Complete";
   private static final String MAX_POLINE_LIMIT = "500";
@@ -77,6 +78,7 @@ public class HelperUtils {
   private static final int DEFAULT_PORT = 9130;
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
   private static final Pattern HOST_PORT_PATTERN = Pattern.compile("https?://([^:/]+)(?::?(\\d+)?)");
+  private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
 
   private HelperUtils() {
 
@@ -85,7 +87,7 @@ public class HelperUtils {
   public static JsonObject verifyAndExtractBody(Response response) {
     if (!Response.isSuccess(response.getCode())) {
       throw new CompletionException(
-          new HttpException(response.getCode(), response.getError().getString("errorMessage")));
+          new HttpException(response.getCode(), response.getError().getString(ERROR_MESSAGE)));
     }
 
     return response.getBody();
@@ -242,7 +244,7 @@ public class HelperUtils {
            */
           int code = response.getCode();
           if (code == 404 && operation == HttpMethod.GET) {
-            String errorMessage = (response.getError() != null) ? response.getError().getString("errorMessage") : StringUtils.EMPTY;
+            String errorMessage = (response.getError() != null) ? response.getError().getString(ERROR_MESSAGE) : StringUtils.EMPTY;
             logger.error("The {} {} operation completed with {} error: {}", operation, url, code, errorMessage);
 
             return new JsonObject();
@@ -854,6 +856,40 @@ public class HelperUtils {
     return future;
   }
 
+  public static void verifyResponse(Response response) {
+    if (!Response.isSuccess(response.getCode())) {
+      throw new CompletionException(
+        new HttpException(response.getCode(), response.getError().getString(ERROR_MESSAGE)));
+    }
+  }
+  
+  /**
+   * A common method to delete an entry in the storage
+   * @param endpoint endpoint
+   */
+  public static CompletableFuture<Void> handleDeleteRequest(String endpoint, HttpClientInterface httpClient, Context ctx,
+      Map<String, String> okapiHeaders, Logger logger) {
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+
+    logger.debug(CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpoint);
+
+    try {
+      httpClient.request(HttpMethod.DELETE, endpoint, okapiHeaders)
+        .thenAccept(HelperUtils::verifyResponse)
+        .thenApply(future::complete)
+        .exceptionally(t -> {
+          logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, HttpMethod.DELETE, endpoint);
+          future.completeExceptionally(t);
+          return null;
+        });
+    } catch (Exception e) {
+      logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, e, HttpMethod.DELETE, endpoint);
+      future.completeExceptionally(e);
+    }
+
+    return future;
+  }
+  
   /**
    * Retrieve configuration for mod-orders from mod-configuration.
    * @param okapiHeaders the headers provided by okapi

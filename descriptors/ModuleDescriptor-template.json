@@ -237,6 +237,22 @@
           "modulePermissions": [
             "orders-storage.pieces.item.post"
           ]
+        },
+        {
+          "methods": ["PUT"],
+          "pathPattern": "/orders/pieces/{id}",
+          "permissionsRequired": ["orders.pieces.item.put"],
+          "modulePermissions": [
+            "orders-storage.pieces.item.put"
+          ]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/orders/pieces/{id}",
+          "permissionsRequired": ["orders.pieces.item.delete"],
+          "modulePermissions": [
+            "orders-storage.pieces.item.delete"
+          ]
         }
       ]
     },
@@ -400,6 +416,16 @@
       "description": "Create piece record"
     },
     {
+      "permissionName": "orders.pieces.item.put",
+      "displayName": "orders - modify an existing piece record",
+      "description": "Modify an existing piece"
+    },
+    {
+      "permissionName": "orders.pieces.item.delete",
+      "displayName": "orders - delete an existing piece record",
+      "description": "Delete an existing piece"
+    },
+    {
       "permissionName": "orders.all",
       "displayName": "orders - all permissions",
       "description": "Entire set of permissions needed to use orders",
@@ -419,7 +445,9 @@
         "orders.receiving.collection.post",
         "orders.check-in.collection.post",
         "orders.receiving-history.collection.get",
-        "orders.pieces.item.post"
+        "orders.pieces.item.post",
+        "orders.pieces.item.put",
+        "orders.pieces.item.delete"
       ]
     }
   ],

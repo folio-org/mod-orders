@@ -297,6 +297,7 @@ public class MockServer {
     router.route(HttpMethod.DELETE, resourcePath(PO_LINES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES));
     router.route(HttpMethod.DELETE, resourcePath(ALERTS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ALERTS));
     router.route(HttpMethod.DELETE, resourcePath(REPORTING_CODES)).handler(ctx -> handleDeleteGenericSubObj(ctx, REPORTING_CODES));
+    router.route(HttpMethod.DELETE, resourcePath(PIECES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PIECES));
 
     router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
     return router;
@@ -1023,6 +1024,7 @@ public class MockServer {
         .end();
     }
   }
+
 
   private void addServerRqRsData(HttpMethod method, String objName, JsonObject data) {
     List<JsonObject> entries = serverRqRs.get(objName, method);

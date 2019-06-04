@@ -361,4 +361,29 @@ public class OrdersImpl implements Orders {
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
+  
+  @Override
+  @Validate
+  public void putOrdersPiecesById(String pieceId, String lang, Piece piece, Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    PiecesHelper putPieceHelper = new PiecesHelper(okapiHeaders, vertxContext, lang);
+
+    if (StringUtils.isEmpty(piece.getId())) {
+      piece.setId(pieceId);
+    }
+
+    putPieceHelper.updatePieceRecord(piece)
+      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(putPieceHelper.buildNoContentResponse())))
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, putPieceHelper, t));
+  }
+
+  @Override
+  @Validate
+  public void deleteOrdersPiecesById(String pieceId, String lang, Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    PiecesHelper deletePieceHelper = new PiecesHelper(okapiHeaders, vertxContext, lang);
+    deletePieceHelper.deletePiece(pieceId)
+      .thenAccept(ok -> asyncResultHandler.handle(succeededFuture(deletePieceHelper.buildNoContentResponse())))
+      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, deletePieceHelper, fail));
+  }
 }
