@@ -220,11 +220,11 @@ resourceTypes:
               value: !include acq-models/mod-orders-storage/examples/piece_get.sample
         responses:
           204:
-            description: "Start value successfully updated"
+            description: "Piece record successfully updated"
           400:
             description: "Bad request"
             body:
-              text/plain:
+              application/json:
                 example: "Bad request"
           404:
               description: "Request id does not exists"
@@ -233,17 +233,17 @@ resourceTypes:
           500:
             description: "Internal server error, e.g. due to misconfiguration"
             body:
-              text/plain:
+              application/json:
                 example: "internal server error, contact administrator"
       delete:
         description: Delete a piece with given {id}
         responses:
           204:
-            description: "Start value successfully updated"
+            description: "Piece record successfully deleted"
           400:
             description: "Bad request"
             body:
-              text/plain:
+              application/json:
                 example: "Bad request"
           404:
               description: "Request id does not exists"
@@ -252,5 +252,5 @@ resourceTypes:
           500:
             description: "Internal server error, e.g. due to misconfiguration"
             body:
-              text/plain:
+              application/json:
                 example: "internal server error, contact administrator"
