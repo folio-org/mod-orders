@@ -225,7 +225,9 @@ resourceTypes:
             description: "Bad request"
             body:
               application/json:
-                example: "Bad request"
+                example:
+                  strict: false
+                  value: !include examples/errors_400.sample
           404:
               description: "Request id does not exists"
               body:
@@ -234,7 +236,9 @@ resourceTypes:
             description: "Internal server error, e.g. due to misconfiguration"
             body:
               application/json:
-                example: "internal server error, contact administrator"
+                example:
+                  strict: false
+                  value: !include examples/errors_500.sample
       delete:
         description: Delete a piece with given {id}
         responses:
@@ -244,7 +248,9 @@ resourceTypes:
             description: "Bad request"
             body:
               application/json:
-                example: "Bad request"
+                example:
+                  strict: false
+                  value: !include examples/errors_400.sample
           404:
               description: "Request id does not exists"
               body:
@@ -253,4 +259,6 @@ resourceTypes:
             description: "Internal server error, e.g. due to misconfiguration"
             body:
               application/json:
-                example: "internal server error, contact administrator"
+                example:
+                  strict: false
+                  value: !include examples/errors_500.sample
