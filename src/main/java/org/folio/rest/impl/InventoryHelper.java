@@ -372,7 +372,7 @@ public class InventoryHelper extends AbstractHelper {
         return productTypes;
       })
       .thenApply(productTypes -> productTypes.getJsonArray(IDENTIFIER_TYPES).stream()
-        .collect(toMap(jsonObj -> ((JsonObject) jsonObj).getString("name"),
+        .collect(toMap(jsonObj -> ((JsonObject) jsonObj).getString("id"),
           jsonObj -> ((JsonObject) jsonObj).getString("id"),
           (k1, k2) -> k1)));
   }
