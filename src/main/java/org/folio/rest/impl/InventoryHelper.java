@@ -352,14 +352,14 @@ public class InventoryHelper extends AbstractHelper {
       .getDetails()
       .getProductIds()
       .stream()
-      .map(productId -> productId.getProductIdType().value())
+      .map(productId -> productId.getProductIdType())
       .collect(toSet());
 
     int prodTypesQty = uniqueProductTypes.size();
 
     String query = uniqueProductTypes
       .stream()
-      .map(productType -> "name==" + productType)
+      .map(productType -> "id==" + productType)
       .collect(joining(" or "));
 
     String endpoint = buildLookupEndpoint(IDENTIFIER_TYPES, encodeQuery(query, logger), prodTypesQty, lang);
