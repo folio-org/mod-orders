@@ -352,7 +352,7 @@ public class InventoryHelper extends AbstractHelper {
       .getDetails()
       .getProductIds()
       .stream()
-      .map(productId -> productId.getProductIdType())
+      .map(ProductId::getProductIdType)
       .collect(toSet());
 
     int prodTypesQty = uniqueProductTypes.size();
@@ -453,7 +453,7 @@ public class InventoryHelper extends AbstractHelper {
   private String buildProductIdQuery(ProductId productId, Map<String, String> productTypes) {
     return String.format("(identifiers adj \"\\\"identifierTypeId\\\": \\\"%s\\\"\" " +
         "and identifiers adj \"\\\"value\\\": \\\"%s\\\"\")",
-      productTypes.get(productId.getProductIdType().toString()),
+      productTypes.get(productId.getProductIdType()),
       productId.getProductId());
   }
 
@@ -495,8 +495,7 @@ public class InventoryHelper extends AbstractHelper {
                .stream()
                .map(pId -> {
                  JsonObject identifier = new JsonObject();
-                 identifier.put(INSTANCE_IDENTIFIER_TYPE_ID, productTypes.get(pId.getProductIdType()
-                                                                                 .toString()));
+                 identifier.put(INSTANCE_IDENTIFIER_TYPE_ID, productTypes.get(pId.getProductIdType()));
                  identifier.put(INSTANCE_IDENTIFIER_TYPE_VALUE, pId.getProductId());
                  return identifier;
                })
