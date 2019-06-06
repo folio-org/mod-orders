@@ -38,7 +38,6 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.folio.orders.utils.ErrorCodes.ITEM_CREATION_FAILED;
-import static org.folio.orders.utils.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_LOAN_TYPE;
@@ -76,6 +75,7 @@ public class InventoryHelper extends AbstractHelper {
   static final String INSTANCE_TYPES = "instanceTypes";
   static final String ITEMS = "items";
   static final String LOAN_TYPES = "loantypes";
+  static final String TOTAL_RECORDS = "totalRecords";
 
   // mod-configuration: config names and default values
   static final String CONFIG_NAME_CONTRIBUTOR_NAME_TYPE = "inventory-contributorNameType";
@@ -105,7 +105,7 @@ public class InventoryHelper extends AbstractHelper {
 
   static {
     Map<String, String> apis = new HashMap<>();
-    apis.put(CONTRIBUTOR_NAME_TYPES, "/contributor-name-types?limit=1&query=name==%s&lang=%s");
+    apis.put(CONTRIBUTOR_NAME_TYPES, "/contributor-name-types?limit=%s&query=%s&lang=%s");
     apis.put(HOLDINGS_RECORDS, "/holdings-storage/holdings?query=%s&limit=1&lang=%s");
     apis.put(LOAN_TYPES, "/loan-types?query=name==%s&limit=1&lang=%s");
     apis.put(IDENTIFIER_TYPES, "/identifier-types?query=%s&limit=%d&lang=%s");
@@ -421,13 +421,26 @@ public class InventoryHelper extends AbstractHelper {
     CompletableFuture<Void> statusFuture = getEntryId(INSTANCE_STATUSES, MISSING_INSTANCE_STATUS)
       .thenAccept(lookupObj::mergeIn);
 
-    CompletableFuture<Void> contributorNameTypeIdFuture = getEntryId(CONTRIBUTOR_NAME_TYPES, MISSING_CONTRIBUTOR_NAME_TYPE)
-      .thenAccept(lookupObj::mergeIn);
+    CompletableFuture<Void> contributorNameTypeIdFuture = verifyContributorNameTypesExist(compPOL.getContributors());
 
     return allOf(ctx, instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
       .thenApply(v -> buildInstanceRecordJsonObject(compPOL, productTypesMap, lookupObj))
       .thenCompose(instanceRecJson -> createRecordInStorage(instanceRecJson, String.format(CREATE_INSTANCE_ENDPOINT, lang)));
   }
+
+  private CompletableFuture<Void> verifyContributorNameTypesExist(List<Contributor> contributors) {
+    List<String> ids = contributors.stream().map(Contributor::getContributorNameType).collect(toList());
+    String query = convertIdsToCqlQuery(ids);
+    String endpoint = buildLookupEndpoint(INVENTORY_LOOKUP_ENDPOINTS.get(CONTRIBUTOR_NAME_TYPES), ids.size(), query, lang);
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenAccept(contributorNameTypes -> {
+        if (contributorNameTypes.getInteger(TOTAL_RECORDS) != ids.size()) {
+          Error error = buildMissingContributorNameTypesError(contributorNameTypes, ids);
+          throw  new HttpException(500, error);
+        }
+      });
+  }
+  private CompletableFuture<JsonObject> findContributorNameTypes
 
   private CompletableFuture<JsonObject> getEntryId(String entryType, ErrorCodes errorCode) {
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>();
