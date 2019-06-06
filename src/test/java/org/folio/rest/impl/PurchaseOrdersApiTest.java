@@ -417,7 +417,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     // Check that search for existing instances was done not for all PO lines
     assertEquals(polCount - 1, instancesSearches.size());
 
-    verifyInventoryInteraction(resp, polCount);
     verifyCalculatedData(resp);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
@@ -517,7 +516,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertEquals(1, holdingsSearches.size());
     assertEquals(1, itemsSearches.size());
 
-    verifyInventoryInteraction(resp, 1);
     verifyCalculatedData(resp);
   }
 
@@ -573,7 +571,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertEquals(1, holdingsSearches.size());
     assertEquals(1, itemsSearches.size());
 
-    verifyInventoryInteraction(resp, 1);
     verifyCalculatedData(resp);
   }
 
@@ -1125,10 +1122,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
-    int polCount = reqData.getCompositePoLines().size();
-
     verifyInstanceLinksForUpdatedOrder(reqData);
-    verifyInventoryInteraction(reqData, polCount - 1);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED.value(), reqData.getCompositePoLines().size());
   }
@@ -1272,13 +1266,12 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().get(0).getPhysical().setCreateInventory(null);
     reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(null);
 
-    final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
     assertNotNull(getHoldingsSearches());
     assertNotNull(getItemsSearches());
-    verifyInventoryInteraction(resp, 1);
 
     assertNotNull(getCreatedPieces());
   }
@@ -1295,15 +1288,12 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().get(0).getPhysical().setCreateInventory(null);
     reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(null);
 
-    final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EMPTY_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
     assertNotNull(getHoldingsSearches());
     assertNotNull(getItemsSearches());
-
-    // MODORDERS-239/240/241: default values will be used when config is empty
-    verifyInventoryInteraction(EMPTY_CONFIG_X_OKAPI_TENANT, resp, 1);
 
     assertNotNull(getCreatedPieces());
   }
@@ -1326,9 +1316,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
-    int polCount = reqData.getCompositePoLines().size();
     verifyInstanceLinksForUpdatedOrder(reqData);
-    verifyInventoryInteraction(reqData, polCount);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
   }

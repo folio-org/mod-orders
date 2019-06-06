@@ -25,17 +25,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
-
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.folio.orders.utils.ErrorCodes.ITEM_CREATION_FAILED;
 import static org.folio.orders.utils.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
@@ -125,8 +120,7 @@ public class InventoryHelper extends AbstractHelper {
     if(compPOL.getInstanceId() != null) {
       return CompletableFuture.completedFuture(compPOL);
     } else {
-      return getProductTypesMap(compPOL)
-        .thenCompose(productTypesMap -> getInstanceRecord(compPOL, productTypesMap))
+      return getInstanceRecord(compPOL)
         .thenApply(compPOL::withInstanceId);
     }
   }
@@ -335,49 +329,6 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   /**
-   * Retrieves product type details associated with given PO line
-   * and builds 'product type name' -> 'product type id' map.
-   *
-   * @param compPOL the PO line to retrieve product type details for
-   * @return product types map
-   */
-  private CompletableFuture<Map<String, String>> getProductTypesMap(CompositePoLine compPOL) {
-    // do not fail if no productId is provided, should be enforced on schema level if it's required
-    if (compPOL.getDetails() == null || compPOL.getDetails().getProductIds().isEmpty()) {
-      return completedFuture(Collections.emptyMap());
-    }
-
-    // Extract unique product types
-    Set<String> uniqueProductTypes = compPOL
-      .getDetails()
-      .getProductIds()
-      .stream()
-      .map(ProductId::getProductIdType)
-      .collect(toSet());
-
-    int prodTypesQty = uniqueProductTypes.size();
-
-    String query = uniqueProductTypes
-      .stream()
-      .map(productType -> "id==" + productType)
-      .collect(joining(" or "));
-
-    String endpoint = buildLookupEndpoint(IDENTIFIER_TYPES, encodeQuery(query, logger), prodTypesQty, lang);
-
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(productTypes -> {
-        if (productTypes.getJsonArray(IDENTIFIER_TYPES).size() != prodTypesQty) {
-          throw new HttpException(422, "Invalid product type(s) is specified for the PO line with id " + compPOL.getId());
-        }
-        return productTypes;
-      })
-      .thenApply(productTypes -> productTypes.getJsonArray(IDENTIFIER_TYPES).stream()
-        .collect(toMap(jsonObj -> ((JsonObject) jsonObj).getString("id"),
-          jsonObj -> ((JsonObject) jsonObj).getString("id"),
-          (k1, k2) -> k1)));
-  }
-
-  /**
    * Returns Id of the Instance Record corresponding to given PO line.
    * Instance record is either retrieved from Inventory or a new one is created if no corresponding Record exists.
    *
@@ -385,14 +336,14 @@ public class InventoryHelper extends AbstractHelper {
    * @param productTypesMap product types Map used to build Inventory query
    * @return future with Instance Id
    */
-  private CompletionStage<String> getInstanceRecord(CompositePoLine compPOL, Map<String, String> productTypesMap) {
+  private CompletableFuture<String> getInstanceRecord(CompositePoLine compPOL) {
     // proceed with new Instance Record creation if no productId is provided
     if (compPOL.getDetails() == null || compPOL.getDetails().getProductIds().isEmpty()) {
-      return createInstanceRecord(compPOL, productTypesMap);
+      return createInstanceRecord(compPOL);
     }
 
     String query = compPOL.getDetails().getProductIds().stream()
-      .map(productId -> buildProductIdQuery(productId, productTypesMap))
+      .map(productId -> buildProductIdQuery(productId))
       .collect(joining(" or "));
 
     // query contains special characters so must be encoded before submitting
@@ -402,7 +353,7 @@ public class InventoryHelper extends AbstractHelper {
         if (!instances.getJsonArray(INSTANCES).isEmpty()) {
           return completedFuture(extractId(getFirstObjectFromResponse(instances, INSTANCES)));
         }
-        return createInstanceRecord(compPOL, productTypesMap);
+        return createInstanceRecord(compPOL);
       });
   }
 
@@ -413,7 +364,7 @@ public class InventoryHelper extends AbstractHelper {
    * @param productTypesMap product types Map used to build Instance Record json object
    * @return id of newly created Instance Record
    */
-  private CompletableFuture<String> createInstanceRecord(CompositePoLine compPOL, Map<String, String> productTypesMap) {
+  private CompletableFuture<String> createInstanceRecord(CompositePoLine compPOL) {
     JsonObject lookupObj = new JsonObject();
     CompletableFuture<Void> instanceTypeFuture = getEntryId(INSTANCE_TYPES, MISSING_INSTANCE_TYPE)
       .thenAccept(lookupObj::mergeIn);
@@ -425,7 +376,7 @@ public class InventoryHelper extends AbstractHelper {
       .thenAccept(lookupObj::mergeIn);
 
     return allOf(ctx, instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
-      .thenApply(v -> buildInstanceRecordJsonObject(compPOL, productTypesMap, lookupObj))
+      .thenApply(v -> buildInstanceRecordJsonObject(compPOL, lookupObj))
       .thenCompose(instanceRecJson -> createRecordInStorage(instanceRecJson, String.format(CREATE_INSTANCE_ENDPOINT, lang)));
   }
 
@@ -450,14 +401,12 @@ public class InventoryHelper extends AbstractHelper {
       .withParameters(parameters);
   }
 
-  private String buildProductIdQuery(ProductId productId, Map<String, String> productTypes) {
-    return String.format("(identifiers adj \"\\\"identifierTypeId\\\": \\\"%s\\\"\" " +
-        "and identifiers adj \"\\\"value\\\": \\\"%s\\\"\")",
-      productTypes.get(productId.getProductIdType()),
+  private String buildProductIdQuery(ProductId productId) {
+    return String.format("(identifiers adj \"\\\"value\\\": \\\"%s\\\"\")",
       productId.getProductId());
   }
 
-  private JsonObject buildInstanceRecordJsonObject(CompositePoLine compPOL, Map<String, String> productTypes, JsonObject lookupObj) {
+  private JsonObject buildInstanceRecordJsonObject(CompositePoLine compPOL, JsonObject lookupObj) {
     JsonObject instance = new JsonObject();
 
     // MODORDERS-145 The Source and source code are required by schema
@@ -495,7 +444,6 @@ public class InventoryHelper extends AbstractHelper {
                .stream()
                .map(pId -> {
                  JsonObject identifier = new JsonObject();
-                 identifier.put(INSTANCE_IDENTIFIER_TYPE_ID, productTypes.get(pId.getProductIdType()));
                  identifier.put(INSTANCE_IDENTIFIER_TYPE_VALUE, pId.getProductId());
                  return identifier;
                })
