@@ -34,6 +34,8 @@
             "orders-storage.reporting-codes.item.post",
             "orders-storage.reporting-codes.item.put",
             "configuration.entries.collection.get",
+            "finance-storage.encumbrances.collection.get",
+            "finance-storage.encumbrances.item.post",
             "inventory-storage.identifier-types.collection.get",
             "inventory.instances.collection.get",
             "inventory.instances.item.post",
@@ -85,6 +87,8 @@
             "orders-storage.reporting-codes.item.put",
             "orders-storage.reporting-codes.item.delete",
             "configuration.entries.collection.get",
+            "finance-storage.encumbrances.collection.get",
+            "finance-storage.encumbrances.item.post",
             "inventory-storage.identifier-types.collection.get",
             "inventory.instances.collection.get",
             "inventory.instances.item.post",
@@ -296,6 +300,10 @@
     {
       "id": "orders-storage.po-lines",
       "version": "5.0"
+    },
+    {
+      "id": "finance-storage.encumbrances",
+      "version": "1.0"
     },
     {
       "id": "holdings-storage",
