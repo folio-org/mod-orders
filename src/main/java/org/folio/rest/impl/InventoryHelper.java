@@ -333,7 +333,6 @@ public class InventoryHelper extends AbstractHelper {
    * Instance record is either retrieved from Inventory or a new one is created if no corresponding Record exists.
    *
    * @param compPOL PO line to retrieve Instance Record Id for
-   * @param productTypesMap product types Map used to build Inventory query
    * @return future with Instance Id
    */
   private CompletableFuture<String> getInstanceRecord(CompositePoLine compPOL) {
@@ -402,7 +401,7 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   private String buildProductIdQuery(ProductId productId) {
-    return String.format("(identifiers adj \"\\\"value\\\": \\\"%s\\\"\")",
+    return String.format("(identifiers adj \\\"\\\\\\\"identifierTypeId\\\\\\\": \\\\\\\"%s\\\\\\\"\\\" \" + and identifiers adj \"\\\"value\\\": \\\"%s\\\"\")", productId.getProductIdType(),
       productId.getProductId());
   }
 
@@ -444,6 +443,7 @@ public class InventoryHelper extends AbstractHelper {
                .stream()
                .map(pId -> {
                  JsonObject identifier = new JsonObject();
+                 identifier.put(INSTANCE_IDENTIFIER_TYPE_ID, pId.getProductIdType());
                  identifier.put(INSTANCE_IDENTIFIER_TYPE_VALUE, pId.getProductId());
                  return identifier;
                })
