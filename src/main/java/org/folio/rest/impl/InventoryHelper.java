@@ -399,7 +399,7 @@ public class InventoryHelper extends AbstractHelper {
 
   private String buildProductIdQuery(ProductId productId) {
     return String.format(
-        "(identifiers adj \\\"\\\\\\\"identifierTypeId\\\\\\\": \\\\\\\"%s\\\\\\\"\\\" \" + and identifiers adj \"\\\"value\\\": \\\"%s\\\"\")",
+        "(identifiers adj \"\"identifierTypeId\": \"%s\"\" \" + and identifiers adj \"\"value\": \"%s\"\")",
         productId.getProductIdType(), productId.getProductId());
   }
 
