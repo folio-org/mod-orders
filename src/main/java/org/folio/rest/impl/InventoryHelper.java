@@ -358,7 +358,6 @@ public class InventoryHelper extends AbstractHelper {
    * Creates Instance Record in Inventory and returns its Id.
    *
    * @param compPOL PO line to create Instance Record for
-   * @param productTypesMap product types Map used to build Instance Record json object
    * @return id of newly created Instance Record
    */
   private CompletableFuture<String> createInstanceRecord(CompositePoLine compPOL) {
