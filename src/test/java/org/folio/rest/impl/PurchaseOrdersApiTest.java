@@ -1125,7 +1125,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
+    int polCount = reqData.getCompositePoLines().size();
+
     verifyInstanceLinksForUpdatedOrder(reqData);
+    verifyInventoryInteraction(reqData, polCount - 1);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED.value(), reqData.getCompositePoLines().size());
   }
@@ -1275,8 +1278,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertNotNull(getInstancesSearches());
     assertNotNull(getHoldingsSearches());
     assertNotNull(getItemsSearches());
-
     verifyInventoryInteraction(resp, 1);
+
     assertNotNull(getCreatedPieces());
   }
 
