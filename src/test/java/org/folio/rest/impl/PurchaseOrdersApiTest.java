@@ -1269,13 +1269,14 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().get(0).getPhysical().setCreateInventory(null);
     reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(null);
 
-    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+    final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
     assertNotNull(getHoldingsSearches());
     assertNotNull(getItemsSearches());
 
+    verifyInventoryInteraction(resp, 1);
     assertNotNull(getCreatedPieces());
   }
 
@@ -1298,7 +1299,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertNotNull(getHoldingsSearches());
     assertNotNull(getItemsSearches());
 
-    // MODORDERS-239/240/241: default values will be used when config is empty  
+    // MODORDERS-239/240/241: default values will be used when config is empty
     verifyInventoryInteraction(EMPTY_CONFIG_X_OKAPI_TENANT, resp, 1);
     assertNotNull(getCreatedPieces());
   }

@@ -401,8 +401,9 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   private String buildProductIdQuery(ProductId productId) {
-    return String.format("(identifiers adj \\\"\\\\\\\"identifierTypeId\\\\\\\": \\\\\\\"%s\\\\\\\"\\\" \" + and identifiers adj \"\\\"value\\\": \\\"%s\\\"\")", productId.getProductIdType(),
-      productId.getProductId());
+    return String.format(
+        "(identifiers adj \\\"\\\\\\\"identifierTypeId\\\\\\\": \\\\\\\"%s\\\\\\\"\\\" \" + and identifiers adj \"\\\"value\\\": \\\"%s\\\"\")",
+        productId.getProductIdType(), productId.getProductId());
   }
 
   private JsonObject buildInstanceRecordJsonObject(CompositePoLine compPOL, JsonObject lookupObj) {
