@@ -83,7 +83,6 @@ public class InventoryHelper extends AbstractHelper {
   static final String DEFAULT_LOAN_TYPE_NAME = "Can circulate";
 
   private static final String HOLDINGS_RECORDS = "holdingsRecords";
-  private static final String IDENTIFIER_TYPES = "identifierTypes";
   private static final String INSTANCES = "instances";
 
   private static final String TENANT_SPECIFIC_KEY_FORMAT = "%s.%s.%s";
@@ -103,7 +102,6 @@ public class InventoryHelper extends AbstractHelper {
     apis.put(CONTRIBUTOR_NAME_TYPES, "/contributor-name-types?limit=1&query=name==%s&lang=%s");
     apis.put(HOLDINGS_RECORDS, "/holdings-storage/holdings?query=%s&limit=1&lang=%s");
     apis.put(LOAN_TYPES, "/loan-types?query=name==%s&limit=1&lang=%s");
-    apis.put(IDENTIFIER_TYPES, "/identifier-types?query=%s&limit=%d&lang=%s");
     apis.put(INSTANCE_STATUSES, "/instance-statuses?query=code==%s&limit=1&lang=%s");
     apis.put(INSTANCE_TYPES, "/instance-types?query=code==%s&lang=%s");
     apis.put(INSTANCES, "/inventory/instances?query=%s&lang=%s");
