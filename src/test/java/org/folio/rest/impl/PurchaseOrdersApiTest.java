@@ -1304,6 +1304,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     // MODORDERS-239/240/241: default values will be used when config is empty
     verifyInventoryInteraction(EMPTY_CONFIG_X_OKAPI_TENANT, resp, 1);
+
     assertNotNull(getCreatedPieces());
   }
 
