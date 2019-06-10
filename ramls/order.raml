@@ -228,10 +228,14 @@ resourceTypes:
                 example:
                   strict: false
                   value: !include examples/errors_400.sample
+              text/plain:
+                example: "unable to create Piece -- Bad request"                  
           404:
               description: "Request id does not exists"
               body:
                 application/json:
+                text/plain:
+                  example: "unable to create Piece -- id does not exists"
           500:
             description: "Internal server error, e.g. due to misconfiguration"
             body:
@@ -239,6 +243,8 @@ resourceTypes:
                 example:
                   strict: false
                   value: !include examples/errors_500.sample
+              text/plain:
+                example: "unable to create Piece -- Internal server error, e.g. due to misconfiguration"
       delete:
         description: Delete a piece with given {id}
         responses:
@@ -251,10 +257,14 @@ resourceTypes:
                 example:
                   strict: false
                   value: !include examples/errors_400.sample
+              text/plain:
+                example: "unable to delete Piece -- Bad request"
           404:
               description: "Request id does not exists"
               body:
                 application/json:
+                text/plain:
+                  example: "unable to delete Piece -- id does not exists"
           500:
             description: "Internal server error, e.g. due to misconfiguration"
             body:
@@ -262,3 +272,5 @@ resourceTypes:
                 example:
                   strict: false
                   value: !include examples/errors_500.sample
+              text/plain:
+                example: "unable to delete Piece -- Internal server error, e.g. due to misconfiguration"
