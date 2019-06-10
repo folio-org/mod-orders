@@ -25,11 +25,11 @@
         "productIds": [
           {
             "productId": "0439708184",
-            "productIdType": "ISBN"
+            "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422"
           },
           {
             "productId": "9780439708180",
-            "productIdType": "ISBN"
+            "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422"
           }
         ]
       },
@@ -80,7 +80,7 @@
         "productIds": [
           {
             "productId": "9780439064873",
-            "productIdType": "ISBN"
+            "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422"
           }
         ]
       },

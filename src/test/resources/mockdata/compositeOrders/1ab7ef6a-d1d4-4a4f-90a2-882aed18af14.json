@@ -44,7 +44,7 @@
         "productIds": [
           {
             "productId": "10407849",
-            "productIdType": "Vendor Item Number"
+            "productIdType": "913300b2-03ed-469a-8179-c1092c991227"
           }
         ],
         "subscriptionFrom": null,
@@ -136,7 +136,7 @@
         "productIds": [
           {
             "productId": "9780820350790",
-            "productIdType": "ISBN"
+            "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422"
           }
         ],
         "subscriptionFrom": null,
@@ -228,7 +228,7 @@
         "productIds": [
           {
             "productId": "9780764354113",
-            "productIdType": "ISBN"
+            "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422"
           }
         ],
         "subscriptionFrom": null,

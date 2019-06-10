@@ -34,7 +34,6 @@
             "orders-storage.reporting-codes.item.post",
             "orders-storage.reporting-codes.item.put",
             "configuration.entries.collection.get",
-            "inventory-storage.identifier-types.collection.get",
             "inventory.instances.collection.get",
             "inventory.instances.item.post",
             "inventory-storage.instance-types.collection.get",
@@ -85,7 +84,6 @@
             "orders-storage.reporting-codes.item.put",
             "orders-storage.reporting-codes.item.delete",
             "configuration.entries.collection.get",
-            "inventory-storage.identifier-types.collection.get",
             "inventory.instances.collection.get",
             "inventory.instances.item.post",
             "inventory-storage.instance-types.collection.get",
@@ -304,10 +302,6 @@
     {
       "id": "orders-storage.po-number",
       "version": "2.0"
-    },
-    {
-      "id": "identifier-types",
-      "version": "1.1"
     },
     {
       "id": "inventory",
