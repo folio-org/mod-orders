@@ -229,13 +229,11 @@ resourceTypes:
                   strict: false
                   value: !include examples/errors_400.sample
               text/plain:
-                example: "unable to create Piece -- Bad request"                  
+                example: "unable to create Piece -- Bad request"
           404:
               description: "Request id does not exists"
               body:
                 application/json:
-                text/plain:
-                  example: "unable to create Piece -- id does not exists"
           500:
             description: "Internal server error, e.g. due to misconfiguration"
             body:
@@ -263,8 +261,6 @@ resourceTypes:
               description: "Request id does not exists"
               body:
                 application/json:
-                text/plain:
-                  example: "unable to delete Piece -- id does not exists"
           500:
             description: "Internal server error, e.g. due to misconfiguration"
             body:
