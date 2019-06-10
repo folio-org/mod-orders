@@ -117,7 +117,6 @@ public class MockServer {
   private static final String ITEMS_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/";
   static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
   static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
-  private static final String INSTANCE_IDENTIFIERS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
   private static final String ENCUMBRANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "encumbrances/";
   static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
@@ -279,7 +278,6 @@ public class MockServer {
     router.route(HttpMethod.GET, resourcesPath(SEARCH_ORDERS)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, SEARCH_ORDERS));
     router.route(HttpMethod.GET, "/instance-types").handler(this::handleGetInstanceType);
     router.route(HttpMethod.GET, "/instance-statuses").handler(this::handleGetInstanceStatus);
-    router.route(HttpMethod.GET, "/identifier-types").handler(this::handleGetIdentifierType);
     router.route(HttpMethod.GET, "/inventory/instances").handler(this::handleGetInstanceRecord);
     router.route(HttpMethod.GET, "/item-storage/items").handler(this::handleGetItemRecordsFromStorage);
     router.route(HttpMethod.GET, "/inventory/items").handler(this::handleGetInventoryItemRecords);
@@ -600,19 +598,6 @@ public class MockServer {
 
   private String getQuery(String... accessProviders) {
     return convertIdsToCqlQuery(Arrays.asList(accessProviders));
-  }
-
-  private void handleGetIdentifierType(RoutingContext ctx) {
-    logger.info("got: " + ctx.request().path());
-
-    try {
-      JsonObject po = new JsonObject(ApiTestBase.getMockData(INSTANCE_IDENTIFIERS_MOCK_DATA_PATH + "ISBN.json"));
-      serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
-    } catch (IOException e) {
-      ctx.response()
-        .setStatusCode(404)
-        .end();
-    }
   }
 
   private void handleGetInstanceStatus(RoutingContext ctx) {
