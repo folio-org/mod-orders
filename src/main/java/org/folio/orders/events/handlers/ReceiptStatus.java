@@ -102,28 +102,4 @@ public class ReceiptStatus extends AbstractHelper implements Handler<Message<Jso
         return null;
       });
   }
-
-  CompletableFuture<Void> updateOrderStatus(Map<String, String> okapiHeaders, HttpClientInterface httpClient, PurchaseOrder purchaseOrder, List<PoLine> poLines) {
-    String orderId = purchaseOrder.getId();
-    if (HelperUtils.changeOrderStatus(purchaseOrder, poLines)) {
-      logger.debug("Workflow status update required for order with id={}", orderId);
-
-      return handlePutRequest(resourceByIdPath(PURCHASE_ORDER, orderId), JsonObject.mapFrom(purchaseOrder),
-        httpClient, ctx, okapiHeaders, logger);
-    }
-    return VertxCompletableFuture.completedFuture(null);
-  }
-
-  private List<PoLine> convertToPoLines(JsonArray linesArray) {
-    return linesArray.stream()
-                     .map(json -> ((JsonObject) json).mapTo(PoLine.class))
-                     .collect(Collectors.toList());
-  }
-
-  private Map<String, String> getOkapiHeaders(Message<JsonObject> message) {
-    Map<String, String> okapiHeaders = new CaseInsensitiveMap<>();
-    message.headers().entries().forEach(entry -> okapiHeaders.put(entry.getKey(), entry.getValue()));
-    return okapiHeaders;
-  }
-
 }
