@@ -1,4 +1,33 @@
-## 6.0.0 - Unreleased
+## 6.1.0 - Unreleased
+
+## 6.0.0 - Released
+
+The main focus of this release was to implement the search and filtering of order-lines, improve receiving/check-in flows. 
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v5.0.0...v6.0.0)
+
+### Stories
+ * [MODORDERS-257](https://issues.folio.org/browse/MODORDERS-257) - Implement PUT and DELETE /orders/pieces/id
+ * [MODORDERS-253](https://issues.folio.org/browse/MODORDERS-253) - Purchase order: bill to and ship to addresses
+ * [MODORDERS-252](https://issues.folio.org/browse/MODORDERS-252) - Make product id type to be uuid
+ * [MODORDERS-246](https://issues.folio.org/browse/MODORDERS-246) - Create a script to generate and load performance test data
+ * [MODORDERS-242](https://issues.folio.org/browse/MODORDERS-242) - PoLine FundDistribution schema updates
+ * [MODORDERS-241](https://issues.folio.org/browse/MODORDERS-241) - Make loan-type configurable
+ * [MODORDERS-240](https://issues.folio.org/browse/MODORDERS-240) - Make instance-status configurable
+ * [MODORDERS-239](https://issues.folio.org/browse/MODORDERS-239) - Make instance-type configurable
+ * [MODORDERS-237](https://issues.folio.org/browse/MODORDERS-237) - Move "Owner" field to PO level
+ * [MODORDERS-234](https://issues.folio.org/browse/MODORDERS-234) - Update PO status based on receipt/payment status - Part 2
+ * [MODORDERS-233](https://issues.folio.org/browse/MODORDERS-233) - Add tenantId to cache keys
+ * [MODORDERS-229](https://issues.folio.org/browse/MODORDERS-229) - Sort PO Lines array by POLNumber in composite PO GET by id response
+ * [MODORDERS-228](https://issues.folio.org/browse/MODORDERS-228) - Search & Filter: Call GET /orders-storage/order-lines
+ * [MODORDERS-221](https://issues.folio.org/browse/MODORDERS-221) - Ability to change locations in receiving/check-in flows
+ 
+### Bug Fixes
+ * [MODORDERS-244](https://issues.folio.org/browse/MODORDERS-244) - Missing module permission for getting contributor-name-types
+ * [MODORDERS-235](https://issues.folio.org/browse/MODORDERS-235) - Instances being duplicated when ordering from existing instance
+ * [MODORDERS-232](https://issues.folio.org/browse/MODORDERS-232) - Inappropriate error response on missing loan-type
+ * [MODORDERS-231](https://issues.folio.org/browse/MODORDERS-231) - Inappropriate error response on missing instance-type
+ * [MODORDERS-230](https://issues.folio.org/browse/MODORDERS-230) - Inappropriate error response on missing instance-status
 
 ## 5.0.0 - Released
 The primary focus of this release was to implement check-in flow and accommodate increased flexibility in inventory integration. Also mod-organizations storage is used now instead of deprecated mod-vendors.
