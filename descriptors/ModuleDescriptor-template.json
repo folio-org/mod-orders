@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "5.0",
+      "version": "6.0",
       "handlers": [
         {
           "methods": ["GET"],
@@ -277,7 +277,7 @@
     },
     {
       "id": "orders-storage.purchase-orders",
-      "version": "5.0"
+      "version": "5.1"
     },
     {
       "id": "orders-storage.alerts",
@@ -297,7 +297,7 @@
     },
     {
       "id": "orders-storage.po-lines",
-      "version": "5.0"
+      "version": "6.0"
     },
     {
       "id": "finance-storage.encumbrances",
