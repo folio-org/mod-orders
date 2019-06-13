@@ -13,6 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -20,6 +21,7 @@ import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
@@ -70,6 +72,7 @@ import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
+import static org.folio.orders.utils.ResourcePathResolver.FINANCE_STORAGE_ENCUMBRANCES;
 import static org.folio.orders.utils.ResourcePathResolver.PAYMENT_STATUS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
@@ -79,6 +82,8 @@ import static org.folio.orders.utils.ResourcePathResolver.RECEIPT_STATUS;
 import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.impl.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoCreation;
+import static org.folio.rest.impl.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
 import static org.folio.rest.impl.InventoryHelper.DEFAULT_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.rest.impl.InventoryHelper.DEFAULT_INSTANCE_STATUS_CODE;
 import static org.folio.rest.impl.InventoryHelper.DEFAULT_INSTANCE_TYPE_CODE;
@@ -90,7 +95,9 @@ import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInstanceL
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInventoryInteraction;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesCreated;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesQuantityForSuccessCase;
+import static org.folio.rest.impl.MockServer.HEADER_SERVER_ERROR;
 import static org.folio.rest.impl.MockServer.getContributorNameTypesSearches;
+import static org.folio.rest.impl.MockServer.getCreatedEncumbrances;
 import static org.folio.rest.impl.MockServer.getCreatedInstances;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
 import static org.folio.rest.impl.MockServer.getCreatedPieces;
@@ -172,6 +179,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("=== Test Listed Print Monograph ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    prepareOrderForPostRequest(reqData);
 
     // Make sure expected number of PO Lines available
     assertThat(reqData.getCompositePoLines(), hasSize(2));
@@ -211,6 +219,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(poId, notNullValue());
     assertThat(poNumber, notNullValue());
     assertThat(resp.getCompositePoLines(), hasSize(2));
+    assertThat(resp.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.PENDING));
 
     for (int i = 0; i < resp.getCompositePoLines().size(); i++) {
       CompositePoLine line = resp.getCompositePoLines().get(i);
@@ -248,6 +257,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
         assertThat(poLineEstimatedPrice, equalTo(expectedTotalPoLine2));
       }
     });
+
+    // MODORDERS-243
+    assertThat(getCreatedEncumbrances(), empty());
   }
 
   @Test
@@ -349,6 +361,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("=== Test Listed Print Monograph in Open status ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    prepareOrderForPostRequest(reqData);
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     reqData.getCompositePoLines().forEach(poLine -> {
       poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
@@ -418,6 +431,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertEquals(polCount - 1, instancesSearches.size());
 
     verifyInventoryInteraction(resp, polCount);
+    verifyEncumbrancesOnPoCreation(reqData, resp);
     verifyCalculatedData(resp);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
@@ -580,9 +594,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   @Test
   public void testPutOrdersByIdPEMixFormat() throws Exception {
     logger.info("=== Test Put Order By Id create Pieces with P/E Mix format ===");
-    JsonObject order = new JsonObject(getMockData(PE_MIX_PATH));
-    order.put("workflowStatus", "Pending");
-    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
 
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     // Make sure that mock PO has 1 po line
@@ -600,7 +612,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
       .filter(location -> ObjectUtils.defaultIfNull(location.getQuantityPhysical(), 0) > 0)
       .forEach(location -> location.setQuantityElectronic(null));
 
+    // MODORDERS-243
+    removeAllEncumbranceLinks(reqData);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
     List<JsonObject> createdPieces = getCreatedPieces();
@@ -614,6 +629,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertEquals(calculateTotalQuantity(compositePoLine), piecesSize);
 
     verifyPiecesCreated(createdItems, reqData.getCompositePoLines(), createdPieces);
+    // MODORDERS-243
+    verifyEncumbrancesOnPoUpdate(reqData);
   }
 
   @Test
@@ -1936,6 +1953,68 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
+  public void testUpdateOrderToOpenEncumbranceLookup() throws Exception {
+    // The order has 2 POLs. The first one has 2 fund distribution objects and the second one - only one
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    /*
+     * MODORDERS-243: Updating the first POL's fund distributions so one has linked encumbrance and another one - not
+     * but mock server will return it on GET RQ
+     */
+    List<FundDistribution> fundDistributions = reqData.getCompositePoLines().get(0).getFundDistribution();
+    fundDistributions.get(0).setEncumbrance(null);
+
+    // Update order
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ID_FOR_PRINT_MONOGRAPH_ORDER), JsonObject.mapFrom(reqData), "", 204);
+
+    verifyEncumbrancesOnPoUpdate(reqData, 0);
+  }
+
+  @Test
+  public void testUpdateOrderToOpenOneNewEncumbrance() throws Exception {
+    // The order has 2 POLs. The first one has 2 fund distribution objects and the second one - only one
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    /*
+     * MODORDERS-243: Updating the first POL's fund distributions so one has linked encumbrance and another one - not.
+     * Setting also new fundId so new encumbrance can be created
+     */
+    FundDistribution fundDistribution = reqData.getCompositePoLines().get(0).getFundDistribution().get(0);
+    fundDistribution.setEncumbrance(null);
+    fundDistribution.setFundId(UUID.randomUUID().toString());
+
+    // Update order
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ID_FOR_PRINT_MONOGRAPH_ORDER), JsonObject.mapFrom(reqData), "", 204);
+
+    verifyEncumbrancesOnPoUpdate(reqData, 1);
+  }
+
+  @Test
+  public void testUpdateOrderToOpenEncumbranceCreationFailure() throws Exception {
+    // The order has 2 POLs. The first one has 2 fund distribution objects and the second one - only one
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    // MODORDERS-243: remove all encumbrance links so new encumbrances have to be created
+    removeAllEncumbranceLinks(reqData);
+    List<FundDistribution> fundDistributions = reqData.getCompositePoLines().get(0).getFundDistribution();
+    fundDistributions.get(0).setEncumbrance(null);
+
+    String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, ID_FOR_PRINT_MONOGRAPH_ORDER);
+    String body = JsonObject.mapFrom(reqData).encode();
+    Header createEncumbranceError = new Header(HEADER_SERVER_ERROR, FINANCE_STORAGE_ENCUMBRANCES);
+    Headers headers = prepareHeaders(X_OKAPI_URL, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_TOKEN, createEncumbranceError);
+
+    // Update order adding header to fail on encumbrance creation
+    final Errors errors = verifyPut(url, body, headers, APPLICATION_JSON, 500).body().as(Errors.class);
+
+    assertThat(errors.getErrors(), hasSize(1));
+    assertThat(errors.getErrors().get(0).getCode(), equalTo(ErrorCodes.ENCUMBRANCE_CREATION_FAILURE.getCode()));
+
+    List<Encumbrance> createdEncumbrances = getCreatedEncumbrances();
+    assertThat(createdEncumbrances, empty());
+  }
+
+  @Test
   public void testPostOpenOrderCacheKayMustBeTenantSpecific() throws Exception {
 
     MockServer.serverRqRs.clear();
@@ -2067,6 +2146,20 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(err.getCode(), equalTo(ErrorCodes.MISSING_LOAN_TYPE.getCode()));
     assertThat(err.getMessage(), equalTo(ErrorCodes.MISSING_LOAN_TYPE.getDescription()));
     assertThat(err.getParameters().get(0).getValue(), equalTo(DEFAULT_LOAN_TYPE_NAME));
+  }
+
+  private void prepareOrderForPostRequest(CompositePurchaseOrder reqData) {
+    reqData.setDateOrdered(null);
+    removeAllEncumbranceLinks(reqData);
+  }
+
+  private void removeAllEncumbranceLinks(CompositePurchaseOrder reqData) {
+    reqData.getCompositePoLines().forEach(poLine -> {
+      poLine.getFundDistribution().forEach(fundDistribution -> {
+        fundDistribution.setEncumbrance(null);
+        fundDistribution.setFundId(UUID.randomUUID().toString());
+      });
+    });
   }
 
   private Error verifyMissingInventoryEntryErrorHandling(Header header) throws Exception {
