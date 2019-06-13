@@ -2,7 +2,8 @@ package org.folio.orders.events.handlers;
 
 public enum MessageAddress {
 
-  ORDER_STATUS("org.folio.orders.order.update.status");
+  ORDER_STATUS("org.folio.orders.order.update.status"),
+  RECEIPT_STATUS("org.folio.orders.receipt.status");
 
   MessageAddress(String address) {
     this.address = address;

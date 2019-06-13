@@ -419,11 +419,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
         // Calculate expected status for each PO Line and update with new one if
         // required
         List<CompletableFuture<String>> futures = new ArrayList<>();
-        for (PoLine poLine : poLines) {
-          List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
-          futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces)
-                .thenCompose(status -> updatePoLineReceiptStatus(poLine, status)));
-        }
+        receiptConsistencyPiecePoLine(poLines, piecesGroupedByPoLine);
 
         return collectResultsOnSuccess(futures)
           .thenAccept(updatedPoLines -> {
@@ -440,6 +436,24 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       .thenApply(ok -> piecesGroupedByPoLine);
   }
 
+  private void receiptConsistencyPiecePoLine(List<PoLine> poLines, Map<String, List<Piece>> piecesGroupedByPoLine) {
+    if (!poLines.isEmpty()) {
+      logger.debug("Sending event to verify receipt status");
+
+      // Collect order ids which should be processed
+      List<String> poIds = StreamEx
+        .of(poLines)
+        .map(PoLine::getId)
+        .distinct()
+        .toList();
+
+      // How can I combine List<PoLine> and Map<String, List<Piece>> to JsonArray to pass as parameter below ?
+      sendEvent(MessageAddress.RECEIPT_STATUS, new JsonObject().put("poLines", new JsonArray(poIds)));
+
+      logger.debug("Event to verify receipt status - sent");
+    }
+  }
+  
   private void updateOrderStatus(List<PoLine> poLines) {
     if (!poLines.isEmpty()) {
       logger.debug("Sending event to verify order status");
