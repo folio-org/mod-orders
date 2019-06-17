@@ -64,9 +64,9 @@ import one.util.streamex.StreamEx;
 
 public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
-  static final int MAX_IDS_FOR_GET_RQ = 15;
-  private static final String PIECES_WITH_QUERY_ENDPOINT = resourcesPath(PIECES) + "?limit=%d&lang=%s&query=%s";
-  private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
+  public static final int MAX_IDS_FOR_GET_RQ = 15;
+  public static final String PIECES_WITH_QUERY_ENDPOINT = resourcesPath(PIECES) + "?limit=%d&lang=%s&query=%s";
+  public static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
   Map<String, Map<String, T>> piecesByLineId;
   final InventoryHelper inventoryHelper;
   Map<String, Map<String, Error>> processingErrors;
@@ -419,8 +419,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
         // Calculate expected status for each PO Line and update with new one if
         // required
         List<CompletableFuture<String>> futures = new ArrayList<>();
-        receiptConsistencyPiecePoLine(poLines, piecesGroupedByPoLine);
-
+        for (PoLine poLine : poLines) {
+          List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
+          futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces)
+                .thenCompose(status -> updatePoLineReceiptStatus(poLine, status)));
+        }
+        // receiptConsistencyPiecePoLine(poLines, piecesGroupedByPoLine);
+        
         return collectResultsOnSuccess(futures)
           .thenAccept(updatedPoLines -> {
             logger.debug("{} out of {} PO Line(s) updated with new status", updatedPoLines.size(), piecesGroupedByPoLine.size());
@@ -436,23 +441,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       .thenApply(ok -> piecesGroupedByPoLine);
   }
 
-  private void receiptConsistencyPiecePoLine(List<PoLine> poLines, Map<String, List<Piece>> piecesGroupedByPoLine) {
-    if (!poLines.isEmpty()) {
-      logger.debug("Sending event to verify receipt status");
 
-      // Collect order ids which should be processed
-      List<String> poIds = StreamEx
-        .of(poLines)
-        .map(PoLine::getId)
-        .distinct()
-        .toList();
-
-      // How can I combine List<PoLine> and Map<String, List<Piece>> to JsonArray to pass as parameter below ?
-      sendEvent(MessageAddress.RECEIPT_STATUS, new JsonObject().put("poLines", new JsonArray(poIds)));
-
-      logger.debug("Event to verify receipt status - sent");
-    }
-  }
   
   private void updateOrderStatus(List<PoLine> poLines) {
     if (!poLines.isEmpty()) {
@@ -483,7 +472,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       .toList();
   }
 
-  private CompletableFuture<List<PoLine>> getPoLines(List<String> poLineIds) {
+  public CompletableFuture<List<PoLine>> getPoLines(List<String> poLineIds) {
     if(poLineList == null) {
       return collectResultsOnSuccess(StreamEx
           .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ)

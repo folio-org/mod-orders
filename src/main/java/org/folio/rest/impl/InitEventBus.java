@@ -28,6 +28,10 @@ public class InitEventBus implements PostDeployVerticle {
   @Qualifier("orderStatusHandler")
   Handler<Message<JsonObject>> orderStatusHandler;
 
+  @Autowired
+  @Qualifier("receiptStatusHandler")
+  Handler<Message<JsonObject>> receiptStatusHandler;
+  
   public InitEventBus() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
   }
@@ -41,7 +45,9 @@ public class InitEventBus implements PostDeployVerticle {
         // Create consumers and assign handlers
         Future<Void> orderStatusRegistrationHandler = Future.future();
         MessageConsumer<JsonObject> orderStatusConsumer = eb.localConsumer(MessageAddress.ORDER_STATUS.address);
+        MessageConsumer<JsonObject> receiptStatusConsumer = eb.localConsumer(MessageAddress.RECEIPT_STATUS.address);
         orderStatusConsumer.handler(orderStatusHandler).completionHandler(orderStatusRegistrationHandler);
+        receiptStatusConsumer.handler(receiptStatusHandler).completionHandler(orderStatusRegistrationHandler);
 
         // Complete blocking code future. When more consumers added, the CompositeFuture.all can be used
         orderStatusRegistrationHandler.setHandler(result -> {

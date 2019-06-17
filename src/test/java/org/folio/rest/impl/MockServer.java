@@ -278,6 +278,14 @@ public class MockServer {
     router.route(HttpMethod.GET, resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
     router.route(HttpMethod.GET, resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
     router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(this::handleGetPieces);
+    router.route(HttpMethod.GET, resourcesPath(PIECES)+"/:id").handler(event -> {
+      try {
+        handleGetPieceById(event);
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    });
     router.route(HttpMethod.GET, resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
     router.route(HttpMethod.GET, resourcesPath(PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
     router.route(HttpMethod.GET, "/contributor-name-types").handler(this::handleGetContributorNameTypes);
@@ -919,6 +927,22 @@ public class MockServer {
     }
   }
 
+  private void handleGetPieceById(RoutingContext ctx) throws IOException {
+    logger.info("handleGetPiecesById got: " + ctx.request().path());
+    String pieceId = ctx.request().getParam(ID);
+    JsonObject body;
+    if (NON_EXIST_VENDOR_ID.equals(pieceId)) {
+      serverResponse(ctx, HttpStatus.HTTP_NOT_FOUND.toInt(), APPLICATION_JSON, "vendor not found");
+    } else if (MOD_VENDOR_INTERNAL_ERROR_ID.equals(pieceId)) {
+      serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), APPLICATION_JSON, "internal server error, contact administrator");
+    } else {
+      body = new JsonObject(ApiTestBase.getMockData("mockdata/pieces/pieceRecord.json"));
+      if (body != null) {
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
+      }
+    }
+  }
+  
   private void handleGetPieces(RoutingContext ctx) {
     logger.info("handleGetPieces got: " + ctx.request().path());
     String query = ctx.request().getParam("query");
