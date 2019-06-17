@@ -7,13 +7,14 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.rest.impl.CheckinReceivePiecesHelper.PIECES_BY_POL_ID_AND_STATUS_QUERY;
-import static org.folio.rest.impl.CheckinReceivePiecesHelper.PIECES_WITH_QUERY_ENDPOINT;
+import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
 
-import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -58,37 +59,39 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
 
     CompletableFuture<PieceCollection> future = new VertxCompletableFuture<>(ctx);
 
+    // 1. Get updated piece by id from storage
     getPieceById(pieceIdUpdate, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonPiece -> {
       Piece piece = jsonPiece.mapTo(Piece.class);
       ReceivingStatus receivingStatus = piece.getReceivingStatus();
       String receivingStatusBeforeUpdate = body.getString("receivingStatusBeforeUpdate");
-      //Map<String, String> okapiHeadersReceiptstatus = (Map<String, String>) body.getValue("okapiHeaders");
-      
+
+      // 2. if receivingStatus is different - before writing to storage vs after writing to storage
       if (!receivingStatus.toString()
         .equalsIgnoreCase(receivingStatusBeforeUpdate)) {
         String poLineId = piece.getPoLineId();
-
-        getPieces(500, 0, "", "/orders-storage/pieces?query=poLineId==" + poLineId, lang, httpClient, ctx, okapiHeaders, logger)
-            .thenAccept(piecesCollection -> {
-              //int totalRecords = piecesCollection.getTotalRecords();
+        int limit = 500;
+        int offset = 0;
+        // 3. Get all pieces for poLineId above
+        getPieces(limit, offset, "", "/orders-storage/pieces?query=poLineId==" + poLineId, lang, httpClient, ctx, okapiHeaders,
+            logger).thenAccept(piecesCollection -> {
               List<org.folio.rest.acq.model.Piece> listOfPieces = piecesCollection.getPieces();
-              logger.info("pieces = " + listOfPieces);
-//              Collection<org.folio.rest.acq.model.Piece> pieces1 = pieces;
+
+              // 4. Get PoLine for the poLineId which will used to calculate PoLineReceiptStatus
               getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(poLineJson -> {
                 PoLine poLine = poLineJson.mapTo(PoLine.class);
-                calculatePoLineReceiptStatus(poLine, listOfPieces);
+                calculatePoLineReceiptStatus(poLine, listOfPieces).thenCompose(status -> updatePoLineReceiptStatus(poLine, status));
               })
+                .exceptionally(e -> {
+                  logger.error("The error getting poLine by id {}", poLineId, e);
+                  future.completeExceptionally(e);
+                  return null;
+                });
+            })
               .exceptionally(e -> {
-                logger.error("The error getting poLine by id {}", poLineId, e);
+                logger.error("The error happened getting all pieces by poLine {}", poLineId, e);
                 future.completeExceptionally(e);
                 return null;
               });
-            })
-          .exceptionally(e -> {
-            logger.error("The error happened getting all pieces by poLine {}", poLineId, e);
-            future.completeExceptionally(e);
-            return null;
-          });
       } else {
         future.complete(null);
       }
@@ -100,27 +103,55 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
       });
   }
 
-  private CompletableFuture<PoLine.ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine, List<org.folio.rest.acq.model.Piece> pieces) {
-    if(pieces.isEmpty())
+  private CompletableFuture<PoLine.ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine,
+      List<org.folio.rest.acq.model.Piece> pieces) {
+    if (pieces.isEmpty())
       return completedFuture(poLine.getReceiptStatus());
     else {
       return getPiecesQuantityByPoLineAndStatus(poLine.getId(), ReceivingStatus.EXPECTED, pieces)
-      .thenCompose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, poLine, pieces))
-    .exceptionally(e -> {
-      logger.error("The expected receipt status for PO Line '{}' cannot be calculated", e, poLine.getId());
-      return null;
-  });
+        .thenCompose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, poLine, pieces))
+        .exceptionally(e -> {
+          logger.error("The expected receipt status for PO Line '{}' cannot be calculated", e, poLine.getId());
+          return null;
+        });
     }
   }
-  
+
+  private CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status) {
+    if (status == null || poLine.getReceiptStatus() == status) {
+      return completedFuture(null);
+    }
+    // Update receipt date and receipt status
+    if (status == FULLY_RECEIVED) {
+      poLine.setReceiptDate(new Date());
+    } else if (isCheckin(poLine) && poLine.getReceiptStatus()
+      .equals(ReceiptStatus.AWAITING_RECEIPT) && status == ReceiptStatus.PARTIALLY_RECEIVED) {
+      // if checking in, set the receipt date only for the first piece
+      poLine.setReceiptDate(new Date());
+    } else {
+      poLine.setReceiptDate(null);
+    }
+
+    poLine.setReceiptStatus(status);
+
+    // Update PO Line in storage
+    return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, ctx, okapiHeaders,
+        logger).thenApply(v -> poLine.getId())
+          .exceptionally(e -> {
+            logger.error("The PO Line '{}' cannot be updated with new receipt status", e, poLine.getId());
+            return null;
+          });
+  }
+
   private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity, PoLine poLine,
-    List<org.folio.rest.acq.model.Piece> pieces) {
-    if(!isCheckin(poLine) && expectedPiecesQuantity == 0) {
+      List<org.folio.rest.acq.model.Piece> pieces) {
+    if (!isCheckin(poLine) && expectedPiecesQuantity == 0) {
       return CompletableFuture.completedFuture(FULLY_RECEIVED);
     }
     // Partially Received: In case there is at least one successfully received
     // piece
-    if (StreamEx.of(pieces).anyMatch(piece -> ReceivingStatus.RECEIVED == piece.getReceivingStatus())) {
+    if (StreamEx.of(pieces)
+      .anyMatch(piece -> ReceivingStatus.RECEIVED == piece.getReceivingStatus())) {
       return CompletableFuture.completedFuture(PARTIALLY_RECEIVED);
     }
     // Pieces were rolled-back to Expected. In this case we have to check if
@@ -128,35 +159,38 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     return getPiecesQuantityByPoLineAndStatus(poLine.getId(), ReceivingStatus.RECEIVED, pieces)
       .thenApply(receivedQty -> receivedQty == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED);
   }
-  
+
   boolean isCheckin(PoLine poLine) {
     return defaultIfNull(poLine.getCheckinItems(), false);
   }
-  
-  private CompletableFuture<Integer> getPiecesQuantityByPoLineAndStatus(String poLineId,
-      ReceivingStatus receivingStatus, List<Piece> pieces) {
-    //String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, receivingStatus.value());
-    // Limit to 0 because only total number is important
-    //String endpoint = String.format(PIECES_WITH_QUERY_ENDPOINT, 0, lang, encodeQuery(query, logger));
-    // Search for pieces with Expected status
-    String endpoint = "/orders-storage/pieces?query=poLineId==" + poLineId + " and receivingStatus==" + receivingStatus.toString();
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      // Return total records quantity
-      .thenApply(json -> json.mapTo(PieceCollection.class).getTotalRecords());
+
+  private CompletableFuture<Integer> getPiecesQuantityByPoLineAndStatus(String poLineId, ReceivingStatus receivingStatus,
+      List<Piece> pieces) {
+    Integer count = 0;
+    for (Piece piece : pieces) {
+      if (piece.getReceivingStatus()
+        .value()
+        .equalsIgnoreCase(receivingStatus.toString())) {
+        count++;
+      }
+    }
+    final Integer expectedQty = count;
+
+    return CompletableFuture.supplyAsync(() -> expectedQty);
   }
-  
-  CompletableFuture<PieceCollection> getPieces(int limit, int offset, String query, String path, String lang, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+
+  CompletableFuture<PieceCollection> getPieces(int limit, int offset, String query, String path, String lang,
+      HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<PieceCollection> future = new VertxCompletableFuture<>(ctx);
     try {
       String queryParam = isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
       String endpoint = String.format(path, limit, offset, queryParam, lang);
-      handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-        .thenAccept(jsonOrderLines -> {
-          if (logger.isInfoEnabled()) {
-            logger.info("Successfully retrieved all pieces: {}", jsonOrderLines.encodePrettily());
-          }
-          future.complete(jsonOrderLines.mapTo(PieceCollection.class));
-        })
+      handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonOrderLines -> {
+        if (logger.isInfoEnabled()) {
+          logger.info("Successfully retrieved all pieces: {}", jsonOrderLines.encodePrettily());
+        }
+        future.complete(jsonOrderLines.mapTo(PieceCollection.class));
+      })
         .exceptionally(t -> {
           future.completeExceptionally(t);
           return null;
@@ -167,17 +201,19 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
 
     return future;
   }
-  
+
   public static CompletableFuture<JsonObject> getPieceById(String pieceId, String lang, HttpClientInterface httpClient, Context ctx,
       Map<String, String> okapiHeaders, Logger logger) {
-    //String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES, lineId), lang);
+    // String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES, lineId), lang);
     String endpoint = "/orders-storage/pieces/" + pieceId;
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
   }
-  
+
   private Map<String, String> getOkapiHeaders(Message<JsonObject> message) {
     Map<String, String> okapiHeaders = new CaseInsensitiveMap<>();
-    message.headers().entries().forEach(entry -> okapiHeaders.put(entry.getKey(), entry.getValue()));
+    message.headers()
+      .entries()
+      .forEach(entry -> okapiHeaders.put(entry.getKey(), entry.getValue()));
     return okapiHeaders;
   }
 }
