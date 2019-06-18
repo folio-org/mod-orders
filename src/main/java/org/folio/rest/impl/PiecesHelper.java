@@ -32,18 +32,12 @@ public class PiecesHelper extends AbstractHelper {
     JsonObject jsonObj = new JsonObject();
 
     // explicitly setting RECEIVED to create inconsistency for testing
-    // jsonObj.put("receivingStatusBeforeUpdate", "RECEIVED");
+    //jsonObj.put("receivingStatusBeforeUpdate", "RECEIVED");
     jsonObj.put("receivingStatusBeforeUpdate", piece.getReceivingStatus());
     jsonObj.put("pieceIdUpdate", piece.getId());
 
-    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-    handlePutRequest(resourceByIdPath(PIECES, piece.getId()), JsonObject.mapFrom(piece), httpClient, ctx, okapiHeaders, logger)
-      .thenAccept(sendToEventBus -> receiptConsistencyPiecePoLine(jsonObj))
-      .exceptionally(e -> {
-        logger.error("Retry to OPEN existing Order failed", e);
-        return null;
-      });
-    return future;
+    return handlePutRequest(resourceByIdPath(PIECES, piece.getId()), JsonObject.mapFrom(piece), httpClient, ctx, okapiHeaders, logger)
+      .thenAccept(sendToEventBus -> receiptConsistencyPiecePoLine(jsonObj));
   }
 
   private void receiptConsistencyPiecePoLine(JsonObject jsonObj) {

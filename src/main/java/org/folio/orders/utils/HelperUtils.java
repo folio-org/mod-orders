@@ -1,10 +1,13 @@
 package org.folio.orders.utils;
 
 import static java.util.Objects.nonNull;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
@@ -13,6 +16,34 @@ import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
+import static org.folio.rest.impl.CheckinReceivePiecesHelper.PIECES_BY_POL_ID_AND_STATUS_QUERY;
+import static org.folio.rest.impl.CheckinReceivePiecesHelper.PIECES_WITH_QUERY_ENDPOINT;
+
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.getPoLineById;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import org.apache.commons.collections4.map.CaseInsensitiveMap;
+import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.impl.AbstractHelper;
+import org.folio.rest.acq.model.Piece;
+import org.folio.rest.acq.model.Piece.ReceivingStatus;
+import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
+import org.folio.rest.jaxrs.model.PoLine;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
@@ -40,11 +71,13 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
+import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
+import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -93,6 +126,31 @@ public class HelperUtils {
     return response.getBody();
   }
 
+//  public static CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine, List<Piece> pieces) {
+//    // Search for pieces with Expected status
+//    return pieces.isEmpty()
+//      // No successfully pieces processed - receipt status unchanged
+//      ? completedFuture(poLine.getReceiptStatus())
+//      : getPiecesQuantityByPoLineAndStatus(poLine.getId(), ReceivingStatus.EXPECTED, pieces)
+//        // Calculate receipt status
+//        .thenCompose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, poLine, pieces))
+//        .exceptionally(e -> {
+//          logger.error("The expected receipt status for PO Line '{}' cannot be calculated", e, poLine.getId());
+//          return null;
+//      });
+//  }
+//  
+//  public static CompletableFuture<Integer> getPiecesQuantityByPoLineAndStatus(String poLineId,
+//      ReceivingStatus receivingStatus, List<Piece> pieces) {
+//    String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, receivingStatus.value());
+//    // Limit to 0 because only total number is important
+//    String endpoint = String.format(PIECES_WITH_QUERY_ENDPOINT, 0, lang, encodeQuery(query, logger));
+//    // Search for pieces with Expected status
+//    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+//      // Return total records quantity
+//      .thenApply(json -> json.mapTo(PieceCollection.class).getTotalRecords());
+//  }
+  
   public static CompletableFuture<JsonObject> getPurchaseOrderById(String id, String lang, HttpClientInterface httpClient, Context ctx,
                                                                Map<String, String> okapiHeaders, Logger logger) {
     String endpoint = String.format(GET_PURCHASE_ORDER_BYID, id, lang);

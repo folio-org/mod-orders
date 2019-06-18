@@ -59,6 +59,7 @@ public class PieceApiTest extends ApiTestBase {
     String reqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord.json");
 
     verifyPut(String.format(PIECES_ID_PATH, VALID_UUID), reqData, "", 204);
+    verifyReceiptStatusUpdateEvent(1);
   }
 
   @Test

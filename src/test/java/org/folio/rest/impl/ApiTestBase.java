@@ -130,6 +130,16 @@ public class ApiTestBase {
         eventMessages.add(message);
       };
     }
+    
+    @Bean("receiptStatusHandler")
+    @Primary
+    public Handler<Message<JsonObject>> mockedReceiptStatusHandler() {
+      // As an implementation just add received message to list
+      return message -> {
+        logger.info("New message sent to {} address", message.address());
+        eventMessages.add(message);
+      };
+    }
   }
 
   @BeforeClass
@@ -332,6 +342,22 @@ public class ApiTestBase {
       assertThat(message.body(), notNullValue());
       assertThat(message.body().getJsonArray(ORDER_IDS), iterableWithSize(1));
       assertThat(message.body().getString(HelperUtils.LANG), not(isEmptyOrNullString()));
+    }
+  }
+  
+  void verifyReceiptStatusUpdateEvent(int msgQty) {
+    logger.debug("Verifying event bus messages");
+    // Wait until event bus registers message
+    await().atLeast(50, MILLISECONDS)
+           .atMost(1, SECONDS)
+           .until(() -> eventMessages, hasSize(msgQty));
+    for (int i = 0; i < msgQty; i++) {
+      Message<JsonObject> message = eventMessages.get(i);
+      assertThat(message.address(), equalTo(MessageAddress.RECEIPT_STATUS.address));
+      assertThat(message.headers(), not(emptyIterable()));
+      assertThat(message.body(), notNullValue());
+      assertThat(message.body().getString("receivingStatusBeforeUpdate"), not(isEmptyOrNullString()));
+      //assertThat(message.body().getString(HelperUtils.LANG), not(isEmptyOrNullString()));
     }
   }
 }
