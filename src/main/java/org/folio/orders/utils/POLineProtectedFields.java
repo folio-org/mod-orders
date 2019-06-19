@@ -22,7 +22,7 @@ public enum POLineProtectedFields {
   ERESOURCE_MATERIAL_TYPE("eresource.material"),
   ERESOURCE_USER_LIMIT("eresource.userLimit"),
   FUND_DISTRIBUTION("fundDistribution"),
-  LOCATION("location"),
+  LOCATION("location") ,
   ORER_FORMAT("orderFormat"),
   PHYSICAL_VOLUMES("physical.volumes"),
   PHYSICAL_MATERIAL_TYPE("physical.materialType"),
