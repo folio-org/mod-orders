@@ -129,31 +129,6 @@ public class HelperUtils {
 
     return response.getBody();
   }
-
-//  public static CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine, List<Piece> pieces) {
-//    // Search for pieces with Expected status
-//    return pieces.isEmpty()
-//      // No successfully pieces processed - receipt status unchanged
-//      ? completedFuture(poLine.getReceiptStatus())
-//      : getPiecesQuantityByPoLineAndStatus(poLine.getId(), ReceivingStatus.EXPECTED, pieces)
-//        // Calculate receipt status
-//        .thenCompose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, poLine, pieces))
-//        .exceptionally(e -> {
-//          logger.error("The expected receipt status for PO Line '{}' cannot be calculated", e, poLine.getId());
-//          return null;
-//      });
-//  }
-//  
-//  public static CompletableFuture<Integer> getPiecesQuantityByPoLineAndStatus(String poLineId,
-//      ReceivingStatus receivingStatus, List<Piece> pieces) {
-//    String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, receivingStatus.value());
-//    // Limit to 0 because only total number is important
-//    String endpoint = String.format(PIECES_WITH_QUERY_ENDPOINT, 0, lang, encodeQuery(query, logger));
-//    // Search for pieces with Expected status
-//    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-//      // Return total records quantity
-//      .thenApply(json -> json.mapTo(PieceCollection.class).getTotalRecords());
-//  }
   
   public static CompletableFuture<JsonObject> getPurchaseOrderById(String id, String lang, HttpClientInterface httpClient, Context ctx,
                                                                Map<String, String> okapiHeaders, Logger logger) {

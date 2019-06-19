@@ -1,20 +1,19 @@
 package org.folio.orders.events.handlers;
 
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
-import static org.folio.rest.impl.MockServer.getPieceUpdates;
-import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
-
+import static org.folio.rest.impl.MockServer.getPoLineUpdates;
+import static org.folio.rest.impl.MockServer.getPieceSearches;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 
-import org.folio.rest.impl.AbstractHelper;
+import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.acq.model.PoLine;
+import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.impl.ApiTestBase;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -26,8 +25,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.eventbus.ReplyException;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -51,11 +48,21 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
   }
 
   @Test
-  public void testReceiptStatusReceivedToExpected(TestContext context) {
+  public void testPieceReceiptStatusExpectedToReceived(TestContext context) {
     logger.info("=== Test case when piece receipt status changes from Received to Expected ===");
+    
+    // explicitly setting RECEIVED to create inconsistency
     sendEvent(createBody("RECEIVED"), context.asyncAssertSuccess(result -> {
-      //serverRqRs.get(PIECES, HttpMethod.PUT);
-      //assertThat(getPieceUpdates(), hasSize(1));
+      logger.info("getPoLineSearches()--->" + getPoLineSearches());
+      logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
+      logger.info("getPieceUpdates()--->" + getPieceSearches());
+      //assertThat(getPoLineUpdates(), hasSize(1));
+      assertThat(getPieceSearches(), hasSize(1));
+      
+      Piece piece = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(1).mapTo(Piece.class);
+      //PoLine poLine = getPoLineUpdates().get(0).mapTo(PoLine.class);
+      //poLine.getReceiptStatus().FULLY_RECEIVED, is(ReceivingStatus.));
+      //assertThat(piece.getReceivingStatus(), is(ReceivingStatus.RECEIVED));
       //assertThat(getPurchaseOrderUpdates(), hasSize(1));
       assertThat(result.body(), equalTo(Response.Status.OK.getReasonPhrase()));
     }));
@@ -63,8 +70,6 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
 
   private JsonObject createBody(String receiptStatus) {
     JsonObject jsonObj = new JsonObject();
-
-    // explicitly setting RECEIVED to create inconsistency for testing
     jsonObj.put("receivingStatusBeforeUpdate", receiptStatus);
     jsonObj.put("pieceIdUpdate", "af372ac8-5ffb-4560-8b96-3945a12e121b");
     return jsonObj;

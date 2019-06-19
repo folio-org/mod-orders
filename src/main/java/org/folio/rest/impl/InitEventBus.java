@@ -59,14 +59,6 @@ public class InitEventBus implements PostDeployVerticle {
             blockingCodeFuture.fail(result.cause());
           }
         });
-        // Complete blocking code future. When more consumers added, the CompositeFuture.all can be used
-//        orderStatusRegistrationHandler.setHandler(result -> {
-//          if (result.succeeded()) {
-//            blockingCodeFuture.complete();
-//          } else {
-//            blockingCodeFuture.fail(result.cause());
-//          }
-//        });
       },
       result -> {
         if (result.succeeded()) {

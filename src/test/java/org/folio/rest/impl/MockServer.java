@@ -178,7 +178,7 @@ public class MockServer {
     });
   }
 
-  static List<JsonObject> getPoLineUpdates() {
+  public static List<JsonObject> getPoLineUpdates() {
     return serverRqRs.get(PO_LINES, HttpMethod.PUT);
   }
 
@@ -230,7 +230,7 @@ public class MockServer {
     return serverRqRs.get(PIECES, HttpMethod.POST);
   }
 
-  static List<JsonObject> getPieceSearches() {
+  public static List<JsonObject> getPieceSearches() {
     return serverRqRs.get(PIECES, HttpMethod.GET);
   }
 
@@ -951,7 +951,7 @@ public class MockServer {
     } else if (MOD_VENDOR_INTERNAL_ERROR_ID.equals(pieceId)) {
       serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), APPLICATION_JSON, "internal server error, contact administrator");
     } else {
-      body = new JsonObject(ApiTestBase.getMockData("mockdata/pieces/pieceRecord.json"));
+      body = new JsonObject(ApiTestBase.getMockData("mockdata/pieces/pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json"));
       if (body != null) {
         serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
       }

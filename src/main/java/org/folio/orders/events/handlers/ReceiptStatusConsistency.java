@@ -64,12 +64,15 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
 
     String pieceIdUpdate = body.getString("pieceIdUpdate");
 
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
-    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+    List<CompletableFuture<String>> futures = new ArrayList<>();
+    CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
 
+    futures.add(future);
+    
     // 1. Get updated piece by id from storage
     getPieceById(pieceIdUpdate, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonPiece -> {
       Piece piece = jsonPiece.mapTo(Piece.class);
+      logger.info("piece for pieceRecord.json" + piece);
       ReceivingStatus receivingStatus = piece.getReceivingStatus();
       String receivingStatusBeforeUpdate = body.getString("receivingStatusBeforeUpdate");
 
@@ -88,7 +91,8 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
               getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(poLineJson -> {
                 PoLine poLine = poLineJson.mapTo(PoLine.class);
                 calculatePoLineReceiptStatus(poLine, listOfPieces)
-                  .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, ctx, okapiHeaders, logger));
+                  .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, ctx, okapiHeaders, logger))
+                  .thenAccept(future::complete);
               })
                 .exceptionally(e -> {
                   logger.error("The error getting poLine by id {}", poLineId, e);
@@ -140,9 +144,8 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
   }
   
   private CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-    // For testing
-    status = FULLY_RECEIVED;
-    
+//    // For testing
+//    status = FULLY_RECEIVED;   
     if (status == null || poLine.getReceiptStatus() == status) {
       return completedFuture(null);
     }
