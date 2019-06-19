@@ -1,0 +1,56 @@
+#%RAML 1.0
+title: "Acquisitions units"
+baseUri: http://github.com/folio-org/mod-orders
+version: v1
+
+documentation:
+  - title: Acquisitions units
+    content: <b>CRUD APIs used to manage acquisitions units.</b>
+
+types:
+    acquisitions-unit: !include acq-models/mod-orders-storage/schemas/acquisitions_unit.json
+    acquisitions-unit-collection: !include acq-models/mod-orders-storage/schemas/acquisitions_unit_collection.json
+    errors: !include raml-util/schemas/errors.schema
+    UUID:
+     type: string
+     pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+
+traits:
+    validate: !include raml-util/traits/validation.raml
+    pageable:  !include raml-util/traits/pageable.raml
+    searchable: !include raml-util/traits/searchable.raml
+    language: !include raml-util/traits/language.raml
+
+resourceTypes:
+    collection: !include raml-util/rtypes/collection.raml
+    collection-item: !include raml-util/rtypes/item-collection.raml
+
+/acquisitions-units:
+  /units:
+    type:
+      collection:
+        exampleCollection: !include acq-models/mod-orders-storage/examples/acquisitions_unit_collection.sample
+        exampleItem: !include acq-models/mod-orders-storage/examples/acquisitions_unit_post.sample
+        schemaCollection: acquisitions-unit-collection
+        schemaItem: acquisitions-unit
+    post:
+      description: Create new acquisitions unit
+      is: [validate]
+    get:
+      description: Get list of acquisitions units
+      is: [
+        searchable: {description: "with valid searchable fields: for example protectRead", example: "[\"protectRead\", \"false\"]"},
+        pageable
+      ]
+    /{id}:
+      uriParameters:
+        id:
+          description: The UUID of an acquisitions unit
+          type: UUID
+      type:
+        collection-item:
+          exampleItem: !include acq-models/mod-orders-storage/examples/acquisitions_unit_post.sample
+          schema: acquisitions-unit
+      put:
+        description: Update acquisitions unit
+        is: [validate]
