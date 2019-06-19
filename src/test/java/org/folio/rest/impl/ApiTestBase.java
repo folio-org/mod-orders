@@ -104,8 +104,8 @@ public class ApiTestBase {
   static final Header NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT);
   static final Header NON_EXIST_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "ordersimpltest");
   static final Header X_OKAPI_USER_ID = new Header(OKAPI_USERID_HEADER, "440c89e3-7f6c-578a-9ea8-310dad23605e");
-  static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
-  static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_10");
+  protected static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
+  protected static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_10");
   static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_1");
   static final Header INVALID_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "invalid_config");
   static final Header EMPTY_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, EMPTY_CONFIG_TENANT);
@@ -357,7 +357,7 @@ public class ApiTestBase {
       assertThat(message.headers(), not(emptyIterable()));
       assertThat(message.body(), notNullValue());
       assertThat(message.body().getString("receivingStatusBeforeUpdate"), not(isEmptyOrNullString()));
-      //assertThat(message.body().getString(HelperUtils.LANG), not(isEmptyOrNullString()));
+      assertThat(message.body().getString(HelperUtils.LANG), not(isEmptyOrNullString()));
     }
   }
 }

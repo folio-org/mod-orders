@@ -194,7 +194,7 @@ public class MockServer {
     return serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT);
   }
 
-  static List<JsonObject> getPieceUpdates() {
+  public static List<JsonObject> getPieceUpdates() {
     return serverRqRs.get(PIECES, HttpMethod.PUT);
   }
 
@@ -292,14 +292,14 @@ public class MockServer {
     router.route(HttpMethod.GET, resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
     router.route(HttpMethod.GET, resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
     router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(this::handleGetPieces);
-//    router.route(HttpMethod.GET, resourcesPath(PIECES)+"/:id").handler(event -> {
-//      try {
-//        handleGetPieceById(event);
-//      } catch (IOException e) {
-//        // TODO Auto-generated catch block
-//        e.printStackTrace();
-//      }
-//    });
+    router.route(HttpMethod.GET, resourcesPath(PIECES)+"/:id").handler(event -> {
+      try {
+        handleGetPieceById(event);
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    });
     router.route(HttpMethod.GET, resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
     router.route(HttpMethod.GET, resourcesPath(PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
     router.route(HttpMethod.GET, "/contributor-name-types").handler(this::handleGetContributorNameTypes);
