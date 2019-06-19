@@ -47,12 +47,10 @@ import org.folio.rest.jaxrs.model.PoLine;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Currency;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +61,10 @@ import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import javax.money.CurrencyUnit;
+import javax.money.Monetary;
+import javax.money.MonetaryAmount;
 
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
@@ -80,6 +82,8 @@ import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.javamoney.moneta.Money;
+import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
@@ -498,7 +502,7 @@ public class HelperUtils {
   private static boolean isDiscountNotValid(Cost cost) {
     double discount = defaultIfNull(cost.getDiscount(), 0d);
     return (discount < 0d || cost.getDiscountType() == Cost.DiscountType.PERCENTAGE && discount > 100d)
-      || (discount > 0d && cost.getDiscountType() == Cost.DiscountType.AMOUNT && calculateEstimatedPrice(cost) < 0d);
+      || (discount > 0d && cost.getDiscountType() == Cost.DiscountType.AMOUNT && calculateEstimatedPrice(cost).isNegative());
   }
 
   private static List<Error> validatePoLineWithPhysicalFormat(CompositePoLine compPOL) {
@@ -718,32 +722,38 @@ public class HelperUtils {
    * Calculates total estimated price. See MODORDERS-180 for more details.
    * @param cost PO Line's cost
    */
-  public static double calculateEstimatedPrice(Cost cost) {
-    BigDecimal total = BigDecimal.ZERO;
+  public static MonetaryAmount calculateEstimatedPrice(Cost cost) {
+    CurrencyUnit currency = Monetary.getCurrency(cost.getCurrency());
+    MonetaryAmount total = Money.of(0, currency);
+
+    // Physical resources price
     if (cost.getListUnitPrice() != null && cost.getQuantityPhysical() != null) {
-      BigDecimal pPrice = BigDecimal.valueOf(cost.getListUnitPrice())
-                                    .multiply(BigDecimal.valueOf(cost.getQuantityPhysical()));
+      MonetaryAmount pPrice = Money.of(cost.getListUnitPrice(), currency)
+        .multiply(cost.getQuantityPhysical());
       total = total.add(pPrice);
     }
+    // Electronic resources price
     if (cost.getListUnitPriceElectronic() != null && cost.getQuantityElectronic() != null) {
-      BigDecimal ePrice = BigDecimal.valueOf(cost.getListUnitPriceElectronic())
-                                    .multiply(BigDecimal.valueOf(cost.getQuantityElectronic()));
+      MonetaryAmount ePrice = Money.of(cost.getListUnitPriceElectronic(), currency)
+        .multiply(cost.getQuantityElectronic());
       total = total.add(ePrice);
     }
+    // Discount amount
     if (cost.getDiscount() != null) {
-      BigDecimal discount;
+      MonetaryAmount discount;
       if (Cost.DiscountType.AMOUNT == cost.getDiscountType()) {
-        discount = BigDecimal.valueOf(cost.getDiscount());
+        discount = Money.of(cost.getDiscount(), currency);
       } else {
-        discount = total.multiply(BigDecimal.valueOf(cost.getDiscount()/100d));
+        discount = total.with(MonetaryOperators.percent(cost.getDiscount()));
       }
       total = total.subtract(discount);
     }
+    // Additional cost
     if (cost.getAdditionalCost() != null) {
-      total = total.add(BigDecimal.valueOf(cost.getAdditionalCost()));
+      total = total.add(Money.of(cost.getAdditionalCost(), currency));
     }
-    Currency currency = Currency.getInstance(cost.getCurrency());
-    return total.setScale(currency.getDefaultFractionDigits(), RoundingMode.HALF_UP).doubleValue();
+    // Grand total
+    return total.with(MonetaryOperators.rounding());
   }
 
   /**
