@@ -29,7 +29,7 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
     CompletableFuture<AcquisitionsUnitCollection> future = new VertxCompletableFuture<>(ctx);
 
     try {
-      String endpoint = String.format(GET_UNITS_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
+      String endpoint = String.format(GET_UNITS_BY_QUERY, offset, limit, buildQuery(query, logger), lang);
 
       handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
         .thenApply(jsonUnits -> jsonUnits.mapTo(AcquisitionsUnitCollection.class))
