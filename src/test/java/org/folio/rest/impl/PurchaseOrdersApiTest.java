@@ -600,6 +600,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     // Make sure that mock PO has 1 po line
     assertEquals(1, reqData.getCompositePoLines().size());
 
+    reqData.setManualPo(false);
     CompositePoLine compositePoLine = reqData.getCompositePoLines().get(0);
 
     compositePoLine.setId(PO_LINE_ID_FOR_SUCCESS_CASE);

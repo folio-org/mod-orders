@@ -3,50 +3,32 @@ package org.folio.rest.impl;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
-import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
-import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
-import static org.folio.orders.utils.HelperUtils.deletePoLine;
-import static org.folio.orders.utils.HelperUtils.deletePoLines;
-import static org.folio.orders.utils.HelperUtils.getCompositePoLines;
-import static org.folio.orders.utils.HelperUtils.buildQuery;
-import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
-import static org.folio.orders.utils.HelperUtils.getPoLines;
-import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.handlePutRequest;
-import static org.folio.orders.utils.HelperUtils.operateOnObject;
-import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.orders.utils.HelperUtils.*;
+import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
-
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.ErrorCodes;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.*;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 
 import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.reflect.FieldUtils;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.orders.utils.POProtectedFields;
+import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
 
 public class PurchaseOrderHelper extends AbstractHelper {
@@ -133,6 +115,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   public CompletableFuture<Void> updateOrder(CompositePurchaseOrder compPO) {
     return getPurchaseOrderById(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
+      .thenCompose(poFromStorage -> validateIfProtectedFieldsChanged(compPO,poFromStorage))
       .thenCompose(poFromStorage -> {
         logger.info("Order successfully retrieved from storage");
         return validatePoNumber(poFromStorage, compPO)
@@ -146,6 +129,71 @@ public class PurchaseOrderHelper extends AbstractHelper {
           });
         }
       );
+  }
+
+
+  private CompletableFuture<CompositePurchaseOrder> validateIfProtectedFieldsChanged(CompositePurchaseOrder compPO,CompositePurchaseOrder compPOFromStorage){
+    Set<String> fields = new HashSet<>();
+    for(String field:POProtectedFields.getFieldNames()) {
+      try {
+        if (isFieldNotEmpty(compPO, compPOFromStorage, field) && !EqualsBuilder.reflectionEquals(FieldUtils.readDeclaredField(compPO, field, true),
+            FieldUtils.readDeclaredField(compPOFromStorage, field, true), true, CompositePurchaseOrder.class, true)) {
+           fields.add(field);
+        }
+      } catch (IllegalAccessException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
+
+    fields.addAll(compPO.getCompositePoLines()
+        .stream()
+        .map(poLine -> validatePoLineProtectedFieldsChanged(poLine, findCorrespondingPoLine(poLine, compPOFromStorage)))
+        .flatMap(Set::stream)
+        .collect(Collectors.toSet()));
+
+    if(!fields.isEmpty()) {
+      throw new HttpException(400, "Changing protected Fields");
+    }
+
+    return completedFuture(compPOFromStorage);
+  }
+
+  private Set<String> validatePoLineProtectedFieldsChanged(CompositePoLine compPOLine, CompositePoLine compPOLineFromStorage) {
+    Set<String> fields = new HashSet<>();
+    for(String field:POLineProtectedFields.getFieldNames()) {
+      try {
+        if(field.contains(".")) {
+          String[] splits = field.split(".");
+          if(!EqualsBuilder.reflectionEquals(FieldUtils.readDeclaredField(FieldUtils.readDeclaredField(compPOLine, splits[0], true), splits[1], true),
+            FieldUtils.readDeclaredField(FieldUtils.readDeclaredField(compPOLineFromStorage, splits[0], true), splits[1], true), true, CompositePoLine.class, true)) {
+            fields.add(field);
+          }
+        }
+        if (isFieldNotEmpty(compPOLine, compPOLineFromStorage, field) && !EqualsBuilder.reflectionEquals(FieldUtils.readDeclaredField(compPOLine, field, true),
+            FieldUtils.readDeclaredField(compPOLineFromStorage, field, true), true, CompositePoLine.class, true)) {
+           fields.add(field);
+        }
+      } catch (IllegalAccessException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
+    return fields;
+  }
+
+  private CompositePoLine findCorrespondingPoLine(CompositePoLine poLine, CompositePurchaseOrder compPOFromStorage) {
+    return compPOFromStorage.getCompositePoLines()
+      .stream()
+      .filter(line -> line.getId()
+        .equals(poLine.getId()))
+      .findFirst()
+      .orElse(poLine);
+  }
+
+
+  private static boolean isFieldNotEmpty(Object newObject, Object existedObject, String field) {
+    return FieldUtils.getDeclaredField(newObject.getClass(), field, true) != null && FieldUtils.getDeclaredField(existedObject.getClass(), field, true) != null;
   }
 
   /**
