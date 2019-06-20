@@ -422,7 +422,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
         for (PoLine poLine : poLines) {
           List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
           futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces)
-                .thenCompose(status -> updatePoLineReceiptStatus(poLine, status)));
+                .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, ctx, okapiHeaders, logger)));
         }
         // receiptConsistencyPiecePoLine(poLines, piecesGroupedByPoLine);
         
@@ -563,7 +563,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     return defaultIfNull(poLine.getCheckinItems(), false);
   }
 
-  private CompletableFuture<Integer> getPiecesQuantityByPoLineAndStatus(String poLineId,
+  public CompletableFuture<Integer> getPiecesQuantityByPoLineAndStatus(String poLineId,
       ReceivingStatus receivingStatus) {
     String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, receivingStatus.value());
     // Limit to 0 because only total number is important
@@ -572,34 +572,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       // Return total records quantity
       .thenApply(json -> json.mapTo(PieceCollection.class).getTotalRecords());
-  }
-
-  private CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status) {
-    if (status == null || poLine.getReceiptStatus() == status) {
-      return completedFuture(null);
-    }
-
-    // Update receipt date and receipt status
-    if (status == FULLY_RECEIVED) {
-      poLine.setReceiptDate(new Date());
-    } else if (isCheckin(poLine) && poLine.getReceiptStatus().equals(ReceiptStatus.AWAITING_RECEIPT)
-        && status == ReceiptStatus.PARTIALLY_RECEIVED) {
-      // if checking in, set the receipt date only for the first piece
-      poLine.setReceiptDate(new Date());
-    } else {
-      poLine.setReceiptDate(null);
-    }
-
-    poLine.setReceiptStatus(status);
-
-    // Update PO Line in storage
-    return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, ctx,
-        okapiHeaders, logger)
-      .thenApply(v -> poLine.getId())
-      .exceptionally(e -> {
-        logger.error("The PO Line '{}' cannot be updated with new receipt status", e, poLine.getId());
-        return null;
-      });
   }
 
   /**

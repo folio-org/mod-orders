@@ -1,14 +1,19 @@
 package org.folio.rest.impl;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.HttpHeaders.LOCATION;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static javax.ws.rs.core.Response.Status.CREATED;
+import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.HelperUtils.*;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 
 import io.vertx.core.Context;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -20,6 +25,8 @@ import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 import javax.ws.rs.core.Response;
+
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +36,8 @@ import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
@@ -96,6 +105,42 @@ public abstract class AbstractHelper {
     return processingErrors.getErrors();
   }
 
+  boolean isCheckin(PoLine poLine) {
+    return defaultIfNull(poLine.getCheckinItems(), false);
+  }
+  
+  public CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+    logger.info("PoLine: ----" + poLine + "ReceiptStatus: -----" + status);
+    
+    if (status == null || poLine.getReceiptStatus() == status) {
+      return completedFuture(null);
+    }
+
+    // Update receipt date and receipt status
+    if (status == FULLY_RECEIVED) {
+      poLine.setReceiptDate(new Date());
+    } else if (isCheckin(poLine) && poLine.getReceiptStatus().equals(ReceiptStatus.AWAITING_RECEIPT)
+        && status == ReceiptStatus.PARTIALLY_RECEIVED) {
+      // if checking in, set the receipt date only for the first piece
+      poLine.setReceiptDate(new Date());
+    } else {
+      poLine.setReceiptDate(null);
+    }
+
+    poLine.setReceiptStatus(status);
+
+    logger.info("PO_LINES ----" + PO_LINES + "poLine.getId() -----" + poLine.getId() + "JsonObject.mapFrom(poLine) -----" + JsonObject.mapFrom(poLine)
+    + "httpClient ---- " + httpClient + "ctx ----" + ctx + "okapiHeaders ----" + okapiHeaders + "logger ---- " + logger);
+    // Update PO Line in storage
+    return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, ctx,
+        okapiHeaders, logger)
+      .thenApply(v -> poLine.getId())
+      .exceptionally(e -> {
+        logger.error("The PO Line '{}' cannot be updated with new receipt status", e, poLine.getId());
+        return null;
+      });
+  }
+  
   /**
    * Some requests do not have body and in happy flow do not produce response body. The Accept header is required for calls to storage
    */

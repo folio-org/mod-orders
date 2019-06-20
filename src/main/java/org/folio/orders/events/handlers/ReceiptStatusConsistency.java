@@ -36,6 +36,7 @@ import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.folio.rest.impl.CheckinReceivePiecesHelper;
 
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
@@ -154,32 +155,6 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
           return null;
         });
     }
-  }
-  
-  private CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) { 
-    if (status == null || poLine.getReceiptStatus() == status) {
-      return completedFuture(null);
-    }
-    // Update receipt date and receipt status
-    if (status == FULLY_RECEIVED) {
-      poLine.setReceiptDate(new Date());
-    } else if (isCheckin(poLine) && poLine.getReceiptStatus()
-      .equals(ReceiptStatus.AWAITING_RECEIPT) && status == ReceiptStatus.PARTIALLY_RECEIVED) {
-      // if checking in, set the receipt date only for the first piece
-      poLine.setReceiptDate(new Date());
-    } else {
-      poLine.setReceiptDate(null);
-    }
-
-    poLine.setReceiptStatus(status);
-
-    // Update PO Line in storage
-    return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, ctx, okapiHeaders,
-        logger).thenApply(v -> poLine.getId())
-          .exceptionally(e -> {
-            logger.error("The PO Line '{}' cannot be updated with new receipt status", e, poLine.getId());
-            return null;
-          });
   }
 
   private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity, PoLine poLine,
