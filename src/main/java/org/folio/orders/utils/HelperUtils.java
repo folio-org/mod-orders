@@ -86,6 +86,7 @@ import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.Context;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -121,6 +122,14 @@ public class HelperUtils {
 
   }
 
+  public static Map<String, String> getOkapiHeaders(Message<JsonObject> message) {
+    Map<String, String> okapiHeaders = new CaseInsensitiveMap<>();
+    message.headers()
+      .entries()
+      .forEach(entry -> okapiHeaders.put(entry.getKey(), entry.getValue()));
+    return okapiHeaders;
+  }
+  
   public static JsonObject verifyAndExtractBody(Response response) {
     if (!Response.isSuccess(response.getCode())) {
       throw new CompletionException(

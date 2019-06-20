@@ -10,8 +10,13 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertEquals;
+//import static org.junit.Assert.assertThat;
+import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.instanceOf;
 
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.acq.model.PoLine;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.impl.ApiTestBase;
@@ -25,6 +30,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -48,25 +54,42 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
   }
 
   @Test
-  public void testPieceReceiptStatusExpectedToReceived(TestContext context) {
+  public void testPieceReceiptStatusIsNotConsistent(TestContext context) {
     logger.info("=== Test case when piece receipt status changes from Received to Expected ===");
     
     // explicitly setting RECEIVED to create inconsistency
     sendEvent(createBody("RECEIVED"), context.asyncAssertSuccess(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());
       logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
-      logger.info("getPieceUpdates()--->" + getPieceSearches());
+      logger.info("getPieceSearches()--->" + getPieceSearches());
       //assertThat(getPoLineUpdates(), hasSize(1));
-      assertThat(getPieceSearches(), hasSize(1));
+      assertEquals(getPieceSearches().get(0).getJsonArray("pieces").size(), 2);
       
-      Piece piece = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(1).mapTo(Piece.class);
-      //PoLine poLine = getPoLineUpdates().get(0).mapTo(PoLine.class);
-      //poLine.getReceiptStatus().FULLY_RECEIVED, is(ReceivingStatus.));
-      //assertThat(piece.getReceivingStatus(), is(ReceivingStatus.RECEIVED));
-      //assertThat(getPurchaseOrderUpdates(), hasSize(1));
-      assertThat(result.body(), equalTo(Response.Status.OK.getReasonPhrase()));
+      Piece piece0 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(0).mapTo(Piece.class);
+      Piece piece1 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(1).mapTo(Piece.class);
+      assertEquals(piece0.getReceivingStatus().toString().toLowerCase(),ReceivingStatus.EXPECTED.value().toLowerCase());
+      assertEquals(piece1.getReceivingStatus().toString().toLowerCase(),ReceivingStatus.EXPECTED.value().toLowerCase());
+      
+      PoLine poLine = getPoLineUpdates().get(0).mapTo(PoLine.class);
+      logger.info("poLine.getReceiptStatus()--->" + poLine.getReceiptStatus());
+      logger.info("ReceiptStatus.AWAITING_RECEIPT.toString()--->" + poLine.getReceiptStatus());
+      assertEquals(poLine.getReceiptStatus().toString(), ReceiptStatus.AWAITING_RECEIPT.toString());
+
+      assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
     }));
   }
+  
+//  @Test
+//  public void testPieceReceiptStatusIsConsistent(TestContext context) {
+//    logger.info("=== Test case when receipt status is consistent ===");
+//    sendEvent(createBody("EXPCTED"), context.asyncAssertFailure(result -> {
+//      assertThat(getPoLineSearches(), nullValue());
+//      assertThat(getPoLineUpdates(), nullValue());
+//      assertThat(getPieceSearches(), nullValue());
+//      //assertThat(result, instanceOf(ReplyException.class));
+//      assertThat(((ReplyException) result).failureCode(), is(404));
+//    }));
+//  }
 
   private JsonObject createBody(String receiptStatus) {
     JsonObject jsonObj = new JsonObject();
