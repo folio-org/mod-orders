@@ -129,6 +129,8 @@ public class MockServer {
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";
   static final String ORDER_ID_WITH_PO_LINES = "ab18897b-0e40-4f31-896b-9c9adc979a87";
+  private static final String PIECE_POLINE_CONSISTENCY_INTERNAL_ERROR_ID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
+  private static final String PIECE_POLINE_CONSISTENCY_404_POLINE_NOT_FOUND_ID = "5b454292-6aaa-474f-9510-b59a564e0c8d";
   static final String PO_NUMBER_VALUE = "228D126";
 
   private static final String PO_NUMBER_ERROR_TENANT = "po_number_error_tenant";
@@ -943,6 +945,7 @@ public class MockServer {
   }
 
   private void handleGetPieceById(RoutingContext ctx) throws IOException {
+    
     logger.info("handleGetPiecesById got: " + ctx.request().path());
     String pieceId = ctx.request().getParam(ID);
     JsonObject body;
@@ -950,13 +953,18 @@ public class MockServer {
       serverResponse(ctx, HttpStatus.HTTP_NOT_FOUND.toInt(), APPLICATION_JSON, "vendor not found");
     } else if (MOD_VENDOR_INTERNAL_ERROR_ID.equals(pieceId)) {
       serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), APPLICATION_JSON, "internal server error, contact administrator");
-    } else if ("5b454292-6aaa-474f-9510-b59a564e0c8d".equals(pieceId)) {
-      body = new JsonObject(ApiTestBase.getMockData("mockdata/pieces/pieceRecord-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d.json"));
+    } else if (PIECE_POLINE_CONSISTENCY_404_POLINE_NOT_FOUND_ID.equals(pieceId)) {
+      body = new JsonObject(ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d.json"));
+      if (body != null) {
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
+      }
+    } else if (PIECE_POLINE_CONSISTENCY_INTERNAL_ERROR_ID.equals(pieceId)) {
+      body = new JsonObject(ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-500-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d2.json"));
       if (body != null) {
         serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
       }
     } else {
-      body = new JsonObject(ApiTestBase.getMockData("mockdata/pieces/pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json"));
+      body = new JsonObject(ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH +  "pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json"));
       if (body != null) {
         serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
       }

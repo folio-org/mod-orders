@@ -31,8 +31,6 @@ public class PiecesHelper extends AbstractHelper {
   public CompletableFuture<Void> updatePieceRecord(Piece piece) {
     JsonObject jsonObj = new JsonObject();
 
-    // explicitly setting RECEIVED to create inconsistency for testing
-    //jsonObj.put("receivingStatusBeforeUpdate", "RECEIVED");
     jsonObj.put("receivingStatusBeforeUpdate", piece.getReceivingStatus());
     jsonObj.put("pieceIdUpdate", piece.getId());
 

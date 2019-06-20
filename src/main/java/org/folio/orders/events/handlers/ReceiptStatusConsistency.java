@@ -80,7 +80,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     // 1. Get updated piece by id from storage
     getPieceById(pieceIdUpdate, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonPiece -> {
       Piece piece = jsonPiece.mapTo(Piece.class);
-      logger.info("piece for pieceRecord.json" + piece);
+      logger.info("piece for pieceRecord.json" + piece + " pieceById: " + pieceIdUpdate);
       ReceivingStatus receivingStatus = piece.getReceivingStatus();
       String receivingStatusBeforeUpdate = body.getString(RECEIVING_STATUS_BEFORE_UPDATE);
 
@@ -91,7 +91,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
         String endpoint = String.format(PIECES_ENDPOINT, poLineId, LANG);
         
         // 3. Get all pieces for poLineId above
-        getPieces(LIMIT, OFFSET, "", endpoint, lang, httpClient, ctx, okapiHeaders,
+        getPieces("", endpoint, httpClient, ctx, okapiHeaders,
             logger).thenAccept(piecesCollection -> {
               List<org.folio.rest.acq.model.Piece> listOfPieces = piecesCollection.getPieces();
               logger.info("list of pieces : " + listOfPieces.toString());
@@ -156,9 +156,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     }
   }
   
-  private CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-//    // For testing
-//    status = FULLY_RECEIVED;   
+  private CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) { 
     if (status == null || poLine.getReceiptStatus() == status) {
       return completedFuture(null);
     }
@@ -220,12 +218,12 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     return CompletableFuture.supplyAsync(() -> expectedQty);
   }
 
-  CompletableFuture<PieceCollection> getPieces(int limit, int offset, String query, String path, String lang,
+  CompletableFuture<PieceCollection> getPieces(String query, String path,
       HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<PieceCollection> future = new VertxCompletableFuture<>(ctx);
     try {
       String queryParam = isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
-      String endpoint = String.format(path, limit, offset, queryParam, lang);
+      String endpoint = String.format(path, LIMIT, OFFSET, queryParam, LANG);
       handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonOrderLines -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully retrieved all pieces: {}", jsonOrderLines.encodePrettily());

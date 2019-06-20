@@ -10,12 +10,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
-//import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.instanceOf;
@@ -46,9 +42,12 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 public class ReceiptStatusConsistencyTest extends ApiTestBase {
   private static final Logger logger = LoggerFactory.getLogger(ReceiptStatusConsistencyTest.class);
 
-  private static final String TEST_ADDRESS = "testReceiptStatusAddress";
+  public static final String TEST_ADDRESS = "testReceiptStatusAddress";
   private static final String VALID_PIECE_ID = "af372ac8-5ffb-4560-8b96-3945a12e121b";
   private static final String PIECE_ID_WITH_NO_PO_LINE = "5b454292-6aaa-474f-9510-b59a564e0c8d";
+  private static final String PIECE_ID_WITH_500_ON_PO_LINE = "7d0aa803-a659-49f0-8a95-968f277c87d7";
+  private static final String EXPECTED = "Expected";
+  private static final String RECEIVED = "Received";
 
   private static Vertx vertx;
 
@@ -65,12 +64,11 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
     logger.info("=== Test case when piece receipt status changes from Received to Expected ===");
     
     // explicitly setting RECEIVED to create inconsistency
-    sendEvent(createBody("RECEIVED", VALID_PIECE_ID), context.asyncAssertSuccess(result -> {
+    sendEvent(createBody(RECEIVED, VALID_PIECE_ID), context.asyncAssertSuccess(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());
       logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
       logger.info("getPieceSearches()--->" + getPieceSearches());
-      //assertThat(getPoLineUpdates(), hasSize(1));
-      assertEquals(getPieceSearches().get(0).getJsonArray("pieces").size(), 2);
+      assertEquals(2, getPieceSearches().get(0).getJsonArray("pieces").size());
       
       Piece piece0 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(0).mapTo(Piece.class);
       Piece piece1 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(1).mapTo(Piece.class);
@@ -91,15 +89,28 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
     logger.info("=== Test case when no poLines exists referenced by a piece which should throw a 404 Exception ===");
     
     // explicitly setting RECEIVED to create inconsistency
-    sendEvent(createBody("RECEIVED", PIECE_ID_WITH_NO_PO_LINE), context.asyncAssertFailure(result -> {
+    sendEvent(createBody(RECEIVED, PIECE_ID_WITH_NO_PO_LINE), context.asyncAssertFailure(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());
       logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
       logger.info("getPieceSearches()--->" + getPieceSearches());
       assertThat(getPoLineUpdates(), nullValue());
-      assertEquals(getPieceSearches().get(0).getJsonArray("pieces").size(), 0);
+      assertEquals(0, getPieceSearches().get(0).getJsonArray("pieces").size());
 
       assertThat(result, instanceOf(ReplyException.class));
       assertThat(((ReplyException) result).failureCode(), is(404));
+    }));
+  }
+  
+  @Test
+  public void testPieceReceiptStatus500ErrorGettingPiecesByPoLineId(TestContext context) {
+    logger.info("=== Test case when getting all pieces by poLineId gives internal server error Exception 500 ===");
+
+    // explicitly setting RECEIVED to create inconsistency
+    sendEvent(createBody(RECEIVED, PIECE_ID_WITH_500_ON_PO_LINE), context.asyncAssertFailure(result -> {
+      assertThat(getPoLineUpdates(), nullValue());
+      
+      assertThat(result, instanceOf(ReplyException.class));
+      assertThat(((ReplyException) result).failureCode(), is(500));
     }));
   }
   
@@ -108,31 +119,19 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
     logger.info("=== Test case receipt status is consistent between piece and poLine ===");
     
     // Set to Expected to make piece and poLine receipt status consistent
-    sendEvent(createBody("EXPECTED", VALID_PIECE_ID), context.asyncAssertSuccess(result -> {
+    sendEvent(createBody(EXPECTED, VALID_PIECE_ID), context.asyncAssertSuccess(result -> {
       String pieceReqData;
       try {
         pieceReqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json");
         JsonObject pieceJsonObj = new JsonObject(pieceReqData);
         Piece piece = pieceJsonObj.mapTo(Piece.class);
-        assertEquals(piece.getReceivingStatus().toString(), "Expected");
+        assertEquals("Expected", piece.getReceivingStatus().toString());
       } catch (IOException e) {
         fail(e.getMessage());
       }
       assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
     }));
   }
-  
-//  @Test
-//  public void testPieceReceiptStatusIsConsistent(TestContext context) {
-//    logger.info("=== Test case when receipt status is consistent ===");
-//    sendEvent(createBody("EXPCTED"), context.asyncAssertFailure(result -> {
-//      assertThat(getPoLineSearches(), nullValue());
-//      assertThat(getPoLineUpdates(), nullValue());
-//      assertThat(getPieceSearches(), nullValue());
-//      //assertThat(result, instanceOf(ReplyException.class));
-//      assertThat(((ReplyException) result).failureCode(), is(404));
-//    }));
-//  }
 
   private JsonObject createBody(String receiptStatus, String pieceId) {
     JsonObject jsonObj = new JsonObject();
@@ -144,8 +143,6 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
   private void sendEvent(JsonObject data, Handler<AsyncResult<Message<String>>> replyHandler) {
     // Add okapi url header
     DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader(X_OKAPI_URL.getName(), X_OKAPI_URL.getValue());
-    deliveryOptions.addHeader(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
-    deliveryOptions.addHeader(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getName(),EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue());
     
     vertx.eventBus().send(TEST_ADDRESS, data, deliveryOptions, replyHandler);
   }
