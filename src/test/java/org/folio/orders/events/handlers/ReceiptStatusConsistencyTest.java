@@ -60,7 +60,7 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
   }
 
   @Test
-  public void testPieceReceiptStatusIsNotConsistent(TestContext context) {
+  public void testReceiptStatusWhenReceiptStatusBetweenPiecesAndPoLineNotConsistent(TestContext context) {
     logger.info("=== Test case when piece receipt status changes from Received to Expected ===");
     
     // explicitly setting RECEIVED to create inconsistency
@@ -76,16 +76,33 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
       assertEquals(piece1.getReceivingStatus().toString().toLowerCase(),ReceivingStatus.EXPECTED.value().toLowerCase());
       
       PoLine poLine = getPoLineUpdates().get(0).mapTo(PoLine.class);
-      logger.info("poLine.getReceiptStatus()--->" + poLine.getReceiptStatus());
-      logger.info("ReceiptStatus.AWAITING_RECEIPT.toString()--->" + poLine.getReceiptStatus());
       assertEquals(poLine.getReceiptStatus().toString(), ReceiptStatus.AWAITING_RECEIPT.toString());
 
       assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
     }));
   }
-  
+
   @Test
-  public void testPieceReceiptStatusFailureNoMatchingPoLineForPiece(TestContext context) {
+  public void testPieceReceiptStatusWhenPieceAndPoLineAreConsistent(TestContext context) {
+    logger.info("=== Test case receipt status is consistent between piece and poLine ===");
+
+    // Set to Expected to make piece and poLine receipt status consistent
+    sendEvent(createBody(EXPECTED, VALID_PIECE_ID), context.asyncAssertSuccess(result -> {
+      String pieceReqData;
+      try {
+        pieceReqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json");
+        JsonObject pieceJsonObj = new JsonObject(pieceReqData);
+        Piece piece = pieceJsonObj.mapTo(Piece.class);
+        assertEquals(EXPECTED, piece.getReceivingStatus().toString());
+      } catch (IOException e) {
+        fail(e.getMessage());
+      }
+      assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
+    }));
+  }
+
+  @Test
+  public void testPieceReceiptStatusFailureWhenNoMatchingPoLineForPiece(TestContext context) {
     logger.info("=== Test case when no poLines exists referenced by a piece which should throw a 404 Exception ===");
     
     // explicitly setting RECEIVED to create inconsistency
@@ -100,9 +117,9 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
       assertThat(((ReplyException) result).failureCode(), is(404));
     }));
   }
-  
+
   @Test
-  public void testPieceReceiptStatus500ErrorGettingPiecesByPoLineId(TestContext context) {
+  public void testPieceReceiptStatus500ErrorWhenGettingPiecesByPoLineId(TestContext context) {
     logger.info("=== Test case when getting all pieces by poLineId gives internal server error Exception 500 ===");
 
     // explicitly setting RECEIVED to create inconsistency
@@ -111,25 +128,6 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
       
       assertThat(result, instanceOf(ReplyException.class));
       assertThat(((ReplyException) result).failureCode(), is(500));
-    }));
-  }
-  
-  @Test
-  public void testPieceReceiptStatusFailureNoInconsistencyDetected(TestContext context) {
-    logger.info("=== Test case receipt status is consistent between piece and poLine ===");
-    
-    // Set to Expected to make piece and poLine receipt status consistent
-    sendEvent(createBody(EXPECTED, VALID_PIECE_ID), context.asyncAssertSuccess(result -> {
-      String pieceReqData;
-      try {
-        pieceReqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json");
-        JsonObject pieceJsonObj = new JsonObject(pieceReqData);
-        Piece piece = pieceJsonObj.mapTo(Piece.class);
-        assertEquals("Expected", piece.getReceivingStatus().toString());
-      } catch (IOException e) {
-        fail(e.getMessage());
-      }
-      assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
     }));
   }
 

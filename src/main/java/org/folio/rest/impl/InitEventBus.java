@@ -39,34 +39,35 @@ public class InitEventBus implements PostDeployVerticle {
 
   @Override
   public void init(Vertx vertx, Context context, Handler<AsyncResult<Boolean>> resultHandler) {
-    vertx.executeBlocking(
-      blockingCodeFuture -> {
-        EventBus eb = vertx.eventBus();
+    vertx.executeBlocking(blockingCodeFuture -> {
+      EventBus eb = vertx.eventBus();
 
-        // Create consumers and assign handlers
-        Future<Void> orderStatusRegistrationHandler = Future.future();
-        Future<Void> receiptStatusConsistencyHandler = Future.future();
-        
-        MessageConsumer<JsonObject> orderStatusConsumer = eb.localConsumer(MessageAddress.ORDER_STATUS.address);
-        MessageConsumer<JsonObject> receiptStatusConsumer = eb.localConsumer(MessageAddress.RECEIPT_STATUS.address);
-        orderStatusConsumer.handler(orderStatusHandler).completionHandler(orderStatusRegistrationHandler);
-        receiptStatusConsumer.handler(receiptStatusHandler).completionHandler(receiptStatusConsistencyHandler);
+      // Create consumers and assign handlers
+      Future<Void> orderStatusRegistrationHandler = Future.future();
+      Future<Void> receiptStatusConsistencyHandler = Future.future();
 
-        CompositeFuture.all(orderStatusRegistrationHandler, receiptStatusConsistencyHandler).setHandler(result -> {
+      MessageConsumer<JsonObject> orderStatusConsumer = eb.localConsumer(MessageAddress.ORDER_STATUS.address);
+      MessageConsumer<JsonObject> receiptStatusConsumer = eb.localConsumer(MessageAddress.RECEIPT_STATUS.address);
+      orderStatusConsumer.handler(orderStatusHandler)
+        .completionHandler(orderStatusRegistrationHandler);
+      receiptStatusConsumer.handler(receiptStatusHandler)
+        .completionHandler(receiptStatusConsistencyHandler);
+
+      CompositeFuture.all(orderStatusRegistrationHandler, receiptStatusConsistencyHandler)
+        .setHandler(result -> {
           if (result.succeeded()) {
             blockingCodeFuture.complete();
           } else {
             blockingCodeFuture.fail(result.cause());
           }
         });
-      },
-      result -> {
-        if (result.succeeded()) {
-          resultHandler.handle(Future.succeededFuture(true));
-        } else {
-          logger.error(result.cause());
-          resultHandler.handle(Future.failedFuture(result.cause()));
-        }
-      });
+    }, result -> {
+      if (result.succeeded()) {
+        resultHandler.handle(Future.succeededFuture(true));
+      } else {
+        logger.error(result.cause());
+        resultHandler.handle(Future.failedFuture(result.cause()));
+      }
+    });
   }
 }

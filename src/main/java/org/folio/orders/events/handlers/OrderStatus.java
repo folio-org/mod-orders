@@ -1,6 +1,5 @@
 package org.folio.orders.events.handlers;
 
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
@@ -13,8 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-
-import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.folio.orders.utils.HelperUtils;

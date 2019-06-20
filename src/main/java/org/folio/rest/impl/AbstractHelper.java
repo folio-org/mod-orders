@@ -110,10 +110,11 @@ public abstract class AbstractHelper {
   protected boolean isCheckin(PoLine poLine) {
     return defaultIfNull(poLine.getCheckinItems(), false);
   }
-  
-  public CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status, HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+
+  public CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status, HttpClientInterface httpClient,
+      Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     logger.info("PoLine: ----" + poLine + "ReceiptStatus: -----" + status);
-    
+
     if (status == null || poLine.getReceiptStatus() == status) {
       return completedFuture(null);
     }
@@ -121,8 +122,8 @@ public abstract class AbstractHelper {
     // Update receipt date and receipt status
     if (status == FULLY_RECEIVED) {
       poLine.setReceiptDate(new Date());
-    } else if (isCheckin(poLine) && poLine.getReceiptStatus().equals(ReceiptStatus.AWAITING_RECEIPT)
-        && status == ReceiptStatus.PARTIALLY_RECEIVED) {
+    } else if (isCheckin(poLine) && poLine.getReceiptStatus()
+      .equals(ReceiptStatus.AWAITING_RECEIPT) && status == ReceiptStatus.PARTIALLY_RECEIVED) {
       // if checking in, set the receipt date only for the first piece
       poLine.setReceiptDate(new Date());
     } else {
@@ -131,18 +132,15 @@ public abstract class AbstractHelper {
 
     poLine.setReceiptStatus(status);
 
-    logger.info("PO_LINES ----" + PO_LINES + "poLine.getId() -----" + poLine.getId() + "JsonObject.mapFrom(poLine) -----" + JsonObject.mapFrom(poLine)
-    + "httpClient ---- " + httpClient + "ctx ----" + ctx + "okapiHeaders ----" + okapiHeaders + "logger ---- " + logger);
     // Update PO Line in storage
-    return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, ctx,
-        okapiHeaders, logger)
-      .thenApply(v -> poLine.getId())
-      .exceptionally(e -> {
-        logger.error("The PO Line '{}' cannot be updated with new receipt status", e, poLine.getId());
-        return null;
-      });
+    return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, ctx, okapiHeaders,
+        logger).thenApply(v -> poLine.getId())
+          .exceptionally(e -> {
+            logger.error("The PO Line '{}' cannot be updated with new receipt status", e, poLine.getId());
+            return null;
+          });
   }
-  
+
   protected <T> void completeAllFutures(Context ctx, List<CompletableFuture<T>> futures, Message<JsonObject> message) {
     // Now wait for all operations to be completed and send reply
     allOf(ctx, futures.toArray(new CompletableFuture[0])).thenAccept(v -> {

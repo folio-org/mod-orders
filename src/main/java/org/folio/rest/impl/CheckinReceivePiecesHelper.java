@@ -437,8 +437,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       .thenApply(ok -> piecesGroupedByPoLine);
   }
 
-
-  
   private void updateOrderStatus(List<PoLine> poLines) {
     if (!poLines.isEmpty()) {
       logger.debug("Sending event to verify order status");

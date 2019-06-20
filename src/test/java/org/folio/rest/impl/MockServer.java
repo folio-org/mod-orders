@@ -294,14 +294,7 @@ public class MockServer {
     router.route(HttpMethod.GET, resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
     router.route(HttpMethod.GET, resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
     router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(this::handleGetPieces);
-    router.route(HttpMethod.GET, resourcesPath(PIECES)+"/:id").handler(event -> {
-      try {
-        handleGetPieceById(event);
-      } catch (IOException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
-    });
+    router.route(HttpMethod.GET, resourcesPath(PIECES)+"/:id").handler(this::handleGetPieceById);
     router.route(HttpMethod.GET, resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
     router.route(HttpMethod.GET, resourcesPath(PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
     router.route(HttpMethod.GET, "/contributor-name-types").handler(this::handleGetContributorNameTypes);
@@ -944,31 +937,41 @@ public class MockServer {
     }
   }
 
-  private void handleGetPieceById(RoutingContext ctx) throws IOException {
-    
-    logger.info("handleGetPiecesById got: " + ctx.request().path());
+  private void handleGetPieceById(RoutingContext ctx) {
+
+    logger.info("handleGetPiecesById got: " + ctx.request()
+      .path());
     String pieceId = ctx.request().getParam(ID);
     JsonObject body;
-    if (NON_EXIST_VENDOR_ID.equals(pieceId)) {
-      serverResponse(ctx, HttpStatus.HTTP_NOT_FOUND.toInt(), APPLICATION_JSON, "vendor not found");
-    } else if (MOD_VENDOR_INTERNAL_ERROR_ID.equals(pieceId)) {
-      serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), APPLICATION_JSON, "internal server error, contact administrator");
-    } else if (PIECE_POLINE_CONSISTENCY_404_POLINE_NOT_FOUND_ID.equals(pieceId)) {
-      body = new JsonObject(ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d.json"));
-      if (body != null) {
-        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
+    try {
+      if (NON_EXIST_VENDOR_ID.equals(pieceId)) {
+        serverResponse(ctx, HttpStatus.HTTP_NOT_FOUND.toInt(), APPLICATION_JSON, "vendor not found");
+      } else if (MOD_VENDOR_INTERNAL_ERROR_ID.equals(pieceId)) {
+        serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), APPLICATION_JSON,
+            "internal server error, contact administrator");
+      } else if (PIECE_POLINE_CONSISTENCY_404_POLINE_NOT_FOUND_ID.equals(pieceId)) {
+        body = new JsonObject(ApiTestBase
+          .getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d.json"));
+        if (body != null) {
+          serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
+        }
+      } else if (PIECE_POLINE_CONSISTENCY_INTERNAL_ERROR_ID.equals(pieceId)) {
+        body = new JsonObject(ApiTestBase.getMockData(
+            PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-500-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d2.json"));
+        if (body != null) {
+          serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
+        }
+      } else {
+        body = new JsonObject(
+            ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json"));
+        if (body != null) {
+          serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
+        }
       }
-    } else if (PIECE_POLINE_CONSISTENCY_INTERNAL_ERROR_ID.equals(pieceId)) {
-      body = new JsonObject(ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-500-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d2.json"));
-      if (body != null) {
-        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
-      }
-    } else {
-      body = new JsonObject(ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH +  "pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json"));
-      if (body != null) {
-        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
-      }
+    } catch(IOException e) {
+      fail(e.getMessage());
     }
+
   }
   
   private void handleGetPieces(RoutingContext ctx) {
