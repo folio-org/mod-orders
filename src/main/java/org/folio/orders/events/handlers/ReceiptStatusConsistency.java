@@ -1,8 +1,6 @@
 package org.folio.orders.events.handlers;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
-import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.LANG;
@@ -10,9 +8,7 @@ import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
@@ -20,12 +16,9 @@ import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-
-import javax.ws.rs.core.Response;
 
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
@@ -36,8 +29,6 @@ import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.folio.rest.impl.CheckinReceivePiecesHelper;
-
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -126,20 +117,11 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
         future.completeExceptionally(e);
         return null;
       });
-
+    
     // Now wait for all operations to be completed and send reply
-    allOf(ctx, futures.toArray(new CompletableFuture[0])).thenAccept(v -> {
-      // Sending reply message just in case some logic requires it
-      message.reply(Response.Status.OK.getReasonPhrase());
-      httpClient.closeClient();
-    })
-      .exceptionally(e -> {
-        message.fail(handleProcessingError(e), getErrors().get(0)
-          .getMessage());
-        httpClient.closeClient();
-        return null;
-      });
+    completeAllFutures(ctx, futures, message);
   }
+
 
   private CompletableFuture<PoLine.ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine,
       List<org.folio.rest.acq.model.Piece> pieces) {
@@ -172,10 +154,6 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     // there is any Received piece in the storage
     return getPiecesQuantityByPoLineAndStatus(ReceivingStatus.RECEIVED, pieces)
       .thenApply(receivedQty -> receivedQty == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED);
-  }
-
-  boolean isCheckin(PoLine poLine) {
-    return defaultIfNull(poLine.getCheckinItems(), false);
   }
 
   private CompletableFuture<Integer> getPiecesQuantityByPoLineAndStatus(ReceivingStatus receivingStatus,

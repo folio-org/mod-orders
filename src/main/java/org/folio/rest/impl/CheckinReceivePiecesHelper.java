@@ -2,7 +2,6 @@ package org.folio.rest.impl;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
-import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
@@ -19,7 +18,6 @@ import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.HelperUtils.isHoldingsUpdateRequired;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.impl.InventoryHelper.ITEM_HOLDINGS_RECORD_ID;
@@ -29,7 +27,6 @@ import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -424,8 +421,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
           futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces)
                 .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, ctx, okapiHeaders, logger)));
         }
-        // receiptConsistencyPiecePoLine(poLines, piecesGroupedByPoLine);
-        
+
         return collectResultsOnSuccess(futures)
           .thenAccept(updatedPoLines -> {
             logger.debug("{} out of {} PO Line(s) updated with new status", updatedPoLines.size(), piecesGroupedByPoLine.size());
@@ -557,10 +553,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     // there is any Received piece in the storage
     return getPiecesQuantityByPoLineAndStatus(poLine.getId(), ReceivingStatus.RECEIVED)
       .thenApply(receivedQty -> receivedQty == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED);
-  }
-
-  boolean isCheckin(PoLine poLine) {
-    return defaultIfNull(poLine.getCheckinItems(), false);
   }
 
   public CompletableFuture<Integer> getPiecesQuantityByPoLineAndStatus(String poLineId,

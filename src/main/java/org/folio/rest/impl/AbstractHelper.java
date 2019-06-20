@@ -6,6 +6,7 @@ import static javax.ws.rs.core.HttpHeaders.LOCATION;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
+import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static javax.ws.rs.core.Response.Status.CREATED;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
@@ -17,6 +18,7 @@ import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 
 import io.vertx.core.Context;
 import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
@@ -105,7 +107,7 @@ public abstract class AbstractHelper {
     return processingErrors.getErrors();
   }
 
-  boolean isCheckin(PoLine poLine) {
+  protected boolean isCheckin(PoLine poLine) {
     return defaultIfNull(poLine.getCheckinItems(), false);
   }
   
@@ -137,6 +139,21 @@ public abstract class AbstractHelper {
       .thenApply(v -> poLine.getId())
       .exceptionally(e -> {
         logger.error("The PO Line '{}' cannot be updated with new receipt status", e, poLine.getId());
+        return null;
+      });
+  }
+  
+  protected <T> void completeAllFutures(Context ctx, List<CompletableFuture<T>> futures, Message<JsonObject> message) {
+    // Now wait for all operations to be completed and send reply
+    allOf(ctx, futures.toArray(new CompletableFuture[0])).thenAccept(v -> {
+      // Sending reply message just in case some logic requires it
+      message.reply(Response.Status.OK.getReasonPhrase());
+      httpClient.closeClient();
+    })
+      .exceptionally(e -> {
+        message.fail(handleProcessingError(e), getErrors().get(0)
+          .getMessage());
+        httpClient.closeClient();
         return null;
       });
   }

@@ -88,17 +88,7 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
     }
 
     // Now wait for all operations to be completed and send reply
-    allOf(ctx, futures.toArray(new CompletableFuture[0]))
-      .thenAccept(v -> {
-        // Sending reply message just in case some logic requires it
-        message.reply(Response.Status.OK.getReasonPhrase());
-        httpClient.closeClient();
-      })
-      .exceptionally(e -> {
-        message.fail(handleProcessingError(e), getErrors().get(0).getMessage());
-        httpClient.closeClient();
-        return null;
-      });
+    completeAllFutures(ctx, futures, message);
   }
 
   CompletableFuture<Void> updateOrderStatus(Map<String, String> okapiHeaders, HttpClientInterface httpClient, PurchaseOrder purchaseOrder, List<PoLine> poLines) {
