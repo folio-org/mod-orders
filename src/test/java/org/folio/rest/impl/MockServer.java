@@ -119,7 +119,7 @@ public class MockServer {
   static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
   private static final String ENCUMBRANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "encumbrances/";
-  static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
+  public static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
   private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
   private static final String ORGANIZATIONS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "organizations/";
@@ -950,6 +950,11 @@ public class MockServer {
       serverResponse(ctx, HttpStatus.HTTP_NOT_FOUND.toInt(), APPLICATION_JSON, "vendor not found");
     } else if (MOD_VENDOR_INTERNAL_ERROR_ID.equals(pieceId)) {
       serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), APPLICATION_JSON, "internal server error, contact administrator");
+    } else if ("5b454292-6aaa-474f-9510-b59a564e0c8d".equals(pieceId)) {
+      body = new JsonObject(ApiTestBase.getMockData("mockdata/pieces/pieceRecord-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d.json"));
+      if (body != null) {
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
+      }
     } else {
       body = new JsonObject(ApiTestBase.getMockData("mockdata/pieces/pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json"));
       if (body != null) {

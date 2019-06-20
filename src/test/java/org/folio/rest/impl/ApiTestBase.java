@@ -171,7 +171,7 @@ public class ApiTestBase {
     }
   }
 
-  static String getMockData(String path) throws IOException {
+  protected static String getMockData(String path) throws IOException {
     logger.info("Using mock datafile: {}", path);
     try (InputStream resourceAsStream = PurchaseOrdersApiTest.class.getClassLoader().getResourceAsStream(path)) {
       if (resourceAsStream != null) {

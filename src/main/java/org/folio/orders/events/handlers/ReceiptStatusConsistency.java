@@ -116,6 +116,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
                 return null;
               });
       } else {
+        logger.debug("Receipt status of pieces and po line are consistent");
         future.complete(null);
       }
     })
