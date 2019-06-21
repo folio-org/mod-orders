@@ -113,8 +113,7 @@ public abstract class AbstractHelper {
 
   public CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status, HttpClientInterface httpClient,
       Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-    logger.info("PoLine: ----" + poLine + "ReceiptStatus: -----" + status);
-
+    
     if (status == null || poLine.getReceiptStatus() == status) {
       return completedFuture(null);
     }

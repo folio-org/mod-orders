@@ -70,14 +70,12 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     getPieceById(pieceIdUpdate, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonPiece -> {
       Piece piece = jsonPiece.mapTo(Piece.class);
       logger.info("piece for pieceRecord.json" + piece + " pieceById: " + pieceIdUpdate);
-      ReceivingStatus receivingStatus = piece.getReceivingStatus();
-      String receivingStatusBeforeUpdate = body.getString(RECEIVING_STATUS_BEFORE_UPDATE);
+      ReceivingStatus receivingStatusAfterUpdate = piece.getReceivingStatus();
+      ReceivingStatus receivingStatusBeforeUpdate = ReceivingStatus.fromValue(body.getString(RECEIVING_STATUS_BEFORE_UPDATE));
 
       // 2. if receivingStatus is different - before writing to storage vs after writing to storage
-      if (!receivingStatus.toString()
-        .equalsIgnoreCase(receivingStatusBeforeUpdate)) {
+      if (receivingStatusBeforeUpdate.compareTo(receivingStatusAfterUpdate) != 0) {
         String poLineId = piece.getPoLineId();
-
         String query = String.format(PIECES_ENDPOINT, poLineId, LANG);
 
         // 3. Get all pieces for poLineId above
