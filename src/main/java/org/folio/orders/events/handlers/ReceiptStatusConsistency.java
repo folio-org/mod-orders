@@ -1,11 +1,8 @@
 package org.folio.orders.events.handlers;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.LANG;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
@@ -81,10 +78,10 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
         .equalsIgnoreCase(receivingStatusBeforeUpdate)) {
         String poLineId = piece.getPoLineId();
 
-        String endpoint = String.format(PIECES_ENDPOINT, poLineId, LANG);
+        String query = String.format(PIECES_ENDPOINT, poLineId, LANG);
 
         // 3. Get all pieces for poLineId above
-        getPieces("", endpoint, httpClient, ctx, okapiHeaders, logger).thenAccept(piecesCollection -> {
+        getPieces(query, httpClient, okapiHeaders, logger).thenAccept(piecesCollection -> {
           List<org.folio.rest.acq.model.Piece> listOfPieces = piecesCollection.getPieces();
           // 4. Get PoLine for the poLineId which will used to calculate PoLineReceiptStatus
           getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(poLineJson -> {
@@ -165,12 +162,11 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     return CompletableFuture.supplyAsync(() -> expectedQty);
   }
 
-  CompletableFuture<PieceCollection> getPieces(String query, String path, HttpClientInterface httpClient, Context ctx,
+  CompletableFuture<PieceCollection> getPieces(String path, HttpClientInterface httpClient,
       Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<PieceCollection> future = new VertxCompletableFuture<>(ctx);
     try {
-      String queryParam = isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
-      String endpoint = String.format(path, LIMIT, OFFSET, queryParam, LANG);
+      String endpoint = String.format(path, LIMIT, OFFSET, LANG);
       handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonOrderLines -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully retrieved all pieces: {}", jsonOrderLines.encodePrettily());
