@@ -1,0 +1,21 @@
+{
+  "acquisitionsUnits": [
+    {
+      "id": "0e9525aa-d123-4e4d-9f7e-1b302a97eb90",
+      "name": "Super users",
+      "protectCreate": false,
+      "protectRead": false,
+      "protectUpdate": false,
+      "protectDelete": false
+    },
+    {
+      "id": "6b982ffe-8efd-4690-8168-0c773b49cde1",
+      "name": "Read only",
+      "protectCreate": true,
+      "protectRead": false,
+      "protectUpdate": true,
+      "protectDelete": true
+    }
+  ],
+  "totalRecords": 2
+}
