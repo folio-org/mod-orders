@@ -140,7 +140,7 @@ public abstract class AbstractHelper {
           });
   }
 
-  protected <T> void completeAllFutures(Context ctx, List<CompletableFuture<T>> futures, Message<JsonObject> message) {
+  protected <T> void completeAllFutures(Context ctx, HttpClientInterface httpClient, List<CompletableFuture<T>> futures, Message<JsonObject> message) {
     // Now wait for all operations to be completed and send reply
     allOf(ctx, futures.toArray(new CompletableFuture[0])).thenAccept(v -> {
       // Sending reply message just in case some logic requires it

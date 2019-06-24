@@ -29,13 +29,13 @@ public class PiecesHelper extends AbstractHelper {
   }
 
   public CompletableFuture<Void> updatePieceRecord(Piece piece) {
-    JsonObject jsonObj = new JsonObject();
+    JsonObject messageToEventBus = new JsonObject();
 
-    jsonObj.put("receivingStatusBeforeUpdate", piece.getReceivingStatus());
-    jsonObj.put("pieceIdUpdate", piece.getId());
+    messageToEventBus.put("receivingStatusBeforeUpdate", piece.getReceivingStatus());
+    messageToEventBus.put("pieceIdUpdate", piece.getId());
 
     return handlePutRequest(resourceByIdPath(PIECES, piece.getId()), JsonObject.mapFrom(piece), httpClient, ctx, okapiHeaders, logger)
-      .thenAccept(sendToEventBus -> receiptConsistencyPiecePoLine(jsonObj));
+      .thenAccept(sendToEventBus -> receiptConsistencyPiecePoLine(messageToEventBus));
   }
 
   private void receiptConsistencyPiecePoLine(JsonObject jsonObj) {

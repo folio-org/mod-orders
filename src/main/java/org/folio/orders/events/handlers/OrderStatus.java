@@ -85,7 +85,7 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
     }
 
     // Now wait for all operations to be completed and send reply
-    completeAllFutures(ctx, futures, message);
+    completeAllFutures(ctx, httpClient, futures, message);
   }
 
   CompletableFuture<Void> updateOrderStatus(Map<String, String> okapiHeaders, HttpClientInterface httpClient, PurchaseOrder purchaseOrder, List<PoLine> poLines) {
