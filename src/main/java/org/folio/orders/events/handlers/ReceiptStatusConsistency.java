@@ -118,9 +118,9 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
   private CompletableFuture<PoLine.ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine,
       List<org.folio.rest.acq.model.Piece> pieces) {
 
-    if (pieces.isEmpty())
+    if (pieces.isEmpty()) {
       return completedFuture(poLine.getReceiptStatus());
-    else {
+    } else {
       return getPiecesQuantityByPoLineAndStatus(ReceivingStatus.EXPECTED, pieces)
         .thenCompose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, poLine, pieces))
         .exceptionally(e -> {
