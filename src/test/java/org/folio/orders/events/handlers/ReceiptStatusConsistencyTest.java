@@ -72,11 +72,11 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
       
       Piece piece0 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(0).mapTo(Piece.class);
       Piece piece1 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(1).mapTo(Piece.class);
-      assertEquals(piece0.getReceivingStatus(),ReceivingStatus.EXPECTED);
-      assertEquals(piece1.getReceivingStatus(),ReceivingStatus.EXPECTED);
+      assertEquals(ReceivingStatus.EXPECTED, piece0.getReceivingStatus());
+      assertEquals(ReceivingStatus.EXPECTED, piece1.getReceivingStatus());
       
       PoLine poLine = getPoLineUpdates().get(0).mapTo(PoLine.class);
-      assertEquals(poLine.getReceiptStatus(), ReceiptStatus.AWAITING_RECEIPT);
+      assertEquals(ReceiptStatus.AWAITING_RECEIPT, poLine.getReceiptStatus());
 
       assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
     }));
