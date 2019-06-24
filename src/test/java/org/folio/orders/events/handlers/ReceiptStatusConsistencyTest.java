@@ -16,8 +16,8 @@ import static org.junit.Assert.fail;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.instanceOf;
 
-import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
+import org.folio.rest.acq.model.Piece;
+import org.folio.rest.acq.model.PoLine.ReceiptStatus;
 import org.folio.rest.acq.model.PoLine;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.impl.ApiTestBase;
@@ -72,11 +72,11 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
       
       Piece piece0 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(0).mapTo(Piece.class);
       Piece piece1 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(1).mapTo(Piece.class);
-      assertEquals(piece0.getReceivingStatus().toString().toLowerCase(),ReceivingStatus.EXPECTED.value().toLowerCase());
-      assertEquals(piece1.getReceivingStatus().toString().toLowerCase(),ReceivingStatus.EXPECTED.value().toLowerCase());
+      assertEquals(piece0.getReceivingStatus(),ReceivingStatus.EXPECTED);
+      assertEquals(piece1.getReceivingStatus(),ReceivingStatus.EXPECTED);
       
       PoLine poLine = getPoLineUpdates().get(0).mapTo(PoLine.class);
-      assertEquals(poLine.getReceiptStatus().toString(), ReceiptStatus.AWAITING_RECEIPT.toString());
+      assertEquals(poLine.getReceiptStatus(), ReceiptStatus.AWAITING_RECEIPT);
 
       assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
     }));
@@ -93,7 +93,7 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
         pieceReqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json");
         JsonObject pieceJsonObj = new JsonObject(pieceReqData);
         Piece piece = pieceJsonObj.mapTo(Piece.class);
-        assertEquals(EXPECTED, piece.getReceivingStatus().toString());
+        assertEquals(ReceivingStatus.EXPECTED, piece.getReceivingStatus());
       } catch (IOException e) {
         fail(e.getMessage());
       }

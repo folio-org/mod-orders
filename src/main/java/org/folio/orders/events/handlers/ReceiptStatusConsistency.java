@@ -69,7 +69,6 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     // 1. Get updated piece by id from storage
     getPieceById(pieceIdUpdate, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonPiece -> {
       Piece piece = jsonPiece.mapTo(Piece.class);
-      logger.info("piece for pieceRecord.json" + piece + " pieceById: " + pieceIdUpdate);
       ReceivingStatus receivingStatusAfterUpdate = piece.getReceivingStatus();
       ReceivingStatus receivingStatusBeforeUpdate = ReceivingStatus.fromValue(body.getString(RECEIVING_STATUS_BEFORE_UPDATE));
 
@@ -81,6 +80,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
         // 3. Get all pieces for poLineId above
         getPieces(query, httpClient, okapiHeaders, logger).thenAccept(piecesCollection -> {
           List<org.folio.rest.acq.model.Piece> listOfPieces = piecesCollection.getPieces();
+          
           // 4. Get PoLine for the poLineId which will used to calculate PoLineReceiptStatus
           getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(poLineJson -> {
             PoLine poLine = poLineJson.mapTo(PoLine.class);
@@ -148,16 +148,9 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
   }
 
   private CompletableFuture<Integer> getPiecesQuantityByPoLineAndStatus(ReceivingStatus receivingStatus, List<Piece> pieces) {
-    Integer count = 0;
-    for (Piece piece : pieces) {
-      if (piece.getReceivingStatus()
-        .value()
-        .equalsIgnoreCase(receivingStatus.toString())) {
-        count++;
-      }
-    }
-    final Integer expectedQty = count;
-    return CompletableFuture.supplyAsync(() -> expectedQty);
+    return CompletableFuture.supplyAsync(() -> (int) pieces.stream()
+        .filter(piece -> piece.getReceivingStatus() == receivingStatus)
+        .count());
   }
 
   CompletableFuture<PieceCollection> getPieces(String path, HttpClientInterface httpClient,
