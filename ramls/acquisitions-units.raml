@@ -51,7 +51,7 @@ resourceTypes:
           type: UUID
       type:
         collection-item:
-          exampleItem: !include acq-models/mod-orders-storage/examples/acquisitions_unit_post.sample
+          exampleItem: !include acq-models/mod-orders-storage/examples/acquisitions_unit_get.sample
           schema: acquisitions-unit
       put:
         description: Update acquisitions unit
@@ -69,7 +69,7 @@ resourceTypes:
     get:
       description: Get list of acquisitions units memberships
       is: [
-        searchable: {description: "with valid searchable fields: for example protectRead", example: "[\"protectRead\", \"false\"]"},
+        searchable: {description: "with valid searchable fields: for example acquisitionsUnitId", example: "[\"acquisitionsUnitId\", \"57c35c88-625d-4f0e-bc79-d22818d84d1c\"]"},
         pageable
       ]
     /{id}:
@@ -79,7 +79,7 @@ resourceTypes:
           type: UUID
       type:
         collection-item:
-          exampleItem: !include acq-models/mod-orders-storage/examples/acquisitions_unit_membership_post.sample
+          exampleItem: !include acq-models/mod-orders-storage/examples/acquisitions_unit_membership_get.sample
           schema: acquisitions-unit-membership
       put:
         description: Update acquisitions units membership

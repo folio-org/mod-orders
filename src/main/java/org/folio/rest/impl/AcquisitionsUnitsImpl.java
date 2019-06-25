@@ -116,6 +116,7 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
   }
 
   @Override
+  @Validate
   public void postAcquisitionsUnitsMemberships(String lang, AcquisitionsUnitMembership entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     AcquisitionsMembershipsHelper helper = new AcquisitionsMembershipsHelper(okapiHeaders, vertxContext, lang);
@@ -132,6 +133,7 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
   }
 
   @Override
+  @Validate
   public void getAcquisitionsUnitsMemberships(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     AcquisitionsMembershipsHelper helper = new AcquisitionsMembershipsHelper(okapiHeaders, vertxContext, lang);
@@ -147,6 +149,7 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
   }
 
   @Override
+  @Validate
   public void putAcquisitionsUnitsMembershipsById(String id, String lang, AcquisitionsUnitMembership entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     AcquisitionsMembershipsHelper helper = new AcquisitionsMembershipsHelper(okapiHeaders, vertxContext, lang);
@@ -165,6 +168,7 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
   }
 
   @Override
+  @Validate
   public void getAcquisitionsUnitsMembershipsById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     AcquisitionsMembershipsHelper helper = new AcquisitionsMembershipsHelper(okapiHeaders, vertxContext, lang);
@@ -180,6 +184,7 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
   }
 
   @Override
+  @Validate
   public void deleteAcquisitionsUnitsMembershipsById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     AcquisitionsMembershipsHelper helper = new AcquisitionsMembershipsHelper(okapiHeaders, vertxContext, lang);
