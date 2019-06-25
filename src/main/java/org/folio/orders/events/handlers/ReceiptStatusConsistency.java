@@ -57,53 +57,34 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     Map<String, String> okapiHeaders = org.folio.orders.utils.HelperUtils.getOkapiHeaders(message);
     HttpClientInterface httpClient = getHttpClient(okapiHeaders, true);
 
-    String pieceIdUpdate = messageFromEventBus.getString(PIECE_ID_UPDATE);
+    String poLineIdUpdate = messageFromEventBus.getString("poLineIdUpdate");
+
+    logger.info("poLineIdUpdate -- " + poLineIdUpdate);
 
     List<CompletableFuture<String>> futures = new ArrayList<>();
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
-
     futures.add(future);
+    String query = String.format(PIECES_ENDPOINT, poLineIdUpdate, LIMIT);
 
-    // 1. Get updated piece by id from storage
-    getPieceById(pieceIdUpdate, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonPiece -> {
-      Piece piece = jsonPiece.mapTo(Piece.class);
-      ReceivingStatus receivingStatusAfterUpdate = piece.getReceivingStatus();
-      ReceivingStatus receivingStatusBeforeUpdate = ReceivingStatus.fromValue(messageFromEventBus.getString(RECEIVING_STATUS_BEFORE_UPDATE));
+    // 3. Get all pieces for poLineId above
+    getPieces(query, httpClient, okapiHeaders, logger).thenAccept(piecesCollection -> {
+      List<org.folio.rest.acq.model.Piece> listOfPieces = piecesCollection.getPieces();
 
-      // 2. if receivingStatus is different - before writing to storage vs after writing to storage
-      if (receivingStatusBeforeUpdate.compareTo(receivingStatusAfterUpdate) != 0) {
-        String poLineId = piece.getPoLineId();
-        String query = String.format(PIECES_ENDPOINT, poLineId, LIMIT);
-
-        // 3. Get all pieces for poLineId above
-        getPieces(query, httpClient, okapiHeaders, logger).thenAccept(piecesCollection -> {
-          List<org.folio.rest.acq.model.Piece> listOfPieces = piecesCollection.getPieces();
-          
-          // 4. Get PoLine for the poLineId which will used to calculate PoLineReceiptStatus
-          getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(poLineJson -> {
-            PoLine poLine = poLineJson.mapTo(PoLine.class);
-            calculatePoLineReceiptStatus(poLine, listOfPieces)
-              .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, ctx, okapiHeaders, logger))
-              .thenAccept(future::complete);
-          })
-            .exceptionally(e -> {
-              logger.error("The error getting poLine by id {}", poLineId, e);
-              future.completeExceptionally(e);
-              return null;
-            });
-        })
-          .exceptionally(e -> {
-            logger.error("The error happened getting all pieces by poLine {}", poLineId, e);
-            future.completeExceptionally(e);
-            return null;
-          });
-      } else {
-        logger.debug("Receipt status of pieces and po line are consistent");
-        future.complete(null);
-      }
+      // 4. Get PoLine for the poLineId which will used to calculate PoLineReceiptStatus
+      getPoLineById(poLineIdUpdate, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(poLineJson -> {
+        PoLine poLine = poLineJson.mapTo(PoLine.class);
+        calculatePoLineReceiptStatus(poLine, listOfPieces)
+          .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, ctx, okapiHeaders, logger))
+          .thenAccept(future::complete);
+      })
+        .exceptionally(e -> {
+          logger.error("The error getting poLine by id {}", poLineIdUpdate, e);
+          future.completeExceptionally(e);
+          return null;
+        });
     })
       .exceptionally(e -> {
-        logger.error("The error happened getting a piece by id {}", pieceIdUpdate, e);
+        logger.error("The error happened getting all pieces by poLine {}", poLineIdUpdate, e);
         future.completeExceptionally(e);
         return null;
       });
