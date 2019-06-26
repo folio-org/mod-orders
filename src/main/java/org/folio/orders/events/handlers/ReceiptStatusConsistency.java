@@ -1,11 +1,9 @@
 package org.folio.orders.events.handlers;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
@@ -26,7 +24,6 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
@@ -40,9 +37,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
 
   private static final int LIMIT = Integer.MAX_VALUE;
   private static final String PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId==%s&limit=%s";
-  private static final String PIECE_ID_UPDATE = "pieceIdUpdate";
-  private static final String RECEIVING_STATUS_BEFORE_UPDATE = "receivingStatusBeforeUpdate";
-  
+
   @Autowired
   public ReceiptStatusConsistency(Vertx vertx) {
     super(vertx.getOrCreateContext());
@@ -57,53 +52,32 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     Map<String, String> okapiHeaders = org.folio.orders.utils.HelperUtils.getOkapiHeaders(message);
     HttpClientInterface httpClient = getHttpClient(okapiHeaders, true);
 
-    String pieceIdUpdate = messageFromEventBus.getString(PIECE_ID_UPDATE);
-
     List<CompletableFuture<String>> futures = new ArrayList<>();
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
-
     futures.add(future);
 
-    // 1. Get updated piece by id from storage
-    getPieceById(pieceIdUpdate, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonPiece -> {
-      Piece piece = jsonPiece.mapTo(Piece.class);
-      ReceivingStatus receivingStatusAfterUpdate = piece.getReceivingStatus();
-      ReceivingStatus receivingStatusBeforeUpdate = ReceivingStatus.fromValue(messageFromEventBus.getString(RECEIVING_STATUS_BEFORE_UPDATE));
+    String poLineIdUpdate = messageFromEventBus.getString("poLineIdUpdate");
+    String query = String.format(PIECES_ENDPOINT, poLineIdUpdate, LIMIT);
 
-      // 2. if receivingStatus is different - before writing to storage vs after writing to storage
-      if (receivingStatusBeforeUpdate.compareTo(receivingStatusAfterUpdate) != 0) {
-        String poLineId = piece.getPoLineId();
-        String query = String.format(PIECES_ENDPOINT, poLineId, LIMIT);
+    // 1. Get all pieces for poLineId
+    getPieces(query, httpClient, okapiHeaders, logger).thenAccept(piecesCollection -> {
+      List<org.folio.rest.acq.model.Piece> listOfPieces = piecesCollection.getPieces();
 
-        // 3. Get all pieces for poLineId above
-        getPieces(query, httpClient, okapiHeaders, logger).thenAccept(piecesCollection -> {
-          List<org.folio.rest.acq.model.Piece> listOfPieces = piecesCollection.getPieces();
-          
-          // 4. Get PoLine for the poLineId which will used to calculate PoLineReceiptStatus
-          getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(poLineJson -> {
-            PoLine poLine = poLineJson.mapTo(PoLine.class);
-            calculatePoLineReceiptStatus(poLine, listOfPieces)
-              .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, ctx, okapiHeaders, logger))
-              .thenAccept(future::complete);
-          })
-            .exceptionally(e -> {
-              logger.error("The error getting poLine by id {}", poLineId, e);
-              future.completeExceptionally(e);
-              return null;
-            });
-        })
-          .exceptionally(e -> {
-            logger.error("The error happened getting all pieces by poLine {}", poLineId, e);
-            future.completeExceptionally(e);
-            return null;
-          });
-      } else {
-        logger.debug("Receipt status of pieces and po line are consistent");
-        future.complete(null);
-      }
+      // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
+      getPoLineById(poLineIdUpdate, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(poLineJson -> {
+        PoLine poLine = poLineJson.mapTo(PoLine.class);
+        calculatePoLineReceiptStatus(poLine, listOfPieces)
+          .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, ctx, okapiHeaders, logger))
+          .thenAccept(future::complete);
+      })
+        .exceptionally(e -> {
+          logger.error("The error getting poLine by id {}", poLineIdUpdate, e);
+          future.completeExceptionally(e);
+          return null;
+        });
     })
       .exceptionally(e -> {
-        logger.error("The error happened getting a piece by id {}", pieceIdUpdate, e);
+        logger.error("The error happened getting all pieces by poLine {}", poLineIdUpdate, e);
         future.completeExceptionally(e);
         return null;
       });
@@ -146,12 +120,12 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
 
   private CompletableFuture<Integer> getPiecesQuantityByPoLineAndStatus(ReceivingStatus receivingStatus, List<Piece> pieces) {
     return CompletableFuture.supplyAsync(() -> (int) pieces.stream()
-        .filter(piece -> piece.getReceivingStatus() == receivingStatus)
-        .count());
+      .filter(piece -> piece.getReceivingStatus() == receivingStatus)
+      .count());
   }
 
-  CompletableFuture<PieceCollection> getPieces(String endpoint, HttpClientInterface httpClient,
-      Map<String, String> okapiHeaders, Logger logger) {
+  CompletableFuture<PieceCollection> getPieces(String endpoint, HttpClientInterface httpClient, Map<String, String> okapiHeaders,
+      Logger logger) {
     CompletableFuture<PieceCollection> future = new VertxCompletableFuture<>(ctx);
     try {
       handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonPieces -> {
@@ -168,11 +142,5 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
       future.completeExceptionally(e);
     }
     return future;
-  }
-
-  public static CompletableFuture<JsonObject> getPieceById(String pieceId, String lang, HttpClientInterface httpClient, Context ctx,
-      Map<String, String> okapiHeaders, Logger logger) {
-    String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PIECES, pieceId), lang);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
   }
 }
