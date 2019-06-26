@@ -2,17 +2,14 @@ package org.folio.orders.events.handlers;
 
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
-import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
 
-import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.instanceOf;
 
@@ -43,9 +40,7 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
   private static final Logger logger = LoggerFactory.getLogger(ReceiptStatusConsistencyTest.class);
 
   public static final String TEST_ADDRESS = "testReceiptStatusAddress";
-  private static final String VALID_PIECE_ID = "af372ac8-5ffb-4560-8b96-3945a12e121b";
   private static final String BAD_PO_LINE_404 = "5b454292-6aaa-474f-9510-b59a564e0c8d";
-  private static final String PIECE_ID_WITH_500_ON_PO_LINE = "7d0aa803-a659-49f0-8a95-968f277c87d7";
   private static final String POLINE_UUID_TIED_TO_PIECE = "d471d766-8dbb-4609-999a-02681dea6c22";
 
   private static Vertx vertx;
@@ -61,8 +56,7 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
   @Test
   public void testReceiptStatusWhenReceiptStatusBetweenPiecesAndPoLineNotConsistent(TestContext context) {
     logger.info("=== Test case when piece receipt status changes from Received to Expected ===");
-    
-    // explicitly setting RECEIVED to create inconsistency
+
     sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE), context.asyncAssertSuccess(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());
       logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
@@ -81,30 +75,10 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
     }));
   }
 
-//  @Test
-//  public void testPieceReceiptStatusWhenPieceAndPoLineAreConsistent(TestContext context) {
-//    logger.info("=== Test case receipt status is consistent between piece and poLine ===");
-//
-//    // Set to Expected to make piece and poLine receipt status consistent
-//    sendEvent(createBody("d471d766-8dbb-4609-999a-02681dea6bad"), context.asyncAssertSuccess(result -> {
-//      String pieceReqData;
-//      try {
-//        pieceReqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json");
-//        JsonObject pieceJsonObj = new JsonObject(pieceReqData);
-//        Piece piece = pieceJsonObj.mapTo(Piece.class);
-//        assertEquals(ReceivingStatus.EXPECTED, piece.getReceivingStatus());
-//      } catch (IOException e) {
-//        fail(e.getMessage());
-//      }
-//      assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
-//    }));
-//  }
-
   @Test
   public void testPieceReceiptStatusFailureWhenNoMatchingPoLineForPiece(TestContext context) {
     logger.info("=== Test case when no poLines exists referenced by a piece which should throw a 404 Exception ===");
     
-    // explicitly setting RECEIVED to create inconsistency
     sendEvent(createBody(BAD_PO_LINE_404), context.asyncAssertFailure(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());
       logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
@@ -116,19 +90,6 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
       assertThat(((ReplyException) result).failureCode(), is(404));
     }));
   }
-
-//  @Test
-//  public void testPieceReceiptStatus500ErrorWhenGettingPiecesByPoLineId(TestContext context) {
-//    logger.info("=== Test case when getting all pieces by poLineId gives internal server error Exception 500 ===");
-//
-//    // explicitly setting RECEIVED to create inconsistency
-//    sendEvent(createBody(RECEIVED, PIECE_ID_WITH_500_ON_PO_LINE), context.asyncAssertFailure(result -> {
-//      assertThat(getPoLineUpdates(), nullValue());
-//      
-//      assertThat(result, instanceOf(ReplyException.class));
-//      assertThat(((ReplyException) result).failureCode(), is(500));
-//    }));
-//  }
 
   private JsonObject createBody(String poLineId) {
     JsonObject jsonObj = new JsonObject();
