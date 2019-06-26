@@ -356,7 +356,7 @@ public class ApiTestBase {
       assertThat(message.address(), equalTo(MessageAddress.RECEIPT_STATUS.address));
       assertThat(message.headers(), not(emptyIterable()));
       assertThat(message.body(), notNullValue());
-      assertThat(message.body().getString("receivingStatusBeforeUpdate"), not(isEmptyOrNullString()));
+      assertThat(message.body().getString("poLineIdUpdate"), not(isEmptyOrNullString()));
       assertThat(message.body().getString(HelperUtils.LANG), not(isEmptyOrNullString()));
     }
   }

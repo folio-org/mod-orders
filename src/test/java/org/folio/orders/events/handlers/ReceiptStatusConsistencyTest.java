@@ -64,7 +64,7 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
     logger.info("=== Test case when piece receipt status changes from Received to Expected ===");
     
     // explicitly setting RECEIVED to create inconsistency
-    sendEvent(createBody(RECEIVED, VALID_PIECE_ID, "d471d766-8dbb-4609-999a-02681dea6c22"), context.asyncAssertSuccess(result -> {
+    sendEvent(createBody("d471d766-8dbb-4609-999a-02681dea6c22"), context.asyncAssertSuccess(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());
       logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
       logger.info("getPieceSearches()--->" + getPieceSearches());
@@ -82,41 +82,41 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
     }));
   }
 
-//  @Test
-//  public void testPieceReceiptStatusWhenPieceAndPoLineAreConsistent(TestContext context) {
-//    logger.info("=== Test case receipt status is consistent between piece and poLine ===");
-//
-//    // Set to Expected to make piece and poLine receipt status consistent
-//    sendEvent(createBody(EXPECTED, VALID_PIECE_ID), context.asyncAssertSuccess(result -> {
-//      String pieceReqData;
-//      try {
-//        pieceReqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json");
-//        JsonObject pieceJsonObj = new JsonObject(pieceReqData);
-//        Piece piece = pieceJsonObj.mapTo(Piece.class);
-//        assertEquals(ReceivingStatus.EXPECTED, piece.getReceivingStatus());
-//      } catch (IOException e) {
-//        fail(e.getMessage());
-//      }
-//      assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
-//    }));
-//  }
+  @Test
+  public void testPieceReceiptStatusWhenPieceAndPoLineAreConsistent(TestContext context) {
+    logger.info("=== Test case receipt status is consistent between piece and poLine ===");
 
-//  @Test
-//  public void testPieceReceiptStatusFailureWhenNoMatchingPoLineForPiece(TestContext context) {
-//    logger.info("=== Test case when no poLines exists referenced by a piece which should throw a 404 Exception ===");
-//    
-//    // explicitly setting RECEIVED to create inconsistency
-//    sendEvent(createBody(RECEIVED, PIECE_ID_WITH_NO_PO_LINE), context.asyncAssertFailure(result -> {
-//      logger.info("getPoLineSearches()--->" + getPoLineSearches());
-//      logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
-//      logger.info("getPieceSearches()--->" + getPieceSearches());
-//      assertThat(getPoLineUpdates(), nullValue());
-//      assertEquals(0, getPieceSearches().get(0).getJsonArray("pieces").size());
-//
-//      assertThat(result, instanceOf(ReplyException.class));
-//      assertThat(((ReplyException) result).failureCode(), is(404));
-//    }));
-//  }
+    // Set to Expected to make piece and poLine receipt status consistent
+    sendEvent(createBody("d471d766-8dbb-4609-999a-02681dea6bad"), context.asyncAssertSuccess(result -> {
+      String pieceReqData;
+      try {
+        pieceReqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json");
+        JsonObject pieceJsonObj = new JsonObject(pieceReqData);
+        Piece piece = pieceJsonObj.mapTo(Piece.class);
+        assertEquals(ReceivingStatus.EXPECTED, piece.getReceivingStatus());
+      } catch (IOException e) {
+        fail(e.getMessage());
+      }
+      assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
+    }));
+  }
+
+  @Test
+  public void testPieceReceiptStatusFailureWhenNoMatchingPoLineForPiece(TestContext context) {
+    logger.info("=== Test case when no poLines exists referenced by a piece which should throw a 404 Exception ===");
+    
+    // explicitly setting RECEIVED to create inconsistency
+    sendEvent(createBody("d471d766-8dbb-4609-999a-02681dea6bad"), context.asyncAssertFailure(result -> {
+      logger.info("getPoLineSearches()--->" + getPoLineSearches());
+      logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
+      logger.info("getPieceSearches()--->" + getPieceSearches());
+      assertThat(getPoLineUpdates(), nullValue());
+      assertEquals(0, getPieceSearches().get(0).getJsonArray("pieces").size());
+
+      assertThat(result, instanceOf(ReplyException.class));
+      assertThat(((ReplyException) result).failureCode(), is(404));
+    }));
+  }
 
 //  @Test
 //  public void testPieceReceiptStatus500ErrorWhenGettingPiecesByPoLineId(TestContext context) {
@@ -131,10 +131,8 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
 //    }));
 //  }
 
-  private JsonObject createBody(String receiptStatus, String pieceId, String poLineId) {
+  private JsonObject createBody(String poLineId) {
     JsonObject jsonObj = new JsonObject();
-    jsonObj.put("receivingStatusBeforeUpdate", receiptStatus);
-    jsonObj.put("pieceIdUpdate", pieceId);
     jsonObj.put("poLineIdUpdate",  poLineId);
     return jsonObj;
   }
