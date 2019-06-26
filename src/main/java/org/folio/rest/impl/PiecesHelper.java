@@ -36,9 +36,9 @@ public class PiecesHelper extends AbstractHelper {
   // storage - expected
   // update - received
   // flow
-  // -> get piece by id
-  // -> check if receivingStatus is not consistent with storage before sending message to eventbus. if yes only do below
-  // -> send message
+  // -> Get piece from storage
+  // -> Update piece with new content
+  // -> send an event if piece's receiving status has changed
   // -> get all pieces by poLineId
   // -> get Po Line
   // -> calculate receipt status and update Po Line in storage
@@ -49,10 +49,10 @@ public class PiecesHelper extends AbstractHelper {
       Piece pieceStorage = jsonPiece.mapTo(Piece.class);
       
       JsonObject messageToEventBus = new JsonObject();
-      messageToEventBus.put("poLineIdUpdate", piece.getPoLineId());
+      messageToEventBus.put("poLineIdUpdate", piece.getPoLineId()); // received
       
-      ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
-      ReceivingStatus receivingStatusUpdate = piece.getReceivingStatus();
+      ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus(); // expected
+      ReceivingStatus receivingStatusUpdate = piece.getReceivingStatus(); // received
       
       handlePutRequest(resourceByIdPath(PIECES, piece.getId()), JsonObject.mapFrom(piece), httpClient, ctx, okapiHeaders, logger)
       .thenAccept(v -> helper.buildNoContentResponse())
