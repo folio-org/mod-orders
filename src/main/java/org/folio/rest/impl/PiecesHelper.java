@@ -37,35 +37,31 @@ public class PiecesHelper extends AbstractHelper {
   // update - received
   // flow
   // -> get piece by id
-  // -> check if receivingStatus is inconsistent before sending message to eventbus. if yes only do below
+  // -> check if receivingStatus is not consistent with storage before sending message to eventbus. if yes only do below
   // -> send message
   // -> get all pieces by poLineId
   // -> get Po Line
   // -> calculate receipt status and update Po Line in storage
   public CompletableFuture<Void> updatePieceRecord(Piece piece) {
-    JsonObject messageToEventBus = new JsonObject();
-
-    messageToEventBus.put("receivingStatusBeforeUpdate", piece.getReceivingStatus()); // received
-    messageToEventBus.put("pieceIdUpdate", piece.getId());
-    messageToEventBus.put("poLineIdUpdate", piece.getPoLineId());
-
+    PiecesHelper helper = new PiecesHelper(okapiHeaders, ctx, lang);
+    
     return getPieceById(piece.getId(), lang, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonPiece -> {
       Piece pieceStorage = jsonPiece.mapTo(Piece.class);
-      logger.info("pieces --- " + piece.toString());
-      ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
-      ReceivingStatus receivingStatusBeforeUpdate = piece.getReceivingStatus();
-      logger.info("receivingStatusStorage -- " + receivingStatusStorage);
-      logger.info("receivingStatusBeforeUpdate -- " + receivingStatusBeforeUpdate);
       
-      if (receivingStatusStorage.compareTo(receivingStatusBeforeUpdate) != 0) {
-        receiptConsistencyPiecePoLine(messageToEventBus);
-        return;
-      }
-    }).thenAccept(thenDo -> {
-        handlePutRequest(resourceByIdPath(PIECES, piece.getId()), JsonObject.mapFrom(piece), httpClient, ctx, okapiHeaders, logger);
+      JsonObject messageToEventBus = new JsonObject();
+      messageToEventBus.put("poLineIdUpdate", piece.getPoLineId());
+      
+      ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
+      ReceivingStatus receivingStatusUpdate = piece.getReceivingStatus();
+      
+      handlePutRequest(resourceByIdPath(PIECES, piece.getId()), JsonObject.mapFrom(piece), httpClient, ctx, okapiHeaders, logger)
+      .thenAccept(v -> helper.buildNoContentResponse())
+      .thenAccept(afterUpdate -> {
+        if (receivingStatusStorage.compareTo(receivingStatusUpdate) != 0) {
+          receiptConsistencyPiecePoLine(messageToEventBus);
+        }
+      });
     });
-    
-      //.thenAccept(sendToEventBus -> receiptConsistencyPiecePoLine(messageToEventBus));
   }
 
   public static CompletableFuture<JsonObject> getPieceById(String pieceId, String lang, HttpClientInterface httpClient, Context ctx,
