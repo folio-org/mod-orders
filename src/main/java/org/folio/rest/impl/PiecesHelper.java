@@ -48,7 +48,7 @@ public class PiecesHelper extends AbstractHelper {
   public CompletableFuture<Void> updatePieceRecord(Piece piece) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
-    return getPieceById(piece.getId(), lang, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonPiece -> {
+    getPieceById(piece.getId(), lang, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonPiece -> {
       Piece pieceStorage = jsonPiece.mapTo(Piece.class);
 
       JsonObject messageToEventBus = new JsonObject();
@@ -82,6 +82,7 @@ public class PiecesHelper extends AbstractHelper {
         future.completeExceptionally(e);
         return null;
       });
+    return future;
   }
 
   public static CompletableFuture<JsonObject> getPieceById(String pieceId, String lang, HttpClientInterface httpClient, Context ctx,
