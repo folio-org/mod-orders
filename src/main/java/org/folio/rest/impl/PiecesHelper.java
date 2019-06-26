@@ -61,18 +61,13 @@ public class PiecesHelper extends AbstractHelper {
 
       handlePutRequest(resourceByIdPath(PIECES, piece.getId()), JsonObject.mapFrom(piece), httpClient, ctx, okapiHeaders, logger)
         .thenAccept(v -> future.complete(v))
-        .exceptionally(e -> {
-          logger.error("The error updating piece by id to storage {}", piece.getId(), e);
-          future.completeExceptionally(e);
-          return null;
-        })
         .thenAccept(afterUpdate -> {
           if (receivingStatusStorage.compareTo(receivingStatusUpdate) != 0) {
             receiptConsistencyPiecePoLine(messageToEventBus);
           }
         })
         .exceptionally(e -> {
-          logger.error("Error sending message to event bus {}", messageToEventBus.encodePrettily(), e);
+          logger.error("The error updating piece by id to storage {}", piece.getId(), e);
           future.completeExceptionally(e);
           return null;
         });
