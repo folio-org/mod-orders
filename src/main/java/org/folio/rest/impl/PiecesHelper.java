@@ -46,7 +46,7 @@ public class PiecesHelper extends AbstractHelper {
       ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
 
       handlePutRequest(resourceByIdPath(PIECES, piece.getId()), JsonObject.mapFrom(piece), httpClient, ctx, okapiHeaders, logger)
-        .thenAccept(v -> future.complete(v))
+        .thenAccept(future::complete)
         .thenAccept(afterUpdate -> {
 
           JsonObject messageToEventBus = new JsonObject();

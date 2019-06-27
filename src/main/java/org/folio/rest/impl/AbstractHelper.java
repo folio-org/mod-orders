@@ -55,7 +55,7 @@ public abstract class AbstractHelper {
   private final Errors processingErrors = new Errors();
 
   protected final HttpClientInterface httpClient;
-  protected final Map<String, String> okapiHeaders;
+  protected Map<String, String> okapiHeaders;
   protected final Context ctx;
   protected final String lang;
   private JsonObject tenantConfiguration;
@@ -131,11 +131,6 @@ public abstract class AbstractHelper {
 
     poLine.setReceiptStatus(status);
 
-//    // Since PoLine receipt status has changed, we should check if order status also needs to be updated
-//    List<String> poIds = new ArrayList<String>();
-//    poIds.add(poLine.getPurchaseOrderId());
-//    sendEvent(MessageAddress.ORDER_STATUS, new JsonObject().put(ORDER_IDS, new JsonArray(poIds)));
-    
     // Update PO Line in storage
     return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, ctx, okapiHeaders,
         logger).thenApply(v -> poLine.getId())
@@ -299,24 +294,21 @@ public abstract class AbstractHelper {
 
   protected void sendEvent(MessageAddress messageAddress, JsonObject data) {
     DeliveryOptions deliveryOptions = new DeliveryOptions();
-    
-    logger.info("okapiHeaders: --- " + okapiHeaders);
-    logger.info("okapiHeaders from jObj: --- " + data.encodePrettily());
-    
+
     // Add okapi headers
-    if(okapiHeaders != null) {
-    okapiHeaders.forEach(deliveryOptions::addHeader);
+    if (okapiHeaders != null) {
+      okapiHeaders.forEach(deliveryOptions::addHeader);
     } else {
-      JsonObject okapiHeaders = data.getJsonObject("okapiHeaders");
-     
-      okapiHeaders.put("x-okapi-url", okapiHeaders.getString("x-okapi-url"));
+      Map<String, String> okapiHeaders = new HashMap<>();
+      JsonObject okapiHeadersObject = data.getJsonObject("okapiHeaders");
+      okapiHeaders.put("x-okapi-url", okapiHeadersObject.getString("x-okapi-url"));
+      this.okapiHeaders = okapiHeaders;
     }
-    logger.info("okapiHeaders from okapiHEaders: --- " + okapiHeaders);
-    
+
     data.put(LANG, lang);
 
     ctx.owner()
-       .eventBus()
-       .send(messageAddress.address, data, deliveryOptions);
+      .eventBus()
+      .send(messageAddress.address, data, deliveryOptions);
   }
 }
