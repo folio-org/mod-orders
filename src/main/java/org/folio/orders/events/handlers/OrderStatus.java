@@ -2,6 +2,7 @@ package org.folio.orders.events.handlers;
 
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
+import static org.folio.orders.utils.HelperUtils.getOkapiHeaders;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
@@ -13,7 +14,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.impl.AbstractHelper;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -104,11 +104,4 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
                      .map(json -> ((JsonObject) json).mapTo(PoLine.class))
                      .collect(Collectors.toList());
   }
-
-  private Map<String, String> getOkapiHeaders(Message<JsonObject> message) {
-    Map<String, String> okapiHeaders = new CaseInsensitiveMap<>();
-    message.headers().entries().forEach(entry -> okapiHeaders.put(entry.getKey(), entry.getValue()));
-    return okapiHeaders;
-  }
-
 }

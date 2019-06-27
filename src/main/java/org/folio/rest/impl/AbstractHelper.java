@@ -47,7 +47,6 @@ import org.folio.rest.tools.utils.TenantTool;
 public abstract class AbstractHelper {
   public static final String ID = "id";
   public static final String ORDER_IDS = "orderIds";
-  public static final String RECEIPT_STATUS = "receiptStatus";
   public static final String ERROR_CAUSE = "cause";
 
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
