@@ -1,6 +1,7 @@
 package org.folio.orders.utils;
 
 import static java.util.Objects.nonNull;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -28,6 +29,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.EnumMap;
 import java.util.Objects;
 import java.util.Optional;
@@ -49,6 +51,7 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
+import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -1066,5 +1069,36 @@ public class HelperUtils {
     return pol.mapTo(PoLine.class);
   }
 
+  public static boolean isCheckin(PoLine poLine) {
+    return defaultIfNull(poLine.getCheckinItems(), false);
+  }
+  
+  public static CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status, HttpClientInterface httpClient,
+      Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+    
+    if (status == null || poLine.getReceiptStatus() == status) {
+      return completedFuture(null);
+    }
 
+    // Update receipt date and receipt status
+    if (status == FULLY_RECEIVED) {
+      poLine.setReceiptDate(new Date());
+    } else if (poLine.getReceiptStatus()
+      .equals(ReceiptStatus.AWAITING_RECEIPT) && status == ReceiptStatus.PARTIALLY_RECEIVED) {
+      // if checking in, set the receipt date only for the first piece
+      poLine.setReceiptDate(new Date());
+    } else {
+      poLine.setReceiptDate(null);
+    }
+
+    poLine.setReceiptStatus(status);
+
+    // Update PO Line in storage
+    return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, ctx, okapiHeaders,
+        logger).thenApply(v -> poLine.getId())
+          .exceptionally(e -> {
+            logger.error("The PO Line '{}' cannot be updated with new receipt status", e, poLine.getId());
+            return null;
+          });
+  }
 }

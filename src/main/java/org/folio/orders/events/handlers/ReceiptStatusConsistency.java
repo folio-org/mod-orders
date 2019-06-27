@@ -3,6 +3,7 @@ package org.folio.orders.events.handlers;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
@@ -116,8 +117,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
   private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity, PoLine poLine,
       List<org.folio.rest.acq.model.Piece> pieces) {
     
-    logger.info("expectedPiecesQuantity -- " + expectedPiecesQuantity);
-    if (!isCheckin(poLine) && expectedPiecesQuantity == 0) {
+    if (expectedPiecesQuantity == 0) {
       return CompletableFuture.completedFuture(FULLY_RECEIVED);
     }
     // Partially Received: In case there is at least one successfully received

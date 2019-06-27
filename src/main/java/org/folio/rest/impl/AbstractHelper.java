@@ -1,6 +1,5 @@
 package org.folio.rest.impl;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.HttpHeaders.LOCATION;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -8,14 +7,9 @@ import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static javax.ws.rs.core.Response.Status.CREATED;
-import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.HelperUtils.*;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
-
 import io.vertx.core.Context;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
@@ -28,7 +22,6 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 import javax.ws.rs.core.Response;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,8 +31,6 @@ import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
@@ -105,39 +96,6 @@ public abstract class AbstractHelper {
 
   public List<Error> getErrors() {
     return processingErrors.getErrors();
-  }
-
-  protected boolean isCheckin(PoLine poLine) {
-    return defaultIfNull(poLine.getCheckinItems(), false);
-  }
-
-  public CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status, HttpClientInterface httpClient,
-      Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-    
-    if (status == null || poLine.getReceiptStatus() == status) {
-      return completedFuture(null);
-    }
-
-    // Update receipt date and receipt status
-    if (status == FULLY_RECEIVED) {
-      poLine.setReceiptDate(new Date());
-    } else if (isCheckin(poLine) && poLine.getReceiptStatus()
-      .equals(ReceiptStatus.AWAITING_RECEIPT) && status == ReceiptStatus.PARTIALLY_RECEIVED) {
-      // if checking in, set the receipt date only for the first piece
-      poLine.setReceiptDate(new Date());
-    } else {
-      poLine.setReceiptDate(null);
-    }
-
-    poLine.setReceiptStatus(status);
-
-    // Update PO Line in storage
-    return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, ctx, okapiHeaders,
-        logger).thenApply(v -> poLine.getId())
-          .exceptionally(e -> {
-            logger.error("The PO Line '{}' cannot be updated with new receipt status", e, poLine.getId());
-            return null;
-          });
   }
 
   protected <T> void completeAllFutures(Context ctx, HttpClientInterface httpClient, List<CompletableFuture<T>> futures, Message<JsonObject> message) {
@@ -299,10 +257,10 @@ public abstract class AbstractHelper {
     if (okapiHeaders != null) {
       okapiHeaders.forEach(deliveryOptions::addHeader);
     } else {
-      Map<String, String> okapiHeaders = new HashMap<>();
+      Map<String, String> okapiHeadersMap = new HashMap<>();
       JsonObject okapiHeadersObject = data.getJsonObject("okapiHeaders");
-      okapiHeaders.put("x-okapi-url", okapiHeadersObject.getString("x-okapi-url"));
-      this.okapiHeaders = okapiHeaders;
+      okapiHeadersMap.put("x-okapi-url", okapiHeadersObject.getString("x-okapi-url"));
+      this.okapiHeaders = okapiHeadersMap;
     }
 
     data.put(LANG, lang);
