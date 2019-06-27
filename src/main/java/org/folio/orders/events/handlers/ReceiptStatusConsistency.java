@@ -73,12 +73,8 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
           .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, ctx, okapiHeaders, logger))
           .thenAccept(updatedPoLineId -> {
             if (updatedPoLineId != null) {
-              List<String> poIds = new ArrayList<>();
-              poIds.add(poLine.getPurchaseOrderId());
-              JsonObject messageContent = new JsonObject();
-              messageContent.put(OKAPI_HEADERS, okapiHeaders);
-              messageContent.put(ORDER_IDS, new JsonArray(poIds));
-              sendEvent(MessageAddress.ORDER_STATUS, messageContent);
+              // send event to update order status
+              updateOrderStatus(poLine, okapiHeaders);
             }
           })
           .thenAccept(future::complete);
@@ -99,6 +95,15 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     completeAllFutures(ctx, httpClient, futures, message);
   }
 
+  private void updateOrderStatus(PoLine poLine, Map<String, String> okapiHeaders) {
+    List<String> poIds = new ArrayList<>();
+    poIds.add(poLine.getPurchaseOrderId());
+    JsonObject messageContent = new JsonObject();
+    messageContent.put(OKAPI_HEADERS, okapiHeaders);
+    messageContent.put(ORDER_IDS, new JsonArray(poIds));
+    sendEvent(MessageAddress.ORDER_STATUS, messageContent);
+  }
+
   private CompletableFuture<PoLine.ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine,
       List<org.folio.rest.acq.model.Piece> pieces) {
 
@@ -106,7 +111,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
       return completedFuture(poLine.getReceiptStatus());
     } else {
       return getPiecesQuantityByPoLineAndStatus(ReceivingStatus.EXPECTED, pieces)
-        .thenCompose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, poLine, pieces))
+        .thenCompose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, pieces))
         .exceptionally(e -> {
           logger.error("The expected receipt status for PO Line '{}' cannot be calculated", e, poLine.getId());
           return null;
@@ -114,7 +119,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     }
   }
 
-  private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity, PoLine poLine,
+  private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity,
       List<org.folio.rest.acq.model.Piece> pieces) {
     
     if (expectedPiecesQuantity == 0) {
