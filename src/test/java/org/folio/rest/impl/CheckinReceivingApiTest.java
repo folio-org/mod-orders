@@ -1,8 +1,5 @@
 package org.folio.rest.impl;
 
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
@@ -65,14 +62,12 @@ import org.folio.rest.jaxrs.model.ReceivingItemResult;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
-import org.folio.rest.jaxrs.model.ToBeReceived;
 import org.junit.Assert;
 import org.junit.Test;
 
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import one.util.streamex.StreamEx;
 
 public class CheckinReceivingApiTest extends ApiTestBase {
 
@@ -702,17 +697,5 @@ public class CheckinReceivingApiTest extends ApiTestBase {
       }
     }
     return pieceIdsByPol;
-  }
-
-  private Map<String, Map<String, String>> groupLocationsByPoLineIdOnReceiving(ReceivingCollection receivingCollection) {
-    return StreamEx
-      .of(receivingCollection.getToBeReceived())
-      .groupingBy(ToBeReceived::getPoLineId,
-        mapping(ToBeReceived::getReceivedItems,
-          collectingAndThen(toList(),
-            lists -> StreamEx.of(lists)
-              .flatMap(List::stream)
-              .filter(receivedItem -> receivedItem.getLocationId() != null)
-              .toMap(ReceivedItem::getPieceId, ReceivedItem::getLocationId))));
   }
 }

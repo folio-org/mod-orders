@@ -61,7 +61,7 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
       getPurchaseOrderById(orderId, lang, httpClient, ctx, okapiHeaders, logger)
         .thenAccept(orderJson -> {
           PurchaseOrder purchaseOrder = orderJson.mapTo(PurchaseOrder.class);
-
+          
           if (purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.PENDING) {
             future.complete(null);
           } else {

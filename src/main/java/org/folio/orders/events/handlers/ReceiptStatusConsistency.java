@@ -27,6 +27,7 @@ import org.springframework.stereotype.Component;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
@@ -52,8 +53,8 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     Map<String, String> okapiHeaders = org.folio.orders.utils.HelperUtils.getOkapiHeaders(message);
     HttpClientInterface httpClient = getHttpClient(okapiHeaders, true);
 
-    List<CompletableFuture<String>> futures = new ArrayList<>();
-    CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
     futures.add(future);
 
     String poLineIdUpdate = messageFromEventBus.getString("poLineIdUpdate");
@@ -66,8 +67,20 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
       // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
       getPoLineById(poLineIdUpdate, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(poLineJson -> {
         PoLine poLine = poLineJson.mapTo(PoLine.class);
+        logger.info("poLine is --- " + poLine);
         calculatePoLineReceiptStatus(poLine, listOfPieces)
           .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, ctx, okapiHeaders, logger))
+          .thenAccept(updatedPoLineId -> {
+            if (updatedPoLineId != null) {
+              logger.info("String id: --- " + updatedPoLineId);
+              List<String> poIds = new ArrayList<String>();
+              poIds.add(updatedPoLineId);
+              JsonObject messageContent = new JsonObject();
+              messageContent.put(OKAPI_HEADERS, okapiHeaders);
+              messageContent.put(ORDER_IDS, new JsonArray(poIds));
+              sendEvent(MessageAddress.ORDER_STATUS, messageContent);
+            }
+          })
           .thenAccept(future::complete);
       })
         .exceptionally(e -> {
@@ -103,6 +116,8 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
 
   private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity, PoLine poLine,
       List<org.folio.rest.acq.model.Piece> pieces) {
+    
+    logger.info("expectedPiecesQuantity -- " + expectedPiecesQuantity);
     if (!isCheckin(poLine) && expectedPiecesQuantity == 0) {
       return CompletableFuture.completedFuture(FULLY_RECEIVED);
     }

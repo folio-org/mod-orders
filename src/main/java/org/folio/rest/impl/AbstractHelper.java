@@ -47,6 +47,7 @@ import org.folio.rest.tools.utils.TenantTool;
 public abstract class AbstractHelper {
   public static final String ID = "id";
   public static final String ORDER_IDS = "orderIds";
+  public static final String OKAPI_HEADERS = "okapiHeaders";
   public static final String ERROR_CAUSE = "cause";
 
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -130,6 +131,11 @@ public abstract class AbstractHelper {
 
     poLine.setReceiptStatus(status);
 
+//    // Since PoLine receipt status has changed, we should check if order status also needs to be updated
+//    List<String> poIds = new ArrayList<String>();
+//    poIds.add(poLine.getPurchaseOrderId());
+//    sendEvent(MessageAddress.ORDER_STATUS, new JsonObject().put(ORDER_IDS, new JsonArray(poIds)));
+    
     // Update PO Line in storage
     return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, ctx, okapiHeaders,
         logger).thenApply(v -> poLine.getId())
@@ -293,9 +299,20 @@ public abstract class AbstractHelper {
 
   protected void sendEvent(MessageAddress messageAddress, JsonObject data) {
     DeliveryOptions deliveryOptions = new DeliveryOptions();
+    
+    logger.info("okapiHeaders: --- " + okapiHeaders);
+    logger.info("okapiHeaders from jObj: --- " + data.encodePrettily());
+    
     // Add okapi headers
+    if(okapiHeaders != null) {
     okapiHeaders.forEach(deliveryOptions::addHeader);
-
+    } else {
+      JsonObject okapiHeaders = data.getJsonObject("okapiHeaders");
+     
+      okapiHeaders.put("x-okapi-url", okapiHeaders.getString("x-okapi-url"));
+    }
+    logger.info("okapiHeaders from okapiHEaders: --- " + okapiHeaders);
+    
     data.put(LANG, lang);
 
     ctx.owner()
