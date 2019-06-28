@@ -9,7 +9,9 @@ documentation:
 
 types:
     acquisitions-unit: !include acq-models/mod-orders-storage/schemas/acquisitions_unit.json
+    acquisitions-unit-membership: !include acq-models/mod-orders-storage/schemas/acquisitions_unit_membership.json
     acquisitions-unit-collection: !include acq-models/mod-orders-storage/schemas/acquisitions_unit_collection.json
+    acquisitions-unit-membership-collection: !include acq-models/mod-orders-storage/schemas/acquisitions_unit_membership_collection.json
     errors: !include raml-util/schemas/errors.schema
     UUID:
      type: string
@@ -49,8 +51,36 @@ resourceTypes:
           type: UUID
       type:
         collection-item:
-          exampleItem: !include acq-models/mod-orders-storage/examples/acquisitions_unit_post.sample
+          exampleItem: !include acq-models/mod-orders-storage/examples/acquisitions_unit_get.sample
           schema: acquisitions-unit
       put:
         description: Update acquisitions unit
+        is: [validate]
+  /memberships:
+    type:
+      collection:
+        exampleCollection: !include acq-models/mod-orders-storage/examples/acquisitions_unit_membership_collection.sample
+        exampleItem: !include acq-models/mod-orders-storage/examples/acquisitions_unit_membership_post.sample
+        schemaCollection: acquisitions-unit-membership-collection
+        schemaItem: acquisitions-unit-membership
+    post:
+      description: Create new acquisitions units membership
+      is: [validate]
+    get:
+      description: Get list of acquisitions units memberships
+      is: [
+        searchable: {description: "with valid searchable fields: for example acquisitionsUnitId", example: "[\"acquisitionsUnitId\", \"57c35c88-625d-4f0e-bc79-d22818d84d1c\"]"},
+        pageable
+      ]
+    /{id}:
+      uriParameters:
+        id:
+          description: The UUID of an acquisitions units membership
+          type: UUID
+      type:
+        collection-item:
+          exampleItem: !include acq-models/mod-orders-storage/examples/acquisitions_unit_membership_get.sample
+          schema: acquisitions-unit-membership
+      put:
+        description: Update acquisitions units membership
         is: [validate]
