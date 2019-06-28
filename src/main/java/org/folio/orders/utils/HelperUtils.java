@@ -1068,10 +1068,6 @@ public class HelperUtils {
     pol.remove(REPORTING_CODES);
     return pol.mapTo(PoLine.class);
   }
-
-  public static boolean isCheckin(PoLine poLine) {
-    return defaultIfNull(poLine.getCheckinItems(), false);
-  }
   
   public static CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status, HttpClientInterface httpClient,
       Context ctx, Map<String, String> okapiHeaders, Logger logger) {
