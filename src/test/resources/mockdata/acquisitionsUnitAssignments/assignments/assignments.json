@@ -1,0 +1,24 @@
+{
+  "acquisitionsUnitAssignments": [
+    {
+      "id": "8ad580ee-d3f1-4271-bff4-c7c80ccb22e5",
+      "recordId": "57b575a1-c6bc-4b6e-b91a-06bc0034b768",
+      "acquisitionsUnitId": "c2d6608f-6d1f-45f7-8817-5d32c2416116",
+      "metadata": {
+        "createdDate": "2018-08-19T00:00:00.000+0000",
+        "createdByUserId": "28d1057c-d137-11e8-a8d5-f2801f1b9fd1"
+      }
+    },
+    {
+      "id": "8ad510ee-d3f1-4271-bff4-c7c80ccb22e5",
+      "recordId": "57257531-c6bc-4b6e-b91a-06bc0034b768",
+      "acquisitionsUnitId": "c2d6608f-6d1f-45f7-8817-5d32c2416116",
+      "metadata": {
+        "createdDate": "2018-07-19T00:00:00.000+0000",
+        "createdByUserId": "22d1057c-d137-11e8-a8d5-f2801f1b9fd1"
+      }
+    }
+  ],
+  "totalRecords": 2
+}
+

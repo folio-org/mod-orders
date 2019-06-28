@@ -22,7 +22,7 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
 
   private static final Logger logger = LoggerFactory.getLogger(AcquisitionsUnit.class);
 
-  private static final String ACQUISITIONS_UNITS_LOCATION_PREFIX = "/acquisitions-units/units/";
+  private static final String ACQUISITIONS_UNITS_LOCATION_PREFIX = "/acquisitions-units/units/%s";
 
   @Override
   @Validate
@@ -36,7 +36,8 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
           logger.info("Successfully created new acquisitions unit: " + JsonObject.mapFrom(unit).encodePrettily());
         }
 
-        asyncResultHandler.handle(succeededFuture(buildResponseForPostUnit(unit)));
+        asyncResultHandler.handle(succeededFuture(helper
+          .buildResponseWithLocation(String.format(ACQUISITIONS_UNITS_LOCATION_PREFIX, unit.getId()), unit)));
         helper.closeHttpClient();
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
@@ -111,12 +112,6 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
         asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
-  }
-
-  private Response buildResponseForPostUnit(AcquisitionsUnit unit) {
-    PostAcquisitionsUnitsUnitsResponse.HeadersFor201 headersFor201 = PostAcquisitionsUnitsUnitsResponse.headersFor201()
-      .withLocation(ACQUISITIONS_UNITS_LOCATION_PREFIX + unit.getId());
-    return PostAcquisitionsUnitsUnitsResponse.respond201WithApplicationJson(unit, headersFor201);
   }
 
   private Void handleErrorResponse(Handler<AsyncResult<Response>> asyncResultHandler, AbstractHelper helper, Throwable t) {
