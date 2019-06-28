@@ -41,6 +41,7 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
 
   public static final String TEST_ADDRESS = "testReceiptStatusAddress";
   private static final String BAD_PO_LINE_404 = "5b454292-6aaa-474f-9510-b59a564e0c8d";
+  private static final String PO_LINE_ID_TIED_TO_PIECE_WHEN_TOTAL_PIECES_EMPTY = "84257f10-b6d4-4d3f-b1f0-0f6b31ea6edd";
   private static final String POLINE_UUID_TIED_TO_PIECE = "d471d766-8dbb-4609-999a-02681dea6c22";
 
   private static Vertx vertx;
@@ -54,7 +55,7 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
   }
 
   @Test
-  public void testReceiptStatusWhenReceiptStatusBetweenPiecesAndPoLineNotConsistent(TestContext context) {
+  public void testSuccessReceiptStatusWhenReceiptStatusBetweenPiecesAndPoLineNotConsistent(TestContext context) {
     logger.info("=== Test case when piece receipt status changes from Received to Expected ===");
 
     sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE), context.asyncAssertSuccess(result -> {
@@ -75,6 +76,21 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
     }));
   }
 
+  @Test
+  public void testSuccessReceiptStatusWhenTotalPiecesEmpty(TestContext context) {
+    logger.info("=== Test case to verify receipt status when total pieces empty ===");
+
+    sendEvent(createBody(PO_LINE_ID_TIED_TO_PIECE_WHEN_TOTAL_PIECES_EMPTY), context.asyncAssertSuccess(result -> {
+      logger.info("getPoLineSearches()--->" + getPoLineSearches());
+      logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
+      logger.info("getPieceSearches()--->" + getPieceSearches());
+      assertEquals(0, getPieceSearches().get(0).getJsonArray("pieces").size());
+      assertThat(getPoLineUpdates(), nullValue());
+
+      assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
+    }));
+  }
+  
   @Test
   public void testPieceReceiptStatusFailureWhenNoMatchingPoLineForPiece(TestContext context) {
     logger.info("=== Test case when no poLines exists referenced by a piece which should throw a 404 Exception ===");
