@@ -41,7 +41,7 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
 
   public static final String TEST_ADDRESS = "testReceiptStatusAddress";
   private static final String BAD_PO_LINE_404 = "5b454292-6aaa-474f-9510-b59a564e0c8d";
-  private static final String PO_LINE_ID_TIED_TO_PIECE_WHEN_TOTAL_PIECES_EMPTY = "84257f10-b6d4-4d3f-b1f0-0f6b31ea6edd";
+  private static final String PO_LINE_ID_TIED_TO_PIECE_WHEN_TOTAL_PIECES_EMPTY = "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a";
   private static final String POLINE_UUID_TIED_TO_PIECE = "d471d766-8dbb-4609-999a-02681dea6c22";
 
   private static Vertx vertx;
