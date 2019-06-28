@@ -981,7 +981,6 @@ public class MockServer {
     } catch(IOException e) {
       fail(e.getMessage());
     }
-
   }
   
   private void handleGetPieces(RoutingContext ctx) {
