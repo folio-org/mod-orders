@@ -208,7 +208,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     // The piece searches should be made 2 times: 1st time to get piece record,
     // 2nd time to calculate expected PO Line status
-    assertThat(pieceSearches, hasSize(2));
+    assertThat(pieceSearches, hasSize(3));
     assertThat(pieceUpdates, hasSize(1));
     assertThat(itemsSearches, hasSize(1));
     assertThat(itemUpdates, hasSize(1));
@@ -222,8 +222,8 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     polUpdates.forEach(pol -> {
       PoLine poLine = pol.mapTo(PoLine.class);
       assertThat(poLine.getCheckinItems(), is(true));
-      assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.FULLY_RECEIVED));
-      assertThat(poLine.getReceiptDate(), notNullValue());
+      assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.AWAITING_RECEIPT));
+      assertThat(poLine.getReceiptDate(), nullValue());
     });
 
     // Verify message is sent via event bus

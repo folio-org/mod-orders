@@ -540,7 +540,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity, PoLine poLine,
       List<Piece> pieces) {
     // Fully Received:If receiving and there is no expected piece remaining
-    if (expectedPiecesQuantity == 0) {
+    if (!poLine.getCheckinItems() && expectedPiecesQuantity == 0) {
       return CompletableFuture.completedFuture(FULLY_RECEIVED);
     }
     // Partially Received: In case there is at least one successfully received
