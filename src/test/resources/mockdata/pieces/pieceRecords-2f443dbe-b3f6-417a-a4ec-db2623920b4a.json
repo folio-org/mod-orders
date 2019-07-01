@@ -1,0 +1,37 @@
+{
+  "pieces": [
+    {
+      "id": "738c90ac-99b5-4ba3-9565-30d27d7bfa3c",
+      "poLineId": "2f443dbe-b3f6-417a-a4ec-db2623920b4a",
+      "receivingStatus": "Received",
+      "receivedDate": "2019-03-05T08:06:58.473+0000"
+    },
+    {
+      "id": "9f5d74b7-979e-4e4d-b7b5-d5697a7f4311",
+      "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "poLineId": "2f443dbe-b3f6-417a-a4ec-db2623920b4a",
+      "receivingStatus": "Received"
+    },
+    {
+      "id": "d9a393a8-f153-44c8-bf72-96a7e2eff5d0",
+      "itemId": "a940a524-ec08-42a4-8e63-2b7f8194371e",
+      "poLineId": "2f443dbe-b3f6-417a-a4ec-db2623920b4a",
+      "receivingStatus": "Received"
+    },
+    {
+      "id": "0f4a51d0-1af0-4ad8-8881-c6f7696904be",
+      "itemId": "fbd41843-569b-4a15-95da-6d543fe489ad",
+      "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "poLineId": "2f443dbe-b3f6-417a-a4ec-db2623920b4a",
+      "receivingStatus": "Received"
+    },
+    {
+      "id": "d2468f09-23a6-4f5c-9449-adbf6d8ce60f",
+      "itemId": "821559ef-4ee7-4b19-a835-a6787c2bafb9",
+      "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "poLineId": "2f443dbe-b3f6-417a-a4ec-db2623920b4a",
+      "receivingStatus": "Received"
+    }
+  ],
+  "totalRecords": 5
+}
