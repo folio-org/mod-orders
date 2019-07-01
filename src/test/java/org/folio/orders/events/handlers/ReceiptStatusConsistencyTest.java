@@ -43,6 +43,7 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
   private static final String BAD_PO_LINE_404 = "5b454292-6aaa-474f-9510-b59a564e0c8d";
   private static final String PO_LINE_ID_TIED_TO_PIECE_WHEN_TOTAL_PIECES_EMPTY = "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a";
   private static final String POLINE_UUID_TIED_TO_PIECE = "d471d766-8dbb-4609-999a-02681dea6c22";
+  private static final String POLINE_UUID_TIED_TO_PIECE_PARTIALLY_RECEIVED = "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56";
 
   private static Vertx vertx;
 
@@ -76,6 +77,28 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
     }));
   }
 
+  @Test
+  public void testSuccessPartiallyReceivedStatusWhenAtleastOneSuccessfullyReceivedPiece(TestContext context) {
+    logger.info("=== Test case for partially received status when at least one successfully received piece ===");
+
+    sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE_PARTIALLY_RECEIVED), context.asyncAssertSuccess(result -> {
+      logger.info("getPoLineSearches()--->" + getPoLineSearches());
+      logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
+      logger.info("getPieceSearches()--->" + getPieceSearches());
+      assertEquals(5, getPieceSearches().get(0).getJsonArray("pieces").size());
+      
+      Piece piece0 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(0).mapTo(Piece.class);
+      Piece piece1 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(1).mapTo(Piece.class);
+      assertEquals(ReceivingStatus.RECEIVED, piece0.getReceivingStatus());
+      assertEquals(ReceivingStatus.EXPECTED, piece1.getReceivingStatus());
+      
+      PoLine poLine = getPoLineUpdates().get(0).mapTo(PoLine.class);
+      assertEquals(ReceiptStatus.PARTIALLY_RECEIVED, poLine.getReceiptStatus());
+
+      assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
+    }));
+  }
+  
   @Test
   public void testSuccessReceiptStatusWhenTotalPiecesEmpty(TestContext context) {
     logger.info("=== Test case to verify receipt status when total pieces empty ===");
