@@ -126,9 +126,9 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully created new acquisitions units membership: " + JsonObject.mapFrom(membership).encodePrettily());
         }
-        asyncResultHandler.handle(succeededFuture(asyncResultHandler.handle(succeededFuture(helper
-          .buildResponseWithLocation(String.format(ACQUISITIONS_UNITS_LOCATION_PREFIX, membership.getId()), membership)));));
-        helper.closeHttpClient();
+        asyncResultHandler.handle(succeededFuture(helper
+          .buildResponseWithLocation(String.format(ACQUISITIONS_MEMBERSHIPS_LOCATION_PREFIX, membership.getId()), membership)));
+
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
@@ -198,12 +198,6 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
         asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
-  }
-
-  private Response buildResponseForPostUnit(AcquisitionsUnit unit) {
-    PostAcquisitionsUnitsUnitsResponse.HeadersFor201 headersFor201 = PostAcquisitionsUnitsUnitsResponse.headersFor201()
-      .withLocation(ACQUISITIONS_UNITS_LOCATION_PREFIX + unit.getId());
-    return PostAcquisitionsUnitsUnitsResponse.respond201WithApplicationJson(unit, headersFor201);
   }
 
   private Void handleErrorResponse(Handler<AsyncResult<Response>> asyncResultHandler, AbstractHelper helper, Throwable t) {
