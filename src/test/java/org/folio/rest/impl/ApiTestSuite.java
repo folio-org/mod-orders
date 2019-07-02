@@ -24,13 +24,16 @@ import java.util.concurrent.TimeoutException;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+  AcquisitionsUnitsTests.class,
+  AcquisitionsMembershipsTests.class,
   PurchaseOrdersApiTest.class,
   PurchaseOrderLinesApiTest.class,
   CheckinReceivingApiTest.class,
   PieceApiTest.class,
   ReceivingHistoryApiTest.class,
   PoNumberApiTest.class,
-  OrderStatusTest.class
+  OrderStatusTest.class,
+  AcquisitionsUnitAssignmentsTests.class
 })
 public class ApiTestSuite {
 

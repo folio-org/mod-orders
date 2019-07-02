@@ -20,6 +20,8 @@ import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 import javax.ws.rs.core.Response;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +39,7 @@ public abstract class AbstractHelper {
   public static final String ID = "id";
   public static final String ORDER_IDS = "orderIds";
   public static final String ERROR_CAUSE = "cause";
+  public static final String OKAPI_URL = "x-okapi-url";
 
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -99,8 +102,8 @@ public abstract class AbstractHelper {
    * Some requests do not have body and in happy flow do not produce response body. The Accept header is required for calls to storage
    */
   private static void setDefaultHeaders(HttpClientInterface httpClient) {
-    Map<String,String> customHeader = new HashMap<>();
-    customHeader.put(HttpHeaders.ACCEPT.toString(), APPLICATION_JSON  + ", " + TEXT_PLAIN);
+    Map<String, String> customHeader = new HashMap<>();
+    customHeader.put(HttpHeaders.ACCEPT.toString(), APPLICATION_JSON + ", " + TEXT_PLAIN);
     httpClient.setDefaultHeaders(customHeader);
   }
 
@@ -220,6 +223,18 @@ public abstract class AbstractHelper {
     return Response.status(CREATED).header(CONTENT_TYPE, APPLICATION_JSON).entity(body).build();
   }
 
+  public Response buildResponseWithLocation(String endpoint, Object body) {
+    closeHttpClient();
+    try {
+      return Response.created(new URI(okapiHeaders.get(OKAPI_URL) + endpoint))
+        .header(CONTENT_TYPE, APPLICATION_JSON).entity(body).build();
+    } catch (URISyntaxException e) {
+      return Response.status(CREATED).location(URI.create(endpoint))
+        .header(CONTENT_TYPE, APPLICATION_JSON)
+        .header(LOCATION, endpoint).entity(body).build();
+    }
+  }
+
   public CompletableFuture<JsonObject> getTenantConfiguration() {
     if (this.tenantConfiguration != null) {
       return CompletableFuture.completedFuture(this.tenantConfiguration);
@@ -240,7 +255,7 @@ public abstract class AbstractHelper {
     data.put(LANG, lang);
 
     ctx.owner()
-       .eventBus()
-       .send(messageAddress.address, data, deliveryOptions);
+      .eventBus()
+      .send(messageAddress.address, data, deliveryOptions);
   }
 }
