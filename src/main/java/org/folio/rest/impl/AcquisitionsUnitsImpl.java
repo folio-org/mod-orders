@@ -38,7 +38,6 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
 
         asyncResultHandler.handle(succeededFuture(helper
           .buildResponseWithLocation(String.format(ACQUISITIONS_UNITS_LOCATION_PREFIX, unit.getId()), unit)));
-        helper.closeHttpClient();
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }

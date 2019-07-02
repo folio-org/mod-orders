@@ -295,7 +295,7 @@
       ]
     },
     {
-      "id": "acquisitions-unit-assignments",
+      "id": "orders.acquisitions-unit-assignments",
       "version": "1.0",
       "handlers": [
         {
