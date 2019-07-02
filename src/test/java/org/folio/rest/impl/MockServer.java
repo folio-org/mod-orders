@@ -84,6 +84,7 @@ import static org.folio.rest.impl.ApiTestBase.INSTANCE_TYPE_CONTAINS_CODE_AS_INS
 import static org.folio.rest.impl.ApiTestBase.NON_EXIST_LOAN_TYPE_TENANT;
 import static org.folio.rest.impl.ApiTestBase.PO_ID_GET_LINES_INTERNAL_SERVER_ERROR;
 import static org.folio.rest.impl.ApiTestBase.PO_LINE_NUMBER_VALUE;
+import static org.folio.rest.impl.ApiTestBase.getMockAsJson;
 import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEMS;
 import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
@@ -247,12 +248,16 @@ public class MockServer {
     return serverRqRs.get(ORDER_LINES, HttpMethod.GET);
   }
 
-  static List<JsonObject> getContributorNameTypesSearches() {
-    return serverRqRs.get(CONTRIBUTOR_NAME_TYPES, HttpMethod.GET);
+  static List<JsonObject> getLoanTypesSearches() {
+    return serverRqRs.get(LOAN_TYPES, HttpMethod.GET);
   }
 
   static List<JsonObject> getInstanceStatusesSearches() {
     return serverRqRs.get(INSTANCE_STATUSES, HttpMethod.GET);
+  }
+
+  static List<JsonObject> getContributorNameTypesSearches() {
+    return serverRqRs.get(CONTRIBUTOR_NAME_TYPES, HttpMethod.GET);
   }
 
   static List<JsonObject> getInstanceTypesSearches() {
@@ -1243,21 +1248,30 @@ public class MockServer {
   private void handleGetContributorNameTypes(RoutingContext ctx) {
     String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
     String tenantId = ctx.request().getHeader(OKAPI_HEADER_TENANT);
-    try {
-      if (NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT.equals(tenantId)) {
-        String body = buildEmptyCollection(CONTRIBUTOR_NAME_TYPES);
-        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
-        addServerRqRsData(HttpMethod.GET, CONTRIBUTOR_NAME_TYPES, new JsonObject(body));
-      } else if (("name==Personal name").equals(queryParam)) {
-        String body = ApiTestBase.getMockData(CONTRIBUTOR_NAME_TYPES_PATH);
-        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
-        addServerRqRsData(HttpMethod.GET, CONTRIBUTOR_NAME_TYPES, new JsonObject(body));
-      } else {
-        serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Illegal query");
-      }
-    } catch (IOException e) {
-      serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Mock-server error");
+
+    if (NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT.equals(tenantId)) {
+      String body = buildEmptyCollection(CONTRIBUTOR_NAME_TYPES);
+
+      serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
+      addServerRqRsData(HttpMethod.GET, CONTRIBUTOR_NAME_TYPES, new JsonObject(body));
+    } else if (queryParam.startsWith("id==")) {
+      List<String> contributorNameTypeIds = extractIdsFromQuery(queryParam);
+
+      JsonObject contributorNameTypeCollection = getMockAsJson(CONTRIBUTOR_NAME_TYPES_PATH);
+      List<JsonObject> contributorNameTypes = contributorNameTypeCollection.getJsonArray(CONTRIBUTOR_NAME_TYPES)
+        .stream()
+        .map(o -> ((JsonObject) o))
+        .filter(contributorNameType -> contributorNameTypeIds.contains(contributorNameType.getString(ID)))
+        .collect(Collectors.toList());
+
+      contributorNameTypeCollection.put(CONTRIBUTOR_NAME_TYPES, contributorNameTypes);
+
+      serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, contributorNameTypeCollection.encodePrettily());
+      addServerRqRsData(HttpMethod.GET, CONTRIBUTOR_NAME_TYPES, contributorNameTypeCollection);
+    } else {
+      serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Illegal query");
     }
+
   }
 
   private void handleGetOrderLines(RoutingContext ctx) {

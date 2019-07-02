@@ -37,6 +37,7 @@ public abstract class AbstractHelper {
   public static final String ID = "id";
   public static final String ORDER_IDS = "orderIds";
   public static final String ERROR_CAUSE = "cause";
+  static final int MAX_IDS_FOR_GET_RQ = 15;
 
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 

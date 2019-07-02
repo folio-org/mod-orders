@@ -64,7 +64,6 @@ import one.util.streamex.StreamEx;
 
 public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
-  static final int MAX_IDS_FOR_GET_RQ = 15;
   private static final String PIECES_WITH_QUERY_ENDPOINT = resourcesPath(PIECES) + "?limit=%d&lang=%s&query=%s";
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
   Map<String, Map<String, T>> piecesByLineId;

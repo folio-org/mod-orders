@@ -106,7 +106,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     assertThat(polSearches, not(nullValue()));
     assertThat(polUpdates, not(nullValue()));
 
-    int expectedSearchRqQty = Math.floorDiv(checkInRq.getTotalRecords(), CheckinReceivePiecesHelper.MAX_IDS_FOR_GET_RQ) + 1;
+    int expectedSearchRqQty = Math.floorDiv(checkInRq.getTotalRecords(), AbstractHelper.MAX_IDS_FOR_GET_RQ) + 1;
 
     // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd time to calculate expected PO Line status
     assertThat(pieceSearches, hasSize(expectedSearchRqQty + pieceIdsByPol.size()));
@@ -323,7 +323,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     assertThat(polSearches, not(nullValue()));
     assertThat(polUpdates, not(nullValue()));
 
-    int expectedSearchRqQty = Math.floorDiv(receivingRq.getTotalRecords(), CheckinReceivePiecesHelper.MAX_IDS_FOR_GET_RQ) + 1;
+    int expectedSearchRqQty = Math.floorDiv(receivingRq.getTotalRecords(), AbstractHelper.MAX_IDS_FOR_GET_RQ) + 1;
 
     // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd time to calculate expected PO Line status
     assertThat(pieceSearches, hasSize(expectedSearchRqQty + pieceIdsByPol.size()));
@@ -373,7 +373,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     assertThat(polSearches, not(nullValue()));
     assertThat(polUpdates, not(nullValue()));
 
-    int expectedSearchRqQty = Math.floorDiv(receiving.getTotalRecords(), CheckinReceivePiecesHelper.MAX_IDS_FOR_GET_RQ) + 1;
+    int expectedSearchRqQty = Math.floorDiv(receiving.getTotalRecords(), AbstractHelper.MAX_IDS_FOR_GET_RQ) + 1;
 
     // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd time to calculate expected PO Line status
     assertThat(pieceSearches, hasSize(expectedSearchRqQty + pieceIdsByPol.size()));

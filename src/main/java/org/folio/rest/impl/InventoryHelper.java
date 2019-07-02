@@ -27,12 +27,16 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.stream.Collectors;
+
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.ErrorCodes.ITEM_CREATION_FAILED;
+import static org.folio.orders.utils.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_LOAN_TYPE;
@@ -70,14 +74,11 @@ public class InventoryHelper extends AbstractHelper {
   static final String INSTANCE_TYPES = "instanceTypes";
   static final String ITEMS = "items";
   static final String LOAN_TYPES = "loantypes";
-  static final String TOTAL_RECORDS = "totalRecords";
 
   // mod-configuration: config names and default values
-  static final String CONFIG_NAME_CONTRIBUTOR_NAME_TYPE = "inventory-contributorNameType";
   static final String CONFIG_NAME_INSTANCE_TYPE_CODE = "inventory-instanceTypeCode";
   static final String CONFIG_NAME_INSTANCE_STATUS_CODE = "inventory-instanceStatusCode";
   static final String CONFIG_NAME_LOAN_TYPE_NAME = "inventory-loanTypeName";
-  static final String DEFAULT_CONTRIBUTOR_NAME_TYPE = "Personal name";
   static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
   static final String DEFAULT_INSTANCE_STATUS_CODE = "temp";
   static final String DEFAULT_LOAN_TYPE_NAME = "Can circulate";
@@ -340,7 +341,7 @@ public class InventoryHelper extends AbstractHelper {
     }
 
     String query = compPOL.getDetails().getProductIds().stream()
-      .map(productId -> buildProductIdQuery(productId))
+      .map(this::buildProductIdQuery)
       .collect(joining(" or "));
 
     // query contains special characters so must be encoded before submitting
@@ -376,18 +377,46 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> verifyContributorNameTypesExist(List<Contributor> contributors) {
-    List<String> ids = contributors.stream().map(Contributor::getContributorNameType).collect(toList());
-    String query = convertIdsToCqlQuery(ids);
-    String endpoint = buildLookupEndpoint(INVENTORY_LOOKUP_ENDPOINTS.get(CONTRIBUTOR_NAME_TYPES), ids.size(), query, lang);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+    List<String> ids = contributors.stream()
+      .map(Contributor::getContributorNameTypeId)
+      .distinct()
+      .collect(toList());
+
+    return getContributorNameTypes(ids)
       .thenAccept(contributorNameTypes -> {
-        if (contributorNameTypes.getInteger(TOTAL_RECORDS) != ids.size()) {
-          Error error = buildMissingContributorNameTypesError(contributorNameTypes, ids);
-          throw  new HttpException(500, error);
+
+        List<String> retrievedIds = contributorNameTypes.stream()
+          .map(o -> o.getString(ID).toLowerCase())
+          .collect(toList());
+
+        if (retrievedIds.size() != ids.size()) {
+          ids.removeAll(retrievedIds);
+          throw new HttpException(500, buildErrorWithParameter(String.join(", ", ids), MISSING_CONTRIBUTOR_NAME_TYPE));
         }
       });
   }
-  private CompletableFuture<JsonObject> findContributorNameTypes
+
+  private CompletableFuture<List<JsonObject>> getContributorNameTypes(List<String> ids) {
+    return collectResultsOnSuccess(StreamEx
+      .ofSubLists(ids, MAX_IDS_FOR_GET_RQ)
+      .map(this::getContributorNameTypeByIds)
+      .toList())
+      .thenApply(lists -> StreamEx.of(lists).toFlatList(contributorNameTypes -> contributorNameTypes));
+  }
+
+  private CompletableFuture<List<JsonObject>> getContributorNameTypeByIds(List<String> ids) {
+    String query = encodeQuery(convertIdsToCqlQuery(ids), logger);
+    String endpoint = buildLookupEndpoint(CONTRIBUTOR_NAME_TYPES, ids.size(), query, lang);
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(entries -> entries.getJsonArray(CONTRIBUTOR_NAME_TYPES).stream()
+        .map(json -> ((JsonObject) json))
+        .collect(Collectors.toList())
+      )
+      .exceptionally(e -> {
+        logger.error("The issue happened getting contributor name types", e);
+        return null;
+      });
+  }
 
   private CompletableFuture<JsonObject> getEntryId(String entryType, ErrorCodes errorCode) {
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>();
@@ -404,9 +433,7 @@ public class InventoryHelper extends AbstractHelper {
   private Error buildErrorWithParameter(String value, ErrorCodes errorCode) {
     List<Parameter> parameters = new ArrayList<>();
     parameters.add(new Parameter().withKey("missingEntry").withValue(value));
-    return new Error()
-      .withCode(errorCode.getCode())
-      .withMessage(errorCode.getDescription())
+    return errorCode.toError()
       .withParameters(parameters);
   }
 
@@ -436,11 +463,11 @@ public class InventoryHelper extends AbstractHelper {
       instance.put(INSTANCE_PUBLICATION, new JsonArray(singletonList(publication)));
     }
 
-    if(compPOL.getContributors() != null && !compPOL.getContributors().isEmpty()) {
+    if(isNotEmpty(compPOL.getContributors())) {
       List<JsonObject> contributors = compPOL.getContributors().stream().map(compPolContributor -> {
         JsonObject invContributor = new JsonObject();
         // According MODORDERS-204 default value for all the contributors is "Personal name".
-        invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, lookupObj.getString(CONTRIBUTOR_NAME_TYPES));
+        invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, compPolContributor.getContributorNameTypeId());
         invContributor.put(CONTRIBUTOR_NAME, compPolContributor.getContributor());
         return invContributor;
       }).collect(toList());
@@ -673,8 +700,6 @@ public class InventoryHelper extends AbstractHelper {
     return getTenantConfiguration()
       .thenApply(configs -> {
         switch (entryType) {
-          case CONTRIBUTOR_NAME_TYPES:
-            return configs.getString(CONFIG_NAME_CONTRIBUTOR_NAME_TYPE, DEFAULT_CONTRIBUTOR_NAME_TYPE);
           case INSTANCE_STATUSES:
             return configs.getString(CONFIG_NAME_INSTANCE_STATUS_CODE, DEFAULT_INSTANCE_STATUS_CODE);
           case INSTANCE_TYPES:

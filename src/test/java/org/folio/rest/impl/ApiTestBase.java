@@ -176,11 +176,11 @@ public class ApiTestBase {
     }
   }
 
-  JsonObject getMockAsJson(String path, String id) {
+  static JsonObject getMockAsJson(String path, String id) {
     return getMockAsJson(String.format("%s%s.json", path, id));
   }
 
-  JsonObject getMockAsJson(String fullPath) {
+  static JsonObject getMockAsJson(String fullPath) {
     try {
       return new JsonObject(getMockData(fullPath));
     } catch (IOException e) {
