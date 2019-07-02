@@ -443,7 +443,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
             if (poFromStorage.getWorkflowStatus() != PENDING && hasNewPoLines(compPO, existingPoLinesArray)) {
               throw new HttpException(422, poFromStorage.getWorkflowStatus() == OPEN ? ErrorCodes.ORDER_OPEN : ErrorCodes.ORDER_CLOSED);
             }
-
             validatePOLineProtectedFieldsChangedinPO(poFromStorage, compPO, existingPoLinesArray);
             //check if the order is in open status and the fields are being changed
             return handlePoLines(compPO, existingPoLinesArray);
@@ -461,14 +460,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
       compPO.getCompositePoLines()
         .stream()
         .forEach(poLine -> {
-          Set<String> fields = HelperUtils.findChangedPoLineProtectedFields(poLine,
+          Set<String> fields = findChangedPoLineProtectedFields(poLine,
               findCorrespondingCompositePoLine(poLine, existedPoLinesArray));
-          HelperUtils.verifyProtectedFieldsChanged(fields);
+          verifyProtectedFieldsChanged(fields);
         });
     }
   }
-
-
 
   private boolean isPoLinesUpdateRequired(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO) {
     return isNotEmpty(compPO.getCompositePoLines()) || isPoNumberChanged(poFromStorage, compPO);

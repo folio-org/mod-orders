@@ -60,6 +60,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class HelperUtils {
 
+  private static final String FIELD_SEPARATOR = "\\.";
   public static final String COMPOSITE_PO_LINES = "compositePoLines";
   public static final String CONFIGS = "configs";
   public static final String CONFIG_NAME = "configName";
@@ -1068,9 +1069,7 @@ public class HelperUtils {
       Set<String> fields = new HashSet<>();
       for (String field : POProtectedFields.getFieldNames()) {
         try {
-          if (isFieldNotEmpty(compPO, compPOFromStorage, field)
-              && !EqualsBuilder.reflectionEquals(readDeclaredField(compPO, field, true),
-                  readDeclaredField(compPOFromStorage, field, true), true, CompositePurchaseOrder.class, true)) {
+          if (isFieldChanged(compPO, compPOFromStorage, field)) {
             fields.add(field);
           }
         } catch (IllegalAccessException e) {
@@ -1085,20 +1084,18 @@ public class HelperUtils {
 
   }
 
-  public static Set<String> findChangedPoLineProtectedFields(CompositePoLine compPOLine,
-      CompositePoLine compPOLineFromStorage) {
+  public static Set<String> findChangedPoLineProtectedFields(CompositePoLine compPOLine, CompositePoLine compPOLineFromStorage) {
     Set<String> fields = new HashSet<>();
     for (String field : POLineProtectedFields.getFieldNames()) {
       try {
         if (field.contains(".")) {
-          String[] splits = field.split("\\.");
-          if (isFieldAdded(compPOLine, compPOLineFromStorage, splits[0])
-              || isFieldDeleted(compPOLine, compPOLineFromStorage, splits[0])
-              || isFieldChanged(compPOLine, compPOLineFromStorage, splits)) {
+          String[] subObject = field.split(FIELD_SEPARATOR);
+          if (isSubObjectAdded(compPOLine, compPOLineFromStorage, subObject[0])
+              || isSubObjectDeleted(compPOLine, compPOLineFromStorage, subObject[0])
+              || isSubObjectFieldChanged(compPOLine, compPOLineFromStorage, subObject)) {
             fields.add(field);
           }
-        } else if (isFieldNotEmpty(compPOLine, compPOLineFromStorage, field)
-            && isFieldChanged(compPOLine, compPOLineFromStorage, field)) {
+        } else if (isFieldChanged(compPOLine, compPOLineFromStorage, field)) {
           fields.add(field);
         }
       } catch (IllegalAccessException e) {
@@ -1116,32 +1113,30 @@ public class HelperUtils {
     }
   }
 
-  private static boolean isFieldChanged(CompositePoLine compPOLine, CompositePoLine compPOLineFromStorage, String[] splits)
+  private static boolean isSubObjectFieldChanged(CompositePoLine compPOLine, CompositePoLine compPOLineFromStorage,
+      String[] subObject) throws IllegalAccessException {
+    return !isFieldNull(compPOLine, subObject[0]) && !isFieldNull(compPOLineFromStorage, subObject[0])
+        && isFieldChanged(readDeclaredField(compPOLine, subObject[0], true),
+            readDeclaredField(compPOLineFromStorage, subObject[0], true), subObject[1]);
+  }
+
+  private static boolean isSubObjectDeleted(CompositePoLine compPOLine, CompositePoLine compPOLineFromStorage, String splits)
       throws IllegalAccessException {
-    return null != readDeclaredField(compPOLine, splits[0], true)
-        && null != readDeclaredField(compPOLineFromStorage, splits[0], true) && isFieldChanged(
-            readDeclaredField(compPOLine, splits[0], true), readDeclaredField(compPOLineFromStorage, splits[0], true), splits[1]);
+    return isFieldNull(compPOLine, splits) && !isFieldNull(compPOLineFromStorage, splits);
   }
 
-  private static boolean isFieldDeleted(CompositePoLine compPOLine, CompositePoLine compPOLineFromStorage, String splits)
+  private static boolean isSubObjectAdded(CompositePoLine compPOLine, CompositePoLine compPOLineFromStorage, String splits)
       throws IllegalAccessException {
-    return null == readDeclaredField(compPOLine, splits, true) && null != readDeclaredField(compPOLineFromStorage, splits, true);
+    return !isFieldNull(compPOLine, splits) && isFieldNull(compPOLineFromStorage, splits);
   }
 
-  private static boolean isFieldAdded(CompositePoLine compPOLine, CompositePoLine compPOLineFromStorage, String splits)
-      throws IllegalAccessException {
-    return null != readDeclaredField(compPOLine, splits, true) && null == readDeclaredField(compPOLineFromStorage, splits, true);
+  private static boolean isFieldNull(CompositePoLine compPoLine, String splits) throws IllegalAccessException {
+    return null == readDeclaredField(compPoLine, splits, true);
   }
-
-  private static boolean isFieldNotEmpty(Object newObject, Object existedObject, String field) {
-    return FieldUtils.getDeclaredField(newObject.getClass(), field, true) != null && FieldUtils.getDeclaredField(existedObject.getClass(), field, true) != null;
-  }
-
-
 
   private static boolean isFieldChanged(Object newObject, Object existedObject, String field) throws IllegalAccessException {
-    return !EqualsBuilder.reflectionEquals(FieldUtils.readDeclaredField(newObject, field, true), FieldUtils.readDeclaredField(existedObject, field, true), true, existedObject.getClass(), true);
+    return !EqualsBuilder.reflectionEquals(FieldUtils.readDeclaredField(newObject, field, true),
+        FieldUtils.readDeclaredField(existedObject, field, true), true, existedObject.getClass(), true);
   }
-
 
 }

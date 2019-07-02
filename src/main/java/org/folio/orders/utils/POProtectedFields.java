@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 
 public enum POProtectedFields {
   PO_NUMBER("poNumber"),
-  REASON_FOR_CLOSURE("reasonForClosure"),
+  CLOSE_REASON("closeReason"),
   MANUAL_PO("manualPo"),
   APPROVED("approved"),
   ORDER_TYPE("orderType"),

@@ -1867,6 +1867,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.setVendor("d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1");
     assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
 
+    reqData.setApproved(false);
+    reqData.setReEncumber(false);
+
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()),
       JsonObject.mapFrom(reqData), EMPTY, 204);
 
@@ -2008,7 +2011,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testUpdateWithProtectedFieldsChanging() throws IllegalAccessException {
     logger.info("=== Test case when OPEN order errors if protected fields are changed ===");
 
-    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS).mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS)
+      .mapTo(CompositePurchaseOrder.class);
     assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
 
     Map<POProtectedFields, Object> allProtectedFieldsModification = new HashMap<>();
@@ -2017,14 +2021,15 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     allProtectedFieldsModification.put(POProtectedFields.PO_NUMBER, "testPO");
     allProtectedFieldsModification.put(POProtectedFields.MANUAL_PO, true);
     allProtectedFieldsModification.put(POProtectedFields.RE_ENCUMBER, true);
-    allProtectedFieldsModification.put(POProtectedFields.BILL_TO, UUID.randomUUID().toString());
+    allProtectedFieldsModification.put(POProtectedFields.BILL_TO, UUID.randomUUID()
+      .toString());
     allProtectedFieldsModification.put(POProtectedFields.VENDOR, "d1b79c8d-4950-482f-8e42-04f9aae3cb40");
     allProtectedFieldsModification.put(POProtectedFields.ORDER_TYPE, CompositePurchaseOrder.OrderType.ONGOING);
     Renewal renewal = new Renewal();
     renewal.setManualRenewal(true);
     allProtectedFieldsModification.put(POProtectedFields.RENEWAL, renewal);
 
-  checkPreventPOModificationRule(reqData, allProtectedFieldsModification);
+    checkPreventPOModificationRule(reqData, allProtectedFieldsModification);
 
   }
 
@@ -2032,10 +2037,14 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testUpdateWithProtectedFieldsChangingForClosedOrder() throws IllegalAccessException {
     logger.info("=== Test case when closed order errors if protected fields are changed ===");
 
-    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_CLOSED_STATUS).mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_CLOSED_STATUS)
+      .mapTo(CompositePurchaseOrder.class);
     assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.CLOSED));
 
-    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider("d1b79c8d-4950-482f-8e42-04f9aae3cb40");
+    reqData.getCompositePoLines()
+      .get(0)
+      .getEresource()
+      .setAccessProvider("d1b79c8d-4950-482f-8e42-04f9aae3cb40");
 
     Map<POProtectedFields, Object> allProtectedFieldsModification = new HashMap<>();
 
@@ -2043,7 +2052,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     allProtectedFieldsModification.put(POProtectedFields.PO_NUMBER, "testPO");
     allProtectedFieldsModification.put(POProtectedFields.MANUAL_PO, true);
     allProtectedFieldsModification.put(POProtectedFields.RE_ENCUMBER, true);
-    allProtectedFieldsModification.put(POProtectedFields.BILL_TO, UUID.randomUUID().toString());
+    allProtectedFieldsModification.put(POProtectedFields.BILL_TO, UUID.randomUUID()
+      .toString());
     allProtectedFieldsModification.put(POProtectedFields.VENDOR, "d1b79c8d-4950-482f-8e42-04f9aae3cb40");
     allProtectedFieldsModification.put(POProtectedFields.ORDER_TYPE, CompositePurchaseOrder.OrderType.ONE_TIME);
     Renewal renewal = new Renewal();
