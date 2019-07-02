@@ -23,8 +23,8 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
 
   private static final Logger logger = LoggerFactory.getLogger(AcquisitionsUnit.class);
 
-  private static final String ACQUISITIONS_UNITS_LOCATION_PREFIX = "/acquisitions-units/units/";
-  private static final String ACQUISITIONS_MEMBERSHIPS_LOCATION_PREFIX = "/acquisitions-units/memberships/";
+  private static final String ACQUISITIONS_UNITS_LOCATION_PREFIX = "/acquisitions-units/units/%s";
+  private static final String ACQUISITIONS_MEMBERSHIPS_LOCATION_PREFIX = "/acquisitions-units/memberships/%s";
 
   @Override
   @Validate
@@ -38,8 +38,8 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
           logger.info("Successfully created new acquisitions unit: " + JsonObject.mapFrom(unit).encodePrettily());
         }
 
-        asyncResultHandler.handle(succeededFuture(buildResponseForPostUnit(unit)));
-        helper.closeHttpClient();
+        asyncResultHandler.handle(succeededFuture(helper
+          .buildResponseWithLocation(String.format(ACQUISITIONS_UNITS_LOCATION_PREFIX, unit.getId()), unit)));
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
@@ -126,8 +126,9 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully created new acquisitions units membership: " + JsonObject.mapFrom(membership).encodePrettily());
         }
-        asyncResultHandler.handle(succeededFuture(buildResponseForPostUnitsMembership(membership)));
-        helper.closeHttpClient();
+        asyncResultHandler.handle(succeededFuture(helper
+          .buildResponseWithLocation(String.format(ACQUISITIONS_MEMBERSHIPS_LOCATION_PREFIX, membership.getId()), membership)));
+
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
@@ -197,18 +198,6 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
         asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
-  }
-
-  private Response buildResponseForPostUnit(AcquisitionsUnit unit) {
-    PostAcquisitionsUnitsUnitsResponse.HeadersFor201 headersFor201 = PostAcquisitionsUnitsUnitsResponse.headersFor201()
-      .withLocation(ACQUISITIONS_UNITS_LOCATION_PREFIX + unit.getId());
-    return PostAcquisitionsUnitsUnitsResponse.respond201WithApplicationJson(unit, headersFor201);
-  }
-
-  private Response buildResponseForPostUnitsMembership(AcquisitionsUnitMembership membership) {
-    PostAcquisitionsUnitsMembershipsResponse.HeadersFor201 headersFor201 = PostAcquisitionsUnitsMembershipsResponse.headersFor201()
-      .withLocation(ACQUISITIONS_MEMBERSHIPS_LOCATION_PREFIX + membership.getId());
-    return PostAcquisitionsUnitsMembershipsResponse.respond201WithApplicationJson(membership, headersFor201);
   }
 
   private Void handleErrorResponse(Handler<AsyncResult<Response>> asyncResultHandler, AbstractHelper helper, Throwable t) {
