@@ -223,7 +223,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
       PoLine poLine = pol.mapTo(PoLine.class);
       assertThat(poLine.getCheckinItems(), is(true));
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.AWAITING_RECEIPT));
-      assertThat(poLine.getReceiptDate(), nullValue());
+      assertThat(poLine.getReceiptDate(), is(nullValue()));
     });
 
     // Verify message is sent via event bus
@@ -379,7 +379,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     polUpdates.forEach(pol -> {
       PoLine poLine = pol.mapTo(PoLine.class);
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.PARTIALLY_RECEIVED));
-      assertThat(poLine.getReceiptDate(), not(nullValue()));
+      assertThat(poLine.getReceiptDate(), is(nullValue()));
     });
 
     // Verify messages sent via event bus
@@ -427,7 +427,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     polUpdates.forEach(pol -> {
       PoLine poLine = pol.mapTo(PoLine.class);
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.PARTIALLY_RECEIVED));
-      assertThat(poLine.getReceiptDate(), not(nullValue()));
+      assertThat(poLine.getReceiptDate(), is(nullValue()));
     });
 
     verifyProperQuantityOfHoldingsCreated(receivingRq);

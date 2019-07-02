@@ -1079,7 +1079,7 @@ public class HelperUtils {
     // Update receipt date and receipt status
     if (status == FULLY_RECEIVED) {
       poLine.setReceiptDate(new Date());
-    } else if (poLine.getReceiptStatus()
+    } else if (poLine.getCheckinItems() && poLine.getReceiptStatus()
       .equals(ReceiptStatus.AWAITING_RECEIPT) && status == ReceiptStatus.PARTIALLY_RECEIVED) {
       // if checking in, set the receipt date only for the first piece
       poLine.setReceiptDate(new Date());
