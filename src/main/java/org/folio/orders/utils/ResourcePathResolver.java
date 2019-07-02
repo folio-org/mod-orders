@@ -16,6 +16,8 @@ public class ResourcePathResolver {
   public static final String PO_LINE_NUMBER = "poLineNumber";
 
   public static final String ALERTS = "alerts";
+  public static final String ACQUISITIONS_UNITS = "acquisitionsUnits";
+  public static final String ACQUISITIONS_MEMBERSHIPS = "acquisitionsMemberships";
   public static final String REPORTING_CODES = "reportingCodes";
   public static final String PURCHASE_ORDER = "purchaseOrder";
   public static final String PIECES = "pieces";
@@ -24,6 +26,7 @@ public class ResourcePathResolver {
   public static final String PAYMENT_STATUS = "paymentStatus";
   public static final String SEARCH_ORDERS = "searchOrders";
   public static final String ORDER_LINES = "orderLines";
+  public static final String FINANCE_STORAGE_ENCUMBRANCES = "finance-storage.encumbrances";
 
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
@@ -32,6 +35,8 @@ public class ResourcePathResolver {
   static {
     Map<String, String> apis = new HashMap<>();
     apis.put(ALERTS, "/orders-storage/alerts");
+    apis.put(ACQUISITIONS_UNITS, "/acquisitions-units-storage/units");
+    apis.put(ACQUISITIONS_MEMBERSHIPS, "/acquisitions-units-storage/memberships");
     apis.put(REPORTING_CODES, "/orders-storage/reporting-codes");
     apis.put(PO_LINES, "/orders-storage/po-lines");
     apis.put(PO_NUMBER, "/orders-storage/po-number");
@@ -41,6 +46,7 @@ public class ResourcePathResolver {
     apis.put(PO_LINE_NUMBER, "/orders-storage/po-line-number");
     apis.put(SEARCH_ORDERS, "/orders-storage/orders");
     apis.put(ORDER_LINES, "/orders-storage/order-lines");
+    apis.put(FINANCE_STORAGE_ENCUMBRANCES, "/finance-storage/encumbrances");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);
     SUB_OBJECT_ITEM_APIS = Collections.unmodifiableMap(

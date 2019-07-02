@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "5.0",
+      "version": "6.0",
       "handlers": [
         {
           "methods": ["GET"],
@@ -34,7 +34,8 @@
             "orders-storage.reporting-codes.item.post",
             "orders-storage.reporting-codes.item.put",
             "configuration.entries.collection.get",
-            "inventory-storage.identifier-types.collection.get",
+            "finance-storage.encumbrances.collection.get",
+            "finance-storage.encumbrances.item.post",
             "inventory.instances.collection.get",
             "inventory.instances.item.post",
             "inventory-storage.instance-types.collection.get",
@@ -85,7 +86,8 @@
             "orders-storage.reporting-codes.item.put",
             "orders-storage.reporting-codes.item.delete",
             "configuration.entries.collection.get",
-            "inventory-storage.identifier-types.collection.get",
+            "finance-storage.encumbrances.collection.get",
+            "finance-storage.encumbrances.item.post",
             "inventory.instances.collection.get",
             "inventory.instances.item.post",
             "inventory-storage.instance-types.collection.get",
@@ -257,6 +259,72 @@
       ]
     },
     {
+      "id": "acquisitions-units",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": ["GET"],
+          "pathPattern": "/acquisitions-units/units",
+          "permissionsRequired": ["acquisitions-units.units.collection.get"],
+          "modulePermissions": ["acquisitions-units-storage.units.collection.get"]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/acquisitions-units/units",
+          "permissionsRequired": ["acquisitions-units.units.item.post"],
+          "modulePermissions": ["acquisitions-units-storage.units.item.post"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/acquisitions-units/units/{id}",
+          "permissionsRequired": ["acquisitions-units.units.item.get"],
+          "modulePermissions": ["acquisitions-units-storage.units.item.get"]
+        },
+        {
+          "methods": ["PUT"],
+          "pathPattern": "/acquisitions-units/units/{id}",
+          "permissionsRequired": ["acquisitions-units.units.item.put"],
+          "modulePermissions": ["acquisitions-units-storage.units.item.put"]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/acquisitions-units/units/{id}",
+          "permissionsRequired": ["acquisitions-units.units.item.delete"],
+          "modulePermissions": ["acquisitions-units-storage.units.item.delete"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/acquisitions-units/memberships",
+          "permissionsRequired": ["acquisitions-units.memberships.collection.get"],
+          "modulePermissions": ["acquisitions-units-storage.memberships.collection.get"]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/acquisitions-units/memberships",
+          "permissionsRequired": ["acquisitions-units.memberships.item.post"],
+          "modulePermissions": ["acquisitions-units-storage.memberships.item.post"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/acquisitions-units/memberships/{id}",
+          "permissionsRequired": ["acquisitions-units.memberships.item.get"],
+          "modulePermissions": ["acquisitions-units-storage.memberships.item.get"]
+        },
+        {
+          "methods": ["PUT"],
+          "pathPattern": "/acquisitions-units/memberships/{id}",
+          "permissionsRequired": ["acquisitions-units.memberships.item.put"],
+          "modulePermissions": ["acquisitions-units-storage.memberships.item.put"]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/acquisitions-units/memberships/{id}",
+          "permissionsRequired": ["acquisitions-units.memberships.item.delete"],
+          "modulePermissions": ["acquisitions-units-storage.memberships.item.delete"]
+        }
+      ]
+    },
+    {
       "id": "_jsonSchemas",
       "version": "1.0",
       "interfaceType" : "multiple",
@@ -270,12 +338,20 @@
   ],
   "requires": [
     {
+      "id": "acquisitions-units-storage.units",
+      "version": "1.0"
+    },
+    {
+      "id": "acquisitions-units-storage.memberships",
+      "version": "1.0"
+    },
+    {
       "id": "configuration",
       "version": "2.0"
     },
     {
       "id": "orders-storage.purchase-orders",
-      "version": "5.0"
+      "version": "5.1"
     },
     {
       "id": "orders-storage.alerts",
@@ -295,7 +371,11 @@
     },
     {
       "id": "orders-storage.po-lines",
-      "version": "5.0"
+      "version": "6.0"
+    },
+    {
+      "id": "finance-storage.encumbrances",
+      "version": "1.0"
     },
     {
       "id": "holdings-storage",
@@ -304,10 +384,6 @@
     {
       "id": "orders-storage.po-number",
       "version": "2.0"
-    },
-    {
-      "id": "identifier-types",
-      "version": "1.1"
     },
     {
       "id": "inventory",
@@ -334,7 +410,7 @@
       "version": "1.0"
     }
   ],
-    "permissionSets": [
+  "permissionSets": [
     {
       "permissionName": "orders.collection.get",
       "displayName": "orders - get orders collection",
@@ -424,6 +500,80 @@
       "permissionName": "orders.pieces.item.delete",
       "displayName": "orders - delete an existing piece record",
       "description": "Delete an existing piece"
+    },
+    {
+      "permissionName": "acquisitions-units.units.collection.get",
+      "displayName": "Acquisitions units - get units",
+      "description": "Get a collection of acquisitions units"
+    },
+    {
+      "permissionName": "acquisitions-units.units.item.post",
+      "displayName": "Acquisitions units - create unit",
+      "description": "Create a new acquisitions unit"
+    },
+    {
+      "permissionName": "acquisitions-units.units.item.get",
+      "displayName": "Acquisitions units - get unit",
+      "description": "Fetch an acquisitions unit"
+    },
+    {
+      "permissionName": "acquisitions-units.units.item.put",
+      "displayName": "Acquisitions units - update unit",
+      "description": "Update an acquisitions unit"
+    },
+    {
+      "permissionName": "acquisitions-units.units.item.delete",
+      "displayName": "Acquisitions units - delete unit",
+      "description": "Delete an acquisitions unit"
+    },
+    {
+      "permissionName": "acquisitions-units.units.all",
+      "displayName": "All acquisitions-units perms",
+      "description": "All permissions for the acquisitions-units",
+      "subPermissions": [
+        "acquisitions-units.units.collection.get",
+        "acquisitions-units.units.item.post",
+        "acquisitions-units.units.item.get",
+        "acquisitions-units.units.item.put",
+        "acquisitions-units.units.item.delete"
+      ]
+    },
+    {
+      "permissionName": "acquisitions-units.memberships.collection.get",
+      "displayName": "Acquisitions units memberships - get units memberships",
+      "description": "Get a collection of acquisitions units memberships"
+    },
+    {
+      "permissionName": "acquisitions-units.memberships.item.post",
+      "displayName": "Acquisitions units memberships - create units membership",
+      "description": "Create a new acquisitions units membership"
+    },
+    {
+      "permissionName": "acquisitions-units.memberships.item.get",
+      "displayName": "Acquisitions units memberships - get units membership",
+      "description": "Fetch an acquisitions units membership"
+    },
+    {
+      "permissionName": "acquisitions-units.memberships.item.put",
+      "displayName": "Acquisitions units memberships - update units membership",
+      "description": "Update an acquisitions units membership"
+    },
+    {
+      "permissionName": "acquisitions-units.memberships.item.delete",
+      "displayName": "Acquisitions units memberships - delete units membership",
+      "description": "Delete an acquisitions units membership"
+    },
+    {
+      "permissionName": "acquisitions-units.memberships.all",
+      "displayName": "All acquisitions-units perms",
+      "description": "All permissions for the acquisitions-units memberships",
+      "subPermissions": [
+        "acquisitions-units.memberships.collection.get",
+        "acquisitions-units.memberships.item.post",
+        "acquisitions-units.memberships.item.get",
+        "acquisitions-units.memberships.item.put",
+        "acquisitions-units.memberships.item.delete"
+      ]
     },
     {
       "permissionName": "orders.all",

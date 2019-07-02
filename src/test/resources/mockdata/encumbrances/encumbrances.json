@@ -1,0 +1,26 @@
+{
+  "encumbrances": [
+    {
+      "id": "eb506834-6c70-4239-8d1a-6414a5b08ac3",
+      "amountEncumbered": 80.93,
+      "fundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
+      "poLineId": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47",
+      "status": "Unreleased"
+    },
+    {
+      "id": "0466cb77-0344-43c6-85eb-0a64aa2934e5",
+      "amountEncumbered": 22.9,
+      "fundId": "1b6d3338-186e-4e35-9e75-1b886b0da53e",
+      "poLineId": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47",
+      "status": "Unreleased"
+    },
+    {
+      "id": "eb506834-6c70-4239-8d1a-6414a5b08015",
+      "amountEncumbered": 71.41,
+      "fundId": "a89eccf0-57a6-495e-898d-32b9b2210f2f",
+      "poLineId": "c0d08448-347b-418a-8c2f-5fb50248d67e",
+      "status": "Unreleased"
+    }
+  ],
+  "totalRecords": 3
+}

@@ -23,6 +23,12 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.SequenceNumber;
+import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.acq.model.finance.EncumbranceCollection;
+import org.folio.rest.jaxrs.model.AcquisitionsUnit;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
@@ -52,7 +58,10 @@ import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.FINANCE_STORAGE_ENCUMBRANCES;
 import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
@@ -114,15 +123,19 @@ public class MockServer {
   private static final String ITEMS_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/";
   static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
   static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
-  private static final String INSTANCE_IDENTIFIERS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
+  private static final String ENCUMBRANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "encumbrances/";
   static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
   private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
+  private static final String ACQUISITIONS_UNITS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "acquisitionsUnits/units";
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
   private static final String ORGANIZATIONS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "organizations/";
   static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "/po_line_collection.json";
+  private static final String ACQUISITIONS_UNITS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/units.json";
+  private static final String ACQUISITIONS_MEMBERSHIPS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/memberships.json";
 
   static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
+  static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";
   static final String ORDER_ID_WITH_PO_LINES = "ab18897b-0e40-4f31-896b-9c9adc979a87";
   static final String PO_NUMBER_VALUE = "228D126";
@@ -246,6 +259,14 @@ public class MockServer {
     return serverRqRs.get(INSTANCE_TYPES, HttpMethod.GET);
   }
 
+  static List<Encumbrance> getCreatedEncumbrances() {
+    List<JsonObject> jsonObjects = serverRqRs.get(FINANCE_STORAGE_ENCUMBRANCES, HttpMethod.POST);
+    return jsonObjects == null ? Collections.emptyList()
+        : jsonObjects.stream()
+          .map(json -> json.mapTo(Encumbrance.class))
+          .collect(Collectors.toList());
+  }
+
   private Router defineRoutes() {
     Router router = Router.router(vertx);
 
@@ -257,15 +278,17 @@ public class MockServer {
     router.route(HttpMethod.POST, resourcesPath(PO_LINES)).handler(this::handlePostPOLine);
     router.route(HttpMethod.POST, resourcesPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
     router.route(HttpMethod.POST, resourcesPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
-
     router.route(HttpMethod.POST, resourcesPath(PIECES)).handler(ctx -> handlePostGenericSubObj(ctx, PIECES));
+    router.route(HttpMethod.POST, resourcesPath(FINANCE_STORAGE_ENCUMBRANCES))
+      .handler(ctx -> handlePostGeneric(ctx, FINANCE_STORAGE_ENCUMBRANCES));
+    router.route(HttpMethod.POST, resourcesPath(ACQUISITIONS_UNITS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_UNITS));
+    router.route(HttpMethod.POST, resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
 
-    router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)+"/:id").handler(this::handleGetPurchaseOrderById);
+    router.route(HttpMethod.GET, resourcePath(PURCHASE_ORDER)).handler(this::handleGetPurchaseOrderById);
     router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, PURCHASE_ORDER));
     router.route(HttpMethod.GET, resourcesPath(SEARCH_ORDERS)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, SEARCH_ORDERS));
     router.route(HttpMethod.GET, "/instance-types").handler(this::handleGetInstanceType);
     router.route(HttpMethod.GET, "/instance-statuses").handler(this::handleGetInstanceStatus);
-    router.route(HttpMethod.GET, "/identifier-types").handler(this::handleGetIdentifierType);
     router.route(HttpMethod.GET, "/inventory/instances").handler(this::handleGetInstanceRecord);
     router.route(HttpMethod.GET, "/item-storage/items").handler(this::handleGetItemRecordsFromStorage);
     router.route(HttpMethod.GET, "/inventory/items").handler(this::handleGetInventoryItemRecords);
@@ -284,6 +307,11 @@ public class MockServer {
     router.route(HttpMethod.GET, resourcesPath(PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
     router.route(HttpMethod.GET, "/contributor-name-types").handler(this::handleGetContributorNameTypes);
     router.route(HttpMethod.GET, resourcesPath(ORDER_LINES)).handler(this::handleGetOrderLines);
+    router.route(HttpMethod.GET, resourcesPath(FINANCE_STORAGE_ENCUMBRANCES)).handler(this::handleGetEncumbrances);
+    router.route(HttpMethod.GET, resourcesPath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnits);
+    router.route(HttpMethod.GET, resourcePath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnit);
+    router.route(HttpMethod.GET, resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(this::handleGetAcquisitionsMemberships);
+    router.route(HttpMethod.GET, resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(this::handleGetAcquisitionsMembership);
 
     router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
     router.route(HttpMethod.PUT, resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -292,12 +320,16 @@ public class MockServer {
     router.route(HttpMethod.PUT, resourcePath(ALERTS)).handler(ctx -> handlePutGenericSubObj(ctx, ALERTS));
     router.route(HttpMethod.PUT, "/inventory/items/:id").handler(ctx -> handlePutGenericSubObj(ctx, ITEM_RECORDS));
     router.route(HttpMethod.PUT, "/holdings-storage/holdings/:id").handler(ctx -> handlePutGenericSubObj(ctx, ITEM_RECORDS));
+    router.route(HttpMethod.PUT, resourcePath(ACQUISITIONS_UNITS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITIONS_UNITS));
+    router.route(HttpMethod.PUT, resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
 
-    router.route(HttpMethod.DELETE, resourcesPath(PURCHASE_ORDER)+"/:id").handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER));
+    router.route(HttpMethod.DELETE, resourcePath(PURCHASE_ORDER)).handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER));
     router.route(HttpMethod.DELETE, resourcePath(PO_LINES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES));
     router.route(HttpMethod.DELETE, resourcePath(ALERTS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ALERTS));
     router.route(HttpMethod.DELETE, resourcePath(REPORTING_CODES)).handler(ctx -> handleDeleteGenericSubObj(ctx, REPORTING_CODES));
     router.route(HttpMethod.DELETE, resourcePath(PIECES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PIECES));
+    router.route(HttpMethod.DELETE, resourcePath(ACQUISITIONS_UNITS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_UNITS));
+    router.route(HttpMethod.DELETE, resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
 
     router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
     return router;
@@ -587,19 +619,6 @@ public class MockServer {
     return convertIdsToCqlQuery(Arrays.asList(accessProviders));
   }
 
-  private void handleGetIdentifierType(RoutingContext ctx) {
-    logger.info("got: " + ctx.request().path());
-
-    try {
-      JsonObject po = new JsonObject(ApiTestBase.getMockData(INSTANCE_IDENTIFIERS_MOCK_DATA_PATH + "ISBN.json"));
-      serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
-    } catch (IOException e) {
-      ctx.response()
-        .setStatusCode(404)
-        .end();
-    }
-  }
-
   private void handleGetInstanceStatus(RoutingContext ctx) {
     logger.info("got: " + ctx.request().path());
 
@@ -818,7 +837,7 @@ public class MockServer {
   private void updatePoLineEstimatedPrice(PoLine line) {
     if (line.getCost() != null) {
       Cost cost = JsonObject.mapFrom(line.getCost()).mapTo(Cost.class);
-      line.getCost().setPoLineEstimatedPrice(calculateEstimatedPrice(cost));
+      line.getCost().setPoLineEstimatedPrice(calculateEstimatedPrice(cost).getNumber().doubleValue());
     }
   }
 
@@ -1107,6 +1126,21 @@ public class MockServer {
       .end(JsonObject.mapFrom(po).encodePrettily());
   }
 
+  private void handlePostGeneric(RoutingContext ctx, String objectType) {
+    logger.info("handlePostGeneric {} got: {}", objectType, ctx.getBodyAsString());
+
+    if (objectType.equals(ctx.request().getHeader(HEADER_SERVER_ERROR))) {
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+    } else {
+      String id = UUID.randomUUID().toString();
+      JsonObject body = ctx.getBodyAsJson();
+      body.put(ID, id);
+      addServerRqRsData(HttpMethod.POST, objectType, body);
+
+      serverResponse(ctx, 201, APPLICATION_JSON, body.encodePrettily());
+    }
+  }
+
   private void handlePostGenericSubObj(RoutingContext ctx, String subObj) {
     logger.info("got: " + ctx.getBodyAsString());
 
@@ -1155,6 +1189,10 @@ public class MockServer {
         return org.folio.rest.acq.model.ReportingCode.class;
       case PIECES:
         return org.folio.rest.acq.model.Piece.class;
+      case ACQUISITIONS_UNITS:
+        return AcquisitionsUnit.class;
+      case ACQUISITIONS_MEMBERSHIPS:
+        return AcquisitionsUnitMembership.class;
     }
 
     fail("The sub-object is unknown");
@@ -1260,6 +1298,134 @@ public class MockServer {
       PoLineCollection poLineCollection = new PoLineCollection();
       poLineCollection.setTotalRecords(0);
       serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(poLineCollection).encodePrettily());
+    }
+  }
+
+  private void handleGetEncumbrances(RoutingContext ctx) {
+    logger.info("handleGetEncumbrances got: " + ctx.request()
+      .path());
+
+    String polId = ctx.request()
+      .getParam("query")
+      .replace("poLineId==", "");
+    EncumbranceCollection encumbrances;
+    try {
+      encumbrances = new JsonObject(ApiTestBase.getMockData(ENCUMBRANCE_RECORDS_MOCK_DATA_PATH + "encumbrances.json"))
+        .mapTo(EncumbranceCollection.class);
+    } catch (IOException e) {
+      encumbrances = new EncumbranceCollection();
+    }
+
+    encumbrances.getEncumbrances()
+      .removeIf(encumbrance -> !encumbrance.getPoLineId()
+        .equals(polId));
+
+    encumbrances.setTotalRecords(encumbrances.getEncumbrances().size());
+
+    JsonObject data = JsonObject.mapFrom(encumbrances);
+    addServerRqRsData(HttpMethod.GET, FINANCE_STORAGE_ENCUMBRANCES, data);
+    serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
+  }
+
+  private void handleGetAcquisitionsUnits(RoutingContext ctx) {
+    logger.info("handleGetAcquisitionsUnits got: " + ctx.request().path());
+
+    String query = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+    if (query.contains(BAD_QUERY)) {
+      serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
+    } else {
+      String name = query.replace("name==", "");
+      AcquisitionsUnitCollection units;
+      try {
+        units = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_UNITS_COLLECTION)).mapTo(AcquisitionsUnitCollection.class);
+      } catch (IOException e) {
+        units = new AcquisitionsUnitCollection();
+      }
+
+      if (StringUtils.isNotEmpty(name)) {
+        units.getAcquisitionsUnits().removeIf(unit -> !unit.getName().equals(name));
+      }
+
+      JsonObject data = JsonObject.mapFrom(units.withTotalRecords(units.getAcquisitionsUnits().size()));
+      addServerRqRsData(HttpMethod.GET, ACQUISITIONS_UNITS, data);
+      serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
+    }
+  }
+
+  private void handleGetAcquisitionsUnit(RoutingContext ctx) {
+    logger.info("handleGetAcquisitionsUnits got: " + ctx.request().path());
+    String id = ctx.request().getParam(ID);
+
+    AcquisitionsUnitCollection units;
+    try {
+      units = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_UNITS_COLLECTION)).mapTo(AcquisitionsUnitCollection.class);
+    } catch (IOException e) {
+      units = new AcquisitionsUnitCollection();
+    }
+
+    AcquisitionsUnit acquisitionsUnit = units.getAcquisitionsUnits()
+      .stream()
+      .filter(unit -> unit.getId().equals(id))
+      .findAny()
+      .orElse(null);
+
+    if (acquisitionsUnit != null) {
+      JsonObject data = JsonObject.mapFrom(acquisitionsUnit);
+      addServerRqRsData(HttpMethod.GET, ACQUISITIONS_UNITS, data);
+      serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
+    } else {
+      serverResponse(ctx, 404, TEXT_PLAIN, id);
+    }
+  }
+
+  private void handleGetAcquisitionsMemberships(RoutingContext ctx) {
+    logger.info("handleGetAcquisitionsMemberships got: " + ctx.request().path());
+
+    String query = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+    if (query.contains(BAD_QUERY)) {
+      serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
+    } else {
+      String userId = query.replace("userId==", "");
+      AcquisitionsUnitMembershipCollection memberships;
+      try {
+        memberships = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_MEMBERSHIPS_COLLECTION)).mapTo(AcquisitionsUnitMembershipCollection.class);
+      } catch (IOException e) {
+        memberships = new AcquisitionsUnitMembershipCollection();
+      }
+
+      if (StringUtils.isNotEmpty(userId)) {
+        memberships.getAcquisitionsUnitMemberships().removeIf(membership -> !membership.getUserId().equals(userId));
+      }
+
+      JsonObject data = JsonObject.mapFrom(memberships.withTotalRecords(memberships.getAcquisitionsUnitMemberships().size()));
+      addServerRqRsData(HttpMethod.GET, ACQUISITIONS_MEMBERSHIPS, data);
+      serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
+    }
+  }
+
+  private void handleGetAcquisitionsMembership(RoutingContext ctx) {
+    logger.info("handleGetAcquisitionsMembership got: " + ctx.request().path());
+    String id = ctx.request().getParam(ID);
+
+    AcquisitionsUnitMembershipCollection memberships;
+    try {
+      memberships = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_MEMBERSHIPS_COLLECTION)).mapTo(AcquisitionsUnitMembershipCollection.class);
+    } catch (IOException e) {
+      memberships = new AcquisitionsUnitMembershipCollection();
+    }
+
+    AcquisitionsUnitMembership acquisitionsUnitMembership = memberships.getAcquisitionsUnitMemberships()
+      .stream()
+      .filter(membership -> membership.getId().equals(id))
+      .findAny()
+      .orElse(null);
+
+    if (acquisitionsUnitMembership != null) {
+      JsonObject data = JsonObject.mapFrom(acquisitionsUnitMembership);
+      addServerRqRsData(HttpMethod.GET, ACQUISITIONS_MEMBERSHIPS, data);
+      serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
+    } else {
+      serverResponse(ctx, 404, TEXT_PLAIN, id);
     }
   }
 }
