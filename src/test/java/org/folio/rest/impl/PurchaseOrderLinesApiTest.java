@@ -366,8 +366,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     assertTrue(StringUtils.isEmpty(resp.getBody().asString()));
 
+    //2 calls to get Order Line and Purchase Order for checking workflow status
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(1, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
@@ -399,8 +400,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
 
+    // 2 calls each to fetch Order Line and Purchase Order
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(1, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);

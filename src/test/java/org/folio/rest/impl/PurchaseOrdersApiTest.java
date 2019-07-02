@@ -10,25 +10,17 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.folio.HttpStatus;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.POProtectedFields;
 import org.folio.rest.acq.model.finance.Encumbrance;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.FundDistribution;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Physical.CreateInventory;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
+import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -36,11 +28,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -68,6 +56,7 @@ import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
+import static org.folio.orders.utils.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
@@ -2016,6 +2005,62 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
+  public void testUpdateWithProtectedFieldsChanging() throws IllegalAccessException {
+    logger.info("=== Test case when OPEN order errors if protected fields are changed ===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS).mapTo(CompositePurchaseOrder.class);
+    assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
+
+    Map<POProtectedFields, Object> allProtectedFieldsModification = new HashMap<>();
+
+    allProtectedFieldsModification.put(POProtectedFields.APPROVED, false);
+    allProtectedFieldsModification.put(POProtectedFields.PO_NUMBER, "testPO");
+    allProtectedFieldsModification.put(POProtectedFields.MANUAL_PO, true);
+    allProtectedFieldsModification.put(POProtectedFields.RE_ENCUMBER, true);
+    allProtectedFieldsModification.put(POProtectedFields.BILL_TO, UUID.randomUUID().toString());
+    allProtectedFieldsModification.put(POProtectedFields.VENDOR, "d1b79c8d-4950-482f-8e42-04f9aae3cb40");
+    allProtectedFieldsModification.put(POProtectedFields.ORDER_TYPE, CompositePurchaseOrder.OrderType.ONGOING);
+    Renewal renewal = new Renewal();
+    renewal.setManualRenewal(true);
+    allProtectedFieldsModification.put(POProtectedFields.RENEWAL, renewal);
+
+  checkPreventPOModificationRule(reqData, allProtectedFieldsModification);
+
+  }
+
+  @Test
+  public void testUpdateWithProtectedFieldsChangingForClosedOrder() throws IllegalAccessException {
+    logger.info("=== Test case when closed order errors if protected fields are changed ===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_CLOSED_STATUS).mapTo(CompositePurchaseOrder.class);
+    assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.CLOSED));
+
+    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider("d1b79c8d-4950-482f-8e42-04f9aae3cb40");
+
+    Map<POProtectedFields, Object> allProtectedFieldsModification = new HashMap<>();
+
+    allProtectedFieldsModification.put(POProtectedFields.APPROVED, false);
+    allProtectedFieldsModification.put(POProtectedFields.PO_NUMBER, "testPO");
+    allProtectedFieldsModification.put(POProtectedFields.MANUAL_PO, true);
+    allProtectedFieldsModification.put(POProtectedFields.RE_ENCUMBER, true);
+    allProtectedFieldsModification.put(POProtectedFields.BILL_TO, UUID.randomUUID().toString());
+    allProtectedFieldsModification.put(POProtectedFields.VENDOR, "d1b79c8d-4950-482f-8e42-04f9aae3cb40");
+    allProtectedFieldsModification.put(POProtectedFields.ORDER_TYPE, CompositePurchaseOrder.OrderType.ONE_TIME);
+    Renewal renewal = new Renewal();
+    renewal.setManualRenewal(true);
+    allProtectedFieldsModification.put(POProtectedFields.RENEWAL, renewal);
+
+    checkPreventPOModificationRule(reqData, allProtectedFieldsModification);
+  }
+
+  private Object[] getModifiedProtectedFields(Error error) {
+    return Optional.of(error.getAdditionalProperties().get("protectedAndModifiedFields"))
+      .map(obj -> (List) obj)
+      .get()
+      .toArray();
+  }
+
+  @Test
   public void testPostOpenOrderCacheKayMustBeTenantSpecific() throws Exception {
 
     MockServer.serverRqRs.clear();
@@ -2223,6 +2268,25 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     order.put("workflowStatus", "Pending");
 
     return order;
+  }
+
+  private void checkPreventPOModificationRule(CompositePurchaseOrder compPO, Map<POProtectedFields, Object> updatedFields) throws IllegalAccessException {
+    compPO.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    for (Map.Entry<POProtectedFields, Object> m : updatedFields.entrySet()) {
+      FieldUtils.writeDeclaredField(compPO, m.getKey().getFieldName(), m.getValue(), true);
+    }
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, compPO.getId()), JsonObject.mapFrom(compPO), "", HttpStatus.HTTP_BAD_REQUEST.toInt()).as(Errors.class);
+
+    // Only one error expected
+    assertThat(errors.getErrors(), hasSize(1));
+
+    Error error = errors.getErrors().get(0);
+    assertThat(error.getCode(), equalTo(PROHIBITED_FIELD_CHANGING.getCode()));
+
+    Object[] failedFieldNames = getModifiedProtectedFields(error);
+    Object[] expected = updatedFields.keySet().stream().map(POProtectedFields::getFieldName).toArray();
+    assertThat(failedFieldNames.length, is(expected.length));
+    assertThat(expected, Matchers.arrayContainingInAnyOrder(failedFieldNames));
   }
 
 }

@@ -297,6 +297,13 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine) {
     return getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
       .thenCompose(lineFromStorage -> {
+        HelperUtils.getPurchaseOrderById(compOrderLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger)
+        .thenAccept(purchaseOrder -> {
+          if (purchaseOrder.getString("workflowStatus") != CompositePurchaseOrder.WorkflowStatus.PENDING.toString()) {
+            Set<String> fields = HelperUtils.findChangedPoLineProtectedFields(compOrderLine,lineFromStorage.mapTo(CompositePoLine.class));
+            verifyProtectedFieldsChanged(fields);
+          }
+        });
         // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line update
         compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
         return updateOrderLine(compOrderLine, lineFromStorage)

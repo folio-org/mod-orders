@@ -20,13 +20,9 @@ import java.util.stream.Stream;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.reflect.FieldUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.orders.utils.POLineProtectedFields;
-import org.folio.orders.utils.POProtectedFields;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
@@ -113,9 +109,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @return completable future holding response indicating success (204 No Content) or error if failed
    */
   public CompletableFuture<Void> updateOrder(CompositePurchaseOrder compPO) {
+
     return getPurchaseOrderById(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
-      .thenCompose(poFromStorage -> validateIfProtectedFieldsChanged(compPO,poFromStorage))
+      .thenCompose(poFromStorage -> HelperUtils.validateIfPOProtectedFieldsChanged(compPO,poFromStorage))
       .thenCompose(poFromStorage -> {
         logger.info("Order successfully retrieved from storage");
         return validatePoNumber(poFromStorage, compPO)
@@ -131,69 +128,14 @@ public class PurchaseOrderHelper extends AbstractHelper {
       );
   }
 
-
-  private CompletableFuture<CompositePurchaseOrder> validateIfProtectedFieldsChanged(CompositePurchaseOrder compPO,CompositePurchaseOrder compPOFromStorage){
-    Set<String> fields = new HashSet<>();
-    for(String field:POProtectedFields.getFieldNames()) {
-      try {
-        if (isFieldNotEmpty(compPO, compPOFromStorage, field) && !EqualsBuilder.reflectionEquals(FieldUtils.readDeclaredField(compPO, field, true),
-            FieldUtils.readDeclaredField(compPOFromStorage, field, true), true, CompositePurchaseOrder.class, true)) {
-           fields.add(field);
-        }
-      } catch (IllegalAccessException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
-    }
-
-    fields.addAll(compPO.getCompositePoLines()
-        .stream()
-        .map(poLine -> validatePoLineProtectedFieldsChanged(poLine, findCorrespondingPoLine(poLine, compPOFromStorage)))
-        .flatMap(Set::stream)
-        .collect(Collectors.toSet()));
-
-    if(!fields.isEmpty()) {
-      throw new HttpException(400, "Changing protected Fields");
-    }
-
-    return completedFuture(compPOFromStorage);
-  }
-
-  private Set<String> validatePoLineProtectedFieldsChanged(CompositePoLine compPOLine, CompositePoLine compPOLineFromStorage) {
-    Set<String> fields = new HashSet<>();
-    for(String field:POLineProtectedFields.getFieldNames()) {
-      try {
-        if(field.contains(".")) {
-          String[] splits = field.split(".");
-          if(!EqualsBuilder.reflectionEquals(FieldUtils.readDeclaredField(FieldUtils.readDeclaredField(compPOLine, splits[0], true), splits[1], true),
-            FieldUtils.readDeclaredField(FieldUtils.readDeclaredField(compPOLineFromStorage, splits[0], true), splits[1], true), true, CompositePoLine.class, true)) {
-            fields.add(field);
-          }
-        }
-        if (isFieldNotEmpty(compPOLine, compPOLineFromStorage, field) && !EqualsBuilder.reflectionEquals(FieldUtils.readDeclaredField(compPOLine, field, true),
-            FieldUtils.readDeclaredField(compPOLineFromStorage, field, true), true, CompositePoLine.class, true)) {
-           fields.add(field);
-        }
-      } catch (IllegalAccessException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
-    }
-    return fields;
-  }
-
-  private CompositePoLine findCorrespondingPoLine(CompositePoLine poLine, CompositePurchaseOrder compPOFromStorage) {
-    return compPOFromStorage.getCompositePoLines()
-      .stream()
-      .filter(line -> line.getId()
+  private CompositePoLine findCorrespondingCompositePoLine(CompositePoLine poLine, JsonArray poLinesFromStorage) {
+    return poLinesFromStorage.copy().stream()
+      .filter(line -> ((JsonObject) line).getString(ID)
         .equals(poLine.getId()))
       .findFirst()
+      .map(line -> HelperUtils.convertToCompositePoLine((JsonObject) line))
       .orElse(poLine);
-  }
 
-
-  private static boolean isFieldNotEmpty(Object newObject, Object existedObject, String field) {
-    return FieldUtils.getDeclaredField(newObject.getClass(), field, true) != null && FieldUtils.getDeclaredField(existedObject.getClass(), field, true) != null;
   }
 
   /**
@@ -495,20 +437,38 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private CompletableFuture<Void> updatePoLines(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO) {
     if (isPoLinesUpdateRequired(poFromStorage, compPO)) {
       return getPoLines(poFromStorage.getId(), lang, httpClient, ctx, okapiHeaders, logger)
-        .thenCompose(existedPoLinesArray -> {
+        .thenCompose(existingPoLinesArray -> {
           if (isNotEmpty(compPO.getCompositePoLines())) {
             // New PO Line(s) can be added only to Pending order
-            if (poFromStorage.getWorkflowStatus() != PENDING && hasNewPoLines(compPO, existedPoLinesArray)) {
+            if (poFromStorage.getWorkflowStatus() != PENDING && hasNewPoLines(compPO, existingPoLinesArray)) {
               throw new HttpException(422, poFromStorage.getWorkflowStatus() == OPEN ? ErrorCodes.ORDER_OPEN : ErrorCodes.ORDER_CLOSED);
             }
-            return handlePoLines(compPO, existedPoLinesArray);
+
+            validatePOLineProtectedFieldsChangedinPO(poFromStorage, compPO, existingPoLinesArray);
+            //check if the order is in open status and the fields are being changed
+            return handlePoLines(compPO, existingPoLinesArray);
           } else {
-            return updatePoLinesNumber(compPO, existedPoLinesArray);
+            return updatePoLinesNumber(compPO, existingPoLinesArray);
           }
         });
     }
     return completedFuture(null);
   }
+
+  private void validatePOLineProtectedFieldsChangedinPO(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO,
+      JsonArray existedPoLinesArray) {
+    if (poFromStorage.getWorkflowStatus() != PENDING) {
+      compPO.getCompositePoLines()
+        .stream()
+        .forEach(poLine -> {
+          Set<String> fields = HelperUtils.findChangedPoLineProtectedFields(poLine,
+              findCorrespondingCompositePoLine(poLine, existedPoLinesArray));
+          HelperUtils.verifyProtectedFieldsChanged(fields);
+        });
+    }
+  }
+
+
 
   private boolean isPoLinesUpdateRequired(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO) {
     return isNotEmpty(compPO.getCompositePoLines()) || isPoNumberChanged(poFromStorage, compPO);

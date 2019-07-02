@@ -1,10 +1,13 @@
 package org.folio.orders.utils;
 
 import static java.util.Objects.nonNull;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.reflect.FieldUtils.readDeclaredField;
+import static org.folio.orders.utils.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
@@ -18,13 +21,7 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
@@ -40,6 +37,8 @@ import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.client.ConfigurationsClient;
@@ -67,7 +66,7 @@ public class HelperUtils {
   public static final String CONFIG_VALUE = "value";
   private static final String CONFIG_QUERY = "module=ORDERS";
   private static final String ERROR_MESSAGE = "errorMessage";
-  
+
   public static final String DEFAULT_POLINE_LIMIT = "1";
   public static final String REASON_COMPLETE = "Complete";
   private static final String MAX_POLINE_LIMIT = "500";
@@ -83,6 +82,7 @@ public class HelperUtils {
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
   private static final Pattern HOST_PORT_PATTERN = Pattern.compile("https?://([^:/]+)(?::?(\\d+)?)");
   private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
+  private static final String PROTECTED_AND_MODIFIED_FIELDS = "protectedAndModifiedFields";
 
   private HelperUtils() {
 
@@ -872,7 +872,7 @@ public class HelperUtils {
         new HttpException(response.getCode(), response.getError().getString(ERROR_MESSAGE)));
     }
   }
-  
+
   /**
    * A common method to delete an entry in the storage
    * @param endpoint endpoint
@@ -899,7 +899,7 @@ public class HelperUtils {
 
     return future;
   }
-  
+
   /**
    * Retrieve configuration for mod-orders from mod-configuration.
    * @param okapiHeaders the headers provided by okapi
@@ -1052,6 +1052,95 @@ public class HelperUtils {
     pol.remove(ALERTS);
     pol.remove(REPORTING_CODES);
     return pol.mapTo(PoLine.class);
+  }
+
+
+  public static CompositePoLine convertToCompositePoLine(JsonObject poLine) {
+    poLine.remove(REPORTING_CODES);
+    poLine.remove(ALERTS);
+    return poLine.mapTo(CompositePoLine.class);
+  }
+
+  public static CompletableFuture<CompositePurchaseOrder> validateIfPOProtectedFieldsChanged(CompositePurchaseOrder compPO,
+      CompositePurchaseOrder compPOFromStorage) {
+    if (!compPOFromStorage.getWorkflowStatus()
+      .equals(CompositePurchaseOrder.WorkflowStatus.PENDING)) {
+      Set<String> fields = new HashSet<>();
+      for (String field : POProtectedFields.getFieldNames()) {
+        try {
+          if (isFieldNotEmpty(compPO, compPOFromStorage, field)
+              && !EqualsBuilder.reflectionEquals(readDeclaredField(compPO, field, true),
+                  readDeclaredField(compPOFromStorage, field, true), true, CompositePurchaseOrder.class, true)) {
+            fields.add(field);
+          }
+        } catch (IllegalAccessException e) {
+          throw new CompletionException(e);
+        }
+      }
+
+      verifyProtectedFieldsChanged(fields);
+    }
+
+    return completedFuture(compPOFromStorage);
+
+  }
+
+  public static Set<String> findChangedPoLineProtectedFields(CompositePoLine compPOLine,
+      CompositePoLine compPOLineFromStorage) {
+    Set<String> fields = new HashSet<>();
+    for (String field : POLineProtectedFields.getFieldNames()) {
+      try {
+        if (field.contains(".")) {
+          String[] splits = field.split("\\.");
+          if (isFieldAdded(compPOLine, compPOLineFromStorage, splits[0])
+              || isFieldDeleted(compPOLine, compPOLineFromStorage, splits[0])
+              || isFieldChanged(compPOLine, compPOLineFromStorage, splits)) {
+            fields.add(field);
+          }
+        } else if (isFieldNotEmpty(compPOLine, compPOLineFromStorage, field)
+            && isFieldChanged(compPOLine, compPOLineFromStorage, field)) {
+          fields.add(field);
+        }
+      } catch (IllegalAccessException e) {
+        throw new CompletionException(e);
+      }
+    }
+    return fields;
+  }
+
+  public static void verifyProtectedFieldsChanged(Set<String> fields) {
+    if (CollectionUtils.isNotEmpty(fields)) {
+      Error error = PROHIBITED_FIELD_CHANGING.toError()
+        .withAdditionalProperty(PROTECTED_AND_MODIFIED_FIELDS, fields);
+      throw new HttpException(400, error);
+    }
+  }
+
+  private static boolean isFieldChanged(CompositePoLine compPOLine, CompositePoLine compPOLineFromStorage, String[] splits)
+      throws IllegalAccessException {
+    return null != readDeclaredField(compPOLine, splits[0], true)
+        && null != readDeclaredField(compPOLineFromStorage, splits[0], true) && isFieldChanged(
+            readDeclaredField(compPOLine, splits[0], true), readDeclaredField(compPOLineFromStorage, splits[0], true), splits[1]);
+  }
+
+  private static boolean isFieldDeleted(CompositePoLine compPOLine, CompositePoLine compPOLineFromStorage, String splits)
+      throws IllegalAccessException {
+    return null == readDeclaredField(compPOLine, splits, true) && null != readDeclaredField(compPOLineFromStorage, splits, true);
+  }
+
+  private static boolean isFieldAdded(CompositePoLine compPOLine, CompositePoLine compPOLineFromStorage, String splits)
+      throws IllegalAccessException {
+    return null != readDeclaredField(compPOLine, splits, true) && null == readDeclaredField(compPOLineFromStorage, splits, true);
+  }
+
+  private static boolean isFieldNotEmpty(Object newObject, Object existedObject, String field) {
+    return FieldUtils.getDeclaredField(newObject.getClass(), field, true) != null && FieldUtils.getDeclaredField(existedObject.getClass(), field, true) != null;
+  }
+
+
+
+  private static boolean isFieldChanged(Object newObject, Object existedObject, String field) throws IllegalAccessException {
+    return !EqualsBuilder.reflectionEquals(FieldUtils.readDeclaredField(newObject, field, true), FieldUtils.readDeclaredField(existedObject, field, true), true, existedObject.getClass(), true);
   }
 
 

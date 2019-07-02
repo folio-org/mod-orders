@@ -5,12 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public enum POProtectedFields {
-  CREATED("created"),
-  CREATED_BY("createdBy"),
-  DATE_ORDERED("dateOrdered"),
   PO_NUMBER("poNumber"),
-  PREFIX("prefix"),
-  SUFFIX("suffix"),
   REASON_FOR_CLOSURE("reasonForClosure"),
   MANUAL_PO("manualPo"),
   APPROVED("approved"),
