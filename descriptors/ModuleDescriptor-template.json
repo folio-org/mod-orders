@@ -291,6 +291,36 @@
           "pathPattern": "/acquisitions-units/units/{id}",
           "permissionsRequired": ["acquisitions-units.units.item.delete"],
           "modulePermissions": ["acquisitions-units-storage.units.item.delete"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/acquisitions-units/memberships",
+          "permissionsRequired": ["acquisitions-units.memberships.collection.get"],
+          "modulePermissions": ["acquisitions-units-storage.memberships.collection.get"]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/acquisitions-units/memberships",
+          "permissionsRequired": ["acquisitions-units.memberships.item.post"],
+          "modulePermissions": ["acquisitions-units-storage.memberships.item.post"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/acquisitions-units/memberships/{id}",
+          "permissionsRequired": ["acquisitions-units.memberships.item.get"],
+          "modulePermissions": ["acquisitions-units-storage.memberships.item.get"]
+        },
+        {
+          "methods": ["PUT"],
+          "pathPattern": "/acquisitions-units/memberships/{id}",
+          "permissionsRequired": ["acquisitions-units.memberships.item.put"],
+          "modulePermissions": ["acquisitions-units-storage.memberships.item.put"]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/acquisitions-units/memberships/{id}",
+          "permissionsRequired": ["acquisitions-units.memberships.item.delete"],
+          "modulePermissions": ["acquisitions-units-storage.memberships.item.delete"]
         }
       ]
     },
@@ -349,6 +379,10 @@
     },
     {
       "id": "orders-acquisitions-unit-assignments-storage",
+      "version": "1.0"
+    },
+    {
+      "id": "acquisitions-units-storage.memberships",
       "version": "1.0"
     },
     {
@@ -416,7 +450,7 @@
       "version": "1.0"
     }
   ],
-    "permissionSets": [
+  "permissionSets": [
     {
       "permissionName": "orders.collection.get",
       "displayName": "orders - get orders collection",
@@ -544,43 +578,80 @@
         "acquisitions-units.units.item.delete"
       ]
     },
-      {
-        "permissionName": "orders.acquisitions-units-assignments.assignments.collection.get",
-        "displayName": "Acquisitions unit assignment - get assignments",
-        "description": "Get a collection of acquisitions unit assignments"
-      },
-      {
-        "permissionName": "orders.acquisitions-units-assignments.assignments.item.post",
-        "displayName": "Acquisitions unit assignment - create unit assignment",
-        "description": "Create a new acquisitions unit assignments"
-      },
-      {
-        "permissionName": "orders.acquisitions-units-assignments.assignments.item.get",
-        "displayName": "Acquisitions unit assignment - get unit assignment",
-        "description": "Fetch an acquisitions unit assignments"
-      },
-      {
-        "permissionName": "orders.acquisitions-units-assignments.assignments.item.put",
-        "displayName": "Acquisitions unit assignment - update unit assignment",
-        "description": "Update an acquisitions unit assignments"
-      },
-      {
-        "permissionName": "orders.acquisitions-units-assignments.assignments.item.delete",
-        "displayName": "Acquisitions units - delete unit",
-        "description": "Delete an acquisitions unit assignments"
-      },
-      {
-        "permissionName": "orders.acquisitions-units-assignments.assignments.all",
-        "displayName": "All acquisitions-unit-assignments perms",
-        "description": "All permissions for the acquisitions-unit-assignments",
-        "subPermissions": [
-          "orders.acquisitions-units-assignments.assignments.collection.get",
-          "orders.acquisitions-units-assignments.assignments.item.post",
-          "orders.acquisitions-units-assignments.assignments.item.get",
-          "orders.acquisitions-units-assignments.assignments.item.put",
-          "orders.acquisitions-units-assignments.assignments.item.delete"
-        ]
-      },
+    {
+      "permissionName": "orders.acquisitions-units-assignments.assignments.collection.get",
+      "displayName": "Acquisitions unit assignment - get assignments",
+      "description": "Get a collection of acquisitions unit assignments"
+    },
+    {
+      "permissionName": "orders.acquisitions-units-assignments.assignments.item.post",
+      "displayName": "Acquisitions unit assignment - create unit assignment",
+      "description": "Create a new acquisitions unit assignments"
+    },
+    {
+      "permissionName": "orders.acquisitions-units-assignments.assignments.item.get",
+      "displayName": "Acquisitions unit assignment - get unit assignment",
+      "description": "Fetch an acquisitions unit assignments"
+    },
+    {
+      "permissionName": "orders.acquisitions-units-assignments.assignments.item.put",
+      "displayName": "Acquisitions unit assignment - update unit assignment",
+      "description": "Update an acquisitions unit assignments"
+    },
+    {
+      "permissionName": "orders.acquisitions-units-assignments.assignments.item.delete",
+      "displayName": "Acquisitions units - delete unit",
+      "description": "Delete an acquisitions unit assignments"
+    },
+    {
+      "permissionName": "orders.acquisitions-units-assignments.assignments.all",
+      "displayName": "All acquisitions-unit-assignments perms",
+      "description": "All permissions for the acquisitions-unit-assignments",
+      "subPermissions": [
+        "orders.acquisitions-units-assignments.assignments.collection.get",
+        "orders.acquisitions-units-assignments.assignments.item.post",
+        "orders.acquisitions-units-assignments.assignments.item.get",
+        "orders.acquisitions-units-assignments.assignments.item.put",
+        "orders.acquisitions-units-assignments.assignments.item.delete"
+      ]
+    },
+    {
+      "permissionName": "acquisitions-units.memberships.collection.get",
+      "displayName": "Acquisitions units memberships - get units memberships",
+      "description": "Get a collection of acquisitions units memberships"
+    },
+    {
+      "permissionName": "acquisitions-units.memberships.item.post",
+      "displayName": "Acquisitions units memberships - create units membership",
+      "description": "Create a new acquisitions units membership"
+    },
+    {
+      "permissionName": "acquisitions-units.memberships.item.get",
+      "displayName": "Acquisitions units memberships - get units membership",
+      "description": "Fetch an acquisitions units membership"
+    },
+    {
+      "permissionName": "acquisitions-units.memberships.item.put",
+      "displayName": "Acquisitions units memberships - update units membership",
+      "description": "Update an acquisitions units membership"
+    },
+    {
+      "permissionName": "acquisitions-units.memberships.item.delete",
+      "displayName": "Acquisitions units memberships - delete units membership",
+      "description": "Delete an acquisitions units membership"
+    },
+    {
+      "permissionName": "acquisitions-units.memberships.all",
+      "displayName": "All acquisitions-units perms",
+      "description": "All permissions for the acquisitions-units memberships",
+      "subPermissions": [
+        "acquisitions-units.memberships.collection.get",
+        "acquisitions-units.memberships.item.post",
+        "acquisitions-units.memberships.item.get",
+        "acquisitions-units.memberships.item.put",
+        "acquisitions-units.memberships.item.delete"
+      ]
+    },
     {
       "permissionName": "orders.all",
       "displayName": "orders - all permissions",

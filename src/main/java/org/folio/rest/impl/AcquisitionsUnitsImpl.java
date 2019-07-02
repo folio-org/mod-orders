@@ -9,6 +9,7 @@ import javax.ws.rs.core.Response;
 
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
 import org.folio.rest.jaxrs.resource.AcquisitionsUnits;
 
 import io.vertx.core.AsyncResult;
@@ -23,6 +24,7 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
   private static final Logger logger = LoggerFactory.getLogger(AcquisitionsUnit.class);
 
   private static final String ACQUISITIONS_UNITS_LOCATION_PREFIX = "/acquisitions-units/units/%s";
+  private static final String ACQUISITIONS_MEMBERSHIPS_LOCATION_PREFIX = "/acquisitions-units/memberships/%s";
 
   @Override
   @Validate
@@ -111,6 +113,97 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
         asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+  }
+
+  @Override
+  @Validate
+  public void postAcquisitionsUnitsMemberships(String lang, AcquisitionsUnitMembership entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+
+    AcquisitionsMembershipsHelper helper = new AcquisitionsMembershipsHelper(okapiHeaders, vertxContext, lang);
+
+    helper.createAcquisitionsUnitsMembership(entity)
+      .thenAccept(membership -> {
+        if (logger.isInfoEnabled()) {
+          logger.info("Successfully created new acquisitions units membership: " + JsonObject.mapFrom(membership).encodePrettily());
+        }
+        asyncResultHandler.handle(succeededFuture(asyncResultHandler.handle(succeededFuture(helper
+          .buildResponseWithLocation(String.format(ACQUISITIONS_UNITS_LOCATION_PREFIX, membership.getId()), membership)));));
+        helper.closeHttpClient();
+      })
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+  }
+
+  @Override
+  @Validate
+  public void getAcquisitionsUnitsMemberships(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+
+    AcquisitionsMembershipsHelper helper = new AcquisitionsMembershipsHelper(okapiHeaders, vertxContext, lang);
+
+    helper.getAcquisitionsUnitsMemberships(query, offset, limit)
+      .thenAccept(memberships -> {
+        if (logger.isInfoEnabled()) {
+          logger.info("Successfully created new acquisitions units memberships: " + JsonObject.mapFrom(memberships).encodePrettily());
+        }
+        asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(memberships)));
+      })
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+  }
+
+  @Override
+  @Validate
+  public void putAcquisitionsUnitsMembershipsById(String id, String lang, AcquisitionsUnitMembership entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+
+    AcquisitionsMembershipsHelper helper = new AcquisitionsMembershipsHelper(okapiHeaders, vertxContext, lang);
+
+    if (entity.getId() != null && !entity.getId().equals(id)) {
+      helper.addProcessingError(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
+      asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422)));
+    } else {
+      helper.updateAcquisitionsUnitsMembership(entity.withId(id))
+        .thenAccept(membership -> {
+          logger.info("Successfully updated acquisitions units membership with id={}", id);
+          asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
+        })
+        .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+    }
+  }
+
+  @Override
+  @Validate
+  public void getAcquisitionsUnitsMembershipsById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+
+    AcquisitionsMembershipsHelper helper = new AcquisitionsMembershipsHelper(okapiHeaders, vertxContext, lang);
+
+    helper.getAcquisitionsUnitsMembership(id)
+      .thenAccept(membership -> {
+        if (logger.isInfoEnabled()) {
+          logger.info("Successfully retrieved acquisitions units membership: " + JsonObject.mapFrom(membership).encodePrettily());
+        }
+        asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(membership)));
+      })
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+  }
+
+  @Override
+  @Validate
+  public void deleteAcquisitionsUnitsMembershipsById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+
+    AcquisitionsMembershipsHelper helper = new AcquisitionsMembershipsHelper(okapiHeaders, vertxContext, lang);
+
+    helper.deleteAcquisitionsUnitsMembership(id)
+      .thenAccept(ok -> {
+        if (logger.isInfoEnabled()) {
+          logger.info("Successfully deleted acquisitions units membership with id={}", id);
+        }
+        asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
+      })
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+  }
+
+  private Response buildResponseForPostUnit(AcquisitionsUnit unit) {
+    PostAcquisitionsUnitsUnitsResponse.HeadersFor201 headersFor201 = PostAcquisitionsUnitsUnitsResponse.headersFor201()
+      .withLocation(ACQUISITIONS_UNITS_LOCATION_PREFIX + unit.getId());
+    return PostAcquisitionsUnitsUnitsResponse.respond201WithApplicationJson(unit, headersFor201);
   }
 
   private Void handleErrorResponse(Handler<AsyncResult<Response>> asyncResultHandler, AbstractHelper helper, Throwable t) {
