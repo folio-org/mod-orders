@@ -9,7 +9,6 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static javax.ws.rs.core.Response.Status.CREATED;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.HelperUtils.*;
-import static org.folio.orders.utils.HelperUtils.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import io.vertx.core.Context;
 import io.vertx.core.eventbus.DeliveryOptions;
