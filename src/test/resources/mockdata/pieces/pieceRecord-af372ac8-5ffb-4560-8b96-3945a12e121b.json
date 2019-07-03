@@ -1,11 +1,12 @@
 {
+  "id": "af372ac8-5ffb-4560-8b96-3945a12e121b",
   "caption": "Tutorial Volume 5",
   "comment": "Special Edition",
   "format": "Physical",
   "itemId": "522a501a-56b5-48d9-b28a-3a8f02482d97",
   "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
   "poLineId": "d471d766-8dbb-4609-999a-02681dea6c22",
-  "receivingStatus": "Received",
+  "receivingStatus": "Expected",
   "supplement": true,
   "receivedDate": "2018-10-10T00:00:00.000Z"
 }

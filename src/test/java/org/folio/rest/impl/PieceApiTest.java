@@ -22,6 +22,7 @@ public class PieceApiTest extends ApiTestBase {
   private static final String PIECES_ENDPOINT = "/orders/pieces";
   private static final String PIECES_ID_PATH = PIECES_ENDPOINT + "/%s";
   static final String VALID_UUID = "c3e26c0e-d6a6-46fb-9309-d494cd0c82de";
+  static final String CONSISTENT_RECEIVED_STATUS_PIECE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
   private JsonObject pieceJsonReqData = getMockAsJson(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord.json");
   
   @Test
@@ -59,6 +60,21 @@ public class PieceApiTest extends ApiTestBase {
     String reqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord.json");
 
     verifyPut(String.format(PIECES_ID_PATH, VALID_UUID), reqData, "", 204);
+    
+    // Message sent to event bus
+    verifyReceiptStatusUpdateEvent(1);
+  }
+
+  @Test
+  public void testPutPiecesByIdConsistentReceiptStatusTest() throws Exception {
+    logger.info("=== Test update piece by id when receipt status is consistent - valid Id 204 ===");
+    
+    String reqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-received-consistent-receipt-status-5b454292-6aaa-474f-9510-b59a564e0c8d2.json");
+
+    verifyPut(String.format(PIECES_ID_PATH, CONSISTENT_RECEIVED_STATUS_PIECE_UUID), reqData, "", 204);
+    
+    // Message not sent to event bus
+    verifyReceiptStatusUpdateEvent(0);
   }
 
   @Test

@@ -2,7 +2,6 @@ package org.folio.rest.impl;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
-import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
@@ -17,9 +16,9 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
 import static org.folio.orders.utils.HelperUtils.isHoldingsUpdateRequired;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.impl.InventoryHelper.ITEM_HOLDINGS_RECORD_ID;
@@ -29,7 +28,6 @@ import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -64,9 +62,9 @@ import one.util.streamex.StreamEx;
 
 public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
-  static final int MAX_IDS_FOR_GET_RQ = 15;
-  private static final String PIECES_WITH_QUERY_ENDPOINT = resourcesPath(PIECES) + "?limit=%d&lang=%s&query=%s";
-  private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
+  public static final int MAX_IDS_FOR_GET_RQ = 15;
+  public static final String PIECES_WITH_QUERY_ENDPOINT = resourcesPath(PIECES) + "?limit=%d&lang=%s&query=%s";
+  public static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
   Map<String, Map<String, T>> piecesByLineId;
   final InventoryHelper inventoryHelper;
   Map<String, Map<String, Error>> processingErrors;
@@ -422,7 +420,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
         for (PoLine poLine : poLines) {
           List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
           futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces)
-                .thenCompose(status -> updatePoLineReceiptStatus(poLine, status)));
+                .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, ctx, okapiHeaders, logger)));
         }
 
         return collectResultsOnSuccess(futures)
@@ -469,7 +467,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       .toList();
   }
 
-  private CompletableFuture<List<PoLine>> getPoLines(List<String> poLineIds) {
+  public CompletableFuture<List<PoLine>> getPoLines(List<String> poLineIds) {
     if(poLineList == null) {
       return collectResultsOnSuccess(StreamEx
           .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ)
@@ -542,7 +540,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity, PoLine poLine,
       List<Piece> pieces) {
     // Fully Received:If receiving and there is no expected piece remaining
-    if (!isCheckin(poLine) && expectedPiecesQuantity == 0) {
+    if (!poLine.getCheckinItems() && expectedPiecesQuantity == 0) {
       return CompletableFuture.completedFuture(FULLY_RECEIVED);
     }
     // Partially Received: In case there is at least one successfully received
@@ -555,12 +553,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     return getPiecesQuantityByPoLineAndStatus(poLine.getId(), ReceivingStatus.RECEIVED)
       .thenApply(receivedQty -> receivedQty == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED);
   }
-
-  boolean isCheckin(PoLine poLine) {
-    return defaultIfNull(poLine.getCheckinItems(), false);
-  }
-
-  private CompletableFuture<Integer> getPiecesQuantityByPoLineAndStatus(String poLineId,
+  
+  public CompletableFuture<Integer> getPiecesQuantityByPoLineAndStatus(String poLineId,
       ReceivingStatus receivingStatus) {
     String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, receivingStatus.value());
     // Limit to 0 because only total number is important
@@ -569,34 +563,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       // Return total records quantity
       .thenApply(json -> json.mapTo(PieceCollection.class).getTotalRecords());
-  }
-
-  private CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status) {
-    if (status == null || poLine.getReceiptStatus() == status) {
-      return completedFuture(null);
-    }
-
-    // Update receipt date and receipt status
-    if (status == FULLY_RECEIVED) {
-      poLine.setReceiptDate(new Date());
-    } else if (isCheckin(poLine) && poLine.getReceiptStatus().equals(ReceiptStatus.AWAITING_RECEIPT)
-        && status == ReceiptStatus.PARTIALLY_RECEIVED) {
-      // if checking in, set the receipt date only for the first piece
-      poLine.setReceiptDate(new Date());
-    } else {
-      poLine.setReceiptDate(null);
-    }
-
-    poLine.setReceiptStatus(status);
-
-    // Update PO Line in storage
-    return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, ctx,
-        okapiHeaders, logger)
-      .thenApply(v -> poLine.getId())
-      .exceptionally(e -> {
-        logger.error("The PO Line '{}' cannot be updated with new receipt status", e, poLine.getId());
-        return null;
-      });
   }
 
   /**
