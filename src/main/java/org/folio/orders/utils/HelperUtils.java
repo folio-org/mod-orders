@@ -104,7 +104,7 @@ public class HelperUtils {
       .forEach(entry -> okapiHeaders.put(entry.getKey(), entry.getValue()));
     return okapiHeaders;
   }
-  
+
   public static JsonObject verifyAndExtractBody(Response response) {
     if (!Response.isSuccess(response.getCode())) {
       throw new CompletionException(
@@ -113,7 +113,7 @@ public class HelperUtils {
 
     return response.getBody();
   }
-  
+
   public static CompletableFuture<JsonObject> getPurchaseOrderById(String id, String lang, HttpClientInterface httpClient, Context ctx,
                                                                Map<String, String> okapiHeaders, Logger logger) {
     String endpoint = String.format(GET_PURCHASE_ORDER_BYID, id, lang);
@@ -1070,10 +1070,10 @@ public class HelperUtils {
     pol.remove(REPORTING_CODES);
     return pol.mapTo(PoLine.class);
   }
-  
+
   public static CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status, HttpClientInterface httpClient,
       Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-    
+
     if (status == null || poLine.getReceiptStatus() == status) {
       return completedFuture(null);
     }
@@ -1090,6 +1090,14 @@ public class HelperUtils {
     }
 
     poLine.setReceiptStatus(status);
+    // Update PO Line in storage
+    return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, ctx, okapiHeaders,
+        logger).thenApply(v -> poLine.getId())
+          .exceptionally(e -> {
+            logger.error("The PO Line '{}' cannot be updated with new receipt status", e, poLine.getId());
+            return null;
+          });
+  }
 
   public static CompositePoLine convertToCompositePoLine(JsonObject poLine) {
     poLine.remove(REPORTING_CODES);
@@ -1174,12 +1182,4 @@ public class HelperUtils {
         FieldUtils.readDeclaredField(existedObject, field, true), true, existedObject.getClass(), true);
   }
 
-    // Update PO Line in storage
-    return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, ctx, okapiHeaders,
-        logger).thenApply(v -> poLine.getId())
-          .exceptionally(e -> {
-            logger.error("The PO Line '{}' cannot be updated with new receipt status", e, poLine.getId());
-            return null;
-          });
-  }
 }
