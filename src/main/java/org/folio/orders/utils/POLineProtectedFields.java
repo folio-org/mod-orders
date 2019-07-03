@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 
 public enum POLineProtectedFields {
 
-  CHECKIN_ITEMS("checkInItems"),
+  CHECKIN_ITEMS("checkinItems"),
   COST_LIST_UNIT_PRICE("cost.listUnitPrice"),
   COST_LIST_UNIT_PRICE_ELECTRONIC("cost.listUnitPriceElectronic"),
   COST_CURRENCY("cost.currency"),
@@ -16,7 +16,6 @@ public enum POLineProtectedFields {
   COST_QUANTITY_ELECTRONIC("cost.quantityElectronic"),
   COLLECTION("collection"),
   CONTRIBUTORS("contributors"),
-  CREATED_DATE("createdDate"),
   DONOR("donor"),
   DETAILS_PRODUCT_IDS("details.productIds"),
   DETAILS_SUBSCRIPTION_INTERVAL("details.subscriptionInterval"),
@@ -27,7 +26,7 @@ public enum POLineProtectedFields {
   ERESOURCE_MATERIAL_TYPE("eresource.materialType"),
   ERESOURCE_USER_LIMIT("eresource.userLimit"),
   FUND_DISTRIBUTION("fundDistribution"),
-  LOCATION("location") ,
+  LOCATION("locations") ,
   ORER_FORMAT("orderFormat"),
   PHYSICAL_VOLUMES("physical.volumes"),
   PHYSICAL_MATERIAL_TYPE("physical.materialType"),
@@ -36,7 +35,6 @@ public enum POLineProtectedFields {
   PO_LINE_NUMBER("poLineNumber"),
   RUSH("rush"),
   SOURCE("source"),
-  REQUESTOR("requestor"),
   SELECTOR("selector"),
   TITLE("title"),
   VENDORDETAIL_INSTRUCTION_TO_VENDOR("vendorDetail.instructions"),

@@ -112,7 +112,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
     return getPurchaseOrderById(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
-      .thenCompose(poFromStorage -> HelperUtils.validateIfPOProtectedFieldsChanged(compPO,poFromStorage))
+      .thenCompose(poFromStorage -> validateIfPOProtectedFieldsChanged(compPO,poFromStorage))
       .thenCompose(poFromStorage -> {
         logger.info("Order successfully retrieved from storage");
         return validatePoNumber(poFromStorage, compPO)
@@ -133,7 +133,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .filter(line -> ((JsonObject) line).getString(ID)
         .equals(poLine.getId()))
       .findFirst()
-      .map(line -> HelperUtils.convertToCompositePoLine((JsonObject) line))
+      .map(line -> convertToCompositePoLine((JsonObject) line))
       .orElse(poLine);
 
   }
