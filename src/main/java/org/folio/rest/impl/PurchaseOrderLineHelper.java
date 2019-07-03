@@ -295,19 +295,27 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
   CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine) {
-    return getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId()).thenCompose(lineFromStorage -> {
-      HelperUtils.getPurchaseOrderById(compOrderLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger)
-        .thenAccept(purchaseOrder -> {
-          if (!purchaseOrder.getString("workflowStatus").equals(CompositePurchaseOrder.WorkflowStatus.PENDING.value())) {
-            Set<String> fields = findChangedPoLineProtectedFields(compOrderLine, lineFromStorage.mapTo(CompositePoLine.class));
-            verifyProtectedFieldsChanged(fields);
-          }
-        });
-      // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
-      // update
-      compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
-      return updateOrderLine(compOrderLine, lineFromStorage).thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage));
-    });
+    return getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
+      .thenCompose(lineFromStorage -> validatePOLineProtectedFields(compOrderLine, lineFromStorage))
+      .thenCompose(lineFromStorage -> {
+        // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
+        // update
+        compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
+        return updateOrderLine(compOrderLine, lineFromStorage).thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage));
+      });
+  }
+
+  private CompletableFuture<JsonObject> validatePOLineProtectedFields(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
+    return HelperUtils.getPurchaseOrderById(compOrderLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(purchaseOrder -> {
+        if (!purchaseOrder.getString("workflowStatus")
+          .equals(CompositePurchaseOrder.WorkflowStatus.PENDING.value())) {
+          Set<String> fields = findChangedPoLineProtectedFields(compOrderLine, convertToCompositePoLine(lineFromStorage.copy()));
+          verifyProtectedFieldsChanged(fields);
+        }
+
+        return completedFuture(lineFromStorage);
+      });
   }
 
   private void updateOrderStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage) {

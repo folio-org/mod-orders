@@ -25,21 +25,7 @@ import java.util.stream.Collectors;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
-import static org.folio.orders.utils.ErrorCodes.COST_ADDITIONAL_COST_INVALID;
-import static org.folio.orders.utils.ErrorCodes.COST_DISCOUNT_INVALID;
-import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
-import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
-import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
-import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
-import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
-import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
-import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
-import static org.folio.orders.utils.ErrorCodes.ORDER_OPEN;
-import static org.folio.orders.utils.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
-import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
-import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
-import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
-import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
+import static org.folio.orders.utils.ErrorCodes.*;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
@@ -408,6 +394,36 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
     assertEquals(3, column.size());
     assertThat(column.keySet(), containsInAnyOrder(PO_LINES, ALERTS, REPORTING_CODES));
+
+    // Verify no message sent via event bus
+    verifyOrderStatusUpdateEvent(0);
+  }
+
+
+  @Test
+  public void testPutOrderLineByIdProtectedFieldsChanged() {
+    logger.info("=== Test PUT Order Line By Id - Protected fields changed ===");
+
+    String lineId = "0009662b-8b80-4001-b704-ca10971f175d";
+    JsonObject body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId);
+    String url = String.format(LINE_BY_ID_PATH, lineId);
+    CompositePoLine poLine = body.mapTo(CompositePoLine.class);
+    poLine.setTitle("Testing ProtectedFields");
+    poLine.setDonor("donor");
+    poLine.getCost()
+      .setCurrency("EUR");
+    poLine.setPoLineNumber("test123-1");
+
+    Errors errors = verifyPut(url, JsonObject.mapFrom(poLine), "", 400).as(Errors.class);
+
+    Error error = errors.getErrors()
+      .get(0);
+    assertThat(error.getCode(), equalTo(PROHIBITED_FIELD_CHANGING.getCode()));
+
+    // 2 calls each to fetch Order Line and Purchase Order
+    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(2, column.size());
+    assertThat(column, hasKey(PO_LINES));
 
     // Verify no message sent via event bus
     verifyOrderStatusUpdateEvent(0);

@@ -1,90 +1,90 @@
 {
-  "id" : "0009662b-8b80-4001-b704-ca10971f175d",
-  "acquisitionMethod" : "Purchase At Vendor System",
-  "alerts" : [ ],
-  "cancellationRestriction" : false,
-  "cancellationRestrictionNote" : "ABCDEFGHIJKLMNOPQRSTUVW",
-  "claims" : [ ],
-  "collection" : false,
-  "contributors" : [ {
-    "contributor" : "Ed Mashburn",
-    "contributorType" : "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
-  } ],
+  "id": "0009662b-8b80-4001-b704-ca10971f175d",
+  "acquisitionMethod": "Purchase",
+  "alerts": [],
+  "cancellationRestriction": false,
+  "cancellationRestrictionNote": "",
+  "claims": [
+    {
+      "claimed": false,
+      "grace": 0
+    }
+  ],
+  "collection": false,
+  "contributors": [
+    {
+      "contributor": "Ed Mashburn",
+      "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+    }
+  ],
   "cost": {
     "currency": "USD",
-    "listUnitPrice": 24.99,
+    "listUnitPrice": 900.00,
     "quantityPhysical": 1
   },
-  "description" : "ABCDEFGH",
+  "description": "",
   "details": {
-    "receivingNote": "ABCDEFGHIJKL",
+    "receivingNote": "start with v. 162",
     "productIds": [
       {
-        "productId": "9780764354113",
-        "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422"
+        "productId": "0065-3438",
+        "productIdType": "913300b2-03ed-469a-8179-c1092c991227"
       }
     ],
-    "subscriptionFrom": "2018-10-09T00:00:00.000Z",
-    "subscriptionInterval": 824,
-    "subscriptionTo": "2020-10-09T00:00:00.000Z"
+    "subscriptionFrom": "2018-07-01T00:00:00.000Z",
+    "subscriptionInterval": 1095,
+    "subscriptionTo": "2021-06-30T00:00:00.000Z"
   },
-  "donor" : "ABCDEFGHIJKLM",
+  "donor": "",
   "fundDistribution": [
     {
-      "code": "HIST",
-      "fundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
-      "percentage": 80.0,
-      "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3"
+      "code": "STATE-SUBN",
+      "fundId": "e54b1f4d-7d05-4b1a-9368-3c36b75d8ac6",
+      "percentage": 100.0,
+      "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08011"
     }
   ],
   "locations": [
     {
-      "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "locationId": "758258bc-ecc1-41b8-abca-f7b610822ffd",
       "quantity": 1,
       "quantityElectronic": 0,
       "quantityPhysical": 1
-    },
-    {
-      "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
-      "quantity": 2,
-      "quantityElectronic": 0,
-      "quantityPhysical": 2
     }
   ],
-  "orderFormat" : "Physical Resource",
-  "paymentStatus" : "Awaiting Payment",
+  "orderFormat": "Physical Resource",
+  "paymentStatus": "Pending",
   "physical": {
     "createInventory": "Instance, Holding, Item",
-    "volumes": [
-      "vol. 1"
-    ],
-    "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+    "materialSupplier": "6828d7cb-d84e-41e5-9db5-fc2e162f9ffb",
     "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8",
-    "expectedReceiptDate": "2018-10-05T00:00:00.000Z",
-    "receiptDue": "2018-10-10T00:00:00.000Z"
+    "receiptDue": "2018-07-31T00:00:00.000Z",
+    "volumes": []
   },
-  "poLineDescription" : "ABCDEFGHIJKLMNOPQRSTUVWXY",
-  "poLineNumber" : "1EFC97C6B7-1",
-  "publicationDate" : "2017",
-  "publisher" : "Schiffer Publishing",
-  "purchaseOrderId" : "95d29d04-34b1-4fe0-a15e-1cd129143692",
-  "receiptDate" : "2018-10-09T00:00:00.000+0000",
-  "receiptStatus" : "Awaiting Receipt",
-  "reportingCodes" : [ ],
-  "requester" : "Leo Bulero",
-  "rush" : true,
-  "selector" : "ABCD",
-  "tags" : [ "ABCDEFGHIJKLMNOPQRSTU", "ABCDEFG", "ABCDEFGHIJKLMNOPQRSTU", "ABCDEFGHIJKLMNO" ],
-  "title" : "Kayak Fishing in the Northern Gulf Coast",
+  "poLineDescription": "",
+  "poLineNumber": "1EFC97C6B7-1",
+  "publicationDate": "2018",
+  "publisher": "Plenum Press",
+  "purchaseOrderId": "11111111-dddd-4444-9999-ffffffffffff",
+  "receiptDate": null,
+  "receiptStatus": "Pending",
+  "reportingCodes": [],
+  "requester": "",
+  "rush": false,
+  "selector": "",
+  "source": {
+    "code": "FOLIO",
+    "description": "Manually entered"
+  },
+  "tags": [],
+  "title": "Advances in astronautical science",
   "vendorDetail": {
-    "instructions": "ABCDEFG",
-    "noteFromVendor": "ABCDEFGHIKJKLMNOP",
-    "refNumber": "123456-78",
-    "refNumberType": "Supplier's unique order line reference number",
-    "vendorAccount": "8910-25"
+    "instructions": "",
+    "noteFromVendor": "",
+    "vendorAccount": ""
   },
   "metadata": {
-    "createdDate": "2014-07-06T00:00:00.000",
-    "createdByUserId": "28d10cfc-d137-11e8-a8d5-f2801f1b9fd1"
+    "createdDate": "2010-10-08T03:53:00.000",
+    "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
   }
 }
