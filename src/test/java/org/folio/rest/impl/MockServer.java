@@ -128,7 +128,7 @@ public class MockServer {
   static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
   private static final String ENCUMBRANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "encumbrances/";
-  static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
+  public static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
   private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
   private static final String ACQUISITIONS_UNITS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "acquisitionsUnits/units";
   private static final String ACQUISITIONS_UNIT_ASSIGNMENTS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "acquisitionsUnitAssignments/assignments";
@@ -143,6 +143,8 @@ public class MockServer {
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";
   static final String ORDER_ID_WITH_PO_LINES = "ab18897b-0e40-4f31-896b-9c9adc979a87";
+  private static final String PIECE_POLINE_CONSISTENT_RECEIPT_STATUS_ID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
+  private static final String PIECE_POLINE_CONSISTENCY_404_POLINE_NOT_FOUND_ID = "5b454292-6aaa-474f-9510-b59a564e0c8d";
   static final String PO_NUMBER_VALUE = "228D126";
 
   private static final String PO_NUMBER_ERROR_TENANT = "po_number_error_tenant";
@@ -192,7 +194,7 @@ public class MockServer {
     });
   }
 
-  static List<JsonObject> getPoLineUpdates() {
+  public static List<JsonObject> getPoLineUpdates() {
     return serverRqRs.get(PO_LINES, HttpMethod.PUT);
   }
 
@@ -208,7 +210,7 @@ public class MockServer {
     return serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT);
   }
 
-  static List<JsonObject> getPieceUpdates() {
+  public static List<JsonObject> getPieceUpdates() {
     return serverRqRs.get(PIECES, HttpMethod.PUT);
   }
 
@@ -244,7 +246,7 @@ public class MockServer {
     return serverRqRs.get(PIECES, HttpMethod.POST);
   }
 
-  static List<JsonObject> getPieceSearches() {
+  public static List<JsonObject> getPieceSearches() {
     return serverRqRs.get(PIECES, HttpMethod.GET);
   }
 
@@ -309,6 +311,7 @@ public class MockServer {
     router.route(HttpMethod.GET, resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
     router.route(HttpMethod.GET, resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
     router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(this::handleGetPieces);
+    router.route(HttpMethod.GET, resourcesPath(PIECES)+"/:id").handler(this::handleGetPieceById);
     router.route(HttpMethod.GET, resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
     router.route(HttpMethod.GET, resourcesPath(PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
     router.route(HttpMethod.GET, "/contributor-name-types").handler(this::handleGetContributorNameTypes);
@@ -963,6 +966,34 @@ public class MockServer {
     }
   }
 
+  private void handleGetPieceById(RoutingContext ctx) {
+
+    logger.info("handleGetPiecesById got: " + ctx.request()
+      .path());
+    String pieceId = ctx.request()
+      .getParam(ID);
+    JsonObject body;
+    try {
+      if (PIECE_POLINE_CONSISTENCY_404_POLINE_NOT_FOUND_ID.equals(pieceId)) {
+        body = new JsonObject(ApiTestBase
+          .getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d.json"));
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
+
+      } else if (PIECE_POLINE_CONSISTENT_RECEIPT_STATUS_ID.equals(pieceId)) {
+        body = new JsonObject(ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH
+            + "pieceRecord-received-consistent-receipt-status-5b454292-6aaa-474f-9510-b59a564e0c8d2.json"));
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
+
+      } else {
+        body = new JsonObject(
+            ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json"));
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
+      }
+    } catch (IOException e) {
+      fail(e.getMessage());
+    }
+  }
+  
   private void handleGetPieces(RoutingContext ctx) {
     logger.info("handleGetPieces got: " + ctx.request().path());
     String query = ctx.request().getParam("query");

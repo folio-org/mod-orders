@@ -104,8 +104,8 @@ public class ApiTestBase {
   static final Header NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT);
   static final Header NON_EXIST_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "ordersimpltest");
   static final Header X_OKAPI_USER_ID = new Header(OKAPI_USERID_HEADER, "440c89e3-7f6c-578a-9ea8-310dad23605e");
-  static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
-  static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_10");
+  protected static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
+  protected static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_10");
   static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_1");
   static final Header INVALID_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "invalid_config");
   static final Header EMPTY_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, EMPTY_CONFIG_TENANT);
@@ -124,6 +124,16 @@ public class ApiTestBase {
     @Bean("orderStatusHandler")
     @Primary
     public Handler<Message<JsonObject>> mockedOrderStatusHandler() {
+      // As an implementation just add received message to list
+      return message -> {
+        logger.info("New message sent to {} address", message.address());
+        eventMessages.add(message);
+      };
+    }
+    
+    @Bean("receiptStatusHandler")
+    @Primary
+    public Handler<Message<JsonObject>> mockedReceiptStatusHandler() {
       // As an implementation just add received message to list
       return message -> {
         logger.info("New message sent to {} address", message.address());
@@ -161,7 +171,7 @@ public class ApiTestBase {
     }
   }
 
-  static String getMockData(String path) throws IOException {
+  protected static String getMockData(String path) throws IOException {
     logger.info("Using mock datafile: {}", path);
     try (InputStream resourceAsStream = PurchaseOrdersApiTest.class.getClassLoader().getResourceAsStream(path)) {
       if (resourceAsStream != null) {
@@ -331,6 +341,22 @@ public class ApiTestBase {
       assertThat(message.headers(), not(emptyIterable()));
       assertThat(message.body(), notNullValue());
       assertThat(message.body().getJsonArray(ORDER_IDS), iterableWithSize(1));
+      assertThat(message.body().getString(HelperUtils.LANG), not(isEmptyOrNullString()));
+    }
+  }
+  
+  void verifyReceiptStatusUpdateEvent(int msgQty) {
+    logger.debug("Verifying event bus messages");
+    // Wait until event bus registers message
+    await().atLeast(50, MILLISECONDS)
+           .atMost(1, SECONDS)
+           .until(() -> eventMessages, hasSize(msgQty));
+    for (int i = 0; i < msgQty; i++) {
+      Message<JsonObject> message = eventMessages.get(i);
+      assertThat(message.address(), equalTo(MessageAddress.RECEIPT_STATUS.address));
+      assertThat(message.headers(), not(emptyIterable()));
+      assertThat(message.body(), notNullValue());
+      assertThat(message.body().getString("poLineIdUpdate"), not(isEmptyOrNullString()));
       assertThat(message.body().getString(HelperUtils.LANG), not(isEmptyOrNullString()));
     }
   }
