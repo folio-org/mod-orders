@@ -298,7 +298,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     return getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId()).thenCompose(lineFromStorage -> {
       HelperUtils.getPurchaseOrderById(compOrderLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger)
         .thenAccept(purchaseOrder -> {
-          if (purchaseOrder.getString("workflowStatus") != CompositePurchaseOrder.WorkflowStatus.PENDING.toString()) {
+          if (!purchaseOrder.getString("workflowStatus").equals(CompositePurchaseOrder.WorkflowStatus.PENDING.value())) {
             Set<String> fields = findChangedPoLineProtectedFields(compOrderLine, lineFromStorage.mapTo(CompositePoLine.class));
             verifyProtectedFieldsChanged(fields);
           }
