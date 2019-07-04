@@ -1,6 +1,7 @@
 package org.folio.orders.utils;
 
 import static java.util.Objects.nonNull;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -13,6 +14,14 @@ import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import org.apache.commons.collections4.map.CaseInsensitiveMap;
+import org.folio.rest.acq.model.Piece;
+import org.folio.rest.jaxrs.model.PoLine;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
@@ -20,12 +29,10 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -41,18 +48,18 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.rest.acq.model.Piece;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
+import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.Context;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -88,6 +95,14 @@ public class HelperUtils {
 
   }
 
+  public static Map<String, String> getOkapiHeaders(Message<JsonObject> message) {
+    Map<String, String> okapiHeaders = new CaseInsensitiveMap<>();
+    message.headers()
+      .entries()
+      .forEach(entry -> okapiHeaders.put(entry.getKey(), entry.getValue()));
+    return okapiHeaders;
+  }
+  
   public static JsonObject verifyAndExtractBody(Response response) {
     if (!Response.isSuccess(response.getCode())) {
       throw new CompletionException(
@@ -96,7 +111,7 @@ public class HelperUtils {
 
     return response.getBody();
   }
-
+  
   public static CompletableFuture<JsonObject> getPurchaseOrderById(String id, String lang, HttpClientInterface httpClient, Context ctx,
                                                                Map<String, String> okapiHeaders, Logger logger) {
     String endpoint = String.format(GET_PURCHASE_ORDER_BYID, id, lang);
@@ -1053,6 +1068,33 @@ public class HelperUtils {
     pol.remove(REPORTING_CODES);
     return pol.mapTo(PoLine.class);
   }
+  
+  public static CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status, HttpClientInterface httpClient,
+      Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+    
+    if (status == null || poLine.getReceiptStatus() == status) {
+      return completedFuture(null);
+    }
 
+    // Update receipt date and receipt status
+    if (status == FULLY_RECEIVED) {
+      poLine.setReceiptDate(new Date());
+    } else if (poLine.getCheckinItems() && poLine.getReceiptStatus()
+      .equals(ReceiptStatus.AWAITING_RECEIPT) && status == ReceiptStatus.PARTIALLY_RECEIVED) {
+      // if checking in, set the receipt date only for the first piece
+      poLine.setReceiptDate(new Date());
+    } else {
+      poLine.setReceiptDate(null);
+    }
 
+    poLine.setReceiptStatus(status);
+
+    // Update PO Line in storage
+    return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, ctx, okapiHeaders,
+        logger).thenApply(v -> poLine.getId())
+          .exceptionally(e -> {
+            logger.error("The PO Line '{}' cannot be updated with new receipt status", e, poLine.getId());
+            return null;
+          });
+  }
 }

@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -28,37 +29,45 @@ public class InitEventBus implements PostDeployVerticle {
   @Qualifier("orderStatusHandler")
   Handler<Message<JsonObject>> orderStatusHandler;
 
+  @Autowired
+  @Qualifier("receiptStatusHandler")
+  Handler<Message<JsonObject>> receiptStatusHandler;
+  
   public InitEventBus() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
   }
 
   @Override
   public void init(Vertx vertx, Context context, Handler<AsyncResult<Boolean>> resultHandler) {
-    vertx.executeBlocking(
-      blockingCodeFuture -> {
-        EventBus eb = vertx.eventBus();
+    vertx.executeBlocking(blockingCodeFuture -> {
+      EventBus eb = vertx.eventBus();
 
-        // Create consumers and assign handlers
-        Future<Void> orderStatusRegistrationHandler = Future.future();
-        MessageConsumer<JsonObject> orderStatusConsumer = eb.localConsumer(MessageAddress.ORDER_STATUS.address);
-        orderStatusConsumer.handler(orderStatusHandler).completionHandler(orderStatusRegistrationHandler);
+      // Create consumers and assign handlers
+      Future<Void> orderStatusRegistrationHandler = Future.future();
+      Future<Void> receiptStatusConsistencyHandler = Future.future();
 
-        // Complete blocking code future. When more consumers added, the CompositeFuture.all can be used
-        orderStatusRegistrationHandler.setHandler(result -> {
+      MessageConsumer<JsonObject> orderStatusConsumer = eb.localConsumer(MessageAddress.ORDER_STATUS.address);
+      MessageConsumer<JsonObject> receiptStatusConsumer = eb.localConsumer(MessageAddress.RECEIPT_STATUS.address);
+      orderStatusConsumer.handler(orderStatusHandler)
+        .completionHandler(orderStatusRegistrationHandler);
+      receiptStatusConsumer.handler(receiptStatusHandler)
+        .completionHandler(receiptStatusConsistencyHandler);
+
+      CompositeFuture.all(orderStatusRegistrationHandler, receiptStatusConsistencyHandler)
+        .setHandler(result -> {
           if (result.succeeded()) {
             blockingCodeFuture.complete();
           } else {
             blockingCodeFuture.fail(result.cause());
           }
         });
-      },
-      result -> {
-        if (result.succeeded()) {
-          resultHandler.handle(Future.succeededFuture(true));
-        } else {
-          logger.error(result.cause());
-          resultHandler.handle(Future.failedFuture(result.cause()));
-        }
-      });
+    }, result -> {
+      if (result.succeeded()) {
+        resultHandler.handle(Future.succeededFuture(true));
+      } else {
+        logger.error(result.cause());
+        resultHandler.handle(Future.failedFuture(result.cause()));
+      }
+    });
   }
 }

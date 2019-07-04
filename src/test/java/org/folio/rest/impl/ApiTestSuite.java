@@ -10,6 +10,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 import org.folio.orders.events.handlers.OrderStatusTest;
+import org.folio.orders.events.handlers.ReceiptStatusConsistencyTest;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
@@ -32,7 +33,9 @@ import java.util.concurrent.TimeoutException;
   PieceApiTest.class,
   ReceivingHistoryApiTest.class,
   PoNumberApiTest.class,
-  OrderStatusTest.class
+  OrderStatusTest.class,
+  ReceiptStatusConsistencyTest.class,
+  AcquisitionsUnitAssignmentsTests.class
 })
 public class ApiTestSuite {
 

@@ -5,6 +5,7 @@ import static javax.ws.rs.core.HttpHeaders.LOCATION;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
+import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static javax.ws.rs.core.Response.Status.CREATED;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.HelperUtils.*;
@@ -12,6 +13,7 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
 import io.vertx.core.Context;
 import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
@@ -20,6 +22,10 @@ import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 import javax.ws.rs.core.Response;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +42,9 @@ import org.folio.rest.tools.utils.TenantTool;
 public abstract class AbstractHelper {
   public static final String ID = "id";
   public static final String ORDER_IDS = "orderIds";
+  public static final String OKAPI_HEADERS = "okapiHeaders";
   public static final String ERROR_CAUSE = "cause";
+  public static final String OKAPI_URL = "x-okapi-url";
   static final int MAX_IDS_FOR_GET_RQ = 15;
 
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -44,7 +52,7 @@ public abstract class AbstractHelper {
   private final Errors processingErrors = new Errors();
 
   protected final HttpClientInterface httpClient;
-  protected final Map<String, String> okapiHeaders;
+  protected Map<String, String> okapiHeaders;
   protected final Context ctx;
   protected final String lang;
   private JsonObject tenantConfiguration;
@@ -96,12 +104,27 @@ public abstract class AbstractHelper {
     return processingErrors.getErrors();
   }
 
+  protected <T> void completeAllFutures(Context ctx, HttpClientInterface httpClient, List<CompletableFuture<T>> futures, Message<JsonObject> message) {
+    // Now wait for all operations to be completed and send reply
+    allOf(ctx, futures.toArray(new CompletableFuture[0])).thenAccept(v -> {
+      // Sending reply message just in case some logic requires it
+      message.reply(Response.Status.OK.getReasonPhrase());
+      httpClient.closeClient();
+    })
+      .exceptionally(e -> {
+        message.fail(handleProcessingError(e), getErrors().get(0)
+          .getMessage());
+        httpClient.closeClient();
+        return null;
+      });
+  }
+
   /**
    * Some requests do not have body and in happy flow do not produce response body. The Accept header is required for calls to storage
    */
   private static void setDefaultHeaders(HttpClientInterface httpClient) {
-    Map<String,String> customHeader = new HashMap<>();
-    customHeader.put(HttpHeaders.ACCEPT.toString(), APPLICATION_JSON  + ", " + TEXT_PLAIN);
+    Map<String, String> customHeader = new HashMap<>();
+    customHeader.put(HttpHeaders.ACCEPT.toString(), APPLICATION_JSON + ", " + TEXT_PLAIN);
     httpClient.setDefaultHeaders(customHeader);
   }
 
@@ -221,6 +244,18 @@ public abstract class AbstractHelper {
     return Response.status(CREATED).header(CONTENT_TYPE, APPLICATION_JSON).entity(body).build();
   }
 
+  public Response buildResponseWithLocation(String endpoint, Object body) {
+    closeHttpClient();
+    try {
+      return Response.created(new URI(okapiHeaders.get(OKAPI_URL) + endpoint))
+        .header(CONTENT_TYPE, APPLICATION_JSON).entity(body).build();
+    } catch (URISyntaxException e) {
+      return Response.status(CREATED).location(URI.create(endpoint))
+        .header(CONTENT_TYPE, APPLICATION_JSON)
+        .header(LOCATION, endpoint).entity(body).build();
+    }
+  }
+
   public CompletableFuture<JsonObject> getTenantConfiguration() {
     if (this.tenantConfiguration != null) {
       return CompletableFuture.completedFuture(this.tenantConfiguration);
@@ -235,13 +270,21 @@ public abstract class AbstractHelper {
 
   protected void sendEvent(MessageAddress messageAddress, JsonObject data) {
     DeliveryOptions deliveryOptions = new DeliveryOptions();
+
     // Add okapi headers
-    okapiHeaders.forEach(deliveryOptions::addHeader);
+    if (okapiHeaders != null) {
+      okapiHeaders.forEach(deliveryOptions::addHeader);
+    } else {
+      Map<String, String> okapiHeadersMap = new HashMap<>();
+      JsonObject okapiHeadersObject = data.getJsonObject(OKAPI_HEADERS);
+      okapiHeadersMap.put(OKAPI_URL, okapiHeadersObject.getString(OKAPI_URL));
+      this.okapiHeaders = okapiHeadersMap;
+    }
 
     data.put(LANG, lang);
 
     ctx.owner()
-       .eventBus()
-       .send(messageAddress.address, data, deliveryOptions);
+      .eventBus()
+      .send(messageAddress.address, data, deliveryOptions);
   }
 }

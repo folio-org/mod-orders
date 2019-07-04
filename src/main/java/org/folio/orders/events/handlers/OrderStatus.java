@@ -1,8 +1,8 @@
 package org.folio.orders.events.handlers;
 
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
+import static org.folio.orders.utils.HelperUtils.getOkapiHeaders;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
@@ -14,9 +14,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import javax.ws.rs.core.Response;
-
-import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.impl.AbstractHelper;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -64,7 +61,7 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
       getPurchaseOrderById(orderId, lang, httpClient, ctx, okapiHeaders, logger)
         .thenAccept(orderJson -> {
           PurchaseOrder purchaseOrder = orderJson.mapTo(PurchaseOrder.class);
-
+          
           if (purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.PENDING) {
             future.complete(null);
           } else {
@@ -88,17 +85,7 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
     }
 
     // Now wait for all operations to be completed and send reply
-    allOf(ctx, futures.toArray(new CompletableFuture[0]))
-      .thenAccept(v -> {
-        // Sending reply message just in case some logic requires it
-        message.reply(Response.Status.OK.getReasonPhrase());
-        httpClient.closeClient();
-      })
-      .exceptionally(e -> {
-        message.fail(handleProcessingError(e), getErrors().get(0).getMessage());
-        httpClient.closeClient();
-        return null;
-      });
+    completeAllFutures(ctx, httpClient, futures, message);
   }
 
   CompletableFuture<Void> updateOrderStatus(Map<String, String> okapiHeaders, HttpClientInterface httpClient, PurchaseOrder purchaseOrder, List<PoLine> poLines) {
@@ -117,11 +104,4 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
                      .map(json -> ((JsonObject) json).mapTo(PoLine.class))
                      .collect(Collectors.toList());
   }
-
-  private Map<String, String> getOkapiHeaders(Message<JsonObject> message) {
-    Map<String, String> okapiHeaders = new CaseInsensitiveMap<>();
-    message.headers().entries().forEach(entry -> okapiHeaders.put(entry.getKey(), entry.getValue()));
-    return okapiHeaders;
-  }
-
 }
