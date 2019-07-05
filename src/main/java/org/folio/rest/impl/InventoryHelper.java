@@ -378,7 +378,7 @@ public class InventoryHelper extends AbstractHelper {
 
   private CompletableFuture<Void> verifyContributorNameTypesExist(List<Contributor> contributors) {
     List<String> ids = contributors.stream()
-      .map(Contributor::getContributorNameTypeId)
+      .map(contributor -> contributor.getContributorNameTypeId().toLowerCase())
       .distinct()
       .collect(toList());
 
@@ -414,7 +414,7 @@ public class InventoryHelper extends AbstractHelper {
       )
       .exceptionally(e -> {
         logger.error("The issue happened getting contributor name types", e);
-        return null;
+        throw new CompletionException(e.getCause());
       });
   }
 
@@ -466,7 +466,6 @@ public class InventoryHelper extends AbstractHelper {
     if(isNotEmpty(compPOL.getContributors())) {
       List<JsonObject> contributors = compPOL.getContributors().stream().map(compPolContributor -> {
         JsonObject invContributor = new JsonObject();
-        // According MODORDERS-204 default value for all the contributors is "Personal name".
         invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, compPolContributor.getContributorNameTypeId());
         invContributor.put(CONTRIBUTOR_NAME, compPolContributor.getContributor());
         return invContributor;

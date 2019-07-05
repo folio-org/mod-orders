@@ -237,8 +237,7 @@
           "pathPattern": "/orders/pieces",
           "permissionsRequired": ["orders.pieces.item.post"],
           "modulePermissions": [
-            "orders-storage.pieces.item.post",
-            "orders-storage.pieces.item.get"
+            "orders-storage.pieces.item.post"
           ]
         },
         {
@@ -246,7 +245,8 @@
           "pathPattern": "/orders/pieces/{id}",
           "permissionsRequired": ["orders.pieces.item.put"],
           "modulePermissions": [
-            "orders-storage.pieces.item.put"
+            "orders-storage.pieces.item.put",
+            "orders-storage.pieces.item.get"
           ]
         },
         {
