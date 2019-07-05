@@ -42,7 +42,7 @@ public class ProtectionHelper extends AbstractHelper {
         .thenCompose(this::getUnitsByIds)
         .thenCompose(this::isOperationProtected);
     } else {
-      return CompletableFuture.completedFuture(false);
+      return CompletableFuture.completedFuture(true);
     }
   }
 

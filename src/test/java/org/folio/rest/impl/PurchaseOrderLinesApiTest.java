@@ -109,6 +109,10 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     Arrays.stream(ALLOWED_CREATION_HEADERS).forEach(header -> verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, header), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()));
 
+    // X-Okapi-User-Id not presented - Forbidden
+    verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt());
+
   }
 
   @Test

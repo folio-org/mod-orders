@@ -70,6 +70,10 @@ public class PieceApiTest extends ApiTestBase {
     Arrays.stream(ALLOWED_CREATION_HEADERS).forEach(header -> verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, header), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()));
 
+    // X-Okapi-User-Id not presented - Forbidden
+    verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt());
+
   }
   
   @Test
