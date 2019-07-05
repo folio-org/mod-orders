@@ -15,7 +15,47 @@
       "id": "874225ae-e3f5-4666-ae19-b35709ff0ee9",
       "userId": "480dba68-ee84-4b9c-a374-7e824fc49227",
       "acquisitionsUnitId": "aa0ec4e1-782f-45f6-a6f3-8e6b6c00599c"
+    },
+    {
+      "id": "3ef2ae98-a60d-4980-a07e-16537d90916c",
+      "userId": "1be84d0e-6bd8-4301-bf2a-b5fea92b3e3a",
+      "acquisitionsUnitId": "0e9525aa-d123-4e4d-9f7e-1b302a97eb90"
+    },
+    {
+      "id": "3ef2ae98-a60d-4980-a07e-16537d90916c",
+      "userId": "5526f491-c836-4ed3-9427-785f6513c623",
+      "acquisitionsUnitId": "0e9525aa-d123-4e4d-9f7e-1b302a97eb90"
+    },
+    {
+      "id": "c136bf82-7f47-4376-afa1-5bde0b9c7f54",
+      "userId": "5526f491-c836-4ed3-9427-785f6513c623",
+      "acquisitionsUnitId": "e68c18fc-833f-494e-9a0e-b236eb4b310b"
+    },
+    {
+      "id": "a4dd98cf-5fe4-4840-8a7e-c7b893fb5bf2",
+      "userId": "8661f687-46f1-41d1-ac48-5034f3251c7f",
+      "acquisitionsUnitId": "0e9525aa-d123-4e4d-9f7e-1b302a97eb90"
+    },
+    {
+      "id": "f2badd39-b148-4a89-ab1b-f2ef8501bacc",
+      "userId": "8661f687-46f1-41d1-ac48-5034f3251c7f",
+      "acquisitionsUnitId": "f6d2cc9d-82ca-437c-a4e6-e5c30323df00"
+    },
+    {
+      "id": "b42b4dab-d082-4bdc-af62-247affa769b8",
+      "userId": "147c36f9-35d1-43bd-ad62-aaa490d0d42c",
+      "acquisitionsUnitId": "2e6a170f-ae20-4889-813f-641831e24b84"
+    },
+    {
+      "id": "d40d27d4-7cef-43a0-9cac-b56262dc3c9c",
+      "userId": "71e62768-d7c4-498f-bbc6-c2ac9e1c9a11",
+      "acquisitionsUnitId": "2e6a170f-ae20-4889-813f-641831e24b84"
+    },
+    {
+      "id": "8308f764-df0d-4ae8-89f7-01a5263f62b7",
+      "userId": "71e62768-d7c4-498f-bbc6-c2ac9e1c9a11",
+      "acquisitionsUnitId": "2e6a170f-ae20-4889-813f-641831e24b84"
     }
   ],
-  "totalRecords": 3
+  "totalRecords": 11
 }

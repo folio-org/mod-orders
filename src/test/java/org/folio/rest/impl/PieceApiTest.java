@@ -8,6 +8,8 @@ import org.folio.HttpStatus;
 import org.folio.rest.acq.model.Piece;
 import org.junit.Test;
 
+import java.util.Arrays;
+
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
@@ -24,7 +26,7 @@ public class PieceApiTest extends ApiTestBase {
   static final String VALID_UUID = "c3e26c0e-d6a6-46fb-9309-d494cd0c82de";
   static final String CONSISTENT_RECEIVED_STATUS_PIECE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
   private JsonObject pieceJsonReqData = getMockAsJson(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord.json");
-  
+
   @Test
   public void testPostPiece() {
     logger.info("=== Test POST Piece (Create Piece) ===");
@@ -35,7 +37,7 @@ public class PieceApiTest extends ApiTestBase {
     // Piece id is null initially
     assertThat(postPieceRq.getId(), nullValue());
 
-    Piece postPieceRs = verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(),
+    Piece postPieceRs = verifyPostResponseWithSuperUserHeader(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Piece.class);
 
     // Piece id not null
@@ -44,13 +46,30 @@ public class PieceApiTest extends ApiTestBase {
     // Negative cases
     // Unable to create piece test
     int status400 = HttpStatus.HTTP_BAD_REQUEST.toInt();
-    verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
+    verifyPostResponseWithSuperUserHeader(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
       new Header(X_ECHO_STATUS, String.valueOf(status400))), APPLICATION_JSON, status400);
 
     // Internal error on mod-orders-storage test
     int status500 = HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt();
-    verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
+    verifyPostResponseWithSuperUserHeader(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
       new Header(X_ECHO_STATUS, String.valueOf(status500))), APPLICATION_JSON, status500);
+  }
+
+  @Test
+  public void testPostPieceProtection() {
+
+    logger.info("=== Test POST Piece (Create Piece) Protection ===");
+
+    Piece postPieceRq = pieceJsonReqData.mapTo(Piece.class);
+
+    // Forbidden
+    Arrays.stream(FORBIDDEN_CREATION_HEADERS).forEach(header -> verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, header), APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt()));
+
+    // Allowed
+    Arrays.stream(ALLOWED_CREATION_HEADERS).forEach(header -> verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, header), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()));
+
   }
   
   @Test

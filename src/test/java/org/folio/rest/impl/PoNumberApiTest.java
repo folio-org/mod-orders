@@ -27,7 +27,7 @@ public class PoNumberApiTest extends ApiTestBase {
   {
     JsonObject poNumber=new JsonObject();
     poNumber.put(PO_NUMBER, EXISTING_PO_NUMBER);
-    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 400);
+    verifyPostResponseWithSuperUserHeader(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 400);
   }
 
   @Test
@@ -35,7 +35,7 @@ public class PoNumberApiTest extends ApiTestBase {
   {
     JsonObject poNumber=new JsonObject();
     poNumber.put(PO_NUMBER, NONEXISTING_PO_NUMBER);
-    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), "", 204);
+    verifyPostResponseWithSuperUserHeader(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), "", 204);
   }
 
   @Test
@@ -43,7 +43,7 @@ public class PoNumberApiTest extends ApiTestBase {
   {
     JsonObject poNumber=new JsonObject();
     poNumber.put(PO_NUMBER, "11");
-    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422);
+    verifyPostResponseWithSuperUserHeader(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422);
   }
 
   @Test

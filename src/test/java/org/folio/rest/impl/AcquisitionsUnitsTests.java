@@ -3,6 +3,7 @@ package org.folio.rest.impl;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
+import static org.folio.rest.impl.MockServer.ACQUISITIONS_UNITS_COLLECTION;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -11,6 +12,7 @@ import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.io.IOException;
 import java.util.UUID;
 
 import javax.ws.rs.core.HttpHeaders;
@@ -33,10 +35,12 @@ public class AcquisitionsUnitsTests extends ApiTestBase {
   private static final String ACQ_UNITS_UNITS_ENDPOINT = "/acquisitions-units/units";
 
   @Test
-  public void testGetAcqUnitsNoQuery() {
+  public void testGetAcqUnitsNoQuery() throws IOException {
     logger.info("=== Test Get Acquisitions Units - With empty query ===");
+    AcquisitionsUnitCollection expected = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_UNITS_COLLECTION)).mapTo(AcquisitionsUnitCollection.class);
     final AcquisitionsUnitCollection units = verifySuccessGet(ACQ_UNITS_UNITS_ENDPOINT, AcquisitionsUnitCollection.class);
-    assertThat(units.getAcquisitionsUnits(), hasSize(2));
+    assertThat(expected.getAcquisitionsUnits(), hasSize(expected.getTotalRecords()));
+    assertThat(units.getAcquisitionsUnits(), hasSize(expected.getTotalRecords()));
   }
 
   @Test
@@ -129,7 +133,7 @@ public class AcquisitionsUnitsTests extends ApiTestBase {
     logger.info("=== Test POST acquisitions unit - success case ===");
 
     String body = JsonObject.mapFrom(new AcquisitionsUnit().withName("Some name")).encode();
-    Response response = verifyPostResponse(ACQ_UNITS_UNITS_ENDPOINT, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
+    Response response = verifyPostResponseWithSuperUserHeader(ACQ_UNITS_UNITS_ENDPOINT, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
         APPLICATION_JSON, 201);
     AcquisitionsUnit unit = response.as(AcquisitionsUnit.class);
 
@@ -143,6 +147,6 @@ public class AcquisitionsUnitsTests extends ApiTestBase {
 
     String body = JsonObject.mapFrom(new AcquisitionsUnit().withName("Some name")).encode();
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, new Header(X_ECHO_STATUS, String.valueOf(500)));
-    verifyPostResponse(ACQ_UNITS_UNITS_ENDPOINT, body, headers, APPLICATION_JSON, 500);
+    verifyPostResponseWithSuperUserHeader(ACQ_UNITS_UNITS_ENDPOINT, body, headers, APPLICATION_JSON, 500);
   }
 }

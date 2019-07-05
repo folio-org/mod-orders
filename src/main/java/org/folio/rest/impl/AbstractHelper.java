@@ -212,6 +212,7 @@ public abstract class AbstractHelper {
     final Response.ResponseBuilder responseBuilder;
     switch (code) {
       case 400:
+      case 403:
       case 404:
       case 422:
         responseBuilder = Response.status(code);

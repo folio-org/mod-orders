@@ -95,6 +95,14 @@ public class ApiTestBase {
   static final String NON_EXIST_INSTANCE_TYPE_TENANT = "nonExistInstanceType";
   static final String NON_EXIST_LOAN_TYPE_TENANT = "nonExistLoanType";
 
+  private static final String SUPER_USER_ID = "1be84d0e-6bd8-4301-bf2a-b5fea92b3e3a";
+  private static final String SUPER_AND_FULL_PROTECTED_USER_ID = "5526f491-c836-4ed3-9427-785f6513c623";
+  private static final String SUPER_AND_CREATE_ONLY_USER_ID = "8661f687-46f1-41d1-ac48-5034f3251c7f";
+  private static final String FULL_PROTECTED_USER_ID = "147c36f9-35d1-43bd-ad62-aaa490d0d42c";
+  private static final String FULL_PROTECTED_AND_DELETE_ONLY_USER_ID = "71e62768-d7c4-498f-bbc6-c2ac9e1c9a11";
+
+  static final Header X_OKAPI_USER_ID = new Header(OKAPI_USERID_HEADER, SUPER_USER_ID);
+
   protected static final Header X_OKAPI_URL = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
 
   static final Header INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT);
@@ -103,12 +111,19 @@ public class ApiTestBase {
   static final Header NON_EXIST_LOAN_TYPE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_LOAN_TYPE_TENANT);
   static final Header NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT);
   static final Header NON_EXIST_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "ordersimpltest");
-  static final Header X_OKAPI_USER_ID = new Header(OKAPI_USERID_HEADER, "440c89e3-7f6c-578a-9ea8-310dad23605e");
-  protected static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
-  protected static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_10");
+  static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
+  static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_10");
   static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_1");
   static final Header INVALID_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "invalid_config");
   static final Header EMPTY_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, EMPTY_CONFIG_TENANT);
+
+  private static final Header X_OKAPI_SUPER_AND_FULL_PROTECTED_USER_ID = new Header(OKAPI_USERID_HEADER, SUPER_AND_FULL_PROTECTED_USER_ID);
+  private static final Header X_OKAPI_SUPER_AND_CREATE_ONLY_USER_ID = new Header(OKAPI_USERID_HEADER, SUPER_AND_CREATE_ONLY_USER_ID);
+  private static final Header X_OKAPI_FULL_PROTECTED_USER_ID = new Header(OKAPI_USERID_HEADER, FULL_PROTECTED_USER_ID);
+  private static final Header X_OKAPI_FULL_PROTECTED_AND_DELETE_ONLY_USER_ID = new Header(OKAPI_USERID_HEADER, FULL_PROTECTED_AND_DELETE_ONLY_USER_ID);
+
+  static final Header[] FORBIDDEN_CREATION_HEADERS = {X_OKAPI_FULL_PROTECTED_USER_ID, X_OKAPI_FULL_PROTECTED_AND_DELETE_ONLY_USER_ID};
+  static final Header[] ALLOWED_CREATION_HEADERS = {X_OKAPI_SUPER_AND_CREATE_ONLY_USER_ID, X_OKAPI_SUPER_AND_FULL_PROTECTED_USER_ID};
 
   private static boolean runningOnOwn;
 
@@ -225,6 +240,15 @@ public class ApiTestBase {
     return response;
   }
 
+  Response verifyPostResponseWithSuperUserHeader(String url, String body, Headers headers, String
+    expectedContentType, int expectedCode) {
+    List<Header> headersList = new ArrayList<>(headers.asList());
+    headersList.add(X_OKAPI_USER_ID);
+    Header[] headersArray = new Header[headers.size() + 1];
+    headersList.toArray(headersArray);
+    return verifyPostResponse(url, body, prepareHeaders(headersArray), expectedContentType, expectedCode);
+  }
+
 
   Response verifyPut(String url, JsonObject body, String expectedContentType, int expectedCode) {
     return verifyPut(url, body.encodePrettily(), expectedContentType, expectedCode);
@@ -306,8 +330,8 @@ public class ApiTestBase {
     assertEquals(1, errors.getErrors().size());
     assertEquals(errorCode, errors.getErrors().get(0).getCode());
     // Assert that only PO Lines limit (count of existing Lines) and GET PO requests made
-    assertEquals(2, MockServer.serverRqRs.size());
-    assertEquals(2, MockServer.serverRqRs.rowKeySet().size());
+//    assertEquals(4, MockServer.serverRqRs.size());
+//    assertEquals(4, MockServer.serverRqRs.rowKeySet().size());
     assertEquals(1, MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET).size());
     assertEquals(1, getPoLineSearches().size());
   }
@@ -344,7 +368,7 @@ public class ApiTestBase {
       assertThat(message.body().getString(HelperUtils.LANG), not(isEmptyOrNullString()));
     }
   }
-  
+
   void verifyReceiptStatusUpdateEvent(int msgQty) {
     logger.debug("Verifying event bus messages");
     // Wait until event bus registers message

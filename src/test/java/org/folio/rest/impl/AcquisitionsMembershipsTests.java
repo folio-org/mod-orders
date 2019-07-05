@@ -12,11 +12,13 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.junit.Test;
 
 import javax.ws.rs.core.HttpHeaders;
+import java.io.IOException;
 import java.util.UUID;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
+import static org.folio.rest.impl.MockServer.ACQUISITIONS_MEMBERSHIPS_COLLECTION;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -32,10 +34,12 @@ public class AcquisitionsMembershipsTests extends ApiTestBase {
   private static final String ACQ_UNITS_MEMBERSHIPS_ENDPOINT = "/acquisitions-units/memberships";
 
   @Test
-  public void testGetAcqMembershipsNoQuery() {
+  public void testGetAcqMembershipsNoQuery() throws IOException {
     logger.info("=== Test GET acquisitions units - with empty query ===");
+    AcquisitionsUnitMembershipCollection expected = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_MEMBERSHIPS_COLLECTION)).mapTo(AcquisitionsUnitMembershipCollection.class);
     final AcquisitionsUnitMembershipCollection memberships = verifySuccessGet(ACQ_UNITS_MEMBERSHIPS_ENDPOINT, AcquisitionsUnitMembershipCollection.class);
-    assertThat(memberships.getAcquisitionsUnitMemberships(), hasSize(3));
+    assertThat(expected.getAcquisitionsUnitMemberships(), hasSize(expected.getTotalRecords()));
+    assertThat(memberships.getAcquisitionsUnitMemberships(), hasSize(expected.getTotalRecords()));
   }
 
   @Test
@@ -129,7 +133,7 @@ public class AcquisitionsMembershipsTests extends ApiTestBase {
 
     String body = JsonObject.mapFrom(new AcquisitionsUnitMembership().withUserId(UUID.randomUUID().toString()).withAcquisitionsUnitId(UUID.randomUUID().toString())).encode();
 
-    Response response = verifyPostResponse(ACQ_UNITS_MEMBERSHIPS_ENDPOINT, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
+    Response response = verifyPostResponseWithSuperUserHeader(ACQ_UNITS_MEMBERSHIPS_ENDPOINT, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
         APPLICATION_JSON, 201);
     AcquisitionsUnitMembership unit = response.as(AcquisitionsUnitMembership.class);
 
@@ -143,6 +147,6 @@ public class AcquisitionsMembershipsTests extends ApiTestBase {
 
     String body = JsonObject.mapFrom(new AcquisitionsUnitMembership().withUserId(UUID.randomUUID().toString()).withAcquisitionsUnitId(UUID.randomUUID().toString())).encode();
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, new Header(X_ECHO_STATUS, String.valueOf(500)));
-    verifyPostResponse(ACQ_UNITS_MEMBERSHIPS_ENDPOINT, body, headers, APPLICATION_JSON, 500);
+    verifyPostResponseWithSuperUserHeader(ACQ_UNITS_MEMBERSHIPS_ENDPOINT, body, headers, APPLICATION_JSON, 500);
   }
 }

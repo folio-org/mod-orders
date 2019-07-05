@@ -165,29 +165,35 @@ public class OrdersImpl implements Orders {
   public void postOrdersOrderLines(String lang, CompositePoLine poLine, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
+    ProtectionHelper.Operation.CREATE.getInstance(okapiHeaders, vertxContext, lang).isOperationProtected()
+      .thenAccept(isOperationProtected -> {
+        PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
+        if(!isOperationProtected) {
+          logger.info("Creating POLine to an existing order...");
 
-    logger.info("Creating POLine to an existing order...");
-
-    // The validation of the PO Line content and its order state is done in
-    // scope of the 'createPoLine' method logic
-    helper
-      .createPoLine(poLine)
-      .thenAccept(pol -> {
-        Response response;
-        if (helper.getErrors().isEmpty()) {
-          if (logger.isInfoEnabled()) {
-            logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
-          }
-          response = PostOrdersOrderLinesResponse.respond201WithApplicationJson(pol,
-              PostOrdersOrderLinesResponse.headersFor201()
-                .withLocation(String.format(ORDER_LINE_LOCATION_PREFIX, pol.getId())));
+          // The validation of the PO Line content and its order state is done in
+          // scope of the 'createPoLine' method logic
+          helper
+            .createPoLine(poLine)
+            .thenAccept(pol -> {
+              Response response;
+              if (helper.getErrors().isEmpty()) {
+                if (logger.isInfoEnabled()) {
+                  logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
+                }
+                response = PostOrdersOrderLinesResponse.respond201WithApplicationJson(pol,
+                  PostOrdersOrderLinesResponse.headersFor201()
+                    .withLocation(String.format(ORDER_LINE_LOCATION_PREFIX, pol.getId())));
+              } else {
+                response = helper.buildErrorResponse(422);
+              }
+              asyncResultHandler.handle(succeededFuture(response));
+            })
+            .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
         } else {
-          response = helper.buildErrorResponse(422);
+          asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(403)));
         }
-        asyncResultHandler.handle(succeededFuture(response));
-      })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+      });
   }
 
   @Override
@@ -353,16 +359,24 @@ public class OrdersImpl implements Orders {
   @Validate
   public void postOrdersPieces(String lang, Piece entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    PiecesHelper helper = new PiecesHelper(okapiHeaders, vertxContext, lang);
-    helper
-      .createRecordInStorage(entity)
-      .thenAccept(piece -> {
-        if (logger.isInfoEnabled()) {
-          logger.info("Successfully created piece: " + JsonObject.mapFrom(piece).encodePrettily());
+
+    ProtectionHelper.Operation.CREATE.getInstance(okapiHeaders, vertxContext, lang).isOperationProtected()
+      .thenAccept(isOperationProtected -> {
+        PiecesHelper helper = new PiecesHelper(okapiHeaders, vertxContext, lang);
+        if(!isOperationProtected) {
+          helper
+            .createRecordInStorage(entity)
+            .thenAccept(piece -> {
+              if (logger.isInfoEnabled()) {
+                logger.info("Successfully created piece: " + JsonObject.mapFrom(piece).encodePrettily());
+              }
+              asyncResultHandler.handle(succeededFuture(helper.buildCreatedResponse(piece)));
+            })
+            .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+        } else {
+          asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(403)));
         }
-        asyncResultHandler.handle(succeededFuture(helper.buildCreatedResponse(piece)));
-      })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+      });
   }
   
   @Override

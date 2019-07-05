@@ -38,21 +38,14 @@ import org.folio.rest.jaxrs.model.PoLineCollection;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toSet;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -135,9 +128,9 @@ public class MockServer {
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
   private static final String ORGANIZATIONS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "organizations/";
   static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "/po_line_collection.json";
-  private static final String ACQUISITIONS_UNITS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/units.json";
+  static final String ACQUISITIONS_UNITS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/units.json";
   private static final String ACQUISITIONS_UNIT_ASSIGNMENTS_COLLECTION = ACQUISITIONS_UNIT_ASSIGNMENTS_MOCK_DATA_PATH + "/assignments.json";
-  private static final String ACQUISITIONS_MEMBERSHIPS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/memberships.json";
+  static final String ACQUISITIONS_MEMBERSHIPS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/memberships.json";
 
   static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
@@ -993,7 +986,7 @@ public class MockServer {
       fail(e.getMessage());
     }
   }
-  
+
   private void handleGetPieces(RoutingContext ctx) {
     logger.info("handleGetPieces got: " + ctx.request().path());
     String query = ctx.request().getParam("query");
@@ -1374,19 +1367,31 @@ public class MockServer {
     logger.info("handleGetAcquisitionsUnits got: " + ctx.request().path());
 
     String query = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+
+    AcquisitionsUnitCollection units;
+
+    try {
+      units = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_UNITS_COLLECTION)).mapTo(AcquisitionsUnitCollection.class);
+    } catch (IOException e) {
+      units = new AcquisitionsUnitCollection();
+    }
+
     if (query.contains(BAD_QUERY)) {
       serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
     } else {
-      String name = query.replace("name==", "");
-      AcquisitionsUnitCollection units;
-      try {
-        units = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_UNITS_COLLECTION)).mapTo(AcquisitionsUnitCollection.class);
-      } catch (IOException e) {
-        units = new AcquisitionsUnitCollection();
+
+      if(query.contains("name==")) {
+        String name = query.replace("name==", "");
+        if (StringUtils.isNotEmpty(name)) {
+          units.getAcquisitionsUnits().removeIf(unit -> !unit.getName().equals(name));
+        }
       }
 
-      if (StringUtils.isNotEmpty(name)) {
-        units.getAcquisitionsUnits().removeIf(unit -> !unit.getName().equals(name));
+      if(query.contains("id==")) {
+        Set<String> ids = Arrays.stream(query.split("\\s*OR\\s*")).map(s -> String.valueOf(s.subSequence(4, s.length()))).collect(toSet());
+        if (!ids.isEmpty()) {
+          units.getAcquisitionsUnits().removeIf(unit -> !ids.contains(unit.getId()));
+        }
       }
 
       JsonObject data = JsonObject.mapFrom(units.withTotalRecords(units.getAcquisitionsUnits().size()));

@@ -6,6 +6,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.HttpStatus;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -19,6 +20,7 @@ import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -77,7 +79,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
     reqData.getCost().setPoLineEstimatedPrice(null);
 
-    final CompositePoLine response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+    final CompositePoLine response = verifyPostResponseWithSuperUserHeader(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePoLine.class);
 
     assertThat(response.getPurchaseOrderId(), equalTo(reqData.getPurchaseOrderId()));
@@ -90,6 +92,23 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertThat(response.getCost().getPoLineEstimatedPrice(), equalTo(49.98d));
     Location location = response.getLocations().get(0);
     verifyLocationQuantity(location, response.getOrderFormat());
+  }
+
+  @Test
+  public void testPostPieceProtection() {
+
+    logger.info("=== Test POST Order Line (Create Order Line) Protection ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+
+    // Forbidden
+    Arrays.stream(FORBIDDEN_CREATION_HEADERS).forEach(header -> verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, header), APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt()));
+
+    // Allowed
+    Arrays.stream(ALLOWED_CREATION_HEADERS).forEach(header -> verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, header), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()));
+
   }
 
   @Test
@@ -107,7 +126,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
       .withQuantityPhysical(0)
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
-    final Errors response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+    final Errors response = verifyPostResponseWithSuperUserHeader(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
 
     assertThat(response.getErrors(), hasSize(4));
@@ -121,8 +140,10 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
       PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
       ZERO_LOCATION_QTY.getCode()));
 
-    // Check that no any calls made by the business logic to other services
-    assertTrue(MockServer.serverRqRs.isEmpty());
+    // Check that only calls made by the business logic to units and memberships
+    assertThat(MockServer.serverRqRs.get("acquisitionsUnits", HttpMethod.GET).size(), is(1));
+    assertThat(MockServer.serverRqRs.get("acquisitionsMemberships", HttpMethod.GET).size(), is(1));
+    assertThat(MockServer.serverRqRs.size(), is(2));
   }
 
   @Test
@@ -145,7 +166,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     eresource.setCreateInventory(org.folio.rest.jaxrs.model.Eresource.CreateInventory.NONE);
     reqData.setEresource(eresource);
 
-    final Errors response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+    final Errors response = verifyPostResponseWithSuperUserHeader(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
 
     assertThat(response.getErrors(), hasSize(3));
@@ -158,8 +179,10 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
       PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
       ZERO_LOCATION_QTY.getCode()));
 
-    // Check that no any calls made by the business logic to other services
-    assertTrue(MockServer.serverRqRs.isEmpty());
+    // Check that only calls made by the business logic to units and memberships
+    assertThat(MockServer.serverRqRs.get("acquisitionsUnits", HttpMethod.GET).size(), is(1));
+    assertThat(MockServer.serverRqRs.get("acquisitionsMemberships", HttpMethod.GET).size(), is(1));
+    assertThat(MockServer.serverRqRs.size(), is(2));
   }
 
   @Test
@@ -177,14 +200,16 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     reqData.getCost().setQuantityElectronic(0);
     reqData.getLocations().get(0).setQuantityPhysical(2);
 
-    final Errors response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+    final Errors response = verifyPostResponseWithSuperUserHeader(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
 
     assertThat(response.getErrors(), hasSize(1));
     assertThat(response.getErrors().get(0).getCode(), equalTo(COST_DISCOUNT_INVALID.getCode()));
 
-    // Check that no any calls made by the business logic to other services
-    assertTrue(MockServer.serverRqRs.isEmpty());
+    // Check that only calls made by the business logic to units and memberships
+    assertThat(MockServer.serverRqRs.get("acquisitionsUnits", HttpMethod.GET).size(), is(1));
+    assertThat(MockServer.serverRqRs.get("acquisitionsMemberships", HttpMethod.GET).size(), is(1));
+    assertThat(MockServer.serverRqRs.size(), is(2));
   }
 
   @Test
@@ -193,7 +218,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     JsonObject compPoLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
 
-    final Errors errors = verifyPostResponse(LINES_PATH, compPoLineJson.encodePrettily(),
+    final Errors errors = verifyPostResponseWithSuperUserHeader(LINES_PATH, compPoLineJson.encodePrettily(),
       prepareHeaders(EMPTY_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).body().as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
@@ -207,7 +232,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     logger.info("=== Test PO Line over limit creation ===");
     JsonObject compPoLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
 
-    final Errors errors = verifyPostResponse(LINES_PATH, compPoLineJson.encodePrettily(),
+    final Errors errors = verifyPostResponseWithSuperUserHeader(LINES_PATH, compPoLineJson.encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1), APPLICATION_JSON, 422).body().as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
@@ -220,7 +245,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   public void testPostOrdersLinesByIdPoLineWithoutId() throws IOException {
     logger.info("=== Test Post Order Lines By Id (empty id in body) ===");
 
-    Errors resp = verifyPostResponse(LINES_PATH, getMockData(PO_LINE_MIN_CONTENT_PATH),
+    Errors resp = verifyPostResponseWithSuperUserHeader(LINES_PATH, getMockData(PO_LINE_MIN_CONTENT_PATH),
       prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
 
     assertEquals(1, resp.getErrors().size());
@@ -233,7 +258,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     JsonObject reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, PO_LINE_ID_FOR_SUCCESS_CASE);
     reqData.put(PURCHASE_ORDER_ID, ID_DOES_NOT_EXIST);
 
-    Errors resp = verifyPostResponse(LINES_PATH, reqData.encodePrettily(),
+    Errors resp = verifyPostResponseWithSuperUserHeader(LINES_PATH, reqData.encodePrettily(),
       prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
 
     assertEquals(1, resp.getErrors().size());
@@ -260,7 +285,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     CompositePoLine poLine = order.getCompositePoLines().get(0);
     poLine.setId(null);
 
-    Errors errors = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(poLine).encode(),
+    Errors errors = verifyPostResponseWithSuperUserHeader(LINES_PATH, JsonObject.mapFrom(poLine).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
     validatePoLineCreationErrorForNonPendingOrder(errorCode, errors);
   }
@@ -269,7 +294,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   public void testCreatePoLineWithGetPoLineNumberError() throws IOException {
     logger.info("=== Test Create PO Line - fail on PO Line number generation ===");
     String body = getMockData(String.format("%s%s.json", COMP_PO_LINES_MOCK_DATA_PATH, PO_LINE_ID_FOR_SUCCESS_CASE));
-    verifyPostResponse(LINES_PATH, body, prepareHeaders(PO_NUMBER_ERROR_X_OKAPI_TENANT), APPLICATION_JSON, 500);
+    verifyPostResponseWithSuperUserHeader(LINES_PATH, body, prepareHeaders(PO_NUMBER_ERROR_X_OKAPI_TENANT), APPLICATION_JSON, 500);
   }
 
   @Test
