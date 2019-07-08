@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.folio.orders.utils.HelperUtils.CONFIGS;
@@ -366,12 +367,12 @@ class InventoryInteractionTestHelper {
       assertThat(instance.getJsonArray(INSTANCE_IDENTIFIERS).getJsonObject(0).getString(INSTANCE_IDENTIFIER_TYPE_ID), equalTo("8261054f-be78-422d-bd51-4ed9f33c3422"));
       assertThat(instance.getJsonArray(INSTANCE_IDENTIFIERS).getJsonObject(0).getString(INSTANCE_IDENTIFIER_TYPE_VALUE), equalTo(line.getDetails().getProductIds().get(0).getProductId()));
     }
-    Object[] actual = instance.getJsonArray(INSTANCE_CONTRIBUTORS).stream()
+    Object[] actual = Optional.ofNullable(instance.getJsonArray(INSTANCE_CONTRIBUTORS)).orElse(new JsonArray()).stream()
       .map(o -> (JsonObject) o)
       .collect(Collectors.toMap(c -> c.getString(CONTRIBUTOR_NAME), c -> c.getString(CONTRIBUTOR_NAME_TYPE_ID)))
       .entrySet().toArray();
     Object[] expected = line.getContributors().stream()
-      .collect(Collectors.toMap(Contributor::getContributor, Contributor::getContributorType))
+      .collect(Collectors.toMap(Contributor::getContributor, Contributor::getContributorNameTypeId))
       .entrySet().toArray();
     assertArrayEquals(expected, actual);
   }
