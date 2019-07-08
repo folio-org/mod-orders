@@ -135,7 +135,8 @@
             "orders-storage.reporting-codes.item.post",
             "configuration.entries.collection.get",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "orders-storage.acquisitions-unit-assignments.collection.get"
           ]
         },
         {
@@ -240,8 +241,10 @@
           "permissionsRequired": ["orders.pieces.item.post"],
           "modulePermissions": [
             "orders-storage.pieces.item.post",
+            "orders-storage.po-lines.collection.get",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "orders-storage.acquisitions-unit-assignments.collection.get"
           ]
         },
         {

@@ -43,7 +43,7 @@ public class ProtectionHelperTest extends ApiTestBase {
 
   @Test
   public void testWithoutUserIdHeader() {
-    // Order with units - expecting of call only to Assignments API
+    // Request without user id header - expecting of call only to Assignments API
     for(Operations operation : Operations.values()) {
       for(ProtectedEntities holder : ProtectedEntities.values()) {
         operation.process(holder.getEndpoint(), holder.getSampleForNormalFlow(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 403);
@@ -56,7 +56,7 @@ public class ProtectionHelperTest extends ApiTestBase {
   }
 
   @Test
-  public void testNumberOfRequests() {
+  public void testNumberOfRequestsForOrderWithUnits() {
     // Order with units - expecting of calls to Units, Memberships, Assignments API
     for(Operations operation : Arrays.asList(Operations.CREATE)) {
       for(ProtectedEntities holder : Arrays.asList(ProtectedEntities.PIECES, ProtectedEntities.ORDER_LINES)) {
@@ -70,8 +70,8 @@ public class ProtectionHelperTest extends ApiTestBase {
   }
 
   @Test
-  public void testNumberOfRequests2() {
-    // Order with units - expecting of calls to Units, Memberships, Assignments API
+  public void testNumberOfRequestsForOrderWithoutUnits() {
+    // Order without units - expecting of call only to Assignments API
     for(Operations operation : Arrays.asList(Operations.CREATE)) {
       for(ProtectedEntities holder : Arrays.asList(ProtectedEntities.ORDER_LINES)) {
         operation.process(holder.getEndpoint(), holder.getSampleWithOrderWithoutUnits(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201);
@@ -84,7 +84,7 @@ public class ProtectionHelperTest extends ApiTestBase {
   }
 
   @Test
-  public void testOperationProtection() {
+  public void testOperationsProtection() {
     for(Operations operation : Operations.values()) {
       for(ProtectedEntities entities : ProtectedEntities.values()) {
         entities.getAllowedUserIdHeadersStream().forEach(header -> operation.process(entities.getEndpoint(), entities.getSampleForNormalFlow(),
