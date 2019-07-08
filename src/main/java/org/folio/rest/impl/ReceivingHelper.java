@@ -21,7 +21,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
-  private static final String GET_RECEIVING_HISTORY_BY_QUERY = resourcesPath(RECEIVING_HISTORY) + "?limit=%s&offset=%s%s&lang=%s";
+  private static final String GET_RECEIVING_HISTORY_BY_QUERY = resourcesPath(RECEIVING_HISTORY) + SEARCH_PARAMS;
 
   /**
    * Map with PO line id as a key and value is map with piece id as a key and {@link ReceivedItem} as a value

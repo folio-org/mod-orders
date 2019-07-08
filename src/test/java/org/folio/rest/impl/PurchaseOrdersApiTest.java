@@ -14,6 +14,7 @@ import org.folio.HttpStatus;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -73,6 +74,8 @@ import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.FINANCE_STORAGE_ENCUMBRANCES;
 import static org.folio.orders.utils.ResourcePathResolver.PAYMENT_STATUS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
@@ -84,6 +87,8 @@ import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.impl.AbstractHelper.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_ID;
+import static org.folio.rest.impl.AcquisitionsUnitsHelper.NO_ACQ_UNIT_ASSIGNED_CQL;
 import static org.folio.rest.impl.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoCreation;
 import static org.folio.rest.impl.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
 import static org.folio.rest.impl.InventoryHelper.DEFAULT_INSTANCE_STATUS_CODE;
@@ -110,9 +115,11 @@ import static org.folio.rest.impl.MockServer.getInstancesSearches;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
+import static org.folio.rest.impl.MockServer.getQueryParams;
 import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -1668,19 +1675,62 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("=== Test Get Orders - With empty query ===");
 
     final PurchaseOrders purchaseOrders = verifySuccessGet(COMPOSITE_ORDERS_PATH, PurchaseOrders.class);
-    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET));
-    assertNull(MockServer.serverRqRs.get(SEARCH_ORDERS, HttpMethod.GET));
-    assertEquals(3, purchaseOrders.getTotalRecords().intValue());
+
+    assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(SEARCH_ORDERS, HttpMethod.GET), nullValue());
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
+    assertThat(purchaseOrders.getTotalRecords(), is(3));
+
+    List<String> queryParams = getQueryParams(PURCHASE_ORDER);
+    assertThat(queryParams, hasSize(1));
+    assertThat(queryParams.get(0), equalTo(NO_ACQ_UNIT_ASSIGNED_CQL));
   }
 
   @Test
   public void testGetOrdersWithParameters() {
     logger.info("=== Test Get Orders - With empty query ===");
-    String endpointQuery = String.format("%s?query=%s", COMPOSITE_ORDERS_PATH, "poNumber==" + EXISTING_PO_NUMBER);
+    String queryValue = "poNumber==" + EXISTING_PO_NUMBER;
+    String endpointQuery = String.format("%s?query=%s", COMPOSITE_ORDERS_PATH, queryValue);
     final PurchaseOrders purchaseOrders = verifySuccessGet(endpointQuery, PurchaseOrders.class);
-    assertNull(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET));
-    assertNotNull(MockServer.serverRqRs.get(SEARCH_ORDERS, HttpMethod.GET));
-    assertEquals(1, purchaseOrders.getTotalRecords().intValue());
+
+    assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET), nullValue());
+    assertThat(MockServer.serverRqRs.get(SEARCH_ORDERS, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
+    assertThat(purchaseOrders.getTotalRecords(), is(1));
+
+    List<String> queryParams = getQueryParams(SEARCH_ORDERS);
+    assertThat(queryParams, hasSize(1));
+    String queryToStorage = queryParams.get(0);
+    assertThat(queryToStorage, containsString(queryValue));
+    assertThat(queryToStorage, not(containsString(ACQUISITIONS_UNIT_ID + "==")));
+    assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
+  }
+
+  @Test
+  public void testGetOrdersForUserAssignedToAcqUnits() {
+    logger.info("=== Test Get Orders by query - user assigned to acq units ===");
+
+    Headers headers = prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID_WITH_ACQ_UNITS);
+    verifyGet(COMPOSITE_ORDERS_PATH, headers, APPLICATION_JSON, 200);
+
+    assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(SEARCH_ORDERS, HttpMethod.GET), nullValue());
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
+
+    List<String> queryParams = getQueryParams(PURCHASE_ORDER);
+    assertThat(queryParams, hasSize(1));
+    String queryToStorage = queryParams.get(0);
+    assertThat(queryToStorage, containsString(ACQUISITIONS_UNIT_ID + "=="));
+    assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
+
+    MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET)
+      .get(0)
+      .mapTo(AcquisitionsUnitMembershipCollection.class)
+      .getAcquisitionsUnitMemberships()
+      .forEach(member -> assertThat(queryToStorage, containsString(member.getAcquisitionsUnitId())));
   }
 
   @Test

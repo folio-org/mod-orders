@@ -27,9 +27,10 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
 
 public class AcquisitionsUnitsHelper extends AbstractHelper {
-  private static final String GET_UNITS_BY_QUERY = resourcesPath(ACQUISITIONS_UNITS) + "?offset=%s&limit=%s%s&lang=%s";
-  private static final String GET_UNITS_MEMBERSHIPS_BY_QUERY = resourcesPath(ACQUISITIONS_MEMBERSHIPS) + "?offset=%s&limit=%s%s&lang=%s";
-  private static final String NO_ACQ_UNIT_ASSIGNED_CQL = "(cql.allRecords=1 NOT acquisitionsUnitId=\"\")";
+  static final String ACQUISITIONS_UNIT_ID = "acquisitionsUnitId";
+  static final String NO_ACQ_UNIT_ASSIGNED_CQL = "(cql.allRecords=1 NOT " + ACQUISITIONS_UNIT_ID + "=\"\")";
+  private static final String GET_UNITS_BY_QUERY = resourcesPath(ACQUISITIONS_UNITS) + SEARCH_PARAMS;
+  private static final String GET_UNITS_MEMBERSHIPS_BY_QUERY = resourcesPath(ACQUISITIONS_MEMBERSHIPS) + SEARCH_PARAMS;
 
   public AcquisitionsUnitsHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -43,7 +44,7 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
     CompletableFuture<AcquisitionsUnitCollection> future = new VertxCompletableFuture<>(ctx);
 
     try {
-      String endpoint = String.format(GET_UNITS_BY_QUERY, offset, limit, buildQuery(query, logger), lang);
+      String endpoint = String.format(GET_UNITS_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
 
       handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
         .thenApply(jsonUnits -> jsonUnits.mapTo(AcquisitionsUnitCollection.class))
@@ -80,11 +81,10 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
   CompletableFuture<String> buildAcqUnitsCqlExprToSearchRecords() {
     return getAcqUnitIdsForSearch().thenApply(ids -> {
       if (ids.isEmpty()) {
-        return AcquisitionsUnitsHelper.NO_ACQ_UNIT_ASSIGNED_CQL;
+        return NO_ACQ_UNIT_ASSIGNED_CQL;
       }
 
-      return String.format("(%s or %s)", convertIdsToCqlQuery(ids, "acquisitionsUnitId"),
-        AcquisitionsUnitsHelper.NO_ACQ_UNIT_ASSIGNED_CQL);
+      return String.format("(%s or %s)", convertIdsToCqlQuery(ids, ACQUISITIONS_UNIT_ID), NO_ACQ_UNIT_ASSIGNED_CQL);
     });
   }
 
@@ -99,7 +99,7 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
   CompletableFuture<AcquisitionsUnitMembershipCollection> getAcquisitionsUnitsMemberships(String query, int offset, int limit) {
     CompletableFuture<AcquisitionsUnitMembershipCollection> future = new VertxCompletableFuture<>(ctx);
     try {
-      String endpoint = String.format(GET_UNITS_MEMBERSHIPS_BY_QUERY, offset, limit, buildQuery(query, logger), lang);
+      String endpoint = String.format(GET_UNITS_MEMBERSHIPS_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
       handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
         .thenApply(jsonUnitsMembership -> jsonUnitsMembership.mapTo(AcquisitionsUnitMembershipCollection.class))
         .thenAccept(future::complete)
@@ -129,21 +129,6 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
       });
   }
 
-  CompletableFuture<List<String>> getOpenForReadAcqUnitIds() {
-    return getAcquisitionsUnits("protectRead==false", 0, Integer.MAX_VALUE).thenApply(units -> {
-      List<String> ids = units.getAcquisitionsUnits()
-        .stream()
-        .map(AcquisitionsUnit::getId)
-        .collect(Collectors.toList());
-
-      if (logger.isDebugEnabled()) {
-        logger.debug("{} acq units with 'protectRead==false' are found: {}", ids.size(), StreamEx.of(ids).joining(", "));
-      }
-
-      return ids;
-    });
-  }
-
   CompletableFuture<AcquisitionsUnitMembership> createAcquisitionsUnitsMembership(AcquisitionsUnitMembership membership) {
     return createRecordInStorage(JsonObject.mapFrom(membership), resourcesPath(ACQUISITIONS_MEMBERSHIPS)).thenApply(membership::withId);
   }
@@ -160,5 +145,20 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
 
   CompletableFuture<Void> deleteAcquisitionsUnitsMembership(String id) {
     return handleDeleteRequest(resourceByIdPath(ACQUISITIONS_MEMBERSHIPS, id), httpClient, ctx, okapiHeaders, logger);
+  }
+
+  private CompletableFuture<List<String>> getOpenForReadAcqUnitIds() {
+    return getAcquisitionsUnits("protectRead==false", 0, Integer.MAX_VALUE).thenApply(units -> {
+      List<String> ids = units.getAcquisitionsUnits()
+        .stream()
+        .map(AcquisitionsUnit::getId)
+        .collect(Collectors.toList());
+
+      if (logger.isDebugEnabled()) {
+        logger.debug("{} acq units with 'protectRead==false' are found: {}", ids.size(), StreamEx.of(ids).joining(", "));
+      }
+
+      return ids;
+    });
   }
 }

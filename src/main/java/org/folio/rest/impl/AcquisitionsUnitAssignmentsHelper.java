@@ -18,7 +18,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class AcquisitionsUnitAssignmentsHelper extends AbstractHelper {
 
-  private static final String GET_UNIT_ASSIGNMENTS_BY_QUERY = resourcesPath(ACQUISITIONS_UNIT_ASSIGNMENTS) + "?offset=%s&limit=%s%s&lang=%s";
+  private static final String GET_UNIT_ASSIGNMENTS_BY_QUERY = resourcesPath(ACQUISITIONS_UNIT_ASSIGNMENTS) + SEARCH_PARAMS;
 
   AcquisitionsUnitAssignmentsHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
@@ -28,7 +28,7 @@ public class AcquisitionsUnitAssignmentsHelper extends AbstractHelper {
     CompletableFuture<AcquisitionsUnitAssignmentCollection> future = new VertxCompletableFuture<>(ctx);
 
     try {
-      String endpoint = String.format(GET_UNIT_ASSIGNMENTS_BY_QUERY, offset, limit, buildQuery(query, logger), lang);
+      String endpoint = String.format(GET_UNIT_ASSIGNMENTS_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
 
       handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
         .thenApply(jsonUnits -> jsonUnits.mapTo(AcquisitionsUnitAssignmentCollection.class))
