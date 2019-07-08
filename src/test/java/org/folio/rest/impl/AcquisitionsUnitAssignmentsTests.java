@@ -9,15 +9,19 @@ import io.vertx.core.logging.LoggerFactory;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitAssignment;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitAssignmentCollection;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 import org.folio.rest.jaxrs.model.Errors;
 import org.junit.Test;
 
 import javax.ws.rs.core.HttpHeaders;
+import java.io.IOException;
 import java.util.UUID;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
+import static org.folio.rest.impl.MockServer.ACQUISITIONS_MEMBERSHIPS_COLLECTION;
+import static org.folio.rest.impl.MockServer.ACQUISITIONS_UNIT_ASSIGNMENTS_COLLECTION;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
@@ -27,10 +31,12 @@ public class AcquisitionsUnitAssignmentsTests extends ApiTestBase {
   private static final String ACQ_UNIT_ASSIGNMENTS_ENDPOINT = "/orders/acquisitions-unit-assignments";
 
   @Test
-  public void testGetAcqUnitAssignmentsNoQuery() {
+  public void testGetAcqUnitAssignmentsNoQuery() throws IOException {
     logger.info("=== Test Get Acquisitions Unit Assignments - With empty query ===");
-    final AcquisitionsUnitAssignmentCollection units = verifySuccessGet(ACQ_UNIT_ASSIGNMENTS_ENDPOINT, AcquisitionsUnitAssignmentCollection.class);
-    assertThat(units.getAcquisitionsUnitAssignments(), hasSize(4));
+    AcquisitionsUnitAssignmentCollection expected = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_UNIT_ASSIGNMENTS_COLLECTION)).mapTo(AcquisitionsUnitAssignmentCollection.class);
+    final AcquisitionsUnitAssignmentCollection assignments = verifySuccessGet(ACQ_UNIT_ASSIGNMENTS_ENDPOINT, AcquisitionsUnitAssignmentCollection.class);
+    assertThat(expected.getAcquisitionsUnitAssignments(), hasSize(expected.getTotalRecords()));
+    assertThat(assignments.getAcquisitionsUnitAssignments(), hasSize(expected.getTotalRecords()));
   }
 
   @Test

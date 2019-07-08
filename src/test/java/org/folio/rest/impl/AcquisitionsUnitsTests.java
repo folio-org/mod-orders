@@ -133,7 +133,7 @@ public class AcquisitionsUnitsTests extends ApiTestBase {
     logger.info("=== Test POST acquisitions unit - success case ===");
 
     String body = JsonObject.mapFrom(new AcquisitionsUnit().withName("Some name")).encode();
-    Response response = verifyPostResponseWithSuperUserHeader(ACQ_UNITS_UNITS_ENDPOINT, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
+    Response response = verifyPostResponse(ACQ_UNITS_UNITS_ENDPOINT, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
         APPLICATION_JSON, 201);
     AcquisitionsUnit unit = response.as(AcquisitionsUnit.class);
 
@@ -147,6 +147,6 @@ public class AcquisitionsUnitsTests extends ApiTestBase {
 
     String body = JsonObject.mapFrom(new AcquisitionsUnit().withName("Some name")).encode();
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, new Header(X_ECHO_STATUS, String.valueOf(500)));
-    verifyPostResponseWithSuperUserHeader(ACQ_UNITS_UNITS_ENDPOINT, body, headers, APPLICATION_JSON, 500);
+    verifyPostResponse(ACQ_UNITS_UNITS_ENDPOINT, body, headers, APPLICATION_JSON, 500);
   }
 }

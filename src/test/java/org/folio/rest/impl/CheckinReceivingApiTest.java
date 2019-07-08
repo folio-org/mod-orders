@@ -82,7 +82,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     CheckinCollection checkInRq = getMockAsJson(CHECKIN_RQ_MOCK_DATA_PATH + "checkin-pe-mix-2-electronic-resources.json").mapTo(CheckinCollection.class);
 
-    ReceivingResults results = verifyPostResponseWithSuperUserHeader(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkInRq).encode(),
+    ReceivingResults results = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkInRq).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
 
     assertThat(results.getTotalRecords(), equalTo(checkInRq.getTotalRecords()));
@@ -126,7 +126,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     CheckinCollection checkInRq = getMockAsJson(CHECKIN_RQ_MOCK_DATA_PATH + "checkin-pe-mix-2-physical-resources.json").mapTo(CheckinCollection.class);
 
-    ReceivingResults results = verifyPostResponseWithSuperUserHeader(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkInRq).encode(),
+    ReceivingResults results = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkInRq).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
 
     assertThat(results.getTotalRecords(), equalTo(checkInRq.getTotalRecords()));
@@ -185,7 +185,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     CheckinCollection checkinReq = getMockAsJson(
       CHECKIN_RQ_MOCK_DATA_PATH + "revert-checkin-physical-1-resource.json").mapTo(CheckinCollection.class);
 
-    ReceivingResults results = verifyPostResponseWithSuperUserHeader(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkinReq).encode(),
+    ReceivingResults results = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkinReq).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
 
     assertThat(results.getTotalRecords(), equalTo(checkinReq.getTotalRecords()));
@@ -297,7 +297,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-physical-all-resources.json").mapTo(ReceivingCollection.class);
 
-    ReceivingResults results = verifyPostResponseWithSuperUserHeader(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
+    ReceivingResults results = verifyPostResponse(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
 
     assertThat(results.getTotalRecords(), equalTo(receivingRq.getTotalRecords()));
@@ -349,7 +349,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     ReceivingCollection receiving = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-electronic-5-of-10-resources-no-items.json").mapTo(ReceivingCollection.class);
 
-    ReceivingResults results = verifyPostResponseWithSuperUserHeader(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receiving).encode(),
+    ReceivingResults results = verifyPostResponse(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receiving).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
 
     assertThat(results.getTotalRecords(), equalTo(receiving.getTotalRecords()));
@@ -392,7 +392,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-physical-resources-6-of-10-with-errors.json").mapTo(ReceivingCollection.class);
 
-    ReceivingResults results = verifyPostResponseWithSuperUserHeader(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
+    ReceivingResults results = verifyPostResponse(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
 
     assertThat(results.getTotalRecords(), is(receivingRq.getTotalRecords()));
@@ -488,7 +488,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-500-error-for-pieces-lookup.json").mapTo(ReceivingCollection.class);
 
-    ReceivingResults results = verifyPostResponseWithSuperUserHeader(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
+    ReceivingResults results = verifyPostResponse(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
 
     assertThat(results.getTotalRecords(), is(1));
@@ -523,7 +523,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-500-error-for-items-lookup.json").mapTo(ReceivingCollection.class);
 
-    ReceivingResults results = verifyPostResponseWithSuperUserHeader(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
+    ReceivingResults results = verifyPostResponse(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
 
     assertThat(results.getTotalRecords(), is(1));
@@ -558,7 +558,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "revert-pe-mix-4-of-5-resources.json").mapTo(ReceivingCollection.class);
 
-    ReceivingResults results = verifyPostResponseWithSuperUserHeader(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
+    ReceivingResults results = verifyPostResponse(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
 
     assertThat(results.getTotalRecords(), equalTo(receivingRq.getTotalRecords()));
@@ -609,7 +609,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "revert-electronic-1-of-1-resource.json").mapTo(ReceivingCollection.class);
 
-    ReceivingResults results = verifyPostResponseWithSuperUserHeader(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
+    ReceivingResults results = verifyPostResponse(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
 
     assertThat(results.getTotalRecords(), equalTo(receivingRq.getTotalRecords()));
@@ -654,7 +654,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
   private void checkResultWithErrors(CheckinCollection request, int expectedNumOfErrors) {
 
-    ReceivingResult response = verifyPostResponseWithSuperUserHeader(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(request).encode(),
+    ReceivingResult response = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(request).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt())
       .as(ReceivingResults.class).getReceivingResults().get(0);
 

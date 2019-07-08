@@ -35,7 +35,8 @@ import java.util.concurrent.TimeoutException;
   PoNumberApiTest.class,
   OrderStatusTest.class,
   ReceiptStatusConsistencyTest.class,
-  AcquisitionsUnitAssignmentsTests.class
+  AcquisitionsUnitAssignmentsTests.class,
+  ProtectionHelperTest.class
 })
 public class ApiTestSuite {
 
