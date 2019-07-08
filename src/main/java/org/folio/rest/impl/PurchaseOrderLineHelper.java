@@ -65,10 +65,12 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private static final String DASH_SEPARATOR = "-";
 
   private final InventoryHelper inventoryHelper;
+  private final ProtectionHelper protectionHelper;
 
   PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
+    protectionHelper = ProtectionHelper.Operation.CREATE.getInstance(okapiHeaders, ctx, lang);
   }
 
   PurchaseOrderLineHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -142,6 +144,16 @@ class PurchaseOrderLineHelper extends AbstractHelper {
           return getCompositePurchaseOrder(compPOL)
             // The PO Line can be created only for order in Pending state
             .thenApply(this::validateOrderState)
+            .thenCompose(po -> {
+              return protectionHelper.isOperationProtected(po.getId())
+                .thenApply(isProtected -> {
+                  if(isProtected) {
+                    throw new HttpException(403, "Forbidden");
+                  } else {
+                    return po;
+                  }
+                });
+            })
             .thenCompose(po -> createPoLine(compPOL, po));
         } else {
           return completedFuture(null);

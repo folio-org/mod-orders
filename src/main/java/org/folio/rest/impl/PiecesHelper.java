@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.folio.orders.events.handlers.MessageAddress;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -23,15 +25,29 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PiecesHelper extends AbstractHelper {
 
+  private ProtectionHelper protectionHelper;
+  private PurchaseOrderLineHelper purchaseOrderLineHelper;
+
   private static final String DELETE_PIECE_BY_ID = resourceByIdPath(PIECES, "%s") + "?lang=%s";
 
   public PiecesHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
+    protectionHelper = ProtectionHelper.Operation.CREATE.getInstance(okapiHeaders, ctx, lang);
+    purchaseOrderLineHelper = new PurchaseOrderLineHelper(okapiHeaders, ctx, lang);
   }
 
   CompletableFuture<Piece> createRecordInStorage(Piece entity) {
-    // On success set id of the created entity to piece object and return it back
-    return createRecordInStorage(JsonObject.mapFrom(entity), resourcesPath(PIECES)).thenApply(entity::withId);
+    String poLineId = entity.getPoLineId();
+    return purchaseOrderLineHelper.getCompositePoLine(poLineId)
+      .thenApply(CompositePoLine::getPurchaseOrderId)
+      .thenCompose(recordId -> protectionHelper.isOperationProtected(recordId))
+      .thenCompose(isOperationProtected -> {
+        if(isOperationProtected) {
+          throw new HttpException(403, "Forbidden");
+        } else {
+          return createRecordInStorage(JsonObject.mapFrom(entity), resourcesPath(PIECES)).thenApply(entity::withId);
+        }
+      });
   }
 
   // Flow to update piece

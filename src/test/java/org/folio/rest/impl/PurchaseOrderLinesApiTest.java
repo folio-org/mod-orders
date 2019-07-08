@@ -95,7 +95,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostPieceProtection() {
+  public void testPostOrderLinesProtection() {
 
     logger.info("=== Test POST Order Line (Create Order Line) Protection ===");
 
@@ -144,10 +144,6 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
       PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
       ZERO_LOCATION_QTY.getCode()));
 
-    // Check that only calls made by the business logic to units and memberships
-    assertThat(MockServer.serverRqRs.get("acquisitionsUnits", HttpMethod.GET).size(), is(1));
-    assertThat(MockServer.serverRqRs.get("acquisitionsMemberships", HttpMethod.GET).size(), is(1));
-    assertThat(MockServer.serverRqRs.size(), is(2));
   }
 
   @Test
@@ -182,11 +178,6 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertThat(errorCodes, containsInAnyOrder(ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
       PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
       ZERO_LOCATION_QTY.getCode()));
-
-    // Check that only calls made by the business logic to units and memberships
-    assertThat(MockServer.serverRqRs.get("acquisitionsUnits", HttpMethod.GET).size(), is(1));
-    assertThat(MockServer.serverRqRs.get("acquisitionsMemberships", HttpMethod.GET).size(), is(1));
-    assertThat(MockServer.serverRqRs.size(), is(2));
   }
 
   @Test
@@ -209,11 +200,6 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     assertThat(response.getErrors(), hasSize(1));
     assertThat(response.getErrors().get(0).getCode(), equalTo(COST_DISCOUNT_INVALID.getCode()));
-
-    // Check that only calls made by the business logic to units and memberships
-    assertThat(MockServer.serverRqRs.get("acquisitionsUnits", HttpMethod.GET).size(), is(1));
-    assertThat(MockServer.serverRqRs.get("acquisitionsMemberships", HttpMethod.GET).size(), is(1));
-    assertThat(MockServer.serverRqRs.size(), is(2));
   }
 
   @Test

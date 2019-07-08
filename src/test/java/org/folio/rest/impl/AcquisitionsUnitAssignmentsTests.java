@@ -30,7 +30,7 @@ public class AcquisitionsUnitAssignmentsTests extends ApiTestBase {
   public void testGetAcqUnitAssignmentsNoQuery() {
     logger.info("=== Test Get Acquisitions Unit Assignments - With empty query ===");
     final AcquisitionsUnitAssignmentCollection units = verifySuccessGet(ACQ_UNIT_ASSIGNMENTS_ENDPOINT, AcquisitionsUnitAssignmentCollection.class);
-    assertThat(units.getAcquisitionsUnitAssignments(), hasSize(2));
+    assertThat(units.getAcquisitionsUnitAssignments(), hasSize(4));
   }
 
   @Test

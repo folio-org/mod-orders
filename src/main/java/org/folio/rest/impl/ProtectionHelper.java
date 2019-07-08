@@ -18,6 +18,7 @@ public class ProtectionHelper extends AbstractHelper {
 
   private AcquisitionsUnitsHelper acquisitionsUnitsHelper;
   private AcquisitionsMembershipsHelper acquisitionsMembershipsHelper;
+  private AcquisitionsUnitAssignmentsHelper acquisitionsUnitAssignmentsHelper;
   private Operation operation;
 
   private static final String OKAPI_USER_ID_HEADER = "X-Okapi-User-Id";
@@ -26,6 +27,7 @@ public class ProtectionHelper extends AbstractHelper {
     super(okapiHeaders, ctx, lang);
     acquisitionsUnitsHelper = new AcquisitionsUnitsHelper(okapiHeaders, ctx, lang);
     acquisitionsMembershipsHelper = new AcquisitionsMembershipsHelper(okapiHeaders, ctx, lang);
+    acquisitionsUnitAssignmentsHelper = new AcquisitionsUnitAssignmentsHelper(okapiHeaders, ctx, lang);
     this.operation = operation;
   }
 
@@ -35,15 +37,34 @@ public class ProtectionHelper extends AbstractHelper {
    *
    * @return true if operation is protected, otherwise - false.
    */
-  public CompletableFuture<Boolean> isOperationProtected() {
-    String userId;
-    if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USER_ID_HEADER)) != null) {
-      return getUnitIds(userId)
-        .thenCompose(this::getUnitsByIds)
-        .thenCompose(this::isOperationProtected);
-    } else {
-      return CompletableFuture.completedFuture(true);
-    }
+  public CompletableFuture<Boolean> isOperationProtected(String recordId) {
+    CompletableFuture<Boolean> future = new CompletableFuture<>();
+    isUnitsExist(recordId).thenAccept(isUnitsExist -> {
+      if(isUnitsExist) {
+        String userId;
+        if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USER_ID_HEADER)) != null) {
+            getUnitIds(userId)
+              .thenCompose(this::getUnitsByIds)
+              .thenCompose(this::isOperationProtected)
+              .thenAccept(future::complete);
+        } else {
+          future.complete(true);
+        }
+      } else {
+        future.complete(false);
+      }
+    });
+    return future;
+  }
+
+  /**
+   * This method checks existence of units associated with order.
+   * @param recordId id of order.
+   * @return true if units exist, otherwise - false.
+   */
+  private CompletableFuture<Boolean> isUnitsExist(String recordId) {
+    return acquisitionsUnitAssignmentsHelper.getAcquisitionsUnitAssignments(String.format("recordId==%s", recordId), 0, Integer.MAX_VALUE)
+      .thenApply(units -> units.getTotalRecords() > 0);
   }
 
   /**

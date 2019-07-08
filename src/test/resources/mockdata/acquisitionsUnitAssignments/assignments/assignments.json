@@ -17,8 +17,26 @@
         "createdDate": "2018-07-19T00:00:00.000+0000",
         "createdByUserId": "22d1057c-d137-11e8-a8d5-f2801f1b9fd1"
       }
+    },
+    {
+      "id": "59f741d0-dcb1-424e-87b0-e3379296897e",
+      "recordId": "00000000-1111-2222-8888-999999999999",
+      "acquisitionsUnitId": "0e9525aa-d123-4e4d-9f7e-1b302a97eb90",
+      "metadata": {
+        "createdDate": "2018-08-19T00:00:00.000+0000",
+        "createdByUserId": "28d1057c-d137-11e8-a8d5-f2801f1b9fd1"
+      }
+    },
+    {
+      "id": "3ade2882-ef61-40fa-bb6d-2d3558cd7a62",
+      "recordId": "e5ae4afd-3fa9-494e-a972-f541df9b877e",
+      "acquisitionsUnitId": "0e9525aa-d123-4e4d-9f7e-1b302a97eb90",
+      "metadata": {
+        "createdDate": "2018-08-19T00:00:00.000+0000",
+        "createdByUserId": "28d1057c-d137-11e8-a8d5-f2801f1b9fd1"
+      }
     }
   ],
-  "totalRecords": 2
+  "totalRecords": 4
 }
 
