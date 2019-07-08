@@ -51,6 +51,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -310,7 +312,7 @@ public class MockServer {
     router.route(HttpMethod.GET, "/loan-types").handler(this::handleGetLoanType);
     router.route(HttpMethod.GET, "/organizations-storage/organizations/:id").handler(this::getOrganizationById);
     router.route(HttpMethod.GET, "/organizations-storage/organizations").handler(this::handleGetAccessProviders);
-    router.route(HttpMethod.GET, resourcesPath(PO_LINES)).handler(this::handleGetPoLines);
+    router.route(HttpMethod.GET, resourcesPath(PO_LINES)).handler(ctx -> handleGetPoLines(ctx, PO_LINES));
     router.route(HttpMethod.GET, resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
     router.route(HttpMethod.GET, resourcePath(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
     router.route(HttpMethod.GET, resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
@@ -320,7 +322,7 @@ public class MockServer {
     router.route(HttpMethod.GET, resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
     router.route(HttpMethod.GET, resourcesPath(PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
     router.route(HttpMethod.GET, "/contributor-name-types").handler(this::handleGetContributorNameTypes);
-    router.route(HttpMethod.GET, resourcesPath(ORDER_LINES)).handler(this::handleGetOrderLines);
+    router.route(HttpMethod.GET, resourcesPath(ORDER_LINES)).handler(ctx -> handleGetPoLines(ctx, ORDER_LINES));
     router.route(HttpMethod.GET, resourcesPath(FINANCE_STORAGE_ENCUMBRANCES)).handler(this::handleGetEncumbrances);
     router.route(HttpMethod.GET, resourcesPath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnits);
     router.route(HttpMethod.GET, resourcePath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnit);
@@ -768,7 +770,7 @@ public class MockServer {
     }
   }
 
-  private void handleGetPoLines(RoutingContext ctx) {
+  private void handleGetPoLines(RoutingContext ctx, String type) {
     logger.info("handleGetPoLines got: {}?{}", ctx.request().path(), ctx.request().query());
 
     String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
@@ -782,7 +784,8 @@ public class MockServer {
       List<String> polIds = Collections.emptyList();
 
       if (queryParam.contains(PURCHASE_ORDER_ID)) {
-        poId = queryParam.split(PURCHASE_ORDER_ID + "==")[1];
+        Matcher matcher = Pattern.compile(".*" + PURCHASE_ORDER_ID + "==(\\S+).*").matcher(queryParam);
+        poId = matcher.find() ? matcher.group(1) : EMPTY;
       } else if (queryParam.startsWith("id==")) {
         polIds = extractIdsFromQuery(queryParam);
       }
@@ -819,13 +822,13 @@ public class MockServer {
         JsonObject po_lines = JsonObject.mapFrom(poLineCollection);
         logger.info(po_lines.encodePrettily());
 
-        addServerRqRsData(HttpMethod.GET, PO_LINES, po_lines);
+        addServerRqRsData(HttpMethod.GET, type, po_lines);
         serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encode());
       } catch (NoSuchFileException e) {
         PoLineCollection poLineCollection = new PoLineCollection();
 
         // Attempt to find POLine in mock server memory
-        List<JsonObject> postedPoLines = serverRqRs.column(HttpMethod.POST).get(PO_LINES);
+        List<JsonObject> postedPoLines = serverRqRs.column(HttpMethod.POST).get(type);
 
         if (postedPoLines != null) {
           List<PoLine> poLines = postedPoLines.stream()
@@ -1064,12 +1067,12 @@ public class MockServer {
   }
 
   private List<String> extractIdsFromQuery(String query) {
-    return StreamEx
-      .split(query, " or ")
-      .flatMap(s -> StreamEx.split(s, "=="))
-      .map(String::trim)
-      .filter(s -> !ID.equals(s))
-      .toList();
+    Matcher matcher = Pattern.compile(".*id==\\((.+)\\).*").matcher(query);
+    if (matcher.find()) {
+      return StreamEx.split(matcher.group(1), " or ").toList();
+    } else {
+      return Collections.emptyList();
+    }
   }
 
   private void handlePutGenericSubObj(RoutingContext ctx, String subObj) {
@@ -1138,12 +1141,13 @@ public class MockServer {
     } else {
       JsonObject po = new JsonObject();
       addServerRqRsData(HttpMethod.GET, orderType, po);
-      final String PO_NUMBER_QUERY = "poNumber==";
-      switch (queryParam) {
-        case PO_NUMBER_QUERY + EXISTING_PO_NUMBER:
+      Matcher matcher = Pattern.compile(".*poNumber==(\\S+).*").matcher(queryParam);
+      final String poNumber = matcher.find() ? matcher.group(1) : EMPTY;
+      switch (poNumber) {
+        case EXISTING_PO_NUMBER:
           po.put(TOTAL_RECORDS, 1);
           break;
-        case PO_NUMBER_QUERY + NONEXISTING_PO_NUMBER:
+        case NONEXISTING_PO_NUMBER:
           po.put(TOTAL_RECORDS, 0);
           break;
         case EMPTY:

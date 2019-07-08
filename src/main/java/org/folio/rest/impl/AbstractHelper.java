@@ -10,6 +10,7 @@ import static javax.ws.rs.core.Response.Status.CREATED;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 
 import io.vertx.core.Context;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -33,6 +34,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.tools.client.HttpClientFactory;
@@ -40,12 +42,13 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
 
 public abstract class AbstractHelper {
-  public static final String ID = "id";
+  public static final String ID = HelperUtils.ID;
   public static final String ORDER_IDS = "orderIds";
   public static final String OKAPI_HEADERS = "okapiHeaders";
   public static final String ERROR_CAUSE = "cause";
   public static final String OKAPI_URL = "x-okapi-url";
   static final int MAX_IDS_FOR_GET_RQ = 15;
+  static final String SEARCH_PARAMS = "?limit=%s&offset=%s%s&lang=%s";
 
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -185,6 +188,10 @@ public abstract class AbstractHelper {
       id = location.substring(location.lastIndexOf('/') + 1);
     }
     return id;
+  }
+
+  protected String getCurrentUserId() {
+    return okapiHeaders.get(OKAPI_USERID_HEADER);
   }
 
   protected int handleProcessingError(Throwable throwable) {
