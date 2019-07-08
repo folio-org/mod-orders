@@ -3,6 +3,7 @@ package org.folio.orders.events.handlers;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.LANG;
 import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -38,7 +39,7 @@ import one.util.streamex.StreamEx;
 public class ReceiptStatusConsistency extends AbstractHelper implements Handler<Message<JsonObject>> {
 
   private static final int LIMIT = Integer.MAX_VALUE;
-  private static final String LANG_QUERY_PARAM = "lang";
+  private static final String LANG_QUERY_PARAM = LANG;
   private static final String PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId==%s&limit=%s";
 
   @Autowired
