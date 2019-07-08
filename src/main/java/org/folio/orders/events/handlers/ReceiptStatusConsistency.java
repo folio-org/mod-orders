@@ -61,12 +61,12 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
 
     String poLineIdUpdate = messageFromEventBus.getString("poLineIdUpdate");
     String query = String.format(PIECES_ENDPOINT, poLineIdUpdate, LIMIT);
-    String lang = messageFromEventBus.getString(LANG_QUERY_PARAM);
-
+    
     // 1. Get all pieces for poLineId
     getPieces(query, httpClient, okapiHeaders, logger).thenAccept(piecesCollection -> {
       List<org.folio.rest.acq.model.Piece> listOfPieces = piecesCollection.getPieces();
 
+      String lang = messageFromEventBus.getString(LANG_QUERY_PARAM);
       // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
       getPoLineById(poLineIdUpdate, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(poLineJson -> {
         PoLine poLine = poLineJson.mapTo(PoLine.class);
