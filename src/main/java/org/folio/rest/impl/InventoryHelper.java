@@ -27,11 +27,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.stream.Collectors;
+
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.ErrorCodes.ITEM_CREATION_FAILED;
 import static org.folio.orders.utils.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
@@ -73,11 +76,9 @@ public class InventoryHelper extends AbstractHelper {
   static final String LOAN_TYPES = "loantypes";
 
   // mod-configuration: config names and default values
-  static final String CONFIG_NAME_CONTRIBUTOR_NAME_TYPE = "inventory-contributorNameType";
   static final String CONFIG_NAME_INSTANCE_TYPE_CODE = "inventory-instanceTypeCode";
   static final String CONFIG_NAME_INSTANCE_STATUS_CODE = "inventory-instanceStatusCode";
   static final String CONFIG_NAME_LOAN_TYPE_NAME = "inventory-loanTypeName";
-  static final String DEFAULT_CONTRIBUTOR_NAME_TYPE = "Personal name";
   static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
   static final String DEFAULT_INSTANCE_STATUS_CODE = "temp";
   static final String DEFAULT_LOAN_TYPE_NAME = "Can circulate";
@@ -99,7 +100,7 @@ public class InventoryHelper extends AbstractHelper {
 
   static {
     Map<String, String> apis = new HashMap<>();
-    apis.put(CONTRIBUTOR_NAME_TYPES, "/contributor-name-types?limit=1&query=name==%s&lang=%s");
+    apis.put(CONTRIBUTOR_NAME_TYPES, "/contributor-name-types?limit=%s&query=%s&lang=%s");
     apis.put(HOLDINGS_RECORDS, "/holdings-storage/holdings?query=%s&limit=1&lang=%s");
     apis.put(LOAN_TYPES, "/loan-types?query=name==%s&limit=1&lang=%s");
     apis.put(INSTANCE_STATUSES, "/instance-statuses?query=code==%s&limit=1&lang=%s");
@@ -340,7 +341,7 @@ public class InventoryHelper extends AbstractHelper {
     }
 
     String query = compPOL.getDetails().getProductIds().stream()
-      .map(productId -> buildProductIdQuery(productId))
+      .map(this::buildProductIdQuery)
       .collect(joining(" or "));
 
     // query contains special characters so must be encoded before submitting
@@ -368,12 +369,53 @@ public class InventoryHelper extends AbstractHelper {
     CompletableFuture<Void> statusFuture = getEntryId(INSTANCE_STATUSES, MISSING_INSTANCE_STATUS)
       .thenAccept(lookupObj::mergeIn);
 
-    CompletableFuture<Void> contributorNameTypeIdFuture = getEntryId(CONTRIBUTOR_NAME_TYPES, MISSING_CONTRIBUTOR_NAME_TYPE)
-      .thenAccept(lookupObj::mergeIn);
+    CompletableFuture<Void> contributorNameTypeIdFuture = verifyContributorNameTypesExist(compPOL.getContributors());
 
     return allOf(ctx, instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
       .thenApply(v -> buildInstanceRecordJsonObject(compPOL, lookupObj))
       .thenCompose(instanceRecJson -> createRecordInStorage(instanceRecJson, String.format(CREATE_INSTANCE_ENDPOINT, lang)));
+  }
+
+  private CompletableFuture<Void> verifyContributorNameTypesExist(List<Contributor> contributors) {
+    List<String> ids = contributors.stream()
+      .map(contributor -> contributor.getContributorNameTypeId().toLowerCase())
+      .distinct()
+      .collect(toList());
+
+    return getContributorNameTypes(ids)
+      .thenAccept(contributorNameTypes -> {
+
+        List<String> retrievedIds = contributorNameTypes.stream()
+          .map(o -> o.getString(ID).toLowerCase())
+          .collect(toList());
+
+        if (retrievedIds.size() != ids.size()) {
+          ids.removeAll(retrievedIds);
+          throw new HttpException(500, buildErrorWithParameter(String.join(", ", ids), MISSING_CONTRIBUTOR_NAME_TYPE));
+        }
+      });
+  }
+
+  private CompletableFuture<List<JsonObject>> getContributorNameTypes(List<String> ids) {
+    return collectResultsOnSuccess(StreamEx
+      .ofSubLists(ids, MAX_IDS_FOR_GET_RQ)
+      .map(this::getContributorNameTypeByIds)
+      .toList())
+      .thenApply(lists -> StreamEx.of(lists).toFlatList(contributorNameTypes -> contributorNameTypes));
+  }
+
+  private CompletableFuture<List<JsonObject>> getContributorNameTypeByIds(List<String> ids) {
+    String query = encodeQuery(convertIdsToCqlQuery(ids), logger);
+    String endpoint = buildLookupEndpoint(CONTRIBUTOR_NAME_TYPES, ids.size(), query, lang);
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(entries -> entries.getJsonArray(CONTRIBUTOR_NAME_TYPES).stream()
+        .map(json -> ((JsonObject) json))
+        .collect(Collectors.toList())
+      )
+      .exceptionally(e -> {
+        logger.error("The issue happened getting contributor name types", e);
+        throw new CompletionException(e.getCause());
+      });
   }
 
   private CompletableFuture<JsonObject> getEntryId(String entryType, ErrorCodes errorCode) {
@@ -391,9 +433,7 @@ public class InventoryHelper extends AbstractHelper {
   private Error buildErrorWithParameter(String value, ErrorCodes errorCode) {
     List<Parameter> parameters = new ArrayList<>();
     parameters.add(new Parameter().withKey("missingEntry").withValue(value));
-    return new Error()
-      .withCode(errorCode.getCode())
-      .withMessage(errorCode.getDescription())
+    return errorCode.toError()
       .withParameters(parameters);
   }
 
@@ -423,11 +463,10 @@ public class InventoryHelper extends AbstractHelper {
       instance.put(INSTANCE_PUBLICATION, new JsonArray(singletonList(publication)));
     }
 
-    if(compPOL.getContributors() != null && !compPOL.getContributors().isEmpty()) {
+    if(isNotEmpty(compPOL.getContributors())) {
       List<JsonObject> contributors = compPOL.getContributors().stream().map(compPolContributor -> {
         JsonObject invContributor = new JsonObject();
-        // According MODORDERS-204 default value for all the contributors is "Personal name".
-        invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, lookupObj.getString(CONTRIBUTOR_NAME_TYPES));
+        invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, compPolContributor.getContributorNameTypeId());
         invContributor.put(CONTRIBUTOR_NAME, compPolContributor.getContributor());
         return invContributor;
       }).collect(toList());
@@ -660,8 +699,6 @@ public class InventoryHelper extends AbstractHelper {
     return getTenantConfiguration()
       .thenApply(configs -> {
         switch (entryType) {
-          case CONTRIBUTOR_NAME_TYPES:
-            return configs.getString(CONFIG_NAME_CONTRIBUTOR_NAME_TYPE, DEFAULT_CONTRIBUTOR_NAME_TYPE);
           case INSTANCE_STATUSES:
             return configs.getString(CONFIG_NAME_INSTANCE_STATUS_CODE, DEFAULT_INSTANCE_STATUS_CODE);
           case INSTANCE_TYPES:
