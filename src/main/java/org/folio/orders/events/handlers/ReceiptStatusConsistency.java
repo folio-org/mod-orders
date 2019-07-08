@@ -3,6 +3,7 @@ package org.folio.orders.events.handlers;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.LANG;
 import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -60,11 +61,12 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
 
     String poLineIdUpdate = messageFromEventBus.getString("poLineIdUpdate");
     String query = String.format(PIECES_ENDPOINT, poLineIdUpdate, LIMIT);
-
+    
     // 1. Get all pieces for poLineId
     getPieces(query, httpClient, okapiHeaders, logger).thenAccept(piecesCollection -> {
       List<org.folio.rest.acq.model.Piece> listOfPieces = piecesCollection.getPieces();
 
+      String lang = messageFromEventBus.getString(LANG);
       // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
       getPoLineById(poLineIdUpdate, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(poLineJson -> {
         PoLine poLine = poLineJson.mapTo(PoLine.class);
