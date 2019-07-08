@@ -39,7 +39,6 @@ import one.util.streamex.StreamEx;
 public class ReceiptStatusConsistency extends AbstractHelper implements Handler<Message<JsonObject>> {
 
   private static final int LIMIT = Integer.MAX_VALUE;
-  private static final String LANG_QUERY_PARAM = LANG;
   private static final String PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId==%s&limit=%s";
 
   @Autowired
@@ -67,7 +66,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     getPieces(query, httpClient, okapiHeaders, logger).thenAccept(piecesCollection -> {
       List<org.folio.rest.acq.model.Piece> listOfPieces = piecesCollection.getPieces();
 
-      String lang = messageFromEventBus.getString(LANG_QUERY_PARAM);
+      String lang = messageFromEventBus.getString(LANG);
       // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
       getPoLineById(poLineIdUpdate, lang, httpClient, ctx, okapiHeaders, logger).thenAccept(poLineJson -> {
         PoLine poLine = poLineJson.mapTo(PoLine.class);
