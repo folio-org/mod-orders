@@ -109,7 +109,6 @@ public class ApiTestBase {
   static final Header NON_EXIST_INSTANCE_STATUS_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_INSTANCE_STATUS_TENANT);
   static final Header NON_EXIST_INSTANCE_TYPE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_INSTANCE_TYPE_TENANT);
   static final Header NON_EXIST_LOAN_TYPE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_LOAN_TYPE_TENANT);
-  static final Header NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT);
   static final Header NON_EXIST_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "ordersimpltest");
   static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
   static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_10");
@@ -201,11 +200,11 @@ public class ApiTestBase {
     }
   }
 
-  JsonObject getMockAsJson(String path, String id) {
+  static JsonObject getMockAsJson(String path, String id) {
     return getMockAsJson(String.format("%s%s.json", path, id));
   }
 
-  JsonObject getMockAsJson(String fullPath) {
+  static JsonObject getMockAsJson(String fullPath) {
     try {
       return new JsonObject(getMockData(fullPath));
     } catch (IOException e) {

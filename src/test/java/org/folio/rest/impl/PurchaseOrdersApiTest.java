@@ -17,6 +17,7 @@ import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
@@ -82,9 +83,9 @@ import static org.folio.orders.utils.ResourcePathResolver.RECEIPT_STATUS;
 import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.impl.AbstractHelper.MAX_IDS_FOR_GET_RQ;
 import static org.folio.rest.impl.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoCreation;
 import static org.folio.rest.impl.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
-import static org.folio.rest.impl.InventoryHelper.DEFAULT_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.rest.impl.InventoryHelper.DEFAULT_INSTANCE_STATUS_CODE;
 import static org.folio.rest.impl.InventoryHelper.DEFAULT_INSTANCE_TYPE_CODE;
 import static org.folio.rest.impl.InventoryHelper.DEFAULT_LOAN_TYPE_NAME;
@@ -97,6 +98,8 @@ import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesCre
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesQuantityForSuccessCase;
 import static org.folio.rest.impl.MockServer.HEADER_SERVER_ERROR;
 import static org.folio.rest.impl.MockServer.getContributorNameTypesSearches;
+import static org.folio.rest.impl.MockServer.getInstanceTypesSearches;
+import static org.folio.rest.impl.MockServer.getLoanTypesSearches;
 import static org.folio.rest.impl.MockServer.getCreatedEncumbrances;
 import static org.folio.rest.impl.MockServer.getCreatedInstances;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
@@ -594,7 +597,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdPEMixFormat() throws Exception {
+  public void testPutOrdersByIdPEMixFormat() {
     logger.info("=== Test Put Order By Id create Pieces with P/E Mix format ===");
     CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
 
@@ -1228,7 +1231,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().get(0).getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE);
     reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE);
 
-    verifyPostResponseWithSuperUserHeader(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
@@ -2030,17 +2034,18 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     //Create order first time for tenant, no contributor name type in cache
     verifyPostResponseWithSuperUserHeader(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
 
-    assertThat(getContributorNameTypesSearches(), hasSize(1));
+    assertThat(getLoanTypesSearches().size() > 0, is(true));
     assertThat(getInstanceStatusesSearches(), hasSize(1));
-    assertThat(MockServer.getInstanceTypesSearches(), hasSize(1));
+    assertThat(getInstanceTypesSearches(), hasSize(1));
     clearServiceInteractions();
 
     //Create order second time for tenant, cache contains contributor name type for this tenant
     verifyPostResponseWithSuperUserHeader(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
 
-    assertThat(getContributorNameTypesSearches(), nullValue());
+
+    assertThat(getLoanTypesSearches(), nullValue());
     assertThat(getInstanceStatusesSearches(), nullValue());
-    assertThat(MockServer.getInstanceTypesSearches(), nullValue());
+    assertThat(getInstanceTypesSearches(), nullValue());
     clearServiceInteractions();
 
     // Prepare X-Okapi-Tenant heander for tenant which has no contributor name type
@@ -2049,9 +2054,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     //Create order for another tenant, no contributor name type in cache for this tenant
     verifyPostResponseWithSuperUserHeader(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
 
-    assertThat(getContributorNameTypesSearches(), hasSize(1));
+    assertThat(getLoanTypesSearches().size() > 0, is(true));
     assertThat(getInstanceStatusesSearches(), hasSize(1));
-    assertThat(MockServer.getInstanceTypesSearches(), hasSize(1));
+    assertThat(getInstanceTypesSearches(), hasSize(1));
 
   }
 
@@ -2072,9 +2077,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
       .getErrors()
       .get(0);
 
-    assertThat(getContributorNameTypesSearches(), hasSize(1));
+    assertThat(getLoanTypesSearches(), nullValue());
     assertThat(getInstanceStatusesSearches(), hasSize(1));
-    assertThat(MockServer.getInstanceTypesSearches(), hasSize(1));
+    assertThat(getInstanceTypesSearches(), hasSize(1));
 
     assertThat(err.getCode(), equalTo(ErrorCodes.MISSING_INSTANCE_STATUS.getCode()));
     assertThat(err.getMessage(), equalTo(ErrorCodes.MISSING_INSTANCE_STATUS.getDescription()));
@@ -2084,9 +2089,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     //Create order second time for same tenant, still no instanceStatus in cache, logic should call get /instance-types again
     verifyPostResponseWithSuperUserHeader(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 500);
 
-    assertThat(getContributorNameTypesSearches(), nullValue());
+    assertThat(getLoanTypesSearches(), nullValue());
     assertThat(getInstanceStatusesSearches(), hasSize(1));
-    assertThat(MockServer.getInstanceTypesSearches(), nullValue());
+    assertThat(getInstanceTypesSearches(), nullValue());
 
   }
 
@@ -2103,17 +2108,16 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     verifyPostResponseWithSuperUserHeader(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
 
-    assertThat(getContributorNameTypesSearches(), hasSize(1));
+    assertThat(getLoanTypesSearches().size() > 0, is(true));
     assertThat(getInstanceStatusesSearches(), hasSize(1));
-    assertThat(MockServer.getInstanceTypesSearches(), hasSize(1));
-
+    assertThat(getInstanceTypesSearches(), hasSize(1));
     clearServiceInteractions();
 
     verifyPostResponseWithSuperUserHeader(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
 
-    assertThat(getContributorNameTypesSearches(), nullValue());
+    assertThat(getLoanTypesSearches(), nullValue());
     assertThat(getInstanceStatusesSearches(), nullValue());
-    assertThat(MockServer.getInstanceTypesSearches(), nullValue());
+    assertThat(getInstanceTypesSearches(), nullValue());
     assertThat(getCreatedInstances(), hasSize(1));
     JsonObject instance = getCreatedInstances().get(0);
     String instanceStatusId = instance.getString(INSTANCE_STATUS_ID);
@@ -2132,12 +2136,57 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testInventoryHelperEmptyContributorNameTypeThrowsProperError() throws Exception {
-    Error err = verifyMissingInventoryEntryErrorHandling(NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT_HEADER);
+  public void testInventoryHelperEmptyContributors() throws Exception {
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.getCompositePoLines()
+      .remove(1);
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
+
+    reqData.getCompositePoLines().get(0).getContributors().clear();
+
+    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10);
+
+    final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
+      .encodePrettily(), headers, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+
+    assertThat(getContributorNameTypesSearches(), nullValue());
+    verifyInventoryInteraction(resp, 1);
+
+  }
+
+
+  @Test
+  public void testInventoryHelperMissingContributorNameTypeThrowsProperError() throws Exception {
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.getCompositePoLines()
+      .remove(1);
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
+
+    reqData.getCompositePoLines().get(0).getContributors().add(new Contributor().withContributor("Test").withContributorNameTypeId(ID_DOES_NOT_EXIST));
+
+    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10);
+
+    Response resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
+      .encodePrettily(), headers, APPLICATION_JSON, 500);
+
+    int expectedContributorNameTypesSearches = Math.toIntExact(reqData.getCompositePoLines().get(0).getContributors().stream()
+      .map(Contributor::getContributorNameTypeId)
+      .distinct()
+      .count() / MAX_IDS_FOR_GET_RQ + 1);
+
+    assertThat(getContributorNameTypesSearches(), hasSize(expectedContributorNameTypesSearches));
+
+    Error err = resp.getBody()
+      .as(Errors.class)
+      .getErrors()
+      .get(0);
 
     assertThat(err.getCode(), equalTo(ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE.getCode()));
     assertThat(err.getMessage(), equalTo(ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE.getDescription()));
-    assertThat(err.getParameters().get(0).getValue(), equalTo(DEFAULT_CONTRIBUTOR_NAME_TYPE));
+    assertThat(err.getParameters().get(0).getValue(), equalTo(ID_DOES_NOT_EXIST));
   }
 
   @Test
@@ -2176,9 +2225,14 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     Response resp = verifyPostResponseWithSuperUserHeader(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
       .encodePrettily(), headers, APPLICATION_JSON, 500);
 
-    assertThat(getContributorNameTypesSearches(), hasSize(1));
+    int expectedContributorNameTypesSearches = Math.toIntExact(reqData.getCompositePoLines().get(0).getContributors().stream()
+      .map(Contributor::getContributorNameTypeId)
+      .distinct()
+      .count() / MAX_IDS_FOR_GET_RQ + 1);
+
+    assertThat(getContributorNameTypesSearches(), hasSize(expectedContributorNameTypesSearches));
     assertThat(getInstanceStatusesSearches(), hasSize(1));
-    assertThat(MockServer.getInstanceTypesSearches(), hasSize(1));
+    assertThat(getInstanceTypesSearches(), hasSize(1));
 
     return resp.getBody()
       .as(Errors.class)

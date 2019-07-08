@@ -23,7 +23,7 @@
       "contributors": [
         {
           "contributor": "Ed Mashburn",
-          "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+          "contributorNameTypeId": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
         }
       ],
       "cost": {
@@ -133,7 +133,7 @@
       "contributors": [
         {
           "contributor": "Ed Mashburn",
-          "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+          "contributorNameTypeId": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
         }
       ],
       "cost": {
@@ -455,7 +455,7 @@
       "contributors": [
         {
           "contributor": "Ed Mashburn",
-          "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+          "contributorNameTypeId": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
         }
       ],
       "cost": {
@@ -589,7 +589,7 @@
       "contributors": [
         {
           "contributor": "Ed Mashburn",
-          "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+          "contributorNameTypeId": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
         }
       ],
       "cost": {

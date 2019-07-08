@@ -249,7 +249,8 @@
           "pathPattern": "/orders/pieces/{id}",
           "permissionsRequired": ["orders.pieces.item.put"],
           "modulePermissions": [
-            "orders-storage.pieces.item.put"
+            "orders-storage.pieces.item.put",
+            "orders-storage.pieces.item.get"
           ]
         },
         {

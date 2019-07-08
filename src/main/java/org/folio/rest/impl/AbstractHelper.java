@@ -10,6 +10,7 @@ import static javax.ws.rs.core.Response.Status.CREATED;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+
 import io.vertx.core.Context;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
@@ -44,6 +45,7 @@ public abstract class AbstractHelper {
   public static final String OKAPI_HEADERS = "okapiHeaders";
   public static final String ERROR_CAUSE = "cause";
   public static final String OKAPI_URL = "x-okapi-url";
+  static final int MAX_IDS_FOR_GET_RQ = 15;
 
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -116,7 +118,7 @@ public abstract class AbstractHelper {
         return null;
       });
   }
-  
+
   /**
    * Some requests do not have body and in happy flow do not produce response body. The Accept header is required for calls to storage
    */
