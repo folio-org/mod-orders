@@ -13,6 +13,7 @@ public enum POProtectedFields {
   RE_ENCUMBER("reEncumber"),
   BILL_TO("billTo"),
   RENEWAL("renewal"),
+  TEMPLATE("template"),
   VENDOR("vendor");
 
   POProtectedFields(String field) {

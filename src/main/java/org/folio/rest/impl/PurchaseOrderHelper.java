@@ -23,6 +23,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.orders.utils.POProtectedFields;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
@@ -109,10 +111,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @return completable future holding response indicating success (204 No Content) or error if failed
    */
   public CompletableFuture<Void> updateOrder(CompositePurchaseOrder compPO) {
-
     return getPurchaseOrderById(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(poFromStorage -> validateIfPOProtectedFieldsChanged(compPO, poFromStorage))
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
-      .thenCompose(poFromStorage -> validateIfPOProtectedFieldsChanged(compPO,poFromStorage))
       .thenCompose(poFromStorage -> {
         logger.info("Order successfully retrieved from storage");
         return validatePoNumber(poFromStorage, compPO)
@@ -128,13 +129,24 @@ public class PurchaseOrderHelper extends AbstractHelper {
       );
   }
 
-  private CompositePoLine findCorrespondingCompositePoLine(CompositePoLine poLine, JsonArray poLinesFromStorage) {
-    return poLinesFromStorage.copy().stream()
+
+  public CompletableFuture<JsonObject> validateIfPOProtectedFieldsChanged(CompositePurchaseOrder compPO,
+      JsonObject compPOFromStorage) {
+    if (!compPOFromStorage.getString(WORKFLOW_STATUS)
+      .equals(CompositePurchaseOrder.WorkflowStatus.PENDING.value())) {
+      verifyProtectedFieldsChanged(POProtectedFields.getFieldNames(), compPOFromStorage, JsonObject.mapFrom(compPO));
+    }
+    return completedFuture(compPOFromStorage);
+  }
+
+  private JsonObject findCorrespondingCompositePoLine(CompositePoLine poLine, JsonArray poLinesFromStorage) {
+    return poLinesFromStorage.copy()
+      .stream()
       .filter(line -> ((JsonObject) line).getString(ID)
         .equals(poLine.getId()))
       .findFirst()
-      .map(line -> convertToCompositePoLine((JsonObject) line))
-      .orElse(poLine);
+      .map(line -> (JsonObject) line)
+      .orElse(JsonObject.mapFrom(poLine));
 
   }
 
@@ -455,15 +467,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private void validatePOLineProtectedFieldsChangedinPO(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO,
-      JsonArray existedPoLinesArray) {
+      JsonArray existingPoLinesArray) {
     if (poFromStorage.getWorkflowStatus() != PENDING) {
       compPO.getCompositePoLines()
         .stream()
-        .forEach(poLine -> {
-          Set<String> fields = findChangedPoLineProtectedFields(poLine,
-              findCorrespondingCompositePoLine(poLine, existedPoLinesArray));
-          verifyProtectedFieldsChanged(fields);
-        });
+        .forEach(poLine -> verifyProtectedFieldsChanged(POLineProtectedFields.getFieldNames(),
+            findCorrespondingCompositePoLine(poLine, existingPoLinesArray), JsonObject.mapFrom(poLine)));
     }
   }
 

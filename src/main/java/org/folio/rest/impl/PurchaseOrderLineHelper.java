@@ -33,6 +33,7 @@ import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.SequenceNumber;
@@ -296,7 +297,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    */
   CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine) {
     return getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
-      .thenCompose(lineFromStorage -> validatePOLineProtectedFields(compOrderLine, lineFromStorage))
+      .thenCompose(lineFromStorage -> validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage))
       .thenCompose(lineFromStorage -> {
         // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
         // update
@@ -305,15 +306,13 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<JsonObject> validatePOLineProtectedFields(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
+  private CompletableFuture<JsonObject> validatePOLineProtectedFieldsChanged(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
     return HelperUtils.getPurchaseOrderById(compOrderLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(purchaseOrder -> {
-        if (!purchaseOrder.getString("workflowStatus")
+        if (!purchaseOrder.getString(WORKFLOW_STATUS)
           .equals(CompositePurchaseOrder.WorkflowStatus.PENDING.value())) {
-          Set<String> fields = findChangedPoLineProtectedFields(compOrderLine, convertToCompositePoLine(lineFromStorage.copy()));
-          verifyProtectedFieldsChanged(fields);
+          verifyProtectedFieldsChanged(POLineProtectedFields.getFieldNames(), lineFromStorage, JsonObject.mapFrom(compOrderLine));
         }
-
         return completedFuture(lineFromStorage);
       });
   }

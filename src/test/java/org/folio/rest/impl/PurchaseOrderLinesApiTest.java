@@ -7,18 +7,14 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.ErrorCodes;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -401,24 +397,31 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
 
   @Test
-  public void testPutOrderLineByIdProtectedFieldsChanged() {
+  public void testPutOrderLineByIdProtectedFieldsChanged() throws IllegalAccessException {
     logger.info("=== Test PUT Order Line By Id - Protected fields changed ===");
 
     String lineId = "0009662b-8b80-4001-b704-ca10971f175d";
     JsonObject body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId);
     String url = String.format(LINE_BY_ID_PATH, lineId);
-    CompositePoLine poLine = body.mapTo(CompositePoLine.class);
-    poLine.setTitle("Testing ProtectedFields");
-    poLine.setDonor("donor");
-    poLine.getCost()
-      .setCurrency("EUR");
-    poLine.setPoLineNumber("test123-1");
 
-    Errors errors = verifyPut(url, JsonObject.mapFrom(poLine), "", 400).as(Errors.class);
+    Map<String, Object> allProtectedFieldsModification = new HashMap<>();
 
-    Error error = errors.getErrors()
-      .get(0);
-    assertThat(error.getCode(), equalTo(PROHIBITED_FIELD_CHANGING.getCode()));
+    allProtectedFieldsModification.put(POLineProtectedFields.TITLE.getFieldName(), "Testing ProtectedFields");
+    allProtectedFieldsModification.put(POLineProtectedFields.DONOR.getFieldName(), "Donor");
+    allProtectedFieldsModification.put(POLineProtectedFields.COST_CURRENCY.getFieldName(), "EUR");
+    allProtectedFieldsModification.put(POLineProtectedFields.ERESOURCE_USER_LIMIT.getFieldName(), 100);
+    //adding trial because a default value is added while sending the request
+    allProtectedFieldsModification.put(POLineProtectedFields.ERESOURCE_TRIAL.getFieldName(), true);
+
+    Contributor contributor = new Contributor();
+    contributor.setContributor("Mr Test");
+    contributor.setContributorType("fbdd42a8-e47d-4694-b448-cc571d1b44c3");
+    List<Contributor> contributors = new ArrayList<>();
+    contributors.add(contributor);
+
+    allProtectedFieldsModification.put(POLineProtectedFields.CONTRIBUTORS.getFieldName(), contributors);
+
+    checkPreventProtectedFieldsModificationRule(url, body, allProtectedFieldsModification);
 
     // 2 calls each to fetch Order Line and Purchase Order
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);

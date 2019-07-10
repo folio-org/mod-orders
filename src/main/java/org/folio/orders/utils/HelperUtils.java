@@ -6,7 +6,6 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.apache.commons.lang3.reflect.FieldUtils.readDeclaredField;
 import static org.folio.orders.utils.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
@@ -44,8 +43,6 @@ import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.reflect.FieldUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.*;
@@ -54,6 +51,7 @@ import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.rest.tools.parser.JsonPathParser;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
@@ -67,7 +65,6 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class HelperUtils {
 
-  private static final String FIELD_SEPARATOR = "\\.";
   public static final String COMPOSITE_PO_LINES = "compositePoLines";
   public static final String CONFIGS = "configs";
   public static final String CONFIG_NAME = "configName";
@@ -91,6 +88,7 @@ public class HelperUtils {
   private static final Pattern HOST_PORT_PATTERN = Pattern.compile("https?://([^:/]+)(?::?(\\d+)?)");
   private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
   private static final String PROTECTED_AND_MODIFIED_FIELDS = "protectedAndModifiedFields";
+  public static final String WORKFLOW_STATUS = "workflowStatus";
 
   private HelperUtils() {
 
@@ -1098,87 +1096,23 @@ public class HelperUtils {
           });
   }
 
-  public static CompositePoLine convertToCompositePoLine(JsonObject poLine) {
-    poLine.remove(REPORTING_CODES);
-    poLine.remove(ALERTS);
-    return poLine.mapTo(CompositePoLine.class);
-  }
-
-  public static CompletableFuture<CompositePurchaseOrder> validateIfPOProtectedFieldsChanged(CompositePurchaseOrder compPO,
-      CompositePurchaseOrder compPOFromStorage) {
-    if (!compPOFromStorage.getWorkflowStatus()
-      .equals(CompositePurchaseOrder.WorkflowStatus.PENDING)) {
-      Set<String> fields = new HashSet<>();
-      for (String field : POProtectedFields.getFieldNames()) {
-        try {
-          if (isFieldChanged(compPO, compPOFromStorage, field)) {
-            fields.add(field);
-          }
-        } catch (IllegalAccessException e) {
-          throw new CompletionException(e);
-        }
-      }
-
-      verifyProtectedFieldsChanged(fields);
-    }
-
-    return completedFuture(compPOFromStorage);
-
-  }
-
-  public static Set<String> findChangedPoLineProtectedFields(CompositePoLine compPOLine, CompositePoLine compPOLineFromStorage) {
+  public static JsonObject verifyProtectedFieldsChanged(List<String> protectedFields, JsonObject objectFromStorage,
+      JsonObject requestObject) {
     Set<String> fields = new HashSet<>();
-    for (String field : POLineProtectedFields.getFieldNames()) {
-      try {
-        if (field.contains(".")) {
-          String[] subObject = field.split(FIELD_SEPARATOR);
-          if (isSubObjectAdded(compPOLine, compPOLineFromStorage, subObject[0])
-              || isSubObjectDeleted(compPOLine, compPOLineFromStorage, subObject[0])
-              || isSubObjectFieldChanged(compPOLine, compPOLineFromStorage, subObject)) {
-            fields.add(field);
-          }
-        } else if (isFieldChanged(compPOLine, compPOLineFromStorage, field)) {
-          fields.add(field);
-        }
-      } catch (IllegalAccessException e) {
-        throw new CompletionException(e);
+    JsonPathParser oldObject = new JsonPathParser(JsonObject.mapFrom(objectFromStorage));
+    JsonPathParser newObject = new JsonPathParser(JsonObject.mapFrom(requestObject));
+    for (String field : protectedFields) {
+      if (!Objects.equals(oldObject.getValueAt(field), newObject.getValueAt(field))) {
+        fields.add(field);
       }
     }
-    return fields;
-  }
 
-  public static void verifyProtectedFieldsChanged(Set<String> fields) {
     if (CollectionUtils.isNotEmpty(fields)) {
       Error error = PROHIBITED_FIELD_CHANGING.toError()
         .withAdditionalProperty(PROTECTED_AND_MODIFIED_FIELDS, fields);
       throw new HttpException(400, error);
     }
-  }
 
-  private static boolean isSubObjectFieldChanged(CompositePoLine compPOLine, CompositePoLine compPOLineFromStorage,
-      String[] subObject) throws IllegalAccessException {
-    return !isFieldNull(compPOLine, subObject[0]) && !isFieldNull(compPOLineFromStorage, subObject[0])
-        && isFieldChanged(readDeclaredField(compPOLine, subObject[0], true),
-            readDeclaredField(compPOLineFromStorage, subObject[0], true), subObject[1]);
+    return objectFromStorage;
   }
-
-  private static boolean isSubObjectDeleted(CompositePoLine compPOLine, CompositePoLine compPOLineFromStorage, String splits)
-      throws IllegalAccessException {
-    return isFieldNull(compPOLine, splits) && !isFieldNull(compPOLineFromStorage, splits);
-  }
-
-  private static boolean isSubObjectAdded(CompositePoLine compPOLine, CompositePoLine compPOLineFromStorage, String splits)
-      throws IllegalAccessException {
-    return !isFieldNull(compPOLine, splits) && isFieldNull(compPOLineFromStorage, splits);
-  }
-
-  private static boolean isFieldNull(CompositePoLine compPoLine, String splits) throws IllegalAccessException {
-    return null == readDeclaredField(compPoLine, splits, true);
-  }
-
-  private static boolean isFieldChanged(Object newObject, Object existedObject, String field) throws IllegalAccessException {
-    return !EqualsBuilder.reflectionEquals(FieldUtils.readDeclaredField(newObject, field, true),
-        FieldUtils.readDeclaredField(existedObject, field, true), true, existedObject.getClass(), true);
-  }
-
 }
