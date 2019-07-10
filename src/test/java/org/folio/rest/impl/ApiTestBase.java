@@ -43,6 +43,7 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.AbstractHelper.ORDER_IDS;
+import static org.folio.rest.impl.AcquisitionsMembershipsTests.USER_ID_ASSIGNED_TO_ACQ_UNITS;
 import static org.folio.rest.impl.ApiTestSuite.mockPort;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
@@ -103,6 +104,7 @@ public class ApiTestBase {
   static final Header NON_EXIST_LOAN_TYPE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_LOAN_TYPE_TENANT);
   static final Header NON_EXIST_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "ordersimpltest");
   static final Header X_OKAPI_USER_ID = new Header(OKAPI_USERID_HEADER, "440c89e3-7f6c-578a-9ea8-310dad23605e");
+  static final Header X_OKAPI_USER_ID_WITH_ACQ_UNITS = new Header(OKAPI_USERID_HEADER, USER_ID_ASSIGNED_TO_ACQ_UNITS);
   protected static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
   protected static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_10");
   static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_1");
@@ -159,6 +161,7 @@ public class ApiTestBase {
   protected void clearServiceInteractions() {
     eventMessages.clear();
     MockServer.serverRqRs.clear();
+    MockServer.serverRqQueries.clear();
   }
 
   @AfterClass
@@ -256,7 +259,7 @@ public class ApiTestBase {
 
   Response verifyGet(String url, String expectedContentType, int expectedCode) {
     Headers headers = prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT);
-    return verifyGet(url, headers,expectedContentType, expectedCode);
+    return verifyGet(url, headers, expectedContentType, expectedCode);
   }
 
   Response verifyGet(String url, Headers headers, String expectedContentType, int expectedCode) {

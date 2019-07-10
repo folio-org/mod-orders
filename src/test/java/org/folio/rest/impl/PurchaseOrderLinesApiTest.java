@@ -40,22 +40,30 @@ import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
+import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_ID;
+import static org.folio.rest.impl.AcquisitionsUnitsHelper.NO_ACQ_UNIT_ASSIGNED_CQL;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ORDER_ID_WITH_PO_LINES;
 import static org.folio.rest.impl.MockServer.PO_NUMBER_ERROR_X_OKAPI_TENANT;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getOrderLineSearches;
+import static org.folio.rest.impl.MockServer.getQueryParams;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.*;
 
@@ -615,18 +623,44 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
   }
 
+  @Test
+  public void testGetOrderPoLinesByEmptyQuery() {
+    logger.info("=== Test Get Orders lines - by empty query ===");
+
+    verifySuccessGet(LINES_PATH, PoLineCollection.class);
+
+    assertThat(getOrderLineSearches(), nullValue());
+    assertThat(getPoLineSearches(), hasSize(1));
+
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
+
+    List<String> queryParams = getQueryParams(PO_LINES);
+    assertThat(queryParams, hasSize(1));
+    assertThat(queryParams.get(0), equalTo(NO_ACQ_UNIT_ASSIGNED_CQL));
+  }
 
   @Test
   public void testGetOrderPOLinesByPoId() {
-    logger.info("=== Test Get Orders lines - With empty query ===");
+    logger.info("=== Test Get Orders lines - by PO id ===");
 
     String endpointQuery = String.format("%s?query=%s", LINES_PATH, PURCHASE_ORDER_ID + "==" + ORDER_ID_WITH_PO_LINES);
 
     final PoLineCollection poLineCollection = verifySuccessGet(endpointQuery, PoLineCollection.class);
 
-    assertEquals(2, poLineCollection.getTotalRecords().intValue());
-    assertEquals(1, getOrderLineSearches().size());
-    assertNull(getPoLineSearches());
+    assertThat(poLineCollection.getTotalRecords(), is(2));
+    assertThat(getOrderLineSearches(), hasSize(1));
+    assertThat(getPoLineSearches(), nullValue());
+
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
+
+    List<String> queryParams = getQueryParams(ORDER_LINES);
+    assertThat(queryParams, hasSize(1));
+    String queryToStorage = queryParams.get(0);
+    assertThat(queryToStorage, containsString(ORDER_ID_WITH_PO_LINES));
+    assertThat(queryToStorage, not(containsString(ACQUISITIONS_UNIT_ID + "==")));
+    assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
   }
 
   private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {

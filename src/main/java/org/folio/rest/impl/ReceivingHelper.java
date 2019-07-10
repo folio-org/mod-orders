@@ -21,7 +21,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
-  private static final String GET_RECEIVING_HISTORY_BY_QUERY = resourcesPath(RECEIVING_HISTORY) + "?limit=%s&offset=%s%s&lang=%s";
+  private static final String GET_RECEIVING_HISTORY_BY_QUERY = resourcesPath(RECEIVING_HISTORY) + SEARCH_PARAMS;
 
   /**
    * Map with PO line id as a key and value is map with piece id as a key and {@link ReceivedItem} as a value
@@ -84,12 +84,16 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     CompletableFuture<ReceivingHistoryCollection> future = new VertxCompletableFuture<>(ctx);
 
     try {
-      String queryParam = buildQuery(query, logger);
-      String endpoint = String.format(GET_RECEIVING_HISTORY_BY_QUERY, limit, offset, queryParam, lang);
-      handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-        .thenAccept(jsonReceivingHistory -> future.complete(jsonReceivingHistory.mapTo(ReceivingHistoryCollection.class)))
+      AcquisitionsUnitsHelper acqUnitsHelper = new AcquisitionsUnitsHelper(httpClient, okapiHeaders, ctx, lang);
+      acqUnitsHelper.buildAcqUnitsCqlExprToSearchRecords()
+        .thenCompose(acqUnitsCqlExpr -> {
+          String queryParam = buildQuery(StringUtils.isEmpty(query) ? acqUnitsCqlExpr : query + " and " + acqUnitsCqlExpr, logger);
+          String endpoint = String.format(GET_RECEIVING_HISTORY_BY_QUERY, limit, offset, queryParam, lang);
+          return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+            .thenAccept(jsonReceivingHistory -> future.complete(jsonReceivingHistory.mapTo(ReceivingHistoryCollection.class)));
+        })
         .exceptionally(t -> {
-          logger.error("Error retrieving receiving history", t);
+          logger.error("Error happened retrieving receiving history", t);
           future.completeExceptionally(t.getCause());
           return null;
         });

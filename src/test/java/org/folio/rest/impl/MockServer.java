@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +52,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -160,6 +163,7 @@ public class MockServer {
   private static final String INSTANCE_STATUSES = "instanceStatuses";
 
   static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
+  static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
 
   private final int port;
   private final Vertx vertx;
@@ -271,6 +275,10 @@ public class MockServer {
     return serverRqRs.get(INSTANCE_TYPES, HttpMethod.GET);
   }
 
+  static List<String> getQueryParams(String resourceType) {
+    return serverRqQueries.getOrDefault(resourceType, Collections.emptyList());
+  }
+
   static List<Encumbrance> getCreatedEncumbrances() {
     List<JsonObject> jsonObjects = serverRqRs.get(FINANCE_STORAGE_ENCUMBRANCES, HttpMethod.POST);
     return jsonObjects == null ? Collections.emptyList()
@@ -310,7 +318,7 @@ public class MockServer {
     router.route(HttpMethod.GET, "/loan-types").handler(this::handleGetLoanType);
     router.route(HttpMethod.GET, "/organizations-storage/organizations/:id").handler(this::getOrganizationById);
     router.route(HttpMethod.GET, "/organizations-storage/organizations").handler(this::handleGetAccessProviders);
-    router.route(HttpMethod.GET, resourcesPath(PO_LINES)).handler(this::handleGetPoLines);
+    router.route(HttpMethod.GET, resourcesPath(PO_LINES)).handler(ctx -> handleGetPoLines(ctx, PO_LINES));
     router.route(HttpMethod.GET, resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
     router.route(HttpMethod.GET, resourcePath(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
     router.route(HttpMethod.GET, resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
@@ -320,7 +328,7 @@ public class MockServer {
     router.route(HttpMethod.GET, resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
     router.route(HttpMethod.GET, resourcesPath(PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
     router.route(HttpMethod.GET, "/contributor-name-types").handler(this::handleGetContributorNameTypes);
-    router.route(HttpMethod.GET, resourcesPath(ORDER_LINES)).handler(this::handleGetOrderLines);
+    router.route(HttpMethod.GET, resourcesPath(ORDER_LINES)).handler(ctx -> handleGetPoLines(ctx, ORDER_LINES));
     router.route(HttpMethod.GET, resourcesPath(FINANCE_STORAGE_ENCUMBRANCES)).handler(this::handleGetEncumbrances);
     router.route(HttpMethod.GET, resourcesPath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnits);
     router.route(HttpMethod.GET, resourcePath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnit);
@@ -707,6 +715,7 @@ public class MockServer {
   private void handleGetReceivingHistory(RoutingContext ctx) {
     logger.info("handleGetItemsRecords got: " + ctx.request().path());
     String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+    addServerRqQuery(RECEIVING_HISTORY, queryParam);
     try {
       JsonObject receivingHistory;
       if (queryParam.contains(RECEIVING_HISTORY_PURCHASE_ORDER_ID)) {
@@ -768,10 +777,11 @@ public class MockServer {
     }
   }
 
-  private void handleGetPoLines(RoutingContext ctx) {
+  private void handleGetPoLines(RoutingContext ctx, String type) {
     logger.info("handleGetPoLines got: {}?{}", ctx.request().path(), ctx.request().query());
 
     String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+    addServerRqQuery(type, queryParam);
     if (queryParam.contains(BAD_QUERY)) {
       serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
     } else if (queryParam.contains(ID_FOR_INTERNAL_SERVER_ERROR) || queryParam.contains(PO_ID_GET_LINES_INTERNAL_SERVER_ERROR)) {
@@ -782,7 +792,8 @@ public class MockServer {
       List<String> polIds = Collections.emptyList();
 
       if (queryParam.contains(PURCHASE_ORDER_ID)) {
-        poId = queryParam.split(PURCHASE_ORDER_ID + "==")[1];
+        Matcher matcher = Pattern.compile(".*" + PURCHASE_ORDER_ID + "==(\\S+).*").matcher(queryParam);
+        poId = matcher.find() ? matcher.group(1) : EMPTY;
       } else if (queryParam.startsWith("id==")) {
         polIds = extractIdsFromQuery(queryParam);
       }
@@ -819,13 +830,13 @@ public class MockServer {
         JsonObject po_lines = JsonObject.mapFrom(poLineCollection);
         logger.info(po_lines.encodePrettily());
 
-        addServerRqRsData(HttpMethod.GET, PO_LINES, po_lines);
+        addServerRqRsData(HttpMethod.GET, type, po_lines);
         serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encode());
       } catch (NoSuchFileException e) {
         PoLineCollection poLineCollection = new PoLineCollection();
 
         // Attempt to find POLine in mock server memory
-        List<JsonObject> postedPoLines = serverRqRs.column(HttpMethod.POST).get(PO_LINES);
+        List<JsonObject> postedPoLines = serverRqRs.column(HttpMethod.POST).get(type);
 
         if (postedPoLines != null) {
           List<PoLine> poLines = postedPoLines.stream()
@@ -839,10 +850,16 @@ public class MockServer {
           }
         }
         poLineCollection.setTotalRecords(poLineCollection.getPoLines().size());
-        serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(poLineCollection).encodePrettily());
+
+        JsonObject entries = JsonObject.mapFrom(poLineCollection);
+        addServerRqRsData(HttpMethod.GET, type, entries);
+        serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
       } catch (IOException e) {
         PoLineCollection poLineCollection = new PoLineCollection();
         poLineCollection.setTotalRecords(0);
+
+        JsonObject entries = JsonObject.mapFrom(poLineCollection);
+        addServerRqRsData(HttpMethod.GET, type, entries);
         serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(poLineCollection).encodePrettily());
       }
     }
@@ -1064,12 +1081,12 @@ public class MockServer {
   }
 
   private List<String> extractIdsFromQuery(String query) {
-    return StreamEx
-      .split(query, " or ")
-      .flatMap(s -> StreamEx.split(s, "=="))
-      .map(String::trim)
-      .filter(s -> !ID.equals(s))
-      .toList();
+    Matcher matcher = Pattern.compile(".*id==\\((.+)\\).*").matcher(query);
+    if (matcher.find()) {
+      return StreamEx.split(matcher.group(1), " or ").toList();
+    } else {
+      return Collections.emptyList();
+    }
   }
 
   private void handlePutGenericSubObj(RoutingContext ctx, String subObj) {
@@ -1090,7 +1107,6 @@ public class MockServer {
     }
   }
 
-
   private void addServerRqRsData(HttpMethod method, String objName, JsonObject data) {
     List<JsonObject> entries = serverRqRs.get(objName, method);
     if (entries == null) {
@@ -1098,6 +1114,11 @@ public class MockServer {
     }
     entries.add(data);
     serverRqRs.put(objName, method, entries);
+  }
+
+  private void addServerRqQuery(String objName, String query) {
+    serverRqQueries.computeIfAbsent(objName, key -> new ArrayList<>())
+      .add(query);
   }
 
   private void handleGetPurchaseOrderById(RoutingContext ctx) {
@@ -1130,20 +1151,23 @@ public class MockServer {
 
   private void handleGetPurchaseOrderByQuery(RoutingContext ctx, String orderType) {
 
-    String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
-    if (queryParam.contains(BAD_QUERY)) {
+    String query = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+    addServerRqQuery(orderType, query);
+    if (query.contains(BAD_QUERY)) {
       serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
-    } else if (queryParam.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
+    } else if (query.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       JsonObject po = new JsonObject();
       addServerRqRsData(HttpMethod.GET, orderType, po);
-      final String PO_NUMBER_QUERY = "poNumber==";
-      switch (queryParam) {
-        case PO_NUMBER_QUERY + EXISTING_PO_NUMBER:
+
+      Matcher matcher = Pattern.compile(".*poNumber==(\\S+).*").matcher(query);
+      final String poNumber = matcher.find() ? matcher.group(1) : EMPTY;
+      switch (poNumber) {
+        case EXISTING_PO_NUMBER:
           po.put(TOTAL_RECORDS, 1);
           break;
-        case PO_NUMBER_QUERY + NONEXISTING_PO_NUMBER:
+        case NONEXISTING_PO_NUMBER:
           po.put(TOTAL_RECORDS, 0);
           break;
         case EMPTY:
@@ -1153,7 +1177,7 @@ public class MockServer {
           //modify later as needed
           po.put(TOTAL_RECORDS, 0);
       }
-      addServerRqRsData(HttpMethod.GET, orderType, po);
+
       serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
     }
   }
