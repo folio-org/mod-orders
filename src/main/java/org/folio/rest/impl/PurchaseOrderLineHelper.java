@@ -54,8 +54,8 @@ import javax.ws.rs.core.Response;
 class PurchaseOrderLineHelper extends AbstractHelper {
 
   private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
-  private static final String GET_PO_LINES_BY_QUERY = resourcesPath(PO_LINES) + "?limit=%s&offset=%s%s&lang=%s";
-  private static final String GET_ORDER_LINES_BY_QUERY = resourcesPath(ORDER_LINES) + "?limit=%s&offset=%s%s&lang=%s";
+  private static final String GET_PO_LINES_BY_QUERY = resourcesPath(PO_LINES) + SEARCH_PARAMS;
+  private static final String GET_ORDER_LINES_BY_QUERY = resourcesPath(ORDER_LINES) + SEARCH_PARAMS;
   private static final String LOOKUP_PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId==%s&limit=%d&lang=%s";
   private static final String PO_LINE_NUMBER_ENDPOINT = resourcesPath(PO_LINE_NUMBER) + "?" + PURCHASE_ORDER_ID + "=";
   private static final Pattern PO_LINE_NUMBER_PATTERN = Pattern.compile("([a-zA-Z0-9]{5,16}-)([0-9]{1,3})");
@@ -103,9 +103,9 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * This method is used for all internal calls to fetch PO lines without or with
    * queries that search/filter on fields present in po_line
    *
-   * @param limit
-   * @param offset
-   * @param query
+   * @param limit Limit the number of elements returned in the response
+   * @param offset Skip over a number of elements by specifying an offset value for the query
+   * @param query A query expressed as a CQL string (see dev.folio.org/reference/glossary#cql) using valid searchable fields.
    * @return Completable future which holds {@link PoLineCollection}
    */
   CompletableFuture<PoLineCollection> getPoLines(int limit, int offset, String query) {
@@ -117,16 +117,19 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * must be used only when there is a necessity to search/filter on the
    * Composite Purchase Order fields
    *
-   * @param limit
-   * @param offset
-   * @param query
+   * @param limit Limit the number of elements returned in the response
+   * @param offset Skip over a number of elements by specifying an offset value for the query
+   * @param query A query expressed as a CQL string (see dev.folio.org/reference/glossary#cql) using valid searchable fields.
    * @return Completable future which holds {@link PoLineCollection} on success or an exception on any error
    */
   CompletableFuture<PoLineCollection> getOrderLines(int limit, int offset, String query) {
-    if(isEmpty(query)) {
-      return getPoLines(limit, offset, query, GET_PO_LINES_BY_QUERY);
-    }
-    return getPoLines(limit, offset, query, GET_ORDER_LINES_BY_QUERY);
+    AcquisitionsUnitsHelper acqUnitsHelper = new AcquisitionsUnitsHelper(httpClient, okapiHeaders, ctx, lang);
+    return acqUnitsHelper.buildAcqUnitsCqlExprToSearchRecords().thenCompose(acqUnitsCqlExpr -> {
+      if (isEmpty(query)) {
+        return getPoLines(limit, offset, acqUnitsCqlExpr, GET_PO_LINES_BY_QUERY);
+      }
+      return getPoLines(limit, offset, query + " and " + acqUnitsCqlExpr, GET_ORDER_LINES_BY_QUERY);
+    });
   }
 
   /**

@@ -1,22 +1,15 @@
 {
-  "id": "0009662b-8b80-4001-b704-ca10971f175d",
-  "acquisitionMethod": "Purchase",
-  "alerts": [],
-  "cancellationRestriction": false,
-  "cancellationRestrictionNote": "",
-  "claims": [
-    {
-      "claimed": false,
-      "grace": 0
-    }
-  ],
-  "collection": false,
-  "contributors": [
-    {
-      "contributor": "Ed Mashburn",
-      "contributorType": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
-    }
-  ],
+  "id" : "0009662b-8b80-4001-b704-ca10971f175d",
+  "acquisitionMethod" : "Purchase At Vendor System",
+  "alerts" : [ ],
+  "cancellationRestriction" : false,
+  "cancellationRestrictionNote" : "ABCDEFGHIJKLMNOPQRSTUVW",
+  "claims" : [ ],
+  "collection" : false,
+  "contributors" : [ {
+    "contributor" : "Ed Mashburn",
+    "contributorNameTypeId" : "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+  } ],
   "cost": {
     "currency": "USD",
     "listUnitPrice": 900.00,

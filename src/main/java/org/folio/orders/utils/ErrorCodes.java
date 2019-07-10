@@ -44,7 +44,7 @@ public enum ErrorCodes {
   ORGANIZATION_NOT_A_VENDOR("organizationNotAVendor", "Order cannot be opened as the associated vendorId belongs to non-vendor organization"),
   MISSING_INSTANCE_TYPE("missingInstanceType", "Instance-type is a required field for creating an Instance in Inventory"),
   MISSING_INSTANCE_STATUS("missingInstanceStatus", "Instance-status is a required field for creating an Instance in Inventory"),
-  MISSING_CONTRIBUTOR_NAME_TYPE("missingContributorNameType", "Contributor-name-type is a required field for creating an Instance in Inventory"),
+  MISSING_CONTRIBUTOR_NAME_TYPE("missingContributorNameType", "The specified contributor-name-types were not found in inventory-storage"),
   MISSING_LOAN_TYPE("missingLoanType", "Loan-type is a required field for creating an Item in Inventory"),
   ENCUMBRANCE_CREATION_FAILURE("encumbranceCreationFailure", "One or more encumbrance record(s) failed to be created"),
   PROHIBITED_FIELD_CHANGING("protectedFieldChanging","Protected fields can't be modified");

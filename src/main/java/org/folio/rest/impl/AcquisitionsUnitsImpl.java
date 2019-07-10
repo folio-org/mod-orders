@@ -119,7 +119,7 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
   @Validate
   public void postAcquisitionsUnitsMemberships(String lang, AcquisitionsUnitMembership entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    AcquisitionsMembershipsHelper helper = new AcquisitionsMembershipsHelper(okapiHeaders, vertxContext, lang);
+    AcquisitionsUnitsHelper helper = new AcquisitionsUnitsHelper(okapiHeaders, vertxContext, lang);
 
     helper.createAcquisitionsUnitsMembership(entity)
       .thenAccept(membership -> {
@@ -137,7 +137,7 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
   @Validate
   public void getAcquisitionsUnitsMemberships(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    AcquisitionsMembershipsHelper helper = new AcquisitionsMembershipsHelper(okapiHeaders, vertxContext, lang);
+    AcquisitionsUnitsHelper helper = new AcquisitionsUnitsHelper(okapiHeaders, vertxContext, lang);
 
     helper.getAcquisitionsUnitsMemberships(query, offset, limit)
       .thenAccept(memberships -> {
@@ -153,7 +153,7 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
   @Validate
   public void putAcquisitionsUnitsMembershipsById(String id, String lang, AcquisitionsUnitMembership entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    AcquisitionsMembershipsHelper helper = new AcquisitionsMembershipsHelper(okapiHeaders, vertxContext, lang);
+    AcquisitionsUnitsHelper helper = new AcquisitionsUnitsHelper(okapiHeaders, vertxContext, lang);
 
     if (entity.getId() != null && !entity.getId().equals(id)) {
       helper.addProcessingError(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
@@ -172,7 +172,7 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
   @Validate
   public void getAcquisitionsUnitsMembershipsById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    AcquisitionsMembershipsHelper helper = new AcquisitionsMembershipsHelper(okapiHeaders, vertxContext, lang);
+    AcquisitionsUnitsHelper helper = new AcquisitionsUnitsHelper(okapiHeaders, vertxContext, lang);
 
     helper.getAcquisitionsUnitsMembership(id)
       .thenAccept(membership -> {
@@ -188,7 +188,7 @@ public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
   @Validate
   public void deleteAcquisitionsUnitsMembershipsById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    AcquisitionsMembershipsHelper helper = new AcquisitionsMembershipsHelper(okapiHeaders, vertxContext, lang);
+    AcquisitionsUnitsHelper helper = new AcquisitionsUnitsHelper(okapiHeaders, vertxContext, lang);
 
     helper.deleteAcquisitionsUnitsMembership(id)
       .thenAccept(ok -> {
