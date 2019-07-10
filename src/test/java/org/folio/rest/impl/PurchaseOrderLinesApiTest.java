@@ -23,6 +23,8 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.orders.utils.ErrorCodes.*;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
@@ -412,16 +414,18 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     Map<String, Object> allProtectedFieldsModification = new HashMap<>();
 
+    allProtectedFieldsModification.put(POLineProtectedFields.ACQUISITION_METHOD.getFieldName(),
+        CompositePoLine.AcquisitionMethod.APPROVAL_PLAN.value());
     allProtectedFieldsModification.put(POLineProtectedFields.TITLE.getFieldName(), "Testing ProtectedFields");
     allProtectedFieldsModification.put(POLineProtectedFields.DONOR.getFieldName(), "Donor");
     allProtectedFieldsModification.put(POLineProtectedFields.COST_CURRENCY.getFieldName(), "EUR");
     allProtectedFieldsModification.put(POLineProtectedFields.ERESOURCE_USER_LIMIT.getFieldName(), 100);
-    //adding trial because a default value is added while sending the request
+    // adding trial because a default value is added while sending the request
     allProtectedFieldsModification.put(POLineProtectedFields.ERESOURCE_TRIAL.getFieldName(), true);
 
     Contributor contributor = new Contributor();
     contributor.setContributor("Mr Test");
-    contributor.setContributorType("fbdd42a8-e47d-4694-b448-cc571d1b44c3");
+    contributor.setContributorNameTypeId("fbdd42a8-e47d-4694-b448-cc571d1b44c3");
     List<Contributor> contributors = new ArrayList<>();
     contributors.add(contributor);
 
