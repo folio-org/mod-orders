@@ -1,9 +1,7 @@
 package org.folio.rest.impl;
 
 import io.vertx.core.Context;
-import org.folio.rest.jaxrs.model.AcquisitionsUnit;
-import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
-import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
+import org.folio.rest.jaxrs.model.*;
 
 import java.util.Iterator;
 import java.util.List;
@@ -39,21 +37,38 @@ public class ProtectionHelper extends AbstractHelper {
    */
   public CompletableFuture<Boolean> isOperationProtected(String recordId) {
     CompletableFuture<Boolean> future = new CompletableFuture<>();
-    isUnitsExist(recordId).thenAccept(isUnitsExist -> {
-      if(isUnitsExist) {
-        String userId;
-        if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USER_ID_HEADER)) != null) {
-            getUnitIds(userId)
-              .thenCompose(this::getUnitsByIds)
-              .thenCompose(this::isOperationProtected)
-              .thenAccept(future::complete);
-        } else {
-          future.complete(true);
-        }
-      } else {
-        future.complete(false);
-      }
-    });
+    String userId;
+    if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USER_ID_HEADER)) != null) {
+      getUnitIdsAssignedToOrder(recordId)
+        .thenAccept(ids -> {
+          // 1. Get ids of Units assigned to Order
+            if(ids.size() > 0) {
+              // Get Units assigned to Order by retrieved ids
+              getUnitsByIds(ids)
+                // Check if operation is protected based on retrieved Units
+                .thenCompose(this::isOperationProtected)
+                .thenAccept(isOperationProtected -> {
+                  if(isOperationProtected) {
+                    // Get User's Units belonging belonging Order's Units
+                    getUnitIdsAssignedToUserAndOrder(userId, ids)
+                      .thenAccept(unitIds -> {
+                        if(unitIds.size() > 0) {
+                          future.complete(false);
+                        } else {
+                          future.complete(true);
+                        }
+                      });
+                  } else {
+                    future.complete(false);
+                  }
+                });
+            } else {
+              future.complete(false);
+            }
+          });
+    } else {
+      future.complete(true);
+    }
     return future;
   }
 
@@ -62,9 +77,9 @@ public class ProtectionHelper extends AbstractHelper {
    * @param recordId id of order.
    * @return true if units exist, otherwise - false.
    */
-  private CompletableFuture<Boolean> isUnitsExist(String recordId) {
+  private CompletableFuture<List<String>> getUnitIdsAssignedToOrder(String recordId) {
     return acquisitionsUnitAssignmentsHelper.getAcquisitionsUnitAssignments(String.format("recordId==%s", recordId), 0, Integer.MAX_VALUE)
-      .thenApply(units -> units.getTotalRecords() > 0);
+      .thenApply(assignment -> assignment.getAcquisitionsUnitAssignments().stream().map(AcquisitionsUnitAssignment::getAcquisitionsUnitId).collect(toList()));
   }
 
   /**
@@ -73,8 +88,8 @@ public class ProtectionHelper extends AbstractHelper {
    *
    * @return list of unit ids associated with user.
    */
-  private CompletableFuture<List<String>> getUnitIds(String userId) {
-    return acquisitionsMembershipsHelper.getAcquisitionsUnitsMemberships(String.format("userId==%s", userId), 0, Integer.MAX_VALUE)
+  private CompletableFuture<List<String>> getUnitIdsAssignedToUserAndOrder(String userId, List<String> unitIdsAssignedToOrder) {
+    return acquisitionsMembershipsHelper.getAcquisitionsUnitsMemberships(String.format("userId==%s AND acquisitionsUnitId==%s", userId, buildOrQuery(unitIdsAssignedToOrder)), 0, Integer.MAX_VALUE)
       .thenApply(memberships -> memberships.getAcquisitionsUnitMemberships().stream()
         .map(AcquisitionsUnitMembership::getAcquisitionsUnitId).collect(toList()));
   }
@@ -86,7 +101,7 @@ public class ProtectionHelper extends AbstractHelper {
    * @return list of {@link AcquisitionsUnit}
    */
   private CompletableFuture<List<AcquisitionsUnit>> getUnitsByIds(List<String> unitIds) {
-    String query = buildUnitsQuery(unitIds);
+    String query = buildUnitsQuery("id", unitIds);
     return acquisitionsUnitsHelper.getAcquisitionsUnits(query, 0, Integer.MAX_VALUE)
       .thenApply(AcquisitionsUnitCollection::getAcquisitionsUnits);
   }
@@ -111,18 +126,32 @@ public class ProtectionHelper extends AbstractHelper {
     return (a, b) -> a && b;
   }
 
-  private String buildUnitsQuery(List<String> unitIds) {
+  private String buildUnitsQuery(String idFieldName, List<String> unitIds) {
     StringBuilder query = new StringBuilder();
     Iterator<String> it = unitIds.iterator();
     while (it.hasNext()) {
-      String id = it.next();
+      String idValue = it.next();
       if(it.hasNext()) {
-        query.append(String.format("id==%s OR ", id));
+        query.append(String.format("%s==%s OR ", idFieldName, idValue));
       } else {
-        query.append(String.format("id==%s", id));
+        query.append(String.format("%s==%s",idFieldName, idValue));
       }
     }
     return new String(query);
+  }
+
+  private String buildOrQuery(List<String> unitIds) {
+    StringBuilder query = new StringBuilder();
+    Iterator<String> it = unitIds.iterator();
+    while (it.hasNext()) {
+      String idValue = it.next();
+      if(it.hasNext()) {
+        query.append(String.format("%%s OR ", idValue));
+      } else {
+        query.append(String.format("%s", idValue));
+      }
+    }
+    return new String("(" + query + ")");
   }
 
   public enum Operation {

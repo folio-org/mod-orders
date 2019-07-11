@@ -30,6 +30,8 @@ public class PieceApiTest extends ApiTestBase {
     logger.info("=== Test POST Piece (Create Piece) ===");
 
     Piece postPieceRq = pieceJsonReqData.mapTo(Piece.class);
+    // To skip unit's permission validation
+    postPieceRq.setPoLineId("0009662b-8b80-4001-b704-ca10971f175d");
 
     // Positive cases
     // Piece id is null initially

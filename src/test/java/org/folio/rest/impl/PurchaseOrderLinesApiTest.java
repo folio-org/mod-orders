@@ -76,6 +76,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
     reqData.getCost().setPoLineEstimatedPrice(null);
+    // To skip permission validation by units
+    reqData.setId("0009662b-8b80-4001-b704-ca10971f175d");
+    reqData.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
 
     final CompositePoLine response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
@@ -268,8 +271,11 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   @Test
   public void testCreatePoLineWithGetPoLineNumberError() throws IOException {
     logger.info("=== Test Create PO Line - fail on PO Line number generation ===");
-    String body = getMockData(String.format("%s%s.json", COMP_PO_LINES_MOCK_DATA_PATH, PO_LINE_ID_FOR_SUCCESS_CASE));
-    verifyPostResponse(LINES_PATH, body, prepareHeaders(PO_NUMBER_ERROR_X_OKAPI_TENANT, X_OKAPI_USER_ID), APPLICATION_JSON, 500);
+    JsonObject json = new JsonObject(getMockData(String.format("%s%s.json", COMP_PO_LINES_MOCK_DATA_PATH, PO_LINE_ID_FOR_SUCCESS_CASE)));
+    CompositePoLine poLine = json.mapTo(CompositePoLine.class);
+    poLine.setId("0009662b-8b80-4001-b704-ca10971f175d");
+    poLine.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
+    verifyPostResponse(LINES_PATH, JsonObject.mapFrom(poLine).encode(), prepareHeaders(PO_NUMBER_ERROR_X_OKAPI_TENANT, X_OKAPI_USER_ID), APPLICATION_JSON, 500);
   }
 
   @Test

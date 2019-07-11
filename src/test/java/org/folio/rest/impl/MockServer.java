@@ -43,6 +43,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toSet;
@@ -1447,7 +1449,13 @@ public class MockServer {
     if (query.contains(BAD_QUERY)) {
       serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
     } else {
-      String userId = query.replace("userId==", "");
+
+      Matcher userIdMatcher = Pattern.compile(".*userId==(\\S+).*").matcher(query);
+      final String userId = userIdMatcher.find() ? userIdMatcher.group(1) : EMPTY;
+
+      Matcher acquisitionsUnitIdsMatcher = Pattern.compile(".*acquisitionsUnitId==\\((\\S+).*\\)").matcher(query);
+      List<String> acquisitionsUnitIds = Arrays.asList((acquisitionsUnitIdsMatcher.find() ? acquisitionsUnitIdsMatcher.group(1) : EMPTY).split("\\s*OR\\s*"));
+
       AcquisitionsUnitMembershipCollection memberships;
       try {
         memberships = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_MEMBERSHIPS_COLLECTION)).mapTo(AcquisitionsUnitMembershipCollection.class);
@@ -1457,6 +1465,9 @@ public class MockServer {
 
       if (StringUtils.isNotEmpty(userId)) {
         memberships.getAcquisitionsUnitMemberships().removeIf(membership -> !membership.getUserId().equals(userId));
+        if (acquisitionsUnitIds.size() > 0) {
+          memberships.getAcquisitionsUnitMemberships().removeIf(membership -> !acquisitionsUnitIds.contains(membership.getAcquisitionsUnitId()));
+        }
       }
 
       JsonObject data = JsonObject.mapFrom(memberships.withTotalRecords(memberships.getAcquisitionsUnitMemberships().size()));

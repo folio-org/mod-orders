@@ -1,5 +1,5 @@
 {
-  "id" : "c2755a78-2f8d-47d0-a218-059a9b7391b4",
+  "id" : "8ca5aa90-bfbd-44b3-8ad2-f6f1b7e05337",
   "acquisitionMethod" : "Purchase At Vendor System",
   "alerts" : [ ],
   "cancellationRestriction" : false,
@@ -13,7 +13,7 @@
   "cost": {
     "currency": "USD",
     "listUnitPrice": 24.99,
-    "quantityPhysical": 6
+    "quantityPhysical": 1
   },
   "description" : "ABCDEFGH",
   "details": {
@@ -29,15 +29,23 @@
     "subscriptionTo": "2020-10-09T00:00:00.000Z"
   },
   "donor" : "ABCDEFGHIJKLM",
+  "fundDistribution": [
+    {
+      "code": "HIST",
+      "fundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
+      "percentage": 80.0,
+      "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3"
+    }
+  ],
   "locations": [
     {
-      "locationId": "b241764c-1466-4e1d-a028-1a3684a5da87",
-      "quantity": 5,
-      "quantityElectronic": 1,
-      "quantityPhysical": 4
+      "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "quantity": 1,
+      "quantityElectronic": 0,
+      "quantityPhysical": 1
     },
     {
-      "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
       "quantity": 2,
       "quantityElectronic": 0,
       "quantityPhysical": 2
@@ -59,17 +67,13 @@
   "poLineNumber" : "1EFC97C6B7-1",
   "publicationDate" : "2017",
   "publisher" : "Schiffer Publishing",
-  "purchaseOrderId" : "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
+  "purchaseOrderId" : "2c1a92c4-10cc-4e62-800a-ee4c8594e4fa",
   "receiptDate" : "2018-10-09T00:00:00.000+0000",
   "receiptStatus" : "Awaiting Receipt",
   "reportingCodes" : [ ],
   "requester" : "Leo Bulero",
   "rush" : true,
   "selector" : "ABCD",
-  "source": {
-    "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-    "description": "ABCDEFGHIJKLMNO"
-  },
   "tags" : [ "ABCDEFGHIJKLMNOPQRSTU", "ABCDEFG", "ABCDEFGHIJKLMNOPQRSTU", "ABCDEFGHIJKLMNO" ],
   "title" : "Kayak Fishing in the Northern Gulf Coast",
   "vendorDetail": {
@@ -77,10 +81,10 @@
     "noteFromVendor": "ABCDEFGHIKJKLMNOP",
     "refNumber": "123456-78",
     "refNumberType": "Supplier's unique order line reference number",
-    "vendorAccount": "8910-10"
+    "vendorAccount": "8910-25"
   },
   "metadata": {
-    "createdDate": "2018-06-29T00:00:00.000",
-    "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
+    "createdDate": "2014-07-06T00:00:00.000",
+    "createdByUserId": "28d10cfc-d137-11e8-a8d5-f2801f1b9fd1"
   }
 }
