@@ -11,11 +11,16 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.HttpStatus;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.tools.parser.JsonPathParser;
+import org.hamcrest.Matchers;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -30,6 +35,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
@@ -38,6 +45,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.awaitility.Awaitility.await;
+import static org.folio.orders.utils.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
@@ -48,13 +56,7 @@ import static org.folio.rest.impl.ApiTestSuite.mockPort;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.emptyIterable;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.isEmptyOrNullString;
-import static org.hamcrest.Matchers.iterableWithSize;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -95,6 +97,7 @@ public class ApiTestBase {
   static final String NON_EXIST_INSTANCE_STATUS_TENANT = "nonExistInstanceStatus";
   static final String NON_EXIST_INSTANCE_TYPE_TENANT = "nonExistInstanceType";
   static final String NON_EXIST_LOAN_TYPE_TENANT = "nonExistLoanType";
+  static final String COMPOSITE_PO_LINES_PREFIX = "compositePoLines[0].";
 
   protected static final Header X_OKAPI_URL = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
 
@@ -131,7 +134,7 @@ public class ApiTestBase {
         eventMessages.add(message);
       };
     }
-    
+
     @Bean("receiptStatusHandler")
     @Primary
     public Handler<Message<JsonObject>> mockedReceiptStatusHandler() {
@@ -172,6 +175,7 @@ public class ApiTestBase {
       ApiTestSuite.after();
     }
   }
+
 
   protected static String getMockData(String path) throws IOException {
     logger.info("Using mock datafile: {}", path);
@@ -346,7 +350,7 @@ public class ApiTestBase {
       assertThat(message.body().getString(HelperUtils.LANG), not(isEmptyOrNullString()));
     }
   }
-  
+
   void verifyReceiptStatusUpdateEvent(int msgQty) {
     logger.debug("Verifying event bus messages");
     // Wait until event bus registers message
@@ -361,5 +365,38 @@ public class ApiTestBase {
       assertThat(message.body().getString("poLineIdUpdate"), not(isEmptyOrNullString()));
       assertThat(message.body().getString(HelperUtils.LANG), not(isEmptyOrNullString()));
     }
+  }
+
+  void checkPreventProtectedFieldsModificationRule(String path, JsonObject compPO, Map<String, Object> updatedFields) {
+    JsonObject compPOJson = JsonObject.mapFrom(compPO);
+    JsonPathParser compPOParser = new JsonPathParser(compPOJson);
+    for (Map.Entry<String, Object> m : updatedFields.entrySet()) {
+      compPOParser.setValueAt(m.getKey(), m.getValue());
+    }
+    Errors errors = verifyPut(String.format(path, compPO.getString("id")), compPOJson, "", HttpStatus.HTTP_BAD_REQUEST.toInt())
+      .as(Errors.class);
+
+    // Only one error expected
+    assertThat(errors.getErrors(), hasSize(1));
+
+    Error error = errors.getErrors()
+      .get(0);
+    assertThat(error.getCode(), equalTo(PROHIBITED_FIELD_CHANGING.getCode()));
+
+    Object[] failedFieldNames = getModifiedProtectedFields(error);
+    Object[] expected = updatedFields.keySet()
+      .stream()
+      .map(fieldName -> fieldName.replace(COMPOSITE_PO_LINES_PREFIX, StringUtils.EMPTY))
+      .toArray();
+    assertThat(failedFieldNames.length, is(expected.length));
+    assertThat(expected, Matchers.arrayContainingInAnyOrder(failedFieldNames));
+  }
+
+  Object[] getModifiedProtectedFields(Error error) {
+    return Optional.of(error.getAdditionalProperties()
+      .get("protectedAndModifiedFields"))
+      .map(obj -> (List) obj)
+      .get()
+      .toArray();
   }
 }

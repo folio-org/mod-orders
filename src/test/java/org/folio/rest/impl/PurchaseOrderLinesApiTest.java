@@ -7,42 +7,24 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.ErrorCodes;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
-import static org.folio.orders.utils.ErrorCodes.COST_ADDITIONAL_COST_INVALID;
-import static org.folio.orders.utils.ErrorCodes.COST_DISCOUNT_INVALID;
-import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
-import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
-import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
-import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
-import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
-import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
-import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
-import static org.folio.orders.utils.ErrorCodes.ORDER_OPEN;
-import static org.folio.orders.utils.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
-import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
-import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
-import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
-import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
+import static org.folio.orders.utils.ErrorCodes.*;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
@@ -374,8 +356,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     assertTrue(StringUtils.isEmpty(resp.getBody().asString()));
 
+    //2 calls to get Order Line and Purchase Order for checking workflow status
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(1, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
@@ -407,13 +390,53 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
 
+    // 2 calls each to fetch Order Line and Purchase Order
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(1, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
     assertEquals(3, column.size());
     assertThat(column.keySet(), containsInAnyOrder(PO_LINES, ALERTS, REPORTING_CODES));
+
+    // Verify no message sent via event bus
+    verifyOrderStatusUpdateEvent(0);
+  }
+
+
+  @Test
+  public void testPutOrderLineByIdProtectedFieldsChanged() throws IllegalAccessException {
+    logger.info("=== Test PUT Order Line By Id - Protected fields changed ===");
+
+    String lineId = "0009662b-8b80-4001-b704-ca10971f175d";
+    JsonObject body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId);
+    String url = String.format(LINE_BY_ID_PATH, lineId);
+
+    Map<String, Object> allProtectedFieldsModification = new HashMap<>();
+
+    allProtectedFieldsModification.put(POLineProtectedFields.ACQUISITION_METHOD.getFieldName(),
+        CompositePoLine.AcquisitionMethod.APPROVAL_PLAN.value());
+    allProtectedFieldsModification.put(POLineProtectedFields.TITLE.getFieldName(), "Testing ProtectedFields");
+    allProtectedFieldsModification.put(POLineProtectedFields.DONOR.getFieldName(), "Donor");
+    allProtectedFieldsModification.put(POLineProtectedFields.COST_CURRENCY.getFieldName(), "EUR");
+    allProtectedFieldsModification.put(POLineProtectedFields.ERESOURCE_USER_LIMIT.getFieldName(), 100);
+    // adding trial because a default value is added while sending the request
+    allProtectedFieldsModification.put(POLineProtectedFields.ERESOURCE_TRIAL.getFieldName(), true);
+
+    Contributor contributor = new Contributor();
+    contributor.setContributor("Mr Test");
+    contributor.setContributorNameTypeId("fbdd42a8-e47d-4694-b448-cc571d1b44c3");
+    List<Contributor> contributors = new ArrayList<>();
+    contributors.add(contributor);
+
+    allProtectedFieldsModification.put(POLineProtectedFields.CONTRIBUTORS.getFieldName(), contributors);
+
+    checkPreventProtectedFieldsModificationRule(url, body, allProtectedFieldsModification);
+
+    // 2 calls each to fetch Order Line and Purchase Order
+    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(2, column.size());
+    assertThat(column, hasKey(PO_LINES));
 
     // Verify no message sent via event bus
     verifyOrderStatusUpdateEvent(0);
