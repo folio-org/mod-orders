@@ -46,7 +46,6 @@
             "inventory-storage.holdings.collection.get",
             "inventory-storage.items.collection.get",
             "inventory-storage.items.item.post",
-            "inventory-storage.instances.item.get",
             "inventory-storage.loan-types.collection.get",
             "inventory-storage.contributor-name-types.collection.get",
             "organizations-storage.organizations.collection.get",
@@ -434,7 +433,7 @@
     },
     {
       "id": "inventory",
-      "version": "8.3"
+      "version": "8.3 9.0"
     },
     {
       "id": "instance-types",
