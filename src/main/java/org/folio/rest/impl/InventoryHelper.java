@@ -45,6 +45,7 @@ import static org.folio.rest.acq.model.Piece.Format.ELECTRONIC;
 
 public class InventoryHelper extends AbstractHelper {
 
+  private static final String SOURCE_FOLIO = "FOLIO";
   static final String INSTANCE_SOURCE = "source";
   static final String INSTANCE_TITLE = "title";
   static final String INSTANCE_EDITIONS = "editions";
@@ -447,7 +448,7 @@ public class InventoryHelper extends AbstractHelper {
     JsonObject instance = new JsonObject();
 
     // MODORDERS-145 The Source and source code are required by schema
-    instance.put(INSTANCE_SOURCE, compPOL.getSource().getCode());
+    instance.put(INSTANCE_SOURCE, SOURCE_FOLIO);
     instance.put(INSTANCE_TITLE, compPOL.getTitle());
 
     if (compPOL.getEdition() != null) {

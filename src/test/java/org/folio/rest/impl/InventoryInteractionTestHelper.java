@@ -355,7 +355,7 @@ class InventoryInteractionTestHelper {
 
   private static void verifyInstanceRecordRequest(Header tenant, JsonObject instance, CompositePoLine line) {
     assertThat(instance.getString(INSTANCE_TITLE), equalTo(line.getTitle()));
-    assertThat(instance.getString(INSTANCE_SOURCE), equalTo(line.getSource().getCode()));
+    assertThat(instance.getString(INSTANCE_SOURCE), equalTo("FOLIO"));
     assertThat(instance.getString(INSTANCE_STATUS_ID), equalTo(getInstanceStatusId(tenant)));
     assertThat(instance.getString(INSTANCE_TYPE_ID), equalTo(getInstanceTypeId(tenant)));
 

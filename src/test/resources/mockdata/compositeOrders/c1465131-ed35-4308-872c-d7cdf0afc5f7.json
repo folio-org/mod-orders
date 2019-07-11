@@ -27,7 +27,7 @@
       },
       "purchaseOrderId": "c1465131-ed35-4308-872c-d7cdf0afc5f7",
       "rush" : false,
-      "source": { "code": "FOLIO" },
+      "source": "User",
       "title": "Kayak Fishing in the Northern Gulf Coast"
     }
   ],

@@ -72,10 +72,7 @@
   "requester": "",
   "rush": false,
   "selector": "",
-  "source": {
-    "code": "FOLIO",
-    "description": "Manually entered"
-  },
+  "source": "User",
   "tags": [],
   "title": "Advances in astronautical science",
   "vendorDetail": {
