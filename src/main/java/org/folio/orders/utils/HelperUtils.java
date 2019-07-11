@@ -6,6 +6,7 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
@@ -27,12 +28,7 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.EnumMap;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -55,6 +51,7 @@ import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.rest.tools.parser.JsonPathParser;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
@@ -75,7 +72,7 @@ public class HelperUtils {
   public static final String CONFIG_VALUE = "value";
   private static final String CONFIG_QUERY = "module=ORDERS";
   private static final String ERROR_MESSAGE = "errorMessage";
-  
+
   public static final String DEFAULT_POLINE_LIMIT = "1";
   public static final String REASON_COMPLETE = "Complete";
   private static final String MAX_POLINE_LIMIT = "500";
@@ -91,6 +88,8 @@ public class HelperUtils {
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
   private static final Pattern HOST_PORT_PATTERN = Pattern.compile("https?://([^:/]+)(?::?(\\d+)?)");
   private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
+  private static final String PROTECTED_AND_MODIFIED_FIELDS = "protectedAndModifiedFields";
+  public static final String WORKFLOW_STATUS = "workflowStatus";
 
   private HelperUtils() {
 
@@ -103,7 +102,7 @@ public class HelperUtils {
       .forEach(entry -> okapiHeaders.put(entry.getKey(), entry.getValue()));
     return okapiHeaders;
   }
-  
+
   public static JsonObject verifyAndExtractBody(Response response) {
     if (!Response.isSuccess(response.getCode())) {
       throw new CompletionException(
@@ -112,7 +111,7 @@ public class HelperUtils {
 
     return response.getBody();
   }
-  
+
   public static CompletableFuture<JsonObject> getPurchaseOrderById(String id, String lang, HttpClientInterface httpClient, Context ctx,
                                                                Map<String, String> okapiHeaders, Logger logger) {
     String endpoint = String.format(GET_PURCHASE_ORDER_BYID, id, lang);
@@ -897,7 +896,7 @@ public class HelperUtils {
         new HttpException(response.getCode(), response.getError().getString(ERROR_MESSAGE)));
     }
   }
-  
+
   /**
    * A common method to delete an entry in the storage
    * @param endpoint endpoint
@@ -924,7 +923,7 @@ public class HelperUtils {
 
     return future;
   }
-  
+
   /**
    * Retrieve configuration for mod-orders from mod-configuration.
    * @param okapiHeaders the headers provided by okapi
@@ -1078,10 +1077,10 @@ public class HelperUtils {
     pol.remove(REPORTING_CODES);
     return pol.mapTo(PoLine.class);
   }
-  
+
   public static CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status, HttpClientInterface httpClient,
       Context ctx, Map<String, String> okapiHeaders, Logger logger) {
-    
+
     if (status == null || poLine.getReceiptStatus() == status) {
       return completedFuture(null);
     }
@@ -1098,7 +1097,6 @@ public class HelperUtils {
     }
 
     poLine.setReceiptStatus(status);
-
     // Update PO Line in storage
     return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, ctx, okapiHeaders,
         logger).thenApply(v -> poLine.getId())
@@ -1106,5 +1104,25 @@ public class HelperUtils {
             logger.error("The PO Line '{}' cannot be updated with new receipt status", e, poLine.getId());
             return null;
           });
+  }
+
+  public static JsonObject verifyProtectedFieldsChanged(List<String> protectedFields, JsonObject objectFromStorage,
+      JsonObject requestObject) {
+    Set<String> fields = new HashSet<>();
+    JsonPathParser oldObject = new JsonPathParser(objectFromStorage);
+    JsonPathParser newObject = new JsonPathParser(requestObject);
+    for (String field : protectedFields) {
+      if (!Objects.equals(oldObject.getValueAt(field), newObject.getValueAt(field))) {
+        fields.add(field);
+      }
+    }
+
+    if (CollectionUtils.isNotEmpty(fields)) {
+      Error error = PROHIBITED_FIELD_CHANGING.toError()
+        .withAdditionalProperty(PROTECTED_AND_MODIFIED_FIELDS, fields);
+      throw new HttpException(400, error);
+    }
+
+    return objectFromStorage;
   }
 }

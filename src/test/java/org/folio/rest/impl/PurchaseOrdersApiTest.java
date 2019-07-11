@@ -13,24 +13,13 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.orders.utils.POProtectedFields;
 import org.folio.rest.acq.model.finance.Encumbrance;
-import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Contributor;
-import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.FundDistribution;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Physical.CreateInventory;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -38,11 +27,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -136,7 +121,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
 
 public class PurchaseOrdersApiTest extends ApiTestBase {
 
@@ -610,6 +594,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     // Make sure that mock PO has 1 po line
     assertEquals(1, reqData.getCompositePoLines().size());
 
+    reqData.setManualPo(false);
     CompositePoLine compositePoLine = reqData.getCompositePoLines().get(0);
 
     compositePoLine.setId(PO_LINE_ID_FOR_SUCCESS_CASE);
@@ -1931,6 +1916,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.setVendor("d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1");
     assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
 
+    reqData.setApproved(false);
+    reqData.setReEncumber(false);
+
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()),
       JsonObject.mapFrom(reqData), EMPTY, 204);
 
@@ -2066,6 +2054,76 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     List<Encumbrance> createdEncumbrances = getCreatedEncumbrances();
     assertThat(createdEncumbrances, empty());
+  }
+
+  @Test
+  public void testUpdateOrderWithProtectedFieldsChanging() throws IllegalAccessException {
+    logger.info("=== Test case when OPEN order errors if protected fields are changed ===");
+
+    JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS);
+    assertThat(reqData.getString("workflowStatus"), is(CompositePurchaseOrder.WorkflowStatus.OPEN.value()));
+
+    Map<String, Object> allProtectedFieldsModification = new HashMap<>();
+
+    allProtectedFieldsModification.put(POProtectedFields.APPROVED.getFieldName(), false);
+    allProtectedFieldsModification.put(POProtectedFields.PO_NUMBER.getFieldName(), "testPO");
+    allProtectedFieldsModification.put(POProtectedFields.MANUAL_PO.getFieldName(), true);
+    allProtectedFieldsModification.put(POProtectedFields.RE_ENCUMBER.getFieldName(), true);
+    allProtectedFieldsModification.put(POProtectedFields.BILL_TO.getFieldName(), UUID.randomUUID()
+      .toString());
+    allProtectedFieldsModification.put(POProtectedFields.VENDOR.getFieldName(), "d1b79c8d-4950-482f-8e42-04f9aae3cb40");
+    allProtectedFieldsModification.put(POProtectedFields.ORDER_TYPE.getFieldName(),
+        CompositePurchaseOrder.OrderType.ONGOING.value());
+    Renewal renewal = new Renewal();
+    renewal.setManualRenewal(true);
+    allProtectedFieldsModification.put(POProtectedFields.RENEWAL.getFieldName(), JsonObject.mapFrom(renewal));
+
+    checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, reqData, allProtectedFieldsModification);
+  }
+
+  @Test
+  public void testUpdateOrderWithLineProtectedFieldsChanging() throws IllegalAccessException {
+    logger.info("=== Test case when OPEN order errors if protected fields are changed in CompositePoLine===");
+
+    JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS);
+    assertThat(reqData.getString("workflowStatus"), is(CompositePurchaseOrder.WorkflowStatus.OPEN.value()));
+
+    Map<String, Object> allProtectedFieldsModification = new HashMap<>();
+
+    allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineProtectedFields.CHECKIN_ITEMS.getFieldName()), true);
+    allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineProtectedFields.ACQUISITION_METHOD.getFieldName()),
+        "Depository");
+    allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineProtectedFields.COST_ADDITIONAL_COST.getFieldName()),
+        10.32);
+    allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineProtectedFields.ERESOURCE_USER_LIMIT.getFieldName()),
+        100);
+
+    checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, reqData, allProtectedFieldsModification);
+  }
+
+  @Test
+  public void testUpdateOrderWithProtectedFieldsChangingForClosedOrder() throws IllegalAccessException {
+    logger.info("=== Test case when closed order errors if protected fields are changed ===");
+
+    JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_CLOSED_STATUS);
+    assertThat(reqData.getString("workflowStatus"), is(CompositePurchaseOrder.WorkflowStatus.CLOSED.value()));
+
+    Map<String, Object> allProtectedFieldsModification = new HashMap<>();
+
+    allProtectedFieldsModification.put(POProtectedFields.APPROVED.getFieldName(), false);
+    allProtectedFieldsModification.put(POProtectedFields.PO_NUMBER.getFieldName(), "testPO");
+    allProtectedFieldsModification.put(POProtectedFields.MANUAL_PO.getFieldName(), true);
+    allProtectedFieldsModification.put(POProtectedFields.RE_ENCUMBER.getFieldName(), true);
+    allProtectedFieldsModification.put(POProtectedFields.BILL_TO.getFieldName(), UUID.randomUUID()
+      .toString());
+    allProtectedFieldsModification.put(POProtectedFields.VENDOR.getFieldName(), "d1b79c8d-4950-482f-8e42-04f9aae3cb40");
+    allProtectedFieldsModification.put(POProtectedFields.ORDER_TYPE.getFieldName(),
+        CompositePurchaseOrder.OrderType.ONE_TIME.value());
+    Renewal renewal = new Renewal();
+    renewal.setManualRenewal(true);
+    allProtectedFieldsModification.put(POProtectedFields.RENEWAL.getFieldName(), JsonObject.mapFrom(renewal));
+
+    checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, reqData, allProtectedFieldsModification);
   }
 
   @Test

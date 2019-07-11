@@ -33,6 +33,7 @@ import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.SequenceNumber;
@@ -309,11 +310,23 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    */
   CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine) {
     return getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
+      .thenCompose(lineFromStorage -> validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage))
       .thenCompose(lineFromStorage -> {
-        // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line update
+        // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
+        // update
         compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
-        return updateOrderLine(compOrderLine, lineFromStorage)
-          .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage));
+        return updateOrderLine(compOrderLine, lineFromStorage).thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage));
+      });
+  }
+
+  private CompletableFuture<JsonObject> validatePOLineProtectedFieldsChanged(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
+    return HelperUtils.getPurchaseOrderById(compOrderLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(purchaseOrder -> {
+        if (!purchaseOrder.getString(WORKFLOW_STATUS)
+          .equals(CompositePurchaseOrder.WorkflowStatus.PENDING.value())) {
+          verifyProtectedFieldsChanged(POLineProtectedFields.getFieldNames(), lineFromStorage, JsonObject.mapFrom(compOrderLine));
+        }
+        return completedFuture(lineFromStorage);
       });
   }
 

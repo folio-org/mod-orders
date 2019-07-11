@@ -3,7 +3,7 @@
   "dateOrdered": "2019-04-24T14:21:16.958+0000",
   "poNumber": "10000",
   "orderType": "One-Time",
-  "vendor": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Open",
   "compositePoLines": [
     {
@@ -11,6 +11,7 @@
       "checkinItems": false,
       "instanceId": "b475cb53-97a6-4112-9712-64e5e3ca4c00",
       "acquisitionMethod": "Purchase At Vendor System",
+      "collection" : false,
       "cost": {
         "listUnitPrice": 1.0,
         "currency": "USD",
@@ -29,6 +30,7 @@
       "purchaseOrderId": "9d56b621-202d-414b-9e7f-5fefe4422ab3",
       "receiptDate": "2019-04-24T14:22:29.087+0000",
       "receiptStatus": "Fully Received",
+      "rush" : false,
       "source": {
         "code": "FOLIO"
       },
