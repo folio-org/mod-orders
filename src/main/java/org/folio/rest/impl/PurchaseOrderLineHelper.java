@@ -127,7 +127,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       if (isEmpty(query)) {
         return getPoLines(limit, offset, acqUnitsCqlExpr, GET_PO_LINES_BY_QUERY);
       }
-      return getPoLines(limit, offset, query + " and " + acqUnitsCqlExpr, GET_ORDER_LINES_BY_QUERY);
+      return getPoLines(limit, offset, acqUnitsCqlExpr + " and " + query, GET_ORDER_LINES_BY_QUERY);
     });
   }
 
