@@ -3,7 +3,6 @@ package org.folio.rest.impl;
 import io.vertx.core.Context;
 import org.folio.rest.jaxrs.model.*;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -11,20 +10,19 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BinaryOperator;
 
 import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 
 public class ProtectionHelper extends AbstractHelper {
 
   private AcquisitionsUnitsHelper acquisitionsUnitsHelper;
-  private AcquisitionsMembershipsHelper acquisitionsMembershipsHelper;
   private AcquisitionsUnitAssignmentsHelper acquisitionsUnitAssignmentsHelper;
   private Operation operation;
 
-  private static final String OKAPI_USER_ID_HEADER = "X-Okapi-User-Id";
 
   private ProtectionHelper(Map<String, String> okapiHeaders, Context ctx, String lang, Operation operation) {
     super(okapiHeaders, ctx, lang);
     acquisitionsUnitsHelper = new AcquisitionsUnitsHelper(okapiHeaders, ctx, lang);
-    acquisitionsMembershipsHelper = new AcquisitionsMembershipsHelper(okapiHeaders, ctx, lang);
     acquisitionsUnitAssignmentsHelper = new AcquisitionsUnitAssignmentsHelper(okapiHeaders, ctx, lang);
     this.operation = operation;
   }
@@ -38,11 +36,11 @@ public class ProtectionHelper extends AbstractHelper {
   public CompletableFuture<Boolean> isOperationProtected(String recordId) {
     CompletableFuture<Boolean> future = new CompletableFuture<>();
     String userId;
-    if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USER_ID_HEADER)) != null) {
+    if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USERID_HEADER)) != null) {
       getUnitIdsAssignedToOrder(recordId)
         .thenAccept(ids -> {
           // 1. Get ids of Units assigned to Order
-            if(ids.size() > 0) {
+            if(!ids.isEmpty()) {
               // Get Units assigned to Order by retrieved ids
               getUnitsByIds(ids)
                 // Check if operation is protected based on retrieved Units
@@ -52,7 +50,7 @@ public class ProtectionHelper extends AbstractHelper {
                     // Get User's Units belonging belonging Order's Units
                     getUnitIdsAssignedToUserAndOrder(userId, ids)
                       .thenAccept(unitIds -> {
-                        if(unitIds.size() > 0) {
+                        if(!unitIds.isEmpty()) {
                           future.complete(false);
                         } else {
                           future.complete(true);
@@ -89,7 +87,8 @@ public class ProtectionHelper extends AbstractHelper {
    * @return list of unit ids associated with user.
    */
   private CompletableFuture<List<String>> getUnitIdsAssignedToUserAndOrder(String userId, List<String> unitIdsAssignedToOrder) {
-    return acquisitionsMembershipsHelper.getAcquisitionsUnitsMemberships(String.format("userId==%s AND acquisitionsUnitId==%s", userId, buildOrQuery(unitIdsAssignedToOrder)), 0, Integer.MAX_VALUE)
+    String query = String.format("userId==%s AND %s", userId, convertIdsToCqlQuery(unitIdsAssignedToOrder, "acquisitionsUnitId"));
+    return acquisitionsUnitsHelper.getAcquisitionsUnitsMemberships(query, 0, Integer.MAX_VALUE)
       .thenApply(memberships -> memberships.getAcquisitionsUnitMemberships().stream()
         .map(AcquisitionsUnitMembership::getAcquisitionsUnitId).collect(toList()));
   }
@@ -101,7 +100,7 @@ public class ProtectionHelper extends AbstractHelper {
    * @return list of {@link AcquisitionsUnit}
    */
   private CompletableFuture<List<AcquisitionsUnit>> getUnitsByIds(List<String> unitIds) {
-    String query = buildUnitsQuery("id", unitIds);
+    String query = convertIdsToCqlQuery(unitIds);
     return acquisitionsUnitsHelper.getAcquisitionsUnits(query, 0, Integer.MAX_VALUE)
       .thenApply(AcquisitionsUnitCollection::getAcquisitionsUnits);
   }
@@ -124,34 +123,6 @@ public class ProtectionHelper extends AbstractHelper {
    */
   private BinaryOperator<Boolean> getMergingStrategy() {
     return (a, b) -> a && b;
-  }
-
-  private String buildUnitsQuery(String idFieldName, List<String> unitIds) {
-    StringBuilder query = new StringBuilder();
-    Iterator<String> it = unitIds.iterator();
-    while (it.hasNext()) {
-      String idValue = it.next();
-      if(it.hasNext()) {
-        query.append(String.format("%s==%s OR ", idFieldName, idValue));
-      } else {
-        query.append(String.format("%s==%s",idFieldName, idValue));
-      }
-    }
-    return new String(query);
-  }
-
-  private String buildOrQuery(List<String> unitIds) {
-    StringBuilder query = new StringBuilder();
-    Iterator<String> it = unitIds.iterator();
-    while (it.hasNext()) {
-      String idValue = it.next();
-      if(it.hasNext()) {
-        query.append(String.format("%%s OR ", idValue));
-      } else {
-        query.append(String.format("%s", idValue));
-      }
-    }
-    return new String("(" + query + ")");
   }
 
   public enum Operation {

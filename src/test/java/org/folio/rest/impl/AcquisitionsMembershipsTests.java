@@ -32,6 +32,7 @@ public class AcquisitionsMembershipsTests extends ApiTestBase {
   private static final Logger logger = LoggerFactory.getLogger(AcquisitionsMembershipsTests.class);
 
   private static final String ACQ_UNITS_MEMBERSHIPS_ENDPOINT = "/acquisitions-units/memberships";
+  public static final String USER_ID_ASSIGNED_TO_ACQ_UNITS = "480dba68-ee84-4b9c-a374-7e824fc49227";
 
   @Test
   public void testGetAcqMembershipsNoQuery() throws IOException {
@@ -45,7 +46,7 @@ public class AcquisitionsMembershipsTests extends ApiTestBase {
   @Test
   public void testGetAcqUnitsMembershipsWithQuery() {
     logger.info("=== Test GET acquisitions units memberships - search by query ===");
-    String url = ACQ_UNITS_MEMBERSHIPS_ENDPOINT + "?query=userId==480dba68-ee84-4b9c-a374-7e824fc49227";
+    String url = ACQ_UNITS_MEMBERSHIPS_ENDPOINT + "?query=userId==" + USER_ID_ASSIGNED_TO_ACQ_UNITS;
 
     final AcquisitionsUnitMembershipCollection units = verifySuccessGet(url, AcquisitionsUnitMembershipCollection.class);
     assertThat(units.getAcquisitionsUnitMemberships(), hasSize(2));

@@ -68,6 +68,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class HelperUtils {
 
+  public static final String ID = "id";
   public static final String COMPOSITE_PO_LINES = "compositePoLines";
   public static final String CONFIGS = "configs";
   public static final String CONFIG_NAME = "configName";
@@ -815,7 +816,16 @@ public class HelperUtils {
    * @return String representing CQL query to get records by id's
    */
   public static String convertIdsToCqlQuery(List<String> ids) {
-    return StreamEx.of(ids).map(id -> "id==" + id).joining(" or ");
+    return convertIdsToCqlQuery(ids, ID);
+  }
+
+  /**
+   * Transform list of id's to CQL query using 'or' operation
+   * @param ids list of id's
+   * @return String representing CQL query to get records by id's
+   */
+  public static String convertIdsToCqlQuery(List<String> ids, String fieldName) {
+    return StreamEx.of(ids).joining(" or ", fieldName + "==(", ")");
   }
 
   public static CompletableFuture<JsonObject> handleGetRequest(String endpoint, HttpClientInterface

@@ -1,13 +1,30 @@
 package org.folio.rest.impl;
 
+import io.restassured.http.Headers;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+
 import org.folio.rest.acq.model.ReceivingHistoryCollection;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 import org.junit.Test;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
+import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
+import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_ID;
+import static org.folio.rest.impl.AcquisitionsUnitsHelper.NO_ACQ_UNIT_ASSIGNED_CQL;
 import static org.folio.rest.impl.MockServer.INTERNAL_SERVER_ERROR;
-import static org.junit.Assert.assertEquals;
+import static org.folio.rest.impl.MockServer.getQueryParams;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+
+import java.util.List;
 
 public class ReceivingHistoryApiTest extends ApiTestBase {
 
@@ -21,7 +38,15 @@ public class ReceivingHistoryApiTest extends ApiTestBase {
     logger.info("=== Test Get Receiving History - With empty query ===");
     final ReceivingHistoryCollection receivingHistory = verifySuccessGet(ORDERS_RECEIVING_HISTORY_ENDPOINT, ReceivingHistoryCollection.class);
 
-    assertEquals(0, receivingHistory.getTotalRecords().intValue());
+    assertThat(receivingHistory.getTotalRecords(), is(0));
+
+    assertThat(MockServer.serverRqRs.get(RECEIVING_HISTORY, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
+
+    List<String> queryParams = getQueryParams(RECEIVING_HISTORY);
+    assertThat(queryParams, hasSize(1));
+//    assertThat(queryParams.get(0), equalTo(NO_ACQ_UNIT_ASSIGNED_CQL));
   }
 
   @Test
@@ -31,7 +56,43 @@ public class ReceivingHistoryApiTest extends ApiTestBase {
 
     final ReceivingHistoryCollection receivingHistory = verifySuccessGet(endpointQuery, ReceivingHistoryCollection.class);
 
-    assertEquals(1, receivingHistory.getTotalRecords().intValue());
+    assertThat(receivingHistory.getTotalRecords(), is(1));
+
+    assertThat(MockServer.serverRqRs.get(RECEIVING_HISTORY, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
+
+    List<String> queryParams = getQueryParams(RECEIVING_HISTORY);
+    assertThat(queryParams, hasSize(1));
+    String queryToStorage = queryParams.get(0);
+    assertThat(queryToStorage, containsString(RECEIVING_HISTORY_PURCHASE_ORDER_ID));
+    assertThat(queryToStorage, containsString(ACQUISITIONS_UNIT_ID + "=="));
+    assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
+  }
+
+  @Test
+  public void testGetReceivingHistoryForUserAssignedToAcqUnits() {
+    logger.info("=== Test Get Receiving History - user assigned to acq units ===");
+    String endpointQuery = String.format("%s?query=purchaseOrderId=%s", ORDERS_RECEIVING_HISTORY_ENDPOINT, RECEIVING_HISTORY_PURCHASE_ORDER_ID);
+
+    Headers headers = prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID_WITH_ACQ_UNITS);
+    verifyGet(endpointQuery, headers, APPLICATION_JSON, 200);
+
+    assertThat(MockServer.serverRqRs.get(RECEIVING_HISTORY, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
+
+    List<String> queryParams = getQueryParams(RECEIVING_HISTORY);
+    assertThat(queryParams, hasSize(1));
+    String queryToStorage = queryParams.get(0);
+    assertThat(queryToStorage, containsString(ACQUISITIONS_UNIT_ID + "=="));
+    assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
+
+    MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET)
+      .get(0)
+      .mapTo(AcquisitionsUnitMembershipCollection.class)
+      .getAcquisitionsUnitMemberships()
+      .forEach(member -> assertThat(queryToStorage, containsString(member.getAcquisitionsUnitId())));
   }
 
   @Test

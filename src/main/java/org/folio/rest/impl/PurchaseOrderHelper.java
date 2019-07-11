@@ -51,8 +51,8 @@ import org.folio.rest.jaxrs.model.Error;
 
 public class PurchaseOrderHelper extends AbstractHelper {
 
-  private static final String SEARCH_PURCHASE_ORDERS = resourcesPath(SEARCH_ORDERS) + "?limit=%s&offset=%s%s&lang=%s";
-  private static final String GET_PURCHASE_ORDERS = resourcesPath(PURCHASE_ORDER) + "?limit=%s&offset=%s&lang=%s";
+  private static final String SEARCH_ORDERS_BY_LINES_DATA = resourcesPath(SEARCH_ORDERS) + SEARCH_PARAMS;
+  private static final String GET_PURCHASE_ORDERS = resourcesPath(PURCHASE_ORDER) + SEARCH_PARAMS;
 
   private final PoNumberHelper poNumberHelper;
   private final PurchaseOrderLineHelper orderLineHelper;
@@ -76,12 +76,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
     CompletableFuture<PurchaseOrders> future = new VertxCompletableFuture<>(ctx);
 
     try {
-      String endpoint = buildGetOrdersPath(limit, offset, query);
-      handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-        .thenAccept(jsonOrders -> {
-          logger.info("Successfully retrieved orders: " + jsonOrders.encodePrettily());
-          future.complete(jsonOrders.mapTo(PurchaseOrders.class));
-        })
+      buildGetOrdersPath(limit, offset, query)
+        .thenCompose(endpoint -> handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger))
+        .thenAccept(jsonOrders -> future.complete(jsonOrders.mapTo(PurchaseOrders.class)))
         .exceptionally(t -> {
           logger.error("Error getting orders", t);
           future.completeExceptionally(t);
@@ -93,13 +90,18 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return future;
   }
 
-  private String buildGetOrdersPath(int limit, int offset, String query) {
-    String queryParam = buildQuery(query, logger);
-    if (StringUtils.isEmpty(queryParam)) {
-      return String.format(GET_PURCHASE_ORDERS, limit, offset, lang);
-    } else {
-      return String.format(SEARCH_PURCHASE_ORDERS, limit, offset, queryParam, lang);
-    }
+  private CompletableFuture<String> buildGetOrdersPath(int limit, int offset, String query) {
+    AcquisitionsUnitsHelper acqUnitsHelper = new AcquisitionsUnitsHelper(httpClient, okapiHeaders, ctx, lang);
+    return acqUnitsHelper.buildAcqUnitsCqlExprToSearchRecords()
+      .thenApply(acqUnitsCqlExpr -> {
+        if (StringUtils.isEmpty(query)) {
+          String queryParam = buildQuery(acqUnitsCqlExpr, logger);
+          return String.format(GET_PURCHASE_ORDERS, limit, offset, queryParam, lang);
+        } else {
+          String queryParam = buildQuery(acqUnitsCqlExpr + " and " + query, logger);
+          return String.format(SEARCH_ORDERS_BY_LINES_DATA, limit, offset, queryParam, lang);
+        }
+      });
   }
 
   /**
