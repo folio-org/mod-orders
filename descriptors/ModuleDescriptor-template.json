@@ -11,6 +11,8 @@
           "pathPattern": "/orders/composite-orders",
           "permissionsRequired": ["orders.collection.get"],
           "modulePermissions": [
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.purchase-orders.collection.get"
           ]
         },
@@ -44,7 +46,6 @@
             "inventory-storage.holdings.collection.get",
             "inventory-storage.items.collection.get",
             "inventory-storage.items.item.post",
-            "inventory-storage.instances.item.get",
             "inventory-storage.loan-types.collection.get",
             "inventory-storage.contributor-name-types.collection.get",
             "organizations-storage.organizations.collection.get",
@@ -119,6 +120,8 @@
           "pathPattern": "/orders/order-lines",
           "permissionsRequired": ["orders.po-lines.collection.get"],
           "modulePermissions": [
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.po-lines.collection.get"
           ]
         },
@@ -230,6 +233,8 @@
           "pathPattern": "/orders/receiving-history",
           "permissionsRequired": ["orders.receiving-history.collection.get"],
           "modulePermissions": [
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.receiving-history.collection.get"
           ]
         },
@@ -429,7 +434,7 @@
     },
     {
       "id": "inventory",
-      "version": "8.3"
+      "version": "8.3 9.0"
     },
     {
       "id": "instance-types",
