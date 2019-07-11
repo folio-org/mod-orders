@@ -142,14 +142,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private JsonObject findCorrespondingCompositePoLine(CompositePoLine poLine, JsonArray poLinesFromStorage) {
-    return poLinesFromStorage.copy()
-      .stream()
-      .filter(line -> ((JsonObject) line).getString(ID)
+    return poLinesFromStorage.stream()
+      .map(line -> (JsonObject) line)
+      .filter(line -> line.getString(ID)
         .equals(poLine.getId()))
       .findFirst()
-      .map(line -> (JsonObject) line)
-      .orElse(JsonObject.mapFrom(poLine));
-
+      .orElse(null);
   }
 
   /**
@@ -472,7 +470,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
       JsonArray existingPoLinesArray) {
     if (poFromStorage.getWorkflowStatus() != PENDING) {
       compPO.getCompositePoLines()
-        .stream()
         .forEach(poLine -> verifyProtectedFieldsChanged(POLineProtectedFields.getFieldNames(),
             findCorrespondingCompositePoLine(poLine, existingPoLinesArray), JsonObject.mapFrom(poLine)));
     }

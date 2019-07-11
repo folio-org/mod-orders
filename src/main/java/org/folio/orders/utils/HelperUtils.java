@@ -1109,8 +1109,8 @@ public class HelperUtils {
   public static JsonObject verifyProtectedFieldsChanged(List<String> protectedFields, JsonObject objectFromStorage,
       JsonObject requestObject) {
     Set<String> fields = new HashSet<>();
-    JsonPathParser oldObject = new JsonPathParser(JsonObject.mapFrom(objectFromStorage));
-    JsonPathParser newObject = new JsonPathParser(JsonObject.mapFrom(requestObject));
+    JsonPathParser oldObject = new JsonPathParser(objectFromStorage);
+    JsonPathParser newObject = new JsonPathParser(requestObject);
     for (String field : protectedFields) {
       if (!Objects.equals(oldObject.getValueAt(field), newObject.getValueAt(field))) {
         fields.add(field);

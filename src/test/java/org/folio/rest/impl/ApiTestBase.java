@@ -11,6 +11,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
@@ -133,7 +134,7 @@ public class ApiTestBase {
         eventMessages.add(message);
       };
     }
-    
+
     @Bean("receiptStatusHandler")
     @Primary
     public Handler<Message<JsonObject>> mockedReceiptStatusHandler() {
@@ -349,7 +350,7 @@ public class ApiTestBase {
       assertThat(message.body().getString(HelperUtils.LANG), not(isEmptyOrNullString()));
     }
   }
-  
+
   void verifyReceiptStatusUpdateEvent(int msgQty) {
     logger.debug("Verifying event bus messages");
     // Wait until event bus registers message
@@ -366,8 +367,7 @@ public class ApiTestBase {
     }
   }
 
-  void checkPreventProtectedFieldsModificationRule(String path, JsonObject compPO, Map<String, Object> updatedFields)
-      throws IllegalAccessException {
+  void checkPreventProtectedFieldsModificationRule(String path, JsonObject compPO, Map<String, Object> updatedFields) {
     JsonObject compPOJson = JsonObject.mapFrom(compPO);
     JsonPathParser compPOParser = new JsonPathParser(compPOJson);
     for (Map.Entry<String, Object> m : updatedFields.entrySet()) {
@@ -386,9 +386,7 @@ public class ApiTestBase {
     Object[] failedFieldNames = getModifiedProtectedFields(error);
     Object[] expected = updatedFields.keySet()
       .stream()
-      .map(s -> {
-        return s.replace(COMPOSITE_PO_LINES_PREFIX, "");
-      })
+      .map(fieldName -> fieldName.replace(COMPOSITE_PO_LINES_PREFIX, StringUtils.EMPTY))
       .toArray();
     assertThat(failedFieldNames.length, is(expected.length));
     assertThat(expected, Matchers.arrayContainingInAnyOrder(failedFieldNames));
