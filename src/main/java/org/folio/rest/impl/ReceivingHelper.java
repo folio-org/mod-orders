@@ -87,7 +87,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       AcquisitionsUnitsHelper acqUnitsHelper = new AcquisitionsUnitsHelper(httpClient, okapiHeaders, ctx, lang);
       acqUnitsHelper.buildAcqUnitsCqlExprToSearchRecords()
         .thenCompose(acqUnitsCqlExpr -> {
-          String queryParam = buildQuery(StringUtils.isEmpty(query) ? acqUnitsCqlExpr : query + " and " + acqUnitsCqlExpr, logger);
+          String queryParam = buildQuery(StringUtils.isEmpty(query) ? acqUnitsCqlExpr : acqUnitsCqlExpr + " and " + query, logger);
           String endpoint = String.format(GET_RECEIVING_HISTORY_BY_QUERY, limit, offset, queryParam, lang);
           return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
             .thenAccept(jsonReceivingHistory -> future.complete(jsonReceivingHistory.mapTo(ReceivingHistoryCollection.class)));
