@@ -1,7 +1,11 @@
 package org.folio.rest.impl;
 
+import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.databind.SerializationConfig;
+import io.vertx.core.json.Json;
 import org.folio.config.ApplicationConfig;
 import org.folio.rest.resource.interfaces.InitAPI;
+import org.folio.rest.tools.utils.ObjectMapperTool;
 import org.folio.spring.SpringContextUtil;
 
 import io.vertx.core.AsyncResult;
@@ -22,6 +26,14 @@ public class InitAPIs implements InitAPI {
   public void init(Vertx vertx, Context context, Handler<AsyncResult<Boolean>> resultHandler) {
     vertx.executeBlocking(
       handler -> {
+        SerializationConfig serializationConfig = ObjectMapperTool.getMapper().getSerializationConfig();
+        DeserializationConfig deserializationConfig = ObjectMapperTool.getMapper().getDeserializationConfig();
+
+        Json.mapper.setConfig(serializationConfig);
+        Json.prettyMapper.setConfig(serializationConfig);
+        Json.mapper.setConfig(deserializationConfig);
+        Json.prettyMapper.setConfig(deserializationConfig);
+
         SpringContextUtil.init(vertx, context, ApplicationConfig.class);
         handler.complete();
       },
