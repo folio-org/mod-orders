@@ -518,6 +518,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
     JsonObject purchaseOrder = JsonObject.mapFrom(compPO);
     purchaseOrder.remove(COMPOSITE_PO_LINES);
+    purchaseOrder.remove(ACQ_UNIT_IDS);
     return purchaseOrder;
   }
 
