@@ -12,14 +12,11 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.stream.Stream;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.ApiTestBase.getMockAsJson;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
-import static org.folio.rest.impl.ProtectionHelperTest.ALLOWED_CREATION_HEADERS;
-import static org.folio.rest.impl.ProtectionHelperTest.FORBIDDEN_CREATION_HEADERS;
 import static org.folio.rest.impl.PurchaseOrderLinesApiTest.ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE;
 import static org.folio.rest.impl.PurchaseOrderLinesApiTest.COMP_PO_LINES_MOCK_DATA_PATH;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -36,8 +33,8 @@ public class ProtectionHelperTest extends ApiTestBase {
   private static final String USER_WITH_UNITS_ASSIGNED_TO_ORDER_ID = "c4785326-c687-416b-9d52-7ac88b442d17";
   private static final Header X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER = new Header(OKAPI_USERID_HEADER, USER_WITH_UNITS_ASSIGNED_TO_ORDER_ID);
 
-  static final Header[] FORBIDDEN_CREATION_HEADERS = {X_OKAPI_USER_WITHOUT_ASSIGNED_UNITS, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER};
-  static final Header[] ALLOWED_CREATION_HEADERS = {X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER};
+  private static final Header[] FORBIDDEN_CREATION_HEADERS = {X_OKAPI_USER_WITHOUT_ASSIGNED_UNITS, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER};
+  private static final Header[] ALLOWED_CREATION_HEADERS = {X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER};
 
   public static final String ACQUISITIONS_UNITS = "acquisitionsUnits";
   public static final String ACQUISITIONS_MEMBERSHIPS = "acquisitionsMemberships";
@@ -93,7 +90,7 @@ public class ProtectionHelperTest extends ApiTestBase {
     // to Units, Memberships, Assignments API and restriction of operation.
     for(Operations operation : Operations.values()) {
       for(ProtectedEntities entities : ProtectedEntities.values()) {
-        entities.getForbiddenUserIdHeadersStream().forEach(header -> {
+        Arrays.stream(FORBIDDEN_CREATION_HEADERS).forEach(header -> {
           // Verify request
           operation.process(entities.getEndpoint(), entities.getSampleForFlow403(),
           prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, header), APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt());
@@ -113,7 +110,7 @@ public class ProtectionHelperTest extends ApiTestBase {
     // to Units, Memberships, Assignments API and allowance of operation.
     for(Operations operation : Operations.values()) {
       for(ProtectedEntities entities : ProtectedEntities.values()) {
-        entities.getAllowedUserIdHeadersStream().forEach(header -> {
+        Arrays.stream(ALLOWED_CREATION_HEADERS).forEach(header -> {
           // Verify request
           operation.process(entities.getEndpoint(), entities.getSampleForFlow201(),
             prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, header), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt());
@@ -144,18 +141,15 @@ enum Operations {
 
 enum ProtectedEntities {
 
-  PIECES("/orders/pieces", getMockAsJson(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord.json").encode(), ALLOWED_CREATION_HEADERS, FORBIDDEN_CREATION_HEADERS),
-  ORDER_LINES("/orders/order-lines", getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).encode(), ALLOWED_CREATION_HEADERS, FORBIDDEN_CREATION_HEADERS);
+  PIECES("/orders/pieces", getMockAsJson(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord.json").encode()),
+  ORDER_LINES("/orders/order-lines", getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).encode());
 
   private String endpoint;
   private String sample;
-  private Header[] allowedUserIdHeaders, forbiddenUserIdHeaders;
 
-  ProtectedEntities(String endpoint, String sample, Header[] allowedUserIdHeaders, Header[] forbiddenUserIdHeaders) {
+  ProtectedEntities(String endpoint, String sample) {
     this.endpoint = endpoint;
     this.sample = sample;
-    this.allowedUserIdHeaders = allowedUserIdHeaders;
-    this.forbiddenUserIdHeaders = forbiddenUserIdHeaders;
   }
 
   public String getEndpoint() {
@@ -214,13 +208,5 @@ enum ProtectedEntities {
       default:
         return null;
     }
-  }
-
-  public Stream<Header> getAllowedUserIdHeadersStream() {
-    return Arrays.stream(allowedUserIdHeaders);
-  }
-
-  public Stream<Header> getForbiddenUserIdHeadersStream() {
-    return Arrays.stream(forbiddenUserIdHeaders);
   }
 }
