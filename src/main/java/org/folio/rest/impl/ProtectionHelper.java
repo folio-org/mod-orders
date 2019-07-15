@@ -1,15 +1,17 @@
 package org.folio.rest.impl;
 
 import io.vertx.core.Context;
+import org.folio.HttpStatus;
+import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BinaryOperator;
 
 import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.ErrorCodes.*;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 
@@ -27,47 +29,74 @@ public class ProtectionHelper extends AbstractHelper {
     this.operation = operation;
   }
 
-  /**
-   * This method returns operation protection status.
-   * False means that operation can be executed, true - operation is protected and can't be executed.
-   *
-   * @return true if operation is protected, otherwise - false.
-   */
-  public CompletableFuture<Boolean> isOperationProtected(String recordId) {
-    CompletableFuture<Boolean> future = new CompletableFuture<>();
+  public CompletableFuture<Boolean> isOperationRestricted(String recordId) {
     String userId;
     if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USERID_HEADER)) != null) {
-      getUnitIdsAssignedToOrder(recordId)
-        .thenAccept(ids -> {
-          // 1. Get ids of Units assigned to Order
-            if(!ids.isEmpty()) {
-              // Get Units assigned to Order by retrieved ids
-              getUnitsByIds(ids)
-                // Check if operation is protected based on retrieved Units
-                .thenCompose(this::isOperationProtected)
+      return getUnitIdsAssignedToOrder(recordId)
+        .thenCompose(unitIds -> {
+          CompletableFuture<Boolean> future = new CompletableFuture<>();
+          if(!unitIds.isEmpty()) {
+            // Get Units assigned to Order by retrieved ids
+            getUnitsByIds(unitIds)
+              // Check if operation is protected based on retrieved Units
+              .thenApply(units -> {
+                if(!units.isEmpty()) {
+                  return applyMergingStrategy(units)
+                    .thenAccept(isOperationProtected -> {
+                      if(isOperationProtected) {
+                        // Get User's Units belonging belonging Order's Units
+                        getUnitIdsAssignedToUserAndOrder(userId, unitIds)
+                          .thenAccept(ids -> future.complete(ids.isEmpty()));
+                      } else {
+                        future.complete(false);
+                      }
+                    });
+                } else {
+                  future.complete(false);
+                }
+                return future;
+              });
+          } else {
+            future.complete(false);
+          }
+          return future;
+        });
+    } else {
+      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), UNKNOWN_USER);
+    }
+  }
+
+  public CompletableFuture<Boolean> isOperationRestricted(List<String> unitIds) {
+    if (unitIds != null && !unitIds.isEmpty()) {
+      String userId;
+      if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USERID_HEADER)) != null) {
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        // Get Units assigned to Order by retrieved ids
+        getUnitsByIds(unitIds)
+          .thenApply(units -> {
+            if(!units.isEmpty()) {
+              return applyMergingStrategy(units)
                 .thenAccept(isOperationProtected -> {
                   if(isOperationProtected) {
                     // Get User's Units belonging belonging Order's Units
-                    getUnitIdsAssignedToUserAndOrder(userId, ids)
-                      .thenAccept(unitIds -> {
-                        if(!unitIds.isEmpty()) {
-                          future.complete(false);
-                        } else {
-                          future.complete(true);
-                        }
-                      });
+                    getUnitIdsAssignedToUserAndOrder(userId, unitIds)
+                      .thenAccept(ids -> future.complete(ids.isEmpty()));
                   } else {
                     future.complete(false);
                   }
                 });
             } else {
-              future.complete(false);
+              future.completeExceptionally(new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), ORDER_UNITS_NOT_FOUND));
+              return null;
             }
           });
+        return future;
+      } else {
+        throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), UNKNOWN_USER);
+      }
     } else {
-      future.complete(true);
+      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), ORDER_UNITS_NOT_FOUND);
     }
-    return future;
   }
 
   /**
@@ -111,9 +140,8 @@ public class ProtectionHelper extends AbstractHelper {
    * @param units list of {@link AcquisitionsUnit}.
    * @return true if operation is protected, otherwise - false.
    */
-  private CompletableFuture<Boolean> isOperationProtected(List<AcquisitionsUnit> units) {
-    Optional<Boolean> result = units.stream().map(unit -> operation.isProtected(unit)).reduce(getMergingStrategy());
-    return CompletableFuture.completedFuture(result.orElse(true));
+  private CompletableFuture<Boolean> applyMergingStrategy(List<AcquisitionsUnit> units) {
+    return CompletableFuture.completedFuture(units.stream().allMatch(unit -> operation.isProtected(unit)));
   }
 
   /**

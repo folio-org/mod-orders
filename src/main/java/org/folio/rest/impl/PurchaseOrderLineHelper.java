@@ -8,6 +8,7 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.comple
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.ErrorCodes.USER_HAS_NOT_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
@@ -28,6 +29,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.HttpStatus;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -97,7 +99,6 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     } catch (Exception e) {
       future.completeExceptionally(e);
     }
-
     return future;
   }
 
@@ -148,10 +149,10 @@ class PurchaseOrderLineHelper extends AbstractHelper {
           return getCompositePurchaseOrder(compPOL)
             // The PO Line can be created only for order in Pending state
             .thenApply(this::validateOrderState)
-            .thenCompose(po -> protectionHelper.isOperationProtected(po.getId())
-              .thenApply(isProtected -> {
-                if(isProtected) {
-                  throw new HttpException(403, "Forbidden");
+            .thenCompose(po -> protectionHelper.isOperationRestricted(po.getId())
+              .thenApply(isRestricted -> {
+                if(isRestricted) {
+                  throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NOT_PERMISSIONS);
                 } else {
                   return po;
                 }

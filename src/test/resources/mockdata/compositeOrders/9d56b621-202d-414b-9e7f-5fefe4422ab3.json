@@ -4,6 +4,9 @@
   "poNumber": "10000",
   "orderType": "One-Time",
   "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "acqUnitIds": [
+    "0e9525aa-d123-4e4d-9f7e-1b302a97eb90"
+  ],
   "workflowStatus": "Open",
   "compositePoLines": [
     {

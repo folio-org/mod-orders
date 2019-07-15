@@ -3,6 +3,7 @@ package org.folio.rest.impl;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
+import static org.folio.orders.utils.ErrorCodes.USER_HAS_NOT_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
@@ -20,6 +21,7 @@ import java.util.stream.Stream;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
@@ -36,12 +38,14 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private final PoNumberHelper poNumberHelper;
   private final PurchaseOrderLineHelper orderLineHelper;
+  private final ProtectionHelper  protectionHelper;
 
   PurchaseOrderHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
 
     poNumberHelper = new PoNumberHelper(httpClient, okapiHeaders, ctx, lang);
     orderLineHelper = new PurchaseOrderLineHelper(httpClient, okapiHeaders, ctx, lang);
+    protectionHelper = ProtectionHelper.Operation.CREATE.getInstance(okapiHeaders, ctx, lang);
   }
 
   /**
@@ -90,10 +94,17 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @return completable future with {@link CompositePurchaseOrder} object with populated uuid on success or an exception if processing fails
    */
   public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO) {
-    return setPoNumberIfMissing(compPO)
-      .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber()))
-      .thenCompose(v -> createPOandPOLines(compPO))
-      .thenApply(this::populateOrderSummary);
+    return protectionHelper.isOperationRestricted(compPO.getAcqUnitIds())
+      .thenCompose(isProtected -> {
+        if(isProtected) {
+          throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NOT_PERMISSIONS);
+        } else {
+          return setPoNumberIfMissing(compPO)
+            .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber()))
+            .thenCompose(v -> createPOandPOLines(compPO))
+            .thenApply(this::populateOrderSummary);
+        }
+      });
   }
 
   /**

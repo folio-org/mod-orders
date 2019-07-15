@@ -49,7 +49,9 @@
             "inventory-storage.loan-types.collection.get",
             "inventory-storage.contributor-name-types.collection.get",
             "organizations-storage.organizations.collection.get",
-            "organizations-storage.organizations.item.get"
+            "organizations-storage.organizations.item.get",
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get"
           ]
         },
         {

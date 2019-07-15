@@ -10,6 +10,9 @@
   "poNumber": "268758",
   "reEncumber": false,
   "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "acqUnitIds": [
+    "0e9525aa-d123-4e4d-9f7e-1b302a97eb90"
+  ],
   "workflowStatus": "Pending",
   "metadata": {
     "createdDate": "2010-10-08T03:53:00.000",

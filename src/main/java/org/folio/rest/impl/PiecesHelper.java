@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import static org.folio.orders.utils.ErrorCodes.USER_HAS_NOT_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
@@ -11,6 +12,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.folio.HttpStatus;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -40,10 +42,10 @@ public class PiecesHelper extends AbstractHelper {
     String poLineId = entity.getPoLineId();
     return purchaseOrderLineHelper.getCompositePoLine(poLineId)
       .thenApply(CompositePoLine::getPurchaseOrderId)
-      .thenCompose(recordId -> protectionHelper.isOperationProtected(recordId))
-      .thenCompose(isOperationProtected -> {
-        if(isOperationProtected) {
-          throw new HttpException(403, "Forbidden");
+      .thenCompose(recordId -> protectionHelper.isOperationRestricted(recordId))
+      .thenCompose(isRestricted -> {
+        if(isRestricted) {
+          throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NOT_PERMISSIONS);
         } else {
           return createRecordInStorage(JsonObject.mapFrom(entity), resourcesPath(PIECES)).thenApply(entity::withId);
         }

@@ -11,6 +11,9 @@ This is the Orders business logic module.
 
 ## Additional information
 
+IMPORTANT NOTE! It is required that user should have permissions `orders-storage.acquisitions-unit-assignments.item.post` to create an purchase order 
+during the POST request to the Orders API. Otherwise, error 403 will be returned.
+
 ### Purchase Order logic 
 Upon receiving a request to create a PO, it does the following:
 * Save a PO object in `Pending` status; then 
