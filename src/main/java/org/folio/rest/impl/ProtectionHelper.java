@@ -54,7 +54,7 @@ public class ProtectionHelper extends AbstractHelper {
                       }
                     });
                 } else {
-                  future.complete(false);
+                  future.completeExceptionally(new HttpException(HttpStatus.HTTP_VALIDATION_ERROR.toInt(), ORDER_UNITS_NOT_FOUND));
                 }
                 return future;
               });
