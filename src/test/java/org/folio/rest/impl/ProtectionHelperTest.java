@@ -5,6 +5,7 @@ import io.restassured.http.Header;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import org.folio.HttpStatus;
+import org.hamcrest.Matcher;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -40,20 +41,13 @@ public class ProtectionHelperTest extends ApiTestBase {
     for(ProtectedOperations operation : ProtectedOperations.values()) {
       for(ProtectedEntities holder : ProtectedEntities.values()) {
         operation.process(holder.getEndpoint(), holder.getSampleForRestrictedFlow(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt());
-        assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), nullValue());
-        assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), nullValue());
-        assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNIT_ASSIGNMENTS, HttpMethod.GET), nullValue());
-        MockServer.serverRqRs.clear();
+        validateNumberOfRequests(0, 0, 0);
       }
-
-      // 2. Specific order case order haven't unit IDs
+      // Specific order case order haven't unit IDs
       operation.process(ProtectedEntities.ORDERS.getEndpoint(), JsonObject.mapFrom(ProtectedEntities.getMinimalContentCompositePurchaseOrder()).encode(),
         prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt());
       // Verify number of sub-requests
-      assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), nullValue());
-      assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), nullValue());
-      assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNIT_ASSIGNMENTS, HttpMethod.GET), nullValue());
-      MockServer.serverRqRs.clear();
+      validateNumberOfRequests(0, 0, 0);
     }
   }
 
@@ -63,21 +57,14 @@ public class ProtectionHelperTest extends ApiTestBase {
     for(ProtectedOperations operation : ProtectedOperations.values()) {
       for(ProtectedEntities holder : Arrays.asList(PIECES, ORDER_LINES)) {
         operation.process(holder.getEndpoint(), holder.getSampleForFlowWithoutUnits(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt());
-        assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), nullValue());
-        assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), nullValue());
-        assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNIT_ASSIGNMENTS, HttpMethod.GET), hasSize(1));
-        MockServer.serverRqRs.clear();
+        validateNumberOfRequests(0, 0, 1);
       }
-
       // Composite PO already contains acquisition unit IDs
-      ProtectedEntities e = ProtectedEntities.ORDERS;
-      operation.process(e.getEndpoint(), e.getSampleForFlowWithoutUnits(),
+      ProtectedEntities order = ProtectedEntities.ORDERS;
+      operation.process(order.getEndpoint(), order.getSampleForFlowWithoutUnits(),
         prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_VALIDATION_ERROR.toInt());
       // Verify number of sub-requests
-      assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
-      assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), nullValue());
-      assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNIT_ASSIGNMENTS, HttpMethod.GET), nullValue());
-      MockServer.serverRqRs.clear();
+      validateNumberOfRequests(1, 0, 0);
     }
   }
 
@@ -88,21 +75,14 @@ public class ProtectionHelperTest extends ApiTestBase {
     for(ProtectedOperations operation : ProtectedOperations.values()) {
       for(ProtectedEntities holder : Arrays.asList(PIECES, ORDER_LINES)) {
         operation.process(holder.getEndpoint(), holder.getSampleForFlow201WithNonProtectedUnits(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt());
-        assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
-        assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), nullValue());
-        assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNIT_ASSIGNMENTS, HttpMethod.GET), hasSize(1));
-        MockServer.serverRqRs.clear();
+        validateNumberOfRequests(1, 0, 1);
       }
-
       // Composite PO already contains acquisition unit IDs
-      ProtectedEntities e = ProtectedEntities.ORDERS;
-      operation.process(e.getEndpoint(), e.getSampleForFlow201WithNonProtectedUnits(),
+      ProtectedEntities order = ProtectedEntities.ORDERS;
+      operation.process(order.getEndpoint(), order.getSampleForFlow201WithNonProtectedUnits(),
         prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt());
       // Verify number of sub-requests
-      assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
-      assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), nullValue());
-      assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNIT_ASSIGNMENTS, HttpMethod.GET), nullValue());
-      MockServer.serverRqRs.clear();
+      validateNumberOfRequests(1, 0, 0);
     }
   }
 
@@ -117,20 +97,13 @@ public class ProtectionHelperTest extends ApiTestBase {
           operation.process(entities.getEndpoint(), entities.getSampleForRestrictedFlow(),
             prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, header), APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt());
           // Verify number of sub-requests
-          assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
-          assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
-          assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNIT_ASSIGNMENTS, HttpMethod.GET), hasSize(1));
-          MockServer.serverRqRs.clear();
+          validateNumberOfRequests(1, 1, 1);
         }
-
-        ProtectedEntities e = ProtectedEntities.ORDERS;
-        operation.process(e.getEndpoint(), e.getSampleForRestrictedFlow(),
+        ProtectedEntities order = ProtectedEntities.ORDERS;
+        operation.process(order.getEndpoint(), order.getSampleForRestrictedFlow(),
           prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, header), APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt());
         // Verify number of sub-requests
-        assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
-        assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
-        assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNIT_ASSIGNMENTS, HttpMethod.GET), nullValue());
-        MockServer.serverRqRs.clear();
+        validateNumberOfRequests(1, 1, 0);
       }
     });
   }
@@ -147,21 +120,26 @@ public class ProtectionHelperTest extends ApiTestBase {
           operation.process(entities.getEndpoint(), entities.getSampleForFlow201(),
             prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, header), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt());
           // Verify number of sub-requests
-          assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
-          assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
-          assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNIT_ASSIGNMENTS, HttpMethod.GET), hasSize(1));
-          MockServer.serverRqRs.clear();
+          validateNumberOfRequests(1, 1, 1);
         }
-
         ProtectedEntities order = ProtectedEntities.ORDERS;
         operation.process(order.getEndpoint(), order.getSampleForFlow201(),
           prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, header), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt());
         // Verify number of sub-requests
-        assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
-        assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
-        assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNIT_ASSIGNMENTS, HttpMethod.GET), nullValue());
+        validateNumberOfRequests(1, 1, 0);
       }
     });
+  }
+
+  private static void validateNumberOfRequests(int numOfUnitRqs, int numOfMembershipRqs, int numOfAssignmentRqs) {
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), getMatcher(numOfUnitRqs));
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), getMatcher(numOfMembershipRqs));
+    assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNIT_ASSIGNMENTS, HttpMethod.GET), getMatcher(numOfAssignmentRqs));
+    MockServer.serverRqRs.clear();
+  }
+
+  private static Matcher getMatcher(int value) {
+    return value > 0 ? hasSize(value) : nullValue();
   }
 }
 

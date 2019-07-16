@@ -74,7 +74,7 @@ public class ProtectionHelper extends AbstractHelper {
    *
    * @return true if operation is restricted, otherwise - false.
    */
-  public CompletableFuture<Boolean> isOperationRestricted(List<String> unitIds) {
+  public CompletableFuture<Boolean> isOrderCreationRestricted(List<String> unitIds) {
     if (unitIds != null && !unitIds.isEmpty()) {
       String userId;
       if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USERID_HEADER)) != null) {
