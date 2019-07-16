@@ -91,12 +91,11 @@
         "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
         "description": "ABCDEFGHIJKLMNO"
       },
-      "tags": [
-        "ABCDEFGHIJKLMNOPQRSTU",
-        "ABCDEFG",
-        "ABCDEFGHIJKLMNOPQRSTU",
-        "ABCDEFGHIJKLMNO"
-      ],
+      "tags": {
+        "tagList": [
+          "important"
+        ]
+      },
       "title": "Kayak Fishing in the Northern Gulf Coast",
       "vendorDetail": {
         "instructions": "ABCDEFG",
@@ -208,12 +207,11 @@
         "code": "Code1",
         "description": ""
       },
-      "tags": [
-        "ABCDEFGHIJKLMNOPQRSTU",
-        "ABCDEFG",
-        "ABCDEFGHIJKLMNOPQRSTU",
-        "ABCDEFGHIJKLMNO"
-      ],
+      "tags": {
+        "tagList": [
+          "important"
+        ]
+      },
       "title": "Kayak Fishing in the Northern Gulf Coast",
       "vendorDetail": {
         "instructions": "ABCDEFG",
@@ -293,7 +291,9 @@
         "code": "Code5",
         "description": ""
       },
-      "tags": [],
+      "tags": {
+        "tagList": []
+      },
       "title": "Harry Potter and the Sorcerer's Stone",
       "metadata": {
         "createdDate": "2019-02-20T19:49:43.854+0000",
@@ -436,7 +436,9 @@
         "code": "Code1",
         "description": ""
       },
-      "tags": [],
+      "tags": {
+        "tagList": []
+      },
       "title": "Harry Potter and the Chamber of Secrets",
       "metadata": {
         "createdDate": "2019-02-20T19:49:43.877+0000",
@@ -735,7 +737,9 @@
                 "code": "manual",
                 "description": "An order placed from test Interface"
             },
-            "tags": [],
+            "tags": {
+              "tagList": []
+            },
             "title": "BEST AMERICAN SCIENCE FICTION AND FANTASY.",
             "vendorDetail": {
                 "instructions": "Next Volume | Listed Print Serial",
@@ -803,7 +807,9 @@
                 "code": "manual",
                 "description": "An order placed for reverting checkin"
             },
-            "tags": [],
+           "tags": {
+             "tagList": []
+           },
             "title": "Country Madness",
             "vendorDetail": {
                 "instructions": "Next Volume | Listed Print Serial",
