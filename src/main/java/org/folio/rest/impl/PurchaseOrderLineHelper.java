@@ -149,7 +149,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
           return getCompositePurchaseOrder(compPOL)
             // The PO Line can be created only for order in Pending state
             .thenApply(this::validateOrderState)
-            .thenCompose(po -> protectionHelper.isOperationRestrictedDefault(po.getId())
+            .thenCompose(po -> protectionHelper.isOperationRestricted(po.getId())
               .thenApply(isRestricted -> {
                 if(isRestricted) {
                   throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NOT_PERMISSIONS);

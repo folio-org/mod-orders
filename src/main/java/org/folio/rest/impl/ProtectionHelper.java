@@ -34,34 +34,16 @@ public class ProtectionHelper extends AbstractHelper {
    *
    * @return true if operation is restricted, otherwise - false.
    */
-  public CompletableFuture<Boolean> isOperationRestrictedDefault(String recordId) {
+  public CompletableFuture<Boolean> isOperationRestricted(String recordId) {
     String userId;
     if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USERID_HEADER)) != null) {
       return getUnitIdsAssignedToOrder(recordId)
         .thenCompose(unitIds -> {
-          CompletableFuture<Boolean> future = new CompletableFuture<>();
           if(!unitIds.isEmpty()) {
-            getUnitsByIds(unitIds)
-              .thenApply(units -> {
-                if(!units.isEmpty()) {
-                  return applyMergingStrategy(units)
-                    .thenAccept(isOperationProtected -> {
-                      if(isOperationProtected) {
-                        getUnitIdsAssignedToUserAndOrder(userId, unitIds)
-                          .thenAccept(ids -> future.complete(ids.isEmpty()));
-                      } else {
-                        future.complete(false);
-                      }
-                    });
-                } else {
-                  future.completeExceptionally(new HttpException(HttpStatus.HTTP_VALIDATION_ERROR.toInt(), ORDER_UNITS_NOT_FOUND));
-                }
-                return future;
-              });
+            return isOperationRestricted(userId, unitIds);
           } else {
-            future.complete(false);
+            return CompletableFuture.completedFuture(false);
           }
-          return future;
         });
     } else {
       throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), UNKNOWN_USER);
@@ -74,35 +56,48 @@ public class ProtectionHelper extends AbstractHelper {
    *
    * @return true if operation is restricted, otherwise - false.
    */
-  public CompletableFuture<Boolean> isOrderCreationRestricted(List<String> unitIds) {
-    if (unitIds != null && !unitIds.isEmpty()) {
-      String userId;
-      if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USERID_HEADER)) != null) {
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-        getUnitsByIds(unitIds)
-          .thenApply(units -> {
-            if(!units.isEmpty()) {
-              return applyMergingStrategy(units)
-                .thenAccept(isOperationProtected -> {
-                  if(isOperationProtected) {
-                    getUnitIdsAssignedToUserAndOrder(userId, unitIds)
-                      .thenAccept(ids -> future.complete(ids.isEmpty()));
-                  } else {
-                    future.complete(false);
-                  }
-                });
-            } else {
-              future.completeExceptionally(new HttpException(HttpStatus.HTTP_VALIDATION_ERROR.toInt(), ORDER_UNITS_NOT_FOUND));
-              return null;
-            }
-          });
-        return future;
+  public CompletableFuture<Boolean> isOperationRestricted(List<String> unitIds) {
+
+    String userId;
+    if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USERID_HEADER)) != null) {
+      if (unitIds != null && !unitIds.isEmpty()) {
+        return isOperationRestricted(userId, unitIds);
       } else {
-        throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), UNKNOWN_USER);
+        throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), ORDER_UNITS_NOT_FOUND);
       }
     } else {
-      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), ORDER_UNITS_NOT_FOUND);
+      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), UNKNOWN_USER);
     }
+
+  }
+
+  /**
+   * This method determines status of operation restriction based on units analysis and user ID.
+   * @param unitIds list of unit's IDs.
+   * @param userId user's ID.
+   *
+   * @return true if operation is restricted, otherwise - false.
+   */
+  private CompletableFuture<Boolean> isOperationRestricted(String userId, List<String> unitIds) {
+    CompletableFuture<Boolean> future = new CompletableFuture<>();
+    getUnitsByIds(unitIds)
+      .thenApply(units -> {
+        if(!units.isEmpty()) {
+          return applyMergingStrategy(units)
+            .thenAccept(isOperationProtected -> {
+              if(isOperationProtected) {
+                getUnitIdsAssignedToUserAndOrder(userId, unitIds)
+                  .thenAccept(ids -> future.complete(ids.isEmpty()));
+              } else {
+                future.complete(false);
+              }
+            });
+        } else {
+          future.completeExceptionally(new HttpException(HttpStatus.HTTP_VALIDATION_ERROR.toInt(), ORDER_UNITS_NOT_FOUND));
+        }
+        return future;
+      });
+    return future;
   }
 
   /**

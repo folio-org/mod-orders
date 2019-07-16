@@ -94,7 +94,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @return completable future with {@link CompositePurchaseOrder} object with populated uuid on success or an exception if processing fails
    */
   public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO) {
-    return protectionHelper.isOrderCreationRestricted(compPO.getAcqUnitIds())
+    return protectionHelper.isOperationRestricted(compPO.getAcqUnitIds())
       .thenCompose(isProtected -> {
         if(isProtected) {
           throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NOT_PERMISSIONS);
