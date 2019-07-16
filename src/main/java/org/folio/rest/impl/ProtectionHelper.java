@@ -8,7 +8,6 @@ import org.folio.rest.jaxrs.model.*;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BinaryOperator;
 
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.ErrorCodes.*;
@@ -29,22 +28,25 @@ public class ProtectionHelper extends AbstractHelper {
     this.operation = operation;
   }
 
-  public CompletableFuture<Boolean> isOperationRestricted(String recordId) {
+  /**
+   * This method determines status of operation restriction based on ID of {@link CompositePurchaseOrder}.
+   * @param recordId corresponding record ID.
+   *
+   * @return true if operation is restricted, otherwise - false.
+   */
+  public CompletableFuture<Boolean> isOperationRestrictedDefault(String recordId) {
     String userId;
     if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USERID_HEADER)) != null) {
       return getUnitIdsAssignedToOrder(recordId)
         .thenCompose(unitIds -> {
           CompletableFuture<Boolean> future = new CompletableFuture<>();
           if(!unitIds.isEmpty()) {
-            // Get Units assigned to Order by retrieved ids
             getUnitsByIds(unitIds)
-              // Check if operation is protected based on retrieved Units
               .thenApply(units -> {
                 if(!units.isEmpty()) {
                   return applyMergingStrategy(units)
                     .thenAccept(isOperationProtected -> {
                       if(isOperationProtected) {
-                        // Get User's Units belonging belonging Order's Units
                         getUnitIdsAssignedToUserAndOrder(userId, unitIds)
                           .thenAccept(ids -> future.complete(ids.isEmpty()));
                       } else {
@@ -66,19 +68,23 @@ public class ProtectionHelper extends AbstractHelper {
     }
   }
 
+  /**
+   * This method determines status of operation restriction based on unit IDs from {@link CompositePurchaseOrder}.
+   * @param unitIds list of unit IDs.
+   *
+   * @return true if operation is restricted, otherwise - false.
+   */
   public CompletableFuture<Boolean> isOperationRestricted(List<String> unitIds) {
     if (unitIds != null && !unitIds.isEmpty()) {
       String userId;
       if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USERID_HEADER)) != null) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
-        // Get Units assigned to Order by retrieved ids
         getUnitsByIds(unitIds)
           .thenApply(units -> {
             if(!units.isEmpty()) {
               return applyMergingStrategy(units)
                 .thenAccept(isOperationProtected -> {
                   if(isOperationProtected) {
-                    // Get User's Units belonging belonging Order's Units
                     getUnitIdsAssignedToUserAndOrder(userId, unitIds)
                       .thenAccept(ids -> future.complete(ids.isEmpty()));
                   } else {
@@ -86,7 +92,7 @@ public class ProtectionHelper extends AbstractHelper {
                   }
                 });
             } else {
-              future.completeExceptionally(new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), ORDER_UNITS_NOT_FOUND));
+              future.completeExceptionally(new HttpException(HttpStatus.HTTP_VALIDATION_ERROR.toInt(), ORDER_UNITS_NOT_FOUND));
               return null;
             }
           });
@@ -102,6 +108,7 @@ public class ProtectionHelper extends AbstractHelper {
   /**
    * This method checks existence of units associated with order.
    * @param recordId id of order.
+   *
    * @return true if units exist, otherwise - false.
    */
   private CompletableFuture<List<String>> getUnitIdsAssignedToOrder(String recordId) {
@@ -135,22 +142,13 @@ public class ProtectionHelper extends AbstractHelper {
   }
 
   /**
-   * This method returns operation protection resulted status based on list of units.
+   * This method returns operation protection resulted status based on list of units with using least restrictive wins strategy.
    *
    * @param units list of {@link AcquisitionsUnit}.
    * @return true if operation is protected, otherwise - false.
    */
   private CompletableFuture<Boolean> applyMergingStrategy(List<AcquisitionsUnit> units) {
     return CompletableFuture.completedFuture(units.stream().allMatch(unit -> operation.isProtected(unit)));
-  }
-
-  /**
-   * This method implements protection statuses merging strategy (least restrictive wins (AND) at the moment).
-   *
-   * @return result of protection statuses merging.
-   */
-  private BinaryOperator<Boolean> getMergingStrategy() {
-    return (a, b) -> a && b;
   }
 
   public enum Operation {

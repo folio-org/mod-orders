@@ -42,7 +42,7 @@ public class PiecesHelper extends AbstractHelper {
     String poLineId = entity.getPoLineId();
     return purchaseOrderLineHelper.getCompositePoLine(poLineId)
       .thenApply(CompositePoLine::getPurchaseOrderId)
-      .thenCompose(recordId -> protectionHelper.isOperationRestricted(recordId))
+      .thenCompose(recordId -> protectionHelper.isOperationRestrictedDefault(recordId))
       .thenCompose(isRestricted -> {
         if(isRestricted) {
           throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NOT_PERMISSIONS);
