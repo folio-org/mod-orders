@@ -3,6 +3,7 @@ package org.folio.rest.impl;
 import io.vertx.core.Context;
 import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.jaxrs.model.*;
 
 import java.util.List;
@@ -18,10 +19,10 @@ public class ProtectionHelper extends AbstractHelper {
 
   private AcquisitionsUnitsHelper acquisitionsUnitsHelper;
   private AcquisitionsUnitAssignmentsHelper acquisitionsUnitAssignmentsHelper;
-  private Operation operation;
+  private ProtectedOperationType operation;
 
 
-  private ProtectionHelper(Map<String, String> okapiHeaders, Context ctx, String lang, Operation operation) {
+  public ProtectionHelper(Map<String, String> okapiHeaders, Context ctx, String lang, ProtectedOperationType operation) {
     super(okapiHeaders, ctx, lang);
     acquisitionsUnitsHelper = new AcquisitionsUnitsHelper(okapiHeaders, ctx, lang);
     acquisitionsUnitAssignmentsHelper = new AcquisitionsUnitAssignmentsHelper(okapiHeaders, ctx, lang);
@@ -144,40 +145,6 @@ public class ProtectionHelper extends AbstractHelper {
    */
   private CompletableFuture<Boolean> applyMergingStrategy(List<AcquisitionsUnit> units) {
     return CompletableFuture.completedFuture(units.stream().allMatch(unit -> operation.isProtected(unit)));
-  }
-
-  public enum Operation {
-
-    CREATE {
-      @Override
-      public boolean isProtected(AcquisitionsUnit unit) {
-        return unit.getProtectCreate();
-      }
-    },
-    READ {
-      @Override
-      public boolean isProtected(AcquisitionsUnit unit) {
-        return unit.getProtectRead();
-      }
-    },
-    UPDATE {
-      @Override
-      public boolean isProtected(AcquisitionsUnit unit) {
-        return unit.getProtectUpdate();
-      }
-    },
-    DELETE {
-      @Override
-      public boolean isProtected(AcquisitionsUnit unit) {
-        return unit.getProtectDelete();
-      }
-    };
-
-    public abstract boolean isProtected(AcquisitionsUnit unit);
-
-    public ProtectionHelper getInstance(Map<String, String> okapiHeaders, Context ctx, String lang) {
-      return new ProtectionHelper(okapiHeaders, ctx, lang, this);
-    }
   }
 
 }

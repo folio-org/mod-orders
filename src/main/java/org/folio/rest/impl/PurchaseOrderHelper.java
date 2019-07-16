@@ -27,6 +27,7 @@ import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.POProtectedFields;
+import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
@@ -45,7 +46,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
     poNumberHelper = new PoNumberHelper(httpClient, okapiHeaders, ctx, lang);
     orderLineHelper = new PurchaseOrderLineHelper(httpClient, okapiHeaders, ctx, lang);
-    protectionHelper = ProtectionHelper.Operation.CREATE.getInstance(okapiHeaders, ctx, lang);
+    protectionHelper = new ProtectionHelper(okapiHeaders, ctx, lang, ProtectedOperationType.CREATE);
   }
 
   /**

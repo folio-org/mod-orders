@@ -15,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
 import org.folio.HttpStatus;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.Piece;
@@ -34,7 +35,7 @@ public class PiecesHelper extends AbstractHelper {
 
   public PiecesHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
-    protectionHelper = ProtectionHelper.Operation.CREATE.getInstance(okapiHeaders, ctx, lang);
+    protectionHelper = new ProtectionHelper(okapiHeaders, ctx, lang, ProtectedOperationType.CREATE);
     purchaseOrderLineHelper = new PurchaseOrderLineHelper(okapiHeaders, ctx, lang);
   }
 
