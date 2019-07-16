@@ -72,7 +72,7 @@ public class ProtectionHelperTest extends ApiTestBase {
       // Composite PO already contains acquisition unit IDs
       ProtectedEntities e = ProtectedEntities.ORDERS;
       operation.process(e.getEndpoint(), e.getSampleForFlowWithoutUnits(),
-        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt());
+        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_VALIDATION_ERROR.toInt());
       // Verify number of sub-requests
       assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
       assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), nullValue());
