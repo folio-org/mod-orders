@@ -84,7 +84,11 @@
     "code": "FOLIO",
     "description": "Manually entered"
   },
-  "tags" : [ "ABCDEFGHIJKLMNOPQRSTU", "ABCDEFG", "ABCDEFGHIJKLMNOPQRSTU", "ABCDEFGHIJKLMNO" ],
+  "tags": {
+    "tagList": [
+      "important"
+    ]
+  },
   "title" : "Kayak Fishing in the Northern Gulf Coast",
   "vendorDetail": {
     "instructions": "ABCDEFG",

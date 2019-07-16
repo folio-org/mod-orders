@@ -69,7 +69,9 @@
     "code": "FOLIO",
     "description": "Manually entered"
   },
-  "tags": [],
+  "tags": {
+    "tagList": []
+  },
   "title": "Advances in astronautical science",
   "vendorDetail": {
     "instructions": "",

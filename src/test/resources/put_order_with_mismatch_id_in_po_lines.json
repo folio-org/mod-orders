@@ -69,7 +69,9 @@
         "code": "FOLIO",
         "description": "Manually entered"
       },
-      "tags": [],
+      "tags": {
+        "tagList": []
+      },
       "title": "Taxes, tributes and tributary lands in the making of Scandinavian kingdoms in the Middle Ages",
       "vendorDetail": {
         "instructions": "",
@@ -151,7 +153,9 @@
         "code": "FOLIO",
         "description": "Manually entered"
       },
-      "tags": [],
+      "tags": {
+        "tagList": []
+      },
       "title": "Kayak Fishing in the Northern Gulf Coast",
       "vendorDetail": {
         "instructions": "",
@@ -265,12 +269,11 @@
         "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
         "description": "ABCDEFGHIJKLMNO"
       },
-      "tags": [
-        "ABCDEFGHIJKLMNOPQRSTU",
-        "ABCDEFG",
-        "ABCDEFGHIJKLMNOPQRSTU",
-        "ABCDEFGHIJKLMNO"
-      ],
+      "tags": {
+        "tagList": [
+          "important"
+        ]
+      },
       "title": "Kayak Fishing in the Northern Gulf Coast",
       "vendorDetail": {
         "instructions": "ABCDEFG",
@@ -362,7 +365,7 @@
         "code": "FOLIO",
         "description": "Manually entered"
       },
-      "tags": [""],
+      "tags": {"tagList" : [""]},
       "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
       "vendorDetail": {
         "noteFromVendor": "",
