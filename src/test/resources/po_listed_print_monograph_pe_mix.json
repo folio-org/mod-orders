@@ -101,7 +101,7 @@
       "rush": false,
       "selector": "Woods",
       "source": "EDI",
-      "tags": [""],
+      "tags": {"tagList" : [""]},
       "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
       "vendorDetail": {
         "noteFromVendor": "",

@@ -91,7 +91,9 @@
       "rush": false,
       "selector": "Stevens",
       "source": "User",
-      "tags": [],
+      "tags": {
+        "tagList": []
+      },
       "title": "Taxes, tributes and tributary lands in the making of Scandinavian kingdoms in the Middle Ages",
       "vendorDetail": {
         "instructions": "",
@@ -180,7 +182,9 @@
       "rush": false,
       "selector": "Brown",
       "source": "User",
-      "tags": [],
+      "tags": {
+        "tagList": []
+      },
       "title": "Alabama Women: Their Lives and Times",
       "vendorDetail": {
         "instructions": "",
@@ -269,7 +273,9 @@
       "rush": false,
       "selector": "Brown",
       "source": "User",
-      "tags": [],
+      "tags": {
+        "tagList": []
+      },
       "title": "Kayak Fishing in the Northern Gulf Coast",
       "vendorDetail": {
         "instructions": "",

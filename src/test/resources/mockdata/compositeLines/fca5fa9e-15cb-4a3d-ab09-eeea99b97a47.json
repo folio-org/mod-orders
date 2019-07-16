@@ -91,7 +91,9 @@
   "rush": false,
   "selector": "Stevens",
   "source": "User",
-  "tags": [],
+  "tags": {
+    "tagList": []
+  },
   "title": "Taxes, tributes and tributary lands in the making of Scandinavian kingdoms in the Middle Ages",
   "vendorDetail": {
     "instructions": "",

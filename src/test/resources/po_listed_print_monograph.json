@@ -141,12 +141,11 @@
       "rush": true,
       "selector": "ABCD",
       "source": "API",
-      "tags": [
-        "ABCDEFGHIJKLMNOPQRSTU",
-        "ABCDEFG",
-        "ABCDEFGHIJKLMNOPQRSTU",
-        "ABCDEFGHIJKLMNO"
-      ],
+      "tags": {
+        "tagList": [
+          "important"
+        ]
+      },
       "title": "Kayak Fishing in the Northern Gulf Coast",
       "vendorDetail": {
         "instructions": "ABCDEFG",
@@ -240,7 +239,7 @@
       "rush": false,
       "selector": "Woods",
       "source": "EDI",
-      "tags": [""],
+      "tags": {"tagList" : [""]},
       "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
       "vendorDetail": {
         "noteFromVendor": "",

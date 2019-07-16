@@ -102,7 +102,9 @@
       "rush": false,
       "selector": "Buchanan",
       "source": "EDI",
-      "tags": [],
+      "tags": {
+        "tagList": []
+      },
       "title": "American Chemical Society Web Editions",
       "vendorDetail": {
         "instructions": "",
