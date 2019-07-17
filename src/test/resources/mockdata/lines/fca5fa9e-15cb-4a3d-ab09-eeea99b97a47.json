@@ -80,10 +80,7 @@
   "requester" : "Leo Bulero",
   "rush" : true,
   "selector" : "ABCD",
-  "source": {
-    "code": "FOLIO",
-    "description": "Manually entered"
-  },
+  "source": "User",
   "tags": {
     "tagList": [
       "important"

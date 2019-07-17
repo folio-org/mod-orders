@@ -140,10 +140,7 @@
       "requester": "Leo Bulero",
       "rush": true,
       "selector": "ABCD",
-      "source": {
-        "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-        "description": "ABCDEFGHIJKLMNO"
-      },
+      "source": "API",
       "tags": {
         "tagList": [
           "important"
@@ -241,10 +238,7 @@
       "requester": "",
       "rush": false,
       "selector": "Woods",
-      "source": {
-        "code": "FOLIO",
-        "description": "Manually entered"
-      },
+      "source": "EDI",
       "tags": {"tagList" : [""]},
       "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
       "vendorDetail": {

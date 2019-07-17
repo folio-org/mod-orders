@@ -97,10 +97,7 @@
       "requester": "",
       "rush": false,
       "selector": "Woods",
-      "source": {
-        "code": "FOLIO",
-        "description": "Manually entered"
-      },
+      "source": "EDI",
       "tags": {
         "tagList": [
           ""

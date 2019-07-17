@@ -65,10 +65,7 @@
       "requester": "",
       "rush": false,
       "selector": "Stevens",
-      "source": {
-        "code": "FOLIO",
-        "description": "Manually entered"
-      },
+      "source": "User",
       "tags": {
         "tagList": []
       },
@@ -149,10 +146,7 @@
       "requester": "",
       "rush": false,
       "selector": "Brown",
-      "source": {
-        "code": "FOLIO",
-        "description": "Manually entered"
-      },
+      "source": "User",
       "tags": {
         "tagList": []
       },
@@ -265,10 +259,7 @@
       "requester": "Leo Bulero",
       "rush": true,
       "selector": "ABCD",
-      "source": {
-        "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-        "description": "ABCDEFGHIJKLMNO"
-      },
+      "source": "User",
       "tags": {
         "tagList": [
           "important"
@@ -361,10 +352,7 @@
       "requester": "",
       "rush": false,
       "selector": "Woods",
-      "source": {
-        "code": "FOLIO",
-        "description": "Manually entered"
-      },
+      "source": "User",
       "tags": {"tagList" : [""]},
       "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
       "vendorDetail": {

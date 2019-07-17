@@ -101,10 +101,7 @@
       "requester": "",
       "rush": false,
       "selector": "Buchanan",
-      "source": {
-        "code": "FOLIO",
-        "description": "Manually entered"
-      },
+      "source": "EDI",
       "tags": {
         "tagList": []
       },

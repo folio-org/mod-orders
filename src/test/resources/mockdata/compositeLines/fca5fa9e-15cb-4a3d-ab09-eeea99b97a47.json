@@ -90,10 +90,7 @@
   "requester": "",
   "rush": false,
   "selector": "Stevens",
-  "source": {
-    "code": "FOLIO",
-    "description": "Manually entered"
-  },
+  "source": "User",
   "tags": {
     "tagList": []
   },

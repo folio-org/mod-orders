@@ -29,9 +29,7 @@
       "purchaseOrderId": "9d56b621-202d-414b-9e7f-5fefe4422ab3",
       "receiptDate": "2019-04-24T14:22:29.087+0000",
       "receiptStatus": "Receipt Not Required",
-      "source": {
-        "code": "FOLIO"
-      },
+      "source": "User",
       "title": "Title"
     }
   ]

@@ -31,9 +31,7 @@
       "receiptDate": "2019-04-24T14:22:29.087+0000",
       "receiptStatus": "Fully Received",
       "rush" : false,
-      "source": {
-        "code": "FOLIO"
-      },
+      "source": "EDI",
       "title": "Title"
     }
   ]

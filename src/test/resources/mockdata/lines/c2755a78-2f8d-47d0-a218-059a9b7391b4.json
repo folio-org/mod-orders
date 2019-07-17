@@ -66,10 +66,7 @@
   "requester" : "Leo Bulero",
   "rush" : true,
   "selector" : "ABCD",
-  "source": {
-    "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-    "description": "ABCDEFGHIJKLMNO"
-  },
+  "source": "User",
   "tags": {
     "tagList": [
       "important"
