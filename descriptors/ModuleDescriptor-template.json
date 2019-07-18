@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "6.0",
+      "version": "7.0",
       "handlers": [
         {
           "methods": ["GET"],
@@ -398,7 +398,7 @@
     },
     {
       "id": "orders-storage.purchase-orders",
-      "version": "5.1"
+      "version": "6.0"
     },
     {
       "id": "orders-storage.alerts",
@@ -406,11 +406,11 @@
     },
     {
       "id": "orders-storage.pieces",
-      "version": "3.0"
+      "version": "3.1"
     },
     {
       "id": "orders-storage.receiving-history",
-      "version": "3.0"
+      "version": "3.1"
     },
     {
       "id": "orders-storage.reporting-codes",
@@ -418,7 +418,7 @@
     },
     {
       "id": "orders-storage.po-lines",
-      "version": "6.0"
+      "version": "7.0"
     },
     {
       "id": "finance-storage.encumbrances",
@@ -454,7 +454,7 @@
     },
     {
       "id":"organizations-storage.organizations",
-      "version": "1.0"
+      "version": "2.0"
     }
   ],
   "permissionSets": [
