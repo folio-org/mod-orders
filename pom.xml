@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-orders</artifactId>
-  <version>6.1.0-SNAPSHOT</version>
+  <version>7.1.0-SNAPSHOT</version>
 
   <name>Orders Business Logic</name>
   <description>Business logic to manage orders in FOLIO</description>
@@ -541,7 +541,7 @@
                   </manifestEntries>
                 </transformer>
                 <!-- The following transformers are required to let javamoney API work fully as part of "fat" jar -->
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
                 <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                   <resource>javamoney.properties</resource>
                 </transformer>
