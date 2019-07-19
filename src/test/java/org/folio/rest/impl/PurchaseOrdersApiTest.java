@@ -437,8 +437,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertEquals(2, reqData.getCompositePoLines().size());
     // remove source to verify validation for first POL
     reqData.getCompositePoLines().get(0).setSource(null);
-    // Set source code to null to verify validation for second POL
-    reqData.getCompositePoLines().get(1).getSource().setCode(null);
+    // Set source to null to verify validation for second POL
+    reqData.getCompositePoLines().get(1).setSource(null);
 
     final Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);

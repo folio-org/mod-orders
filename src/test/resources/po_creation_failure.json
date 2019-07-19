@@ -9,7 +9,7 @@
         "currency": "USD"
       },
       "poLineNumber": "12345-1",
-      "source": { "code": "FOLIO" },
+      "source": "User",
       "orderFormat":"Physical Resource",
       "title": "title"
     },
@@ -19,7 +19,7 @@
         "currency": "USD"
       },
       "poLineNumber": "12345-2",
-      "source": { "code": "FOLIO" },
+      "source": "User",
       "orderFormat":"Physical Resource",
       "title": "title"
     },
@@ -29,7 +29,7 @@
         "currency": "USD"
       },
       "poLineNumber": "12345-3",
-      "source": { "code": "FOLIO" },
+      "source": "User",
       "orderFormat":"Physical Resource",
       "title": "title"
     },
@@ -39,7 +39,7 @@
         "currency": "USD"
       },
       "poLineNumber": "12345-4",
-      "source": { "code": "FOLIO" },
+      "source": "User",
       "orderFormat":"Physical Resource",
       "title": "title"
     }

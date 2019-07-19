@@ -4,12 +4,12 @@
   "compositePoLines": [
     {
       "poLineNumber": "8675309-1",
-      "source": { "code": "FOLIO" },
+      "source": "User",
       "orderFormat": "Physical Resource"
     },
     {
       "poLineNumber": "invalid",
-      "source": { "code": "FOLIO" },
+      "source": "User",
       "orderFormat":  "Physical Resource"
     }
   ]

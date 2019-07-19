@@ -1,9 +1,7 @@
 {
   "acquisitionMethod": "Purchase",
 	"orderFormat": "Other",
-	"source": {
-		"code": "FOLIO"
-	},
+	"source": "EDI",
 	"cost": {
 		"listUnitPrice": 0,
 		"currency": "USD",

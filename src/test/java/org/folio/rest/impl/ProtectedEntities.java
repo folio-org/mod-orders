@@ -27,63 +27,21 @@ public enum ProtectedEntities {
     return endpoint;
   }
 
-  // Returns sample for flow: order have units, units protect operation, user isn't member of order's units
-  public String getSampleForRestrictedFlow() {
-    switch (this) {
-      case PIECES:
-        Piece piece = getMinimalContentPiece();
-        piece.setPoLineId("d471d766-8dbb-4609-999a-02681dea6c22");
-        return JsonObject.mapFrom(piece).encode();
-      case ORDER_LINES:
-        CompositePoLine poLine = getMinimalContentCompositePoLine();
-        poLine.setId("c2755a78-2f8d-47d0-a218-059a9b7391b4");
-        poLine.setPurchaseOrderId("1ab7ef6a-d1d4-4a4f-90a2-882aed18af14");
-        return JsonObject.mapFrom(poLine).encode();
-      case ORDERS:
-        CompositePurchaseOrder compPo = getMinimalContentCompositePurchaseOrder();
-        compPo.setAcqUnitIds(Arrays.asList("2e6a170f-ae20-4889-813f-641831e24b84"));
-        return JsonObject.mapFrom(compPo).encode();
-      default:
-        return null;
-    }
-  }
-
-  // Returns sample for flow: order have units, units protect operation, user is member of order's units
-  public String getSampleForFlow201() {
-    switch (this) {
-      case PIECES:
-        Piece piece = getMinimalContentPiece();
-        piece.setPoLineId("c2755a78-2f8d-47d0-a218-059a9b7391b4");
-        return JsonObject.mapFrom(piece).encode();
-      case ORDER_LINES:
-        CompositePoLine poLine = getMinimalContentCompositePoLine();
-        poLine.setPurchaseOrderId("1ab7ef6a-d1d4-4a4f-90a2-882aed18af14");
-        poLine.setId("c2755a78-2f8d-47d0-a218-059a9b7391b4");
-        return JsonObject.mapFrom(poLine).encode();
-      case ORDERS:
-        CompositePurchaseOrder compPo = getMinimalContentCompositePurchaseOrder();
-        compPo.setAcqUnitIds(Arrays.asList("6b982ffe-8efd-4690-8168-0c773b49cde1", "aa0ec4e1-782f-45f6-a6f3-8e6b6c00599c"));
-        return JsonObject.mapFrom(compPo).encode();
-      default:
-        return null;
-    }
-  }
-
   // Returns sample for flow: order haven't units
   public String getSampleForFlowWithoutUnits() {
     switch (this) {
       case PIECES:
         Piece piece = getMinimalContentPiece();
-        piece.setPoLineId("0009662b-8b80-4001-b704-ca10971f175d");
+        piece.setPoLineId("0dd8f1d2-ac2e-4155-a407-72071f6d5f4a");
         return JsonObject.mapFrom(piece).encode();
       case ORDER_LINES:
         CompositePoLine poLine = getMinimalContentCompositePoLine();
-        poLine.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
-        poLine.setId("0009662b-8b80-4001-b704-ca10971f175d");
+        poLine.setId("0dd8f1d2-ac2e-4155-a407-72071f6d5f4a");
+        poLine.setPurchaseOrderId("1ab7ef6a-d1d4-4a4f-90a2-882aed18af14");
         return JsonObject.mapFrom(poLine).encode();
       case ORDERS:
         CompositePurchaseOrder compPo = getMinimalContentCompositePurchaseOrder();
-        compPo.setAcqUnitIds(Arrays.asList("5a9fa0b5-b7e2-45b9-8cfb-4d38fad2f9ed"));
+        compPo.setAcqUnitIds(Arrays.asList("b548d790-07da-456f-b4ea-7a77c0e34a0f", "0f2bb7a2-728f-4e07-9268-082577a7bedb"));
         return JsonObject.mapFrom(compPo).encode();
       default:
         return null;
@@ -91,25 +49,72 @@ public enum ProtectedEntities {
   }
 
   // Returns sample for flow: order have units allowed operation
-  public String getSampleForFlow201WithNonProtectedUnits() {
+  public String getSampleForFlowWithAllowedUnits() {
     switch (this) {
       case PIECES:
         Piece piece = getMinimalContentPiece();
-        piece.setPoLineId("8ca5aa90-bfbd-44b3-8ad2-f6f1b7e05337");
+        piece.setPoLineId("568f1899-fc55-4956-be18-e47073807acd");
         return JsonObject.mapFrom(piece).encode();
       case ORDER_LINES:
         CompositePoLine poLine = getMinimalContentCompositePoLine();
-        poLine.setPurchaseOrderId("e5ae4afd-3fa9-494e-a972-f541df9b877e");
-        poLine.setId("8ca5aa90-bfbd-44b3-8ad2-f6f1b7e05337");
+        poLine.setId("568f1899-fc55-4956-be18-e47073807acd");
+        poLine.setPurchaseOrderId("a200e0e1-79f2-4161-81e3-15cc2c8ff9d1");
         return JsonObject.mapFrom(poLine).encode();
       case ORDERS:
         CompositePurchaseOrder compPo = getMinimalContentCompositePurchaseOrder();
-        compPo.setAcqUnitIds(Arrays.asList("0e9525aa-d123-4e4d-9f7e-1b302a97eb90"));
+        compPo.setAcqUnitIds(Arrays.asList("0e9525aa-d123-4e4d-9f7e-1b302a97eb90", "e68c18fc-833f-494e-9a0e-b236eb4b310b"));
         return JsonObject.mapFrom(compPo).encode();
       default:
         return null;
     }
   }
+
+
+  // Returns sample for flow: order have units, units protect operation, user is member of order's units
+  public String getSampleForProtectedUnitsAndAllowedUserFlow() {
+    switch (this) {
+      case PIECES:
+        Piece piece = getMinimalContentPiece();
+        piece.setPoLineId("c081774b-9ad6-40d8-9527-569a5316f14e");
+        return JsonObject.mapFrom(piece).encode();
+      case ORDER_LINES:
+        CompositePoLine poLine = getMinimalContentCompositePoLine();
+        poLine.setId("c081774b-9ad6-40d8-9527-569a5316f14e");
+        poLine.setPurchaseOrderId("d4f3c8e6-0b4a-48ee-bc6e-2d07284bff3b");
+        return JsonObject.mapFrom(poLine).encode();
+      case ORDERS:
+        CompositePurchaseOrder compPo = getMinimalContentCompositePurchaseOrder();
+        compPo.setAcqUnitIds(Arrays.asList("e68c18fc-833f-494e-9a0e-b236eb4b310b", "aa0ec4e1-782f-45f6-a6f3-8e6b6c00599c"));
+        return JsonObject.mapFrom(compPo).encode();
+      default:
+        return null;
+    }
+  }
+
+
+
+
+  // Returns sample for flow: order have units, units protect operation, user isn't member of order's units
+  public String getSampleForRestrictedFlow() {
+    switch (this) {
+      case PIECES:
+        Piece piece = getMinimalContentPiece();
+        piece.setPoLineId("6953bdfb-db69-4e25-9169-71522c11f2a0");
+        return JsonObject.mapFrom(piece).encode();
+      case ORDER_LINES:
+        CompositePoLine poLine = getMinimalContentCompositePoLine();
+        poLine.setId("6953bdfb-db69-4e25-9169-71522c11f2a0");
+        poLine.setPurchaseOrderId("54876d24-78cf-4ed1-a017-5ca54d94130b");
+        return JsonObject.mapFrom(poLine).encode();
+      case ORDERS:
+        CompositePurchaseOrder compPo = getMinimalContentCompositePurchaseOrder();
+        compPo.setAcqUnitIds(Arrays.asList("e68c18fc-833f-494e-9a0e-b236eb4b310b", "aa0ec4e1-782f-45f6-a6f3-8e6b6c00599c"));
+        return JsonObject.mapFrom(compPo).encode();
+      default:
+        return null;
+    }
+  }
+
 
   public static Piece getMinimalContentPiece() {
     Piece piece = new Piece();

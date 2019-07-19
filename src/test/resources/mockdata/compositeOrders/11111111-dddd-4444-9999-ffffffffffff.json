@@ -23,7 +23,7 @@
   "compositePoLines": [
     {
       "id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
-      "source": { "code": "FOLIO" },
+      "source": "User",
       "purchaseOrderId": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB4bb"
     }
   ]

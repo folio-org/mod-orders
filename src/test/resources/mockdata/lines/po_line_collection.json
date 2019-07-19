@@ -87,16 +87,12 @@
       "requester": "Leo Bulero",
       "rush": true,
       "selector": "ABCD",
-      "source": {
-        "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-        "description": "ABCDEFGHIJKLMNO"
+      "source": "User",
+      "tags": {
+        "tagList": [
+          "important"
+        ]
       },
-      "tags": [
-        "ABCDEFGHIJKLMNOPQRSTU",
-        "ABCDEFG",
-        "ABCDEFGHIJKLMNOPQRSTU",
-        "ABCDEFGHIJKLMNO"
-      ],
       "title": "Kayak Fishing in the Northern Gulf Coast",
       "vendorDetail": {
         "instructions": "ABCDEFG",
@@ -204,16 +200,12 @@
       "requester": "Leo Bulero",
       "rush": true,
       "selector": "ABCD",
-      "source": {
-        "code": "Code1",
-        "description": ""
+      "source": "EDI",
+      "tags": {
+        "tagList": [
+          "important"
+        ]
       },
-      "tags": [
-        "ABCDEFGHIJKLMNOPQRSTU",
-        "ABCDEFG",
-        "ABCDEFGHIJKLMNOPQRSTU",
-        "ABCDEFGHIJKLMNO"
-      ],
       "title": "Kayak Fishing in the Northern Gulf Coast",
       "vendorDetail": {
         "instructions": "ABCDEFG",
@@ -289,11 +281,10 @@
       "reportingCodes": [],
       "requester": "Leo Bulero",
       "rush": true,
-      "source": {
-        "code": "Code5",
-        "description": ""
+      "source": "API",
+      "tags": {
+        "tagList": []
       },
-      "tags": [],
       "title": "Harry Potter and the Sorcerer's Stone",
       "metadata": {
         "createdDate": "2019-02-20T19:49:43.854+0000",
@@ -361,10 +352,7 @@
       "reportingCodes": [],
       "requester": "Leo Bulero",
       "rush": true,
-      "source": {
-        "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-        "description": "ABCDEFGHIJKLMNO"
-      },
+      "source": "User",
       "title": "Harry Potter and the Sorcerer's Stone",
       "metadata": {
         "createdDate": "2019-02-20T19:49:43.854+0000",
@@ -432,11 +420,10 @@
       "reportingCodes": [],
       "requester": "Leo Bulero",
       "rush": true,
-      "source": {
-        "code": "Code1",
-        "description": ""
+      "source": "User",
+      "tags": {
+        "tagList": []
       },
-      "tags": [],
       "title": "Harry Potter and the Chamber of Secrets",
       "metadata": {
         "createdDate": "2019-02-20T19:49:43.877+0000",
@@ -552,10 +539,7 @@
       "requester": "Leo Bulero",
       "rush": true,
       "selector": "ABCD",
-      "source": {
-        "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-        "description": "ABCDEFGHIJKLMNO"
-      },
+      "source": "EDI",
       "title": "Kayak Fishing in the Northern Gulf Coast",
       "vendorDetail": {
         "instructions": "ABCDEFG",
@@ -647,10 +631,7 @@
       "receiptStatus": "Fully Received",
       "rush": false,
       "selector": "Woods",
-      "source": {
-        "code": "ABCDEFGHIJKLMNOPQRSTUVWXYZABC",
-        "description": "ABCDEFGHIJKLMNO"
-      },
+      "source": "User",
       "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
       "vendorDetail": {
         "instructions": "ABCDEFG",
@@ -731,11 +712,10 @@
             "purchaseOrderId": "f6328932-cca2-4758-8547-b9435b783fbb",
             "receiptStatus": "Awaiting Receipt",
             "reportingCodes": [],
-            "source": {
-                "code": "manual",
-                "description": "An order placed from test Interface"
+            "source": "User",
+            "tags": {
+              "tagList": []
             },
-            "tags": [],
             "title": "BEST AMERICAN SCIENCE FICTION AND FANTASY.",
             "vendorDetail": {
                 "instructions": "Next Volume | Listed Print Serial",
@@ -799,11 +779,10 @@
             "purchaseOrderId": "707cefd7-cccd-437d-b4bf-456f9c3dde6d",
             "receiptStatus": "Partially Received",
             "reportingCodes": [],
-            "source": {
-                "code": "manual",
-                "description": "An order placed for reverting checkin"
-            },
-            "tags": [],
+            "source": "User",
+           "tags": {
+             "tagList": []
+           },
             "title": "Country Madness",
             "vendorDetail": {
                 "instructions": "Next Volume | Listed Print Serial",

@@ -80,11 +80,12 @@
   "requester" : "Leo Bulero",
   "rush" : true,
   "selector" : "ABCD",
-  "source": {
-    "code": "FOLIO",
-    "description": "Manually entered"
+  "source": "User",
+  "tags": {
+    "tagList": [
+      "important"
+    ]
   },
-  "tags" : [ "ABCDEFGHIJKLMNOPQRSTU", "ABCDEFG", "ABCDEFGHIJKLMNOPQRSTU", "ABCDEFGHIJKLMNO" ],
   "title" : "Kayak Fishing in the Northern Gulf Coast",
   "vendorDetail": {
     "instructions": "ABCDEFG",

@@ -74,6 +74,8 @@ import static org.folio.rest.impl.ApiTestBase.getMockAsJson;
 import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEMS;
 import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
+import static org.folio.rest.impl.ProtectedEntities.getMinimalContentCompositePoLine;
+import static org.folio.rest.impl.ProtectedEntities.getMinimalContentCompositePurchaseOrder;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_A;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_B;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_VENDOR_ID;
@@ -144,6 +146,7 @@ public class MockServer {
 
   static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
+  static Table<String, String, String> pieceLineOrderComplianceMatrix = HashBasedTable.create();
 
   private final int port;
   private final Vertx vertx;
@@ -151,6 +154,18 @@ public class MockServer {
   MockServer(int port) {
     this.port = port;
     this.vertx = Vertx.vertx();
+    pieceLineOrderComplianceMatrix.put("e4ebae49-f39d-460f-a383-c609da7e07cd", "5a8dc627-a90e-40b6-9a62-b6c7f27fbb6f", "21743476-1c47-4a9a-85cd-8ee77af6e3e9");
+    pieceLineOrderComplianceMatrix.put("dd6c7335-a8e5-440d-86ba-657240867de5", "568f1899-fc55-4956-be18-e47073807acd", "a200e0e1-79f2-4161-81e3-15cc2c8ff9d1");
+    pieceLineOrderComplianceMatrix.put("63bd5119-e177-490b-8eef-dadbb18f4473", "c081774b-9ad6-40d8-9527-569a5316f14e", "d4f3c8e6-0b4a-48ee-bc6e-2d07284bff3b");
+    pieceLineOrderComplianceMatrix.put("67c97a0c-4824-4a3b-9b2c-1b4a4ea80ded", "6953bdfb-db69-4e25-9169-71522c11f2a0", "54876d24-78cf-4ed1-a017-5ca54d94130b");
+  }
+
+  private static String getPoIdByPoLineId(String poLineId) {
+    return new ArrayList<>(pieceLineOrderComplianceMatrix.column(poLineId).values()).get(0);
+  }
+
+  private static String getPoLineIdByPieceId(String pieceId) {
+    return new ArrayList<>(pieceLineOrderComplianceMatrix.row(pieceId).values()).get(0);
   }
 
   void start() throws InterruptedException, ExecutionException, TimeoutException {
@@ -906,39 +921,47 @@ public class MockServer {
     String id = ctx.request().getParam(ID);
     logger.info("id: " + id);
 
-    addServerRqRsData(HttpMethod.GET, PO_LINES, new JsonObject().put(ID, id));
-
-    if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+    if(pieceLineOrderComplianceMatrix.containsColumn(id)) {
+      serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(getMinimalContentCompositePoLine().withPurchaseOrderId(getPoIdByPoLineId(id))).encodePrettily());
     } else {
-      try {
+      addServerRqRsData(HttpMethod.GET, PO_LINES, new JsonObject().put(ID, id));
 
-        JsonObject pol = null;
+      if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
+        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+      } else {
+        try {
 
-        // Attempt to find POLine in mock server memory
-        Map<String, List<JsonObject>> column = serverRqRs.column(HttpMethod.POST);
-        if (MapUtils.isNotEmpty(column) && CollectionUtils.isNotEmpty(column.get(PO_LINES))) {
-          List<JsonObject> objects = new ArrayList<>(column.get(PO_LINES));
-          Comparator<JsonObject> comparator = Comparator.comparing(o -> o.getString(ID));
-          objects.sort(comparator);
-          int ind = Collections.binarySearch(objects, new JsonObject().put(ID, id), comparator);
-          if(ind > -1) {
-            pol = objects.get(ind);
+          JsonObject pol = null;
+
+          // Attempt to find POLine in mock server memory
+          Map<String, List<JsonObject>> column = serverRqRs.column(HttpMethod.POST);
+          if (MapUtils.isNotEmpty(column) && CollectionUtils.isNotEmpty(column.get(PO_LINES))) {
+            List<JsonObject> objects = new ArrayList<>(column.get(PO_LINES));
+            Comparator<JsonObject> comparator = Comparator.comparing(o -> o.getString(ID));
+            objects.sort(comparator);
+            int ind = Collections.binarySearch(objects, new JsonObject().put(ID, id), comparator);
+            if(ind > -1) {
+              pol = objects.get(ind);
+            }
           }
-        }
 
-        // If previous step has no result then attempt to find POLine in stubs
-        if (pol == null) {
-          PoLine poLine = new JsonObject(ApiTestBase.getMockData(String.format("%s%s.json", PO_LINES_MOCK_DATA_PATH, id))).mapTo(PoLine.class);
-          updatePoLineEstimatedPrice(poLine);
-          pol = JsonObject.mapFrom(poLine);
-        }
+          // If previous step has no result then attempt to find POLine in stubs
+          if (pol == null) {
+            PoLine poLine = new JsonObject(ApiTestBase.getMockData(String.format("%s%s.json", PO_LINES_MOCK_DATA_PATH, id))).mapTo(PoLine.class);
+            updatePoLineEstimatedPrice(poLine);
+            pol = JsonObject.mapFrom(poLine);
+          }
 
-        serverResponse(ctx, 200, APPLICATION_JSON, pol.encodePrettily());
-      } catch (IOException e) {
-        serverResponse(ctx, 404, APPLICATION_JSON, id);
+          serverResponse(ctx, 200, APPLICATION_JSON, pol.encodePrettily());
+        } catch (IOException e) {
+          serverResponse(ctx, 404, APPLICATION_JSON, id);
+        }
       }
+
     }
+
+
+
   }
 
   private void serverResponse(RoutingContext ctx, int statusCode, String contentType, String body) {
@@ -1111,28 +1134,40 @@ public class MockServer {
     String id = ctx.request().getParam(ID);
     logger.info("id: " + id);
 
-    try {
-      String filePath;
-      if (ID_FOR_PRINT_MONOGRAPH_ORDER.equals(id)) {
-        filePath = LISTED_PRINT_MONOGRAPH_PATH;
-      } else {
-        filePath = String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id);
-      }
-      JsonObject po = new JsonObject(ApiTestBase.getMockData(filePath));
-      po.remove(COMPOSITE_PO_LINES);
-      po.remove(ACQ_UNIT_IDS);
+    if(pieceLineOrderComplianceMatrix.values().contains(id)) {
+      serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withId(id)).encodePrettily());
 
-      // Validate the content against schema
-      org.folio.rest.acq.model.PurchaseOrder order = po.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
-      order.setId(id);
-      po = JsonObject.mapFrom(order);
-      addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
-      serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
-    } catch (IOException e) {
-      ctx.response()
-        .setStatusCode(ID_FOR_INTERNAL_SERVER_ERROR.equals(id) ? 500 : 404)
-        .end(id);
+
+    } else {
+      try {
+        String filePath;
+        if (ID_FOR_PRINT_MONOGRAPH_ORDER.equals(id)) {
+          filePath = LISTED_PRINT_MONOGRAPH_PATH;
+        } else {
+          filePath = String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id);
+        }
+        JsonObject po = new JsonObject(ApiTestBase.getMockData(filePath));
+        po.remove(COMPOSITE_PO_LINES);
+        po.remove(ACQ_UNIT_IDS);
+
+        // Validate the content against schema
+        org.folio.rest.acq.model.PurchaseOrder order = po.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
+        order.setId(id);
+        po = JsonObject.mapFrom(order);
+        addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
+        serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+      } catch (IOException e) {
+        ctx.response()
+          .setStatusCode(ID_FOR_INTERNAL_SERVER_ERROR.equals(id) ? 500 : 404)
+          .end(id);
+      }
+
     }
+
+
+
+
+
   }
 
   private void handleGetPurchaseOrderByQuery(RoutingContext ctx, String orderType) {

@@ -36,7 +36,7 @@
       "physical":{
         "createInventory":"None"
       },
-      "source": { "code": "FOLIO" },
+      "source": "User",
       "title": "Kayak Fishing in the Northern Gulf Coast",
       "metadata": {
         "createdDate": "2010-10-08T03:53:00.000",
