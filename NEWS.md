@@ -6,16 +6,16 @@ The primary focus of this release was to implement CRUD API for managing Teams (
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v6.0.0...v7.0.0)
 
 ### Stories
- * [MODORDERS-277](https://issues.folio.org/browse/MODORDERS-277)	- Update inventory interface version
- * [MODORDERS-275](https://issues.folio.org/browse/MODORDERS-275)	- Make poLine.source an enum
- * [MODORDERS-267](https://issues.folio.org/browse/MODORDERS-267)	- Add purchaseOrder.template field
- * [MODORDERS-266](https://issues.folio.org/browse/MODORDERS-266)	- Implement basic CRUD for `/orders/acquisitions-unit-assignments`
- * [MODORDERS-265](https://issues.folio.org/browse/MODORDERS-265)	- Restrict which fields can be edited once worflowStatus = Open
- * [MODORDERS-250](https://issues.folio.org/browse/MODORDERS-250)	- Implement basic CRUD for `/acquisitions-units/memberships`
- * [MODORDERS-249](https://issues.folio.org/browse/MODORDERS-249)	- Implement basic CRUD for `/acquisitions-units/units`
- * [MODORDERS-247](https://issues.folio.org/browse/MODORDERS-247)	- Make contributor-name-type configurable
- * [MODORDERS-243](https://issues.folio.org/browse/MODORDERS-243)	- Create encumbrance upon order transition to "Open"
- * [MODORDERS-173](https://issues.folio.org/browse/MODORDERS-173)	- ensure receiptStatus consistency between piece and poLine
+ * [MODORDERS-277](https://issues.folio.org/browse/MODORDERS-277) - Update inventory interface version
+ * [MODORDERS-275](https://issues.folio.org/browse/MODORDERS-275) - Make poLine.source an enum
+ * [MODORDERS-267](https://issues.folio.org/browse/MODORDERS-267) - Add purchaseOrder.template field
+ * [MODORDERS-266](https://issues.folio.org/browse/MODORDERS-266) - Implement basic CRUD for `/orders/acquisitions-unit-assignments`
+ * [MODORDERS-265](https://issues.folio.org/browse/MODORDERS-265) - Restrict which fields can be edited once worflowStatus = Open
+ * [MODORDERS-250](https://issues.folio.org/browse/MODORDERS-250) - Implement basic CRUD for `/acquisitions-units/memberships`
+ * [MODORDERS-249](https://issues.folio.org/browse/MODORDERS-249) - Implement basic CRUD for `/acquisitions-units/units`
+ * [MODORDERS-247](https://issues.folio.org/browse/MODORDERS-247) - Make contributor-name-type configurable
+ * [MODORDERS-243](https://issues.folio.org/browse/MODORDERS-243) - Create encumbrance upon order transition to "Open"
+ * [MODORDERS-173](https://issues.folio.org/browse/MODORDERS-173) - ensure receiptStatus consistency between piece and poLine
 
 ## 6.0.0 - Released
 The main focus of this release was to implement the search and filtering of order-lines, improve receiving/check-in flows. 
