@@ -109,7 +109,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
@@ -151,6 +150,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   private static final String PO_ID_FOR_FAILURE_CASE = "bad500aa-aaaa-500a-aaaa-aaaaaaaaaaaa";
   private static final String ORDER_ID_WITHOUT_PO_LINES = "50fb922c-3fa9-494e-a972-f2801f1b9fd1";
   private static final String ORDER_WITHOUT_WORKFLOW_STATUS = "41d56e59-46db-4d5e-a1ad-a178228913e5";
+  private static final String ORDERS_CLOSED_REASON = "c1465131-ed35-4308-872c-d7cdf0af0000";
   static final String ORDER_WIT_PO_LINES_FOR_SORTING =  "9a952cd0-842b-4e71-bddd-014eb128dc8e";
 
   // API paths
@@ -2057,15 +2057,12 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     List<Encumbrance> createdEncumbrances = getCreatedEncumbrances();
     assertThat(createdEncumbrances, empty());
   }
-
-  // 1ab7ef6a-d1d4-4a4f-90a2-882aed18af14
   
   @Test
   public void testPutOrderReasonClosedProtectedFieldsChanged() throws IllegalAccessException {
     logger.info("=== Test PUT Order By Id - Reason Closed Protected fields changed ===");
 
-    JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, "c1465131-ed35-4308-872c-d7cdf0af0000");
-    //JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, "11111111-dddd-4444-9999-ffffffffffff");
+    JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, ORDERS_CLOSED_REASON);
     assertThat(reqData.getString("workflowStatus"), is(CompositePurchaseOrder.WorkflowStatus.CLOSED.value()));
 
     Map<String, Object> allProtectedFieldsModification = new HashMap<>();
