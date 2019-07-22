@@ -7,6 +7,9 @@ import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
+import static org.folio.orders.utils.POProtectedFields.getFieldNames;
+import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder;
+
 
 import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
@@ -24,7 +27,6 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
-import org.folio.orders.utils.POProtectedFields;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
@@ -134,9 +136,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   public CompletableFuture<JsonObject> validateIfPOProtectedFieldsChanged(CompositePurchaseOrder compPO,
       JsonObject compPOFromStorage) {
-    if (!compPOFromStorage.getString(WORKFLOW_STATUS)
-      .equals(CompositePurchaseOrder.WorkflowStatus.PENDING.value())) {
-      verifyProtectedFieldsChanged(POProtectedFields.getFieldNames(), compPOFromStorage, JsonObject.mapFrom(compPO));
+    WorkflowStatus storagePOWorkflowStatus = WorkflowStatus.fromValue(compPOFromStorage.getString(WORKFLOW_STATUS));
+    if (!PENDING.equals(storagePOWorkflowStatus)) {
+      List<String> fieldNames = OPEN.equals(storagePOWorkflowStatus) ? getFieldNamesForOpenOrder() : getFieldNames();
+      verifyProtectedFieldsChanged(fieldNames, compPOFromStorage, JsonObject.mapFrom(compPO));
     }
     return completedFuture(compPOFromStorage);
   }

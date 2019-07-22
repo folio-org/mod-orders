@@ -31,6 +31,7 @@ public enum POLineProtectedFields {
   FUND_DISTRIBUTION("fundDistribution"),
   LOCATION("locations") ,
   ORER_FORMAT("orderFormat"),
+  PHYSICAL_CREATE_INVENTORY("physical.createInventory"),
   PHYSICAL_VOLUMES("physical.volumes"),
   PHYSICAL_MATERIAL_TYPE("physical.materialType"),
   PUBLICATION_DATE("publicationDate"),
