@@ -60,26 +60,15 @@ import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.rest.impl.ApiTestBase.COMP_ORDER_MOCK_DATA_PATH;
+import static org.folio.rest.impl.ApiTestBase.*;
 import static org.folio.rest.impl.ApiTestBase.ID;
-import static org.folio.rest.impl.ApiTestBase.ID_DOES_NOT_EXIST;
-import static org.folio.rest.impl.ApiTestBase.ID_FOR_INTERNAL_SERVER_ERROR;
-import static org.folio.rest.impl.ApiTestBase.NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT;
-import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_STATUS_TENANT;
-import static org.folio.rest.impl.ApiTestBase.INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT;
-import static org.folio.rest.impl.ApiTestBase.NON_EXIST_LOAN_TYPE_TENANT;
-import static org.folio.rest.impl.ApiTestBase.PO_ID_GET_LINES_INTERNAL_SERVER_ERROR;
-import static org.folio.rest.impl.ApiTestBase.PO_LINE_NUMBER_VALUE;
-import static org.folio.rest.impl.ApiTestBase.getMockAsJson;
 import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEMS;
 import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
-import static org.folio.rest.impl.ProtectedEntities.getMinimalContentCompositePoLine;
-import static org.folio.rest.impl.ProtectedEntities.getMinimalContentCompositePurchaseOrder;
+import static org.folio.rest.impl.ProtectedEntities.*;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_A;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_B;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_VENDOR_ID;
-import static org.folio.rest.impl.ApiTestBase.BAD_QUERY;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.EMPTY_CONFIG_TENANT;
 import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
@@ -95,9 +84,7 @@ import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_VENDOR_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.VENDOR_WITH_BAD_CONTENT;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ORGANIZATION_NOT_VENDOR;
-import static org.folio.rest.impl.ApiTestBase.X_ECHO_STATUS;
 import static org.folio.rest.impl.ReceivingHistoryApiTest.RECEIVING_HISTORY_PURCHASE_ORDER_ID;
-import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_TYPE_TENANT;
 import static org.junit.Assert.fail;
 
 public class MockServer {
@@ -146,26 +133,20 @@ public class MockServer {
 
   static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
-  static Table<String, String, String> pieceLineOrderComplianceMatrix = HashBasedTable.create();
+  private static Table<String, String, String> pieceLineOrderComplianceMatrix = HashBasedTable.create();
 
   private final int port;
   private final Vertx vertx;
 
+  static {
+    pieceLineOrderComplianceMatrix.put("dd6c7335-a8e5-440d-86ba-657240867de5", PO_LINE_FOR_ORDER_WITH_NON_PROTECTED_UNITS_ID, ORDER_WITH_NON_PROTECTED_UNITS_ID);
+    pieceLineOrderComplianceMatrix.put("63bd5119-e177-490b-8eef-dadbb18f4473", PO_LINE_FOR_ORDER_WITH_PROTECTED_UNITS_ALLOWED_USER_ID, ORDER_WITH_PROTECTED_UNITS_ALLOWED_USER_ID);
+    pieceLineOrderComplianceMatrix.put("67c97a0c-4824-4a3b-9b2c-1b4a4ea80ded", PO_LINE_FOR_ORDER_WITH_PROTECTED_UNITS_AND_FORBIDDEN_USER_ID, ORDER_WITH_PROTECTED_UNITS_AND_FORBIDDEN_USER_ID);
+  }
+
   MockServer(int port) {
     this.port = port;
     this.vertx = Vertx.vertx();
-    pieceLineOrderComplianceMatrix.put("e4ebae49-f39d-460f-a383-c609da7e07cd", "5a8dc627-a90e-40b6-9a62-b6c7f27fbb6f", "21743476-1c47-4a9a-85cd-8ee77af6e3e9");
-    pieceLineOrderComplianceMatrix.put("dd6c7335-a8e5-440d-86ba-657240867de5", "568f1899-fc55-4956-be18-e47073807acd", "a200e0e1-79f2-4161-81e3-15cc2c8ff9d1");
-    pieceLineOrderComplianceMatrix.put("63bd5119-e177-490b-8eef-dadbb18f4473", "c081774b-9ad6-40d8-9527-569a5316f14e", "d4f3c8e6-0b4a-48ee-bc6e-2d07284bff3b");
-    pieceLineOrderComplianceMatrix.put("67c97a0c-4824-4a3b-9b2c-1b4a4ea80ded", "6953bdfb-db69-4e25-9169-71522c11f2a0", "54876d24-78cf-4ed1-a017-5ca54d94130b");
-  }
-
-  private static String getPoIdByPoLineId(String poLineId) {
-    return new ArrayList<>(pieceLineOrderComplianceMatrix.column(poLineId).values()).get(0);
-  }
-
-  private static String getPoLineIdByPieceId(String pieceId) {
-    return new ArrayList<>(pieceLineOrderComplianceMatrix.row(pieceId).values()).get(0);
   }
 
   void start() throws InterruptedException, ExecutionException, TimeoutException {
@@ -280,6 +261,14 @@ public class MockServer {
         : jsonObjects.stream()
           .map(json -> json.mapTo(Encumbrance.class))
           .collect(Collectors.toList());
+  }
+
+  private static String getPoIdByPoLineId(String poLineId) {
+    return new ArrayList<>(pieceLineOrderComplianceMatrix.column(poLineId).values()).get(0);
+  }
+
+  private static String getPoLineIdByPieceId(String pieceId) {
+    return new ArrayList<>(pieceLineOrderComplianceMatrix.row(pieceId).values()).get(0);
   }
 
   private Router defineRoutes() {

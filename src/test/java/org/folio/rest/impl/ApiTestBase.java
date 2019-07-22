@@ -15,10 +15,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.tools.parser.JsonPathParser;
 import org.hamcrest.Matchers;
 import org.junit.AfterClass;
@@ -33,10 +31,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
@@ -398,5 +393,27 @@ public class ApiTestBase {
       .map(obj -> (List) obj)
       .get()
       .toArray();
+  }
+
+  static Piece getMinimalContentPiece() {
+    return new Piece()
+      .withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
+      .withFormat(Piece.Format.PHYSICAL);
+  }
+
+  static CompositePoLine getMinimalContentCompositePoLine() {
+    return new CompositePoLine().withSource(CompositePoLine.Source.EDI)
+      .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withAcquisitionMethod(CompositePoLine.AcquisitionMethod.PURCHASE)
+      .withPhysical(new Physical().withMaterialType("2d1398ae-e1aa-4c7c-b9c9-15adf8cf6425"))
+      .withCost(new Cost().withCurrency("EUR").withQuantityPhysical(1).withListUnitPrice(10.0))
+      .withLocations(Arrays.asList(new Location().withLocationId("2a00b0be-1447-42a1-a112-124450991899").withQuantityPhysical(1)))
+      .withTitle("Title");
+  }
+
+  static CompositePurchaseOrder getMinimalContentCompositePurchaseOrder() {
+    return new CompositePurchaseOrder()
+      .withOrderType(CompositePurchaseOrder.OrderType.ONE_TIME)
+      .withVendor("7d232b43-bf9a-4301-a0ce-9e076298632e");
   }
 }

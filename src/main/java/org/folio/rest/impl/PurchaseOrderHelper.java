@@ -18,6 +18,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import io.vertx.core.logging.Logger;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -31,6 +33,7 @@ import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 public class PurchaseOrderHelper extends AbstractHelper {
 
@@ -40,6 +43,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private final PoNumberHelper poNumberHelper;
   private final PurchaseOrderLineHelper orderLineHelper;
   private final ProtectionHelper  protectionHelper;
+  private final AcquisitionsUnitAssignmentsHelper acquisitionsUnitAssignmentsHelper;
 
   PurchaseOrderHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
@@ -47,6 +51,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     poNumberHelper = new PoNumberHelper(httpClient, okapiHeaders, ctx, lang);
     orderLineHelper = new PurchaseOrderLineHelper(httpClient, okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(okapiHeaders, ctx, lang, ProtectedOperationType.CREATE);
+    acquisitionsUnitAssignmentsHelper = new AcquisitionsUnitAssignmentsHelper(okapiHeaders, ctx, lang);
   }
 
   /**
@@ -103,6 +108,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           return setPoNumberIfMissing(compPO)
             .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber()))
             .thenCompose(v -> createPOandPOLines(compPO))
+            .thenCompose(v -> createUnitAssignments(compPO))
             .thenApply(this::populateOrderSummary);
         }
       });
@@ -331,6 +337,18 @@ public class PurchaseOrderHelper extends AbstractHelper {
     }
 
     return validateOrder(compPO);
+  }
+
+  private CompletableFuture<CompositePurchaseOrder> createUnitAssignments(CompositePurchaseOrder comPO) {
+    CompletableFuture<CompositePurchaseOrder> future = new CompletableFuture<>();
+    CompletableFuture.allOf(comPO.getAcqUnitIds().stream().map(id -> acquisitionsUnitAssignmentsHelper
+      .createAcquisitionsUnitAssignment(new AcquisitionsUnitAssignment())).toArray(CompletableFuture[]::new))
+      .thenAccept(v -> future.complete(comPO))
+      .exceptionally(t -> {
+        future.completeExceptionally(t);
+        return null;
+      });
+    return future;
   }
 
   @Override

@@ -39,13 +39,7 @@ public class ProtectionHelper extends AbstractHelper {
     String userId;
     if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USERID_HEADER)) != null) {
       return getUnitIdsAssignedToOrder(recordId)
-        .thenCompose(unitIds -> {
-          if(!unitIds.isEmpty()) {
-            return isOperationRestricted(userId, unitIds);
-          } else {
-            return CompletableFuture.completedFuture(false);
-          }
-        });
+        .thenCompose(unitIds -> isOperationRestricted(userId, unitIds));
     } else {
       throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), UNKNOWN_USER);
     }
@@ -58,18 +52,12 @@ public class ProtectionHelper extends AbstractHelper {
    * @return true if operation is restricted, otherwise - false.
    */
   public CompletableFuture<Boolean> isOperationRestricted(List<String> unitIds) {
-
     String userId;
     if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USERID_HEADER)) != null) {
-      if (unitIds != null && !unitIds.isEmpty()) {
         return isOperationRestricted(userId, unitIds);
-      } else {
-        throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), ORDER_UNITS_NOT_FOUND);
-      }
     } else {
       throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), UNKNOWN_USER);
     }
-
   }
 
   /**
@@ -80,25 +68,29 @@ public class ProtectionHelper extends AbstractHelper {
    * @return true if operation is restricted, otherwise - false.
    */
   private CompletableFuture<Boolean> isOperationRestricted(String userId, List<String> unitIds) {
-    CompletableFuture<Boolean> future = new CompletableFuture<>();
-    getUnitsByIds(unitIds)
-      .thenApply(units -> {
-        if(!units.isEmpty()) {
-          return applyMergingStrategy(units)
-            .thenAccept(isOperationProtected -> {
-              if(isOperationProtected) {
-                getUnitIdsAssignedToUserAndOrder(userId, unitIds)
-                  .thenAccept(ids -> future.complete(ids.isEmpty()));
-              } else {
-                future.complete(false);
-              }
-            });
-        } else {
-          future.completeExceptionally(new HttpException(HttpStatus.HTTP_VALIDATION_ERROR.toInt(), ORDER_UNITS_NOT_FOUND));
-        }
-        return future;
-      });
-    return future;
+    if(!unitIds.isEmpty()) {
+      CompletableFuture<Boolean> future = new CompletableFuture<>();
+      getUnitsByIds(unitIds)
+        .thenApply(units -> {
+          if(!units.isEmpty() && unitIds.size() == units.size()) {
+            return applyMergingStrategy(units)
+              .thenAccept(isOperationProtected -> {
+                if(isOperationProtected) {
+                  getUnitIdsAssignedToUserAndOrder(userId, unitIds)
+                    .thenAccept(ids -> future.complete(ids.isEmpty()));
+                } else {
+                  future.complete(false);
+                }
+              });
+          } else {
+            future.completeExceptionally(new HttpException(HttpStatus.HTTP_VALIDATION_ERROR.toInt(), ORDER_UNITS_NOT_FOUND));
+          }
+          return future;
+        });
+      return future;
+    } else {
+      return CompletableFuture.completedFuture(false);
+    }
   }
 
   /**
