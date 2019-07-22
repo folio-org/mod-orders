@@ -366,7 +366,7 @@ public class ApiTestBase {
       assertThat(message.body().getString(HelperUtils.LANG), not(isEmptyOrNullString()));
     }
   }
-
+  
   void checkPreventProtectedFieldsModificationRule(String path, JsonObject compPO, Map<String, Object> updatedFields) {
     JsonObject compPOJson = JsonObject.mapFrom(compPO);
     JsonPathParser compPOParser = new JsonPathParser(compPOJson);

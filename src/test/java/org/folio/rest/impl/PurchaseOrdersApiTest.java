@@ -20,6 +20,7 @@ import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Physical.CreateInventory;
+import org.folio.rest.tools.parser.JsonPathParser;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -108,6 +109,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
@@ -2056,6 +2058,31 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(createdEncumbrances, empty());
   }
 
+  // 1ab7ef6a-d1d4-4a4f-90a2-882aed18af14
+  
+  @Test
+  public void testPutOrderReasonClosedProtectedFieldsChanged() throws IllegalAccessException {
+    logger.info("=== Test PUT Order By Id - Reason Closed Protected fields changed ===");
+
+    JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, "c1465131-ed35-4308-872c-d7cdf0af0000");
+    //JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, "11111111-dddd-4444-9999-ffffffffffff");
+    assertThat(reqData.getString("workflowStatus"), is(CompositePurchaseOrder.WorkflowStatus.CLOSED.value()));
+
+    Map<String, Object> allProtectedFieldsModification = new HashMap<>();
+
+    JsonObject closeReason = new JsonObject();
+    closeReason.put("reason", "Shipping delay");
+    closeReason.put("note", "Two years is too long for shipping");
+    allProtectedFieldsModification.put(POProtectedFields.CLOSE_REASON.getFieldName(), closeReason);
+
+    JsonObject compPOJson = JsonObject.mapFrom(reqData);
+    JsonPathParser compPOParser = new JsonPathParser(compPOJson);
+    for (Map.Entry<String, Object> m : allProtectedFieldsModification.entrySet()) {
+      compPOParser.setValueAt(m.getKey(), m.getValue());
+    }
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getString("id")), compPOJson, "", HttpStatus.HTTP_NO_CONTENT.toInt());
+  }
+  
   @Test
   public void testUpdateOrderWithProtectedFieldsChanging() throws IllegalAccessException {
     logger.info("=== Test case when OPEN order errors if protected fields are changed ===");

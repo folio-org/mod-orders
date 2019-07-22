@@ -134,8 +134,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   public CompletableFuture<JsonObject> validateIfPOProtectedFieldsChanged(CompositePurchaseOrder compPO,
       JsonObject compPOFromStorage) {
-    if (!compPOFromStorage.getString(WORKFLOW_STATUS)
-      .equals(CompositePurchaseOrder.WorkflowStatus.PENDING.value())) {
+    if ((compPOFromStorage.getString(WORKFLOW_STATUS).equals(CompositePurchaseOrder.WorkflowStatus.OPEN.value())) ||
+        (compPOFromStorage.getString(WORKFLOW_STATUS).equals(CompositePurchaseOrder.WorkflowStatus.CLOSED.value()) && compPO.getCloseReason() == null)) {
       verifyProtectedFieldsChanged(POProtectedFields.getFieldNames(), compPOFromStorage, JsonObject.mapFrom(compPO));
     }
     return completedFuture(compPOFromStorage);
