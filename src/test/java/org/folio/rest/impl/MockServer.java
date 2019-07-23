@@ -1502,7 +1502,7 @@ public class MockServer {
       if (StringUtils.isNotEmpty(userId)) {
         memberships.getAcquisitionsUnitMemberships().removeIf(membership -> !membership.getUserId().equals(userId));
         List<String> acquisitionsUnitIds = extractIdsFromQuery("acquisitionsUnitId", query);
-          if (acquisitionsUnitIds.size() > 0) {
+          if (!acquisitionsUnitIds.isEmpty()) {
             memberships.getAcquisitionsUnitMemberships().removeIf(membership -> !acquisitionsUnitIds.contains(membership.getAcquisitionsUnitId()));
           }
       }

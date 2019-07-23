@@ -48,7 +48,6 @@ public enum ErrorCodes {
   MISSING_LOAN_TYPE("missingLoanType", "Loan-type is a required field for creating an Item in Inventory"),
   ENCUMBRANCE_CREATION_FAILURE("encumbranceCreationFailure", "One or more encumbrance record(s) failed to be created"),
   PROHIBITED_FIELD_CHANGING("protectedFieldChanging","Protected fields can't be modified"),
-  UNKNOWN_USER("restrictedDueToUnknownUser", "User Id is not presented"),
   ORDER_UNITS_NOT_FOUND("orderUnitsNotFound", "Order doesn't contain unit ids or units not found"),
   USER_HAS_NOT_PERMISSIONS("userHasNoPermission", "User hasn't permissions - operation is restricted");
 

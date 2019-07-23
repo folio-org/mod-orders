@@ -44,13 +44,7 @@ public class PiecesHelper extends AbstractHelper {
     return purchaseOrderLineHelper.getCompositePoLine(poLineId)
       .thenApply(CompositePoLine::getPurchaseOrderId)
       .thenCompose(recordId -> protectionHelper.isOperationRestricted(recordId))
-      .thenCompose(isRestricted -> {
-        if(isRestricted) {
-          throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NOT_PERMISSIONS);
-        } else {
-          return createRecordInStorage(JsonObject.mapFrom(entity), resourcesPath(PIECES)).thenApply(entity::withId);
-        }
-      });
+      .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(entity), resourcesPath(PIECES)).thenApply(entity::withId));
   }
 
   // Flow to update piece

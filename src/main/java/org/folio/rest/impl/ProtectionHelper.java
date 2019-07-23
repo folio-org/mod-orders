@@ -35,14 +35,9 @@ public class ProtectionHelper extends AbstractHelper {
    *
    * @return true if operation is restricted, otherwise - false.
    */
-  public CompletableFuture<Boolean> isOperationRestricted(String recordId) {
-    String userId;
-    if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USERID_HEADER)) != null) {
-      return getUnitIdsAssignedToOrder(recordId)
-        .thenCompose(unitIds -> isOperationRestricted(userId, unitIds));
-    } else {
-      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), UNKNOWN_USER);
-    }
+  public CompletableFuture<Void> isOperationRestricted(String recordId) {
+    return getUnitIdsAssignedToOrder(recordId)
+      .thenCompose(this::isOperationRestricted);
   }
 
   /**
@@ -51,45 +46,26 @@ public class ProtectionHelper extends AbstractHelper {
    *
    * @return true if operation is restricted, otherwise - false.
    */
-  public CompletableFuture<Boolean> isOperationRestricted(List<String> unitIds) {
-    String userId;
-    if(okapiHeaders != null && (userId = okapiHeaders.get(OKAPI_USERID_HEADER)) != null) {
-        return isOperationRestricted(userId, unitIds);
-    } else {
-      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), UNKNOWN_USER);
-    }
-  }
-
-  /**
-   * This method determines status of operation restriction based on units analysis and user ID.
-   * @param unitIds list of unit's IDs.
-   * @param userId user's ID.
-   *
-   * @return true if operation is restricted, otherwise - false.
-   */
-  private CompletableFuture<Boolean> isOperationRestricted(String userId, List<String> unitIds) {
+  public CompletableFuture<Void> isOperationRestricted(List<String> unitIds) {
     if(!unitIds.isEmpty()) {
-      CompletableFuture<Boolean> future = new CompletableFuture<>();
-      getUnitsByIds(unitIds)
-        .thenApply(units -> {
-          if(!units.isEmpty() && unitIds.size() == units.size()) {
-            return applyMergingStrategy(units)
-              .thenAccept(isOperationProtected -> {
-                if(isOperationProtected) {
-                  getUnitIdsAssignedToUserAndOrder(userId, unitIds)
-                    .thenAccept(ids -> future.complete(ids.isEmpty()));
-                } else {
-                  future.complete(false);
+      return getUnitsByIds(unitIds)
+        .thenCompose(units -> {
+          if(unitIds.size() == units.size()) {
+                if(applyMergingStrategy(units)) {
+                  return getUnitIdsAssignedToUserAndOrder(okapiHeaders.get(OKAPI_USERID_HEADER), unitIds)
+                    .thenAccept(ids -> {
+                      if(ids == 0) {
+                        throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NOT_PERMISSIONS);
+                      }
+                    });
                 }
-              });
+            return CompletableFuture.completedFuture(null);
           } else {
-            future.completeExceptionally(new HttpException(HttpStatus.HTTP_VALIDATION_ERROR.toInt(), ORDER_UNITS_NOT_FOUND));
+            throw new HttpException(HttpStatus.HTTP_VALIDATION_ERROR.toInt(), ORDER_UNITS_NOT_FOUND);
           }
-          return future;
         });
-      return future;
     } else {
-      return CompletableFuture.completedFuture(false);
+      return CompletableFuture.completedFuture(null);
     }
   }
 
@@ -110,11 +86,10 @@ public class ProtectionHelper extends AbstractHelper {
    *
    * @return list of unit ids associated with user.
    */
-  private CompletableFuture<List<String>> getUnitIdsAssignedToUserAndOrder(String userId, List<String> unitIdsAssignedToOrder) {
+  private CompletableFuture<Integer> getUnitIdsAssignedToUserAndOrder(String userId, List<String> unitIdsAssignedToOrder) {
     String query = String.format("userId==%s AND %s", userId, convertIdsToCqlQuery(unitIdsAssignedToOrder, "acquisitionsUnitId"));
-    return acquisitionsUnitsHelper.getAcquisitionsUnitsMemberships(query, 0, Integer.MAX_VALUE)
-      .thenApply(memberships -> memberships.getAcquisitionsUnitMemberships().stream()
-        .map(AcquisitionsUnitMembership::getAcquisitionsUnitId).collect(toList()));
+    return acquisitionsUnitsHelper.getAcquisitionsUnitsMemberships(query, 0, 0)
+      .thenApply(AcquisitionsUnitMembershipCollection::getTotalRecords);
   }
 
   /**
@@ -135,8 +110,8 @@ public class ProtectionHelper extends AbstractHelper {
    * @param units list of {@link AcquisitionsUnit}.
    * @return true if operation is protected, otherwise - false.
    */
-  private CompletableFuture<Boolean> applyMergingStrategy(List<AcquisitionsUnit> units) {
-    return CompletableFuture.completedFuture(units.stream().allMatch(unit -> operation.isProtected(unit)));
+  private Boolean applyMergingStrategy(List<AcquisitionsUnit> units) {
+    return units.stream().allMatch(unit -> operation.isProtected(unit));
   }
 
 }

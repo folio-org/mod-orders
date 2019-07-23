@@ -34,17 +34,6 @@ public class ProtectionHelperTest extends ApiTestBase {
   private static final String ACQUISITIONS_MEMBERSHIPS = "acquisitionsMemberships";
   private static final String ACQUISITIONS_UNIT_ASSIGNMENTS = "acquisitionsUnitAssignments";
 
-  @Test
-  public void testStaticValidation() {
-    logger.info("=== Test request without user id header - expecting no calls to Units, Memberships, Assignments API ===");
-
-    for(ProtectedOperations operation : ProtectedOperations.values()) {
-      for(ProtectedEntities holder : ProtectedEntities.values()) {
-        operation.process(holder.getEndpoint(), holder.getSampleForRestrictedFlow(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt());
-        validateNumberOfRequests(0, 0, 0);
-      }
-    }
-  }
 
   @Test
   public void testAssignmentCreation() {
@@ -93,7 +82,6 @@ public class ProtectionHelperTest extends ApiTestBase {
   public void testOperationWithAllowedUnits() {
     logger.info("=== Test corresponding order has units allowed operation - expecting of call only to Assignments API and Units API ===");
 
-    // 3. Order have units allowed operation - expecting of call only to Assignments API and Units API.
     for(ProtectedOperations operation : ProtectedOperations.values()) {
       for(ProtectedEntities holder : Arrays.asList(PIECES, ORDER_LINES)) {
         operation.process(holder.getEndpoint(), holder.getSampleForFlowWithAllowedUnits(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt());

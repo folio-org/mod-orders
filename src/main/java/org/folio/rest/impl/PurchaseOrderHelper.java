@@ -99,17 +99,11 @@ public class PurchaseOrderHelper extends AbstractHelper {
    */
   public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO) {
     return protectionHelper.isOperationRestricted(compPO.getAcqUnitIds())
-      .thenCompose(isProtected -> {
-        if(isProtected) {
-          throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NOT_PERMISSIONS);
-        } else {
-          return setPoNumberIfMissing(compPO)
-            .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber()))
-            .thenCompose(v -> createPOandPOLines(compPO))
-            .thenCompose(v -> createUnitAssignments(compPO))
-            .thenApply(this::populateOrderSummary);
-        }
-      });
+      .thenCompose(vVoid -> setPoNumberIfMissing(compPO)
+        .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber()))
+        .thenCompose(v -> createPOandPOLines(compPO))
+        .thenCompose(v -> createUnitAssignments(compPO))
+        .thenApply(this::populateOrderSummary));
   }
 
   /**
