@@ -1,5 +1,13 @@
 ## 8.0.0 - Unreleased
 
+## 7.0.1 - Released
+This release includes bug fix for issue related to order's closing.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v7.0.0...v7.0.1)
+
+### Bug Fixes
+ * [MODORDERS-284](https://issues.folio.org/browse/MODORDERS-284) - `closeReason` is protected, so unable to close Order
+
 ## 7.0.0 - Released
 The primary focus of this release was to implement CRUD API for managing Teams (Units, Assignments, Memberships) and business logic improvements.
 
