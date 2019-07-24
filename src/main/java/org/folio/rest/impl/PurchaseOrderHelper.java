@@ -3,11 +3,13 @@ package org.folio.rest.impl;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.folio.orders.utils.ErrorCodes.USER_HAS_NOT_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
+import static org.folio.orders.utils.POProtectedFields.getFieldNames;
+import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder;
+
 
 import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
@@ -22,12 +24,10 @@ import java.util.stream.Stream;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
-import org.folio.orders.utils.POProtectedFields;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
@@ -99,10 +99,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
    */
   public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO) {
     return protectionHelper.isOperationRestricted(compPO.getAcqUnitIds())
+      .thenCompose(v -> createUnitAssignments(compPO))
       .thenCompose(vVoid -> setPoNumberIfMissing(compPO)
         .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber()))
         .thenCompose(v -> createPOandPOLines(compPO))
-        .thenCompose(v -> createUnitAssignments(compPO))
         .thenApply(this::populateOrderSummary));
   }
 
@@ -144,9 +144,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   public CompletableFuture<JsonObject> validateIfPOProtectedFieldsChanged(CompositePurchaseOrder compPO,
       JsonObject compPOFromStorage) {
-    if (!compPOFromStorage.getString(WORKFLOW_STATUS)
-      .equals(CompositePurchaseOrder.WorkflowStatus.PENDING.value())) {
-      verifyProtectedFieldsChanged(POProtectedFields.getFieldNames(), compPOFromStorage, JsonObject.mapFrom(compPO));
+    WorkflowStatus storagePOWorkflowStatus = WorkflowStatus.fromValue(compPOFromStorage.getString(WORKFLOW_STATUS));
+    if (!PENDING.equals(storagePOWorkflowStatus)) {
+      List<String> fieldNames = OPEN.equals(storagePOWorkflowStatus) ? getFieldNamesForOpenOrder() : getFieldNames();
+      verifyProtectedFieldsChanged(fieldNames, compPOFromStorage, JsonObject.mapFrom(compPO));
     }
     return completedFuture(compPOFromStorage);
   }
@@ -334,7 +335,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private CompletableFuture<CompositePurchaseOrder> createUnitAssignments(CompositePurchaseOrder comPO) {
     CompletableFuture<CompositePurchaseOrder> future = new CompletableFuture<>();
     CompletableFuture.allOf(comPO.getAcqUnitIds().stream().map(id -> acquisitionsUnitAssignmentsHelper
-      .createAcquisitionsUnitAssignment(new AcquisitionsUnitAssignment())).toArray(CompletableFuture[]::new))
+      .createAcquisitionsUnitAssignment(new AcquisitionsUnitAssignment()
+        .withAcquisitionsUnitId(id)
+        .withRecordId(comPO.getId()))).toArray(CompletableFuture[]::new))
       .thenAccept(v -> future.complete(comPO))
       .exceptionally(t -> {
         future.completeExceptionally(t);

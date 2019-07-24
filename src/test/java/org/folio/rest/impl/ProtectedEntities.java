@@ -39,8 +39,8 @@ public enum ProtectedEntities {
     return endpoint;
   }
 
-  // Returns sample for flow: order haven't units
-  public String getSampleForFlowWithoutUnits() {
+  // Returns sample for flow: order has IDs of non-existed units
+  public String getSampleForFlowWithNonExistedUnits() {
     switch (this) {
       case PIECES:
         Piece piece = getMinimalContentPiece();
@@ -60,7 +60,7 @@ public enum ProtectedEntities {
     }
   }
 
-  // Returns sample for flow: order have units allowed operation
+  // Returns sample for flow: order has IDs of existed units that allowed operation
   public String getSampleForFlowWithAllowedUnits() {
     switch (this) {
       case PIECES:
@@ -81,7 +81,7 @@ public enum ProtectedEntities {
     }
   }
 
-  // Returns sample for flow: order have units, units protect operation, user is member of order's units
+  // Returns sample for flow: order has IDs of existed units that protect operation, but user is a member of order's units
   public String getSampleForProtectedUnitsAndAllowedUserFlow() {
     switch (this) {
       case PIECES:
@@ -102,7 +102,7 @@ public enum ProtectedEntities {
     }
   }
 
-  // Returns sample for flow: order have units, units protect operation, user isn't member of order's units
+  // Returns sample for flow: order has IDs of existed units that protect operation, but user isn't member of order's units
   public String getSampleForRestrictedFlow() {
     switch (this) {
       case PIECES:

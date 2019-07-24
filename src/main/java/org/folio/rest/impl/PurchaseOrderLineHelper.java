@@ -8,7 +8,6 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.comple
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.orders.utils.ErrorCodes.USER_HAS_NOT_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
@@ -29,7 +28,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
-import org.folio.HttpStatus;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.rest.exceptions.HttpException;

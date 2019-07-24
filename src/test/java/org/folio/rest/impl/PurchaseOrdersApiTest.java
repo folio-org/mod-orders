@@ -2080,6 +2080,23 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, reqData, allProtectedFieldsModification);
   }
 
+
+  @Test
+  public void testUpdateOrderCloseOrderWithCloseReason() throws IllegalAccessException {
+    logger.info("=== Test case: Able to Close Order with close Reason ===");
+
+    JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS);
+    assertThat(reqData.getString("workflowStatus"), is(CompositePurchaseOrder.WorkflowStatus.OPEN.value()));
+    reqData.put("workflowStatus", "Closed");
+    // close reason must not be checked if the Order is in OPEN status in storage
+    CloseReason closeReason = new CloseReason();
+    closeReason.setNote("can set close reason");
+    closeReason.setReason("Complete");
+    reqData.put("closeReason", JsonObject.mapFrom(closeReason));
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getString("id")), JsonObject.mapFrom(reqData), "", 204);
+  }
+
   @Test
   public void testUpdateOrderWithLineProtectedFieldsChanging() throws IllegalAccessException {
     logger.info("=== Test case when OPEN order errors if protected fields are changed in CompositePoLine===");
@@ -2121,6 +2138,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     Renewal renewal = new Renewal();
     renewal.setManualRenewal(true);
     allProtectedFieldsModification.put(POProtectedFields.RENEWAL.getFieldName(), JsonObject.mapFrom(renewal));
+    CloseReason closeReason = new CloseReason();
+    closeReason.setNote("testing reason on Closed Order");
+    closeReason.setReason("Complete");
+    allProtectedFieldsModification.put(POProtectedFields.CLOSE_REASON.getFieldName(), JsonObject.mapFrom(closeReason));
 
     checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, reqData, allProtectedFieldsModification);
   }

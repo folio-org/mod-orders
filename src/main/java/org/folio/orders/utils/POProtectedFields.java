@@ -31,4 +31,11 @@ public enum POProtectedFields {
       .map(POProtectedFields::getFieldName)
       .collect(Collectors.toList());
   }
+
+  public static List<String> getFieldNamesForOpenOrder() {
+    return Arrays.stream(POProtectedFields.values())
+      .map(POProtectedFields::getFieldName)
+      .filter(field -> !field.equals(CLOSE_REASON.getFieldName()))
+      .collect(Collectors.toList());
+  }
 }

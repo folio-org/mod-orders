@@ -12,6 +12,10 @@ import org.junit.Test;
 import java.util.Arrays;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNIT_ASSIGNMENTS;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.ProtectedEntities.*;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -30,48 +34,48 @@ public class ProtectionHelperTest extends ApiTestBase {
   private static final Header[] FORBIDDEN_CREATION_HEADERS = {X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER};
   private static final Header[] ALLOWED_CREATION_HEADERS = {X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER};
 
-  private static final String ACQUISITIONS_UNITS = "acquisitionsUnits";
-  private static final String ACQUISITIONS_MEMBERSHIPS = "acquisitionsMemberships";
-  private static final String ACQUISITIONS_UNIT_ASSIGNMENTS = "acquisitionsUnitAssignments";
-
 
   @Test
   public void testAssignmentCreation() {
-    logger.info("=== Test request without user id header - expecting no calls to Units, Memberships, Assignments API ===");
+    logger.info("=== Test assignment creation during POST order ===");
 
     ProtectedEntities order = ProtectedEntities.ORDERS;
 
     // Assignment should be created
     ProtectedOperations.CREATE.process(order.getEndpoint(), order.getSampleForFlowWithAllowedUnits(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt());
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNIT_ASSIGNMENTS, HttpMethod.POST), hasSize(2));
+    assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.POST), hasSize(1));
     MockServer.serverRqRs.clear();
 
     ProtectedOperations.CREATE.process(order.getEndpoint(), order.getSampleForProtectedUnitsAndAllowedUserFlow(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALLOWED_CREATION_HEADERS[0]), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt());
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNIT_ASSIGNMENTS, HttpMethod.POST), hasSize(2));
+    assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.POST), hasSize(1));
     MockServer.serverRqRs.clear();
 
     // Assignment shouldn't be created
-    ProtectedOperations.CREATE.process(order.getEndpoint(), order.getSampleForFlowWithoutUnits(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_VALIDATION_ERROR.toInt());
+    ProtectedOperations.CREATE.process(order.getEndpoint(), order.getSampleForFlowWithNonExistedUnits(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_VALIDATION_ERROR.toInt());
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNIT_ASSIGNMENTS, HttpMethod.POST), nullValue());
+    assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.POST), nullValue());
     MockServer.serverRqRs.clear();
 
     ProtectedOperations.CREATE.process(order.getEndpoint(), order.getSampleForRestrictedFlow(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt());
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNIT_ASSIGNMENTS, HttpMethod.POST), nullValue());
+    assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.POST), nullValue());
     MockServer.serverRqRs.clear();
   }
 
   @Test
-  public void testOperationWithoutUnits() {
+  public void testOperationWithNonExistedUnits() {
     logger.info("=== Test corresponding order hasn't units - expecting of call only to Assignments API ===");
 
     for(ProtectedOperations operation : ProtectedOperations.values()) {
       for(ProtectedEntities holder : Arrays.asList(PIECES, ORDER_LINES)) {
-        operation.process(holder.getEndpoint(), holder.getSampleForFlowWithoutUnits(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt());
+        operation.process(holder.getEndpoint(), holder.getSampleForFlowWithNonExistedUnits(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt());
         validateNumberOfRequests(0, 0, 1);
       }
       // Composite PO already contains acquisition unit IDs
       ProtectedEntities order = ProtectedEntities.ORDERS;
-      operation.process(order.getEndpoint(), order.getSampleForFlowWithoutUnits(),
+      operation.process(order.getEndpoint(), order.getSampleForFlowWithNonExistedUnits(),
         prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_VALIDATION_ERROR.toInt());
       // Verify number of sub-requests
       validateNumberOfRequests(1, 0, 0);
