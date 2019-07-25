@@ -7,16 +7,15 @@ import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitAssignment;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
-import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.ErrorCodes.*;
+import static org.folio.orders.utils.ErrorCodes.ORDER_UNITS_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 
 public class ProtectionHelper extends AbstractHelper {
 
@@ -55,7 +54,7 @@ public class ProtectionHelper extends AbstractHelper {
         .thenCompose(units -> {
           if(unitIds.size() == units.size()) {
                 if(applyMergingStrategy(units)) {
-                  return getUnitIdsAssignedToUserAndOrder(okapiHeaders.get(OKAPI_USERID_HEADER), unitIds)
+                  return isUserMemberOfOrdersUnits(getCurrentUserId(), unitIds)
                     .thenAccept(isProtected -> {
                       if(isProtected) {
                         throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_PERMISSIONS);
@@ -89,7 +88,7 @@ public class ProtectionHelper extends AbstractHelper {
    *
    * @return list of unit ids associated with user.
    */
-  private CompletableFuture<Boolean> getUnitIdsAssignedToUserAndOrder(String userId, List<String> unitIdsAssignedToOrder) {
+  private CompletableFuture<Boolean> isUserMemberOfOrdersUnits(String userId, List<String> unitIdsAssignedToOrder) {
     String query = String.format("userId==%s AND %s", userId, convertIdsToCqlQuery(unitIdsAssignedToOrder, "acquisitionsUnitId"));
     return acquisitionsUnitsHelper.getAcquisitionsUnitsMemberships(query, 0, 0)
       .thenApply(unit -> unit.getTotalRecords() == 0);
