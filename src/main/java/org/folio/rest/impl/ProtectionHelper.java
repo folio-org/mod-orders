@@ -46,7 +46,7 @@ public class ProtectionHelper extends AbstractHelper {
    * This method determines status of operation restriction based on unit IDs from {@link CompositePurchaseOrder}.
    * @param unitIds list of unit IDs.
    *
-   * @return true if operation is restricted, otherwise - false.
+   * @throws HttpException if user hasn't permissions or units not found
    */
   public CompletableFuture<Void> isOperationRestricted(List<String> unitIds) {
     if(!unitIds.isEmpty()) {
