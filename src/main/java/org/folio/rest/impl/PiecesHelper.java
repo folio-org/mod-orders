@@ -1,9 +1,6 @@
 package org.folio.rest.impl;
 
-import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
-import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -38,7 +35,8 @@ public class PiecesHelper extends AbstractHelper {
 
   CompletableFuture<Piece> createRecordInStorage(Piece entity) {
     String poLineId = entity.getPoLineId();
-    return purchaseOrderLineHelper.getCompositePoLine(poLineId)
+    return getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(json -> json.mapTo(CompositePoLine.class))
       .thenApply(CompositePoLine::getPurchaseOrderId)
       .thenCompose(recordId -> protectionHelper.isOperationRestricted(recordId))
       .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(entity), resourcesPath(PIECES)).thenApply(entity::withId));
