@@ -40,7 +40,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private final PoNumberHelper poNumberHelper;
   private final PurchaseOrderLineHelper orderLineHelper;
-  private final ProtectionHelper  protectionHelper;
+  private final ProtectionHelper  protectionHelper, readProtectionHelper;
   private final AcquisitionsUnitAssignmentsHelper acquisitionsUnitAssignmentsHelper;
 
   PurchaseOrderHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -49,6 +49,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     poNumberHelper = new PoNumberHelper(httpClient, okapiHeaders, ctx, lang);
     orderLineHelper = new PurchaseOrderLineHelper(httpClient, okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(okapiHeaders, ctx, lang, ProtectedOperationType.CREATE);
+    readProtectionHelper = new ProtectionHelper(okapiHeaders, ctx, lang, ProtectedOperationType.READ);
     acquisitionsUnitAssignmentsHelper = new AcquisitionsUnitAssignmentsHelper(okapiHeaders, ctx, lang);
   }
 
@@ -199,36 +200,40 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @return completable future with {@link CompositePurchaseOrder} on success or an exception if processing fails
    */
   public CompletableFuture<CompositePurchaseOrder> getCompositeOrder(String id) {
-    CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
 
-    getPurchaseOrderById(id, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenAccept(po -> {
-        if (logger.isInfoEnabled()) {
-          logger.info("got: " + po.encodePrettily());
-        }
-        CompositePurchaseOrder compPO = HelperUtils.convertToCompositePurchaseOrder(po);
+    return readProtectionHelper.isOperationRestricted(id)
+      .thenCompose(v -> {
+        CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
 
-        getCompositePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
-          .thenApply(poLines -> {
-            orderLineHelper.sortPoLinesByPoLineNumber(poLines);
-            return poLines;
+        getPurchaseOrderById(id, lang, httpClient, ctx, okapiHeaders, logger)
+          .thenAccept(po -> {
+            if (logger.isInfoEnabled()) {
+              logger.info("got: " + po.encodePrettily());
+            }
+            CompositePurchaseOrder compPO = HelperUtils.convertToCompositePurchaseOrder(po);
+
+            getCompositePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
+              .thenApply(poLines -> {
+                orderLineHelper.sortPoLinesByPoLineNumber(poLines);
+                return poLines;
+              })
+              .thenApply(compPO::withCompositePoLines)
+              .thenApply(this::populateOrderSummary)
+              .thenAccept(future::complete)
+              .exceptionally(t -> {
+                logger.error("Failed to get POLines", t);
+                future.completeExceptionally(t);
+                return null;
+              });
           })
-          .thenApply(compPO::withCompositePoLines)
-          .thenApply(this::populateOrderSummary)
-          .thenAccept(future::complete)
           .exceptionally(t -> {
-            logger.error("Failed to get POLines", t);
+            logger.error("Failed to build composite purchase order", t.getCause());
             future.completeExceptionally(t);
             return null;
           });
-      })
-      .exceptionally(t -> {
-        logger.error("Failed to build composite purchase order", t.getCause());
-        future.completeExceptionally(t);
-        return null;
-      });
 
-    return future;
+        return future;
+      });
   }
 
   private CompositePurchaseOrder populateOrderSummary(CompositePurchaseOrder compPO) {

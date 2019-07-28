@@ -65,7 +65,6 @@ import static org.folio.rest.impl.ApiTestBase.ID;
 import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEMS;
 import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
-import static org.folio.rest.impl.ProtectedEntities.*;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_A;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_B;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_VENDOR_ID;
@@ -85,6 +84,7 @@ import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.VENDOR_WITH_BAD_CONTENT;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ORGANIZATION_NOT_VENDOR;
 import static org.folio.rest.impl.ReceivingHistoryApiTest.RECEIVING_HISTORY_PURCHASE_ORDER_ID;
+import static org.folio.rest.impl.protection.ProtectedEntityTestBase.*;
 import static org.junit.Assert.fail;
 
 public class MockServer {
@@ -139,9 +139,10 @@ public class MockServer {
   private final Vertx vertx;
 
   static {
-    pieceLineOrderComplianceMatrix.put("dd6c7335-a8e5-440d-86ba-657240867de5", PO_LINE_FOR_ORDER_WITH_NON_PROTECTED_UNITS_ID, ORDER_WITH_NON_PROTECTED_UNITS_ID);
-    pieceLineOrderComplianceMatrix.put("63bd5119-e177-490b-8eef-dadbb18f4473", PO_LINE_FOR_ORDER_WITH_PROTECTED_UNITS_ALLOWED_USER_ID, ORDER_WITH_PROTECTED_UNITS_ALLOWED_USER_ID);
-    pieceLineOrderComplianceMatrix.put("67c97a0c-4824-4a3b-9b2c-1b4a4ea80ded", PO_LINE_FOR_ORDER_WITH_PROTECTED_UNITS_AND_FORBIDDEN_USER_ID, ORDER_WITH_PROTECTED_UNITS_AND_FORBIDDEN_USER_ID);
+    pieceLineOrderComplianceMatrix.put(PIECE_WITH_PO_LINE_FOR_ORDER_WITHOUT_UNITS_ID, PO_LINE_FOR_ORDER_WITHOUT_UNITS_ID, ORDER_WITHOUT_UNITS_ID);
+    pieceLineOrderComplianceMatrix.put(PIECE_WITH_PO_LINE_FOR_ORDER_WITH_NON_PROTECTED_UNITS_ID, PO_LINE_FOR_ORDER_WITH_NON_PROTECTED_UNITS_ID, ORDER_WITH_NON_PROTECTED_UNITS_ID);
+    pieceLineOrderComplianceMatrix.put(PIECE_WITH_PO_LINE_FOR_ORDER_WITH_PROTECTED_UNITS_ALLOWED_USER_ID, PO_LINE_FOR_ORDER_WITH_PROTECTED_UNITS_ALLOWED_USER_ID, ORDER_WITH_PROTECTED_UNITS_ALLOWED_USER_ID);
+    pieceLineOrderComplianceMatrix.put(PIECE_WITH_PO_LINE_FOR_ORDER_WITH_PROTECTED_UNITS_AND_FORBIDDEN_USER_ID, PO_LINE_FOR_ORDER_WITH_PROTECTED_UNITS_AND_FORBIDDEN_USER_ID, ORDER_WITH_PROTECTED_UNITS_AND_FORBIDDEN_USER_ID);
   }
 
   MockServer(int port) {
@@ -185,6 +186,10 @@ public class MockServer {
 
   public static List<JsonObject> getPurchaseOrderRetrievals() {
     return serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET);
+  }
+
+  public static List<JsonObject> getPurchaseOrderCreations() {
+    return serverRqRs.get(PURCHASE_ORDER, HttpMethod.POST);
   }
 
   public static List<JsonObject> getPurchaseOrderUpdates() {
@@ -249,6 +254,26 @@ public class MockServer {
 
   static List<JsonObject> getInstanceTypesSearches() {
     return serverRqRs.get(INSTANCE_TYPES, HttpMethod.GET);
+  }
+
+  public static List<JsonObject> getAcqUnitsSearches() {
+    return serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET);
+  }
+
+  public static List<JsonObject> getAcqAssignmentSearches() {
+    return serverRqRs.get(ACQUISITIONS_UNIT_ASSIGNMENTS, HttpMethod.GET);
+  }
+
+  public static List<JsonObject> getAcqMembershipsSearches() {
+    return serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET);
+  }
+
+  public static List<JsonObject> getAcqAssignmentCreations() {
+    return serverRqRs.get(ACQUISITIONS_UNIT_ASSIGNMENTS, HttpMethod.POST);
+  }
+
+  public static void release() {
+    serverRqRs.clear();
   }
 
   static List<String> getQueryParams(String resourceType) {

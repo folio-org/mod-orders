@@ -100,8 +100,8 @@ public class ApiTestBase {
   static final Header NON_EXIST_INSTANCE_STATUS_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_INSTANCE_STATUS_TENANT);
   static final Header NON_EXIST_INSTANCE_TYPE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_INSTANCE_TYPE_TENANT);
   static final Header NON_EXIST_LOAN_TYPE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_LOAN_TYPE_TENANT);
-  static final Header NON_EXIST_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "ordersimpltest");
-  static final Header X_OKAPI_USER_ID = new Header(OKAPI_USERID_HEADER, "440c89e3-7f6c-578a-9ea8-310dad23605e");
+  public static final Header NON_EXIST_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "ordersimpltest");
+  public static final Header X_OKAPI_USER_ID = new Header(OKAPI_USERID_HEADER, "440c89e3-7f6c-578a-9ea8-310dad23605e");
   static final Header X_OKAPI_USER_ID_WITH_ACQ_UNITS = new Header(OKAPI_USERID_HEADER, USER_ID_ASSIGNED_TO_ACQ_UNITS);
   protected static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
   protected static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_10");
@@ -200,7 +200,7 @@ public class ApiTestBase {
     return new JsonObject();
   }
 
-  Response verifyPostResponse(String url, String body, Headers headers, String
+  public Response verifyPostResponse(String url, String body, Headers headers, String
     expectedContentType, int expectedCode) {
     Response response = RestAssured
       .with()
@@ -256,12 +256,12 @@ public class ApiTestBase {
     return response;
   }
 
-  Response verifyGet(String url, String expectedContentType, int expectedCode) {
+  public Response verifyGet(String url, String expectedContentType, int expectedCode) {
     Headers headers = prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT);
     return verifyGet(url, headers, expectedContentType, expectedCode);
   }
 
-  Response verifyGet(String url, Headers headers, String expectedContentType, int expectedCode) {
+  public Response verifyGet(String url, Headers headers, String expectedContentType, int expectedCode) {
     return RestAssured
       .with()
         .headers(headers)
@@ -299,7 +299,7 @@ public class ApiTestBase {
     return response;
   }
 
-  Headers prepareHeaders(Header... headers) {
+  public Headers prepareHeaders(Header... headers) {
     return new Headers(headers);
   }
 
@@ -395,13 +395,13 @@ public class ApiTestBase {
       .toArray();
   }
 
-  static Piece getMinimalContentPiece() {
+  public static Piece getMinimalContentPiece() {
     return new Piece()
       .withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
       .withFormat(Piece.Format.PHYSICAL);
   }
 
-  static CompositePoLine getMinimalContentCompositePoLine() {
+  public static CompositePoLine getMinimalContentCompositePoLine() {
     return new CompositePoLine().withSource(CompositePoLine.Source.EDI)
       .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
       .withAcquisitionMethod(CompositePoLine.AcquisitionMethod.PURCHASE)
@@ -411,7 +411,7 @@ public class ApiTestBase {
       .withTitle("Title");
   }
 
-  static CompositePurchaseOrder getMinimalContentCompositePurchaseOrder() {
+  public static CompositePurchaseOrder getMinimalContentCompositePurchaseOrder() {
     return new CompositePurchaseOrder()
       .withOrderType(CompositePurchaseOrder.OrderType.ONE_TIME)
       .withVendor("7d232b43-bf9a-4301-a0ce-9e076298632e");

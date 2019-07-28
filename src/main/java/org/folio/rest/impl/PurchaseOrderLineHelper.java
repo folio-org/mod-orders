@@ -67,12 +67,13 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private static final String DASH_SEPARATOR = "-";
 
   private final InventoryHelper inventoryHelper;
-  private final ProtectionHelper protectionHelper;
+  private final ProtectionHelper protectionHelper, readProtectionHelper;
 
   PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(okapiHeaders, ctx, lang, ProtectedOperationType.CREATE);
+    readProtectionHelper = new ProtectionHelper(okapiHeaders, ctx, lang, ProtectedOperationType.CREATE);
   }
 
   PurchaseOrderLineHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -286,7 +287,9 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   CompletableFuture<CompositePoLine> getCompositePoLine(String polineId) {
     return getPoLineById(polineId, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenCompose(this::populateCompositeLine);
+      .thenCompose(this::populateCompositeLine)
+      .thenCompose(compPo -> readProtectionHelper.isOperationRestricted(compPo.getPurchaseOrderId())
+        .thenApply(v -> compPo));
   }
 
   CompletableFuture<Void> deleteLine(String lineId) {

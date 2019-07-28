@@ -149,7 +149,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   static final String ORDER_WIT_PO_LINES_FOR_SORTING =  "9a952cd0-842b-4e71-bddd-014eb128dc8e";
 
   // API paths
-  private final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
+  public final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
   private final static String COMPOSITE_ORDERS_BY_ID_PATH = COMPOSITE_ORDERS_PATH + "/%s";
 
   static final String LISTED_PRINT_MONOGRAPH_PATH = "po_listed_print_monograph.json";

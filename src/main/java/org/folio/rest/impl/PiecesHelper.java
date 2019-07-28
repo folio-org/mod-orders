@@ -23,14 +23,12 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 public class PiecesHelper extends AbstractHelper {
 
   private ProtectionHelper protectionHelper;
-  private PurchaseOrderLineHelper purchaseOrderLineHelper;
 
   private static final String DELETE_PIECE_BY_ID = resourceByIdPath(PIECES, "%s") + "?lang=%s";
 
   public PiecesHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(okapiHeaders, ctx, lang, ProtectedOperationType.CREATE);
-    purchaseOrderLineHelper = new PurchaseOrderLineHelper(okapiHeaders, ctx, lang);
   }
 
   CompletableFuture<Piece> createRecordInStorage(Piece entity) {
