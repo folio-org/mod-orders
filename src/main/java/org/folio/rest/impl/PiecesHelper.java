@@ -1,6 +1,11 @@
 package org.folio.rest.impl;
 
-import static org.folio.orders.utils.HelperUtils.*;
+import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
+import static org.folio.orders.utils.HelperUtils.getPoLineById;
+import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
+import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -10,9 +15,10 @@ import java.util.concurrent.CompletableFuture;
 
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.ProtectedOperationType;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.Context;
@@ -23,23 +29,25 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 public class PiecesHelper extends AbstractHelper {
 
   private ProtectionHelper protectionHelper;
-  private PurchaseOrderLineHelper purchaseOrderLineHelper;
 
   private static final String DELETE_PIECE_BY_ID = resourceByIdPath(PIECES, "%s") + "?lang=%s";
 
   public PiecesHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
-    protectionHelper = new ProtectionHelper(okapiHeaders, ctx, lang, ProtectedOperationType.CREATE);
-    purchaseOrderLineHelper = new PurchaseOrderLineHelper(okapiHeaders, ctx, lang);
+    protectionHelper = new ProtectionHelper(okapiHeaders, ctx, lang);
   }
 
-  CompletableFuture<Piece> createRecordInStorage(Piece entity) {
-    String poLineId = entity.getPoLineId();
+  CompletableFuture<Piece> createRecordInStorage(Piece piece) {
+    return getRelatedOrder(piece.getPoLineId())
+      .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE))
+      .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(piece), resourcesPath(PIECES)).thenApply(piece::withId));
+  }
+
+  private CompletableFuture<PurchaseOrder> getRelatedOrder(String poLineId) {
     return getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(json -> json.mapTo(CompositePoLine.class))
-      .thenApply(CompositePoLine::getPurchaseOrderId)
-      .thenCompose(recordId -> protectionHelper.isOperationRestricted(recordId))
-      .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(entity), resourcesPath(PIECES)).thenApply(entity::withId));
+      .thenApply(json -> json.mapTo(PoLine.class))
+      .thenCompose(poLine -> getPurchaseOrderById(poLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger))
+      .thenApply(jsonObject -> jsonObject.mapTo(PurchaseOrder.class));
   }
 
   // Flow to update piece

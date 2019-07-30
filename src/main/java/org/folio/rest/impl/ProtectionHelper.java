@@ -1,45 +1,31 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.Context;
-import org.folio.HttpStatus;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.ProtectedOperationType;
-import org.folio.rest.jaxrs.model.AcquisitionsUnit;
-import org.folio.rest.jaxrs.model.AcquisitionsUnitAssignment;
-import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
+import static org.folio.orders.utils.ErrorCodes.ORDER_UNITS_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
+import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.ErrorCodes.ORDER_UNITS_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
-import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import org.apache.commons.collections4.CollectionUtils;
+import org.folio.HttpStatus;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.jaxrs.model.AcquisitionsUnit;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+
+import io.vertx.core.Context;
 
 public class ProtectionHelper extends AbstractHelper {
 
   private AcquisitionsUnitsHelper acquisitionsUnitsHelper;
-  private AcquisitionsUnitAssignmentsHelper acquisitionsUnitAssignmentsHelper;
-  private ProtectedOperationType operation;
 
 
-  public ProtectionHelper(Map<String, String> okapiHeaders, Context ctx, String lang, ProtectedOperationType operation) {
+  public ProtectionHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
     acquisitionsUnitsHelper = new AcquisitionsUnitsHelper(okapiHeaders, ctx, lang);
-    acquisitionsUnitAssignmentsHelper = new AcquisitionsUnitAssignmentsHelper(okapiHeaders, ctx, lang);
-    this.operation = operation;
-  }
-
-  /**
-   * This method determines status of operation restriction based on ID of {@link CompositePurchaseOrder}.
-   * @param recordId corresponding record ID.
-   *
-   * @return true if operation is restricted, otherwise - false.
-   */
-  public CompletableFuture<Void> isOperationRestricted(String recordId) {
-    return getUnitIdsAssignedToOrder(recordId)
-      .thenCompose(this::isOperationRestricted);
   }
 
   /**
@@ -48,19 +34,14 @@ public class ProtectionHelper extends AbstractHelper {
    *
    * @throws HttpException if user hasn't permissions or units not found
    */
-  public CompletableFuture<Void> isOperationRestricted(List<String> unitIds) {
-    if(!unitIds.isEmpty()) {
+  public CompletableFuture<Void> isOperationRestricted(List<String> unitIds, ProtectedOperationType operation) {
+    if (CollectionUtils.isNotEmpty(unitIds)) {
       return getUnitsByIds(unitIds)
         .thenCompose(units -> {
-          if(unitIds.size() == units.size()) {
-                if(applyMergingStrategy(units)) {
-                  return isUserMemberOfOrdersUnits(getCurrentUserId(), unitIds)
-                    .thenAccept(isProtected -> {
-                      if(isProtected) {
-                        throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_PERMISSIONS);
-                      }
-                    });
-                }
+          if (unitIds.size() == units.size()) {
+            if (applyMergingStrategy(units, operation)) {
+              return verifyUserIsMemberOfOrdersUnits(unitIds);
+            }
             return CompletableFuture.completedFuture(null);
           } else {
             throw new HttpException(HttpStatus.HTTP_VALIDATION_ERROR.toInt(), ORDER_UNITS_NOT_FOUND);
@@ -72,26 +53,18 @@ public class ProtectionHelper extends AbstractHelper {
   }
 
   /**
-   * This method checks existence of units associated with order.
-   * @param recordId id of order.
-   *
-   * @return true if units exist, otherwise - false.
-   */
-  private CompletableFuture<List<String>> getUnitIdsAssignedToOrder(String recordId) {
-    return acquisitionsUnitAssignmentsHelper.getAcquisitionsUnitAssignments(String.format("recordId==%s", recordId), 0, Integer.MAX_VALUE)
-      .thenApply(assignment -> assignment.getAcquisitionsUnitAssignments().stream().map(AcquisitionsUnitAssignment::getAcquisitionsUnitId).collect(toList()));
-  }
-
-  /**
-   * This method returns list of units ids associated with User.
-   * @param userId id of User.
+   * Check whether the user is a member of at least one group from which the related order belongs.
    *
    * @return list of unit ids associated with user.
    */
-  private CompletableFuture<Boolean> isUserMemberOfOrdersUnits(String userId, List<String> unitIdsAssignedToOrder) {
-    String query = String.format("userId==%s AND %s", userId, convertIdsToCqlQuery(unitIdsAssignedToOrder, "acquisitionsUnitId"));
+  private CompletableFuture<Void> verifyUserIsMemberOfOrdersUnits(List<String> unitIdsAssignedToOrder) {
+    String query = String.format("userId==%s AND %s", getCurrentUserId(), convertIdsToCqlQuery(unitIdsAssignedToOrder, "acquisitionsUnitId"));
     return acquisitionsUnitsHelper.getAcquisitionsUnitsMemberships(query, 0, 0)
-      .thenApply(unit -> unit.getTotalRecords() == 0);
+      .thenAccept(unit -> {
+        if (unit.getTotalRecords() == 0) {
+          throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_PERMISSIONS);
+        }
+      });
   }
 
   /**
@@ -112,8 +85,8 @@ public class ProtectionHelper extends AbstractHelper {
    * @param units list of {@link AcquisitionsUnit}.
    * @return true if operation is protected, otherwise - false.
    */
-  private Boolean applyMergingStrategy(List<AcquisitionsUnit> units) {
-    return units.stream().allMatch(unit -> operation.isProtected(unit));
+  private Boolean applyMergingStrategy(List<AcquisitionsUnit> units, ProtectedOperationType operation) {
+    return units.stream().allMatch(operation::isProtected);
   }
 
 }

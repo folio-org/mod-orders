@@ -1,41 +1,5 @@
 package org.folio.rest.impl;
 
-import io.restassured.RestAssured;
-import io.restassured.http.Header;
-import io.restassured.http.Headers;
-import io.restassured.response.Response;
-import io.vertx.core.Handler;
-import io.vertx.core.eventbus.Message;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.HttpStatus;
-import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.*;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.tools.parser.JsonPathParser;
-import org.hamcrest.Matchers;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Stream;
-
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -51,9 +15,66 @@ import static org.folio.rest.impl.ApiTestSuite.mockPort;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.emptyIterable;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.isEmptyOrNullString;
+import static org.hamcrest.Matchers.iterableWithSize;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.HttpStatus;
+import org.folio.orders.events.handlers.MessageAddress;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.tools.parser.JsonPathParser;
+import org.hamcrest.Matchers;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+
+import io.restassured.RestAssured;
+import io.restassured.http.Header;
+import io.restassured.http.Headers;
+import io.restassured.response.Response;
+import io.vertx.core.Handler;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class ApiTestBase {
 
@@ -100,8 +121,8 @@ public class ApiTestBase {
   static final Header NON_EXIST_INSTANCE_STATUS_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_INSTANCE_STATUS_TENANT);
   static final Header NON_EXIST_INSTANCE_TYPE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_INSTANCE_TYPE_TENANT);
   static final Header NON_EXIST_LOAN_TYPE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_LOAN_TYPE_TENANT);
-  static final Header NON_EXIST_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "ordersimpltest");
-  static final Header X_OKAPI_USER_ID = new Header(OKAPI_USERID_HEADER, "440c89e3-7f6c-578a-9ea8-310dad23605e");
+  public static final Header NON_EXIST_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "ordersimpltest");
+  public static final Header X_OKAPI_USER_ID = new Header(OKAPI_USERID_HEADER, "440c89e3-7f6c-578a-9ea8-310dad23605e");
   static final Header X_OKAPI_USER_ID_WITH_ACQ_UNITS = new Header(OKAPI_USERID_HEADER, USER_ID_ASSIGNED_TO_ACQ_UNITS);
   protected static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
   protected static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_10");
@@ -200,7 +221,7 @@ public class ApiTestBase {
     return new JsonObject();
   }
 
-  Response verifyPostResponse(String url, String body, Headers headers, String
+  public Response verifyPostResponse(String url, String body, Headers headers, String
     expectedContentType, int expectedCode) {
     Response response = RestAssured
       .with()
@@ -256,12 +277,12 @@ public class ApiTestBase {
     return response;
   }
 
-  Response verifyGet(String url, String expectedContentType, int expectedCode) {
+  public Response verifyGet(String url, String expectedContentType, int expectedCode) {
     Headers headers = prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT);
     return verifyGet(url, headers, expectedContentType, expectedCode);
   }
 
-  Response verifyGet(String url, Headers headers, String expectedContentType, int expectedCode) {
+  public Response verifyGet(String url, Headers headers, String expectedContentType, int expectedCode) {
     return RestAssured
       .with()
         .headers(headers)
@@ -299,7 +320,7 @@ public class ApiTestBase {
     return response;
   }
 
-  Headers prepareHeaders(Header... headers) {
+  public Headers prepareHeaders(Header... headers) {
     return new Headers(headers);
   }
 
@@ -395,25 +416,34 @@ public class ApiTestBase {
       .toArray();
   }
 
-  static Piece getMinimalContentPiece() {
+  public static Piece getMinimalContentPiece(String poLineId) {
     return new Piece()
+      .withId(UUID.randomUUID().toString())
       .withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
-      .withFormat(Piece.Format.PHYSICAL);
+      .withFormat(Piece.Format.PHYSICAL)
+      .withPoLineId(poLineId);
   }
 
-  static CompositePoLine getMinimalContentCompositePoLine() {
-    return new CompositePoLine().withSource(CompositePoLine.Source.EDI)
-      .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
-      .withAcquisitionMethod(CompositePoLine.AcquisitionMethod.PURCHASE)
+  public static PoLine getMinimalContentCompositePoLine(String orderId) {
+    return new PoLine().withSource(PoLine.Source.EDI)
+      .withId(UUID.randomUUID().toString())
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withAcquisitionMethod(PoLine.AcquisitionMethod.PURCHASE)
       .withPhysical(new Physical().withMaterialType("2d1398ae-e1aa-4c7c-b9c9-15adf8cf6425"))
       .withCost(new Cost().withCurrency("EUR").withQuantityPhysical(1).withListUnitPrice(10.0))
-      .withLocations(Arrays.asList(new Location().withLocationId("2a00b0be-1447-42a1-a112-124450991899").withQuantityPhysical(1)))
-      .withTitle("Title");
+      .withLocations(Collections.singletonList(new Location().withLocationId("2a00b0be-1447-42a1-a112-124450991899").withQuantityPhysical(1)))
+      .withTitle("Title")
+      .withPurchaseOrderId(orderId);
   }
 
-  static CompositePurchaseOrder getMinimalContentCompositePurchaseOrder() {
-    return new CompositePurchaseOrder()
-      .withOrderType(CompositePurchaseOrder.OrderType.ONE_TIME)
+  public static PurchaseOrder getMinimalContentPurchaseOrder() {
+    return new PurchaseOrder()
+      .withId(UUID.randomUUID().toString())
+      .withOrderType(PurchaseOrder.OrderType.ONE_TIME)
       .withVendor("7d232b43-bf9a-4301-a0ce-9e076298632e");
+  }
+
+  public String encodePrettily(Object entity) {
+    return JsonObject.mapFrom(entity).encodePrettily();
   }
 }

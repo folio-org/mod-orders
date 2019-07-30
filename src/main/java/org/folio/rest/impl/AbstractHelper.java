@@ -208,7 +208,9 @@ public abstract class AbstractHelper {
       error = GENERIC_ERROR_CODE.toError().withAdditionalProperty(ERROR_CAUSE, cause.getMessage());
     }
 
-    addProcessingError(error);
+    if (getErrors().isEmpty()) {
+      addProcessingError(error);
+    }
 
     return code;
   }

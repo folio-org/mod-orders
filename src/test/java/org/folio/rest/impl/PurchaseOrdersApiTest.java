@@ -11,6 +11,7 @@ import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
+import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
@@ -67,6 +68,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIPT_STATUS;
 import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.impl.AbstractHelper.MAX_IDS_FOR_GET_RQ;
 import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_ID;
@@ -149,7 +151,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   static final String ORDER_WIT_PO_LINES_FOR_SORTING =  "9a952cd0-842b-4e71-bddd-014eb128dc8e";
 
   // API paths
-  private final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
+  public final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
   private final static String COMPOSITE_ORDERS_BY_ID_PATH = COMPOSITE_ORDERS_PATH + "/%s";
 
   static final String LISTED_PRINT_MONOGRAPH_PATH = "po_listed_print_monograph.json";
@@ -163,6 +165,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
   private static final String NULL = "null";
   static final String PURCHASE_ORDER_ID = "purchaseOrderId";
+
+  public static final Header ALL_DESIRED_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(AcqDesiredPermissions.getValues()).encode());
 
 
   @Test
@@ -696,7 +700,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     request.put("poNumber", PoNumberApiTest.EXISTING_PO_NUMBER);
     request.put("orderType", "Ongoing");
     request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
-    request.put(ACQ_UNIT_IDS, Arrays.asList("0e9525aa-d123-4e4d-9f7e-1b302a97eb90"));
     String body= request.toString();
 
      verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
@@ -711,7 +714,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     JsonObject request = new JsonObject();
     request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
     request.put("orderType", "Ongoing");
-    request.put(ACQ_UNIT_IDS, Arrays.asList("0e9525aa-d123-4e4d-9f7e-1b302a97eb90"));
     String body= request.toString();
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
@@ -2056,7 +2058,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdateOrderWithProtectedFieldsChanging() throws IllegalAccessException {
+  public void testUpdateOrderWithProtectedFieldsChanging() {
     logger.info("=== Test case when OPEN order errors if protected fields are changed ===");
 
     JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS);
@@ -2082,7 +2084,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
 
   @Test
-  public void testUpdateOrderCloseOrderWithCloseReason() throws IllegalAccessException {
+  public void testUpdateOrderCloseOrderWithCloseReason() {
     logger.info("=== Test case: Able to Close Order with close Reason ===");
 
     JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS);
@@ -2098,7 +2100,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdateOrderWithLineProtectedFieldsChanging() throws IllegalAccessException {
+  public void testUpdateOrderWithLineProtectedFieldsChanging() {
     logger.info("=== Test case when OPEN order errors if protected fields are changed in CompositePoLine===");
 
     JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS);
@@ -2118,7 +2120,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdateOrderWithProtectedFieldsChangingForClosedOrder() throws IllegalAccessException {
+  public void testUpdateOrderWithProtectedFieldsChangingForClosedOrder() {
     logger.info("=== Test case when closed order errors if protected fields are changed ===");
 
     JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_CLOSED_STATUS);
@@ -2331,12 +2333,12 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   private void removeAllEncumbranceLinks(CompositePurchaseOrder reqData) {
-    reqData.getCompositePoLines().forEach(poLine -> {
+    reqData.getCompositePoLines().forEach(poLine ->
       poLine.getFundDistribution().forEach(fundDistribution -> {
         fundDistribution.setEncumbrance(null);
         fundDistribution.setFundId(UUID.randomUUID().toString());
-      });
-    });
+      })
+    );
   }
 
   private Error verifyMissingInventoryEntryErrorHandling(Header header) throws Exception {
@@ -2379,8 +2381,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     CompositePurchaseOrder comPo = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     comPo.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     comPo.setVendor(vendorId);
-    List<String> acqUnitIds = Arrays.asList("0e9525aa-d123-4e4d-9f7e-1b302a97eb90");
-    comPo.setAcqUnitIds(acqUnitIds);
     for(int i = 0; i < accessProviderIds.length; i++) {
       comPo.getCompositePoLines().get(i).getEresource().setAccessProvider(accessProviderIds[i]);
     }

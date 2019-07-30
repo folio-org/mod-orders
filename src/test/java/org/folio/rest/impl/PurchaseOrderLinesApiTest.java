@@ -55,7 +55,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
   private static final String PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED = "0009662b-8b80-4001-b704-ca10971f175d";
   static final String ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE = "c0d08448-347b-418a-8c2f-5fb50248d67e";
-  private final static String LINES_PATH = "/orders/order-lines";
+  public final static String LINES_PATH = "/orders/order-lines";
   private static final String LINE_BY_ID_PATH = "/orders/order-lines/%s";
   static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "minimalContent.json";

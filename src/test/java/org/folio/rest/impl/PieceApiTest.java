@@ -19,7 +19,7 @@ public class PieceApiTest extends ApiTestBase {
 
   private static final Logger logger = LoggerFactory.getLogger(PieceApiTest.class);
 
-  private static final String PIECES_ENDPOINT = "/orders/pieces";
+  public static final String PIECES_ENDPOINT = "/orders/pieces";
   private static final String PIECES_ID_PATH = PIECES_ENDPOINT + "/%s";
   static final String VALID_UUID = "c3e26c0e-d6a6-46fb-9309-d494cd0c82de";
   static final String CONSISTENT_RECEIVED_STATUS_PIECE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";

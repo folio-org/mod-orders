@@ -1,7 +1,7 @@
 package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
-import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
+import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.HelperUtils.validatePoLine;
 
 import java.util.ArrayList;
@@ -12,11 +12,17 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
-import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.annotations.Validate;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PoNumber;
+import org.folio.rest.jaxrs.model.ReceivingCollection;
 import org.folio.rest.jaxrs.resource.Orders;
 
 import io.vertx.core.AsyncResult;
@@ -32,7 +38,6 @@ public class OrdersImpl implements Orders {
 
   private static final String ORDERS_LOCATION_PREFIX = "/orders/composite-orders/%s";
   private static final String ORDER_LINE_LOCATION_PREFIX = "/orders/order-lines/%s";
-  private static final String ACQUISITIONS_UNIT_ASSIGNMENTS_LOCATION_PREFIX = "/orders/acquisitions-unit-assignments/%s";
 
 
   @Override
@@ -80,34 +85,20 @@ public class OrdersImpl implements Orders {
     // First validate content of the PO and proceed only if all is okay
     helper
       .validateOrder(compPO)
-      .thenAccept(isValid -> {
+      .thenCompose(isValid -> {
         if (isValid) {
           logger.info("Creating PO and POLines...");
-          helper.createPurchaseOrder(compPO)
+          return helper.createPurchaseOrder(compPO)
             .thenAccept(withIds -> {
-              logger.info("Applying Funds...");
-              helper.applyFunds(withIds)
-                .thenAccept(withFunds -> {
-                  logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withFunds).encodePrettily());
+                  logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withIds).encodePrettily());
                   helper.closeHttpClient();
-                  Response response = PostOrdersCompositeOrdersResponse.respond201WithApplicationJson(withFunds,
+                  Response response = PostOrdersCompositeOrdersResponse.respond201WithApplicationJson(withIds,
                       PostOrdersCompositeOrdersResponse.headersFor201()
-                        .withLocation(String.format(ORDERS_LOCATION_PREFIX, withFunds.getId())));
+                        .withLocation(String.format(ORDERS_LOCATION_PREFIX, withIds.getId())));
                   asyncResultHandler.handle(succeededFuture(response));
-                })
-                .exceptionally(t -> {
-                  logger.error("Failure happened applying funds to created order");
-                  asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(t)));
-                  return null;
-                });
-            })
-            .exceptionally(t -> {
-              logger.error("Failure to create order");
-              asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(t)));
-              return null;
             });
         } else {
-          asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422)));
+          throw new HttpException(422, GENERIC_ERROR_CODE);
         }
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
@@ -390,83 +381,4 @@ public class OrdersImpl implements Orders {
       .exceptionally(fail -> handleErrorResponse(asyncResultHandler, deletePieceHelper, fail));
   }
 
-  @Override
-  @Validate
-  public void postOrdersAcquisitionsUnitAssignments(String lang, AcquisitionsUnitAssignment entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    AcquisitionsUnitAssignmentsHelper helper = new AcquisitionsUnitAssignmentsHelper(okapiHeaders, vertxContext, lang);
-
-    helper.createAcquisitionsUnitAssignment(entity)
-      .thenAccept(unit -> {
-        if (logger.isInfoEnabled()) {
-          logger.info("Successfully created new acquisitions unit: " + JsonObject.mapFrom(unit).encodePrettily());
-        }
-
-        asyncResultHandler.handle(succeededFuture(helper.buildResponseWithLocation(String.format(ACQUISITIONS_UNIT_ASSIGNMENTS_LOCATION_PREFIX, unit.getId()), unit)));
-      })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
-  }
-
-  @Override
-  @Validate
-  public void getOrdersAcquisitionsUnitAssignments(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    AcquisitionsUnitAssignmentsHelper helper = new AcquisitionsUnitAssignmentsHelper(okapiHeaders, vertxContext, lang);
-
-    helper
-      .getAcquisitionsUnitAssignments(query, offset, limit)
-      .thenAccept(orders -> {
-        if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved acquisitions unit assignment : " + JsonObject.mapFrom(orders).encodePrettily());
-        }
-        asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(orders)));
-      })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
-  }
-
-  @Override
-  @Validate
-  public void putOrdersAcquisitionsUnitAssignmentsById(String id, String lang, AcquisitionsUnitAssignment entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    AcquisitionsUnitAssignmentsHelper helper = new AcquisitionsUnitAssignmentsHelper(okapiHeaders, vertxContext, lang);
-
-    if (entity.getId() != null && !entity.getId().equals(id)) {
-      helper.addProcessingError(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
-      asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422)));
-    } else {
-      helper.updateAcquisitionsUnitAssignment(entity.withId(id))
-        .thenAccept(units -> {
-          logger.info("Successfully updated acquisitions unit assignment with id={}", id);
-          asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
-        })
-        .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
-    }
-  }
-
-  @Override
-  @Validate
-  public void getOrdersAcquisitionsUnitAssignmentsById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    AcquisitionsUnitAssignmentsHelper helper = new AcquisitionsUnitAssignmentsHelper(okapiHeaders, vertxContext, lang);
-
-    helper.getAcquisitionsUnitAssignment(id)
-      .thenAccept(unit -> {
-        if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved acquisitions unit assignment: " + JsonObject.mapFrom(unit).encodePrettily());
-        }
-        asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(unit)));
-      })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
-  }
-
-  @Override
-  @Validate
-  public void deleteOrdersAcquisitionsUnitAssignmentsById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    AcquisitionsUnitAssignmentsHelper helper = new AcquisitionsUnitAssignmentsHelper(okapiHeaders, vertxContext, lang);
-
-    helper.deleteAcquisitionsUnitAssignment(id)
-      .thenAccept(ok -> {
-        if (logger.isInfoEnabled()) {
-          logger.info("Successfully deleted acquisitions unit assignment with id={}", id);
-        }
-        asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
-      })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
-  }
 }

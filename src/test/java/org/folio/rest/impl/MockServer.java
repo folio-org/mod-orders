@@ -1,7 +1,108 @@
 package org.folio.rest.impl;
 
+import static java.util.stream.Collectors.toList;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
+import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
+import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
+import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
+import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.FINANCE_STORAGE_ENCUMBRANCES;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
+import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
+import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
+import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.impl.ApiTestBase.BAD_QUERY;
+import static org.folio.rest.impl.ApiTestBase.COMP_ORDER_MOCK_DATA_PATH;
+import static org.folio.rest.impl.ApiTestBase.ID;
+import static org.folio.rest.impl.ApiTestBase.ID_DOES_NOT_EXIST;
+import static org.folio.rest.impl.ApiTestBase.ID_FOR_INTERNAL_SERVER_ERROR;
+import static org.folio.rest.impl.ApiTestBase.INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT;
+import static org.folio.rest.impl.ApiTestBase.NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT;
+import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_STATUS_TENANT;
+import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_TYPE_TENANT;
+import static org.folio.rest.impl.ApiTestBase.NON_EXIST_LOAN_TYPE_TENANT;
+import static org.folio.rest.impl.ApiTestBase.PO_ID_GET_LINES_INTERNAL_SERVER_ERROR;
+import static org.folio.rest.impl.ApiTestBase.PO_LINE_NUMBER_VALUE;
+import static org.folio.rest.impl.ApiTestBase.X_ECHO_STATUS;
+import static org.folio.rest.impl.ApiTestBase.getMockAsJson;
+import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
+import static org.folio.rest.impl.InventoryHelper.ITEMS;
+import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
+import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
+import static org.folio.rest.impl.PoNumberApiTest.NONEXISTING_PO_NUMBER;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_A;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_B;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_VENDOR_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.EMPTY_CONFIG_TENANT;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ID_FOR_PRINT_MONOGRAPH_ORDER;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_ACCESS_PROVIDER_A;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_ACCESS_PROVIDER_B;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_VENDOR_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.LISTED_PRINT_MONOGRAPH_PATH;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.MOD_VENDOR_INTERNAL_ERROR_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_ACCESS_PROVIDER_A;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_VENDOR_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ORGANIZATION_NOT_VENDOR;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.VENDOR_WITH_BAD_CONTENT;
+import static org.folio.rest.impl.ReceivingHistoryApiTest.RECEIVING_HISTORY_PURCHASE_ORDER_ID;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.nio.file.NoSuchFileException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import javax.ws.rs.core.Response;
+
+import org.apache.commons.lang3.StringUtils;
+import org.folio.HttpStatus;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.acq.model.Piece;
+import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.acq.model.SequenceNumber;
+import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.acq.model.finance.EncumbranceCollection;
+import org.folio.rest.jaxrs.model.AcquisitionsUnit;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLineCollection;
+
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
+
 import io.restassured.http.Header;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
@@ -15,77 +116,6 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import one.util.streamex.StreamEx;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.MapUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.HttpStatus;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.rest.acq.model.Piece;
-import org.folio.rest.acq.model.PieceCollection;
-import org.folio.rest.acq.model.SequenceNumber;
-import org.folio.rest.acq.model.finance.Encumbrance;
-import org.folio.rest.acq.model.finance.EncumbranceCollection;
-import org.folio.rest.jaxrs.model.*;
-
-import javax.ws.rs.core.Response;
-import java.io.IOException;
-import java.nio.file.NoSuchFileException;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.folio.orders.utils.HelperUtils.*;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNIT_ASSIGNMENTS;
-import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.FINANCE_STORAGE_ENCUMBRANCES;
-import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
-import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
-import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
-import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.rest.impl.ApiTestBase.*;
-import static org.folio.rest.impl.ApiTestBase.ID;
-import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
-import static org.folio.rest.impl.InventoryHelper.ITEMS;
-import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
-import static org.folio.rest.impl.ProtectedEntities.*;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_A;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_B;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_VENDOR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.EMPTY_CONFIG_TENANT;
-import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ID_FOR_PRINT_MONOGRAPH_ORDER;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_ACCESS_PROVIDER_A;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_ACCESS_PROVIDER_B;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_VENDOR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.LISTED_PRINT_MONOGRAPH_PATH;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.MOD_VENDOR_INTERNAL_ERROR_ID;
-import static org.folio.rest.impl.PoNumberApiTest.NONEXISTING_PO_NUMBER;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_ACCESS_PROVIDER_A;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_VENDOR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.VENDOR_WITH_BAD_CONTENT;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ORGANIZATION_NOT_VENDOR;
-import static org.folio.rest.impl.ReceivingHistoryApiTest.RECEIVING_HISTORY_PURCHASE_ORDER_ID;
-import static org.junit.Assert.fail;
 
 public class MockServer {
 
@@ -104,12 +134,10 @@ public class MockServer {
   public static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
   private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
   private static final String ACQUISITIONS_UNITS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "acquisitionsUnits/units";
-  private static final String ACQUISITIONS_UNIT_ASSIGNMENTS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "acquisitionsUnitAssignments/assignments";
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
   private static final String ORGANIZATIONS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "organizations/";
   static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "/po_line_collection.json";
   static final String ACQUISITIONS_UNITS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/units.json";
-  static final String ACQUISITIONS_UNIT_ASSIGNMENTS_COLLECTION = ACQUISITIONS_UNIT_ASSIGNMENTS_MOCK_DATA_PATH + "/assignments.json";
   static final String ACQUISITIONS_MEMBERSHIPS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/memberships.json";
 
   static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
@@ -133,16 +161,9 @@ public class MockServer {
 
   static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
-  private static Table<String, String, String> pieceLineOrderComplianceMatrix = HashBasedTable.create();
 
   private final int port;
   private final Vertx vertx;
-
-  static {
-    pieceLineOrderComplianceMatrix.put("dd6c7335-a8e5-440d-86ba-657240867de5", PO_LINE_FOR_ORDER_WITH_NON_PROTECTED_UNITS_ID, ORDER_WITH_NON_PROTECTED_UNITS_ID);
-    pieceLineOrderComplianceMatrix.put("63bd5119-e177-490b-8eef-dadbb18f4473", PO_LINE_FOR_ORDER_WITH_PROTECTED_UNITS_ALLOWED_USER_ID, ORDER_WITH_PROTECTED_UNITS_ALLOWED_USER_ID);
-    pieceLineOrderComplianceMatrix.put("67c97a0c-4824-4a3b-9b2c-1b4a4ea80ded", PO_LINE_FOR_ORDER_WITH_PROTECTED_UNITS_AND_FORBIDDEN_USER_ID, ORDER_WITH_PROTECTED_UNITS_AND_FORBIDDEN_USER_ID);
-  }
 
   MockServer(int port) {
     this.port = port;
@@ -185,6 +206,10 @@ public class MockServer {
 
   public static List<JsonObject> getPurchaseOrderRetrievals() {
     return serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET);
+  }
+
+  public static List<JsonObject> getPurchaseOrderCreations() {
+    return serverRqRs.get(PURCHASE_ORDER, HttpMethod.POST);
   }
 
   public static List<JsonObject> getPurchaseOrderUpdates() {
@@ -251,8 +276,45 @@ public class MockServer {
     return serverRqRs.get(INSTANCE_TYPES, HttpMethod.GET);
   }
 
+  public static List<JsonObject> getAcqUnitsSearches() {
+    return serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET);
+  }
+
+  public static List<JsonObject> getAcqMembershipsSearches() {
+    return serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET);
+  }
+
+  public static void release() {
+    serverRqRs.clear();
+  }
+
   static List<String> getQueryParams(String resourceType) {
     return serverRqQueries.getOrDefault(resourceType, Collections.emptyList());
+  }
+
+  public static void addMockEntry(String objName, JsonObject data) {
+    addServerRqRsData(HttpMethod.OTHER, objName, data);
+  }
+
+  private Optional<JsonObject> getMockEntry(String objName, String id) {
+    return getRqRsEntries(HttpMethod.OTHER, objName).stream()
+      .filter(obj -> id.equals(obj.getString(AbstractHelper.ID)))
+      .findAny();
+  }
+
+  private <T> Optional<List<T>> getMockEntries(String objName, Class<T> tClass) {
+    List<T> entryList =  getRqRsEntries(HttpMethod.OTHER, objName).stream()
+      .map(entries -> entries.mapTo(tClass))
+      .collect(toList());
+    return Optional.ofNullable(entryList.isEmpty()? null: entryList);
+  }
+
+  public static List<JsonObject> getRqRsEntries(HttpMethod method, String objName) {
+    List<JsonObject> entries = serverRqRs.get(objName, method);
+    if (entries == null) {
+      entries = new ArrayList<>();
+    }
+    return entries;
   }
 
   static List<Encumbrance> getCreatedEncumbrances() {
@@ -261,14 +323,6 @@ public class MockServer {
         : jsonObjects.stream()
           .map(json -> json.mapTo(Encumbrance.class))
           .collect(Collectors.toList());
-  }
-
-  private static String getPoIdByPoLineId(String poLineId) {
-    return new ArrayList<>(pieceLineOrderComplianceMatrix.column(poLineId).values()).get(0);
-  }
-
-  private static String getPoLineIdByPieceId(String pieceId) {
-    return new ArrayList<>(pieceLineOrderComplianceMatrix.row(pieceId).values()).get(0);
   }
 
   private Router defineRoutes() {
@@ -286,7 +340,6 @@ public class MockServer {
     router.route(HttpMethod.POST, resourcesPath(FINANCE_STORAGE_ENCUMBRANCES))
       .handler(ctx -> handlePostGeneric(ctx, FINANCE_STORAGE_ENCUMBRANCES));
     router.route(HttpMethod.POST, resourcesPath(ACQUISITIONS_UNITS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_UNITS));
-    router.route(HttpMethod.POST, resourcesPath(ACQUISITIONS_UNIT_ASSIGNMENTS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_UNIT_ASSIGNMENTS));
     router.route(HttpMethod.POST, resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
 
     router.route(HttpMethod.GET, resourcePath(PURCHASE_ORDER)).handler(this::handleGetPurchaseOrderById);
@@ -316,8 +369,6 @@ public class MockServer {
     router.route(HttpMethod.GET, resourcesPath(FINANCE_STORAGE_ENCUMBRANCES)).handler(this::handleGetEncumbrances);
     router.route(HttpMethod.GET, resourcesPath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnits);
     router.route(HttpMethod.GET, resourcePath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnit);
-    router.route(HttpMethod.GET, resourcesPath(ACQUISITIONS_UNIT_ASSIGNMENTS)).handler(this::handleGetAcquisitionsUnitAssignments);
-    router.route(HttpMethod.GET, resourcePath(ACQUISITIONS_UNIT_ASSIGNMENTS)).handler(this::handleGetAcquisitionsUnitAssignment);
     router.route(HttpMethod.GET, resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(this::handleGetAcquisitionsMemberships);
     router.route(HttpMethod.GET, resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(this::handleGetAcquisitionsMembership);
 
@@ -329,7 +380,6 @@ public class MockServer {
     router.route(HttpMethod.PUT, "/inventory/items/:id").handler(ctx -> handlePutGenericSubObj(ctx, ITEM_RECORDS));
     router.route(HttpMethod.PUT, "/holdings-storage/holdings/:id").handler(ctx -> handlePutGenericSubObj(ctx, ITEM_RECORDS));
     router.route(HttpMethod.PUT, resourcePath(ACQUISITIONS_UNITS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITIONS_UNITS));
-    router.route(HttpMethod.PUT, resourcePath(ACQUISITIONS_UNIT_ASSIGNMENTS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITIONS_UNIT_ASSIGNMENTS));
     router.route(HttpMethod.PUT, resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
 
     router.route(HttpMethod.DELETE, resourcePath(PURCHASE_ORDER)).handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER));
@@ -338,7 +388,6 @@ public class MockServer {
     router.route(HttpMethod.DELETE, resourcePath(REPORTING_CODES)).handler(ctx -> handleDeleteGenericSubObj(ctx, REPORTING_CODES));
     router.route(HttpMethod.DELETE, resourcePath(PIECES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PIECES));
     router.route(HttpMethod.DELETE, resourcePath(ACQUISITIONS_UNITS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_UNITS));
-    router.route(HttpMethod.DELETE, resourcePath(ACQUISITIONS_UNIT_ASSIGNMENTS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_UNIT_ASSIGNMENTS));
     router.route(HttpMethod.DELETE, resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
 
     router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
@@ -910,47 +959,28 @@ public class MockServer {
     String id = ctx.request().getParam(ID);
     logger.info("id: " + id);
 
-    if(pieceLineOrderComplianceMatrix.containsColumn(id)) {
-      serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(getMinimalContentCompositePoLine().withPurchaseOrderId(getPoIdByPoLineId(id))).encodePrettily());
+    addServerRqRsData(HttpMethod.GET, PO_LINES, new JsonObject().put(ID, id));
+
+    if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
     } else {
-      addServerRqRsData(HttpMethod.GET, PO_LINES, new JsonObject().put(ID, id));
+      try {
 
-      if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
-        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
-      } else {
-        try {
+        // Attempt to find POLine in mock server memory
+        JsonObject pol = getMockEntry(PO_LINES, id).orElse(null);
 
-          JsonObject pol = null;
-
-          // Attempt to find POLine in mock server memory
-          Map<String, List<JsonObject>> column = serverRqRs.column(HttpMethod.POST);
-          if (MapUtils.isNotEmpty(column) && CollectionUtils.isNotEmpty(column.get(PO_LINES))) {
-            List<JsonObject> objects = new ArrayList<>(column.get(PO_LINES));
-            Comparator<JsonObject> comparator = Comparator.comparing(o -> o.getString(ID));
-            objects.sort(comparator);
-            int ind = Collections.binarySearch(objects, new JsonObject().put(ID, id), comparator);
-            if(ind > -1) {
-              pol = objects.get(ind);
-            }
-          }
-
-          // If previous step has no result then attempt to find POLine in stubs
-          if (pol == null) {
-            PoLine poLine = new JsonObject(ApiTestBase.getMockData(String.format("%s%s.json", PO_LINES_MOCK_DATA_PATH, id))).mapTo(PoLine.class);
-            updatePoLineEstimatedPrice(poLine);
-            pol = JsonObject.mapFrom(poLine);
-          }
-
-          serverResponse(ctx, 200, APPLICATION_JSON, pol.encodePrettily());
-        } catch (IOException e) {
-          serverResponse(ctx, 404, APPLICATION_JSON, id);
+        // If previous step has no result then attempt to find POLine in stubs
+        if (pol == null) {
+          PoLine poLine = new JsonObject(ApiTestBase.getMockData(String.format("%s%s.json", PO_LINES_MOCK_DATA_PATH, id))).mapTo(PoLine.class);
+          updatePoLineEstimatedPrice(poLine);
+          pol = JsonObject.mapFrom(poLine);
         }
+
+        serverResponse(ctx, 200, APPLICATION_JSON, pol.encodePrettily());
+      } catch (IOException e) {
+        serverResponse(ctx, 404, APPLICATION_JSON, id);
       }
-
     }
-
-
-
   }
 
   private void serverResponse(RoutingContext ctx, int statusCode, String contentType, String body) {
@@ -1104,7 +1134,7 @@ public class MockServer {
     }
   }
 
-  private void addServerRqRsData(HttpMethod method, String objName, JsonObject data) {
+  private static void addServerRqRsData(HttpMethod method, String objName, JsonObject data) {
     List<JsonObject> entries = serverRqRs.get(objName, method);
     if (entries == null) {
       entries = new ArrayList<>();
@@ -1123,40 +1153,33 @@ public class MockServer {
     String id = ctx.request().getParam(ID);
     logger.info("id: " + id);
 
-    if(pieceLineOrderComplianceMatrix.values().contains(id)) {
-      serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withId(id)).encodePrettily());
+    try {
+      // Attempt to find PO in mock server memory
+      JsonObject po = getMockEntry(PURCHASE_ORDER, id).orElse(null);
 
-
-    } else {
-      try {
+      // If previous step has no result then attempt to find PO in stubs
+      if (po == null) {
         String filePath;
         if (ID_FOR_PRINT_MONOGRAPH_ORDER.equals(id)) {
           filePath = LISTED_PRINT_MONOGRAPH_PATH;
         } else {
           filePath = String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id);
         }
-        JsonObject po = new JsonObject(ApiTestBase.getMockData(filePath));
+        po = new JsonObject(ApiTestBase.getMockData(filePath));
         po.remove(COMPOSITE_PO_LINES);
-        po.remove(ACQ_UNIT_IDS);
 
         // Validate the content against schema
         org.folio.rest.acq.model.PurchaseOrder order = po.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
         order.setId(id);
         po = JsonObject.mapFrom(order);
-        addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
-        serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
-      } catch (IOException e) {
-        ctx.response()
-          .setStatusCode(ID_FOR_INTERNAL_SERVER_ERROR.equals(id) ? 500 : 404)
-          .end(id);
       }
-
+      addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
+      serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
+    } catch (IOException e) {
+      ctx.response()
+        .setStatusCode(ID_FOR_INTERNAL_SERVER_ERROR.equals(id) ? 500 : 404)
+        .end(id);
     }
-
-
-
-
-
   }
 
   private void handleGetPurchaseOrderByQuery(RoutingContext ctx, String orderType) {
@@ -1271,8 +1294,6 @@ public class MockServer {
         return org.folio.rest.acq.model.Piece.class;
       case ACQUISITIONS_UNITS:
         return AcquisitionsUnit.class;
-      case ACQUISITIONS_UNIT_ASSIGNMENTS:
-        return AcquisitionsUnitAssignment.class;
       case ACQUISITIONS_MEMBERSHIPS:
         return AcquisitionsUnitMembership.class;
     }
@@ -1349,47 +1370,6 @@ public class MockServer {
       serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Illegal query");
     }
 
-  }
-
-  private void handleGetOrderLines(RoutingContext ctx) {
-    logger.info("handleGetOrderLines got: {}?{}", ctx.request().path(), ctx.request().query());
-
-    String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
-    if (queryParam.contains(BAD_QUERY)) {
-      serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
-    }
-    String poId = null;
-    if (queryParam.contains(PURCHASE_ORDER_ID)) {
-      poId = queryParam.split(PURCHASE_ORDER_ID + "==")[1];
-    }
-
-    try {
-      PoLineCollection poLineCollection = null;
-      if (ORDER_ID_WITH_PO_LINES.equals(poId)) {
-        poLineCollection = new JsonObject(ApiTestBase.getMockData(POLINES_COLLECTION)).mapTo(PoLineCollection.class);
-        Iterator<PoLine> iterator = poLineCollection.getPoLines().iterator();
-        while (iterator.hasNext()) {
-          PoLine poLine = iterator.next();
-          if (!poId.equals(poLine.getPurchaseOrderId())) {
-            iterator.remove();
-          }
-        }
-        poLineCollection.setTotalRecords(poLineCollection.getPoLines().size());
-      }
-
-      // Update calculated data
-      updatePoLineCalculatedData(poLineCollection);
-
-      JsonObject po_lines = JsonObject.mapFrom(poLineCollection);
-      logger.info(po_lines.encodePrettily());
-
-      addServerRqRsData(HttpMethod.GET, ORDER_LINES, po_lines);
-      serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encode());
-    } catch (IOException e) {
-      PoLineCollection poLineCollection = new PoLineCollection();
-      poLineCollection.setTotalRecords(0);
-      serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(poLineCollection).encodePrettily());
-    }
   }
 
   private void handleGetEncumbrances(RoutingContext ctx) {
@@ -1539,54 +1519,4 @@ public class MockServer {
     }
   }
 
-  private void handleGetAcquisitionsUnitAssignments(RoutingContext ctx) {
-    logger.info("handleGetAcquisitionsUnitAssignments got: " + ctx.request().path());
-
-    String query = StringUtils.trimToEmpty(ctx.request().getParam("query"));
-    if (query.contains(BAD_QUERY)) {
-      serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
-    } else {
-      String name = query.replace("recordId==", "");
-      AcquisitionsUnitAssignmentCollection units;
-      try {
-        units = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_UNIT_ASSIGNMENTS_COLLECTION)).mapTo(AcquisitionsUnitAssignmentCollection.class);
-      } catch (IOException e) {
-        units = new AcquisitionsUnitAssignmentCollection();
-      }
-
-      if (StringUtils.isNotEmpty(name)) {
-        units.getAcquisitionsUnitAssignments().removeIf(unit -> !unit.getRecordId().equals(name));
-      }
-
-      JsonObject data = JsonObject.mapFrom(units.withTotalRecords(units.getAcquisitionsUnitAssignments().size()));
-      addServerRqRsData(HttpMethod.GET, ACQUISITIONS_UNIT_ASSIGNMENTS, data);
-      serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
-    }
-  }
-
-  private void handleGetAcquisitionsUnitAssignment(RoutingContext ctx) {
-    logger.info("handleGetAcquisitionsUnitAssignment got: " + ctx.request().path());
-    String id = ctx.request().getParam(ID);
-
-    AcquisitionsUnitAssignmentCollection unitAssignments;
-    try {
-      unitAssignments = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_UNIT_ASSIGNMENTS_COLLECTION)).mapTo(AcquisitionsUnitAssignmentCollection.class);
-    } catch (IOException e) {
-      unitAssignments = new AcquisitionsUnitAssignmentCollection();
-    }
-
-    AcquisitionsUnitAssignment acquisitionsUnitAssignment = unitAssignments.getAcquisitionsUnitAssignments()
-      .stream()
-      .filter(unitAssignment -> unitAssignment.getId().equals(id))
-      .findAny()
-      .orElse(null);
-
-    if (acquisitionsUnitAssignment != null) {
-      JsonObject data = JsonObject.mapFrom(acquisitionsUnitAssignment);
-      addServerRqRsData(HttpMethod.GET, ACQUISITIONS_UNIT_ASSIGNMENTS, data);
-      serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
-    } else {
-      serverResponse(ctx, 404, TEXT_PLAIN, id);
-    }
-  }
 }
