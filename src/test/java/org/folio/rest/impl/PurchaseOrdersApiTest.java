@@ -72,7 +72,7 @@ import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.impl.AbstractHelper.MAX_IDS_FOR_GET_RQ;
-import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_ID;
+import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
 import static org.folio.rest.impl.AcquisitionsUnitsHelper.NO_ACQ_UNIT_ASSIGNED_CQL;
 import static org.folio.rest.impl.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoCreation;
 import static org.folio.rest.impl.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
@@ -1689,7 +1689,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(queryParams, hasSize(1));
     String queryToStorage = queryParams.get(0);
     assertThat(queryToStorage, containsString(queryValue));
-    assertThat(queryToStorage, not(containsString(ACQUISITIONS_UNIT_ID + "==")));
+    assertThat(queryToStorage, not(containsString(ACQUISITIONS_UNIT_IDS + "=")));
     assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
   }
 
@@ -1708,7 +1708,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     List<String> queryParams = getQueryParams(PURCHASE_ORDER);
     assertThat(queryParams, hasSize(1));
     String queryToStorage = queryParams.get(0);
-    assertThat(queryToStorage, containsString(ACQUISITIONS_UNIT_ID + "=="));
+    assertThat(queryToStorage, containsString(ACQUISITIONS_UNIT_IDS + "="));
     assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
 
     MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET)

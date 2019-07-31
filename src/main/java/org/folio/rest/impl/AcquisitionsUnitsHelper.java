@@ -27,8 +27,8 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
 
 public class AcquisitionsUnitsHelper extends AbstractHelper {
-  static final String ACQUISITIONS_UNIT_ID = "acquisitionsUnitId";
-  static final String NO_ACQ_UNIT_ASSIGNED_CQL = "(cql.allRecords=1 NOT " + ACQUISITIONS_UNIT_ID + "=\"\")";
+  static final String ACQUISITIONS_UNIT_IDS = "acqUnitIds";
+  static final String NO_ACQ_UNIT_ASSIGNED_CQL = "(cql.allRecords=1 NOT " + ACQUISITIONS_UNIT_IDS + "<> [])";
   private static final String GET_UNITS_BY_QUERY = resourcesPath(ACQUISITIONS_UNITS) + SEARCH_PARAMS;
   private static final String GET_UNITS_MEMBERSHIPS_BY_QUERY = resourcesPath(ACQUISITIONS_MEMBERSHIPS) + SEARCH_PARAMS;
 
@@ -84,7 +84,7 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
         return NO_ACQ_UNIT_ASSIGNED_CQL;
       }
 
-      return String.format("(%s or %s)", convertIdsToCqlQuery(ids, ACQUISITIONS_UNIT_ID), NO_ACQ_UNIT_ASSIGNED_CQL);
+      return String.format("(%s or %s)", convertIdsToCqlQuery(ids, ACQUISITIONS_UNIT_IDS, false), NO_ACQ_UNIT_ASSIGNED_CQL);
     });
   }
 

@@ -815,16 +815,19 @@ public class HelperUtils {
    * @return String representing CQL query to get records by id's
    */
   public static String convertIdsToCqlQuery(List<String> ids) {
-    return convertIdsToCqlQuery(ids, ID);
+    return convertIdsToCqlQuery(ids, ID, true);
   }
 
   /**
-   * Transform list of id's to CQL query using 'or' operation
+   * Transform list of values for some property to CQL query using 'or' operation
    * @param ids list of id's
-   * @return String representing CQL query to get records by id's
+   * @param fieldName the property name to search by
+   * @param strictMatch indicates whether strict match mode (i.e. ==) should be used or not (i.e. =)
+   * @return String representing CQL query to get records by some property values
    */
-  public static String convertIdsToCqlQuery(List<String> ids, String fieldName) {
-    return StreamEx.of(ids).joining(" or ", fieldName + "==(", ")");
+  public static String convertIdsToCqlQuery(List<String> ids, String fieldName, boolean strictMatch) {
+    String relation = strictMatch ? "==" : "=";
+    return StreamEx.of(ids).joining(" or ", fieldName + relation + "(", ")");
   }
 
   public static CompletableFuture<JsonObject> handleGetRequest(String endpoint, HttpClientInterface

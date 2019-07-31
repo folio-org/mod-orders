@@ -29,7 +29,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
-import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_ID;
+import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
 import static org.folio.rest.impl.AcquisitionsUnitsHelper.NO_ACQ_UNIT_ASSIGNED_CQL;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ORDER_ID_WITH_PO_LINES;
@@ -682,7 +682,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertThat(queryParams, hasSize(1));
     String queryToStorage = queryParams.get(0);
     assertThat(queryToStorage, containsString(ORDER_ID_WITH_PO_LINES));
-    assertThat(queryToStorage, not(containsString(ACQUISITIONS_UNIT_ID + "==")));
+    assertThat(queryToStorage, not(containsString(ACQUISITIONS_UNIT_IDS + "=")));
     assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
   }
 
