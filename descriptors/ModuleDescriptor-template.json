@@ -565,8 +565,8 @@
       "description": "Delete an acquisitions unit assignments"
     },
     {
-      "permissionName": "orders.assignments.all",
-      "displayName": "All acquisitions-unit-assignments perms",
+      "permissionName": "orders.acquisitions-units-assignments.all",
+      "displayName": "All order acquisitions-unit-assignments permissions",
       "description": "All permissions for the acquisitions-unit-assignments",
       "subPermissions": [
         "orders.acquisitions-units-assignments.item.post",
@@ -633,7 +633,7 @@
         "orders.pieces.item.post",
         "orders.pieces.item.put",
         "orders.pieces.item.delete",
-        "orders.assignments.all"
+        "orders.acquisitions-units-assignments.all"
       ]
     }
   ],
