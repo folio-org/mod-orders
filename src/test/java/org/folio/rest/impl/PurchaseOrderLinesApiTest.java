@@ -41,6 +41,7 @@ import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
@@ -667,7 +668,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   public void testGetOrderPOLinesByPoId() {
     logger.info("=== Test Get Orders lines - by PO id ===");
 
-    String endpointQuery = String.format("%s?query=%s", LINES_PATH, PURCHASE_ORDER_ID + "==" + ORDER_ID_WITH_PO_LINES);
+    String sortBy = " sortBy poNumber";
+    String cql = String.format("%s==%s", PURCHASE_ORDER_ID, ORDER_ID_WITH_PO_LINES);
+    String endpointQuery = String.format("%s?query=%s%s", LINES_PATH, cql, sortBy);
 
     final PoLineCollection poLineCollection = verifySuccessGet(endpointQuery, PoLineCollection.class);
 
@@ -681,9 +684,11 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     List<String> queryParams = getQueryParams(ORDER_LINES);
     assertThat(queryParams, hasSize(1));
     String queryToStorage = queryParams.get(0);
+    assertThat(queryToStorage, containsString("(" + cql + ")"));
     assertThat(queryToStorage, containsString(ORDER_ID_WITH_PO_LINES));
     assertThat(queryToStorage, not(containsString(ACQUISITIONS_UNIT_IDS + "=")));
     assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
+    assertThat(queryToStorage, endsWith(sortBy));
   }
 
   private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {

@@ -106,6 +106,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
@@ -1675,8 +1676,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   @Test
   public void testGetOrdersWithParameters() {
     logger.info("=== Test Get Orders - With empty query ===");
+    String sortBy = " sortBy poNumber";
     String queryValue = "poNumber==" + EXISTING_PO_NUMBER;
-    String endpointQuery = String.format("%s?query=%s", COMPOSITE_ORDERS_PATH, queryValue);
+    String endpointQuery = String.format("%s?query=%s%s", COMPOSITE_ORDERS_PATH, queryValue, sortBy);
     final PurchaseOrders purchaseOrders = verifySuccessGet(endpointQuery, PurchaseOrders.class);
 
     assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET), nullValue());
@@ -1688,9 +1690,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     List<String> queryParams = getQueryParams(SEARCH_ORDERS);
     assertThat(queryParams, hasSize(1));
     String queryToStorage = queryParams.get(0);
-    assertThat(queryToStorage, containsString(queryValue));
+    assertThat(queryToStorage, containsString("(" + queryValue + ")"));
     assertThat(queryToStorage, not(containsString(ACQUISITIONS_UNIT_IDS + "=")));
     assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
+    assertThat(queryToStorage, endsWith(sortBy));
   }
 
   @Test

@@ -782,7 +782,7 @@ public class MockServer {
       List<String> polIds = Collections.emptyList();
 
       if (queryParam.contains(PURCHASE_ORDER_ID)) {
-        Matcher matcher = Pattern.compile(".*" + PURCHASE_ORDER_ID + "==(\\S+).*").matcher(queryParam);
+        Matcher matcher = Pattern.compile(".*" + PURCHASE_ORDER_ID + "==(\\S[^)]+).*").matcher(queryParam);
         poId = matcher.find() ? matcher.group(1) : EMPTY;
       } else if (queryParam.startsWith("id==")) {
         polIds = extractIdsFromQuery(queryParam);
@@ -1151,7 +1151,7 @@ public class MockServer {
       JsonObject po = new JsonObject();
       addServerRqRsData(HttpMethod.GET, orderType, po);
 
-      Matcher matcher = Pattern.compile(".*poNumber==(\\S+).*").matcher(query);
+      Matcher matcher = Pattern.compile(".*poNumber==(\\S[^)]+).*").matcher(query);
       final String poNumber = matcher.find() ? matcher.group(1) : EMPTY;
       switch (poNumber) {
         case EXISTING_PO_NUMBER:
