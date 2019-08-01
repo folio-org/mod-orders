@@ -20,7 +20,7 @@
           "methods": ["POST"],
           "pathPattern": "/orders/composite-orders",
           "permissionsRequired": ["orders.item.post"],
-          "permissionsDesired": ["orders.assignments.item.post"],
+          "permissionsDesired": ["orders.acquisitions-units-assignments.item.post"],
           "modulePermissions": [
             "orders-storage.purchase-orders.collection.get",
             "orders-storage.purchase-orders.item.post",
@@ -141,8 +141,7 @@
             "orders-storage.reporting-codes.item.post",
             "configuration.entries.collection.get",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get",
-            "orders-storage.acquisitions-unit-assignments.collection.get"
+            "acquisitions-units-storage.memberships.collection.get"
           ]
         },
         {
@@ -250,10 +249,10 @@
           "permissionsRequired": ["orders.pieces.item.post"],
           "modulePermissions": [
             "orders-storage.pieces.item.post",
-            "orders-storage.po-lines.collection.get",
+            "orders-storage.po-lines.item.get",
+            "orders-storage.purchase-orders.item.get",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get",
-            "orders-storage.acquisitions-unit-assignments.collection.get"
+            "acquisitions-units-storage.memberships.collection.get"
           ]
         },
         {
@@ -556,12 +555,12 @@
       ]
     },
     {
-      "permissionName": "orders.assignments.item.post",
+      "permissionName": "orders.acquisitions-units-assignments.item.post",
       "displayName": "Acquisitions unit assignment - create unit assignment",
       "description": "Create a new acquisitions unit assignments"
     },
     {
-      "permissionName": "orders.assignments.item.delete",
+      "permissionName": "orders.acquisitions-units-assignments.item.delete",
       "displayName": "Acquisitions units - delete unit",
       "description": "Delete an acquisitions unit assignments"
     },
@@ -570,8 +569,8 @@
       "displayName": "All acquisitions-unit-assignments perms",
       "description": "All permissions for the acquisitions-unit-assignments",
       "subPermissions": [
-        "orders.assignments.item.post",
-        "orders.assignments.item.delete"
+        "orders.acquisitions-units-assignments.item.post",
+        "orders.acquisitions-units-assignments.item.delete"
       ]
     },
     {

@@ -54,7 +54,7 @@ resourceTypes:
     get:
       is: [pageable, searchable: {description: "using CQL (indexes for purchase orders)", example: "workflow_status==\"Pending\""} ]
     post:
-      description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order. Only in case an acquisition unit has to be assigned to the Order it is required that user should have extra permission orders-storage.acquisitions-unit-assignments.item.post to create an purchase order.
+      description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order. Only in case an acquisition unit has to be assigned to the Order it is required that user should have extra permission orders.acquisitions-units-assignments.item.post to create an purchase order.
     /{id}:
       uriParameters:
         id:

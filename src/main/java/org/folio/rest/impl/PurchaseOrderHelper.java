@@ -5,7 +5,7 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.AcqDesiredPermissions.CREATE;
 import static org.folio.orders.utils.AcqDesiredPermissions.DELETE;
-import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_DESIRED_PERMISSIONS;
+import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
@@ -34,14 +34,12 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.O
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -77,7 +75,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private static final String SEARCH_ORDERS_BY_LINES_DATA = resourcesPath(SEARCH_ORDERS) + SEARCH_PARAMS;
   private static final String GET_PURCHASE_ORDERS = resourcesPath(PURCHASE_ORDER) + SEARCH_PARAMS;
-  public static final String EMPTY_JSON_ARRAY = "[]";
+  public static final String EMPTY_ARRAY = "[]";
 
   private final PoNumberHelper poNumberHelper;
   private final PurchaseOrderLineHelper orderLineHelper;
@@ -146,18 +144,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
         .thenApply(this::populateOrderSummary));
   }
 
-  /**
-   * Create fund transactions corresponding to the order
-   * @param compPO {@link CompositePurchaseOrder} object representing Purchase Order and optionally Purchase Order Line details.
-   * @return completable future with {@link CompositePurchaseOrder}
-   */
-  public CompletableFuture<CompositePurchaseOrder> applyFunds(CompositePurchaseOrder compPO) {
-    CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
-    future.complete(compPO);
-    return future;
-  }
-
-  /**
+   /**
    * Handles update of the order. First retrieve the PO from storage and depending on its content handle passed PO.
    * @param compPO updated {@link CompositePurchaseOrder} purchase order
    * @return completable future holding response indicating success (204 No Content) or error if failed
@@ -676,7 +663,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     List<String> requiredAcqPermissions = getRequiredAcqPermissions(newAcqUnits, acqUnitsFromStorage);
 
     if (!getProvidedPermissions().containsAll(requiredAcqPermissions)){
-      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_DESIRED_PERMISSIONS);
+      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS);
     }
   }
 
@@ -692,7 +679,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private List<String> getProvidedPermissions() {
-    return new JsonArray(okapiHeaders.getOrDefault(OKAPI_HEADER_PERMISSIONS, EMPTY_JSON_ARRAY)).stream().
+    return new JsonArray(okapiHeaders.getOrDefault(OKAPI_HEADER_PERMISSIONS, EMPTY_ARRAY)).stream().
       map(Object::toString)
       .collect(Collectors.toList());
   }

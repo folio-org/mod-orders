@@ -90,12 +90,9 @@ public class OrdersImpl implements Orders {
           logger.info("Creating PO and POLines...");
           return helper.createPurchaseOrder(compPO)
             .thenAccept(withIds -> {
-                  logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withIds).encodePrettily());
-                  helper.closeHttpClient();
-                  Response response = PostOrdersCompositeOrdersResponse.respond201WithApplicationJson(withIds,
-                      PostOrdersCompositeOrdersResponse.headersFor201()
-                        .withLocation(String.format(ORDERS_LOCATION_PREFIX, withIds.getId())));
-                  asyncResultHandler.handle(succeededFuture(response));
+              logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withIds).encodePrettily());
+              asyncResultHandler.handle(succeededFuture(helper
+                .buildResponseWithLocation(String.format(ORDERS_LOCATION_PREFIX, withIds.getId()), withIds)));
             });
         } else {
           throw new HttpException(422, GENERIC_ERROR_CODE);
@@ -165,18 +162,15 @@ public class OrdersImpl implements Orders {
     helper
       .createPoLine(poLine)
       .thenAccept(pol -> {
-        Response response;
         if (helper.getErrors().isEmpty()) {
           if (logger.isInfoEnabled()) {
             logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
           }
-          response = PostOrdersOrderLinesResponse.respond201WithApplicationJson(pol,
-              PostOrdersOrderLinesResponse.headersFor201()
-                .withLocation(String.format(ORDER_LINE_LOCATION_PREFIX, pol.getId())));
+          asyncResultHandler.handle(succeededFuture(helper
+            .buildResponseWithLocation(String.format(ORDER_LINE_LOCATION_PREFIX, pol.getId()), pol)));
         } else {
-          response = helper.buildErrorResponse(422);
+          throw new HttpException(422, "");
         }
-        asyncResultHandler.handle(succeededFuture(response));
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
