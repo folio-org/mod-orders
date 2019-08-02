@@ -32,9 +32,8 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     "CREATE"
   })
   public void testOperationWithNonExistedUnits(ProtectedOperations operation) {
-    logger.info("=== Test corresponding order hasn't units - expecting of call only to Assignments API ===");
+    logger.info("=== Test order contains non-existent unit ids - expecting of call only to Units API ===");
 
-    // Composite PO already contains acquisition unit IDs
     final Headers headers = prepareHeaders(X_OKAPI_URL, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_ID);
     Errors errors = operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(prepareOrder(NON_EXISTENT_UNITS)),
       headers, APPLICATION_JSON, HttpStatus.HTTP_VALIDATION_ERROR.toInt()).as(Errors.class);
@@ -50,13 +49,11 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     "CREATE"
   })
   public void testOperationWithAllowedUnits(ProtectedOperations operation) {
-    logger.info("=== Test corresponding order has units allowed operation - expecting of call only to Assignments API and Units API ===");
+    logger.info("=== Test corresponding order has units allowed operation - expecting of call only to Units API ===");
 
     final Headers headers = prepareHeaders(X_OKAPI_URL, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_ID);
     operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(prepareOrder(NOT_PROTECTED_UNITS)), headers, APPLICATION_JSON, operation.getCode());
 
-
-    // Verify number of sub-requests
     validateNumberOfRequests(1, 0);
   }
 
@@ -65,11 +62,11 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     "CREATE"
   })
   public void testWithRestrictedUnitsAndAllowedUser(ProtectedOperations operation) {
-    logger.info("=== Test corresponding order has units, units protect operation, user is member of order's units - expecting of calls to Units, Memberships, Assignments API and allowance of operation ===");
+    logger.info("=== Test corresponding order has units, units protect operation, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
 
     Headers headers = prepareHeaders(X_OKAPI_URL, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER);
     operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(prepareOrder(PROTECTED_UNITS)), headers, APPLICATION_JSON, operation.getCode());
-    // Verify number of sub-requests
+
     validateNumberOfRequests(1, 1);
   }
 
@@ -78,7 +75,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     "CREATE"
   })
   public void testWithProtectedUnitsAndForbiddenUser(ProtectedOperations operation) {
-    logger.info("=== Test corresponding order has units, units protect operation, user isn't member of order's units - expecting of calls to Units, Memberships, Assignments API and restriction of operation ===");
+    logger.info("=== Test corresponding order has units, units protect operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");
 
     Headers headers = prepareHeaders(X_OKAPI_URL, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER);
     Errors errors = operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(prepareOrder(PROTECTED_UNITS)),
@@ -86,7 +83,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
 
     assertThat(errors.getErrors(), hasSize(1));
     assertThat(errors.getErrors().get(0).getCode(), equalTo(USER_HAS_NO_PERMISSIONS.getCode()));
-    // Verify number of sub-requests
+
     validateNumberOfRequests(1, 1);
   }
 
@@ -102,7 +99,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
       headers, APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt()).as(Errors.class);
     assertThat(errors.getErrors(), hasSize(1));
     assertThat(errors.getErrors().get(0).getCode(), equalTo(USER_HAS_NO_ACQ_PERMISSIONS.getCode()));
-    // Verify number of sub-requests
+
     validateNumberOfRequests(0, 0);
   }
 
