@@ -13,7 +13,7 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
-import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_ID;
+import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
 import static org.folio.rest.impl.AcquisitionsUnitsHelper.NO_ACQ_UNIT_ASSIGNED_CQL;
 import static org.folio.rest.impl.MockServer.INTERNAL_SERVER_ERROR;
 import static org.folio.rest.impl.MockServer.getQueryParams;
@@ -46,7 +46,7 @@ public class ReceivingHistoryApiTest extends ApiTestBase {
 
     List<String> queryParams = getQueryParams(RECEIVING_HISTORY);
     assertThat(queryParams, hasSize(1));
-//    assertThat(queryParams.get(0), equalTo(NO_ACQ_UNIT_ASSIGNED_CQL));
+    assertThat(queryParams.get(0), equalTo(NO_ACQ_UNIT_ASSIGNED_CQL));
   }
 
   @Test
@@ -66,7 +66,7 @@ public class ReceivingHistoryApiTest extends ApiTestBase {
     assertThat(queryParams, hasSize(1));
     String queryToStorage = queryParams.get(0);
     assertThat(queryToStorage, containsString(RECEIVING_HISTORY_PURCHASE_ORDER_ID));
-    assertThat(queryToStorage, containsString(ACQUISITIONS_UNIT_ID + "=="));
+    assertThat(queryToStorage, not(containsString(ACQUISITIONS_UNIT_IDS + "=")));
     assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
   }
 
@@ -85,7 +85,7 @@ public class ReceivingHistoryApiTest extends ApiTestBase {
     List<String> queryParams = getQueryParams(RECEIVING_HISTORY);
     assertThat(queryParams, hasSize(1));
     String queryToStorage = queryParams.get(0);
-    assertThat(queryToStorage, containsString(ACQUISITIONS_UNIT_ID + "=="));
+    assertThat(queryToStorage, containsString(ACQUISITIONS_UNIT_IDS + "="));
     assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
 
     MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET)

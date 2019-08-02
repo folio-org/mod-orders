@@ -349,7 +349,7 @@ public class OrdersImpl implements Orders {
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
-  
+
   @Override
   @Validate
   public void putOrdersPiecesById(String pieceId, String lang, Piece piece, Map<String, String> okapiHeaders,

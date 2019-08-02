@@ -123,7 +123,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           String queryParam = buildQuery(acqUnitsCqlExpr, logger);
           return String.format(GET_PURCHASE_ORDERS, limit, offset, queryParam, lang);
         } else {
-          String queryParam = buildQuery(acqUnitsCqlExpr + " and " + query, logger);
+          String queryParam = buildQuery(combineCqlExpressions("and", acqUnitsCqlExpr, query), logger);
           return String.format(SEARCH_ORDERS_BY_LINES_DATA, limit, offset, queryParam, lang);
         }
       });

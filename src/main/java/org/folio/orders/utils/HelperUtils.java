@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
+import org.apache.commons.lang3.ArrayUtils;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 
@@ -87,10 +88,12 @@ public class HelperUtils {
 
   private static final int DEFAULT_PORT = 9130;
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
-  private static final Pattern HOST_PORT_PATTERN = Pattern.compile("https?://([^:/]+)(?::?(\\d+)?)");
   private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
   private static final String PROTECTED_AND_MODIFIED_FIELDS = "protectedAndModifiedFields";
   public static final String WORKFLOW_STATUS = "workflowStatus";
+
+  private static final Pattern HOST_PORT_PATTERN = Pattern.compile("https?://([^:/]+)(?::?(\\d+)?)");
+  private static final Pattern CQL_SORT_BY_PATTERN = Pattern.compile("(.*)(\\ssortBy\\s.*)", Pattern.CASE_INSENSITIVE);
 
   private HelperUtils() {
 
@@ -321,6 +324,25 @@ public class HelperUtils {
 
   public static String buildQuery(String query, Logger logger) {
     return isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
+  }
+
+  public static String combineCqlExpressions(String term, String... expressions) {
+    if (ArrayUtils.isEmpty(expressions)) {
+      return EMPTY;
+    }
+
+    String sorting = EMPTY;
+
+    // Check whether last expression contains sorting query. If it does, extract it to be added in the end of the resulting query
+    Matcher matcher = CQL_SORT_BY_PATTERN.matcher(expressions[expressions.length - 1]);
+    if (matcher.find()) {
+      expressions[expressions.length - 1] = matcher.group(1);
+      sorting = matcher.group(2);
+    }
+
+    return StreamEx.of(expressions)
+      .filter(StringUtils::isNotBlank)
+      .joining(") " + term + " (", "(", ")") + sorting;
   }
 
   public static List<Error> validateOrder(CompositePurchaseOrder compositeOrder) {
@@ -816,16 +838,19 @@ public class HelperUtils {
    * @return String representing CQL query to get records by id's
    */
   public static String convertIdsToCqlQuery(List<String> ids) {
-    return convertIdsToCqlQuery(ids, ID);
+    return convertIdsToCqlQuery(ids, ID, true);
   }
 
   /**
-   * Transform list of id's to CQL query using 'or' operation
-   * @param ids list of id's
-   * @return String representing CQL query to get records by id's
+   * Transform list of values for some property to CQL query using 'or' operation
+   * @param values list of field values
+   * @param fieldName the property name to search by
+   * @param strictMatch indicates whether strict match mode (i.e. ==) should be used or not (i.e. =)
+   * @return String representing CQL query to get records by some property values
    */
-  public static String convertIdsToCqlQuery(List<String> ids, String fieldName) {
-    return StreamEx.of(ids).joining(" or ", fieldName + "==(", ")");
+  public static String convertIdsToCqlQuery(List<String> values, String fieldName, boolean strictMatch) {
+    String prefix = fieldName + (strictMatch ? "==(" : "=(");
+    return StreamEx.of(values).joining(" or ", prefix, ")");
   }
 
   public static CompletableFuture<JsonObject> handleGetRequest(String endpoint, HttpClientInterface

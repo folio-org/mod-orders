@@ -24,6 +24,7 @@ types:
   po-number: !include acq-models/mod-orders/schemas/po_number.json
   piece: !include acq-models/mod-orders-storage/schemas/piece.json
 
+
   UUID:
     type: string
     pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
@@ -176,7 +177,7 @@ resourceTypes:
     post:
       description: Check-in items spanning one or more po_lines in this order
   /receiving-history:
-    get: 
+    get:
       displayName: Receiving history
       description: Get receiving history matching the provided criteria
       is: [
