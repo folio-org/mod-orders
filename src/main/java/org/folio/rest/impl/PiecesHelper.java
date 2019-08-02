@@ -34,7 +34,7 @@ public class PiecesHelper extends AbstractHelper {
 
   public PiecesHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
-    protectionHelper = new ProtectionHelper(okapiHeaders, ctx, lang);
+    protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   CompletableFuture<Piece> createRecordInStorage(Piece piece) {

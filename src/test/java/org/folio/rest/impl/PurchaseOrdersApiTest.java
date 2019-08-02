@@ -1664,7 +1664,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testGetOrdersNoParameters() {
     logger.info("=== Test Get Orders - With empty query ===");
 
-    final PurchaseOrders purchaseOrders = verifySuccessGet(COMPOSITE_ORDERS_PATH, PurchaseOrders.class);
+    final PurchaseOrders purchaseOrders = verifySuccessGet(COMPOSITE_ORDERS_PATH, PurchaseOrders.class, PROTECTED_READ_ONLY_TENANT);
 
     assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET), hasSize(1));
     assertThat(MockServer.serverRqRs.get(SEARCH_ORDERS, HttpMethod.GET), nullValue());
@@ -1683,7 +1683,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     String sortBy = " sortBy poNumber";
     String queryValue = "poNumber==" + EXISTING_PO_NUMBER;
     String endpointQuery = String.format("%s?query=%s%s", COMPOSITE_ORDERS_PATH, queryValue, sortBy);
-    final PurchaseOrders purchaseOrders = verifySuccessGet(endpointQuery, PurchaseOrders.class);
+    final PurchaseOrders purchaseOrders = verifySuccessGet(endpointQuery, PurchaseOrders.class, PROTECTED_READ_ONLY_TENANT);
 
     assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET), nullValue());
     assertThat(MockServer.serverRqRs.get(SEARCH_ORDERS, HttpMethod.GET), hasSize(1));

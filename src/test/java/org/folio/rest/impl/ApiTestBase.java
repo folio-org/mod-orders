@@ -129,6 +129,7 @@ public class ApiTestBase {
   static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_1");
   static final Header INVALID_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "invalid_config");
   static final Header EMPTY_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, EMPTY_CONFIG_TENANT);
+  public static final String PROTECTED_READ_ONLY_TENANT = "protected_read";
 
   private static boolean runningOnOwn;
 
@@ -282,6 +283,11 @@ public class ApiTestBase {
     return verifyGet(url, headers, expectedContentType, expectedCode);
   }
 
+  public Response verifyGet(String url, String expectedContentType, int expectedCode, String tenant) {
+    Headers headers = prepareHeaders(X_OKAPI_URL, new Header(OKAPI_HEADER_TENANT, tenant));
+    return verifyGet(url, headers, expectedContentType, expectedCode);
+  }
+
   public Response verifyGet(String url, Headers headers, String expectedContentType, int expectedCode) {
     return RestAssured
       .with()
@@ -296,6 +302,10 @@ public class ApiTestBase {
 
   <T> T verifySuccessGet(String url, Class<T> clazz) {
     return verifyGet(url, APPLICATION_JSON, 200).as(clazz);
+  }
+
+  <T> T verifySuccessGet(String url, Class<T> clazz, String tenant) {
+    return verifyGet(url, APPLICATION_JSON, 200, tenant).as(clazz);
   }
 
   Response verifyDeleteResponse(String url, String expectedContentType, int expectedCode) {

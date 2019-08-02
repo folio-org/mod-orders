@@ -17,15 +17,16 @@ import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 
 import io.vertx.core.Context;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 public class ProtectionHelper extends AbstractHelper {
 
+  public static final String ACQUISITIONS_UNIT_ID = "acquisitionsUnitId";
   private AcquisitionsUnitsHelper acquisitionsUnitsHelper;
 
-
-  public ProtectionHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
-    super(okapiHeaders, ctx, lang);
-    acquisitionsUnitsHelper = new AcquisitionsUnitsHelper(okapiHeaders, ctx, lang);
+  public ProtectionHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+    super(httpClient, okapiHeaders, ctx, lang);
+    acquisitionsUnitsHelper = new AcquisitionsUnitsHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   /**
@@ -58,7 +59,7 @@ public class ProtectionHelper extends AbstractHelper {
    * @return list of unit ids associated with user.
    */
   private CompletableFuture<Void> verifyUserIsMemberOfOrdersUnits(List<String> unitIdsAssignedToOrder) {
-    String query = String.format("userId==%s AND %s", getCurrentUserId(), convertIdsToCqlQuery(unitIdsAssignedToOrder, "acquisitionsUnitId"));
+    String query = String.format("userId==%s AND %s", getCurrentUserId(), convertIdsToCqlQuery(unitIdsAssignedToOrder, ACQUISITIONS_UNIT_ID, true));
     return acquisitionsUnitsHelper.getAcquisitionsUnitsMemberships(query, 0, 0)
       .thenAccept(unit -> {
         if (unit.getTotalRecords() == 0) {

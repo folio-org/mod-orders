@@ -657,7 +657,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   public void testGetOrderPoLinesByEmptyQuery() {
     logger.info("=== Test Get Orders lines - by empty query ===");
 
-    verifySuccessGet(LINES_PATH, PoLineCollection.class);
+    verifySuccessGet(LINES_PATH, PoLineCollection.class, PROTECTED_READ_ONLY_TENANT);
 
     assertThat(getOrderLineSearches(), nullValue());
     assertThat(getPoLineSearches(), hasSize(1));
@@ -678,7 +678,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     String cql = String.format("%s==%s", PURCHASE_ORDER_ID, ORDER_ID_WITH_PO_LINES);
     String endpointQuery = String.format("%s?query=%s%s", LINES_PATH, cql, sortBy);
 
-    final PoLineCollection poLineCollection = verifySuccessGet(endpointQuery, PoLineCollection.class);
+    final PoLineCollection poLineCollection = verifySuccessGet(endpointQuery, PoLineCollection.class, PROTECTED_READ_ONLY_TENANT);
 
     assertThat(poLineCollection.getTotalRecords(), is(2));
     assertThat(getOrderLineSearches(), hasSize(1));

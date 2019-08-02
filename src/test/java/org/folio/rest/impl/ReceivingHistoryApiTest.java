@@ -36,7 +36,7 @@ public class ReceivingHistoryApiTest extends ApiTestBase {
   @Test
   public void testGetReceivingHistory() {
     logger.info("=== Test Get Receiving History - With empty query ===");
-    final ReceivingHistoryCollection receivingHistory = verifySuccessGet(ORDERS_RECEIVING_HISTORY_ENDPOINT, ReceivingHistoryCollection.class);
+    final ReceivingHistoryCollection receivingHistory = verifySuccessGet(ORDERS_RECEIVING_HISTORY_ENDPOINT, ReceivingHistoryCollection.class, PROTECTED_READ_ONLY_TENANT);
 
     assertThat(receivingHistory.getTotalRecords(), is(0));
 
@@ -54,7 +54,7 @@ public class ReceivingHistoryApiTest extends ApiTestBase {
     logger.info("=== Test Get Receiving History - With purchase Order query ===");
     String endpointQuery = String.format("%s?query=purchaseOrderId=%s", ORDERS_RECEIVING_HISTORY_ENDPOINT, RECEIVING_HISTORY_PURCHASE_ORDER_ID);
 
-    final ReceivingHistoryCollection receivingHistory = verifySuccessGet(endpointQuery, ReceivingHistoryCollection.class);
+    final ReceivingHistoryCollection receivingHistory = verifySuccessGet(endpointQuery, ReceivingHistoryCollection.class, PROTECTED_READ_ONLY_TENANT);
 
     assertThat(receivingHistory.getTotalRecords(), is(1));
 

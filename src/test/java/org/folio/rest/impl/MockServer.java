@@ -36,6 +36,7 @@ import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_TYPE_TENANT;
 import static org.folio.rest.impl.ApiTestBase.NON_EXIST_LOAN_TYPE_TENANT;
 import static org.folio.rest.impl.ApiTestBase.PO_ID_GET_LINES_INTERNAL_SERVER_ERROR;
 import static org.folio.rest.impl.ApiTestBase.PO_LINE_NUMBER_VALUE;
+import static org.folio.rest.impl.ApiTestBase.PROTECTED_READ_ONLY_TENANT;
 import static org.folio.rest.impl.ApiTestBase.X_ECHO_STATUS;
 import static org.folio.rest.impl.ApiTestBase.getMockAsJson;
 import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
@@ -43,6 +44,7 @@ import static org.folio.rest.impl.InventoryHelper.ITEMS;
 import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
 import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
 import static org.folio.rest.impl.PoNumberApiTest.NONEXISTING_PO_NUMBER;
+import static org.folio.rest.impl.ProtectionHelper.ACQUISITIONS_UNIT_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_A;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_B;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_VENDOR_ID;
@@ -1400,13 +1402,17 @@ public class MockServer {
 
   private void handleGetAcquisitionsUnits(RoutingContext ctx) {
     logger.info("handleGetAcquisitionsUnits got: " + ctx.request().path());
-
+    String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
     String query = StringUtils.trimToEmpty(ctx.request().getParam("query"));
 
     AcquisitionsUnitCollection units;
 
     try {
-      units = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_UNITS_COLLECTION)).mapTo(AcquisitionsUnitCollection.class);
+      if (PROTECTED_READ_ONLY_TENANT.equals(tenant)) {
+        units = new AcquisitionsUnitCollection();
+      } else {
+        units = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_UNITS_COLLECTION)).mapTo(AcquisitionsUnitCollection.class);
+      }
     } catch (IOException e) {
       units = new AcquisitionsUnitCollection();
     }
@@ -1481,7 +1487,7 @@ public class MockServer {
 
       if (StringUtils.isNotEmpty(userId)) {
         memberships.getAcquisitionsUnitMemberships().removeIf(membership -> !membership.getUserId().equals(userId));
-        List<String> acquisitionsUnitIds = extractIdsFromQuery("acquisitionsUnitId", query);
+        List<String> acquisitionsUnitIds = extractIdsFromQuery(ACQUISITIONS_UNIT_ID, query);
           if (!acquisitionsUnitIds.isEmpty()) {
             memberships.getAcquisitionsUnitMemberships().removeIf(membership -> !acquisitionsUnitIds.contains(membership.getAcquisitionsUnitId()));
           }
