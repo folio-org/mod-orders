@@ -15,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
 import static java.util.stream.Collectors.*;
 import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
+import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -87,8 +88,8 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       AcquisitionsUnitsHelper acqUnitsHelper = new AcquisitionsUnitsHelper(httpClient, okapiHeaders, ctx, lang);
       acqUnitsHelper.buildAcqUnitsCqlExprToSearchRecords()
         .thenCompose(acqUnitsCqlExpr -> {
-          String queryParam = buildQuery(StringUtils.isEmpty(query) ? acqUnitsCqlExpr : acqUnitsCqlExpr + " and " + query, logger);
-          String endpoint = String.format(GET_RECEIVING_HISTORY_BY_QUERY, limit, offset, queryParam, lang);
+          String cql = StringUtils.isEmpty(query) ? acqUnitsCqlExpr : combineCqlExpressions("and", acqUnitsCqlExpr, query);
+          String endpoint = String.format(GET_RECEIVING_HISTORY_BY_QUERY, limit, offset, buildQuery(cql, logger), lang);
           return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
             .thenAccept(jsonReceivingHistory -> future.complete(jsonReceivingHistory.mapTo(ReceivingHistoryCollection.class)));
         })

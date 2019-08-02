@@ -72,7 +72,7 @@ import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.impl.AbstractHelper.MAX_IDS_FOR_GET_RQ;
-import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_ID;
+import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
 import static org.folio.rest.impl.AcquisitionsUnitsHelper.NO_ACQ_UNIT_ASSIGNED_CQL;
 import static org.folio.rest.impl.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoCreation;
 import static org.folio.rest.impl.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
@@ -106,6 +106,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
@@ -1675,8 +1676,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   @Test
   public void testGetOrdersWithParameters() {
     logger.info("=== Test Get Orders - With empty query ===");
+    String sortBy = " sortBy poNumber";
     String queryValue = "poNumber==" + EXISTING_PO_NUMBER;
-    String endpointQuery = String.format("%s?query=%s", COMPOSITE_ORDERS_PATH, queryValue);
+    String endpointQuery = String.format("%s?query=%s%s", COMPOSITE_ORDERS_PATH, queryValue, sortBy);
     final PurchaseOrders purchaseOrders = verifySuccessGet(endpointQuery, PurchaseOrders.class);
 
     assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET), nullValue());
@@ -1688,9 +1690,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     List<String> queryParams = getQueryParams(SEARCH_ORDERS);
     assertThat(queryParams, hasSize(1));
     String queryToStorage = queryParams.get(0);
-    assertThat(queryToStorage, containsString(queryValue));
-    assertThat(queryToStorage, not(containsString(ACQUISITIONS_UNIT_ID + "==")));
+    assertThat(queryToStorage, containsString("(" + queryValue + ")"));
+    assertThat(queryToStorage, not(containsString(ACQUISITIONS_UNIT_IDS + "=")));
     assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
+    assertThat(queryToStorage, endsWith(sortBy));
   }
 
   @Test
@@ -1708,7 +1711,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     List<String> queryParams = getQueryParams(PURCHASE_ORDER);
     assertThat(queryParams, hasSize(1));
     String queryToStorage = queryParams.get(0);
-    assertThat(queryToStorage, containsString(ACQUISITIONS_UNIT_ID + "=="));
+    assertThat(queryToStorage, containsString(ACQUISITIONS_UNIT_IDS + "="));
     assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
 
     MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET)
