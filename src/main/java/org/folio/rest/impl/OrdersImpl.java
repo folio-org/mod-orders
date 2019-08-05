@@ -261,10 +261,10 @@ public class OrdersImpl implements Orders {
           asyncResultHandler.handle(succeededFuture(response));
           return;
         }
-
-        helper.updateOrderLine(poLine)
-          .thenAccept(v -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
-          .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+        helper.validateAndNormalizeISBN(poLine)
+          .thenCompose(vo -> helper.updateOrderLine(poLine)
+            .thenAccept(v -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
+            .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t)));
 
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
@@ -364,7 +364,7 @@ public class OrdersImpl implements Orders {
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
-  
+
   @Override
   @Validate
   public void putOrdersPiecesById(String pieceId, String lang, Piece piece, Map<String, String> okapiHeaders,

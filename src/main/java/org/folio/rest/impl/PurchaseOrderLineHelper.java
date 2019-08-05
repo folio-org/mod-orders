@@ -2,9 +2,9 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.json.JsonObject.mapFrom;
 import static java.util.concurrent.CompletableFuture.allOf;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.completedFuture;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
@@ -438,7 +438,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       return completedFuture(false);
     }
 
-    return allOf(validatePoLineLimit(compPOL))
+    return allOf(validatePoLineLimit(compPOL),validateAndNormalizeISBN(compPOL))
       .thenApply(v -> getErrors().isEmpty());
   }
 
@@ -828,4 +828,19 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     String poLineNumberSuffix2 = poLine2.getPoLineNumber().split(DASH_SEPARATOR)[1];
     return Integer.parseInt(poLineNumberSuffix1) - Integer.parseInt(poLineNumberSuffix2);
   }
+
+  public CompletableFuture<Void> validateAndNormalizeISBN(CompositePoLine compPOL) {
+    return inventoryHelper.getProductTypeUUID("ISBN")
+      .thenAccept(id -> compPOL.getDetails()
+        .getProductIds()
+        .forEach(productID -> {
+          if (productID.getProductIdType()
+            .equals(id)) {
+            inventoryHelper.convertISBNto13(productID.getProductId())
+              .thenAccept(productID::setProductId);
+          }
+        }));
+  }
 }
+
+

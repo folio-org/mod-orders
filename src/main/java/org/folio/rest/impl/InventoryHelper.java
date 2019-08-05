@@ -711,4 +711,19 @@ public class InventoryHelper extends AbstractHelper {
         }
       });
   }
+
+  public CompletableFuture<String> getProductTypeUUID(String identifierType) {
+    String endpoint = String.format("/identifier-types?limit=1&query=name==%s&lang=%s", identifierType, lang);
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(identifierTypes -> completedFuture(extractId(getFirstObjectFromResponse(identifierTypes, ("identifierTypes")))));
+  }
+
+  public CompletableFuture<String> convertISBNto13(String isbn) {
+    String convertEndpoint = String.format("/isbn/convertTo13?isbn=%s&lang=%s", isbn, lang);
+    return handleGetRequest(convertEndpoint, httpClient, ctx, okapiHeaders, logger).thenApply(json -> json.getString("isbn"))
+      .exceptionally(e -> {
+        logger.error("Error converting to isbn13", e);
+        throw new CompletionException(e.getCause());
+      });
+  }
 }
