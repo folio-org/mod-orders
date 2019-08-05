@@ -53,6 +53,7 @@ import javax.ws.rs.core.Response;
 
 class PurchaseOrderLineHelper extends AbstractHelper {
 
+  private static final String ISBN = "ISBN";
   private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
   private static final String GET_PO_LINES_BY_QUERY = resourcesPath(PO_LINES) + SEARCH_PARAMS;
   private static final String GET_ORDER_LINES_BY_QUERY = resourcesPath(ORDER_LINES) + SEARCH_PARAMS;
@@ -830,16 +831,25 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   public CompletableFuture<Void> validateAndNormalizeISBN(CompositePoLine compPOL) {
-    return inventoryHelper.getProductTypeUUID("ISBN")
-      .thenAccept(id -> compPOL.getDetails()
-        .getProductIds()
-        .forEach(productID -> {
-          if (productID.getProductIdType()
-            .equals(id)) {
-            inventoryHelper.convertISBNto13(productID.getProductId())
-              .thenAccept(productID::setProductId);
-          }
-        }));
+    return inventoryHelper.getProductTypeUUID(ISBN)
+      .thenCompose(id -> validateIsbnValues(compPOL, id));
+  }
+
+  CompletableFuture<Void> validateIsbnValues(CompositePoLine compPOL, String id) {
+    CompletableFuture[] futures = compPOL.getDetails()
+      .getProductIds()
+      .stream()
+      .map(productID -> {
+        if (productID.getProductIdType()
+          .equals(id)) {
+          return inventoryHelper.convertISBNto13(productID.getProductId())
+            .thenAccept(productID::setProductId);
+        }
+        return completedFuture(null);
+      })
+      .toArray(CompletableFuture[]::new);
+
+    return VertxCompletableFuture.allOf(ctx, futures);
   }
 }
 

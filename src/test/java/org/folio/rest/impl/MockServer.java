@@ -142,6 +142,7 @@ public class MockServer {
   private static final String ACQUISITIONS_UNITS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/units.json";
   private static final String ACQUISITIONS_UNIT_ASSIGNMENTS_COLLECTION = ACQUISITIONS_UNIT_ASSIGNMENTS_MOCK_DATA_PATH + "/assignments.json";
   private static final String ACQUISITIONS_MEMBERSHIPS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/memberships.json";
+  private static final String IDENTIFIER_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
 
   static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
@@ -161,6 +162,7 @@ public class MockServer {
   private static final String CONTRIBUTOR_NAME_TYPES = "contributorNameTypes";
   private static final String INSTANCE_TYPES = "instanceTypes";
   private static final String INSTANCE_STATUSES = "instanceStatuses";
+  private static final String IDENTIFIER_TYPES = "identifierTypes";
 
   static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
@@ -318,6 +320,7 @@ public class MockServer {
     router.route(HttpMethod.GET, "/loan-types").handler(this::handleGetLoanType);
     router.route(HttpMethod.GET, "/organizations-storage/organizations/:id").handler(this::getOrganizationById);
     router.route(HttpMethod.GET, "/organizations-storage/organizations").handler(this::handleGetAccessProviders);
+    router.route(HttpMethod.GET, "/identifier-types").handler(this::handleGetIdentifierType);
     router.route(HttpMethod.GET, resourcesPath(PO_LINES)).handler(ctx -> handleGetPoLines(ctx, PO_LINES));
     router.route(HttpMethod.GET, resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
     router.route(HttpMethod.GET, resourcePath(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
@@ -529,6 +532,24 @@ public class MockServer {
         serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
         addServerRqRsData(HttpMethod.GET, LOAN_TYPES, entries);
       }
+    } catch (IOException e) {
+      ctx.response()
+        .setStatusCode(404)
+        .end();
+    }
+  }
+
+  private void handleGetIdentifierType(RoutingContext ctx) {
+    logger.info("handleGetIdentifierType got: " + ctx.request().path());
+    String tenantId = ctx.request().getHeader(OKAPI_HEADER_TENANT);
+    try {
+        // Filter result based on name from query
+        String name = ctx.request().getParam("query").split("==")[1];
+        JsonObject entries = new JsonObject(ApiTestBase.getMockData(IDENTIFIER_TYPES_MOCK_DATA_PATH + "identifierTypes.json"));
+        filterByKeyValue("name", name, entries.getJsonArray(IDENTIFIER_TYPES));
+
+        serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+        addServerRqRsData(HttpMethod.GET, IDENTIFIER_TYPES, entries);
     } catch (IOException e) {
       ctx.response()
         .setStatusCode(404)
@@ -1015,7 +1036,7 @@ public class MockServer {
       fail(e.getMessage());
     }
   }
-  
+
   private void handleGetPieces(RoutingContext ctx) {
     logger.info("handleGetPieces got: " + ctx.request().path());
     String query = ctx.request().getParam("query");
