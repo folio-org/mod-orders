@@ -159,6 +159,12 @@
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>pl.pragmatists</groupId>
+      <artifactId>JUnitParams</artifactId>
+      <version>1.1.1</version>
+      <scope>test</scope>
+    </dependency>
     <!-- The RMB runtime defines usage of log4j2 for vert.x logging interface. Including Log4j 2 SLF4J Binding to allow SLF4J API to use Log4j 2 as the implementation. -->
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>

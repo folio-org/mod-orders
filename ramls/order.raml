@@ -23,8 +23,6 @@ types:
   errors: !include raml-util/schemas/errors.schema
   po-number: !include acq-models/mod-orders/schemas/po_number.json
   piece: !include acq-models/mod-orders-storage/schemas/piece.json
-  acquisitions-unit-assignment-collection: !include acq-models/common/schemas/acquisitions_unit_assignment_collection.json
-  acquisitions-unit-assignment: !include acq-models/common/schemas/acquisitions_unit_assignment.json
 
 
   UUID:
@@ -57,7 +55,7 @@ resourceTypes:
     get:
       is: [pageable, searchable: {description: "using CQL (indexes for purchase orders)", example: "workflow_status==\"Pending\""} ]
     post:
-      description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order
+      description: Post a purchase order (PO) and a number of PO lines; record fund transactions corresponding to the order. Only in case an acquisition unit has to be assigned to the Order it is required that user should have extra permission orders.acquisitions-units-assignments.item.post to create an purchase order.
     /{id}:
       uriParameters:
         id:
@@ -179,7 +177,7 @@ resourceTypes:
     post:
       description: Check-in items spanning one or more po_lines in this order
   /receiving-history:
-    get: 
+    get:
       displayName: Receiving history
       description: Get receiving history matching the provided criteria
       is: [
@@ -274,37 +272,3 @@ resourceTypes:
                   value: !include examples/errors_500.sample
               text/plain:
                 example: "unable to delete Piece -- Internal server error, e.g. due to misconfiguration"
-  /acquisitions-unit-assignments :
-    displayName: Acquisitions unit assignments
-    description: Create acquisitions unit assignments record
-    type:
-        collection:
-          exampleCollection: !include acq-models/common/examples/acquisitions_unit_assignment_collection.sample
-          exampleItem: !include acq-models/common/examples/acquisitions_unit_assignment_post.sample
-          schemaCollection: acquisitions-unit-assignment-collection
-          schemaItem: acquisitions-unit-assignment
-    post:
-      description: Create acquisitions unit assignments record
-      is: [validate]
-    get:
-      description: Get list of acquisitions unit assignments
-      is: [
-        searchable: {description: "with valid searchable fields: for example recordId", example: "recordId == 8ad580ee-d3f1-4271-bff4-c7c80ccb22e5"},
-        pageable
-      ]
-    /{id}:
-     uriParameters:
-          id:
-            description: The UUID of a acquisitions unit assignment
-            type: UUID
-     type:
-        collection-item:
-          exampleItem: !include acq-models/common/examples/acquisitions_unit_assignment_post.sample
-          schema: acquisitions-unit-assignment
-     put:
-        description: Update acquisitions unit assignment
-        is: [validate]
-
-
-
-

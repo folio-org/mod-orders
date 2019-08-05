@@ -15,7 +15,12 @@
       "id": "874225ae-e3f5-4666-ae19-b35709ff0ee9",
       "userId": "480dba68-ee84-4b9c-a374-7e824fc49227",
       "acquisitionsUnitId": "aa0ec4e1-782f-45f6-a6f3-8e6b6c00599c"
+    },
+    {
+      "id": "9985ec57-91cb-4588-9fab-089859a017a5",
+      "userId": "6b4be232-5ad9-47a6-80b1-8c1acabd6212",
+      "acquisitionsUnitId": "e68c18fc-833f-494e-9a0e-b236eb4b310b"
     }
   ],
-  "totalRecords": 3
+  "totalRecords": 4
 }

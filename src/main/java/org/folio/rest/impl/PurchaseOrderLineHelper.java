@@ -34,6 +34,7 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.SequenceNumber;
@@ -67,10 +68,12 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private static final String DASH_SEPARATOR = "-";
 
   private final InventoryHelper inventoryHelper;
+  private final ProtectionHelper protectionHelper;
 
   PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
+    protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   PurchaseOrderLineHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -96,7 +99,6 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     } catch (Exception e) {
       future.completeExceptionally(e);
     }
-
     return future;
   }
 
@@ -129,7 +131,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       if (isEmpty(query)) {
         return getPoLines(limit, offset, acqUnitsCqlExpr, GET_PO_LINES_BY_QUERY);
       }
-      return getPoLines(limit, offset, acqUnitsCqlExpr + " and " + query, GET_ORDER_LINES_BY_QUERY);
+      return getPoLines(limit, offset, combineCqlExpressions("and", acqUnitsCqlExpr, query), GET_ORDER_LINES_BY_QUERY);
     });
   }
 
@@ -147,6 +149,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
           return getCompositePurchaseOrder(compPOL)
             // The PO Line can be created only for order in Pending state
             .thenApply(this::validateOrderState)
+            .thenCompose(po -> protectionHelper.isOperationRestricted(po.getAcqUnitIds(),ProtectedOperationType.CREATE).thenApply(vVoid -> po))
             .thenCompose(po -> createPoLine(compPOL, po));
         } else {
           return completedFuture(null);
@@ -209,16 +212,16 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   public static boolean isCreateInventoryNull(CompositePoLine compPOL) {
     switch (compPOL.getOrderFormat()) {
-    case P_E_MIX:
-      return isEresourceInventoryNotPresent(compPOL)
+      case P_E_MIX:
+        return isEresourceInventoryNotPresent(compPOL)
           || isPhysicalInventoryNotPresent(compPOL);
-    case ELECTRONIC_RESOURCE:
-      return isEresourceInventoryNotPresent(compPOL);
-    case OTHER:
-    case PHYSICAL_RESOURCE:
-      return isPhysicalInventoryNotPresent(compPOL);
-    default:
-      return false;
+      case ELECTRONIC_RESOURCE:
+        return isEresourceInventoryNotPresent(compPOL);
+      case OTHER:
+      case PHYSICAL_RESOURCE:
+        return isPhysicalInventoryNotPresent(compPOL);
+      default:
+        return false;
     }
   }
 
@@ -247,7 +250,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     // try to set createInventory by values from mod-configuration. If empty -
     // set default hardcoded values
     if (compPOL.getOrderFormat().equals(OrderFormat.ELECTRONIC_RESOURCE)
-        || compPOL.getOrderFormat().equals(OrderFormat.P_E_MIX)) {
+      || compPOL.getOrderFormat().equals(OrderFormat.P_E_MIX)) {
       String tenantDefault = jsonConfig.getString(ERESOURCE);
       Eresource.CreateInventory eresourceDefaultValue = getEresourceInventoryDefault(tenantDefault);
       if (compPOL.getEresource() == null) {
@@ -259,7 +262,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     }
     if (!compPOL.getOrderFormat().equals(OrderFormat.ELECTRONIC_RESOURCE)) {
       String tenantDefault = compPOL.getOrderFormat().equals(OrderFormat.OTHER) ? jsonConfig.getString(OTHER)
-          : jsonConfig.getString(PHYSICAL);
+        : jsonConfig.getString(PHYSICAL);
       Physical.CreateInventory createInventoryDefaultValue = getPhysicalInventoryDefault(tenantDefault);
       if (compPOL.getPhysical() == null) {
         compPOL.setPhysical(new Physical());
@@ -271,15 +274,15 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private Physical.CreateInventory getPhysicalInventoryDefault(String tenantDefault) {
-   return StringUtils.isEmpty(tenantDefault)
-        ? Physical.CreateInventory.INSTANCE_HOLDING_ITEM
-        : Physical.CreateInventory.fromValue(tenantDefault);
+    return StringUtils.isEmpty(tenantDefault)
+      ? Physical.CreateInventory.INSTANCE_HOLDING_ITEM
+      : Physical.CreateInventory.fromValue(tenantDefault);
   }
 
   private Eresource.CreateInventory getEresourceInventoryDefault(String tenantDefault) {
     return StringUtils.isEmpty(tenantDefault)
-        ? Eresource.CreateInventory.INSTANCE_HOLDING
-        : Eresource.CreateInventory.fromValue(tenantDefault);
+      ? Eresource.CreateInventory.INSTANCE_HOLDING
+      : Eresource.CreateInventory.fromValue(tenantDefault);
   }
 
   CompletableFuture<CompositePoLine> getCompositePoLine(String polineId) {
@@ -636,7 +639,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       });
 
     return future;
-	}
+  }
 
   private CompletionStage<JsonObject> updatePoLineSubObjects(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
     JsonObject updatedLineJson = mapFrom(compOrderLine);
@@ -668,11 +671,11 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     }
 
     return operateOnObject(operation, url, subObjContent, httpClient, ctx, okapiHeaders, logger)
-                      .thenApply(json -> {
+      .thenApply(json -> {
         if (operation == HttpMethod.PUT) {
           return storageId;
         } else if (operation == HttpMethod.POST && json.getString(ID) != null) {
-	        return json.getString(ID);
+          return json.getString(ID);
         }
         return null;
       });
@@ -723,8 +726,8 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private void handleProcessingError(Throwable exc, String propName, String propId) {
     Error error = new Error().withMessage(exc.getMessage());
     error.getParameters()
-         .add(new Parameter().withKey(propName)
-                             .withValue(propId));
+      .add(new Parameter().withKey(propName)
+        .withValue(propId));
 
     addProcessingError(error);
   }

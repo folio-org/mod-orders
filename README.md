@@ -11,6 +11,9 @@ This is the Orders business logic module.
 
 ## Additional information
 
+IMPORTANT NOTE! Only in case an acquisition unit has to be assigned to the Order it is required that user should have 
+extra permission `orders.acquisitions-units-assignments.item.post` to create an purchase order.
+
 ### Purchase Order logic 
 Upon receiving a request to create a PO, it does the following:
 * Save a PO object in `Pending` status; then 

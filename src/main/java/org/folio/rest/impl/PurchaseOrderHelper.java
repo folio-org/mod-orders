@@ -3,47 +3,91 @@ package org.folio.rest.impl;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.folio.orders.utils.HelperUtils.*;
-import static org.folio.orders.utils.ResourcePathResolver.*;
-import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
-import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
+import static org.folio.orders.utils.AcqDesiredPermissions.CREATE;
+import static org.folio.orders.utils.AcqDesiredPermissions.DELETE;
+import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
+import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
+import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
+import static org.folio.orders.utils.HelperUtils.buildQuery;
+import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
+import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
+import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
+import static org.folio.orders.utils.HelperUtils.convertToCompositePurchaseOrder;
+import static org.folio.orders.utils.HelperUtils.deletePoLine;
+import static org.folio.orders.utils.HelperUtils.deletePoLines;
+import static org.folio.orders.utils.HelperUtils.getCompositePoLines;
+import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
+import static org.folio.orders.utils.HelperUtils.getPoLines;
+import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.HelperUtils.operateOnObject;
+import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.POProtectedFields.getFieldNames;
 import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.HttpStatus;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.AcqDesiredPermissions;
+import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.PurchaseOrders;
 
 import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.ErrorCodes;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.orders.utils.POLineProtectedFields;
-import org.folio.rest.jaxrs.model.*;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
-import org.folio.rest.jaxrs.model.Error;
 
 public class PurchaseOrderHelper extends AbstractHelper {
 
   private static final String SEARCH_ORDERS_BY_LINES_DATA = resourcesPath(SEARCH_ORDERS) + SEARCH_PARAMS;
   private static final String GET_PURCHASE_ORDERS = resourcesPath(PURCHASE_ORDER) + SEARCH_PARAMS;
+  public static final String EMPTY_ARRAY = "[]";
 
   private final PoNumberHelper poNumberHelper;
   private final PurchaseOrderLineHelper orderLineHelper;
+  private final ProtectionHelper  protectionHelper;
 
   PurchaseOrderHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
 
     poNumberHelper = new PoNumberHelper(httpClient, okapiHeaders, ctx, lang);
     orderLineHelper = new PurchaseOrderLineHelper(httpClient, okapiHeaders, ctx, lang);
+    protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   /**
@@ -80,7 +124,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           String queryParam = buildQuery(acqUnitsCqlExpr, logger);
           return String.format(GET_PURCHASE_ORDERS, limit, offset, queryParam, lang);
         } else {
-          String queryParam = buildQuery(acqUnitsCqlExpr + " and " + query, logger);
+          String queryParam = buildQuery(combineCqlExpressions("and", acqUnitsCqlExpr, query), logger);
           return String.format(SEARCH_ORDERS_BY_LINES_DATA, limit, offset, queryParam, lang);
         }
       });
@@ -92,24 +136,16 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @return completable future with {@link CompositePurchaseOrder} object with populated uuid on success or an exception if processing fails
    */
   public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO) {
-    return setPoNumberIfMissing(compPO)
-      .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber()))
-      .thenCompose(v -> createPOandPOLines(compPO))
-      .thenApply(this::populateOrderSummary);
+
+    verifyUserHasDesiredPermissions(compPO, new CompositePurchaseOrder());
+    return protectionHelper.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.CREATE)
+      .thenCompose(vVoid -> setPoNumberIfMissing(compPO)
+        .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber()))
+        .thenCompose(v -> createPOandPOLines(compPO))
+        .thenApply(this::populateOrderSummary));
   }
 
-  /**
-   * Create fund transactions corresponding to the order
-   * @param compPO {@link CompositePurchaseOrder} object representing Purchase Order and optionally Purchase Order Line details.
-   * @return completable future with {@link CompositePurchaseOrder}
-   */
-  public CompletableFuture<CompositePurchaseOrder> applyFunds(CompositePurchaseOrder compPO) {
-    CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
-    future.complete(compPO);
-    return future;
-  }
-
-  /**
+   /**
    * Handles update of the order. First retrieve the PO from storage and depending on its content handle passed PO.
    * @param compPO updated {@link CompositePurchaseOrder} purchase order
    * @return completable future holding response indicating success (204 No Content) or error if failed
@@ -198,7 +234,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
         if (logger.isInfoEnabled()) {
           logger.info("got: " + po.encodePrettily());
         }
-        CompositePurchaseOrder compPO = HelperUtils.convertToCompositePurchaseOrder(po);
+        CompositePurchaseOrder compPO = convertToCompositePurchaseOrder(po);
 
         getCompositePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
           .thenApply(poLines -> {
@@ -626,4 +662,39 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .stream()
       .filter(poLine -> !lineIdsInStorage.contains(poLine.getId()));
   }
+
+  /**
+   * The method compares the permissions that are necessary to manage the acquisition units assignments and the permissions granted by the user,
+   * and if there is no required permission among the granted permissions, it throws {@link HttpException} with status 403.
+   *
+   * @param newOrder purchase order from request
+   * @param orderFromStorage purchase order from storage
+   */
+  private void verifyUserHasDesiredPermissions(CompositePurchaseOrder newOrder, CompositePurchaseOrder orderFromStorage) {
+    Set<String> newAcqUnits = new HashSet<>(CollectionUtils.emptyIfNull(newOrder.getAcqUnitIds()));
+    Set<String> acqUnitsFromStorage = new HashSet<>(CollectionUtils.emptyIfNull(orderFromStorage.getAcqUnitIds()));
+    List<String> requiredAcqPermissions = getRequiredAcqPermissions(newAcqUnits, acqUnitsFromStorage);
+
+    if (!getProvidedPermissions().containsAll(requiredAcqPermissions)){
+      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS);
+    }
+  }
+
+  private List<String> getRequiredAcqPermissions(Set<String> newAcqUnits, Set<String> acqUnitsFromStorage) {
+    if (CollectionUtils.isEqualCollection(newAcqUnits, acqUnitsFromStorage)) {
+      return Collections.emptyList();
+    } else if (CollectionUtils.isSubCollection(acqUnitsFromStorage, newAcqUnits)) {
+      return Collections.singletonList(CREATE.getPermission());
+    } else if (CollectionUtils.isSubCollection(newAcqUnits, acqUnitsFromStorage)) {
+      return Collections.singletonList(DELETE.getPermission());
+    }
+    return AcqDesiredPermissions.getValues();
+  }
+
+  private List<String> getProvidedPermissions() {
+    return new JsonArray(okapiHeaders.getOrDefault(OKAPI_HEADER_PERMISSIONS, EMPTY_ARRAY)).stream().
+      map(Object::toString)
+      .collect(Collectors.toList());
+  }
+
 }

@@ -3,6 +3,7 @@ package org.folio.rest.impl;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
+import static org.folio.rest.impl.MockServer.ACQUISITIONS_UNITS_COLLECTION;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -11,6 +12,7 @@ import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.io.IOException;
 import java.util.UUID;
 
 import javax.ws.rs.core.HttpHeaders;
@@ -33,10 +35,12 @@ public class AcquisitionsUnitsTests extends ApiTestBase {
   private static final String ACQ_UNITS_UNITS_ENDPOINT = "/acquisitions-units/units";
 
   @Test
-  public void testGetAcqUnitsNoQuery() {
+  public void testGetAcqUnitsNoQuery() throws IOException {
     logger.info("=== Test Get Acquisitions Units - With empty query ===");
+    AcquisitionsUnitCollection expected = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_UNITS_COLLECTION)).mapTo(AcquisitionsUnitCollection.class);
     final AcquisitionsUnitCollection units = verifySuccessGet(ACQ_UNITS_UNITS_ENDPOINT, AcquisitionsUnitCollection.class);
-    assertThat(units.getAcquisitionsUnits(), hasSize(2));
+    assertThat(expected.getAcquisitionsUnits(), hasSize(expected.getTotalRecords()));
+    assertThat(units.getAcquisitionsUnits(), hasSize(expected.getTotalRecords()));
   }
 
   @Test

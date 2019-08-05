@@ -47,7 +47,10 @@ public enum ErrorCodes {
   MISSING_CONTRIBUTOR_NAME_TYPE("missingContributorNameType", "The specified contributor-name-types were not found in inventory-storage"),
   MISSING_LOAN_TYPE("missingLoanType", "Loan-type is a required field for creating an Item in Inventory"),
   ENCUMBRANCE_CREATION_FAILURE("encumbranceCreationFailure", "One or more encumbrance record(s) failed to be created"),
-  PROHIBITED_FIELD_CHANGING("protectedFieldChanging","Protected fields can't be modified");
+  PROHIBITED_FIELD_CHANGING("protectedFieldChanging","Protected fields can't be modified"),
+  ORDER_UNITS_NOT_FOUND("orderUnitsNotFound", "Units not found"),
+  USER_HAS_NO_PERMISSIONS("userHasNoPermission", "User does not have permissions - operation is restricted"),
+  USER_HAS_NO_ACQ_PERMISSIONS("userHasNoAcqUnitsPermission", "User does not have permissions to manage acquisition units assignments- operation is restricted");
 
   private final String code;
   private final String description;

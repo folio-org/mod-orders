@@ -12,11 +12,13 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.junit.Test;
 
 import javax.ws.rs.core.HttpHeaders;
+import java.io.IOException;
 import java.util.UUID;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
+import static org.folio.rest.impl.MockServer.ACQUISITIONS_MEMBERSHIPS_COLLECTION;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -33,10 +35,12 @@ public class AcquisitionsMembershipsTests extends ApiTestBase {
   public static final String USER_ID_ASSIGNED_TO_ACQ_UNITS = "480dba68-ee84-4b9c-a374-7e824fc49227";
 
   @Test
-  public void testGetAcqMembershipsNoQuery() {
+  public void testGetAcqMembershipsNoQuery() throws IOException {
     logger.info("=== Test GET acquisitions units - with empty query ===");
+    AcquisitionsUnitMembershipCollection expected = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_MEMBERSHIPS_COLLECTION)).mapTo(AcquisitionsUnitMembershipCollection.class);
     final AcquisitionsUnitMembershipCollection memberships = verifySuccessGet(ACQ_UNITS_MEMBERSHIPS_ENDPOINT, AcquisitionsUnitMembershipCollection.class);
-    assertThat(memberships.getAcquisitionsUnitMemberships(), hasSize(3));
+    assertThat(expected.getAcquisitionsUnitMemberships(), hasSize(expected.getTotalRecords()));
+    assertThat(memberships.getAcquisitionsUnitMemberships(), hasSize(expected.getTotalRecords()));
   }
 
   @Test
