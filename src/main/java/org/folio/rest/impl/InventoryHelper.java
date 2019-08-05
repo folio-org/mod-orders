@@ -45,6 +45,7 @@ import static org.folio.rest.acq.model.Piece.Format.ELECTRONIC;
 
 public class InventoryHelper extends AbstractHelper {
 
+  private static final String IDENTIFIER_TYPES = "identifierTypes";
   private static final String SOURCE_FOLIO = "FOLIO";
   static final String INSTANCE_SOURCE = "source";
   static final String INSTANCE_TITLE = "title";
@@ -715,7 +716,7 @@ public class InventoryHelper extends AbstractHelper {
   public CompletableFuture<String> getProductTypeUUID(String identifierType) {
     String endpoint = String.format("/identifier-types?limit=1&query=name==%s&lang=%s", identifierType, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenCompose(identifierTypes -> completedFuture(extractId(getFirstObjectFromResponse(identifierTypes, ("identifierTypes")))));
+      .thenCompose(identifierTypes -> completedFuture(extractId(getFirstObjectFromResponse(identifierTypes, IDENTIFIER_TYPES))));
   }
 
   public CompletableFuture<String> convertISBNto13(String isbn) {
