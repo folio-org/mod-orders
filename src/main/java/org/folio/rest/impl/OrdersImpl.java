@@ -1,6 +1,7 @@
 package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.HelperUtils.validatePoLine;
 
 import java.util.ArrayList;
@@ -11,11 +12,17 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
-import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.annotations.Validate;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PoNumber;
+import org.folio.rest.jaxrs.model.ReceivingCollection;
 import org.folio.rest.jaxrs.resource.Orders;
 
 import io.vertx.core.AsyncResult;
@@ -31,6 +38,7 @@ public class OrdersImpl implements Orders {
 
   private static final String ORDERS_LOCATION_PREFIX = "/orders/composite-orders/%s";
   private static final String ORDER_LINE_LOCATION_PREFIX = "/orders/order-lines/%s";
+
 
   @Override
   @Validate
@@ -77,34 +85,17 @@ public class OrdersImpl implements Orders {
     // First validate content of the PO and proceed only if all is okay
     helper
       .validateOrder(compPO)
-      .thenAccept(isValid -> {
+      .thenCompose(isValid -> {
         if (isValid) {
           logger.info("Creating PO and POLines...");
-          helper.createPurchaseOrder(compPO)
+          return helper.createPurchaseOrder(compPO)
             .thenAccept(withIds -> {
-              logger.info("Applying Funds...");
-              helper.applyFunds(withIds)
-                .thenAccept(withFunds -> {
-                  logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withFunds).encodePrettily());
-                  helper.closeHttpClient();
-                  Response response = PostOrdersCompositeOrdersResponse.respond201WithApplicationJson(withFunds,
-                      PostOrdersCompositeOrdersResponse.headersFor201()
-                        .withLocation(String.format(ORDERS_LOCATION_PREFIX, withFunds.getId())));
-                  asyncResultHandler.handle(succeededFuture(response));
-                })
-                .exceptionally(t -> {
-                  logger.error("Failure happened applying funds to created order");
-                  asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(t)));
-                  return null;
-                });
-            })
-            .exceptionally(t -> {
-              logger.error("Failure to create order");
-              asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(t)));
-              return null;
+              logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withIds).encodePrettily());
+              asyncResultHandler.handle(succeededFuture(helper
+                .buildResponseWithLocation(String.format(ORDERS_LOCATION_PREFIX, withIds.getId()), withIds)));
             });
         } else {
-          asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422)));
+          throw new HttpException(422, GENERIC_ERROR_CODE);
         }
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
@@ -171,18 +162,15 @@ public class OrdersImpl implements Orders {
     helper
       .createPoLine(poLine)
       .thenAccept(pol -> {
-        Response response;
         if (helper.getErrors().isEmpty()) {
           if (logger.isInfoEnabled()) {
             logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol).encodePrettily());
           }
-          response = PostOrdersOrderLinesResponse.respond201WithApplicationJson(pol,
-              PostOrdersOrderLinesResponse.headersFor201()
-                .withLocation(String.format(ORDER_LINE_LOCATION_PREFIX, pol.getId())));
+          asyncResultHandler.handle(succeededFuture(helper
+            .buildResponseWithLocation(String.format(ORDER_LINE_LOCATION_PREFIX, pol.getId()), pol)));
         } else {
-          response = helper.buildErrorResponse(422);
+          throw new HttpException(422, "");
         }
-        asyncResultHandler.handle(succeededFuture(response));
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
@@ -386,4 +374,5 @@ public class OrdersImpl implements Orders {
       .thenAccept(ok -> asyncResultHandler.handle(succeededFuture(deletePieceHelper.buildNoContentResponse())))
       .exceptionally(fail -> handleErrorResponse(asyncResultHandler, deletePieceHelper, fail));
   }
+
 }

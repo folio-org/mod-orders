@@ -208,7 +208,9 @@ public abstract class AbstractHelper {
       error = GENERIC_ERROR_CODE.toError().withAdditionalProperty(ERROR_CAUSE, cause.getMessage());
     }
 
-    addProcessingError(error);
+    if (getErrors().isEmpty()) {
+      addProcessingError(error);
+    }
 
     return code;
   }
@@ -221,6 +223,7 @@ public abstract class AbstractHelper {
     final Response.ResponseBuilder responseBuilder;
     switch (code) {
       case 400:
+      case 403:
       case 404:
       case 422:
         responseBuilder = Response.status(code);

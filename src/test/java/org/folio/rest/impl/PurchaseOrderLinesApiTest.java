@@ -55,10 +55,10 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   private static final Logger logger = LoggerFactory.getLogger(PurchaseOrderLinesApiTest.class);
 
   private static final String PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED = "0009662b-8b80-4001-b704-ca10971f175d";
-  private static final String ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE = "c0d08448-347b-418a-8c2f-5fb50248d67e";
-  private final static String LINES_PATH = "/orders/order-lines";
+  static final String ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE = "c0d08448-347b-418a-8c2f-5fb50248d67e";
+  public final static String LINES_PATH = "/orders/order-lines";
   private static final String LINE_BY_ID_PATH = "/orders/order-lines/%s";
-  private static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
+  static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "minimalContent.json";
 
   @Test
@@ -67,9 +67,12 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
     reqData.getCost().setPoLineEstimatedPrice(null);
+    // To skip permission validation by units
+    reqData.setId("0009662b-8b80-4001-b704-ca10971f175d");
+    reqData.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
 
     final CompositePoLine response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePoLine.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
 
     assertThat(response.getPurchaseOrderId(), equalTo(reqData.getPurchaseOrderId()));
     assertThat(response.getInstanceId(), nullValue());
@@ -259,8 +262,11 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   @Test
   public void testCreatePoLineWithGetPoLineNumberError() throws IOException {
     logger.info("=== Test Create PO Line - fail on PO Line number generation ===");
-    String body = getMockData(String.format("%s%s.json", COMP_PO_LINES_MOCK_DATA_PATH, PO_LINE_ID_FOR_SUCCESS_CASE));
-    verifyPostResponse(LINES_PATH, body, prepareHeaders(PO_NUMBER_ERROR_X_OKAPI_TENANT), APPLICATION_JSON, 500);
+    JsonObject json = new JsonObject(getMockData(String.format("%s%s.json", COMP_PO_LINES_MOCK_DATA_PATH, PO_LINE_ID_FOR_SUCCESS_CASE)));
+    CompositePoLine poLine = json.mapTo(CompositePoLine.class);
+    poLine.setId("0009662b-8b80-4001-b704-ca10971f175d");
+    poLine.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
+    verifyPostResponse(LINES_PATH, JsonObject.mapFrom(poLine).encode(), prepareHeaders(PO_NUMBER_ERROR_X_OKAPI_TENANT, X_OKAPI_USER_ID), APPLICATION_JSON, 500);
   }
 
   @Test
@@ -406,7 +412,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
 
   @Test
-  public void testPutOrderLineByIdProtectedFieldsChanged() throws IllegalAccessException {
+  public void testPutOrderLineByIdProtectedFieldsChanged() {
     logger.info("=== Test PUT Order Line By Id - Protected fields changed ===");
 
     String lineId = "0009662b-8b80-4001-b704-ca10971f175d";
@@ -651,7 +657,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   public void testGetOrderPoLinesByEmptyQuery() {
     logger.info("=== Test Get Orders lines - by empty query ===");
 
-    verifySuccessGet(LINES_PATH, PoLineCollection.class);
+    verifySuccessGet(LINES_PATH, PoLineCollection.class, PROTECTED_READ_ONLY_TENANT);
 
     assertThat(getOrderLineSearches(), nullValue());
     assertThat(getPoLineSearches(), hasSize(1));
@@ -672,7 +678,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     String cql = String.format("%s==%s", PURCHASE_ORDER_ID, ORDER_ID_WITH_PO_LINES);
     String endpointQuery = String.format("%s?query=%s%s", LINES_PATH, cql, sortBy);
 
-    final PoLineCollection poLineCollection = verifySuccessGet(endpointQuery, PoLineCollection.class);
+    final PoLineCollection poLineCollection = verifySuccessGet(endpointQuery, PoLineCollection.class, PROTECTED_READ_ONLY_TENANT);
 
     assertThat(poLineCollection.getTotalRecords(), is(2));
     assertThat(getOrderLineSearches(), hasSize(1));

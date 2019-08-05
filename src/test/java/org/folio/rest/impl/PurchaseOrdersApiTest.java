@@ -11,6 +11,7 @@ import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
+import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
@@ -70,6 +71,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIPT_STATUS;
 import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.impl.AbstractHelper.MAX_IDS_FOR_GET_RQ;
 import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
@@ -153,7 +155,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   static final String ORDER_WIT_PO_LINES_FOR_SORTING =  "9a952cd0-842b-4e71-bddd-014eb128dc8e";
 
   // API paths
-  private final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
+  public final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
   private final static String COMPOSITE_ORDERS_BY_ID_PATH = COMPOSITE_ORDERS_PATH + "/%s";
 
   static final String LISTED_PRINT_MONOGRAPH_PATH = "po_listed_print_monograph.json";
@@ -167,6 +169,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
   private static final String NULL = "null";
   static final String PURCHASE_ORDER_ID = "purchaseOrderId";
+
+  public static final Header ALL_DESIRED_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(AcqDesiredPermissions.getValues()).encode());
 
 
   @Test
@@ -204,7 +208,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     double expectedTotalPoLine2 = 32.98d;
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     logger.info(JsonObject.mapFrom(resp));
 
@@ -390,7 +394,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     LocalDate now = LocalDate.now();
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     LocalDate dateOrdered = resp.getDateOrdered().toInstant().atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDate();
     assertThat(dateOrdered.getMonth(), equalTo(now.getMonth()));
@@ -461,7 +465,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     // Verify dateOrdered is not set because Workflow status is not OPEN
     assertNull(resp.getDateOrdered());
@@ -508,7 +512,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
           LocalDate now = LocalDate.now();
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
     LocalDate dateOrdered = resp.getDateOrdered().toInstant().atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDate();
     assertThat(dateOrdered.getMonth(), equalTo(now.getMonth()));
     assertThat(dateOrdered.getYear(), equalTo(now.getYear()));
@@ -565,7 +569,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     LocalDate now = LocalDate.now();
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
     LocalDate dateOrdered = resp.getDateOrdered().toInstant().atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDate();
     assertThat(dateOrdered.getMonth(), equalTo(now.getMonth()));
     assertThat(dateOrdered.getYear(), equalTo(now.getYear()));
@@ -655,7 +659,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     JsonObject reqData = new JsonObject(body);
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
-      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
 
     logger.info(JsonObject.mapFrom(resp));
@@ -703,7 +707,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     String body= request.toString();
 
      verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
-       prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 400);
+       prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID), APPLICATION_JSON, 400);
 
   }
 
@@ -717,7 +721,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     String body= request.toString();
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
-      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     String poId = resp.getId();
     String poNumber = resp.getPoNumber();
@@ -783,7 +787,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     int status403 = HttpStatus.HTTP_FORBIDDEN.toInt();
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, new Header(X_ECHO_STATUS, String.valueOf(status403)));
 
-    final Response resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, body, headers, APPLICATION_JSON, 500);
+    final Response resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, body, headers, APPLICATION_JSON, 403);
 
     String respBody = resp.getBody().as(Errors.class).getErrors().get(0).getMessage();
     logger.info(respBody);
@@ -1181,7 +1185,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().forEach(s -> s.setCheckinItems(true));
 
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_TOKEN, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
     assertNotNull(getHoldingsSearches());
@@ -1202,7 +1206,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
 
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNull(getInstancesSearches());
     assertNull(getHoldingsSearches());
@@ -1224,7 +1228,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
 
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
     assertNull(getHoldingsSearches());
@@ -1245,7 +1249,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
 
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
     assertNotNull(getHoldingsSearches());
@@ -1266,7 +1270,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
 
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
     assertNotNull(getHoldingsSearches());
@@ -1287,7 +1291,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(null);
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
     assertNotNull(getHoldingsSearches());
@@ -1310,7 +1314,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(null);
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(EMPTY_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      prepareHeaders(EMPTY_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
     assertNotNull(getHoldingsSearches());
@@ -1660,7 +1664,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testGetOrdersNoParameters() {
     logger.info("=== Test Get Orders - With empty query ===");
 
-    final PurchaseOrders purchaseOrders = verifySuccessGet(COMPOSITE_ORDERS_PATH, PurchaseOrders.class);
+    final PurchaseOrders purchaseOrders = verifySuccessGet(COMPOSITE_ORDERS_PATH, PurchaseOrders.class, PROTECTED_READ_ONLY_TENANT);
 
     assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET), hasSize(1));
     assertThat(MockServer.serverRqRs.get(SEARCH_ORDERS, HttpMethod.GET), nullValue());
@@ -1679,7 +1683,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     String sortBy = " sortBy poNumber";
     String queryValue = "poNumber==" + EXISTING_PO_NUMBER;
     String endpointQuery = String.format("%s?query=%s%s", COMPOSITE_ORDERS_PATH, queryValue, sortBy);
-    final PurchaseOrders purchaseOrders = verifySuccessGet(endpointQuery, PurchaseOrders.class);
+    final PurchaseOrders purchaseOrders = verifySuccessGet(endpointQuery, PurchaseOrders.class, PROTECTED_READ_ONLY_TENANT);
 
     assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET), nullValue());
     assertThat(MockServer.serverRqRs.get(SEARCH_ORDERS, HttpMethod.GET), hasSize(1));
@@ -1753,7 +1757,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     // Purchase order is OK
     Errors activeVendorActiveAccessProviderErrors = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(Errors.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(Errors.class);
     assertThat(activeVendorActiveAccessProviderErrors.getErrors(), empty());
 
     // Internal mod-vendor error
@@ -1942,7 +1946,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
 
     CompositePurchaseOrder respData = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertThat(respData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.CLOSED));
     assertThat(respData.getCloseReason(), notNullValue());
@@ -2060,7 +2064,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdateOrderWithProtectedFieldsChanging() throws IllegalAccessException {
+  public void testUpdateOrderWithProtectedFieldsChanging() {
     logger.info("=== Test case when OPEN order errors if protected fields are changed ===");
 
     JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS);
@@ -2086,7 +2090,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
 
   @Test
-  public void testUpdateOrderCloseOrderWithCloseReason() throws IllegalAccessException {
+  public void testUpdateOrderCloseOrderWithCloseReason() {
     logger.info("=== Test case: Able to Close Order with close Reason ===");
 
     JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS);
@@ -2102,7 +2106,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdateOrderWithLineProtectedFieldsChanging() throws IllegalAccessException {
+  public void testUpdateOrderWithLineProtectedFieldsChanging() {
     logger.info("=== Test case when OPEN order errors if protected fields are changed in CompositePoLine===");
 
     JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS);
@@ -2122,7 +2126,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdateOrderWithProtectedFieldsChangingForClosedOrder() throws IllegalAccessException {
+  public void testUpdateOrderWithProtectedFieldsChangingForClosedOrder() {
     logger.info("=== Test case when closed order errors if protected fields are changed ===");
 
     JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_CLOSED_STATUS);
@@ -2159,7 +2163,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().remove(1);
     assertThat( reqData.getCompositePoLines(), hasSize(1));
 
-    Headers headers = prepareHeaders(new Header(OKAPI_HEADER_TENANT, "existReferenceData"));
+    Headers headers = prepareHeaders(new Header(OKAPI_HEADER_TENANT, "existReferenceData"), X_OKAPI_USER_ID);
 
     //Create order first time for tenant, no contributor name type in cache
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
@@ -2179,7 +2183,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     clearServiceInteractions();
 
     // Prepare X-Okapi-Tenant heander for tenant which has no contributor name type
-    headers = prepareHeaders(new Header(OKAPI_HEADER_TENANT, "anotherExistReferenceData"));
+    headers = prepareHeaders(new Header(OKAPI_HEADER_TENANT, "anotherExistReferenceData"), X_OKAPI_USER_ID);
 
     //Create order for another tenant, no contributor name type in cache for this tenant
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
@@ -2199,7 +2203,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().remove(1);
     assertThat( reqData.getCompositePoLines(), hasSize(1));
 
-    Headers headers = prepareHeaders(NON_EXIST_INSTANCE_STATUS_TENANT_HEADER);
+    Headers headers = prepareHeaders(NON_EXIST_INSTANCE_STATUS_TENANT_HEADER, X_OKAPI_USER_ID);
 
     //Create order first time for tenant without instanceStatus, no instanceStatus in cache, so logic should call get /instance-types
     Error err = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 500).getBody()
@@ -2234,7 +2238,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().remove(1);
     assertThat( reqData.getCompositePoLines(), hasSize(1));
 
-    Headers headers = prepareHeaders(INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT_HEADER);
+    Headers headers = prepareHeaders(INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT_HEADER, X_OKAPI_USER_ID);
 
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
 
@@ -2275,7 +2279,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     reqData.getCompositePoLines().get(0).getContributors().clear();
 
-    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10);
+    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID);
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
       .encodePrettily(), headers, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
@@ -2297,7 +2301,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     reqData.getCompositePoLines().get(0).getContributors().add(new Contributor().withContributor("Test").withContributorNameTypeId(ID_DOES_NOT_EXIST));
 
-    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10);
+    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID);
 
     Response resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
       .encodePrettily(), headers, APPLICATION_JSON, 500);
@@ -2335,12 +2339,12 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   private void removeAllEncumbranceLinks(CompositePurchaseOrder reqData) {
-    reqData.getCompositePoLines().forEach(poLine -> {
+    reqData.getCompositePoLines().forEach(poLine ->
       poLine.getFundDistribution().forEach(fundDistribution -> {
         fundDistribution.setEncumbrance(null);
         fundDistribution.setFundId(UUID.randomUUID().toString());
-      });
-    });
+      })
+    );
   }
 
   private Error verifyMissingInventoryEntryErrorHandling(Header header) throws Exception {
@@ -2350,7 +2354,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
       .remove(1);
     assertThat(reqData.getCompositePoLines(), hasSize(1));
 
-    Headers headers = prepareHeaders(header);
+    Headers headers = prepareHeaders(header, X_OKAPI_USER_ID);
 
     Response resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
       .encodePrettily(), headers, APPLICATION_JSON, 500);
@@ -2372,7 +2376,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
   private Errors verifyPostResponseErrors(int expectedErrorsNumber, String body) {
     Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422).as(Errors.class);
     assertThat(errors.getTotalRecords(), equalTo(expectedErrorsNumber));
     assertThat(errors.getErrors(), hasSize(expectedErrorsNumber));
     return errors;

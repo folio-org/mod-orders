@@ -19,24 +19,26 @@ public class PieceApiTest extends ApiTestBase {
 
   private static final Logger logger = LoggerFactory.getLogger(PieceApiTest.class);
 
-  private static final String PIECES_ENDPOINT = "/orders/pieces";
+  public static final String PIECES_ENDPOINT = "/orders/pieces";
   private static final String PIECES_ID_PATH = PIECES_ENDPOINT + "/%s";
   static final String VALID_UUID = "c3e26c0e-d6a6-46fb-9309-d494cd0c82de";
   static final String CONSISTENT_RECEIVED_STATUS_PIECE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
   private JsonObject pieceJsonReqData = getMockAsJson(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord.json");
-  
+
   @Test
   public void testPostPiece() {
     logger.info("=== Test POST Piece (Create Piece) ===");
 
     Piece postPieceRq = pieceJsonReqData.mapTo(Piece.class);
+    // To skip unit's permission validation
+    postPieceRq.setPoLineId("0009662b-8b80-4001-b704-ca10971f175d");
 
     // Positive cases
     // Piece id is null initially
     assertThat(postPieceRq.getId(), nullValue());
 
     Piece postPieceRs = verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Piece.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Piece.class);
 
     // Piece id not null
     assertThat(postPieceRs.getId(), notNullValue());
@@ -44,12 +46,12 @@ public class PieceApiTest extends ApiTestBase {
     // Negative cases
     // Unable to create piece test
     int status400 = HttpStatus.HTTP_BAD_REQUEST.toInt();
-    verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
+    verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID,
       new Header(X_ECHO_STATUS, String.valueOf(status400))), APPLICATION_JSON, status400);
 
     // Internal error on mod-orders-storage test
     int status500 = HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt();
-    verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
+    verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID,
       new Header(X_ECHO_STATUS, String.valueOf(status500))), APPLICATION_JSON, status500);
   }
   
