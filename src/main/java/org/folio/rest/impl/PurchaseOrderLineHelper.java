@@ -128,7 +128,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     AcquisitionsUnitsHelper acqUnitsHelper = new AcquisitionsUnitsHelper(httpClient, okapiHeaders, ctx, lang);
     return acqUnitsHelper.buildAcqUnitsCqlExprToSearchRecords().thenCompose(acqUnitsCqlExpr -> {
       if (isEmpty(query)) {
-        return getPoLines(limit, offset, acqUnitsCqlExpr, GET_PO_LINES_BY_QUERY);
+        return getPoLines(limit, offset, acqUnitsCqlExpr);
       }
       return getPoLines(limit, offset, combineCqlExpressions("and", acqUnitsCqlExpr, query), GET_ORDER_LINES_BY_QUERY);
     });
@@ -145,7 +145,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       .thenCompose(v -> validateNewPoLine(compPOL))
       .thenCompose(isValid -> {
         if (isValid) {
-          return getCompositePurchaseOrder(compPOL)
+          return getCompositePurchaseOrder(compPOL.getPurchaseOrderId())
             // The PO Line can be created only for order in Pending state
             .thenApply(this::validateOrderState)
             .thenCompose(po -> protectionHelper.isOperationRestricted(po.getAcqUnitIds(),ProtectedOperationType.CREATE).thenApply(vVoid -> po))
@@ -286,7 +286,9 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   CompletableFuture<CompositePoLine> getCompositePoLine(String polineId) {
     return getPoLineById(polineId, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenCompose(this::populateCompositeLine);
+      .thenCompose(line -> getCompositePurchaseOrder(line.getString(PURCHASE_ORDER_ID))
+        .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.READ))
+        .thenCompose(ok -> populateCompositeLine(line)));
   }
 
   CompletableFuture<Void> deleteLine(String lineId) {
@@ -313,10 +315,9 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private CompletableFuture<JsonObject> validatePOLineProtectedFieldsChanged(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
-    return HelperUtils.getPurchaseOrderById(compOrderLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger)
+    return getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId())
       .thenCompose(purchaseOrder -> {
-        if (!purchaseOrder.getString(WORKFLOW_STATUS)
-          .equals(CompositePurchaseOrder.WorkflowStatus.PENDING.value())) {
+        if (purchaseOrder.getWorkflowStatus() != CompositePurchaseOrder.WorkflowStatus.PENDING) {
           verifyProtectedFieldsChanged(POLineProtectedFields.getFieldNames(), lineFromStorage, JsonObject.mapFrom(compOrderLine));
         }
         return completedFuture(lineFromStorage);
@@ -457,8 +458,8 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(CompositePoLine compPOL) {
-    return getPurchaseOrderById(compPOL.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger)
+  private CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId) {
+    return getPurchaseOrderById(purchaseOrderId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
       .exceptionally(t -> {
         Throwable cause = t.getCause();

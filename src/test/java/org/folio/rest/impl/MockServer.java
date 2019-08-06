@@ -30,6 +30,8 @@ import static org.folio.rest.impl.ApiTestBase.ID;
 import static org.folio.rest.impl.ApiTestBase.ID_DOES_NOT_EXIST;
 import static org.folio.rest.impl.ApiTestBase.ID_FOR_INTERNAL_SERVER_ERROR;
 import static org.folio.rest.impl.ApiTestBase.INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT;
+import static org.folio.rest.impl.ApiTestBase.MIN_PO_ID;
+import static org.folio.rest.impl.ApiTestBase.MIN_PO_LINE_ID;
 import static org.folio.rest.impl.ApiTestBase.NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT;
 import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_STATUS_TENANT;
 import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_TYPE_TENANT;
@@ -38,6 +40,9 @@ import static org.folio.rest.impl.ApiTestBase.PO_ID_GET_LINES_INTERNAL_SERVER_ER
 import static org.folio.rest.impl.ApiTestBase.PO_LINE_NUMBER_VALUE;
 import static org.folio.rest.impl.ApiTestBase.PROTECTED_READ_ONLY_TENANT;
 import static org.folio.rest.impl.ApiTestBase.X_ECHO_STATUS;
+import static org.folio.rest.impl.ApiTestBase.encodePrettily;
+import static org.folio.rest.impl.ApiTestBase.getMinimalContentCompositePoLine;
+import static org.folio.rest.impl.ApiTestBase.getMinimalContentPurchaseOrder;
 import static org.folio.rest.impl.ApiTestBase.getMockAsJson;
 import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEMS;
@@ -965,6 +970,8 @@ public class MockServer {
 
     if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+    } else if (MIN_PO_LINE_ID.equals(id)) {
+      serverResponse(ctx, 200, APPLICATION_JSON, encodePrettily(getMinimalContentCompositePoLine()));
     } else {
       try {
 
@@ -1161,6 +1168,11 @@ public class MockServer {
 
       // If previous step has no result then attempt to find PO in stubs
       if (po == null) {
+        if (MIN_PO_ID.equals(id)) {
+          serverResponse(ctx, 200, APPLICATION_JSON, encodePrettily(getMinimalContentPurchaseOrder()));
+          return;
+        }
+
         String filePath;
         if (ID_FOR_PRINT_MONOGRAPH_ORDER.equals(id)) {
           filePath = LISTED_PRINT_MONOGRAPH_PATH;

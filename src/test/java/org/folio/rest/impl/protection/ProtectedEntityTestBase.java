@@ -49,12 +49,12 @@ public abstract class ProtectedEntityTestBase extends ApiTestBase {
   public PurchaseOrder prepareOrder(List<String> acqUnitsIds) {
     PurchaseOrder po = getMinimalContentPurchaseOrder();
     po.setAcqUnitIds(acqUnitsIds);
+    addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(po));
     return po;
   }
 
   public PoLine preparePoLine(List<String> acqUnitsIds) {
     PurchaseOrder order = prepareOrder(acqUnitsIds);
-    addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
     return getMinimalContentCompositePoLine(order.getId());
   }
 

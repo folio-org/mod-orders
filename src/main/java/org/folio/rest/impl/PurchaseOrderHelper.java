@@ -12,7 +12,6 @@ import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
-import static org.folio.orders.utils.HelperUtils.convertToCompositePurchaseOrder;
 import static org.folio.orders.utils.HelperUtils.deletePoLine;
 import static org.folio.orders.utils.HelperUtils.deletePoLines;
 import static org.folio.orders.utils.HelperUtils.getCompositePoLines;
@@ -80,7 +79,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private final PoNumberHelper poNumberHelper;
   private final PurchaseOrderLineHelper orderLineHelper;
-  private final ProtectionHelper  protectionHelper;
+  private final ProtectionHelper protectionHelper;
 
   PurchaseOrderHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
@@ -206,13 +205,13 @@ public class PurchaseOrderHelper extends AbstractHelper {
             future.complete(null);
           })
           .exceptionally(t -> {
-            logger.error("Failed to delete PO", t);
+            logger.error("Failed to delete the order with id={}", t.getCause(), id);
             future.completeExceptionally(t);
             return null;
           });
       })
       .exceptionally(t -> {
-        logger.error("Failed to delete PO Lines", t);
+        logger.error("Failed to delete PO Lines of the order with id={}", t.getCause(), id);
         future.completeExceptionally(t);
         return null;
       });
@@ -227,36 +226,41 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @return completable future with {@link CompositePurchaseOrder} on success or an exception if processing fails
    */
   public CompletableFuture<CompositePurchaseOrder> getCompositeOrder(String id) {
+
     CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
 
     getPurchaseOrderById(id, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenAccept(po -> {
-        if (logger.isInfoEnabled()) {
-          logger.info("got: " + po.encodePrettily());
-        }
-        CompositePurchaseOrder compPO = convertToCompositePurchaseOrder(po);
-
-        getCompositePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
-          .thenApply(poLines -> {
-            orderLineHelper.sortPoLinesByPoLineNumber(poLines);
-            return poLines;
-          })
+      .thenApply(HelperUtils::convertToCompositePurchaseOrder)
+      .thenAccept(compPO -> protectionHelper.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.READ)
+        .thenAccept(ok -> getSortedCompositeOrderLines(id)
           .thenApply(compPO::withCompositePoLines)
           .thenApply(this::populateOrderSummary)
           .thenAccept(future::complete)
           .exceptionally(t -> {
-            logger.error("Failed to get POLines", t);
+            logger.error("Failed to get lines for order with id={}", t.getCause(), id);
             future.completeExceptionally(t);
             return null;
-          });
-      })
+          }))
+        .exceptionally(t -> {
+          logger.error("User with id={} is forbidden to view order with id={}", t.getCause(), getCurrentUserId(), id);
+          future.completeExceptionally(t);
+          return null;
+        }))
       .exceptionally(t -> {
-        logger.error("Failed to build composite purchase order", t.getCause());
+        logger.error("Failed to build composite purchase order with id={}", t.getCause(), id);
         future.completeExceptionally(t);
         return null;
       });
 
     return future;
+  }
+
+  private CompletableFuture<List<CompositePoLine>> getSortedCompositeOrderLines(String orderId) {
+    return getCompositePoLines(orderId, lang, httpClient, ctx, okapiHeaders, logger)
+    .thenApply(poLines -> {
+      orderLineHelper.sortPoLinesByPoLineNumber(poLines);
+      return poLines;
+    });
   }
 
   private CompositePurchaseOrder populateOrderSummary(CompositePurchaseOrder compPO) {
