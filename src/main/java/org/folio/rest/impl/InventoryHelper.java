@@ -719,12 +719,8 @@ public class InventoryHelper extends AbstractHelper {
       .thenCompose(identifierTypes -> completedFuture(extractId(getFirstObjectFromResponse(identifierTypes, IDENTIFIER_TYPES))));
   }
 
-  public CompletableFuture<String> convertISBNto13(String isbn) {
+  public CompletableFuture<String> convertToISBN13(String isbn) {
     String convertEndpoint = String.format("/isbn/convertTo13?isbn=%s&lang=%s", isbn, lang);
-    return handleGetRequest(convertEndpoint, httpClient, ctx, okapiHeaders, logger).thenApply(json -> json.getString("isbn"))
-      .exceptionally(e -> {
-        logger.error("Error converting to isbn13", e);
-        throw new CompletionException(e.getCause());
-      });
+    return handleGetRequest(convertEndpoint, httpClient, ctx, okapiHeaders, logger).thenApply(json -> json.getString("isbn"));
   }
 }

@@ -377,6 +377,7 @@ public class MockServer {
     router.route(HttpMethod.GET, resourcesPath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnits);
     router.route(HttpMethod.GET, resourcePath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnit);
     router.route(HttpMethod.GET, resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(this::handleGetAcquisitionsMemberships);
+    router.route(HttpMethod.GET, resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(this::handleGetAcquisitionsMembership);
     router.route(HttpMethod.GET, "/isbn/convertTo13").handler(this::handleGetIsbnConverter);
 
     router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
@@ -1522,18 +1523,48 @@ public class MockServer {
     }
   }
 
+  private void handleGetAcquisitionsMembership(RoutingContext ctx) {
+    logger.info("handleGetAcquisitionsMembership got: " + ctx.request().path());
+    String id = ctx.request().getParam(ID);
+
+    AcquisitionsUnitMembershipCollection memberships;
+    try {
+      memberships = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_MEMBERSHIPS_COLLECTION)).mapTo(AcquisitionsUnitMembershipCollection.class);
+    } catch (IOException e) {
+      memberships = new AcquisitionsUnitMembershipCollection();
+    }
+
+    AcquisitionsUnitMembership acquisitionsUnitMembership = memberships.getAcquisitionsUnitMemberships()
+      .stream()
+      .filter(membership -> membership.getId().equals(id))
+      .findAny()
+      .orElse(null);
+
+    if (acquisitionsUnitMembership != null) {
+      JsonObject data = JsonObject.mapFrom(acquisitionsUnitMembership);
+      addServerRqRsData(HttpMethod.GET, ACQUISITIONS_MEMBERSHIPS, data);
+      serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
+    } else {
+      serverResponse(ctx, 404, TEXT_PLAIN, id);
+    }
+  }
+
   private void handleGetIsbnConverter(RoutingContext ctx) {
     logger.info("handleGetIsbnConverter got: " + ctx.request()
       .path());
     String isbn = ctx.request()
       .getParam("isbn");
     JsonObject data = new JsonObject();
-    if (IsbnUtil.isValid13DigitNumber(isbn) || IsbnUtil.isValid10DigitNumber(isbn)) {
+    if (IsbnUtil.isValid13DigitNumber(isbn)) {
+      data.put("isbn", isbn);
+      addServerRqRsData(HttpMethod.GET, ISBN_CONVERT13, data);
+      serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
+    } else if (IsbnUtil.isValid10DigitNumber(isbn)) {
       data.put("isbn", IsbnUtil.convertTo13DigitNumber(isbn));
       addServerRqRsData(HttpMethod.GET, ISBN_CONVERT13, data);
       serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
     } else {
-      serverResponse(ctx, 400, TEXT_PLAIN, "ISBN value is invalid");
+      serverResponse(ctx, 400, TEXT_PLAIN, String.format("ISBN value %s is invalid", isbn));
     }
   }
 

@@ -834,8 +834,12 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   public CompletableFuture<Void> validateAndNormalizeISBN(CompositePoLine compPOL) {
-    return inventoryHelper.getProductTypeUUID(ISBN)
-      .thenCompose(id -> validateIsbnValues(compPOL, id));
+    if (compPOL.getDetails() != null && compPOL.getDetails()
+      .getProductIds() != null) {
+      return inventoryHelper.getProductTypeUUID(ISBN)
+        .thenCompose(id -> validateIsbnValues(compPOL, id));
+    }
+    return completedFuture(null);
   }
 
   CompletableFuture<Void> validateIsbnValues(CompositePoLine compPOL, String id) {
@@ -845,7 +849,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       .map(productID -> {
         if (productID.getProductIdType()
           .equals(id)) {
-          return inventoryHelper.convertISBNto13(productID.getProductId())
+          return inventoryHelper.convertToISBN13(productID.getProductId())
             .thenAccept(productID::setProductId);
         }
         return completedFuture(null);

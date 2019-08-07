@@ -256,7 +256,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     Errors errors = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(poLine).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
-    validatePoLineCreationErrorForNonPendingOrder(errorCode, errors);
+    validatePoLineCreationErrorForNonPendingOrder(errorCode, errors, 4);
   }
 
   @Test
@@ -363,9 +363,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     assertTrue(StringUtils.isEmpty(resp.getBody().asString()));
 
-    //2 calls to get Order Line and Purchase Order for checking workflow status
+    //3 calls to get Order Line,Purchase Order for checking workflow status and ISBN validation
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(2, column.size());
+    assertEquals(3, column.size());
     assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
@@ -398,8 +398,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
 
     // 2 calls each to fetch Order Line and Purchase Order
+    // inaddition 2 calls for ISBN validation
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(2, column.size());
+    assertEquals(4, column.size());
     assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
@@ -440,9 +441,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     checkPreventProtectedFieldsModificationRule(url, body, allProtectedFieldsModification);
 
-    // 2 calls each to fetch Order Line and Purchase Order
+    // 3 calls each to fetch Order Line , Purchase Order and ISBN validation
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(2, column.size());
+    assertEquals(3, column.size());
     assertThat(column, hasKey(PO_LINES));
 
     // Verify no message sent via event bus
@@ -695,6 +696,68 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertThat(queryToStorage, not(containsString(ACQUISITIONS_UNIT_IDS + "=")));
     assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
     assertThat(queryToStorage, endsWith(sortBy));
+  }
+
+  @Test
+  public void testPostOrdersWithInvalidIsbn() throws Exception {
+    logger.info("=== Test Post Order line with invalid ISBN ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+    // To skip permission validation by units
+    reqData.setId("0009662b-8b80-4001-b704-ca10971f175d");
+    reqData.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
+
+    String isbn = "1234";
+
+    reqData.getDetails().getProductIds().get(0).setProductId(isbn);
+
+
+    Response resp = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 400);
+
+    Error err = resp.getBody()
+        .as(Errors.class)
+        .getErrors()
+        .get(0);
+
+      assertThat(err.getMessage(), equalTo(String.format("ISBN value %s is invalid", isbn)));
+  }
+
+  @Test
+  public void testPostOrderLinetoConvertToIsbn13() throws Exception {
+    logger.info("=== Test Post order line to verify ISBN 10 is normalized to ISBN 13 ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+    // To skip permission validation by units
+    reqData.setId("0009662b-8b80-4001-b704-ca10971f175d");
+    reqData.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
+
+    String isbn = "0-19-852663-6";
+
+    reqData.getDetails().getProductIds().get(0).setProductId(isbn);
+
+    CompositePoLine resp = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
+
+    assertThat(resp.getDetails().getProductIds().get(0).getProductId(), equalTo("9780198526636"));
+  }
+
+  @Test
+  public void testPutOrdersWithInvalidIsbn() throws Exception {
+    logger.info("=== Test Put Order line with invalid ISBN ===");
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
+      .mapTo(CompositePoLine.class);
+    reqData.setId(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
+    String isbn = "1234";
+
+    reqData.getDetails().getProductIds().get(0).setProductId(isbn);
+
+    Response response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), APPLICATION_JSON,
+        400);
+
+    Error err = response.getBody().as(Errors.class).getErrors().get(0);
+
+    assertThat(err.getMessage(), equalTo(String.format("ISBN value %s is invalid", isbn)));
   }
 
   private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {
