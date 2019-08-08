@@ -175,7 +175,7 @@
      <groupId>org.folio</groupId>
      <artifactId>folio-isbn-util</artifactId>
      <version>1.1.0</version>
-     <type>jar</type>
+     <scope>test</scope>
    </dependency>
   </dependencies>
 
