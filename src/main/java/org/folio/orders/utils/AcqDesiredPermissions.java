@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public enum AcqDesiredPermissions {
-  CREATE("orders.acquisitions-units-assignments.item.post"),
-  DELETE("orders.acquisitions-units-assignments.item.delete");
+  ASSIGN("orders.acquisitions-units-assignments.assign"),
+  MANAGE("orders.acquisitions-units-assignments.manage");
 
   private String permission;
   private static final List<String> values;

@@ -20,7 +20,7 @@
           "methods": ["POST"],
           "pathPattern": "/orders/composite-orders",
           "permissionsRequired": ["orders.item.post"],
-          "permissionsDesired": ["orders.acquisitions-units-assignments.item.post"],
+          "permissionsDesired": ["orders.acquisitions-units-assignments.assign"],
           "modulePermissions": [
             "orders-storage.purchase-orders.collection.get",
             "orders-storage.purchase-orders.item.post",
@@ -71,6 +71,7 @@
           "methods": ["PUT"],
           "pathPattern": "/orders/composite-orders/{id}",
           "permissionsRequired": ["orders.item.put"],
+          "permissionsDesired": ["orders.acquisitions-units-assignments.manage"],
           "modulePermissions": [
             "orders-storage.purchase-orders.collection.get",
             "orders-storage.purchase-orders.item.put",
@@ -563,22 +564,22 @@
       ]
     },
     {
-      "permissionName": "orders.acquisitions-units-assignments.item.post",
+      "permissionName": "orders.acquisitions-units-assignments.assign",
       "displayName": "Acquisitions unit assignment - create unit assignment",
-      "description": "Create a new acquisitions unit assignments"
+      "description": "Assign new order to acquisitions units"
     },
     {
-      "permissionName": "orders.acquisitions-units-assignments.item.delete",
-      "displayName": "Acquisitions units - delete unit",
-      "description": "Delete an acquisitions unit assignments"
+      "permissionName": "orders.acquisitions-units-assignments.manage",
+      "displayName": "Acquisitions units assignment - manage unit assignments",
+      "description": "Manage unit assignments during orders update"
     },
     {
       "permissionName": "orders.acquisitions-units-assignments.all",
       "displayName": "All order acquisitions-unit-assignments permissions",
       "description": "All permissions for the acquisitions-unit-assignments",
       "subPermissions": [
-        "orders.acquisitions-units-assignments.item.post",
-        "orders.acquisitions-units-assignments.item.delete"
+        "orders.acquisitions-units-assignments.assign",
+        "orders.acquisitions-units-assignments.manage"
       ]
     },
     {
