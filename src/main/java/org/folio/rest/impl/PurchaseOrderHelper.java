@@ -305,6 +305,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
     return setCreateInventoryDefaultValues(compPO)
       .thenAccept(v -> addProcessingErrors(HelperUtils.validateOrder(compPO)))
+      .thenCompose(v -> validateIsbnValues(compPO))
       .thenCompose(v -> validatePoLineLimit(compPO))
       .thenCompose(isLimitValid -> {
         if (!getErrors().isEmpty()) {
@@ -318,6 +319,17 @@ public class PurchaseOrderHelper extends AbstractHelper {
       });
 
   }
+
+
+  CompletableFuture<Void> validateIsbnValues(CompositePurchaseOrder compPO) {
+    CompletableFuture[] futures = compPO.getCompositePoLines()
+      .stream()
+      .map(orderLineHelper::validateAndNormalizeISBN)
+      .toArray(CompletableFuture[]::new);
+
+    return VertxCompletableFuture.allOf(ctx, futures);
+  }
+
 
   CompletableFuture<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO) {
     CompletableFuture[] futures = compPO.getCompositePoLines()

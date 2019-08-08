@@ -45,6 +45,7 @@ import static org.folio.rest.acq.model.Piece.Format.ELECTRONIC;
 
 public class InventoryHelper extends AbstractHelper {
 
+  private static final String IDENTIFIER_TYPES = "identifierTypes";
   private static final String SOURCE_FOLIO = "FOLIO";
   static final String INSTANCE_SOURCE = "source";
   static final String INSTANCE_TITLE = "title";
@@ -710,5 +711,16 @@ public class InventoryHelper extends AbstractHelper {
             throw new IllegalArgumentException("Unexpected inventory entry type: " + entryType);
         }
       });
+  }
+
+  public CompletableFuture<String> getProductTypeUUID(String identifierType) {
+    String endpoint = String.format("/identifier-types?limit=1&query=name==%s&lang=%s", identifierType, lang);
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(identifierTypes -> completedFuture(extractId(getFirstObjectFromResponse(identifierTypes, IDENTIFIER_TYPES))));
+  }
+
+  public CompletableFuture<String> convertToISBN13(String isbn) {
+    String convertEndpoint = String.format("/isbn/convertTo13?isbn=%s&lang=%s", isbn, lang);
+    return handleGetRequest(convertEndpoint, httpClient, ctx, okapiHeaders, logger).thenApply(json -> json.getString("isbn"));
   }
 }
