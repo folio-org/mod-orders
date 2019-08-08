@@ -246,11 +246,10 @@ public class OrdersImpl implements Orders {
           asyncResultHandler.handle(succeededFuture(response));
           return;
         }
-
-        helper.updateOrderLine(poLine)
+        helper.validateAndNormalizeISBN(poLine)
+          .thenCompose(vo -> helper.updateOrderLine(poLine))
           .thenAccept(v -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
           .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
-
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
