@@ -655,8 +655,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   /**
-   * The method checks if user trying assign order to acquisition unit, if yes that
-   * check that user has permission to assign record to unit.
+   * The method checks if the order is assigned to acquisition unit, if yes,
+   * then check that if the user has desired permission to assign the record to acquisition unit
    *
    * @throws HttpException if user does not have assign permission
    * @param compOrder purchase order from request
@@ -668,8 +668,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   /**
-   * The method checks if user trying update order assignments, if yes that
-   * check that user has permission to manage unit assignments.
+   * The method checks if list of acquisition units to which the order is assigned is changed, if yes,
+   * then check that if the user has desired permission to manage acquisition units assignments
    *
    * @throws HttpException if user does not have manage permission
    * @param newOrder purchase order from request
@@ -684,8 +684,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
     }
   }
 
-  private boolean isUserDoesNotHaveDesiredPermission(AcqDesiredPermissions manage) {
-    return !getProvidedPermissions().contains(manage.getPermission());
+  private boolean isUserDoesNotHaveDesiredPermission(AcqDesiredPermissions acqPerm) {
+    return !getProvidedPermissions().contains(acqPerm.getPermission());
   }
 
   private boolean isManagePermissionRequired(Set<String> newAcqUnits, Set<String> acqUnitsFromStorage) {
