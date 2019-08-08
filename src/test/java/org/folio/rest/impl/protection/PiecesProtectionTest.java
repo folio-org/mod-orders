@@ -26,7 +26,9 @@ public class PiecesProtectionTest extends ProtectedEntityTestBase {
 
   @Test
   @Parameters({
-    "CREATE"
+    "CREATE",
+    "UPDATE",
+    "DELETE"
   })
   public void testOperationWithNonExistedUnits(ProtectedOperations operation) {
     logger.info("=== Test corresponding order contains non-existent unit ids - expecting of call only to Units API ===");
@@ -43,33 +45,39 @@ public class PiecesProtectionTest extends ProtectedEntityTestBase {
 
   @Test
   @Parameters({
-    "CREATE"
+    "CREATE",
+    "UPDATE",
+    "DELETE"
   })
   public void testOperationWithAllowedUnits(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units allowed operation - expecting of call only to Units API ===");
 
     operation.process(PIECES_ENDPOINT, encodePrettily(preparePiece(NOT_PROTECTED_UNITS)),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, operation.getCode());
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), operation.getContentType(), operation.getCode());
 
     validateNumberOfRequests(1, 0);
   }
 
   @Test
   @Parameters({
-    "CREATE"
+    "CREATE",
+    "UPDATE",
+    "DELETE"
   })
   public void testWithRestrictedUnitsAndAllowedUser(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units, units protect operation, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER);
-    operation.process(PIECES_ENDPOINT, encodePrettily(preparePiece(PROTECTED_UNITS)), headers, APPLICATION_JSON, operation.getCode());
+    operation.process(PIECES_ENDPOINT, encodePrettily(preparePiece(PROTECTED_UNITS)), headers, operation.getContentType(), operation.getCode());
 
     validateNumberOfRequests(1, 1);
   }
 
   @Test
   @Parameters({
-    "CREATE"
+    "CREATE",
+    "UPDATE",
+    "DELETE"
   })
   public void testWithProtectedUnitsAndForbiddenUser(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units, units protect operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");

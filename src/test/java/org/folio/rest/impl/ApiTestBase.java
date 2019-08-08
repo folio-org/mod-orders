@@ -254,12 +254,13 @@ public class ApiTestBase {
   }
 
   Response verifyPut(String url, String body, String expectedContentType, int expectedCode) {
-    return verifyPut(url, body, prepareHeaders(X_OKAPI_URL, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_TOKEN), expectedContentType, expectedCode);
+    return verifyPut(url, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_TOKEN), expectedContentType, expectedCode);
   }
 
-  Response verifyPut(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
+  public Response verifyPut(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
     Response response = RestAssured
       .with()
+        .header(X_OKAPI_URL)
         .headers(headers)
         .body(body)
         .contentType(APPLICATION_JSON)
@@ -308,14 +309,15 @@ public class ApiTestBase {
     return verifyGet(url, APPLICATION_JSON, 200, tenant).as(clazz);
   }
 
-  Response verifyDeleteResponse(String url, String expectedContentType, int expectedCode) {
-    Headers headers =  prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT);
+  public Response verifyDeleteResponse(String url, String expectedContentType, int expectedCode) {
+    Headers headers =  prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT);
     return verifyDeleteResponse(url, headers, expectedContentType, expectedCode);
   }
 
-  Response verifyDeleteResponse(String url, Headers headers, String expectedContentType, int expectedCode) {
+  public Response verifyDeleteResponse(String url, Headers headers, String expectedContentType, int expectedCode) {
     Response response = RestAssured
       .with()
+        .header(X_OKAPI_URL)
         .headers(headers)
       .delete(url)
         .then()
@@ -449,6 +451,7 @@ public class ApiTestBase {
   public static PurchaseOrder getMinimalContentPurchaseOrder() {
     return new PurchaseOrder()
       .withId(UUID.randomUUID().toString())
+      .withPoNumber("TestNumber")
       .withOrderType(PurchaseOrder.OrderType.ONE_TIME)
       .withVendor("7d232b43-bf9a-4301-a0ce-9e076298632e");
   }

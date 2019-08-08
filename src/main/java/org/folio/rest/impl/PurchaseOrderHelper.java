@@ -3,8 +3,8 @@ package org.folio.rest.impl;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.folio.orders.utils.AcqDesiredPermissions.CREATE;
-import static org.folio.orders.utils.AcqDesiredPermissions.DELETE;
+import static org.folio.orders.utils.AcqDesiredPermissions.ASSIGN;
+import static org.folio.orders.utils.AcqDesiredPermissions.MANAGE;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
@@ -25,6 +25,8 @@ import static org.folio.orders.utils.HelperUtils.operateOnObject;
 import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.POProtectedFields.getFieldNames;
 import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder;
+import static org.folio.orders.utils.ProtectedOperationType.DELETE;
+import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
@@ -35,7 +37,6 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.O
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -137,7 +138,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
    */
   public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO) {
 
-    verifyUserHasDesiredPermissions(compPO, new CompositePurchaseOrder());
+    verifyUserHasAssignPermission(compPO);
     return protectionHelper.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.CREATE)
       .thenCompose(vVoid -> setPoNumberIfMissing(compPO)
         .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber()))
@@ -154,6 +155,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return getPurchaseOrderById(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(poFromStorage -> validateIfPOProtectedFieldsChanged(compPO, poFromStorage))
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
+      .thenApply(poFromStorage -> {
+        verifyUserHasManagePermission(compPO, poFromStorage);
+        return poFromStorage;
+      })
+      .thenCompose(poFromStorage -> protectionHelper.isOperationRestricted(poFromStorage.getAcqUnitIds(), UPDATE)
+        .thenApply(vVoid -> poFromStorage))
       .thenCompose(poFromStorage -> {
         logger.info("Order successfully retrieved from storage");
         return validatePoNumber(poFromStorage, compPO)
@@ -197,25 +204,42 @@ public class PurchaseOrderHelper extends AbstractHelper {
   public CompletableFuture<Void> deleteOrder(String id) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
-    deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenRun(() -> {
-        logger.info("Successfully deleted poLines, proceeding with purchase order");
-        operateOnObject(HttpMethod.DELETE, resourceByIdPath(PURCHASE_ORDER, id), httpClient, ctx, okapiHeaders, logger)
-          .thenAccept(rs -> {
-            logger.info("Successfully deleted order with id={}", id);
-            future.complete(null);
+    getPurchaseOrderById(id, lang, httpClient, ctx, okapiHeaders, logger)
+      .thenAccept(purchaseOrder -> {
+        CompositePurchaseOrder compPo = convertToCompositePurchaseOrder(purchaseOrder);
+        protectionHelper.isOperationRestricted(compPo.getAcqUnitIds(), DELETE)
+        .exceptionally(t -> {
+          logger.error("User with id={} is forbidden to view delete with id={}", t.getCause(), getCurrentUserId(), id);
+          future.completeExceptionally(t);
+          return null;
+        });
+      })
+      .thenAccept(aVoid ->
+        deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
+          .thenRun(() -> {
+            logger.info("Successfully deleted poLines, proceeding with purchase order");
+            operateOnObject(HttpMethod.DELETE, resourceByIdPath(PURCHASE_ORDER, id), httpClient, ctx, okapiHeaders, logger)
+              .thenAccept(rs -> {
+                logger.info("Successfully deleted order with id={}", id);
+                future.complete(null);
+              })
+              .exceptionally(t -> {
+                logger.error("Failed to delete PO", t);
+                future.completeExceptionally(t);
+                return null;
+              });
           })
           .exceptionally(t -> {
-            logger.error("Failed to delete PO", t);
+            logger.error("Failed to delete PO Lines", t);
             future.completeExceptionally(t);
             return null;
-          });
-      })
-      .exceptionally(t -> {
-        logger.error("Failed to delete PO Lines", t);
-        future.completeExceptionally(t);
-        return null;
-      });
+          })
+      )
+    .exceptionally(t ->{
+      logger.error("Failed to delete PO Lines", t);
+      future.completeExceptionally(t);
+      return null;
+    });
 
     return future;
   }
@@ -652,31 +676,41 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   /**
-   * The method compares the permissions that are necessary to manage the acquisition units assignments and the permissions granted by the user,
-   * and if there is no required permission among the granted permissions, it throws {@link HttpException} with status 403.
+   * The method checks if user trying assign order to acquisition unit, if yes that
+   * check that user has permission to assign record to unit.
    *
-   * @param newOrder purchase order from request
-   * @param orderFromStorage purchase order from storage
+   * @throws HttpException if user does not have assign permission
+   * @param compOrder purchase order from request
    */
-  private void verifyUserHasDesiredPermissions(CompositePurchaseOrder newOrder, CompositePurchaseOrder orderFromStorage) {
-    Set<String> newAcqUnits = new HashSet<>(CollectionUtils.emptyIfNull(newOrder.getAcqUnitIds()));
-    Set<String> acqUnitsFromStorage = new HashSet<>(CollectionUtils.emptyIfNull(orderFromStorage.getAcqUnitIds()));
-    List<String> requiredAcqPermissions = getRequiredAcqPermissions(newAcqUnits, acqUnitsFromStorage);
-
-    if (!getProvidedPermissions().containsAll(requiredAcqPermissions)){
+  private void verifyUserHasAssignPermission(CompositePurchaseOrder compOrder) {
+    if (CollectionUtils.isNotEmpty(compOrder.getAcqUnitIds()) && isUserDoesNotHaveDesiredPermission(ASSIGN)){
       throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS);
     }
   }
 
-  private List<String> getRequiredAcqPermissions(Set<String> newAcqUnits, Set<String> acqUnitsFromStorage) {
-    if (CollectionUtils.isEqualCollection(newAcqUnits, acqUnitsFromStorage)) {
-      return Collections.emptyList();
-    } else if (CollectionUtils.isSubCollection(acqUnitsFromStorage, newAcqUnits)) {
-      return Collections.singletonList(CREATE.getPermission());
-    } else if (CollectionUtils.isSubCollection(newAcqUnits, acqUnitsFromStorage)) {
-      return Collections.singletonList(DELETE.getPermission());
+  /**
+   * The method checks if user trying update order assignments, if yes that
+   * check that user has permission to manage unit assignments.
+   *
+   * @throws HttpException if user does not have manage permission
+   * @param newOrder purchase order from request
+   * @param orderFromStorage purchase order from storage
+   */
+  private void verifyUserHasManagePermission(CompositePurchaseOrder newOrder, CompositePurchaseOrder orderFromStorage) {
+    Set<String> newAcqUnits = new HashSet<>(CollectionUtils.emptyIfNull(newOrder.getAcqUnitIds()));
+    Set<String> acqUnitsFromStorage = new HashSet<>(CollectionUtils.emptyIfNull(orderFromStorage.getAcqUnitIds()));
+
+    if (isManagePermissionRequired(newAcqUnits, acqUnitsFromStorage) && isUserDoesNotHaveDesiredPermission(MANAGE)){
+      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS);
     }
-    return AcqDesiredPermissions.getValues();
+  }
+
+  private boolean isUserDoesNotHaveDesiredPermission(AcqDesiredPermissions manage) {
+    return !getProvidedPermissions().contains(manage.getPermission());
+  }
+
+  private boolean isManagePermissionRequired(Set<String> newAcqUnits, Set<String> acqUnitsFromStorage) {
+    return !CollectionUtils.isEqualCollection(newAcqUnits, acqUnitsFromStorage);
   }
 
   private List<String> getProvidedPermissions() {

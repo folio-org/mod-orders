@@ -9,6 +9,8 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supply
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.*;
+import static org.folio.orders.utils.ProtectedOperationType.DELETE;
+import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
@@ -145,7 +147,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       .thenCompose(v -> validateNewPoLine(compPOL))
       .thenCompose(isValid -> {
         if (isValid) {
-          return getCompositePurchaseOrder(compPOL)
+          return getCompositePurchaseOrder(compPOL.getPurchaseOrderId())
             // The PO Line can be created only for order in Pending state
             .thenApply(this::validateOrderState)
             .thenCompose(po -> protectionHelper.isOperationRestricted(po.getAcqUnitIds(),ProtectedOperationType.CREATE).thenApply(vVoid -> po))
@@ -291,6 +293,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   CompletableFuture<Void> deleteLine(String lineId) {
     return getPoLineById(lineId, lang, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(this::verifyDeleteAllowed)
       .thenCompose(line -> {
         logger.debug("Deleting PO line...");
         return deletePoLine(line, httpClient, ctx, okapiHeaders, logger);
@@ -298,12 +301,24 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       .thenAccept(json -> logger.info("The PO Line with id='{}' has been deleted successfully", lineId));
   }
 
+  private CompletableFuture<JsonObject> verifyDeleteAllowed(JsonObject line) {
+    return getCompositePurchaseOrder(line.getString(PURCHASE_ORDER_ID))
+      .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), DELETE))
+      .thenApply(aVoid -> line);
+  }
+
   /**
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
   CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine) {
     return getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
-      .thenCompose(lineFromStorage -> validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage))
+      .thenCompose(lineFromStorage -> getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId())
+        .thenCompose(compOrder -> {
+          validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage, compOrder);
+          return protectionHelper.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE)
+            .thenApply(aVoid -> lineFromStorage);
+        })
+      )
       .thenCompose(lineFromStorage -> {
         // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
         // update
@@ -312,15 +327,10 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<JsonObject> validatePOLineProtectedFieldsChanged(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
-    return HelperUtils.getPurchaseOrderById(compOrderLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger)
-      .thenCompose(purchaseOrder -> {
-        if (!purchaseOrder.getString(WORKFLOW_STATUS)
-          .equals(CompositePurchaseOrder.WorkflowStatus.PENDING.value())) {
-          verifyProtectedFieldsChanged(POLineProtectedFields.getFieldNames(), lineFromStorage, JsonObject.mapFrom(compOrderLine));
-        }
-        return completedFuture(lineFromStorage);
-      });
+  private void validatePOLineProtectedFieldsChanged(CompositePoLine compOrderLine, JsonObject lineFromStorage, CompositePurchaseOrder purchaseOrder) {
+    if (purchaseOrder.getWorkflowStatus() != PENDING) {
+      verifyProtectedFieldsChanged(POLineProtectedFields.getFieldNames(), lineFromStorage, JsonObject.mapFrom(compOrderLine));
+    }
   }
 
   private void updateOrderStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
@@ -457,8 +467,8 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(CompositePoLine compPOL) {
-    return getPurchaseOrderById(compPOL.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger)
+  private CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(String id) {
+    return getPurchaseOrderById(id, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
       .exceptionally(t -> {
         Throwable cause = t.getCause();

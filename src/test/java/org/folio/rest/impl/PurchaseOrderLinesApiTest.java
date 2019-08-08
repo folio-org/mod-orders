@@ -450,21 +450,6 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderLineByIdWithoutOkapiUrlHeader() throws IOException {
-    logger.info("=== Test PUT Order Line By Id - 500 due to missing Okapi URL header ===");
-
-    String lineId = ID_DOES_NOT_EXIST;
-
-    String url = String.format(LINE_BY_ID_PATH, lineId);
-    String body = getPoLineWithMinContentAndIds(lineId, ID_DOES_NOT_EXIST);
-
-    verifyPut(url, body, prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 500);
-
-    // Verify that no calls reached mock server
-    assertTrue(MockServer.serverRqRs.isEmpty());
-  }
-
-  @Test
   public void testPutOrderLineByIdNotFound() throws IOException {
     logger.info("=== Test PUT Order Line By Id - Not Found ===");
 
@@ -571,14 +556,6 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     final Response resp = verifyDeleteResponse(url, "", 204);
     assertTrue(StringUtils.isEmpty(resp.getBody().asString()));
-  }
-
-  @Test
-  public void testDeleteOrderLineByIdWithoutOkapiUrlHeader() {
-    logger.info("=== Test Delete Order Line By Id - 500 due to missing Okapi URL header ===");
-
-    verifyDeleteResponse(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST), prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON,500);
-
   }
 
   @Test

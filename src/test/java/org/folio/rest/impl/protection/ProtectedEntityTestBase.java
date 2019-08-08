@@ -1,5 +1,6 @@
 package org.folio.rest.impl.protection;
 
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
@@ -9,6 +10,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.folio.rest.impl.ApiTestBase;
@@ -24,8 +26,7 @@ import io.vertx.core.json.JsonObject;
 public abstract class ProtectedEntityTestBase extends ApiTestBase {
 
   static final String FULL_PROTECTED_USERS_UNIT_ID = "e68c18fc-833f-494e-9a0e-b236eb4b310b";
-  static final String UPDATE_ONLY_UNIT_ID = "aa0ec4e1-782f-45f6-a6f3-8e6b6c00599c";
-  public static final List<String> PROTECTED_UNITS = Arrays.asList(FULL_PROTECTED_USERS_UNIT_ID, UPDATE_ONLY_UNIT_ID);
+  public static final List<String> PROTECTED_UNITS = Collections.singletonList(FULL_PROTECTED_USERS_UNIT_ID);
   static final String NOT_PROTECTED_UNIT_ID = "0e9525aa-d123-4e4d-9f7e-1b302a97eb90";
   public static final List<String> NOT_PROTECTED_UNITS = Arrays.asList(NOT_PROTECTED_UNIT_ID, FULL_PROTECTED_USERS_UNIT_ID);
   static final String NON_EXISTENT_UNIT_ID = "b548d790-07da-456f-b4ea-7a77c0e34a0f";
@@ -49,18 +50,21 @@ public abstract class ProtectedEntityTestBase extends ApiTestBase {
   public PurchaseOrder prepareOrder(List<String> acqUnitsIds) {
     PurchaseOrder po = getMinimalContentPurchaseOrder();
     po.setAcqUnitIds(acqUnitsIds);
+    addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(po));
     return po;
   }
 
   public PoLine preparePoLine(List<String> acqUnitsIds) {
     PurchaseOrder order = prepareOrder(acqUnitsIds);
-    addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
-    return getMinimalContentCompositePoLine(order.getId());
+    PoLine poLine = getMinimalContentCompositePoLine(order.getId());
+    addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
+    return poLine;
   }
 
   public Piece preparePiece(List<String> acqUnitsIds) {
     PoLine poLine = preparePoLine(acqUnitsIds);
-    addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
-    return getMinimalContentPiece(poLine.getId());
+    Piece piece = getMinimalContentPiece(poLine.getId());
+    addMockEntry(PIECES, JsonObject.mapFrom(piece));
+    return piece;
   }
 }

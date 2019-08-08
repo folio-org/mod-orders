@@ -6,6 +6,7 @@ import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -19,11 +20,9 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PiecesHelper extends AbstractHelper {
@@ -37,17 +36,10 @@ public class PiecesHelper extends AbstractHelper {
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
-  CompletableFuture<Piece> createRecordInStorage(Piece piece) {
-    return getRelatedOrder(piece.getPoLineId())
+  CompletableFuture<Piece> createPiece(Piece piece) {
+    return getOrderByPoLineId(piece.getPoLineId())
       .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE))
       .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(piece), resourcesPath(PIECES)).thenApply(piece::withId));
-  }
-
-  private CompletableFuture<PurchaseOrder> getRelatedOrder(String poLineId) {
-    return getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(json -> json.mapTo(PoLine.class))
-      .thenCompose(poLine -> getPurchaseOrderById(poLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger))
-      .thenApply(jsonObject -> jsonObject.mapTo(PurchaseOrder.class));
   }
 
   // Flow to update piece
@@ -56,44 +48,51 @@ public class PiecesHelper extends AbstractHelper {
   // 3. Create a message and check if receivingStatus is not consistent with storage; if yes - send a message to event bus
   public CompletableFuture<Void> updatePieceRecord(Piece piece) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+    getOrderByPoLineId(piece.getPoLineId())
+      .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE))
+      .thenAccept(vVoid ->
+        getPieceById(piece.getId()).thenAccept(pieceStorage -> {
+          ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
 
-    getPieceById(piece.getId(), lang, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonPiece -> {
-      Piece pieceStorage = jsonPiece.mapTo(Piece.class);
-      ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
+          handlePutRequest(resourceByIdPath(PIECES, piece.getId()), JsonObject.mapFrom(piece), httpClient, ctx, okapiHeaders, logger)
+            .thenAccept(future::complete)
+            .thenAccept(afterUpdate -> {
 
-      handlePutRequest(resourceByIdPath(PIECES, piece.getId()), JsonObject.mapFrom(piece), httpClient, ctx, okapiHeaders, logger)
-        .thenAccept(future::complete)
-        .thenAccept(afterUpdate -> {
+              JsonObject messageToEventBus = new JsonObject();
+              messageToEventBus.put("poLineIdUpdate", piece.getPoLineId());
 
-          JsonObject messageToEventBus = new JsonObject();
-          messageToEventBus.put("poLineIdUpdate", piece.getPoLineId());
+              ReceivingStatus receivingStatusUpdate = piece.getReceivingStatus();
+              logger.debug("receivingStatusStorage -- " + receivingStatusStorage);
+              logger.debug("receivingStatusUpdate -- " + receivingStatusUpdate);
 
-          ReceivingStatus receivingStatusUpdate = piece.getReceivingStatus();
-          logger.debug("receivingStatusStorage -- " + receivingStatusStorage);
-          logger.debug("receivingStatusUpdate -- " + receivingStatusUpdate);
-
-          if (receivingStatusStorage.compareTo(receivingStatusUpdate) != 0) {
-            receiptConsistencyPiecePoLine(messageToEventBus);
-          }
+              if (receivingStatusStorage.compareTo(receivingStatusUpdate) != 0) {
+                receiptConsistencyPiecePoLine(messageToEventBus);
+              }
+            })
+            .exceptionally(e -> {
+              logger.error("Error updating piece by id to storage {}", piece.getId(), e);
+              future.completeExceptionally(e);
+              return null;
+            });
         })
-        .exceptionally(e -> {
-          logger.error("Error updating piece by id to storage {}", piece.getId(), e);
-          future.completeExceptionally(e);
-          return null;
-        });
-    })
-      .exceptionally(e -> {
-        logger.error("Error getting piece by id from storage {}", piece.getId(), e);
-        future.completeExceptionally(e);
+          .exceptionally(e -> {
+            logger.error("Error getting piece by id from storage {}", piece.getId(), e);
+            future.completeExceptionally(e);
+            return null;
+          })
+    )
+      .exceptionally(t -> {
+        logger.error("User with id={} is forbidden to update piece with id={}", t.getCause(), getCurrentUserId(), piece.getId());
+        future.completeExceptionally(t);
         return null;
-      });
+    });
     return future;
   }
 
-  public static CompletableFuture<JsonObject> getPieceById(String pieceId, String lang, HttpClientInterface httpClient, Context ctx,
-      Map<String, String> okapiHeaders, Logger logger) {
+  public CompletableFuture<Piece> getPieceById(String pieceId) {
     String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PIECES, pieceId), lang);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(jsonPiece -> jsonPiece.mapTo(Piece.class));
   }
 
   private void receiptConsistencyPiecePoLine(JsonObject jsonObj) {
@@ -105,6 +104,17 @@ public class PiecesHelper extends AbstractHelper {
   }
 
   public CompletableFuture<Void> deletePiece(String id) {
-    return handleDeleteRequest(String.format(DELETE_PIECE_BY_ID, id, lang), httpClient, ctx, okapiHeaders, logger);
+    return getPieceById(id)
+      .thenCompose(piece -> getOrderByPoLineId(piece.getPoLineId()))
+      .thenCompose(purchaseOrder -> protectionHelper.isOperationRestricted(purchaseOrder.getAcqUnitIds(), DELETE))
+      .thenCompose(aVoid -> handleDeleteRequest(String.format(DELETE_PIECE_BY_ID, id, lang), httpClient, ctx, okapiHeaders, logger));
+  }
+
+
+  public CompletableFuture<PurchaseOrder> getOrderByPoLineId(String poLineId) {
+    return getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(json -> json.mapTo(PoLine.class))
+      .thenCompose(poLine -> getPurchaseOrderById(poLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger))
+      .thenApply(jsonObject -> jsonObject.mapTo(PurchaseOrder.class));
   }
 }
