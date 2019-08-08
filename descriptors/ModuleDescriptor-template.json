@@ -70,6 +70,7 @@
           "methods": ["PUT"],
           "pathPattern": "/orders/composite-orders/{id}",
           "permissionsRequired": ["orders.item.put"],
+          "permissionsDesired": ["orders.acquisitions-units-assignments.manage"],
           "modulePermissions": [
             "orders-storage.purchase-orders.collection.get",
             "orders-storage.purchase-orders.item.put",
