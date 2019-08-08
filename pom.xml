@@ -171,6 +171,12 @@
       <artifactId>log4j-slf4j-impl</artifactId>
       <version>2.11.1</version>
     </dependency>
+     <dependency>
+     <groupId>org.folio</groupId>
+     <artifactId>folio-isbn-util</artifactId>
+     <version>1.1.0</version>
+     <scope>test</scope>
+   </dependency>
   </dependencies>
 
   <build>
