@@ -53,6 +53,7 @@
             "organizations-storage.organizations.item.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
+            "inventory-storage.identifier-types.collection.get",
             "isbn-utils.convert-to-13.get"
           ]
         },
@@ -106,6 +107,7 @@
             "inventory-storage.contributor-name-types.collection.get",
             "organizations-storage.organizations.collection.get",
             "organizations-storage.organizations.item.get",
+            "inventory-storage.identifier-types.collection.get",
             "isbn-utils.convert-to-13.get"
           ]
         },
@@ -145,6 +147,7 @@
             "configuration.entries.collection.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
+            "inventory-storage.identifier-types.collection.get",
             "isbn-utils.convert-to-13.get"
           ]
         },
@@ -174,6 +177,7 @@
             "orders-storage.reporting-codes.item.put",
             "orders-storage.reporting-codes.item.delete",
             "configuration.entries.collection.get",
+            "inventory-storage.identifier-types.collection.get",
             "isbn-utils.convert-to-13.get"
           ]
         },
@@ -421,6 +425,10 @@
     {
       "id": "item-storage",
       "version": "7.3"
+    },
+    {
+      "id": "identifier-types",
+      "version": "1.2"
     },
     {
       "id": "isbn-utils",
