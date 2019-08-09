@@ -65,7 +65,9 @@
             "orders-storage.purchase-orders.item.get",
             "orders-storage.po-lines.collection.get",
             "orders-storage.alerts.item.get",
-            "orders-storage.reporting-codes.item.get"
+            "orders-storage.reporting-codes.item.get",
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get"
           ]
         },
         {
@@ -158,7 +160,10 @@
           "modulePermissions": [
             "orders-storage.po-lines.item.get",
             "orders-storage.alerts.item.get",
-            "orders-storage.reporting-codes.item.get"
+            "orders-storage.reporting-codes.item.get",
+            "orders-storage.purchase-orders.item.get",
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get"
           ]
         },
         {

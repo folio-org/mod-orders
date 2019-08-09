@@ -103,6 +103,8 @@ public class ApiTestBase {
   protected static final String PO_ID_CLOSED_STATUS = "07f65192-44a4-483d-97aa-b137bbd96390";
   protected static final String PO_ID_OPEN_TO_BE_CLOSED = "9d56b621-202d-414b-9e7f-5fefe4422ab3";
   static final String PO_LINE_ID_FOR_SUCCESS_CASE = "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47";
+  static final String MIN_PO_ID = UUID.randomUUID().toString();
+  static final String MIN_PO_LINE_ID = UUID.randomUUID().toString();
 
   static final String COMP_ORDER_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/";
 
@@ -434,9 +436,13 @@ public class ApiTestBase {
       .withPoLineId(poLineId);
   }
 
+  public static PoLine getMinimalContentCompositePoLine() {
+    return getMinimalContentCompositePoLine(MIN_PO_ID);
+  }
+
   public static PoLine getMinimalContentCompositePoLine(String orderId) {
     return new PoLine().withSource(PoLine.Source.EDI)
-      .withId(UUID.randomUUID().toString())
+      .withId(MIN_PO_LINE_ID)
       .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
       .withAcquisitionMethod(PoLine.AcquisitionMethod.PURCHASE)
       .withPhysical(new Physical().withMaterialType("2d1398ae-e1aa-4c7c-b9c9-15adf8cf6425"))
@@ -448,12 +454,12 @@ public class ApiTestBase {
 
   public static PurchaseOrder getMinimalContentPurchaseOrder() {
     return new PurchaseOrder()
-      .withId(UUID.randomUUID().toString())
+      .withId(MIN_PO_ID)
       .withOrderType(PurchaseOrder.OrderType.ONE_TIME)
       .withVendor("7d232b43-bf9a-4301-a0ce-9e076298632e");
   }
 
-  public String encodePrettily(Object entity) {
+  public static String encodePrettily(Object entity) {
     return JsonObject.mapFrom(entity).encodePrettily();
   }
 }

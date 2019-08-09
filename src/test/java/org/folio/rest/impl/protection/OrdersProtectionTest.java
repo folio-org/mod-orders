@@ -29,7 +29,8 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
 
   @Test
   @Parameters({
-    "CREATE"
+    "CREATE",
+    "READ"
   })
   public void testOperationWithNonExistedUnits(ProtectedOperations operation) {
     logger.info("=== Test order contains non-existent unit ids - expecting of call only to Units API ===");
@@ -46,7 +47,8 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
 
   @Test
   @Parameters({
-    "CREATE"
+    "CREATE",
+    "READ"
   })
   public void testOperationWithAllowedUnits(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units allowed operation - expecting of call only to Units API ===");
@@ -59,7 +61,8 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
 
   @Test
   @Parameters({
-    "CREATE"
+    "CREATE",
+    "READ"
   })
   public void testWithRestrictedUnitsAndAllowedUser(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units, units protect operation, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
@@ -72,7 +75,8 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
 
   @Test
   @Parameters({
-    "CREATE"
+    "CREATE",
+    "READ"
   })
   public void testWithProtectedUnitsAndForbiddenUser(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units, units protect operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");
