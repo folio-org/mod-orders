@@ -1,11 +1,9 @@
 package org.folio.rest.impl.protection;
 
-import static io.vertx.core.json.Json.encodePrettily;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.orders.utils.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
-import static org.folio.orders.utils.HelperUtils.convertToCompositePurchaseOrder;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.rest.impl.MockServer.addMockEntry;
@@ -19,16 +17,15 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import java.util.Collections;
 import java.util.UUID;
 
-import io.vertx.core.json.JsonObject;
 import org.folio.HttpStatus;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import io.restassured.http.Headers;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import junitparams.JUnitParamsRunner;

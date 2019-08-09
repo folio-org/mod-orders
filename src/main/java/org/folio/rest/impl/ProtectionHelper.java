@@ -4,7 +4,6 @@ import static org.folio.orders.utils.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -18,9 +17,9 @@ import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.Context;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 public class ProtectionHelper extends AbstractHelper {
 

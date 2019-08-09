@@ -284,18 +284,19 @@ public class ApiTestBase {
   }
 
   public Response verifyGet(String url, String expectedContentType, int expectedCode) {
-    Headers headers = prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT);
+    Headers headers = prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT);
     return verifyGet(url, headers, expectedContentType, expectedCode);
   }
 
   public Response verifyGet(String url, String expectedContentType, int expectedCode, String tenant) {
-    Headers headers = prepareHeaders(X_OKAPI_URL, new Header(OKAPI_HEADER_TENANT, tenant));
+    Headers headers = prepareHeaders(new Header(OKAPI_HEADER_TENANT, tenant));
     return verifyGet(url, headers, expectedContentType, expectedCode);
   }
 
   public Response verifyGet(String url, Headers headers, String expectedContentType, int expectedCode) {
     return RestAssured
       .with()
+      .header(X_OKAPI_URL)
         .headers(headers)
       .get(url)
         .then()

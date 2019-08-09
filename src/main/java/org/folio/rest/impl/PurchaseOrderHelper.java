@@ -502,6 +502,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenApply(compPO::withId)
       .thenCompose(this::createPoLines)
       .thenAccept(compPO::setCompositePoLines)
+      .thenAccept(aVoid -> orderLines = compPO.getCompositePoLines().stream().map(HelperUtils::convertToPoLine).collect(toList()))
       .thenCompose(v -> {
         if (finalStatus == OPEN) {
           return openOrder(compPO);

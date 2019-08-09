@@ -17,7 +17,6 @@ import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.hamcrest.Matcher;
 
 import io.restassured.http.Header;

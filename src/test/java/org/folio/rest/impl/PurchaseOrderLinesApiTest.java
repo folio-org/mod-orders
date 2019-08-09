@@ -676,7 +676,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersWithInvalidIsbn() throws Exception {
+  public void testPostOrdersWithInvalidIsbn() {
     logger.info("=== Test Post Order line with invalid ISBN ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
@@ -701,7 +701,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrderLinetoConvertToIsbn13() throws Exception {
+  public void testPostOrderLinetoConvertToIsbn13() {
     logger.info("=== Test Post order line to verify ISBN 10 is normalized to ISBN 13 ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
@@ -720,7 +720,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersWithInvalidIsbn() throws Exception {
+  public void testPutOrdersWithInvalidIsbn() {
     logger.info("=== Test Put Order line with invalid ISBN ===");
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
       .mapTo(CompositePoLine.class);

@@ -16,10 +16,10 @@ import java.util.concurrent.CompletableFuture;
 
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
@@ -111,10 +111,10 @@ public class PiecesHelper extends AbstractHelper {
   }
 
 
-  public CompletableFuture<PurchaseOrder> getOrderByPoLineId(String poLineId) {
+  public CompletableFuture<CompositePurchaseOrder> getOrderByPoLineId(String poLineId) {
     return getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(json -> json.mapTo(PoLine.class))
       .thenCompose(poLine -> getPurchaseOrderById(poLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger))
-      .thenApply(jsonObject -> jsonObject.mapTo(PurchaseOrder.class));
+      .thenApply(jsonObject -> jsonObject.mapTo(CompositePurchaseOrder.class));
   }
 }

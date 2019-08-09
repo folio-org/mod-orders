@@ -1,6 +1,5 @@
 package org.folio.rest.impl.protection;
 
-import static io.vertx.core.json.Json.encodePrettily;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.orders.utils.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;

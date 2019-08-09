@@ -8,12 +8,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.hamcrest.core.IsEqual.equalTo;
 
-import io.restassured.http.Headers;
 import org.folio.HttpStatus;
 import org.folio.rest.jaxrs.model.Errors;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import io.restassured.http.Headers;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import junitparams.JUnitParamsRunner;
