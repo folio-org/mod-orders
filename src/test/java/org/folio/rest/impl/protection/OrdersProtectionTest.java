@@ -1,5 +1,6 @@
 package org.folio.rest.impl.protection;
 
+import static io.vertx.core.json.Json.encodePrettily;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.orders.utils.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
@@ -16,6 +17,7 @@ import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.hamcrest.core.IsEqual.equalTo;
 
 import java.util.Collections;
+import java.util.UUID;
 
 import io.vertx.core.json.JsonObject;
 import org.folio.HttpStatus;
@@ -42,7 +44,8 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
   @Parameters({
     "CREATE",
     "UPDATE",
-    "DELETE"
+    "DELETE",
+    "READ"
   })
   public void testOperationWithNonExistedUnits(ProtectedOperations operation) {
     logger.info("=== Test order contains non-existent unit ids - expecting of call only to Units API ===");
@@ -61,7 +64,8 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
   @Parameters({
     "CREATE",
     "UPDATE",
-    "DELETE"
+    "DELETE",
+    "READ"
   })
   public void testOperationWithAllowedUnits(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units allowed operation - expecting of call only to Units API ===");
@@ -76,7 +80,8 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
   @Parameters({
     "CREATE",
     "UPDATE",
-    "DELETE"
+    "DELETE",
+    "READ"
   })
   public void testWithRestrictedUnitsAndAllowedUser(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units, units protect operation, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
@@ -91,7 +96,8 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
   @Parameters({
     "CREATE",
     "UPDATE",
-    "DELETE"
+    "DELETE",
+    "READ"
   })
   public void testWithProtectedUnitsAndForbiddenUser(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units, units protect operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");
@@ -131,6 +137,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
 
     CompositePurchaseOrder order = prepareOrder(CREATE_PROTECTED_UNITS);
     CompositePoLine line = getMinimalContentCompositePoLine(order.getId());
+    line.setId(UUID.randomUUID().toString());
     order.getCompositePoLines().add(line);
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER);
     Errors errors = UPDATE.process(COMPOSITE_ORDERS_PATH, encodePrettily(order),
@@ -149,7 +156,9 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder();
     order.setAcqUnitIds(DELETE_PROTECTED_UNITS);
     CompositePoLine line1 = getMinimalContentCompositePoLine(order.getId());
+    line1.setId(UUID.randomUUID().toString());
     CompositePoLine line2 = getMinimalContentCompositePoLine(order.getId());
+    line2.setId(UUID.randomUUID().toString());
     order.getCompositePoLines().add(line1);
     order.getCompositePoLines().add(line2);
     addMockEntry(PO_LINES, JsonObject.mapFrom(line1));
@@ -172,9 +181,10 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     logger.info("=== Units protect all operations, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
 
     CompositePurchaseOrder order = prepareOrder(PROTECTED_UNITS);
-    CompositePoLine line1 = getMinimalContentCompositePoLine(order.getId());
-    order.getCompositePoLines().add(line1);
-    addMockEntry(PO_LINES, JsonObject.mapFrom(line1));
+    CompositePoLine line = getMinimalContentCompositePoLine(order.getId());
+    line.setId(UUID.randomUUID().toString());
+    order.getCompositePoLines().add(line);
+    addMockEntry(PO_LINES, JsonObject.mapFrom(line));
     addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
     order.getCompositePoLines().remove(0);
     order.getCompositePoLines().add(getMinimalContentCompositePoLine(order.getId()));

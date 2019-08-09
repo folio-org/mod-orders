@@ -509,7 +509,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
       location.setQuantityPhysical(1);
     });
 
-          LocalDate now = LocalDate.now();
+    LocalDate now = LocalDate.now();
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
