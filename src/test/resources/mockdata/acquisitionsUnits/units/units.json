@@ -10,11 +10,11 @@
     },
     {
       "id": "f6d2cc9d-82ca-437c-a4e6-e5c30323df00",
-      "name": "Create only",
-      "protectCreate": false,
-      "protectRead": true,
-      "protectUpdate": true,
-      "protectDelete": true
+      "name": "Create protected",
+      "protectCreate": true,
+      "protectRead": false,
+      "protectUpdate": false,
+      "protectDelete": false
     },
     {
       "id": "6b982ffe-8efd-4690-8168-0c773b49cde1",
@@ -34,11 +34,11 @@
     },
     {
       "id": "2e6a170f-ae20-4889-813f-641831e24b84",
-      "name": "Delete only",
-      "protectCreate": true,
-      "protectRead": true,
-      "protectUpdate": true,
-      "protectDelete": false
+      "name": "Delete protected",
+      "protectCreate": false,
+      "protectRead": false,
+      "protectUpdate": false,
+      "protectDelete": true
     },
     {
       "id": "e68c18fc-833f-494e-9a0e-b236eb4b310b",

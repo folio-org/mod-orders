@@ -4,8 +4,11 @@ import static org.folio.orders.utils.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -36,11 +39,21 @@ public class ProtectionHelper extends AbstractHelper {
    * @throws HttpException if user hasn't permissions or units not found
    */
   public CompletableFuture<Void> isOperationRestricted(List<String> unitIds, ProtectedOperationType operation) {
+    return isOperationRestricted(unitIds, Collections.singleton(operation));
+  }
+
+  /**
+   * This method determines status of operation restriction based on unit IDs from {@link CompositePurchaseOrder}.
+   * @param unitIds list of unit IDs.
+   *
+   * @throws HttpException if user hasn't permissions or units not found
+   */
+  public CompletableFuture<Void> isOperationRestricted(List<String> unitIds, Set<ProtectedOperationType> operations) {
     if (CollectionUtils.isNotEmpty(unitIds)) {
       return getUnitsByIds(unitIds)
         .thenCompose(units -> {
           if (unitIds.size() == units.size()) {
-            if (applyMergingStrategy(units, operation)) {
+            if (applyMergingStrategy(units, operations)) {
               return verifyUserIsMemberOfOrdersUnits(unitIds);
             }
             return CompletableFuture.completedFuture(null);
@@ -86,8 +99,8 @@ public class ProtectionHelper extends AbstractHelper {
    * @param units list of {@link AcquisitionsUnit}.
    * @return true if operation is protected, otherwise - false.
    */
-  private Boolean applyMergingStrategy(List<AcquisitionsUnit> units, ProtectedOperationType operation) {
-    return units.stream().allMatch(operation::isProtected);
+  private Boolean applyMergingStrategy(List<AcquisitionsUnit> units, Set<ProtectedOperationType> operations) {
+    return units.stream().allMatch(unit -> operations.stream().anyMatch(operation -> operation.isProtected(unit)));
   }
 
 }

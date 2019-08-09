@@ -2,9 +2,9 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.json.JsonObject.mapFrom;
 import static java.util.concurrent.CompletableFuture.allOf;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.completedFuture;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
@@ -56,6 +56,7 @@ import javax.ws.rs.core.Response;
 
 class PurchaseOrderLineHelper extends AbstractHelper {
 
+  private static final String ISBN = "ISBN";
   private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
   private static final String GET_PO_LINES_BY_QUERY = resourcesPath(PO_LINES) + SEARCH_PARAMS;
   private static final String GET_ORDER_LINES_BY_QUERY = resourcesPath(ORDER_LINES) + SEARCH_PARAMS;
@@ -418,13 +419,13 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       .thenCompose(piecesWithItemId -> createPieces(compPOL, piecesWithItemId));
   }
 
-  String buildNewPoLineNumber(JsonObject poLineFromStorage, String poNumber) {
-    String oldPoLineNumber = poLineFromStorage.getString(PO_LINE_NUMBER);
+  String buildNewPoLineNumber(PoLine poLineFromStorage, String poNumber) {
+    String oldPoLineNumber = poLineFromStorage.getPoLineNumber();
     Matcher matcher = PO_LINE_NUMBER_PATTERN.matcher(oldPoLineNumber);
     if (matcher.find()) {
       return buildPoLineNumber(poNumber, matcher.group(2));
     }
-    logger.error("PO Line - {} has invalid or missing number.", poLineFromStorage.getString(ID));
+    logger.error("PO Line - {} has invalid or missing number.", poLineFromStorage.getId());
     return oldPoLineNumber;
   }
 
@@ -451,7 +452,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       return completedFuture(false);
     }
 
-    return allOf(validatePoLineLimit(compPOL))
+    return allOf(validatePoLineLimit(compPOL),validateAndNormalizeISBN(compPOL))
       .thenApply(v -> getErrors().isEmpty());
   }
 
@@ -841,4 +842,32 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     String poLineNumberSuffix2 = poLine2.getPoLineNumber().split(DASH_SEPARATOR)[1];
     return Integer.parseInt(poLineNumberSuffix1) - Integer.parseInt(poLineNumberSuffix2);
   }
+
+  public CompletableFuture<Void> validateAndNormalizeISBN(CompositePoLine compPOL) {
+    if (compPOL.getDetails() != null && compPOL.getDetails()
+      .getProductIds() != null) {
+      return inventoryHelper.getProductTypeUUID(ISBN)
+        .thenCompose(id -> validateIsbnValues(compPOL, id));
+    }
+    return completedFuture(null);
+  }
+
+  CompletableFuture<Void> validateIsbnValues(CompositePoLine compPOL, String id) {
+    CompletableFuture[] futures = compPOL.getDetails()
+      .getProductIds()
+      .stream()
+      .map(productID -> {
+        if (productID.getProductIdType()
+          .equals(id)) {
+          return inventoryHelper.convertToISBN13(productID.getProductId())
+            .thenAccept(productID::setProductId);
+        }
+        return completedFuture(null);
+      })
+      .toArray(CompletableFuture[]::new);
+
+    return VertxCompletableFuture.allOf(ctx, futures);
+  }
 }
+
+

@@ -310,8 +310,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
                                               COST_UNIT_PRICE_INVALID.getCode(),
                                               MISSING_MATERIAL_TYPE.getCode()));
 
-    // Check that no any calls made by the business logic to other services
-    assertTrue(MockServer.serverRqRs.isEmpty());
+    // Check that no other calls are made by the business logic to other services, except for ISBN validation
+    assertEquals(2, MockServer.serverRqRs.size());
   }
 
   @Test
@@ -352,7 +352,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
                                               ZERO_LOCATION_QTY.getCode()));
 
     // Check that no any calls made by the business logic to other services
-    assertTrue(MockServer.serverRqRs.isEmpty());
+    assertEquals(MockServer.serverRqRs.size(),2);
   }
 
   @Test
@@ -1590,7 +1590,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().forEach(line -> line.setId(null));
 
     Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), APPLICATION_JSON, 422).as(Errors.class);
-    validatePoLineCreationErrorForNonPendingOrder(errorCode, errors);
+    validatePoLineCreationErrorForNonPendingOrder(errorCode, errors, 4);
   }
 
   @Test
@@ -2326,6 +2326,79 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(err.getParameters().get(0).getValue(), equalTo(DEFAULT_LOAN_TYPE_NAME));
   }
 
+  @Test
+  public void testPostOrdersWithInvalidIsbn() throws Exception {
+    logger.info("=== Test Post Order with invalid ISBN ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    prepareOrderForPostRequest(reqData);
+    String isbn = "1234";
+
+    reqData.getCompositePoLines().get(0).getDetails().getProductIds().get(0).setProductId(isbn);
+
+
+    Response resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 400);
+
+    Error err = resp.getBody()
+        .as(Errors.class)
+        .getErrors()
+        .get(0);
+
+      assertThat(err.getMessage(), equalTo(String.format("ISBN value %s is invalid", isbn)));
+  }
+
+  @Test
+  public void testPostOrderstoConvertToIsbn13() throws Exception {
+    logger.info("=== Test Post order to verify ISBN 10 is normalized to ISBN 13 ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    prepareOrderForPostRequest(reqData);
+    String isbn = "0-19-852663-6";
+
+    reqData.getCompositePoLines().get(0).getDetails().getProductIds().get(0).setProductId(isbn);
+    CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    assertThat(resp.getCompositePoLines().get(0).getDetails().getProductIds().get(0).getProductId(), equalTo("9780198526636"));
+  }
+
+  @Test
+  public void testPutOrdersWithInvalidIsbn() throws Exception {
+    logger.info("=== Test Put Order with invalid ISBN ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    String isbn = "1234";
+
+    reqData.getCompositePoLines().get(0).getDetails().getProductIds().get(0).setProductId(isbn);
+
+    Response resp = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), APPLICATION_JSON, 400);
+
+    Error err = resp.getBody()
+        .as(Errors.class)
+        .getErrors()
+        .get(0);
+
+      assertThat(err.getMessage(), equalTo(String.format("ISBN value %s is invalid", isbn)));
+  }
+
+  @Test
+  public void testPutOrderstoConvertToIsbn13() throws Exception {
+    logger.info("=== Test Put order to verify ISBN 10 is normalized to ISBN 13 ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    String isbn = "0-19-852663-6";
+
+    reqData.getCompositePoLines().remove(1);
+    reqData.getCompositePoLines().get(0).getDetails().getProductIds().get(0).setProductId(isbn);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData)
+      .encodePrettily(), "", 204);
+
+    assertThat(MockServer.getPoLineUpdates().get(0).mapTo(PoLine.class).getDetails().getProductIds().get(0).getProductId(), equalTo("9780198526636"));
+  }
+
   private void prepareOrderForPostRequest(CompositePurchaseOrder reqData) {
     reqData.setDateOrdered(null);
     removeAllEncumbranceLinks(reqData);
@@ -2339,6 +2412,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
       })
     );
   }
+
 
   private Error verifyMissingInventoryEntryErrorHandling(Header header) throws Exception {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);

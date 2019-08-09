@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.impl.AbstractHelper;
@@ -67,7 +66,7 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
           } else {
             // Get purchase order lines to check if order status needs to be changed.
             getPoLines(orderId, lang, httpClient, ctx, okapiHeaders, logger)
-              .thenCompose(linesArray -> supplyBlockingAsync(ctx, () -> convertToPoLines(linesArray)))
+              .thenCompose(linesArray -> supplyBlockingAsync(ctx, () -> HelperUtils.convertToPoLines(linesArray)))
               .thenCompose(poLines -> updateOrderStatus(okapiHeaders, httpClient, purchaseOrder, poLines))
               .thenAccept(future::complete)
               .exceptionally(e -> {
@@ -99,9 +98,4 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
     return VertxCompletableFuture.completedFuture(null);
   }
 
-  private List<PoLine> convertToPoLines(JsonArray linesArray) {
-    return linesArray.stream()
-                     .map(json -> ((JsonObject) json).mapTo(PoLine.class))
-                     .collect(Collectors.toList());
-  }
 }

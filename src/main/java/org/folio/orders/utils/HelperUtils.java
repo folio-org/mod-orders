@@ -181,7 +181,7 @@ public class HelperUtils {
                                                                     Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<List<CompositePoLine>> future = new VertxCompletableFuture<>(ctx);
 
-    getPoLines(id,lang, httpClient,ctx, okapiHeaders, logger)
+    getPoLines(id, lang, httpClient,ctx, okapiHeaders, logger)
       .thenAccept(jsonArray -> {
         List<CompletableFuture<CompositePoLine>> futures = new ArrayList<>();
 
@@ -1152,4 +1152,9 @@ public class HelperUtils {
     return objectFromStorage;
   }
 
+  public static List<PoLine> convertToPoLines(JsonArray linesArray) {
+    return linesArray.stream()
+                     .map(json -> ((JsonObject) json).mapTo(PoLine.class))
+                     .collect(toList());
+  }
 }

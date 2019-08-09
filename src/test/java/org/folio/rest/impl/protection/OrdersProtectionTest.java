@@ -4,14 +4,25 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.orders.utils.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
+import static org.folio.orders.utils.HelperUtils.convertToCompositePurchaseOrder;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ALL_DESIRED_PERMISSIONS_HEADER;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.COMPOSITE_ORDERS_PATH;
+import static org.folio.rest.impl.protection.ProtectedOperations.UPDATE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.hamcrest.core.IsEqual.equalTo;
 
+import java.util.Collections;
+
+import io.vertx.core.json.JsonObject;
 import org.folio.HttpStatus;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -97,18 +108,82 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
 
   @Test
   @Parameters({
-    "CREATE"
+    "CREATE",
+    "UPDATE"
   })
   public void testModifyUnitsList(ProtectedOperations operation) {
     logger.info("=== Test user without desired permissions modifying acqUnitsIds ===");
 
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER);
-    Errors errors = operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(prepareOrder(PROTECTED_UNITS)),
+    CompositePurchaseOrder order = prepareOrder(Collections.emptyList());
+    order.setAcqUnitIds(PROTECTED_UNITS);
+    Errors errors = operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(order),
       headers, APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt()).as(Errors.class);
     assertThat(errors.getErrors(), hasSize(1));
     assertThat(errors.getErrors().get(0).getCode(), equalTo(USER_HAS_NO_ACQ_PERMISSIONS.getCode()));
 
     validateNumberOfRequests(0, 0);
+  }
+
+  @Test
+  public void testUpdateOrderAssignedToCreateProtectedUnitAddingPoLineUserNotAssigned() {
+    logger.info("=== Test corresponding order has units, poLine is going to be added to order, units protect only create operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");
+
+    CompositePurchaseOrder order = prepareOrder(CREATE_PROTECTED_UNITS);
+    CompositePoLine line = getMinimalContentCompositePoLine(order.getId());
+    order.getCompositePoLines().add(line);
+    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER);
+    Errors errors = UPDATE.process(COMPOSITE_ORDERS_PATH, encodePrettily(order),
+      headers, APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt()).as(Errors.class);
+
+    assertThat(errors.getErrors(), hasSize(1));
+    assertThat(errors.getErrors().get(0).getCode(), equalTo(USER_HAS_NO_PERMISSIONS.getCode()));
+
+    validateNumberOfRequests(1, 1);
+  }
+
+  @Test
+  public void testUpdateOrderAssignedToDeleteProtectedUnitDeletingPoLineUserNotAssigned() {
+    logger.info("=== Test corresponding order has units, poLine is going to be deleted from order, units protect only delete operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");
+
+    CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder();
+    order.setAcqUnitIds(DELETE_PROTECTED_UNITS);
+    CompositePoLine line1 = getMinimalContentCompositePoLine(order.getId());
+    CompositePoLine line2 = getMinimalContentCompositePoLine(order.getId());
+    order.getCompositePoLines().add(line1);
+    order.getCompositePoLines().add(line2);
+    addMockEntry(PO_LINES, JsonObject.mapFrom(line1));
+    addMockEntry(PO_LINES, JsonObject.mapFrom(line2));
+    addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
+    order.getCompositePoLines().remove(1);
+    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER);
+    Errors errors = UPDATE.process(COMPOSITE_ORDERS_PATH, encodePrettily(order),
+      headers, APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt()).as(Errors.class);
+
+    assertThat(errors.getErrors(), hasSize(1));
+    assertThat(errors.getErrors().get(0).getCode(), equalTo(USER_HAS_NO_PERMISSIONS.getCode()));
+
+    validateNumberOfRequests(1, 1);
+  }
+
+  @Test
+  public void testUpdateOrderAssignedToCreateProtectedUnitAddingAndDeletingPoLinesUserAssigned() {
+    logger.info("=== Test corresponding order has units, poLine is going to be deleted, new line will be added ===");
+    logger.info("=== Units protect all operations, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
+
+    CompositePurchaseOrder order = prepareOrder(PROTECTED_UNITS);
+    CompositePoLine line1 = getMinimalContentCompositePoLine(order.getId());
+    order.getCompositePoLines().add(line1);
+    addMockEntry(PO_LINES, JsonObject.mapFrom(line1));
+    addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
+    order.getCompositePoLines().remove(0);
+    order.getCompositePoLines().add(getMinimalContentCompositePoLine(order.getId()));
+    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER);
+    UPDATE.process(COMPOSITE_ORDERS_PATH, encodePrettily(order),
+      headers, UPDATE.getContentType(), UPDATE.getCode());
+
+
+    validateNumberOfRequests(1, 1);
   }
 
 }

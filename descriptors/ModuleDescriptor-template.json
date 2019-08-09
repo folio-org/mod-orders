@@ -52,7 +52,8 @@
             "organizations-storage.organizations.collection.get",
             "organizations-storage.organizations.item.get",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "isbn-utils.convert-to-13.get"
           ]
         },
         {
@@ -70,6 +71,7 @@
           "methods": ["PUT"],
           "pathPattern": "/orders/composite-orders/{id}",
           "permissionsRequired": ["orders.item.put"],
+          "permissionsDesired": ["orders.acquisitions-units-assignments.manage"],
           "modulePermissions": [
             "orders-storage.purchase-orders.collection.get",
             "orders-storage.purchase-orders.item.put",
@@ -103,7 +105,8 @@
             "inventory-storage.loan-types.collection.get",
             "inventory-storage.contributor-name-types.collection.get",
             "organizations-storage.organizations.collection.get",
-            "organizations-storage.organizations.item.get"
+            "organizations-storage.organizations.item.get",
+            "isbn-utils.convert-to-13.get"
           ]
         },
         {
@@ -141,7 +144,8 @@
             "orders-storage.reporting-codes.item.post",
             "configuration.entries.collection.get",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "isbn-utils.convert-to-13.get"
           ]
         },
         {
@@ -169,7 +173,8 @@
             "orders-storage.reporting-codes.item.post",
             "orders-storage.reporting-codes.item.put",
             "orders-storage.reporting-codes.item.delete",
-            "configuration.entries.collection.get"
+            "configuration.entries.collection.get",
+            "isbn-utils.convert-to-13.get"
           ]
         },
         {
@@ -416,6 +421,10 @@
     {
       "id": "item-storage",
       "version": "7.3"
+    },
+    {
+      "id": "isbn-utils",
+      "version": "2.0"
     },
     {
       "id": "loan-types",
