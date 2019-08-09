@@ -106,7 +106,9 @@
             "inventory-storage.contributor-name-types.collection.get",
             "organizations-storage.organizations.collection.get",
             "organizations-storage.organizations.item.get",
-            "isbn-utils.convert-to-13.get"
+            "isbn-utils.convert-to-13.get",
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get"
           ]
         },
         {
@@ -114,11 +116,14 @@
           "pathPattern": "/orders/composite-orders/{id}",
           "permissionsRequired": ["orders.item.delete"],
           "modulePermissions": [
+            "orders-storage.purchase-orders.item.get",
             "orders-storage.purchase-orders.item.delete",
             "orders-storage.po-lines.collection.get",
             "orders-storage.po-lines.item.delete",
             "orders-storage.alerts.item.delete",
-            "orders-storage.reporting-codes.item.delete"
+            "orders-storage.reporting-codes.item.delete",
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get"
           ]
         },
         {
@@ -174,7 +179,9 @@
             "orders-storage.reporting-codes.item.put",
             "orders-storage.reporting-codes.item.delete",
             "configuration.entries.collection.get",
-            "isbn-utils.convert-to-13.get"
+            "isbn-utils.convert-to-13.get",
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get"
           ]
         },
         {
@@ -182,10 +189,13 @@
           "pathPattern": "/orders/order-lines/{id}",
           "permissionsRequired": ["orders.po-lines.item.delete"],
           "modulePermissions": [
+            "orders-storage.purchase-orders.item.get",
             "orders-storage.po-lines.item.get",
             "orders-storage.po-lines.item.delete",
             "orders-storage.alerts.item.delete",
-            "orders-storage.reporting-codes.item.delete"
+            "orders-storage.reporting-codes.item.delete",
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get"
           ]
         },
         {
@@ -266,7 +276,11 @@
           "permissionsRequired": ["orders.pieces.item.put"],
           "modulePermissions": [
             "orders-storage.pieces.item.put",
-            "orders-storage.pieces.item.get"
+            "orders-storage.pieces.item.get",
+            "orders-storage.po-lines.item.get",
+            "orders-storage.purchase-orders.item.get",
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get"
           ]
         },
         {
@@ -274,7 +288,12 @@
           "pathPattern": "/orders/pieces/{id}",
           "permissionsRequired": ["orders.pieces.item.delete"],
           "modulePermissions": [
-            "orders-storage.pieces.item.delete"
+            "orders-storage.pieces.item.delete",
+            "orders-storage.pieces.item.get",
+            "orders-storage.po-lines.item.get",
+            "orders-storage.purchase-orders.item.get",
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get"
           ]
         }
       ]
