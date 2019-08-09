@@ -14,6 +14,14 @@
       "acquisitionMethod": "Purchase At Vendor System",
       "collection" : false,
       "description": "ABCDEFGH",
+      "details": {
+        "productIds": [
+          {
+            "productId": "9781118416068",
+            "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422"
+          }
+        ]
+      },
       "eresource":{
         "createInventory": "None"
       },

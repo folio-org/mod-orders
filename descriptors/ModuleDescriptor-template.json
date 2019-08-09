@@ -20,7 +20,7 @@
           "methods": ["POST"],
           "pathPattern": "/orders/composite-orders",
           "permissionsRequired": ["orders.item.post"],
-          "permissionsDesired": ["orders.acquisitions-units-assignments.item.post"],
+          "permissionsDesired": ["orders.acquisitions-units-assignments.assign"],
           "modulePermissions": [
             "orders-storage.purchase-orders.collection.get",
             "orders-storage.purchase-orders.item.post",
@@ -52,7 +52,9 @@
             "organizations-storage.organizations.collection.get",
             "organizations-storage.organizations.item.get",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "inventory-storage.identifier-types.collection.get",
+            "isbn-utils.convert-to-13.get"
           ]
         },
         {
@@ -72,6 +74,7 @@
           "methods": ["PUT"],
           "pathPattern": "/orders/composite-orders/{id}",
           "permissionsRequired": ["orders.item.put"],
+          "permissionsDesired": ["orders.acquisitions-units-assignments.manage"],
           "modulePermissions": [
             "orders-storage.purchase-orders.collection.get",
             "orders-storage.purchase-orders.item.put",
@@ -105,7 +108,9 @@
             "inventory-storage.loan-types.collection.get",
             "inventory-storage.contributor-name-types.collection.get",
             "organizations-storage.organizations.collection.get",
-            "organizations-storage.organizations.item.get"
+            "organizations-storage.organizations.item.get",
+            "inventory-storage.identifier-types.collection.get",
+            "isbn-utils.convert-to-13.get"
           ]
         },
         {
@@ -143,7 +148,9 @@
             "orders-storage.reporting-codes.item.post",
             "configuration.entries.collection.get",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "inventory-storage.identifier-types.collection.get",
+            "isbn-utils.convert-to-13.get"
           ]
         },
         {
@@ -174,7 +181,9 @@
             "orders-storage.reporting-codes.item.post",
             "orders-storage.reporting-codes.item.put",
             "orders-storage.reporting-codes.item.delete",
-            "configuration.entries.collection.get"
+            "configuration.entries.collection.get",
+            "inventory-storage.identifier-types.collection.get",
+            "isbn-utils.convert-to-13.get"
           ]
         },
         {
@@ -423,6 +432,14 @@
       "version": "7.3"
     },
     {
+      "id": "identifier-types",
+      "version": "1.2"
+    },
+    {
+      "id": "isbn-utils",
+      "version": "2.0"
+    },
+    {
       "id": "loan-types",
       "version": "2.2"
     },
@@ -560,22 +577,22 @@
       ]
     },
     {
-      "permissionName": "orders.acquisitions-units-assignments.item.post",
+      "permissionName": "orders.acquisitions-units-assignments.assign",
       "displayName": "Acquisitions unit assignment - create unit assignment",
-      "description": "Create a new acquisitions unit assignments"
+      "description": "Assign new order to acquisitions units"
     },
     {
-      "permissionName": "orders.acquisitions-units-assignments.item.delete",
-      "displayName": "Acquisitions units - delete unit",
-      "description": "Delete an acquisitions unit assignments"
+      "permissionName": "orders.acquisitions-units-assignments.manage",
+      "displayName": "Acquisitions units assignment - manage unit assignments",
+      "description": "Manage unit assignments during orders update"
     },
     {
       "permissionName": "orders.acquisitions-units-assignments.all",
       "displayName": "All order acquisitions-unit-assignments permissions",
       "description": "All permissions for the acquisitions-unit-assignments",
       "subPermissions": [
-        "orders.acquisitions-units-assignments.item.post",
-        "orders.acquisitions-units-assignments.item.delete"
+        "orders.acquisitions-units-assignments.assign",
+        "orders.acquisitions-units-assignments.manage"
       ]
     },
     {

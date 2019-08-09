@@ -93,6 +93,7 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
+import org.folio.isbn.IsbnUtil;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
@@ -144,6 +145,7 @@ public class MockServer {
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
   private static final String ORGANIZATIONS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "organizations/";
   static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "/po_line_collection.json";
+  private static final String IDENTIFIER_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
   static final String ACQUISITIONS_UNITS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/units.json";
   static final String ACQUISITIONS_MEMBERSHIPS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/memberships.json";
 
@@ -165,6 +167,8 @@ public class MockServer {
   private static final String CONTRIBUTOR_NAME_TYPES = "contributorNameTypes";
   private static final String INSTANCE_TYPES = "instanceTypes";
   private static final String INSTANCE_STATUSES = "instanceStatuses";
+  private static final String IDENTIFIER_TYPES = "identifierTypes";
+  private static final String ISBN_CONVERT13 = "ISBN13";
 
   static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
@@ -362,6 +366,7 @@ public class MockServer {
     router.route(HttpMethod.GET, "/loan-types").handler(this::handleGetLoanType);
     router.route(HttpMethod.GET, "/organizations-storage/organizations/:id").handler(this::getOrganizationById);
     router.route(HttpMethod.GET, "/organizations-storage/organizations").handler(this::handleGetAccessProviders);
+    router.route(HttpMethod.GET, "/identifier-types").handler(this::handleGetIdentifierType);
     router.route(HttpMethod.GET, resourcesPath(PO_LINES)).handler(ctx -> handleGetPoLines(ctx, PO_LINES));
     router.route(HttpMethod.GET, resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
     router.route(HttpMethod.GET, resourcePath(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
@@ -378,6 +383,7 @@ public class MockServer {
     router.route(HttpMethod.GET, resourcePath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnit);
     router.route(HttpMethod.GET, resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(this::handleGetAcquisitionsMemberships);
     router.route(HttpMethod.GET, resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(this::handleGetAcquisitionsMembership);
+    router.route(HttpMethod.GET, "/isbn/convertTo13").handler(this::handleGetIsbnConverter);
 
     router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
     router.route(HttpMethod.PUT, resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -569,6 +575,24 @@ public class MockServer {
         serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
         addServerRqRsData(HttpMethod.GET, LOAN_TYPES, entries);
       }
+    } catch (IOException e) {
+      ctx.response()
+        .setStatusCode(404)
+        .end();
+    }
+  }
+
+  private void handleGetIdentifierType(RoutingContext ctx) {
+    logger.info("handleGetIdentifierType got: " + ctx.request().path());
+    String tenantId = ctx.request().getHeader(OKAPI_HEADER_TENANT);
+    try {
+        // Filter result based on name from query
+        String name = ctx.request().getParam("query").split("==")[1];
+        JsonObject entries = new JsonObject(ApiTestBase.getMockData(IDENTIFIER_TYPES_MOCK_DATA_PATH + "identifierTypes.json"));
+        filterByKeyValue("name", name, entries.getJsonArray(IDENTIFIER_TYPES));
+
+        serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+        addServerRqRsData(HttpMethod.GET, IDENTIFIER_TYPES, entries);
     } catch (IOException e) {
       ctx.response()
         .setStatusCode(404)
@@ -1534,6 +1558,25 @@ public class MockServer {
       serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
     } else {
       serverResponse(ctx, 404, TEXT_PLAIN, id);
+    }
+  }
+
+  private void handleGetIsbnConverter(RoutingContext ctx) {
+    logger.info("handleGetIsbnConverter got: " + ctx.request()
+      .path());
+    String isbn = ctx.request()
+      .getParam("isbn");
+    JsonObject data = new JsonObject();
+    if (IsbnUtil.isValid13DigitNumber(isbn)) {
+      data.put("isbn", isbn);
+      addServerRqRsData(HttpMethod.GET, ISBN_CONVERT13, data);
+      serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
+    } else if (IsbnUtil.isValid10DigitNumber(isbn)) {
+      data.put("isbn", IsbnUtil.convertTo13DigitNumber(isbn));
+      addServerRqRsData(HttpMethod.GET, ISBN_CONVERT13, data);
+      serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
+    } else {
+      serverResponse(ctx, 400, TEXT_PLAIN, String.format("ISBN value %s is invalid", isbn));
     }
   }
 
