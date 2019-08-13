@@ -13,7 +13,6 @@ import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.convertToCompositePurchaseOrder;
-import static org.folio.orders.utils.HelperUtils.convertToPoLines;
 import static org.folio.orders.utils.HelperUtils.deletePoLine;
 import static org.folio.orders.utils.HelperUtils.deletePoLines;
 import static org.folio.orders.utils.HelperUtils.getCompositePoLines;
@@ -349,7 +348,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenCompose(this::updateInventory)
       .thenCompose(ok -> createEncumbrances(compPO))
       .thenAccept(ok -> changePoLineStatuses(compPO))
-      .thenCompose(ok -> updateCompositePoLines(compPO))
+      .thenCompose(ok -> updatePoLinesSummary(compPO))
       .thenCompose(ok -> updateOrderSummary(compPO));
   }
 
@@ -502,7 +501,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenApply(compPO::withId)
       .thenCompose(this::createPoLines)
       .thenAccept(compPO::setCompositePoLines)
-      .thenAccept(aVoid -> orderLines = compPO.getCompositePoLines().stream().map(HelperUtils::convertToPoLine).collect(toList()))
       .thenCompose(v -> {
         if (finalStatus == OPEN) {
           return openOrder(compPO);
@@ -596,22 +594,16 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return isNotEmpty(compPO.getCompositePoLines()) || isPoNumberChanged(poFromStorage, compPO);
   }
 
-  private CompletableFuture<Void> updateCompositePoLines(CompositePurchaseOrder compPO) {
-    if (isNotEmpty(compPO.getCompositePoLines())) {
-      return fetchOrderLinesByOrderId(compPO.getId())
-        .thenCompose(existedPoLinesArray -> handlePoLines(compPO, existedPoLinesArray));
-    } else {
-      return completedFuture(null);
-    }
+  private CompletableFuture<Void> updatePoLinesSummary(CompositePurchaseOrder compPO) {
+    return VertxCompletableFuture.allOf(ctx, compPO.getCompositePoLines().stream()
+      .map(HelperUtils::convertToPoLine)
+      .map(line -> orderLineHelper.updateOrderLineSummary(line.getId(), JsonObject.mapFrom(line))).toArray(CompletableFuture[]::new));
   }
 
   private CompletableFuture<Void> updateOrderSummary(CompositePurchaseOrder compPO) {
     logger.debug("Updating order...");
     PurchaseOrder purchaseOrder = convertToPurchaseOrder(compPO).mapTo(PurchaseOrder.class);
-    List<PoLine> poLines = compPO.getCompositePoLines()
-      .stream()
-      .map(HelperUtils::convertToPoLine)
-      .collect(toList());
+    List<PoLine> poLines = HelperUtils.convertToPoLines(compPO.getCompositePoLines());
 
     if (changeOrderStatus(purchaseOrder, poLines)) {
       logger.debug("Workflow status update required for order with id={}", compPO.getId());
@@ -779,7 +771,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
     return getPoLines(orderId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(linesJsonArray -> {
-        orderLines = convertToPoLines(linesJsonArray);
+        orderLines = HelperUtils.convertToPoLines(linesJsonArray);
         return new ArrayList<>(orderLines);
       });
   }

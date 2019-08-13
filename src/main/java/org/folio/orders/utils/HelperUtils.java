@@ -1093,7 +1093,10 @@ public class HelperUtils {
     JsonObject pol = JsonObject.mapFrom(compPoLine);
     pol.remove(ALERTS);
     pol.remove(REPORTING_CODES);
-    return pol.mapTo(PoLine.class);
+    PoLine poLine = pol.mapTo(PoLine.class);
+    poLine.setAlerts(compPoLine.getAlerts().stream().map(Alert::getId).collect(toList()));
+    poLine.setReportingCodes(compPoLine.getReportingCodes().stream().map(ReportingCode::getId).collect(toList()));
+    return poLine;
   }
 
   public static CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status, HttpClientInterface httpClient,
@@ -1148,5 +1151,12 @@ public class HelperUtils {
     return linesArray.stream()
                      .map(json -> ((JsonObject) json).mapTo(PoLine.class))
                      .collect(toList());
+  }
+
+  public static List<PoLine> convertToPoLines(List<CompositePoLine> compositePoLines) {
+    return compositePoLines
+      .stream()
+      .map(HelperUtils::convertToPoLine)
+      .collect(toList());
   }
 }
