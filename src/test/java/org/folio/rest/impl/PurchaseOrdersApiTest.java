@@ -509,7 +509,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
       location.setQuantityPhysical(1);
     });
 
-          LocalDate now = LocalDate.now();
+    LocalDate now = LocalDate.now();
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
@@ -914,20 +914,13 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   @Test
   public void testDeleteByIdNoOrderFound() {
     logger.info("=== Test Delete Order By Id - Not Found ===");
-    verifyDeleteResponse(COMPOSITE_ORDERS_PATH + "/" + ID_DOES_NOT_EXIST, "", 204);
+    verifyDeleteResponse(COMPOSITE_ORDERS_PATH + "/" + ID_DOES_NOT_EXIST, "", 404);
   }
 
   @Test
   public void testDeleteById500Error() {
     logger.info("=== Test Delete Order By Id - Storage Internal Server Error ===");
     verifyDeleteResponse(COMPOSITE_ORDERS_PATH + "/" + ID_FOR_INTERNAL_SERVER_ERROR, APPLICATION_JSON, 500);
-  }
-
-  @Test
-  public void testDeleteByIdWithoutOkapiUrlHeader() {
-    logger.info("=== Test Delete Order By Id - 500 due to missing Okapi URL header ===");
-
-    verifyDeleteResponse(COMPOSITE_ORDERS_PATH + "/" + ID_DOES_NOT_EXIST, prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON,500);
   }
 
   @Test

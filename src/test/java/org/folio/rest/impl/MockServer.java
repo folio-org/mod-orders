@@ -42,7 +42,7 @@ import static org.folio.rest.impl.ApiTestBase.PROTECTED_READ_ONLY_TENANT;
 import static org.folio.rest.impl.ApiTestBase.X_ECHO_STATUS;
 import static org.folio.rest.impl.ApiTestBase.encodePrettily;
 import static org.folio.rest.impl.ApiTestBase.getMinimalContentCompositePoLine;
-import static org.folio.rest.impl.ApiTestBase.getMinimalContentPurchaseOrder;
+import static org.folio.rest.impl.ApiTestBase.getMinimalContentCompositePurchaseOrder;
 import static org.folio.rest.impl.ApiTestBase.getMockAsJson;
 import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEMS;
@@ -144,7 +144,7 @@ public class MockServer {
   private static final String ACQUISITIONS_UNITS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "acquisitionsUnits/units";
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
   private static final String ORGANIZATIONS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "organizations/";
-  static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "/po_line_collection.json";
+  static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "po_line_collection.json";
   private static final String IDENTIFIER_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
   static final String ACQUISITIONS_UNITS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/units.json";
   static final String ACQUISITIONS_MEMBERSHIPS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/memberships.json";
@@ -373,7 +373,7 @@ public class MockServer {
     router.route(HttpMethod.GET, resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
     router.route(HttpMethod.GET, resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
     router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(this::handleGetPieces);
-    router.route(HttpMethod.GET, resourcesPath(PIECES)+"/:id").handler(this::handleGetPieceById);
+    router.route(HttpMethod.GET, resourcePath(PIECES)).handler(this::handleGetPieceById);
     router.route(HttpMethod.GET, resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
     router.route(HttpMethod.GET, resourcesPath(PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
     router.route(HttpMethod.GET, "/contributor-name-types").handler(this::handleGetContributorNameTypes);
@@ -900,7 +900,7 @@ public class MockServer {
         PoLineCollection poLineCollection = new PoLineCollection();
 
         // Attempt to find POLine in mock server memory
-        List<JsonObject> postedPoLines = serverRqRs.column(HttpMethod.POST).get(type);
+        List<JsonObject> postedPoLines = serverRqRs.column(HttpMethod.OTHER).get(type);
 
         if (postedPoLines != null) {
           List<PoLine> poLines = postedPoLines.stream()
@@ -1049,25 +1049,26 @@ public class MockServer {
       .path());
     String pieceId = ctx.request()
       .getParam(ID);
-    JsonObject body;
+
     try {
-      if (PIECE_POLINE_CONSISTENCY_404_POLINE_NOT_FOUND_ID.equals(pieceId)) {
-        body = new JsonObject(ApiTestBase
-          .getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d.json"));
-        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
+      // Attempt to find POLine in mock server memory
+      JsonObject body = getMockEntry(PIECES, pieceId).orElse(null);
+      if (body == null) {
+        if (PIECE_POLINE_CONSISTENCY_404_POLINE_NOT_FOUND_ID.equals(pieceId)) {
+          body = new JsonObject(ApiTestBase
+            .getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d.json"));
 
-      } else if (PIECE_POLINE_CONSISTENT_RECEIPT_STATUS_ID.equals(pieceId)) {
-        body = new JsonObject(ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH
+        } else if (PIECE_POLINE_CONSISTENT_RECEIPT_STATUS_ID.equals(pieceId)) {
+          body = new JsonObject(ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH
             + "pieceRecord-received-consistent-receipt-status-5b454292-6aaa-474f-9510-b59a564e0c8d2.json"));
-        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
-
-      } else {
-        body = new JsonObject(
+        } else {
+          body = new JsonObject(
             ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json"));
-        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
+        }
       }
+      serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
     } catch (IOException e) {
-      fail(e.getMessage());
+      serverResponse(ctx, 404, APPLICATION_JSON, pieceId);
     }
   }
 
@@ -1193,7 +1194,7 @@ public class MockServer {
       // If previous step has no result then attempt to find PO in stubs
       if (po == null) {
         if (MIN_PO_ID.equals(id)) {
-          serverResponse(ctx, 200, APPLICATION_JSON, encodePrettily(getMinimalContentPurchaseOrder()));
+          serverResponse(ctx, 200, APPLICATION_JSON, encodePrettily(getMinimalContentCompositePurchaseOrder()));
           return;
         }
 

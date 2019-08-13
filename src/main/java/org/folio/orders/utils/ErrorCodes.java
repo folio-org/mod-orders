@@ -50,7 +50,7 @@ public enum ErrorCodes {
   PROHIBITED_FIELD_CHANGING("protectedFieldChanging","Protected fields can't be modified"),
   ORDER_UNITS_NOT_FOUND("orderUnitsNotFound", "Units not found"),
   USER_HAS_NO_PERMISSIONS("userHasNoPermission", "User does not have permissions - operation is restricted"),
-  USER_HAS_NO_ACQ_PERMISSIONS("userHasNoAcqUnitsPermission", "User does not have permissions to manage acquisition units assignments- operation is restricted");
+  USER_HAS_NO_ACQ_PERMISSIONS("userHasNoAcqUnitsPermission", "User does not have permissions to manage acquisition units assignments - operation is restricted");
 
   private final String code;
   private final String description;

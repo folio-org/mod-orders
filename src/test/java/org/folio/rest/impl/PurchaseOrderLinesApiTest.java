@@ -451,21 +451,6 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderLineByIdWithoutOkapiUrlHeader() throws IOException {
-    logger.info("=== Test PUT Order Line By Id - 500 due to missing Okapi URL header ===");
-
-    String lineId = ID_DOES_NOT_EXIST;
-
-    String url = String.format(LINE_BY_ID_PATH, lineId);
-    String body = getPoLineWithMinContentAndIds(lineId, ID_DOES_NOT_EXIST);
-
-    verifyPut(url, body, prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 500);
-
-    // Verify that no calls reached mock server
-    assertTrue(MockServer.serverRqRs.isEmpty());
-  }
-
-  @Test
   public void testPutOrderLineByIdNotFound() throws IOException {
     logger.info("=== Test PUT Order Line By Id - Not Found ===");
 
@@ -572,14 +557,6 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     final Response resp = verifyDeleteResponse(url, "", 204);
     assertTrue(StringUtils.isEmpty(resp.getBody().asString()));
-  }
-
-  @Test
-  public void testDeleteOrderLineByIdWithoutOkapiUrlHeader() {
-    logger.info("=== Test Delete Order Line By Id - 500 due to missing Okapi URL header ===");
-
-    verifyDeleteResponse(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST), prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON,500);
-
   }
 
   @Test
@@ -699,7 +676,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersWithInvalidIsbn() throws Exception {
+  public void testPostOrdersWithInvalidIsbn() {
     logger.info("=== Test Post Order line with invalid ISBN ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
@@ -724,7 +701,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrderLinetoConvertToIsbn13() throws Exception {
+  public void testPostOrderLinetoConvertToIsbn13() {
     logger.info("=== Test Post order line to verify ISBN 10 is normalized to ISBN 13 ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
@@ -743,7 +720,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersWithInvalidIsbn() throws Exception {
+  public void testPutOrdersWithInvalidIsbn() {
     logger.info("=== Test Put Order line with invalid ISBN ===");
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
       .mapTo(CompositePoLine.class);

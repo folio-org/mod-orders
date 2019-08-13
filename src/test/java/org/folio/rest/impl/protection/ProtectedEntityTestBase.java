@@ -1,5 +1,6 @@
 package org.folio.rest.impl.protection;
 
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
@@ -13,9 +14,9 @@ import java.util.List;
 
 import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.impl.MockServer;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.hamcrest.Matcher;
 
 import io.restassured.http.Header;
@@ -23,9 +24,12 @@ import io.vertx.core.json.JsonObject;
 
 public abstract class ProtectedEntityTestBase extends ApiTestBase {
 
+  static final String DELETE_PROTECTED_UNIT = "2e6a170f-ae20-4889-813f-641831e24b84";
+  public static final List<String> DELETE_PROTECTED_UNITS = Arrays.asList(DELETE_PROTECTED_UNIT);
+  static final String CREATE_PROTECTED_UNIT = "f6d2cc9d-82ca-437c-a4e6-e5c30323df00";
+  public static final List<String> CREATE_PROTECTED_UNITS = Arrays.asList(CREATE_PROTECTED_UNIT);
   static final String FULL_PROTECTED_USERS_UNIT_ID = "e68c18fc-833f-494e-9a0e-b236eb4b310b";
-  static final String UPDATE_ONLY_UNIT_ID = "aa0ec4e1-782f-45f6-a6f3-8e6b6c00599c";
-  public static final List<String> PROTECTED_UNITS = Arrays.asList(FULL_PROTECTED_USERS_UNIT_ID, UPDATE_ONLY_UNIT_ID);
+  public static final List<String> PROTECTED_UNITS = Arrays.asList(FULL_PROTECTED_USERS_UNIT_ID);
   static final String NOT_PROTECTED_UNIT_ID = "0e9525aa-d123-4e4d-9f7e-1b302a97eb90";
   public static final List<String> NOT_PROTECTED_UNITS = Arrays.asList(NOT_PROTECTED_UNIT_ID, FULL_PROTECTED_USERS_UNIT_ID);
   static final String NON_EXISTENT_UNIT_ID = "b548d790-07da-456f-b4ea-7a77c0e34a0f";
@@ -46,21 +50,24 @@ public abstract class ProtectedEntityTestBase extends ApiTestBase {
     return value > 0 ? hasSize(value) : nullValue();
   }
 
-  public PurchaseOrder prepareOrder(List<String> acqUnitsIds) {
-    PurchaseOrder po = getMinimalContentPurchaseOrder();
+  public CompositePurchaseOrder prepareOrder(List<String> acqUnitsIds) {
+    CompositePurchaseOrder po = getMinimalContentCompositePurchaseOrder();
     po.setAcqUnitIds(acqUnitsIds);
     addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(po));
     return po;
   }
 
-  public PoLine preparePoLine(List<String> acqUnitsIds) {
-    PurchaseOrder order = prepareOrder(acqUnitsIds);
-    return getMinimalContentCompositePoLine(order.getId());
+  public CompositePoLine preparePoLine(List<String> acqUnitsIds) {
+    CompositePurchaseOrder order = prepareOrder(acqUnitsIds);
+    CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId());
+    addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
+    return poLine;
   }
 
   public Piece preparePiece(List<String> acqUnitsIds) {
-    PoLine poLine = preparePoLine(acqUnitsIds);
-    addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
-    return getMinimalContentPiece(poLine.getId());
+    CompositePoLine poLine = preparePoLine(acqUnitsIds);
+    Piece piece = getMinimalContentPiece(poLine.getId());
+    addMockEntry(PIECES, JsonObject.mapFrom(piece));
+    return piece;
   }
 }

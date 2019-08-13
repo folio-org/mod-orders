@@ -181,7 +181,7 @@ public class HelperUtils {
                                                                     Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<List<CompositePoLine>> future = new VertxCompletableFuture<>(ctx);
 
-    getPoLines(id,lang, httpClient,ctx, okapiHeaders, logger)
+    getPoLines(id, lang, httpClient,ctx, okapiHeaders, logger)
       .thenAccept(jsonArray -> {
         List<CompletableFuture<CompositePoLine>> futures = new ArrayList<>();
 
@@ -271,14 +271,6 @@ public class HelperUtils {
             logger.error("The {} {} operation completed with {} error: {}", operation, url, code, errorMessage);
 
             return new JsonObject();
-          }
-
-          /*
-           * Ignoring not found error from storage because after MODORDSTOR-52 changes mod-orders-storage returns 404 instead of 204
-           * when we try to delete the record which is not in the database.
-           */
-          if (code == 404 && operation == HttpMethod.DELETE) {
-            return null;
           }
 
           return verifyAndExtractBody(response);
@@ -1101,7 +1093,10 @@ public class HelperUtils {
     JsonObject pol = JsonObject.mapFrom(compPoLine);
     pol.remove(ALERTS);
     pol.remove(REPORTING_CODES);
-    return pol.mapTo(PoLine.class);
+    PoLine poLine = pol.mapTo(PoLine.class);
+    poLine.setAlerts(compPoLine.getAlerts().stream().map(Alert::getId).collect(toList()));
+    poLine.setReportingCodes(compPoLine.getReportingCodes().stream().map(ReportingCode::getId).collect(toList()));
+    return poLine;
   }
 
   public static CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status, HttpClientInterface httpClient,
@@ -1150,5 +1145,18 @@ public class HelperUtils {
     }
 
     return objectFromStorage;
+  }
+
+  public static List<PoLine> convertToPoLines(JsonArray linesArray) {
+    return linesArray.stream()
+                     .map(json -> ((JsonObject) json).mapTo(PoLine.class))
+                     .collect(toList());
+  }
+
+  public static List<PoLine> convertToPoLines(List<CompositePoLine> compositePoLines) {
+    return compositePoLines
+      .stream()
+      .map(HelperUtils::convertToPoLine)
+      .collect(toList());
   }
 }

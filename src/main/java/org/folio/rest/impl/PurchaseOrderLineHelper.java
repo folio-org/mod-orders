@@ -8,29 +8,58 @@ import static java.util.stream.Collectors.toList;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.orders.utils.HelperUtils.*;
+import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
+import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
+import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
+import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantity;
+import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantityWithoutLocation;
+import static org.folio.orders.utils.HelperUtils.calculateTotalLocationQuantity;
+import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
+import static org.folio.orders.utils.HelperUtils.deletePoLine;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.getPoLineById;
+import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
+import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
+import static org.folio.orders.utils.HelperUtils.groupLocationsById;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.inventoryUpdateNotRequired;
+import static org.folio.orders.utils.HelperUtils.operateOnObject;
+import static org.folio.orders.utils.HelperUtils.validatePoLine;
+import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
+import static org.folio.orders.utils.ProtectedOperationType.DELETE;
+import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import javax.ws.rs.core.Response;
+
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
@@ -38,9 +67,19 @@ import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.SequenceNumber;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.Alert;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.Context;
@@ -49,8 +88,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
-
-import javax.ws.rs.core.Response;
 
 class PurchaseOrderLineHelper extends AbstractHelper {
 
@@ -294,6 +331,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   CompletableFuture<Void> deleteLine(String lineId) {
     return getPoLineById(lineId, lang, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(this::verifyDeleteAllowed)
       .thenCompose(line -> {
         logger.debug("Deleting PO line...");
         return deletePoLine(line, httpClient, ctx, okapiHeaders, logger);
@@ -301,12 +339,24 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       .thenAccept(json -> logger.info("The PO Line with id='{}' has been deleted successfully", lineId));
   }
 
+  private CompletableFuture<JsonObject> verifyDeleteAllowed(JsonObject line) {
+    return getCompositePurchaseOrder(line.getString(PURCHASE_ORDER_ID))
+      .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), DELETE))
+      .thenApply(aVoid -> line);
+  }
+
   /**
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
   CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine) {
     return getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
-      .thenCompose(lineFromStorage -> validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage))
+      .thenCompose(lineFromStorage -> getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId())
+        .thenCompose(compOrder -> {
+          validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage, compOrder);
+          return protectionHelper.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE)
+            .thenApply(aVoid -> lineFromStorage);
+        })
+      )
       .thenCompose(lineFromStorage -> {
         // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
         // update
@@ -315,14 +365,10 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<JsonObject> validatePOLineProtectedFieldsChanged(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
-    return getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId())
-      .thenCompose(purchaseOrder -> {
-        if (purchaseOrder.getWorkflowStatus() != CompositePurchaseOrder.WorkflowStatus.PENDING) {
-          verifyProtectedFieldsChanged(POLineProtectedFields.getFieldNames(), lineFromStorage, JsonObject.mapFrom(compOrderLine));
-        }
-        return completedFuture(lineFromStorage);
-      });
+  private void validatePOLineProtectedFieldsChanged(CompositePoLine compOrderLine, JsonObject lineFromStorage, CompositePurchaseOrder purchaseOrder) {
+    if (purchaseOrder.getWorkflowStatus() != PENDING) {
+      verifyProtectedFieldsChanged(POLineProtectedFields.getFieldNames(), lineFromStorage, JsonObject.mapFrom(compOrderLine));
+    }
   }
 
   private void updateOrderStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
@@ -410,13 +456,13 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       .thenCompose(piecesWithItemId -> createPieces(compPOL, piecesWithItemId));
   }
 
-  String buildNewPoLineNumber(JsonObject poLineFromStorage, String poNumber) {
-    String oldPoLineNumber = poLineFromStorage.getString(PO_LINE_NUMBER);
+  String buildNewPoLineNumber(PoLine poLineFromStorage, String poNumber) {
+    String oldPoLineNumber = poLineFromStorage.getPoLineNumber();
     Matcher matcher = PO_LINE_NUMBER_PATTERN.matcher(oldPoLineNumber);
     if (matcher.find()) {
       return buildPoLineNumber(poNumber, matcher.group(2));
     }
-    logger.error("PO Line - {} has invalid or missing number.", poLineFromStorage.getString(ID));
+    logger.error("PO Line - {} has invalid or missing number.", poLineFromStorage.getId());
     return oldPoLineNumber;
   }
 

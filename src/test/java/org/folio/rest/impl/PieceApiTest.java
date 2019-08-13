@@ -80,7 +80,7 @@ public class PieceApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutPiecesByNonExistentId() throws Exception {
+  public void testPutPiecesByNonExistentId() {
     logger.info("=== Test update piece by id - Id does not exists 404 ===");
     
     Piece reqData = pieceJsonReqData.mapTo(Piece.class);
@@ -92,7 +92,7 @@ public class PieceApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutPiecesWithError() throws Exception {
+  public void testPutPiecesWithError() {
     logger.info("=== Test update piece by id - internal error from storage 500 ===");
     
     Piece reqData = pieceJsonReqData.mapTo(Piece.class);

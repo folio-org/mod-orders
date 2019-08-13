@@ -48,6 +48,7 @@ import org.folio.HttpStatus;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -256,12 +257,14 @@ public class ApiTestBase {
   }
 
   Response verifyPut(String url, String body, String expectedContentType, int expectedCode) {
-    return verifyPut(url, body, prepareHeaders(X_OKAPI_URL, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_TOKEN), expectedContentType, expectedCode);
+    return verifyPut(url, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), expectedContentType, expectedCode);
   }
 
-  Response verifyPut(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
+  public Response verifyPut(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
     Response response = RestAssured
       .with()
+        .header(X_OKAPI_TOKEN)
+        .header(X_OKAPI_URL)
         .headers(headers)
         .body(body)
         .contentType(APPLICATION_JSON)
@@ -281,18 +284,19 @@ public class ApiTestBase {
   }
 
   public Response verifyGet(String url, String expectedContentType, int expectedCode) {
-    Headers headers = prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT);
+    Headers headers = prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT);
     return verifyGet(url, headers, expectedContentType, expectedCode);
   }
 
   public Response verifyGet(String url, String expectedContentType, int expectedCode, String tenant) {
-    Headers headers = prepareHeaders(X_OKAPI_URL, new Header(OKAPI_HEADER_TENANT, tenant));
+    Headers headers = prepareHeaders(new Header(OKAPI_HEADER_TENANT, tenant));
     return verifyGet(url, headers, expectedContentType, expectedCode);
   }
 
   public Response verifyGet(String url, Headers headers, String expectedContentType, int expectedCode) {
     return RestAssured
       .with()
+      .header(X_OKAPI_URL)
         .headers(headers)
       .get(url)
         .then()
@@ -310,14 +314,15 @@ public class ApiTestBase {
     return verifyGet(url, APPLICATION_JSON, 200, tenant).as(clazz);
   }
 
-  Response verifyDeleteResponse(String url, String expectedContentType, int expectedCode) {
-    Headers headers =  prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT);
+  public Response verifyDeleteResponse(String url, String expectedContentType, int expectedCode) {
+    Headers headers =  prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT);
     return verifyDeleteResponse(url, headers, expectedContentType, expectedCode);
   }
 
-  Response verifyDeleteResponse(String url, Headers headers, String expectedContentType, int expectedCode) {
+  public Response verifyDeleteResponse(String url, Headers headers, String expectedContentType, int expectedCode) {
     Response response = RestAssured
       .with()
+        .header(X_OKAPI_URL)
         .headers(headers)
       .delete(url)
         .then()
@@ -436,15 +441,16 @@ public class ApiTestBase {
       .withPoLineId(poLineId);
   }
 
-  public static PoLine getMinimalContentCompositePoLine() {
+
+  public static CompositePoLine getMinimalContentCompositePoLine() {
     return getMinimalContentCompositePoLine(MIN_PO_ID);
   }
 
-  public static PoLine getMinimalContentCompositePoLine(String orderId) {
-    return new PoLine().withSource(PoLine.Source.EDI)
+  public static CompositePoLine getMinimalContentCompositePoLine(String orderId) {
+    return new CompositePoLine().withSource(CompositePoLine.Source.EDI)
       .withId(MIN_PO_LINE_ID)
-      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
-      .withAcquisitionMethod(PoLine.AcquisitionMethod.PURCHASE)
+      .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withAcquisitionMethod(CompositePoLine.AcquisitionMethod.PURCHASE)
       .withPhysical(new Physical().withMaterialType("2d1398ae-e1aa-4c7c-b9c9-15adf8cf6425"))
       .withCost(new Cost().withCurrency("EUR").withQuantityPhysical(1).withListUnitPrice(10.0))
       .withLocations(Collections.singletonList(new Location().withLocationId("2a00b0be-1447-42a1-a112-124450991899").withQuantityPhysical(1)))
@@ -452,10 +458,11 @@ public class ApiTestBase {
       .withPurchaseOrderId(orderId);
   }
 
-  public static PurchaseOrder getMinimalContentPurchaseOrder() {
-    return new PurchaseOrder()
+  public static CompositePurchaseOrder getMinimalContentCompositePurchaseOrder() {
+    return new CompositePurchaseOrder()
       .withId(MIN_PO_ID)
-      .withOrderType(PurchaseOrder.OrderType.ONE_TIME)
+      .withPoNumber("TestNumber")
+      .withOrderType(CompositePurchaseOrder.OrderType.ONE_TIME)
       .withVendor("7d232b43-bf9a-4301-a0ce-9e076298632e");
   }
 

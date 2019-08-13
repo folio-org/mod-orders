@@ -339,7 +339,7 @@ public class OrdersImpl implements Orders {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     PiecesHelper helper = new PiecesHelper(okapiHeaders, vertxContext, lang);
     helper
-      .createRecordInStorage(entity)
+      .createPiece(entity)
       .thenAccept(piece -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully created piece: " + JsonObject.mapFrom(piece).encodePrettily());
