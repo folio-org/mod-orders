@@ -240,14 +240,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
     getPurchaseOrderById(id, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenAccept(purchaseOrder -> {
+      .thenCompose(purchaseOrder -> {
         CompositePurchaseOrder compPo = convertToCompositePurchaseOrder(purchaseOrder);
-        protectionHelper.isOperationRestricted(compPo.getAcqUnitIds(), DELETE)
-        .exceptionally(t -> {
-          logger.error("User with id={} is forbidden to view delete with id={}", t.getCause(), getCurrentUserId(), id);
-          future.completeExceptionally(t);
-          return null;
-        });
+        return protectionHelper.isOperationRestricted(compPo.getAcqUnitIds(), DELETE);
       })
       .thenAccept(aVoid ->
         deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
