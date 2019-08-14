@@ -63,6 +63,7 @@ import static org.folio.rest.impl.PurchaseOrdersApiTest.LISTED_PRINT_MONOGRAPH_P
 import static org.folio.rest.impl.PurchaseOrdersApiTest.MOD_VENDOR_INTERNAL_ERROR_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_ACCESS_PROVIDER_A;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_VENDOR_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ORDER_DELETE_ERROR_TENANT;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ORGANIZATION_NOT_VENDOR;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.VENDOR_WITH_BAD_CONTENT;
@@ -827,11 +828,11 @@ public class MockServer {
 
   private void handleDeleteGenericSubObj(RoutingContext ctx, String subObj) {
     String id = ctx.request().getParam(ID);
-
+    String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
     addServerRqRsData(HttpMethod.DELETE, subObj, new JsonObject().put(ID, id));
     if (ID_DOES_NOT_EXIST.equals(id)) {
       serverResponse(ctx, 404, TEXT_PLAIN, id);
-    } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
+    } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id) || ORDER_DELETE_ERROR_TENANT.equals(tenant)) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
     } else {
       ctx.response()

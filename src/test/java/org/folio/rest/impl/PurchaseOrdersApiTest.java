@@ -89,6 +89,7 @@ import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInventory
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesCreated;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesQuantityForSuccessCase;
 import static org.folio.rest.impl.MockServer.HEADER_SERVER_ERROR;
+import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.getContributorNameTypesSearches;
 import static org.folio.rest.impl.MockServer.getInstanceTypesSearches;
 import static org.folio.rest.impl.MockServer.getLoanTypesSearches;
@@ -169,6 +170,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
   private static final String NULL = "null";
   static final String PURCHASE_ORDER_ID = "purchaseOrderId";
+  public static final String ORDER_DELETE_ERROR_TENANT = "order_delete_error";
+  static final Header ERROR_ORDER_DELETE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, ORDER_DELETE_ERROR_TENANT);
 
   public static final Header ALL_DESIRED_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(AcqDesiredPermissions.getValues()).encode());
 
@@ -920,7 +923,20 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   @Test
   public void testDeleteById500Error() {
     logger.info("=== Test Delete Order By Id - Storage Internal Server Error ===");
-    verifyDeleteResponse(COMPOSITE_ORDERS_PATH + "/" + ID_FOR_INTERNAL_SERVER_ERROR, APPLICATION_JSON, 500);
+    Headers headers =  prepareHeaders(ERROR_ORDER_DELETE_TENANT_HEADER);
+    verifyDeleteResponse(COMPOSITE_ORDERS_PATH + "/" + MIN_PO_ID, headers, APPLICATION_JSON, 500);
+  }
+
+  @Test
+  public void testDeleteByIdWhenDeletingPoLine500Error() {
+    logger.info("=== Test Delete Order By Id - Storage Internal Server Error on PO Line deletion ===");
+    CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder();
+    CompositePoLine line= getMinimalContentCompositePoLine(order.getId());
+    line.setId(ID_FOR_INTERNAL_SERVER_ERROR);
+    addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
+    addMockEntry(PO_LINES, JsonObject.mapFrom(line));
+
+    verifyDeleteResponse(COMPOSITE_ORDERS_PATH + "/" + order.getId(), APPLICATION_JSON, 500);
   }
 
   @Test
