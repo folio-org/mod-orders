@@ -240,31 +240,35 @@ public class PurchaseOrderHelper extends AbstractHelper {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
     getPurchaseOrderById(id, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenCompose(purchaseOrder -> {
+      .thenAccept(purchaseOrder -> {
         CompositePurchaseOrder compPo = convertToCompositePurchaseOrder(purchaseOrder);
-        return protectionHelper.isOperationRestricted(compPo.getAcqUnitIds(), DELETE);
-      })
-      .thenAccept(aVoid ->
-        deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
-          .thenRun(() -> {
-            logger.info("Successfully deleted poLines, proceeding with purchase order");
-            operateOnObject(HttpMethod.DELETE, resourceByIdPath(PURCHASE_ORDER, id), httpClient, ctx, okapiHeaders, logger)
-              .thenAccept(rs -> {
-                logger.info("Successfully deleted order with id={}", id);
-                future.complete(null);
-              })
-              .exceptionally(t -> {
-                logger.error("Failed to delete the order with id={}", t.getCause(), id);
-                future.completeExceptionally(t);
-                return null;
-              });
-          })
+        protectionHelper.isOperationRestricted(compPo.getAcqUnitIds(), DELETE)
+          .thenAccept(aVoid -> deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
+            .thenRun(() -> {
+              logger.info("Successfully deleted poLines, proceeding with purchase order");
+              operateOnObject(HttpMethod.DELETE, resourceByIdPath(PURCHASE_ORDER, id), httpClient, ctx, okapiHeaders, logger)
+                .thenAccept(rs -> {
+                  logger.info("Successfully deleted order with id={}", id);
+                  future.complete(null);
+                })
+                .exceptionally(t -> {
+                  logger.error("Failed to delete the order with id={}", t.getCause(), id);
+                  future.completeExceptionally(t);
+                  return null;
+                });
+            })
+            .exceptionally(t -> {
+              logger.error("Failed to delete PO Lines of the order with id={}", t.getCause(), id);
+              future.completeExceptionally(t);
+              return null;
+            })
+          )
           .exceptionally(t -> {
-            logger.error("Failed to delete PO Lines of the order with id={}", t.getCause(), id);
+            logger.error("User with id={} is forbidden to view delete with id={}", t.getCause(), getCurrentUserId(), id);
             future.completeExceptionally(t);
             return null;
-          })
-      )
+          });
+      })
     .exceptionally(t ->{
       logger.error("Failed to delete PO Lines", t);
       future.completeExceptionally(t);
