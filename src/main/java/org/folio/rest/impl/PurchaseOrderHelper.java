@@ -167,13 +167,13 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenCompose(poFromStorage -> {
         logger.info("Order successfully retrieved from storage");
         return validatePoNumber(poFromStorage, compPO)
-          .thenCompose(v -> updatePoLines(poFromStorage, compPO))
           .thenCompose(v -> {
             if (isTransitionToApproved(poFromStorage, compPO)) {
               return checkOrderApprovalPermissions(compPO);
             }
             return completedFuture(null);
           })
+          .thenCompose(v -> updatePoLines(poFromStorage, compPO))
           .thenCompose(v -> {
             if (isTransitionToOpen(poFromStorage, compPO)) {
               return checkOrderApprovalRequired(compPO).
