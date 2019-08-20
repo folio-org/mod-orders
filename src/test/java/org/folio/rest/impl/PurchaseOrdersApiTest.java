@@ -1932,7 +1932,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("===  Test case when order status update is expected from Open to Closed ===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
-    reqData.setVendor("d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1");
+    reqData.setVendor(ACTIVE_VENDOR_ID);
     assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
 
     reqData.setReEncumber(false);
@@ -1953,7 +1953,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("===  Test case when order status update is expected from Open to Closed ===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
-    reqData.setVendor("d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1");
+    reqData.setVendor(ACTIVE_VENDOR_ID);
     assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
 
     CompositePurchaseOrder respData = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
@@ -2423,7 +2423,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("===  Test case when approval is required and user does not have required permission===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
-    reqData.setVendor("d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1");
+    reqData.setVendor(ACTIVE_VENDOR_ID);
     assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
 
     Response resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
@@ -2442,7 +2442,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("===  Test case when approval is required to open order and order not approved ===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
-    reqData.setVendor("d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1");
+    reqData.setVendor(ACTIVE_VENDOR_ID);
     reqData.setApproved(false);
     assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
 
@@ -2465,7 +2465,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     CompositePurchaseOrder pendingData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_PENDING_STATUS_WITHOUT_PO_LINES)
       .mapTo(CompositePurchaseOrder.class);
-    pendingData.setVendor("d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1");
+    pendingData.setVendor(ACTIVE_VENDOR_ID);
     pendingData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
     assertThat(pendingData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.PENDING));
 
@@ -2482,7 +2482,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_PENDING_STATUS_WITHOUT_PO_LINES)
         .mapTo(CompositePurchaseOrder.class);
-    reqData.setVendor("d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1");
+    reqData.setVendor(ACTIVE_VENDOR_ID);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
       assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.PENDING));
 
@@ -2502,7 +2502,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
     reqData.setApproved(false);
-    reqData.setVendor("d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1");
+    reqData.setVendor(ACTIVE_VENDOR_ID);
     assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
 
     CompositePurchaseOrder respData = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
