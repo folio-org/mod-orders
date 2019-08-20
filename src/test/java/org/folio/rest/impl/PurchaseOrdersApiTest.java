@@ -2083,7 +2083,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     Map<String, Object> allProtectedFieldsModification = new HashMap<>();
 
-    allProtectedFieldsModification.put(POProtectedFields.APPROVED.getFieldName(), false);
+    allProtectedFieldsModification.put(POProtectedFields.APPROVED.getFieldName(), true);
     allProtectedFieldsModification.put(POProtectedFields.PO_NUMBER.getFieldName(), "testPO");
     allProtectedFieldsModification.put(POProtectedFields.MANUAL_PO.getFieldName(), true);
     allProtectedFieldsModification.put(POProtectedFields.RE_ENCUMBER.getFieldName(), true);
