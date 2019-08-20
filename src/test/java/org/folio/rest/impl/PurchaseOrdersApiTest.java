@@ -128,6 +128,8 @@ import static org.junit.Assert.assertTrue;
 
 public class PurchaseOrdersApiTest extends ApiTestBase {
 
+  private static final String PENDING_ORDER_APPROVED_FALSE = "e5ae4afd-3fa9-494e-a972-f541df9b877e";
+
   private static final Logger logger = LoggerFactory.getLogger(PurchaseOrdersApiTest.class);
 
   private static final String ORDER_WITHOUT_PO_LINES = "order_without_po_lines.json";
@@ -174,6 +176,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   static final Header ERROR_ORDER_DELETE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, ORDER_DELETE_ERROR_TENANT);
 
   public static final Header ALL_DESIRED_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(AcqDesiredPermissions.getValues()).encode());
+  public static final Header APPROVAL_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(Arrays.asList("orders.item.approve")).encode());
 
 
   @Test
@@ -2413,6 +2416,112 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
       .encodePrettily(), "", 204);
 
     assertThat(MockServer.getPoLineUpdates().get(0).mapTo(PoLine.class).getDetails().getProductIds().get(0).getProductId(), equalTo("9780198526636"));
+  }
+
+
+  @Test
+  public void testPostOrderWithUserNotHavingApprovalPermissions() {
+    logger.info("===  Test case when approval is required and user does not have required permission===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
+    reqData.setVendor("d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1");
+    assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
+
+    Response resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 403);
+
+    Error err = resp.getBody()
+        .as(Errors.class)
+        .getErrors()
+        .get(0);
+
+    assertThat(err.getCode(), equalTo(ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS.getCode()));
+  }
+
+  @Test
+  public void testPostOrderToFailOnNonApprovedOrder() {
+    logger.info("===  Test case when approval is required to open order and order not approved ===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
+    reqData.setVendor("d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1");
+    reqData.setApproved(false);
+    assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
+
+    Response resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, APPROVAL_PERMISSIONS_HEADER), APPLICATION_JSON, 400);
+
+    Error err = resp.getBody()
+        .as(Errors.class)
+        .getErrors()
+        .get(0);
+
+    assertThat(err.getCode(), equalTo(ErrorCodes.APPROVAL_REQUIRED_TO_OPEN.getCode()));
+  }
+
+  @Test
+  public void testPostOrderToSetRequiredFieldsOnApproval() {
+    logger.info("===  Test required Fields are set/not set based on approval required field===");
+
+    // -- test config set to "isApprovalRequired":true, approval details are set when order is approved in PENDING state
+
+    CompositePurchaseOrder pendingData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_PENDING_STATUS_WITHOUT_PO_LINES)
+      .mapTo(CompositePurchaseOrder.class);
+    pendingData.setVendor("d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1");
+    pendingData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
+    assertThat(pendingData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.PENDING));
+
+    CompositePurchaseOrder responseData = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(pendingData)
+      .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, APPROVAL_PERMISSIONS_HEADER),
+        APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    assertThat(responseData.getApprovalDate(), notNullValue());
+    assertThat(responseData.getApprovedById(), notNullValue());
+    assertThat(responseData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.PENDING));
+
+
+    // -- test config set to "isApprovalRequired":false, approval details are not set when order is approved in PENDING state
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_PENDING_STATUS_WITHOUT_PO_LINES)
+        .mapTo(CompositePurchaseOrder.class);
+    reqData.setVendor("d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1");
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
+      assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.PENDING));
+
+      CompositePurchaseOrder respData = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
+        .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1, X_OKAPI_USER_ID, APPROVAL_PERMISSIONS_HEADER),
+          APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+      assertThat(respData.getApprovalDate(), nullValue());
+      assertThat(respData.getApprovedById(), nullValue());
+      assertThat(respData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.PENDING));
+  }
+
+
+  @Test
+  public void testPostOrderApprovalNotRequired() {
+    logger.info("===  Test case when approval is not required to open order, and order not approved, set required Fields when opening Order ===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
+    reqData.setApproved(false);
+    reqData.setVendor("d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1");
+    assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
+
+    CompositePurchaseOrder respData = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+      assertThat(respData.getApprovalDate(), notNullValue());
+      assertThat(respData.getApprovedById(), notNullValue());
+  }
+
+  @Test
+  public void testPutOrderWithUserNotHavingApprovalPermissions() throws Exception {
+    logger.info("=== Test PUT PO, with User not having Approval permission==");
+
+    CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
+    reqData.setApproved(true);
+    Headers headers = prepareHeaders(X_OKAPI_URL, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_TOKEN, X_OKAPI_USER_ID);
+    String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, PENDING_ORDER_APPROVED_FALSE);
+    verifyPut(url, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 403).body().as(Errors.class);
   }
 
   private void prepareOrderForPostRequest(CompositePurchaseOrder reqData) {

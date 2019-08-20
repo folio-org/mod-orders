@@ -6,6 +6,8 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.AcqDesiredPermissions.ASSIGN;
 import static org.folio.orders.utils.AcqDesiredPermissions.MANAGE;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
+import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS;
+import static org.folio.orders.utils.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
@@ -37,14 +39,7 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
@@ -62,6 +57,7 @@ import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
+import org.hibernate.validator.internal.util.privilegedactions.NewJaxbContext;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -77,6 +73,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PurchaseOrderHelper extends AbstractHelper {
 
+  private static final String PERMISSION_ORDER_APPROVE = "orders.item.approve";
   private static final String SEARCH_ORDERS_BY_LINES_DATA = resourcesPath(SEARCH_ORDERS) + SEARCH_PARAMS;
   private static final String GET_PURCHASE_ORDERS = resourcesPath(PURCHASE_ORDER) + SEARCH_PARAMS;
   public static final String EMPTY_ARRAY = "[]";
@@ -145,7 +142,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
     verifyUserHasAssignPermission(compPO);
     return protectionHelper.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.CREATE)
-      .thenCompose(vVoid -> setPoNumberIfMissing(compPO)
+        .thenCompose(vvoid -> checkOrderApprovalPermissions(compPO))
+        .thenCompose(vVoid -> setPoNumberIfMissing(compPO)
         .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber()))
         .thenCompose(v -> createPOandPOLines(compPO))
         .thenApply(this::populateOrderSummary));
@@ -171,14 +169,25 @@ public class PurchaseOrderHelper extends AbstractHelper {
         return validatePoNumber(poFromStorage, compPO)
           .thenCompose(v -> updatePoLines(poFromStorage, compPO))
           .thenCompose(v -> {
+            if (isTransitionToApproved(poFromStorage, compPO)) {
+              return checkOrderApprovalPermissions(compPO);
+            }
+            return completedFuture(null);
+          })
+          .thenCompose(v -> {
             if (isTransitionToOpen(poFromStorage, compPO)) {
-              return openOrder(compPO);
+              return checkOrderApprovalRequired(compPO).
+                  thenCompose(ok -> openOrder(compPO));
             } else {
               return updateOrderSummary(compPO);
             }
           });
         }
       );
+  }
+
+  private boolean isTransitionToApproved(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO) {
+    return !poFromStorage.getApproved() && compPO.getApproved();
   }
 
   private CompletableFuture<Set<ProtectedOperationType>> getInvolvedOperations(CompositePurchaseOrder compPO) {
@@ -502,11 +511,53 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenAccept(compPO::setCompositePoLines)
       .thenCompose(v -> {
         if (finalStatus == OPEN) {
-          return openOrder(compPO);
+          return checkOrderApprovalRequired(compPO).
+              thenCompose(ok -> openOrder(compPO));
         }
         return completedFuture(null);
       })
       .thenApply(v -> compPO);
+  }
+
+  /**
+   * Checks the value of "isApprovalRequired" in configurations, if the value is set to true, and order is being approved, verifies
+   * if the user has required permissions to approve order
+   *
+   * @param compPO
+   */
+  private CompletableFuture<Void> checkOrderApprovalPermissions(CompositePurchaseOrder compPO) {
+    return getTenantConfiguration().thenAccept(config -> {
+      boolean isApprovalRequired = isApprovalRequiredConfiguration(config);
+      if (isApprovalRequired && compPO.getApproved()) {
+        if (isUserNotHaveApprovePermission()) {
+          throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_APPROVAL_PERMISSIONS);
+        }
+        compPO.setApprovalDate(new Date());
+        compPO.setApprovedById(getCurrentUserId());
+      }
+    });
+  }
+
+  private boolean isApprovalRequiredConfiguration(JsonObject config) {
+    return Optional.ofNullable(config.getString("approvals"))
+      .map(approval -> new JsonObject(approval).getBoolean("isApprovalRequired"))
+      .orElse(false);
+  }
+
+  /**
+   * If an order is transitioning to OPEN, checks if approval is required and throws an error if it is not approved
+   *
+   * @param compPO
+   */
+  private CompletableFuture<Void> checkOrderApprovalRequired(CompositePurchaseOrder compPO) {
+    return getTenantConfiguration().thenAccept(config -> {
+      boolean isApprovalRequired = isApprovalRequiredConfiguration(config);
+      if (isApprovalRequired && !compPO.getApproved()) {
+        throw new HttpException(400, APPROVAL_REQUIRED_TO_OPEN);
+      }
+      compPO.setApprovedById(getCurrentUserId());
+      compPO.setApprovalDate(new Date());
+    });
   }
 
   private CompletableFuture<List<CompositePoLine>> createPoLines(CompositePurchaseOrder compPO) {
@@ -775,4 +826,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
       });
   }
 
+
+  private boolean isUserNotHaveApprovePermission() {
+    return !getProvidedPermissions().contains(PERMISSION_ORDER_APPROVE);
+  }
 }
