@@ -60,6 +60,13 @@
       "configName": "inventory-loanTypeName",
       "enabled": true,
       "value": "customLoanType"
+    },
+    {
+      "id" : "339bc2b6-4f2d-4fff-a23c-4fbec2a5e27a",
+      "module" : "ORDERS",
+      "configName" : "approvals",
+      "enabled" : true,
+      "value" : "{\"isApprovalRequired\":false}"
     }
   ]
 }

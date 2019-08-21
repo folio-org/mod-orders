@@ -12,11 +12,18 @@
         "updatedDate": "2018-12-12T08:24:34.213+0000",
         "updatedByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c"
       }
+    },
+    {
+      "id" : "339bc2b6-4f2d-4fff-a23c-4fbec2a5e27a",
+      "module" : "ORDERS",
+      "configName" : "approvals",
+      "enabled" : true,
+      "value" : "{\"isApprovalRequired\":true}"
     }
   ],
-  "totalRecords": 1,
+  "totalRecords": 2,
   "resultInfo": {
-    "totalRecords": 1,
+    "totalRecords": 2,
     "facets": [],
     "diagnostics": []
   }

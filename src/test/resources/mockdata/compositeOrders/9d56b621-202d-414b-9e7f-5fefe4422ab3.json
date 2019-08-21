@@ -1,6 +1,7 @@
 {
   "id": "9d56b621-202d-414b-9e7f-5fefe4422ab3",
   "dateOrdered": "2019-04-24T14:21:16.958+0000",
+  "approved" : true,
   "poNumber": "10000",
   "orderType": "One-Time",
   "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
