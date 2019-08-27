@@ -1,38 +1,5 @@
 package org.folio.rest.impl;
 
-import io.restassured.http.Header;
-import io.restassured.http.Headers;
-import io.restassured.response.Response;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.HttpStatus;
-import org.folio.orders.utils.AcqDesiredPermissions;
-import org.folio.orders.utils.ErrorCodes;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.orders.utils.POLineProtectedFields;
-import org.folio.orders.utils.POProtectedFields;
-import org.folio.rest.acq.model.finance.Encumbrance;
-import org.folio.rest.jaxrs.model.*;
-import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Physical.CreateInventory;
-import org.junit.Test;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
@@ -62,7 +29,6 @@ import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
-import static org.folio.orders.utils.ResourcePathResolver.FINANCE_STORAGE_ENCUMBRANCES;
 import static org.folio.orders.utils.ResourcePathResolver.PAYMENT_STATUS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
@@ -76,8 +42,6 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.impl.AbstractHelper.MAX_IDS_FOR_GET_RQ;
 import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
 import static org.folio.rest.impl.AcquisitionsUnitsHelper.NO_ACQ_UNIT_ASSIGNED_CQL;
-import static org.folio.rest.impl.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoCreation;
-import static org.folio.rest.impl.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
 import static org.folio.rest.impl.InventoryHelper.DEFAULT_INSTANCE_STATUS_CODE;
 import static org.folio.rest.impl.InventoryHelper.DEFAULT_INSTANCE_TYPE_CODE;
 import static org.folio.rest.impl.InventoryHelper.DEFAULT_LOAN_TYPE_NAME;
@@ -88,19 +52,17 @@ import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInstanceL
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInventoryInteraction;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesCreated;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesQuantityForSuccessCase;
-import static org.folio.rest.impl.MockServer.HEADER_SERVER_ERROR;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.getContributorNameTypesSearches;
-import static org.folio.rest.impl.MockServer.getInstanceTypesSearches;
-import static org.folio.rest.impl.MockServer.getLoanTypesSearches;
-import static org.folio.rest.impl.MockServer.getCreatedEncumbrances;
 import static org.folio.rest.impl.MockServer.getCreatedInstances;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
 import static org.folio.rest.impl.MockServer.getCreatedPieces;
 import static org.folio.rest.impl.MockServer.getHoldingsSearches;
 import static org.folio.rest.impl.MockServer.getInstanceStatusesSearches;
+import static org.folio.rest.impl.MockServer.getInstanceTypesSearches;
 import static org.folio.rest.impl.MockServer.getInstancesSearches;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
+import static org.folio.rest.impl.MockServer.getLoanTypesSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
 import static org.folio.rest.impl.MockServer.getQueryParams;
@@ -125,6 +87,58 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.HttpStatus;
+import org.folio.orders.utils.AcqDesiredPermissions;
+import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.orders.utils.POProtectedFields;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
+import org.folio.rest.jaxrs.model.CloseReason;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Contributor;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.Physical.CreateInventory;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.PurchaseOrders;
+import org.folio.rest.jaxrs.model.Renewal;
+import org.junit.Test;
+
+import io.restassured.http.Header;
+import io.restassured.http.Headers;
+import io.restassured.response.Response;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class PurchaseOrdersApiTest extends ApiTestBase {
 
@@ -263,8 +277,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
       }
     });
 
-    // MODORDERS-243
-    assertThat(getCreatedEncumbrances(), empty());
   }
 
   @Test
@@ -358,7 +370,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
                                               ZERO_LOCATION_QTY.getCode()));
 
     // Check that no any calls made by the business logic to other services
-    assertEquals(MockServer.serverRqRs.size(),2);
+    assertEquals(2, MockServer.serverRqRs.size());
   }
 
   @Test
@@ -436,7 +448,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertEquals(polCount - 1, instancesSearches.size());
 
     verifyInventoryInteraction(resp, polCount);
-    verifyEncumbrancesOnPoCreation(reqData, resp);
     verifyCalculatedData(resp);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
@@ -635,8 +646,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertEquals(calculateTotalQuantity(compositePoLine), piecesSize);
 
     verifyPiecesCreated(createdItems, reqData.getCompositePoLines(), createdPieces);
-    // MODORDERS-243
-    verifyEncumbrancesOnPoUpdate(reqData);
   }
 
   @Test
@@ -2013,68 +2022,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdateOrderToOpenEncumbranceLookup() throws Exception {
-    // The order has 2 POLs. The first one has 2 fund distribution objects and the second one - only one
-    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
-    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    /*
-     * MODORDERS-243: Updating the first POL's fund distributions so one has linked encumbrance and another one - not
-     * but mock server will return it on GET RQ
-     */
-    List<FundDistribution> fundDistributions = reqData.getCompositePoLines().get(0).getFundDistribution();
-    fundDistributions.get(0).setEncumbrance(null);
-
-    // Update order
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ID_FOR_PRINT_MONOGRAPH_ORDER), JsonObject.mapFrom(reqData), "", 204);
-
-    verifyEncumbrancesOnPoUpdate(reqData, 0);
-  }
-
-  @Test
-  public void testUpdateOrderToOpenOneNewEncumbrance() throws Exception {
-    // The order has 2 POLs. The first one has 2 fund distribution objects and the second one - only one
-    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
-    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    /*
-     * MODORDERS-243: Updating the first POL's fund distributions so one has linked encumbrance and another one - not.
-     * Setting also new fundId so new encumbrance can be created
-     */
-    FundDistribution fundDistribution = reqData.getCompositePoLines().get(0).getFundDistribution().get(0);
-    fundDistribution.setEncumbrance(null);
-    fundDistribution.setFundId(UUID.randomUUID().toString());
-
-    // Update order
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ID_FOR_PRINT_MONOGRAPH_ORDER), JsonObject.mapFrom(reqData), "", 204);
-
-    verifyEncumbrancesOnPoUpdate(reqData, 1);
-  }
-
-  @Test
-  public void testUpdateOrderToOpenEncumbranceCreationFailure() throws Exception {
-    // The order has 2 POLs. The first one has 2 fund distribution objects and the second one - only one
-    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
-    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    // MODORDERS-243: remove all encumbrance links so new encumbrances have to be created
-    removeAllEncumbranceLinks(reqData);
-    List<FundDistribution> fundDistributions = reqData.getCompositePoLines().get(0).getFundDistribution();
-    fundDistributions.get(0).setEncumbrance(null);
-
-    String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, ID_FOR_PRINT_MONOGRAPH_ORDER);
-    String body = JsonObject.mapFrom(reqData).encode();
-    Header createEncumbranceError = new Header(HEADER_SERVER_ERROR, FINANCE_STORAGE_ENCUMBRANCES);
-    Headers headers = prepareHeaders(X_OKAPI_URL, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_TOKEN, createEncumbranceError);
-
-    // Update order adding header to fail on encumbrance creation
-    final Errors errors = verifyPut(url, body, headers, APPLICATION_JSON, 500).body().as(Errors.class);
-
-    assertThat(errors.getErrors(), hasSize(1));
-    assertThat(errors.getErrors().get(0).getCode(), equalTo(ErrorCodes.ENCUMBRANCE_CREATION_FAILURE.getCode()));
-
-    List<Encumbrance> createdEncumbrances = getCreatedEncumbrances();
-    assertThat(createdEncumbrances, empty());
-  }
-
-  @Test
   public void testUpdateOrderWithProtectedFieldsChanging() {
     logger.info("=== Test case when OPEN order errors if protected fields are changed ===");
 
@@ -2513,7 +2460,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderWithUserNotHavingApprovalPermissions() throws Exception {
+  public void testPutOrderWithUserNotHavingApprovalPermissions() {
     logger.info("=== Test PUT PO, with User not having Approval permission==");
 
     CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);

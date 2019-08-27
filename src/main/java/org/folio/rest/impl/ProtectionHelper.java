@@ -57,7 +57,7 @@ public class ProtectionHelper extends AbstractHelper {
             }
             return CompletableFuture.completedFuture(null);
           } else {
-            throw new HttpException(HttpStatus.HTTP_VALIDATION_ERROR.toInt(), ORDER_UNITS_NOT_FOUND);
+            throw new HttpException(HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt(), ORDER_UNITS_NOT_FOUND);
           }
         });
     } else {
@@ -98,7 +98,7 @@ public class ProtectionHelper extends AbstractHelper {
    * @param units list of {@link AcquisitionsUnit}.
    * @return true if operation is protected, otherwise - false.
    */
-  private Boolean applyMergingStrategy(List<AcquisitionsUnit> units, Set<ProtectedOperationType> operations) {
+  private boolean applyMergingStrategy(List<AcquisitionsUnit> units, Set<ProtectedOperationType> operations) {
     return units.stream().allMatch(unit -> operations.stream().anyMatch(operation -> operation.isProtected(unit)));
   }
 
