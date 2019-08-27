@@ -6,13 +6,29 @@ import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.CheckInPiece;
+import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.ProcessingStatus;
+import org.folio.rest.jaxrs.model.ReceivingResult;
+import org.folio.rest.jaxrs.model.ReceivingResults;
+import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 
 public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
@@ -39,6 +55,13 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   CompletableFuture<ReceivingResults> checkinPieces(CheckinCollection checkinCollection) {
+    return getPoLines(new ArrayList<>(checkinPieces.keySet()))
+      .thenCompose(poLines -> removeForbiddenEntities(poLines, checkinPieces))
+      .thenCompose(futures -> collectResultsOnSuccess(futures)
+        .thenCompose(vVoid -> processCheckInPieces(checkinCollection)));
+  }
+
+  private CompletionStage<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection) {
     Map<String, Map<String, String>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnCheckin(checkinCollection);
 
     // 1. Get piece records from storage
