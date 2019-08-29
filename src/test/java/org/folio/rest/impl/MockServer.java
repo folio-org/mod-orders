@@ -289,11 +289,26 @@ public class MockServer {
   }
 
   public static List<JsonObject> getAcqUnitsSearches() {
-    return serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET);
+    return getCollectionRecords(getRqRsEntries(HttpMethod.GET, ACQUISITIONS_UNITS));
+  }
+  public static List<JsonObject> getAcqUnitsRetrievals() {
+    return getRecordsByIds(getRqRsEntries(HttpMethod.GET, ACQUISITIONS_UNITS));
   }
 
   public static List<JsonObject> getAcqMembershipsSearches() {
-    return serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET);
+    return getCollectionRecords(getRqRsEntries(HttpMethod.GET, ACQUISITIONS_MEMBERSHIPS));
+  }
+
+  private static List<JsonObject> getCollectionRecords(List<JsonObject> entries) {
+    return entries.stream()
+      .filter(json -> !json.containsKey(ID))
+      .collect(toList());
+  }
+
+  private static List<JsonObject> getRecordsByIds(List<JsonObject> entries) {
+    return entries.stream()
+      .filter(json -> json.containsKey(ID))
+      .collect(toList());
   }
 
   public static void release() {
@@ -312,13 +327,6 @@ public class MockServer {
     return getRqRsEntries(HttpMethod.OTHER, objName).stream()
       .filter(obj -> id.equals(obj.getString(AbstractHelper.ID)))
       .findAny();
-  }
-
-  private <T> Optional<List<T>> getMockEntries(String objName, Class<T> tClass) {
-    List<T> entryList =  getRqRsEntries(HttpMethod.OTHER, objName).stream()
-      .map(entries -> entries.mapTo(tClass))
-      .collect(toList());
-    return Optional.ofNullable(entryList.isEmpty()? null: entryList);
   }
 
   public static List<JsonObject> getRqRsEntries(HttpMethod method, String objName) {

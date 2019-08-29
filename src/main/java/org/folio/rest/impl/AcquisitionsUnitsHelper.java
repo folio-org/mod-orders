@@ -75,7 +75,8 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
   }
 
   CompletableFuture<Void> deleteAcquisitionsUnit(String id) {
-    return handleDeleteRequest(resourceByIdPath(ACQUISITIONS_UNITS, id), httpClient, ctx, okapiHeaders, logger);
+    return getAcquisitionsUnit(id).thenApply(unit -> unit.withIsDeleted(true))
+      .thenCompose(this::updateAcquisitionsUnit);
   }
 
   CompletableFuture<String> buildAcqUnitsCqlExprToSearchRecords() {
