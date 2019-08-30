@@ -1,60 +1,5 @@
 package org.folio.rest.impl;
 
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
-import io.restassured.http.Header;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServer;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
-import one.util.streamex.StreamEx;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.HttpStatus;
-import org.folio.isbn.IsbnUtil;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.rest.acq.model.Piece;
-import org.folio.rest.acq.model.PieceCollection;
-import org.folio.rest.acq.model.SequenceNumber;
-import org.folio.rest.acq.model.finance.Encumbrance;
-import org.folio.rest.acq.model.finance.EncumbranceCollection;
-import org.folio.rest.jaxrs.model.AcquisitionsUnit;
-import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
-import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
-import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
-import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PoLineCollection;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
-
-import javax.ws.rs.core.Response;
-import java.io.IOException;
-import java.nio.file.NoSuchFileException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
@@ -124,6 +69,64 @@ import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.VENDOR_WITH_BAD_CONTENT;
 import static org.folio.rest.impl.ReceivingHistoryApiTest.RECEIVING_HISTORY_PURCHASE_ORDER_ID;
 import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.nio.file.NoSuchFileException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import javax.ws.rs.core.Response;
+
+import org.apache.commons.lang3.StringUtils;
+import org.folio.HttpStatus;
+import org.folio.isbn.IsbnUtil;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.acq.model.Piece;
+import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.acq.model.SequenceNumber;
+import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.acq.model.finance.EncumbranceCollection;
+import org.folio.rest.jaxrs.model.AcquisitionsUnit;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLineCollection;
+
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
+
+import io.restassured.http.Header;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
+import one.util.streamex.StreamEx;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.PurchaseOrders;
 
 public class MockServer {
 
@@ -331,9 +334,9 @@ public class MockServer {
   static List<Encumbrance> getCreatedEncumbrances() {
     List<JsonObject> jsonObjects = serverRqRs.get(FINANCE_STORAGE_ENCUMBRANCES, HttpMethod.POST);
     return jsonObjects == null ? Collections.emptyList()
-      : jsonObjects.stream()
-      .map(json -> json.mapTo(Encumbrance.class))
-      .collect(Collectors.toList());
+        : jsonObjects.stream()
+          .map(json -> json.mapTo(Encumbrance.class))
+          .collect(Collectors.toList());
   }
 
   private Router defineRoutes() {
@@ -586,13 +589,13 @@ public class MockServer {
     logger.info("handleGetIdentifierType got: " + ctx.request().path());
     String tenantId = ctx.request().getHeader(OKAPI_HEADER_TENANT);
     try {
-      // Filter result based on name from query
-      String name = ctx.request().getParam("query").split("==")[1];
-      JsonObject entries = new JsonObject(ApiTestBase.getMockData(IDENTIFIER_TYPES_MOCK_DATA_PATH + "identifierTypes.json"));
-      filterByKeyValue("name", name, entries.getJsonArray(IDENTIFIER_TYPES));
+        // Filter result based on name from query
+        String name = ctx.request().getParam("query").split("==")[1];
+        JsonObject entries = new JsonObject(ApiTestBase.getMockData(IDENTIFIER_TYPES_MOCK_DATA_PATH + "identifierTypes.json"));
+        filterByKeyValue("name", name, entries.getJsonArray(IDENTIFIER_TYPES));
 
-      serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
-      addServerRqRsData(HttpMethod.GET, IDENTIFIER_TYPES, entries);
+        serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+        addServerRqRsData(HttpMethod.GET, IDENTIFIER_TYPES, entries);
     } catch (IOException e) {
       ctx.response()
         .setStatusCode(404)
@@ -623,7 +626,7 @@ public class MockServer {
         body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_providers_active.json"));
       } else if (getQuery(ORGANIZATION_NOT_VENDOR).equals(query)) {
         body = new JsonObject(
-          ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "not_vendor.json"));
+            ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "not_vendor.json"));
       }
       else {
         JsonArray organizations = new JsonArray();
@@ -1548,9 +1551,9 @@ public class MockServer {
       if (StringUtils.isNotEmpty(userId)) {
         memberships.getAcquisitionsUnitMemberships().removeIf(membership -> !membership.getUserId().equals(userId));
         List<String> acquisitionsUnitIds = extractIdsFromQuery(ACQUISITIONS_UNIT_ID, query);
-        if (!acquisitionsUnitIds.isEmpty()) {
-          memberships.getAcquisitionsUnitMemberships().removeIf(membership -> !acquisitionsUnitIds.contains(membership.getAcquisitionsUnitId()));
-        }
+          if (!acquisitionsUnitIds.isEmpty()) {
+            memberships.getAcquisitionsUnitMemberships().removeIf(membership -> !acquisitionsUnitIds.contains(membership.getAcquisitionsUnitId()));
+          }
       }
 
       JsonObject data = JsonObject.mapFrom(memberships.withTotalRecords(memberships.getAcquisitionsUnitMemberships().size()));

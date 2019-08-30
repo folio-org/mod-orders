@@ -1,41 +1,5 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import one.util.streamex.EntryStream;
-import one.util.streamex.StreamEx;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.orders.utils.ProtectedOperationType;
-import org.folio.rest.acq.model.Piece;
-import org.folio.rest.acq.model.Piece.ReceivingStatus;
-import org.folio.rest.acq.model.PieceCollection;
-import org.folio.rest.jaxrs.model.Eresource;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Physical;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
-import org.folio.rest.jaxrs.model.PoLineCollection;
-import org.folio.rest.jaxrs.model.ProcessingStatus;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
-import org.folio.rest.jaxrs.model.ReceivingItemResult;
-import org.folio.rest.jaxrs.model.ReceivingResult;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.groupingBy;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
@@ -56,8 +20,8 @@ import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
-import static org.folio.orders.utils.HelperUtils.isHoldingsUpdateRequired;
 import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
+import static org.folio.orders.utils.HelperUtils.isHoldingsUpdateRequired;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -66,6 +30,43 @@ import static org.folio.rest.impl.PurchaseOrderHelper.GET_PURCHASE_ORDERS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.events.handlers.MessageAddress;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.acq.model.Piece;
+import org.folio.rest.acq.model.Piece.ReceivingStatus;
+import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
+import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.ProcessingStatus;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.PurchaseOrders;
+import org.folio.rest.jaxrs.model.ReceivingItemResult;
+import org.folio.rest.jaxrs.model.ReceivingResult;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import one.util.streamex.EntryStream;
+import one.util.streamex.StreamEx;
 
 public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
@@ -81,7 +82,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   private List<PoLine> poLineList;
 
   CheckinReceivePiecesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx,
-                             String lang) {
+      String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
     processedHoldingsParams = new HashSet<>();
     processedHoldings = new HashMap<>();
@@ -134,7 +135,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
   private CompletableFuture<Void> getPiecesByIds(List<String> ids, Map<String, List<Piece>> piecesByPoLine) {
     // Transform piece id's to CQL query
-    String query = HelperUtils.convertIdsToCqlQuery(ids);
+    String query = convertIdsToCqlQuery(ids);
     String endpoint = String.format(PIECES_WITH_QUERY_ENDPOINT, ids.size(), lang, encodeQuery(query, logger));
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(pieceJson -> {
@@ -289,7 +290,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    * @return future with list of item records
    */
   private CompletableFuture<List<JsonObject>> getItemRecordsByIds(List<String> ids,
-                                                                  Map<String, Piece> piecesWithItems) {
+      Map<String, Piece> piecesWithItems) {
     return inventoryHelper.getItemRecordsByIds(ids)
       .thenApply(items -> {
         checkIfAllItemsFound(ids, items, piecesWithItems);
@@ -317,7 +318,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    *          found item records
    */
   private void checkIfAllItemsFound(List<String> expectedItemIds, List<JsonObject> items,
-                                    Map<String, Piece> piecesWithItems) {
+      Map<String, Piece> piecesWithItems) {
     // Handle the case when for some reason some items are not found
     if (items.size() < expectedItemIds.size()) {
       List<String> foundItemIds = StreamEx.of(items).map(inventoryHelper::extractId).toList();
@@ -401,11 +402,11 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   private CompletableFuture<Void> storeUpdatedPieceRecord(Piece piece) {
     String pieceId = piece.getId();
     return handlePutRequest(resourceByIdPath(PIECES, pieceId), JsonObject.mapFrom(piece), httpClient, ctx, okapiHeaders,
-      logger)
-      .exceptionally(e -> {
-        addError(getPoLineIdByPieceId(pieceId), pieceId, PIECE_UPDATE_FAILED.toError());
-        return null;
-      });
+        logger)
+          .exceptionally(e -> {
+            addError(getPoLineIdByPieceId(pieceId), pieceId, PIECE_UPDATE_FAILED.toError());
+            return null;
+          });
   }
 
   /**
@@ -428,7 +429,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
         for (PoLine poLine : poLines) {
           List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
           futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces)
-            .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, ctx, okapiHeaders, logger)));
+                .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, ctx, okapiHeaders, logger)));
         }
 
         return collectResultsOnSuccess(futures)
@@ -525,11 +526,11 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       // No successfully pieces processed - receipt status unchanged
       ? completedFuture(poLine.getReceiptStatus())
       : getPiecesQuantityByPoLineAndStatus(poLine.getId(), ReceivingStatus.EXPECTED)
-      // Calculate receipt status
-      .thenCompose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, poLine, pieces))
-      .exceptionally(e -> {
-        logger.error("The expected receipt status for PO Line '{}' cannot be calculated", e, poLine.getId());
-        return null;
+        // Calculate receipt status
+        .thenCompose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, poLine, pieces))
+        .exceptionally(e -> {
+          logger.error("The expected receipt status for PO Line '{}' cannot be calculated", e, poLine.getId());
+          return null;
       });
   }
 
@@ -546,7 +547,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    * @return completable future holding calculated PO Line's receipt status
    */
   private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity, PoLine poLine,
-                                                                        List<Piece> pieces) {
+      List<Piece> pieces) {
     // Fully Received:If receiving and there is no expected piece remaining
     if (!poLine.getCheckinItems() && expectedPiecesQuantity == 0) {
       return CompletableFuture.completedFuture(FULLY_RECEIVED);
@@ -563,7 +564,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   }
 
   public CompletableFuture<Integer> getPiecesQuantityByPoLineAndStatus(String poLineId,
-                                                                       ReceivingStatus receivingStatus) {
+      ReceivingStatus receivingStatus) {
     String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, receivingStatus.value());
     // Limit to 0 because only total number is important
     String endpoint = String.format(PIECES_WITH_QUERY_ENDPOINT, 0, lang, encodeQuery(query, logger));
@@ -590,8 +591,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    */
   private Error getError(String polId, String pieceId) {
     return Optional.ofNullable(processingErrors.get(polId))
-      .map(errors -> errors.get(pieceId))
-      .orElse(null);
+     .map(errors -> errors.get(pieceId))
+     .orElse(null);
   }
 
   void addError(String polId, String pieceId, Error error) {
@@ -600,7 +601,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   }
 
   public void calculateProcessingErrors(String poLineId, ReceivingResult result,
-                                        Map<String, Piece> processedPiecesForPoLine, Map<String, Integer> resultCounts, String pieceId) {
+      Map<String, Piece> processedPiecesForPoLine, Map<String, Integer> resultCounts, String pieceId) {
     // Calculate processing status
     ProcessingStatus status = new ProcessingStatus();
     Error error = getError(poLineId, pieceId);
@@ -668,7 +669,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    *         and list of corresponding pieces as value
    */
   CompletableFuture<Map<String, List<Piece>>> updateInventoryItems(Map<String, Map<String, String>> pieceLocationsGroupedByPoLine,
-                                                                   Map<String, List<Piece>> piecesGroupedByPoLine) {
+      Map<String, List<Piece>> piecesGroupedByPoLine) {
     // Collect all piece records with non-empty item ids. The result is a map
     // with item id as a key and piece record as a value
     Map<String, Piece> piecesWithItems = collectPiecesWithItemId(piecesGroupedByPoLine);
@@ -681,8 +682,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   }
 
   private CompletableFuture<Map<String, List<Piece>>> processItemsUpdate(
-    Map<String, Map<String, String>> pieceLocationsGroupedByPoLine, Map<String, List<Piece>> piecesGroupedByPoLine,
-    List<JsonObject> items, List<PoLine> poLines) {
+      Map<String, Map<String, String>> pieceLocationsGroupedByPoLine, Map<String, List<Piece>> piecesGroupedByPoLine,
+      List<JsonObject> items, List<PoLine> poLines) {
     List<CompletableFuture<Boolean>> futuresForItemsUpdates = new ArrayList<>();
     Map<String, Piece> piecesWithItems = collectPiecesWithItemId(piecesGroupedByPoLine);
 
@@ -719,7 +720,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   }
 
   private CompletableFuture<Void> processHoldingsUpdate(Map<String, Map<String, String>> pieceLocationsGroupedByPoLine,
-                                                        Map<String, List<Piece>> piecesGroupedByPoLine, List<PoLine> poLines) {
+      Map<String, List<Piece>> piecesGroupedByPoLine, List<PoLine> poLines) {
     List<CompletableFuture<Boolean>> futuresForHoldingsUpdates = new ArrayList<>();
     StreamEx.ofValues(piecesGroupedByPoLine)
       .flatMap(List::stream)
@@ -747,9 +748,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     });
   }
 
-  private CompletableFuture[] getListOfRestrictionCheckingFutures(List<PurchaseOrder> or, List<PoLine> poLines, Map<String, Map<String, T>> pieces) {
+  private CompletableFuture[] getListOfRestrictionCheckingFutures(List<PurchaseOrder> orders, List<PoLine> poLines, Map<String, Map<String, T>> pieces) {
     Map<String, List<PoLine>> poLinesGroupedByOrderId = poLines.stream().collect(groupingBy(PoLine::getPurchaseOrderId));
-    return or.stream().map(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE)
+    return orders.stream().map(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE)
       .exceptionally(t -> {
         for (PoLine line : poLinesGroupedByOrderId.get(order.getId())) {
           for (String pieceId : pieces.remove(line.getId()).keySet()) {
@@ -767,8 +768,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       String url = String.format(GET_PURCHASE_ORDERS, poLinesGroupedByOrderId.size(), 0, query, lang);
       return handleGetRequest(url, httpClient, ctx, okapiHeaders, logger)
         .thenCompose(json -> {
-          List<PurchaseOrder> futures = json.mapTo(PurchaseOrders.class).getPurchaseOrders();
-          return allOf(getListOfRestrictionCheckingFutures(futures, poLines, pieces));
+          List<PurchaseOrder> orders = json.mapTo(PurchaseOrders.class).getPurchaseOrders();
+          return allOf(getListOfRestrictionCheckingFutures(orders, poLines, pieces));
         });
     } else {
       return CompletableFuture.completedFuture(null);

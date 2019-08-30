@@ -1,17 +1,5 @@
 package org.folio.rest.impl.protection;
 
-import io.restassured.http.Header;
-import io.vertx.core.json.JsonObject;
-import org.folio.rest.impl.ApiTestBase;
-import org.folio.rest.impl.MockServer;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Piece;
-import org.hamcrest.Matcher;
-
-import java.util.Arrays;
-import java.util.List;
-
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
@@ -20,6 +8,19 @@ import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
+
+import java.util.Arrays;
+import java.util.List;
+
+import org.folio.rest.impl.ApiTestBase;
+import org.folio.rest.impl.MockServer;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Piece;
+import org.hamcrest.Matcher;
+
+import io.restassured.http.Header;
+import io.vertx.core.json.JsonObject;
 
 public abstract class ProtectedEntityTestBase extends ApiTestBase {
 
