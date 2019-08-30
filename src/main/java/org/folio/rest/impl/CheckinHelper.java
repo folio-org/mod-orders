@@ -54,7 +54,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   CompletableFuture<ReceivingResults> checkinPieces(CheckinCollection checkinCollection) {
     return getPoLines(new ArrayList<>(checkinPieces.keySet()))
       .thenCompose(poLines -> removeForbiddenEntities(poLines, checkinPieces))
-        .thenCompose(vVoid -> processCheckInPieces(checkinCollection));
+      .thenCompose(vVoid -> processCheckInPieces(checkinCollection));
   }
 
   private CompletionStage<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection) {
