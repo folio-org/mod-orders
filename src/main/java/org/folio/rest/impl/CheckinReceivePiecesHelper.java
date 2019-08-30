@@ -1,31 +1,10 @@
 package org.folio.rest.impl;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toList;
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.folio.orders.utils.ErrorCodes.*;
-import static org.folio.orders.utils.HelperUtils.*;
-import static org.folio.orders.utils.ResourcePathResolver.*;
-import static org.folio.rest.impl.InventoryHelper.ITEM_HOLDINGS_RECORD_ID;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.stream.Collectors;
-
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import one.util.streamex.EntryStream;
+import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
@@ -33,21 +12,64 @@ import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.acq.model.PieceCollection;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
+import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.ProcessingStatus;
+import org.folio.rest.jaxrs.model.PurchaseOrders;
+import org.folio.rest.jaxrs.model.ReceivingItemResult;
+import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import one.util.streamex.EntryStream;
-import one.util.streamex.StreamEx;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
+import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
+import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
+import static org.folio.orders.utils.ErrorCodes.LOC_NOT_PROVIDED;
+import static org.folio.orders.utils.ErrorCodes.PIECE_ALREADY_RECEIVED;
+import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_RETRIEVED;
+import static org.folio.orders.utils.ErrorCodes.PIECE_POL_MISMATCH;
+import static org.folio.orders.utils.ErrorCodes.PIECE_UPDATE_FAILED;
+import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
+import static org.folio.orders.utils.HelperUtils.buildQuery;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.HelperUtils.isHoldingsUpdateRequired;
+import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.impl.InventoryHelper.ITEM_HOLDINGS_RECORD_ID;
+import static org.folio.rest.impl.PurchaseOrderHelper.GET_PURCHASE_ORDERS;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
 
 public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
   private static final String PIECES_WITH_QUERY_ENDPOINT = resourcesPath(PIECES) + "?limit=%d&lang=%s&query=%s";
-  private static final String GET_PURCHASE_ORDERS = resourcesPath(PURCHASE_ORDER) + SEARCH_PARAMS;
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
   Map<String, Map<String, T>> piecesByLineId;
   final InventoryHelper inventoryHelper;
@@ -55,7 +77,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   Set<String> processedHoldingsParams;
   Map<String, String> processedHoldings;
   private final PurchaseOrderLineHelper poLineHelper;
-  final PurchaseOrderHelper poHelper;
   final ProtectionHelper protectionHelper;
   private List<PoLine> poLineList;
 
@@ -67,7 +88,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     processingErrors = new HashMap<>();
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
     poLineHelper = new PurchaseOrderLineHelper(httpClient, okapiHeaders, ctx, lang);
-    poHelper = new PurchaseOrderHelper(okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
@@ -727,18 +747,26 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     });
   }
 
-  CompletionStage<List<CompletableFuture<Void>>> removeForbiddenEntities(List<PoLine> poLines, Map<String, Map<String, T>> pieces) {
-    Map<String, List<PoLine>> poLinesGroupedByOrderId = poLines.stream().collect(groupingBy(PoLine::getPurchaseOrderId));
-    String query = buildQuery(convertIdsToCqlQuery(new ArrayList<>(poLinesGroupedByOrderId.keySet())), logger);
-    String url = String.format(GET_PURCHASE_ORDERS, Integer.MAX_VALUE, 0, query, lang);
-    return handleGetRequest(url, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(orders -> orders.mapTo(PurchaseOrders.class).getPurchaseOrders().stream().map(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE)
-        .exceptionally(t -> {
-          poLinesGroupedByOrderId.get(order.getId())
-            .forEach(line -> Objects.requireNonNull(pieces.computeIfPresent(line.getId(), (s, stringCheckInPieceMap) -> pieces.remove(line.getId()))).keySet()
-              .forEach(pieceId -> addError(line.getId(), pieceId, USER_HAS_NO_PERMISSIONS.toError())));
-          return null;
-        }))
-        .collect(toList()));
+  CompletableFuture<Void> removeForbiddenEntities(List<PoLine> poLines, Map<String, Map<String, T>> pieces) {
+    if(!poLines.isEmpty()) {
+      Map<String, List<PoLine>> poLinesGroupedByOrderId = poLines.stream().collect(groupingBy(PoLine::getPurchaseOrderId));
+      String query = buildQuery(convertIdsToCqlQuery(poLinesGroupedByOrderId.keySet()), logger);
+      String url = String.format(GET_PURCHASE_ORDERS, poLinesGroupedByOrderId.size(), 0, query, lang);
+      return CompletableFuture.allOf(handleGetRequest(url, httpClient, ctx, okapiHeaders, logger)
+        .thenApply(json -> json.mapTo(PurchaseOrders.class).getPurchaseOrders())
+        .thenApply(orders -> orders.stream().map(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE)
+          .exceptionally(t -> {
+            for(PoLine line : poLinesGroupedByOrderId.get(order.getId())) {
+              for(String pieceId : pieces.remove(line.getId()).keySet()) {
+                addError(line.getId(), pieceId, USER_HAS_NO_PERMISSIONS.toError());
+              }
+            }
+            return null;
+          }))
+          .collect(toList()))
+      );
+    } else {
+      return CompletableFuture.completedFuture(null);
+    }
   }
 }

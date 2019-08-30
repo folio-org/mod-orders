@@ -28,7 +28,6 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
-import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
@@ -68,8 +67,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   CompletableFuture<ReceivingResults> receiveItems(ReceivingCollection receivingCollection) {
     return getPoLines(new ArrayList<>(receivingItems.keySet()))
       .thenCompose(poLines -> removeForbiddenEntities(poLines, receivingItems))
-      .thenCompose(futures -> collectResultsOnSuccess(futures)
-        .thenCompose(vVoid -> processReceiveItems(receivingCollection)));
+      .thenCompose(vVoid -> processReceiveItems(receivingCollection));
   }
 
   private CompletableFuture<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection) {
