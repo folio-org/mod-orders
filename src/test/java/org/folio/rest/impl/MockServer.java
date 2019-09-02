@@ -1413,6 +1413,7 @@ public class MockServer {
     logger.info("handleGetAcquisitionsUnits got: " + ctx.request().path());
     String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
     String query = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+    addServerRqQuery(ACQUISITIONS_UNITS, query);
 
     AcquisitionsUnitCollection units;
 

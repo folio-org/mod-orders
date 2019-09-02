@@ -4,8 +4,11 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
+import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACTIVE_UNITS_CQL;
+import static org.folio.rest.impl.AcquisitionsUnitsHelper.ALL_UNITS_CQL;
 import static org.folio.rest.impl.MockServer.ACQUISITIONS_UNITS_COLLECTION;
 import static org.folio.rest.impl.MockServer.getAcqUnitsRetrievals;
+import static org.folio.rest.impl.MockServer.getQueryParams;
 import static org.folio.rest.impl.MockServer.getRqRsEntries;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -49,15 +52,24 @@ public class AcquisitionsUnitsTests extends ApiTestBase {
     final AcquisitionsUnitCollection units = verifySuccessGet(ACQ_UNITS_UNITS_ENDPOINT, AcquisitionsUnitCollection.class);
     assertThat(expected.getAcquisitionsUnits(), hasSize(expected.getTotalRecords()));
     assertThat(units.getAcquisitionsUnits(), hasSize(expected.getTotalRecords()));
+
+    List<String> queryParams = getQueryParams(ACQUISITIONS_UNITS);
+    assertThat(queryParams, hasSize(1));
+    assertThat(queryParams.get(0), containsString(ACTIVE_UNITS_CQL));
   }
 
   @Test
   public void testGetAcqUnitsWithQuery() {
     logger.info("=== Test GET Acquisitions Units - search by query ===");
-    String url = ACQ_UNITS_UNITS_ENDPOINT + "?query=name==Read only";
+    String cql = ALL_UNITS_CQL + " and name==Read only";
+    String url = ACQ_UNITS_UNITS_ENDPOINT + "?query=" + cql;
 
     final AcquisitionsUnitCollection units = verifySuccessGet(url, AcquisitionsUnitCollection.class);
     assertThat(units.getAcquisitionsUnits(), hasSize(1));
+
+    List<String> queryParams = getQueryParams(ACQUISITIONS_UNITS);
+    assertThat(queryParams, hasSize(1));
+    assertThat(queryParams.get(0), equalTo(cql));
   }
 
   @Test
