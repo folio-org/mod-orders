@@ -510,7 +510,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     assertThat(getPieceUpdates(), is(nullValue()));
     assertThat(getItemsSearches(), is(nullValue()));
     assertThat(getItemUpdates(), is(nullValue()));
-    assertThat(getPoLineSearches(), is(nullValue()));
+    assertThat(getPoLineSearches(), hasSize(1));
     assertThat(getPoLineUpdates(), is(nullValue()));
 
     // Verify messages sent via event bus

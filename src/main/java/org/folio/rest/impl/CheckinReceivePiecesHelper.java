@@ -1,6 +1,7 @@
 package org.folio.rest.impl;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.stream.Collectors.groupingBy;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_FOUND;
@@ -12,7 +13,10 @@ import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_RETRIEVED;
 import static org.folio.orders.utils.ErrorCodes.PIECE_POL_MISMATCH;
 import static org.folio.orders.utils.ErrorCodes.PIECE_UPDATE_FAILED;
+import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
+import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
@@ -22,6 +26,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.impl.InventoryHelper.ITEM_HOLDINGS_RECORD_ID;
+import static org.folio.rest.impl.PurchaseOrderHelper.GET_PURCHASE_ORDERS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
@@ -40,6 +45,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.acq.model.PieceCollection;
@@ -50,6 +56,8 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.PurchaseOrders;
 import org.folio.rest.jaxrs.model.ReceivingItemResult;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -70,6 +78,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   Set<String> processedHoldingsParams;
   Map<String, String> processedHoldings;
   private final PurchaseOrderLineHelper poLineHelper;
+  final ProtectionHelper protectionHelper;
   private List<PoLine> poLineList;
 
   CheckinReceivePiecesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx,
@@ -80,6 +89,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     processingErrors = new HashMap<>();
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
     poLineHelper = new PurchaseOrderLineHelper(httpClient, okapiHeaders, ctx, lang);
+    protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   /**
@@ -125,7 +135,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
   private CompletableFuture<Void> getPiecesByIds(List<String> ids, Map<String, List<Piece>> piecesByPoLine) {
     // Transform piece id's to CQL query
-    String query = HelperUtils.convertIdsToCqlQuery(ids);
+    String query = convertIdsToCqlQuery(ids);
     String endpoint = String.format(PIECES_WITH_QUERY_ENDPOINT, ids.size(), lang, encodeQuery(query, logger));
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(pieceJson -> {
@@ -225,7 +235,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
   private CompletableFuture<Boolean> createHoldingsForChangedLocations(Piece piece, PoLine poLine, String receivedPieceLocationId) {
     if (ifHoldingNotProcessed(receivedPieceLocationId, poLine.getInstanceId()) && !isRevertToOnOrder(piece)) {
-      
+
       return inventoryHelper.getOrCreateHoldingsRecord(poLine.getInstanceId(), receivedPieceLocationId)
         .thenCompose(holdingId -> {
           processedHoldings.put(receivedPieceLocationId + poLine.getInstanceId(), holdingId);
@@ -681,7 +691,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     if (piecesWithItems.isEmpty()) {
       return completedFuture(piecesGroupedByPoLine);
     }
-    
+
     for (JsonObject item : items) {
       String itemId = item.getString(ID);
       Piece piece = piecesWithItems.get(itemId);
@@ -736,5 +746,32 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
         logger.debug("{} out of {} holdings successfully processed", successQty, results.size());
       }
     });
+  }
+
+  private CompletableFuture[] getListOfRestrictionCheckingFutures(List<PurchaseOrder> orders,  Map<String, List<PoLine>> poLinesGroupedByOrderId, Map<String, Map<String, T>> pieces) {
+    return orders.stream().map(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE)
+      .exceptionally(t -> {
+        for (PoLine line : poLinesGroupedByOrderId.get(order.getId())) {
+          for (String pieceId : pieces.remove(line.getId()).keySet()) {
+            addError(line.getId(), pieceId, USER_HAS_NO_PERMISSIONS.toError());
+          }
+        }
+        return null;
+      })).toArray(CompletableFuture[]::new);
+  }
+
+  CompletableFuture<Void> removeForbiddenEntities(List<PoLine> poLines, Map<String, Map<String, T>> pieces) {
+    if(!poLines.isEmpty()) {
+      Map<String, List<PoLine>> poLinesGroupedByOrderId = poLines.stream().collect(groupingBy(PoLine::getPurchaseOrderId));
+      String query = buildQuery(convertIdsToCqlQuery(poLinesGroupedByOrderId.keySet()), logger);
+      String url = String.format(GET_PURCHASE_ORDERS, poLinesGroupedByOrderId.size(), 0, query, lang);
+      return handleGetRequest(url, httpClient, ctx, okapiHeaders, logger)
+        .thenCompose(json -> {
+          List<PurchaseOrder> orders = json.mapTo(PurchaseOrders.class).getPurchaseOrders();
+          return allOf(getListOfRestrictionCheckingFutures(orders, poLinesGroupedByOrderId, pieces));
+        });
+    } else {
+      return CompletableFuture.completedFuture(null);
+    }
   }
 }
