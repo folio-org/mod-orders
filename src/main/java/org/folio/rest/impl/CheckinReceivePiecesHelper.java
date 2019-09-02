@@ -748,8 +748,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     });
   }
 
-  private CompletableFuture[] getListOfRestrictionCheckingFutures(List<PurchaseOrder> orders, List<PoLine> poLines, Map<String, Map<String, T>> pieces) {
-    Map<String, List<PoLine>> poLinesGroupedByOrderId = poLines.stream().collect(groupingBy(PoLine::getPurchaseOrderId));
+  private CompletableFuture[] getListOfRestrictionCheckingFutures(List<PurchaseOrder> orders,  Map<String, List<PoLine>> poLinesGroupedByOrderId, Map<String, Map<String, T>> pieces) {
     return orders.stream().map(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE)
       .exceptionally(t -> {
         for (PoLine line : poLinesGroupedByOrderId.get(order.getId())) {
@@ -769,7 +768,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       return handleGetRequest(url, httpClient, ctx, okapiHeaders, logger)
         .thenCompose(json -> {
           List<PurchaseOrder> orders = json.mapTo(PurchaseOrders.class).getPurchaseOrders();
-          return allOf(getListOfRestrictionCheckingFutures(orders, poLines, pieces));
+          return allOf(getListOfRestrictionCheckingFutures(orders, poLinesGroupedByOrderId, pieces));
         });
     } else {
       return CompletableFuture.completedFuture(null);
