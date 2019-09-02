@@ -6,6 +6,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -47,7 +48,7 @@ public abstract class ProtectedEntityTestBase extends ApiTestBase {
   }
 
   static Matcher getMatcher(int value) {
-    return value > 0 ? hasSize(value) : nullValue();
+    return value > 0 ? hasSize(value) : empty();
   }
 
   public CompositePurchaseOrder prepareOrder(List<String> acqUnitsIds) {

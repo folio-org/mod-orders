@@ -3,17 +3,24 @@ package org.folio.rest.impl;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.rest.impl.MockServer.ACQUISITIONS_UNITS_COLLECTION;
+import static org.folio.rest.impl.MockServer.getAcqUnitsRetrievals;
+import static org.folio.rest.impl.MockServer.getRqRsEntries;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.core.HttpHeaders;
 
@@ -25,6 +32,7 @@ import org.junit.Test;
 import io.restassured.http.Header;
 import io.restassured.http.Headers;
 import io.restassured.response.Response;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -118,14 +126,22 @@ public class AcquisitionsUnitsTests extends ApiTestBase {
     String url = ACQ_UNITS_UNITS_ENDPOINT + "/0e9525aa-d123-4e4d-9f7e-1b302a97eb90";
 
     verifyDeleteResponse(url, "", 204);
+    assertThat(getAcqUnitsRetrievals(), hasSize(1));
+
+    List<AcquisitionsUnit> updates = getRqRsEntries(HttpMethod.PUT, ACQUISITIONS_UNITS).stream()
+      .map(json -> json.mapTo(AcquisitionsUnit.class))
+      .collect(Collectors.toList());
+    assertThat(updates, hasSize(1));
+    assertThat(updates.get(0).getIsDeleted(), is(true));
   }
 
   @Test
-  public void testDeletePutUnitNotFound() {
+  public void testDeleteUnitNotFound() {
     logger.info("=== Test DELETE acquisitions unit - not found ===");
     String url = ACQ_UNITS_UNITS_ENDPOINT + "/" + ID_DOES_NOT_EXIST;
 
-    verifyPut(url, JsonObject.mapFrom(new AcquisitionsUnit().withName("Some name")), APPLICATION_JSON, 404);
+    verifyDeleteResponse(url, APPLICATION_JSON, 404);
+    assertThat(getRqRsEntries(HttpMethod.PUT, ACQUISITIONS_UNITS), empty());
   }
 
   @Test
