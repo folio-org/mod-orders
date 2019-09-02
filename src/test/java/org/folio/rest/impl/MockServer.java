@@ -853,7 +853,7 @@ public class MockServer {
         polIds = extractIdsFromQuery(queryParam);
       }
 
-      List<JsonObject> postedPoLines = serverRqRs.column(HttpMethod.OTHER).get(type);
+      List<JsonObject> postedPoLines = getRqRsEntries(HttpMethod.OTHER, type);
 
       try {
         PoLineCollection poLineCollection;

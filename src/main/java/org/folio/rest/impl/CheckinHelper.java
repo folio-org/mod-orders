@@ -1,17 +1,9 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonObject;
-import one.util.streamex.StreamEx;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.rest.acq.model.Piece;
-import org.folio.rest.acq.model.Piece.ReceivingStatus;
-import org.folio.rest.jaxrs.model.CheckInPiece;
-import org.folio.rest.jaxrs.model.CheckinCollection;
-import org.folio.rest.jaxrs.model.ProcessingStatus;
-import org.folio.rest.jaxrs.model.ReceivingResult;
-import org.folio.rest.jaxrs.model.ReceivingResults;
-import org.folio.rest.jaxrs.model.ToBeCheckedIn;
+import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -22,10 +14,19 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.rest.acq.model.Piece;
+import org.folio.rest.acq.model.Piece.ReceivingStatus;
+import org.folio.rest.jaxrs.model.CheckInPiece;
+import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.ProcessingStatus;
+import org.folio.rest.jaxrs.model.ReceivingResult;
+import org.folio.rest.jaxrs.model.ReceivingResults;
+import org.folio.rest.jaxrs.model.ToBeCheckedIn;
+
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonObject;
+import one.util.streamex.StreamEx;
 
 public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 

@@ -1,43 +1,5 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.Context;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.HttpStatus;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.AcqDesiredPermissions;
-import org.folio.orders.utils.ErrorCodes;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.orders.utils.POLineProtectedFields;
-import org.folio.orders.utils.ProtectedOperationType;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
@@ -76,6 +38,45 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.HttpStatus;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.AcqDesiredPermissions;
+import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.PurchaseOrders;
+
+import io.vertx.core.Context;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PurchaseOrderHelper extends AbstractHelper {
 
