@@ -351,7 +351,10 @@
           "methods": ["DELETE"],
           "pathPattern": "/acquisitions-units/units/{id}",
           "permissionsRequired": ["acquisitions-units.units.item.delete"],
-          "modulePermissions": ["acquisitions-units-storage.units.item.delete"]
+          "modulePermissions": [
+            "acquisitions-units-storage.units.item.get",
+            "acquisitions-units-storage.units.item.put"
+          ]
         },
         {
           "methods": ["GET"],

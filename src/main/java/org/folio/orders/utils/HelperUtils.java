@@ -318,7 +318,7 @@ public class HelperUtils {
     return isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
   }
 
-  public static String combineCqlExpressions(String term, String... expressions) {
+  public static String combineCqlExpressions(String operator, String... expressions) {
     if (ArrayUtils.isEmpty(expressions)) {
       return EMPTY;
     }
@@ -334,7 +334,7 @@ public class HelperUtils {
 
     return StreamEx.of(expressions)
       .filter(StringUtils::isNotBlank)
-      .joining(") " + term + " (", "(", ")") + sorting;
+      .joining(") " + operator + " (", "(", ")") + sorting;
   }
 
   public static List<Error> validateOrder(CompositePurchaseOrder compositeOrder) {
