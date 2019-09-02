@@ -198,7 +198,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private CompletableFuture<Set<ProtectedOperationType>> getInvolvedOperations(CompositePurchaseOrder compPO) {
     if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-      return VertxCompletableFuture.completedFuture(Collections.singleton(UPDATE));
+      return CompletableFuture.completedFuture(Collections.singleton(UPDATE));
 
     }
     return fetchOrderLinesByOrderId(compPO.getId())
@@ -360,7 +360,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     compPO.setDateOrdered(new Date());
     return fetchCompositePoLines(compPO)
       .thenCompose(this::updateInventory)
-      .thenCompose(ok -> createEncumbrances(compPO))
+      .thenCompose(ok -> createEncumbrances())
       .thenAccept(ok -> changePoLineStatuses(compPO))
       .thenCompose(ok -> updatePoLinesSummary(compPO))
       .thenCompose(ok -> updateOrderSummary(compPO));
@@ -699,24 +699,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return VertxCompletableFuture.allOf(ctx, futures);
   }
 
-  private CompletableFuture<Void> createEncumbrances(CompositePurchaseOrder compPO) {
-    CompletableFuture<Void> completableFuture = new VertxCompletableFuture<>(ctx);
-
-    FinanceHelper helper = new FinanceHelper(httpClient, okapiHeaders, ctx, lang);
-    CompletableFuture[] futures = compPO.getCompositePoLines()
-      .stream()
-      .map(helper::handleEncumbrances)
-      .toArray(CompletableFuture[]::new);
-
-    VertxCompletableFuture.allOf(ctx, futures)
-      .thenAccept(completableFuture::complete)
-      .exceptionally(fail -> {
-        logger.error(ErrorCodes.ENCUMBRANCE_CREATION_FAILURE.getDescription(), fail.getCause());
-        completableFuture.completeExceptionally(new HttpException(500, ErrorCodes.ENCUMBRANCE_CREATION_FAILURE));
-        return null;
-      });
-
-    return completableFuture;
+  private CompletableFuture<Void> createEncumbrances() {
+    // MODORDERS-298 Temporarily disable interaction with encumbrance APIs
+    return CompletableFuture.completedFuture(null);
   }
 
   private CompletableFuture<Void> updateInventory(CompositePurchaseOrder compPO) {
