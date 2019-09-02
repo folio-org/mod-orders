@@ -23,6 +23,7 @@ import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.impl.AcquisitionsUnitsHelper.IS_DELETED_PROP;
 import static org.folio.rest.impl.ApiTestBase.BAD_QUERY;
 import static org.folio.rest.impl.ApiTestBase.COMP_ORDER_MOCK_DATA_PATH;
 import static org.folio.rest.impl.ApiTestBase.ID;
@@ -1134,12 +1135,12 @@ public class MockServer {
   }
 
   private List<String> extractIdsFromQuery(String query) {
-    return extractIdsFromQuery(ID, query);
+    return extractValuesFromQuery(ID, query);
   }
 
 
-  private List<String> extractIdsFromQuery(String fieldName, String query) {
-    Matcher matcher = Pattern.compile(".*" + fieldName + "==\\((.+)\\).*").matcher(query);
+  private List<String> extractValuesFromQuery(String fieldName, String query) {
+    Matcher matcher = Pattern.compile(".*" + fieldName + "==\\(?([^)]+).*").matcher(query);
     if (matcher.find()) {
       return StreamEx.split(matcher.group(1), " or ").toList();
     } else {
@@ -1429,10 +1430,17 @@ public class MockServer {
       serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
     } else {
 
+      List<Boolean> isDeleted = extractValuesFromQuery(IS_DELETED_PROP, query).stream()
+        .map(Boolean::valueOf)
+        .collect(toList());
+      if (!isDeleted.isEmpty()) {
+        units.getAcquisitionsUnits().removeIf(unit -> !isDeleted.contains(unit.getIsDeleted()));
+      }
+
       if(query.contains("name==")) {
-        String name = query.replace("name==", "");
-        if (StringUtils.isNotEmpty(name)) {
-          units.getAcquisitionsUnits().removeIf(unit -> !unit.getName().equals(name));
+        List<String> names = extractValuesFromQuery("name", query);
+        if (!names.isEmpty()) {
+          units.getAcquisitionsUnits().removeIf(unit -> !names.contains(unit.getName()));
         }
       }
 
@@ -1495,7 +1503,7 @@ public class MockServer {
 
       if (StringUtils.isNotEmpty(userId)) {
         memberships.getAcquisitionsUnitMemberships().removeIf(membership -> !membership.getUserId().equals(userId));
-        List<String> acquisitionsUnitIds = extractIdsFromQuery(ACQUISITIONS_UNIT_ID, query);
+        List<String> acquisitionsUnitIds = extractValuesFromQuery(ACQUISITIONS_UNIT_ID, query);
           if (!acquisitionsUnitIds.isEmpty()) {
             memberships.getAcquisitionsUnitMemberships().removeIf(membership -> !acquisitionsUnitIds.contains(membership.getAcquisitionsUnitId()));
           }

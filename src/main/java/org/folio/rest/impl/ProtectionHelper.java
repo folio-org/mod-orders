@@ -2,7 +2,9 @@ package org.folio.rest.impl;
 
 import static org.folio.orders.utils.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
+import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.rest.impl.AcquisitionsUnitsHelper.ALL_UNITS_CQL;
 
 import java.util.Collections;
 import java.util.List;
@@ -87,7 +89,7 @@ public class ProtectionHelper extends AbstractHelper {
    * @return list of {@link AcquisitionsUnit}
    */
   private CompletableFuture<List<AcquisitionsUnit>> getUnitsByIds(List<String> unitIds) {
-    String query = convertIdsToCqlQuery(unitIds);
+    String query = combineCqlExpressions("and", ALL_UNITS_CQL, convertIdsToCqlQuery(unitIds));
     return acquisitionsUnitsHelper.getAcquisitionsUnits(query, 0, Integer.MAX_VALUE)
       .thenApply(AcquisitionsUnitCollection::getAcquisitionsUnits);
   }

@@ -28,6 +28,8 @@ import one.util.streamex.StreamEx;
 
 public class AcquisitionsUnitsHelper extends AbstractHelper {
   static final String ACQUISITIONS_UNIT_IDS = "acqUnitIds";
+  static final String IS_DELETED_PROP = "isDeleted";
+  static final String ALL_UNITS_CQL = IS_DELETED_PROP + "==(true or false)";
   static final String NO_ACQ_UNIT_ASSIGNED_CQL = "cql.allRecords=1 not " + ACQUISITIONS_UNIT_IDS + " <> []";
   private static final String GET_UNITS_BY_QUERY = resourcesPath(ACQUISITIONS_UNITS) + SEARCH_PARAMS;
   private static final String GET_UNITS_MEMBERSHIPS_BY_QUERY = resourcesPath(ACQUISITIONS_MEMBERSHIPS) + SEARCH_PARAMS;
@@ -45,7 +47,6 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
 
     try {
       String endpoint = String.format(GET_UNITS_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
-
       handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
         .thenApply(jsonUnits -> jsonUnits.mapTo(AcquisitionsUnitCollection.class))
         .thenAccept(future::complete)
