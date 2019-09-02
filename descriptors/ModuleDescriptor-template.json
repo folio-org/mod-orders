@@ -432,10 +432,6 @@
       "version": "7.0"
     },
     {
-      "id": "finance-storage.encumbrances",
-      "version": "1.0"
-    },
-    {
       "id": "holdings-storage",
       "version": "3.0"
     },

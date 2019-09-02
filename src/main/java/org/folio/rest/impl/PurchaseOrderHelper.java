@@ -5,9 +5,9 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.AcqDesiredPermissions.ASSIGN;
 import static org.folio.orders.utils.AcqDesiredPermissions.MANAGE;
+import static org.folio.orders.utils.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS;
-import static org.folio.orders.utils.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
@@ -39,7 +39,15 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
@@ -57,7 +65,6 @@ import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
-import org.hibernate.validator.internal.util.privilegedactions.NewJaxbContext;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -76,7 +83,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private static final String PERMISSION_ORDER_APPROVE = "orders.item.approve";
   private static final String SEARCH_ORDERS_BY_LINES_DATA = resourcesPath(SEARCH_ORDERS) + SEARCH_PARAMS;
   private static final String GET_PURCHASE_ORDERS = resourcesPath(PURCHASE_ORDER) + SEARCH_PARAMS;
-  public static final String EMPTY_ARRAY = "[]";
+  static final String EMPTY_ARRAY = "[]";
 
   // Using variable to "cache" lines for particular order base on assumption that the helper is stateful and new instance is used
   private List<PoLine> orderLines;
@@ -192,7 +199,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private CompletableFuture<Set<ProtectedOperationType>> getInvolvedOperations(CompositePurchaseOrder compPO) {
     if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-      return VertxCompletableFuture.completedFuture(Collections.singleton(UPDATE));
+      return CompletableFuture.completedFuture(Collections.singleton(UPDATE));
 
     }
     return fetchOrderLinesByOrderId(compPO.getId())
@@ -354,7 +361,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     compPO.setDateOrdered(new Date());
     return fetchCompositePoLines(compPO)
       .thenCompose(this::updateInventory)
-      .thenCompose(ok -> createEncumbrances(compPO))
+      .thenCompose(ok -> createEncumbrances())
       .thenAccept(ok -> changePoLineStatuses(compPO))
       .thenCompose(ok -> updatePoLinesSummary(compPO))
       .thenCompose(ok -> updateOrderSummary(compPO));
@@ -693,24 +700,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return VertxCompletableFuture.allOf(ctx, futures);
   }
 
-  private CompletableFuture<Void> createEncumbrances(CompositePurchaseOrder compPO) {
-    CompletableFuture<Void> completableFuture = new VertxCompletableFuture<>(ctx);
-
-    FinanceHelper helper = new FinanceHelper(httpClient, okapiHeaders, ctx, lang);
-    CompletableFuture[] futures = compPO.getCompositePoLines()
-      .stream()
-      .map(helper::handleEncumbrances)
-      .toArray(CompletableFuture[]::new);
-
-    VertxCompletableFuture.allOf(ctx, futures)
-      .thenAccept(completableFuture::complete)
-      .exceptionally(fail -> {
-        logger.error(ErrorCodes.ENCUMBRANCE_CREATION_FAILURE.getDescription(), fail.getCause());
-        completableFuture.completeExceptionally(new HttpException(500, ErrorCodes.ENCUMBRANCE_CREATION_FAILURE));
-        return null;
-      });
-
-    return completableFuture;
+  private CompletableFuture<Void> createEncumbrances() {
+    // MODORDERS-298 Temporarily disable interaction with encumbrance APIs
+    return CompletableFuture.completedFuture(null);
   }
 
   private CompletableFuture<Void> updateInventory(CompositePurchaseOrder compPO) {
