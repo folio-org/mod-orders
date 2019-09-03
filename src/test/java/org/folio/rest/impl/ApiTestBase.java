@@ -47,6 +47,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
@@ -55,8 +56,9 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.ReceivedItem;
+import org.folio.rest.jaxrs.model.ToBeCheckedIn;
+import org.folio.rest.jaxrs.model.ToBeReceived;
 import org.folio.rest.tools.parser.JsonPathParser;
 import org.hamcrest.Matchers;
 import org.junit.AfterClass;
@@ -85,8 +87,8 @@ public class ApiTestBase {
 
   private static final Logger logger = LoggerFactory.getLogger(ApiTestBase.class);
 
-  static final String ORDERS_RECEIVING_ENDPOINT = "/orders/receive";
-  static final String ORDERS_CHECKIN_ENDPOINT = "/orders/check-in";
+  public static final String ORDERS_RECEIVING_ENDPOINT = "/orders/receive";
+  public static final String ORDERS_CHECKIN_ENDPOINT = "/orders/check-in";
 
   static final String PO_LINE_NUMBER_VALUE = "1";
 
@@ -133,6 +135,9 @@ public class ApiTestBase {
   static final Header INVALID_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "invalid_config");
   static final Header EMPTY_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, EMPTY_CONFIG_TENANT);
   public static final String PROTECTED_READ_ONLY_TENANT = "protected_read";
+
+  private static final String STATUS_RECEIVED = "Received";
+  private static final String LOCATION_ID = "f34d27c6-a8eb-461b-acd6-5dea81771e70";
 
   private static boolean runningOnOwn;
 
@@ -216,7 +221,7 @@ public class ApiTestBase {
     return getMockAsJson(String.format("%s%s.json", path, id));
   }
 
-  static JsonObject getMockAsJson(String fullPath) {
+  protected static JsonObject getMockAsJson(String fullPath) {
     try {
       return new JsonObject(getMockData(fullPath));
     } catch (IOException e) {
@@ -468,5 +473,37 @@ public class ApiTestBase {
 
   public static String encodePrettily(Object entity) {
     return JsonObject.mapFrom(entity).encodePrettily();
+  }
+
+  public static List<CheckInPiece> getCheckInPieces(CheckInPiece... checkInPieces) {
+    return Arrays.asList(checkInPieces);
+  }
+
+  public static List<ReceivedItem> getReceivedItems(ReceivedItem... receivedItems) {
+    return Arrays.asList(receivedItems);
+  }
+
+  public static CheckInPiece getCheckInPiece(String id) {
+    return new CheckInPiece().withItemStatus(STATUS_RECEIVED).withLocationId(LOCATION_ID).withId(id);
+  }
+
+  public static ReceivedItem getReceivedItem(String pieceId) {
+    return new ReceivedItem().withItemStatus(STATUS_RECEIVED).withLocationId(LOCATION_ID).withPieceId(pieceId);
+  }
+
+  public static ToBeCheckedIn getToBeCheckedIn(String poLineId, String pieceId) {
+    return new ToBeCheckedIn()
+      .withPoLineId(poLineId)
+      .withCheckInPieces(getCheckInPieces(getCheckInPiece(pieceId)));
+  }
+
+  public static ToBeReceived getToBeReceived(String poLineId, String pieceId) {
+    return new ToBeReceived()
+      .withPoLineId(poLineId)
+      .withReceivedItems(getReceivedItems(getReceivedItem(pieceId)));
+  }
+
+  public static String getRandomId() {
+    return UUID.randomUUID().toString();
   }
 }

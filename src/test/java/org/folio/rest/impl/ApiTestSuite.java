@@ -1,20 +1,16 @@
 package org.folio.rest.impl;
 
-import static org.awaitility.Awaitility.await;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-
 import io.restassured.RestAssured;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-
 import org.folio.orders.events.handlers.OrderStatusTest;
 import org.folio.orders.events.handlers.ReceiptStatusConsistencyTest;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.impl.protection.LinesProtectionTest;
 import org.folio.rest.impl.protection.OrdersProtectionTest;
 import org.folio.rest.impl.protection.PiecesProtectionTest;
+import org.folio.rest.impl.protection.ReceivingCheckinProtectionTest;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -25,6 +21,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import static org.awaitility.Awaitility.await;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
@@ -40,7 +40,8 @@ import java.util.concurrent.TimeoutException;
   ReceiptStatusConsistencyTest.class,
   OrdersProtectionTest.class,
   LinesProtectionTest.class,
-  PiecesProtectionTest.class
+  PiecesProtectionTest.class,
+  ReceivingCheckinProtectionTest.class
 })
 public class ApiTestSuite {
 

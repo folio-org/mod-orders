@@ -243,7 +243,10 @@
             "inventory.items.collection.get",
             "inventory.items.item.put",
             "inventory-storage.holdings.collection.get",
-            "inventory-storage.holdings.item.post"
+            "inventory-storage.holdings.item.post",
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get",
+            "orders-storage.purchase-orders.collection.get"
           ]
         },
         {
@@ -260,7 +263,10 @@
             "inventory.items.collection.get",
             "inventory.items.item.put",
             "inventory-storage.holdings.collection.get",
-            "inventory-storage.holdings.item.post"
+            "inventory-storage.holdings.item.post",
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get",
+            "orders-storage.purchase-orders.collection.get"
           ]
         },
         {
