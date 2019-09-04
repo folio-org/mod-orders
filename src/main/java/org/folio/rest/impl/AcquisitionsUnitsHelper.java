@@ -1,6 +1,7 @@
 package org.folio.rest.impl;
 
 import static org.folio.orders.utils.HelperUtils.buildQuery;
+import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
@@ -29,6 +31,7 @@ import one.util.streamex.StreamEx;
 public class AcquisitionsUnitsHelper extends AbstractHelper {
   static final String ACQUISITIONS_UNIT_IDS = "acqUnitIds";
   static final String IS_DELETED_PROP = "isDeleted";
+  static final String ACTIVE_UNITS_CQL = IS_DELETED_PROP + "==false";
   static final String ALL_UNITS_CQL = IS_DELETED_PROP + "==(true or false)";
   static final String NO_ACQ_UNIT_ASSIGNED_CQL = "cql.allRecords=1 not " + ACQUISITIONS_UNIT_IDS + " <> []";
   private static final String GET_UNITS_BY_QUERY = resourcesPath(ACQUISITIONS_UNITS) + SEARCH_PARAMS;
@@ -46,6 +49,13 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
     CompletableFuture<AcquisitionsUnitCollection> future = new VertxCompletableFuture<>(ctx);
 
     try {
+      // In case if client did not specify filter by "deleted" units, return only "active" units
+      if (StringUtils.isEmpty(query)) {
+        query = ACTIVE_UNITS_CQL;
+      } else if (!query.contains(IS_DELETED_PROP)) {
+        query = combineCqlExpressions("and", ACTIVE_UNITS_CQL, query);
+      }
+
       String endpoint = String.format(GET_UNITS_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
       handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
         .thenApply(jsonUnits -> jsonUnits.mapTo(AcquisitionsUnitCollection.class))
