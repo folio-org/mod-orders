@@ -39,7 +39,7 @@ resourceTypes:
       description: Create new acquisitions unit
       is: [validate]
     get:
-      description: Get list of acquisitions units
+      description: Get list of acquisitions units. In case client does not specify search criteria by "isDeleted" property, the logic will search for records with "isDeleted==false"
       is: [
         searchable: {description: "with valid searchable fields: for example protectRead", example: "[\"protectRead\", \"false\"]"},
         pageable
@@ -56,6 +56,8 @@ resourceTypes:
       put:
         description: Update acquisitions unit
         is: [validate]
+      delete:
+        description: In order to avoid reference integrity issues when deleting acquisition units that are assigned to records, the logic implements a "soft delete". Update acquisitions unit setting the "isDeleted" field to true
   /memberships:
     type:
       collection:

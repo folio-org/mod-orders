@@ -19,22 +19,24 @@ This is the Orders business logic module.
  * If the setting "isApprovalRequired" is set to true,an order approval is required to `OPEN` an order and the user should have
    `orders.item.approve` permissions to `approve` an order
 
-### Purchase Order logic 
+### Purchase Order logic
 Upon receiving a request to create a PO, it does the following:
+* Validate PO content (vendor, acquisition units, settings based validation like order lines limit and etc.); then
 * Save a PO object in `Pending` status; then 
 * Retrieve the `id` of the PO and pass that to the related PO lines; then
 * Save the PO lines; then
-* In case an order is in Open status and updates are required in the Inventory, it does the following:
+* In case an order is in `Open` status and updates are required in the Inventory, it does the following:
   * Find or create instance record; then
   * Update PO lines with instance record identifier; then 
   * Find or create holding record; then
   * Find or create item record per unit of physical/electronic quantity identified in the order line record
-* In case expected order status is `Open`, update a PO object; then 
-* Retrieve the fund transactions associated with each PO line; then
-* Make the appropriate transactions against the associated funds
+  * Update a PO object; then 
+* Retrieve the encumbrance transactions associated with each PO line based on fund distributions; then
+* Make the appropriate encumbrance transactions against the associated funds
 
 Upon receiving a request to update a PO, it does the following:
-* if provided PO doesn't contain PO Lines, just update the PO information via the /orders-storage/purchase_orders endpoint
+* validate PO content (vendor, acquisition units, settings based validation like order lines limit and etc.); then
+* if provided PO doesn't contain PO Lines, just update the PO information via the `PUT /orders-storage/purchase-orders/<id>` endpoint
 * if provided PO contain PO Lines:
   * Get the current list of PO Lines for this order; then
   * Compare the provided list of PO Lines with what's in the database:
@@ -49,15 +51,18 @@ Upon receiving a request to update a PO, it does the following:
   * Update a PO object with `Open` status 
 
 Upon receiving a request to delete a PO, it does the following:
+* Validate if PO is not restricted by acquisitions units or a user is a member of assigned units; then
 * Retrieve PO lines by the `id` of the PO and delete them; then
 * Delete PO
 
 ### Purchase Order Line logic
 Upon receiving a request to create a PO Line, it does the following:
+* Validate PO Line content (interrelated fields, acquisition units based validation, settings based validation like order lines limit and etc.); then
 * Save a PO Line sub-objects in the storage; then 
 * Save a PO Line content with references to the created sub-objects in the storage.
 
 Upon receiving a request to update a PO Line, it does the following:
+* Validate PO Line content (interrelated fields, acquisition units based validation and etc.); then
 * Retrieve PO Line data from storage; then
 * Validate that PO id of the PO Line from storage corresponds to order id in the path; then
 * Depending on the content in the storage the sub-object updates are following:
@@ -72,8 +77,9 @@ Upon receiving a request to update a PO Line, it does the following:
 Note: the PO Line update might lead to Order's workflow status update (see [MODORDERS-218](https://issues.folio.org/browse/MODORDERS-218) for more details)
 
 Upon receiving a request to delete a PO Line, it does the following:
-* Retrieve PO line by the `id` of the PO and delete them; then
-* Validate that PO id of the PO Line corresponds to order id in the path; then
+* Validate if PO is not restricted by acquisitions units or a user is a member of assigned units; then
+* Retrieve PO line by the `id`; then
+* Validate that PO `id` of the PO Line corresponds to order id in the path; then
 * Delete PO Line and its sub-objects
 
 ### Receiving logic 
@@ -148,6 +154,13 @@ Sample of the requests:
     ```
 
 Note: receiving might lead to Order's workflow status update (see [MODORDERS-218](https://issues.folio.org/browse/MODORDERS-218) for more details)
+
+### Acquisitions units
+CRUD APIs are available to manage acquisitions units and memberships (user-unit relations).  
+In order to avoid reference integrity issues when deleting acquisition units that are assigned to records, the logic implements a "soft delete" approach.
+* When client sends `DELETE /acquisitions-units/units/<id>`, the logic gets acquisitions unit be specified id and updates it setting `isDeleted` to `true`
+* When client sends `GET /acquisitions-units/units?query=<cql>` and `<cql>` does not contain criteria by `isDeleted`, the logic will search for records with `isDeleted==false`.
+* To get all the units regardless of `isDeleted` value, the request should be like `GET /acquisition-units/units?query=isDeleted=* AND (<cql>)`
 
 ### Issue tracker
 
