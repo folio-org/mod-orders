@@ -54,6 +54,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -147,50 +148,54 @@ public class PurchaseOrderHelper extends AbstractHelper {
    */
   public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO) {
 
-    verifyUserHasAssignPermission(compPO);
-    return protectionHelper.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.CREATE)
-        .thenCompose(vvoid -> checkOrderApprovalPermissions(compPO))
-        .thenCompose(vVoid -> setPoNumberIfMissing(compPO)
+    return validateAcqUnitsOnCreate(compPO.getAcqUnitIds())
+        .thenCompose(ok -> checkOrderApprovalPermissions(compPO))
+        .thenCompose(ok -> setPoNumberIfMissing(compPO)
         .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber()))
         .thenCompose(v -> createPOandPOLines(compPO))
         .thenApply(this::populateOrderSummary));
   }
 
-   /**
+  /**
+   * @param acqUnitIds acquisitions units assigned to purchase order from request
+   * @return completable future completed successfully if all checks pass or exceptionally in case of error/restriction
+   *         caused by acquisitions units
+   */
+  private CompletableFuture<Void> validateAcqUnitsOnCreate(List<String> acqUnitIds) {
+    if (acqUnitIds.isEmpty()) {
+      return completedFuture(null);
+    }
+
+    return VertxCompletableFuture.runAsync(ctx, () -> verifyUserHasAssignPermission(acqUnitIds))
+      .thenCompose(ok -> protectionHelper.verifyIfUnitsAreActive(acqUnitIds))
+      .thenCompose(ok -> protectionHelper.isOperationRestricted(acqUnitIds, ProtectedOperationType.CREATE));
+  }
+
+  /**
    * Handles update of the order. First retrieve the PO from storage and depending on its content handle passed PO.
    * @param compPO updated {@link CompositePurchaseOrder} purchase order
    * @return completable future holding response indicating success (204 No Content) or error if failed
    */
   public CompletableFuture<Void> updateOrder(CompositePurchaseOrder compPO) {
     return getPurchaseOrderById(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
-      .thenCompose(poFromStorage -> validateIfPOProtectedFieldsChanged(compPO, poFromStorage))
+      .thenCompose(jsonPoFromStorage -> validateIfPOProtectedFieldsChanged(compPO, jsonPoFromStorage))
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
-      .thenCompose(poFromStorage -> {
-        verifyUserHasManagePermission(compPO, poFromStorage);
-        return getInvolvedOperations(compPO)
-          .thenCompose(protectedOperationTypes ->  protectionHelper.isOperationRestricted(poFromStorage.getAcqUnitIds(), protectedOperationTypes))
-          .thenApply(vVoid -> poFromStorage);
-      })
-      .thenCompose(poFromStorage -> {
-        logger.info("Order successfully retrieved from storage");
-        return validatePoNumber(poFromStorage, compPO)
-          .thenCompose(v -> {
-            if (isTransitionToApproved(poFromStorage, compPO)) {
-              return checkOrderApprovalPermissions(compPO);
-            }
-            return completedFuture(null);
-          })
-          .thenCompose(v -> updatePoLines(poFromStorage, compPO))
-          .thenCompose(v -> {
-            if (isTransitionToOpen(poFromStorage, compPO)) {
-              return checkOrderApprovalRequired(compPO).
-                  thenCompose(ok -> openOrder(compPO));
-            } else {
-              return updateOrderSummary(compPO);
-            }
-          });
-        }
-      );
+      .thenCompose(poFromStorage -> validateAcqUnitsOnUpdate(compPO, poFromStorage)
+        .thenCompose(ok -> validatePoNumber(poFromStorage, compPO))
+        .thenCompose(ok -> {
+          if (isTransitionToApproved(poFromStorage, compPO)) {
+            return checkOrderApprovalPermissions(compPO);
+          }
+          return completedFuture(null);
+        })
+        .thenCompose(v -> updatePoLines(poFromStorage, compPO))
+        .thenCompose(v -> {
+          if (isTransitionToOpen(poFromStorage, compPO)) {
+            return checkOrderApprovalRequired(compPO).thenCompose(ok -> openOrder(compPO));
+          } else {
+            return updateOrderSummary(compPO);
+          }
+        }));
   }
 
   private boolean isTransitionToApproved(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO) {
@@ -767,12 +772,31 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * then check that if the user has desired permission to assign the record to acquisition unit
    *
    * @throws HttpException if user does not have assign permission
-   * @param compOrder purchase order from request
+   * @param acqUnitIds acquisitions units assigned to purchase order from request
    */
-  private void verifyUserHasAssignPermission(CompositePurchaseOrder compOrder) {
-    if (CollectionUtils.isNotEmpty(compOrder.getAcqUnitIds()) && isUserDoesNotHaveDesiredPermission(ASSIGN)){
+  private void verifyUserHasAssignPermission(List<String> acqUnitIds) {
+    if (CollectionUtils.isNotEmpty(acqUnitIds) && isUserDoesNotHaveDesiredPermission(ASSIGN)){
       throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS);
     }
+  }
+
+  /**
+   * @param updatedOrder purchase order from request
+   * @param persistedOrder purchase order from storage
+   * @return completable future completed successfully if all checks pass or exceptionally in case of error/restriction
+   *         caused by acquisitions units
+   */
+  private CompletableFuture<Void> validateAcqUnitsOnUpdate(CompositePurchaseOrder updatedOrder,
+      CompositePurchaseOrder persistedOrder) {
+    List<String> updatedAcqUnitIds = updatedOrder.getAcqUnitIds();
+    List<String> currentAcqUnitIds = persistedOrder.getAcqUnitIds();
+
+    return VertxCompletableFuture.runAsync(ctx, () -> verifyUserHasManagePermission(updatedAcqUnitIds, currentAcqUnitIds))
+      // Check that all newly assigned units are active/exist
+      .thenCompose(ok -> protectionHelper.verifyIfUnitsAreActive(ListUtils.subtract(updatedAcqUnitIds, currentAcqUnitIds)))
+      .thenCompose(ok -> getInvolvedOperations(updatedOrder))
+      // The check should be done against currently assigned (persisted in storage) units
+      .thenCompose(protectedOperationTypes -> protectionHelper.isOperationRestricted(currentAcqUnitIds, protectedOperationTypes));
   }
 
   /**
@@ -780,12 +804,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * then check that if the user has desired permission to manage acquisition units assignments
    *
    * @throws HttpException if user does not have manage permission
-   * @param newOrder purchase order from request
-   * @param orderFromStorage purchase order from storage
+   * @param newAcqUnitIds acquisitions units assigned to purchase order from request
+   * @param currentAcqUnitIds acquisitions units assigned to purchase order from storage
    */
-  private void verifyUserHasManagePermission(CompositePurchaseOrder newOrder, CompositePurchaseOrder orderFromStorage) {
-    Set<String> newAcqUnits = new HashSet<>(CollectionUtils.emptyIfNull(newOrder.getAcqUnitIds()));
-    Set<String> acqUnitsFromStorage = new HashSet<>(CollectionUtils.emptyIfNull(orderFromStorage.getAcqUnitIds()));
+  private void verifyUserHasManagePermission(List<String> newAcqUnitIds, List<String> currentAcqUnitIds) {
+    Set<String> newAcqUnits = new HashSet<>(CollectionUtils.emptyIfNull(newAcqUnitIds));
+    Set<String> acqUnitsFromStorage = new HashSet<>(CollectionUtils.emptyIfNull(currentAcqUnitIds));
 
     if (isManagePermissionRequired(newAcqUnits, acqUnitsFromStorage) && isUserDoesNotHaveDesiredPermission(MANAGE)){
       throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS);

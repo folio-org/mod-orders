@@ -23,6 +23,7 @@ import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.impl.AcquisitionsUnitsHelper.ALL_UNITS_CQL;
 import static org.folio.rest.impl.AcquisitionsUnitsHelper.IS_DELETED_PROP;
 import static org.folio.rest.impl.ApiTestBase.BAD_QUERY;
 import static org.folio.rest.impl.ApiTestBase.COMP_ORDER_MOCK_DATA_PATH;
@@ -86,6 +87,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -99,7 +101,6 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.SequenceNumber;
-import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
@@ -313,20 +314,28 @@ public class MockServer {
 
   public static void release() {
     serverRqRs.clear();
+    serverRqQueries.clear();
   }
 
   static List<String> getQueryParams(String resourceType) {
     return serverRqQueries.getOrDefault(resourceType, Collections.emptyList());
   }
 
-  public static void addMockEntry(String objName, JsonObject data) {
-    addServerRqRsData(HttpMethod.OTHER, objName, data);
+  public static void addMockEntry(String objName, Object data) {
+    addServerRqRsData(HttpMethod.OTHER, objName, (data instanceof JsonObject) ? (JsonObject) data : JsonObject.mapFrom(data));
   }
 
   private Optional<JsonObject> getMockEntry(String objName, String id) {
     return getRqRsEntries(HttpMethod.OTHER, objName).stream()
       .filter(obj -> id.equals(obj.getString(AbstractHelper.ID)))
       .findAny();
+  }
+
+  private <T> Optional<List<T>> getMockEntries(String objName, Class<T> tClass) {
+    List<T> entryList =  getRqRsEntries(HttpMethod.OTHER, objName).stream()
+      .map(entries -> entries.mapTo(tClass))
+      .collect(toList());
+    return Optional.ofNullable(entryList.isEmpty()? null: entryList);
   }
 
   public static List<JsonObject> getRqRsEntries(HttpMethod method, String objName) {
@@ -1434,43 +1443,47 @@ public class MockServer {
 
   }
 
+  Supplier<List<AcquisitionsUnit>> getAcqUnitsFromFile = () -> {
+    try {
+      return new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_UNITS_COLLECTION)).mapTo(AcquisitionsUnitCollection.class)
+        .getAcquisitionsUnits();
+    } catch (IOException e) {
+      return Collections.emptyList();
+    }
+  };
+
   private void handleGetAcquisitionsUnits(RoutingContext ctx) {
     logger.info("handleGetAcquisitionsUnits got: " + ctx.request().path());
     String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
     String query = StringUtils.trimToEmpty(ctx.request().getParam("query"));
     addServerRqQuery(ACQUISITIONS_UNITS, query);
 
-    AcquisitionsUnitCollection units;
-
-    try {
-      if (PROTECTED_READ_ONLY_TENANT.equals(tenant)) {
-        units = new AcquisitionsUnitCollection();
-      } else {
-        units = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_UNITS_COLLECTION)).mapTo(AcquisitionsUnitCollection.class);
-      }
-    } catch (IOException e) {
-      units = new AcquisitionsUnitCollection();
+    AcquisitionsUnitCollection units = new AcquisitionsUnitCollection();
+    if (!PROTECTED_READ_ONLY_TENANT.equals(tenant)) {
+      units.setAcquisitionsUnits(getMockEntries(ACQUISITIONS_UNITS, AcquisitionsUnit.class).orElseGet(getAcqUnitsFromFile));
     }
 
     if (query.contains(BAD_QUERY)) {
       serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
     } else {
 
-      List<Boolean> isDeleted = extractValuesFromQuery(IS_DELETED_PROP, query).stream()
-        .map(Boolean::valueOf)
-        .collect(toList());
-      if (!isDeleted.isEmpty()) {
-        units.getAcquisitionsUnits().removeIf(unit -> !isDeleted.contains(unit.getIsDeleted()));
+      if (!query.contains(ALL_UNITS_CQL)) {
+        List<Boolean> isDeleted = extractValuesFromQuery(IS_DELETED_PROP, query).stream()
+          .map(Boolean::valueOf)
+          .collect(toList());
+        if (!isDeleted.isEmpty()) {
+          units.getAcquisitionsUnits().removeIf(unit -> !isDeleted.contains(unit.getIsDeleted()));
+        }
       }
 
-      if(query.contains("name==")) {
+      if (query.contains("name==")) {
         List<String> names = extractValuesFromQuery("name", query);
         if (!names.isEmpty()) {
           units.getAcquisitionsUnits().removeIf(unit -> !names.contains(unit.getName()));
         }
       }
 
-      if(query.contains("id==")) {
+      if (query.contains("id==")) {
         List<String> ids = extractIdsFromQuery(query);
         if (!ids.isEmpty()) {
           units.getAcquisitionsUnits().removeIf(unit -> !ids.contains(unit.getId()));

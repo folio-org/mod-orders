@@ -850,7 +850,7 @@ public class HelperUtils {
                                        Logger logger) {
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
     try {
-      logger.debug("Calling GET {}", endpoint);
+      logger.info("Calling GET {}", endpoint);
 
       httpClient
         .request(HttpMethod.GET, endpoint, okapiHeaders)
@@ -859,8 +859,8 @@ public class HelperUtils {
           return verifyAndExtractBody(response);
         })
         .thenAccept(body -> {
-          if (logger.isDebugEnabled()) {
-            logger.debug("The response body for GET {}: {}", endpoint, nonNull(body) ? body.encodePrettily() : null);
+          if (logger.isInfoEnabled()) {
+            logger.info("The response body for GET {}: {}", endpoint, nonNull(body) ? body.encodePrettily() : null);
           }
           future.complete(body);
         })
