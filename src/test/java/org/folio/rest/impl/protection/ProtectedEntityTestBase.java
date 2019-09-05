@@ -8,13 +8,15 @@ import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.nullValue;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.impl.MockServer;
+import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
@@ -53,7 +55,7 @@ public abstract class ProtectedEntityTestBase extends ApiTestBase {
 
   public CompositePurchaseOrder prepareOrder(List<String> acqUnitsIds) {
     CompositePurchaseOrder po = getMinimalContentCompositePurchaseOrder();
-    po.setAcqUnitIds(acqUnitsIds);
+    po.setAcqUnitIds(new ArrayList<>(acqUnitsIds));
     addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(po));
     return po;
   }
@@ -70,5 +72,10 @@ public abstract class ProtectedEntityTestBase extends ApiTestBase {
     Piece piece = getMinimalContentPiece(poLine.getId());
     addMockEntry(PIECES, JsonObject.mapFrom(piece));
     return piece;
+  }
+
+  public AcquisitionsUnit prepareTestUnit(boolean isDeleted) {
+    String id = getRandomId();
+    return new AcquisitionsUnit().withId(id).withName(id).withIsDeleted(isDeleted);
   }
 }
