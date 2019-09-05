@@ -48,7 +48,7 @@ public enum ErrorCodes {
   MISSING_LOAN_TYPE("missingLoanType", "Loan-type is a required field for creating an Item in Inventory"),
   ENCUMBRANCE_CREATION_FAILURE("encumbranceCreationFailure", "One or more encumbrance record(s) failed to be created"),
   PROHIBITED_FIELD_CHANGING("protectedFieldChanging","Protected fields can't be modified"),
-  ORDER_UNITS_NOT_FOUND("orderUnitsNotFound", "Units not found"),
+  ORDER_UNITS_NOT_FOUND("orderAcqUnitsNotFound", "Acquisitions units assigned to order cannot be found"),
   USER_HAS_NO_PERMISSIONS("userHasNoPermission", "User does not have permissions - operation is restricted"),
   USER_HAS_NO_ACQ_PERMISSIONS("userHasNoAcqUnitsPermission", "User does not have permissions to manage acquisition units assignments - operation is restricted"),
   USER_HAS_NO_APPROVAL_PERMISSIONS("userHasNoApprovalPermission", "User does not have permissions to approve order - operation is restricted"),
