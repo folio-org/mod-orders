@@ -160,7 +160,7 @@ CRUD APIs are available to manage acquisitions units and memberships (user-unit 
 In order to avoid reference integrity issues when deleting acquisition units that are assigned to records, the logic implements a "soft delete" approach.
 * When client sends `DELETE /acquisitions-units/units/<id>`, the logic gets acquisitions unit by specified id and updates it setting `isDeleted` to `true`
 * When client sends `GET /acquisitions-units/units?query=<cql>` and `<cql>` does not contain criteria by `isDeleted`, the logic will search for records with `isDeleted==false`.
-* To get all the units regardless of `isDeleted` value, the request should be like `GET /acquisition-units/units?query=isDeleted=* AND (<cql>)`
+* To get all the units regardless of `isDeleted` value, the request should be like `GET /acquisitions-units/units?query=isDeleted=* AND (<cql>)`
 
 ### Issue tracker
 
