@@ -16,6 +16,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.hamcrest.core.IsEqual.equalTo;
 
@@ -25,7 +26,9 @@ import java.util.List;
 import java.util.UUID;
 
 import org.folio.HttpStatus;
+import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
@@ -181,6 +184,35 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     } else {
       assertThat(ids, containsInAnyOrder(unit2.getId(), unit3.getId()));
     }
+  }
+
+  @Test
+  public void testGetOrderWithAssignedSoftDeletedUnit() {
+    logger.info("=== Test order contains only \"soft deleted\" unit id - expecting of call only to Units API ===");
+
+    final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_ID);
+
+    // Acq to order in storage for update case and
+    AcquisitionsUnit unit1 = prepareTestUnit(true);
+    // Add all acq units as mock data
+    addMockEntry(ACQUISITIONS_UNITS, unit1);
+
+    // Prepare order with 2 acq units (one is "soft deleted") and add it as mock data for update case
+    CompositePurchaseOrder order = prepareOrder(Collections.singletonList(unit1.getId()));
+
+    ProtectedOperations.READ.process(COMPOSITE_ORDERS_PATH, encodePrettily(order), headers, APPLICATION_JSON,
+        HttpStatus.HTTP_OK.toInt());
+
+    // Verify number of sub-requests
+    validateNumberOfRequests(1, 0);
+
+    // Verify that unit was deleted so logic skipped membership check
+    List<AcquisitionsUnit> acquisitionsUnits = MockServer.getAcqUnitsSearches()
+      .get(0)
+      .mapTo(AcquisitionsUnitCollection.class)
+      .getAcquisitionsUnits();
+    assertThat(acquisitionsUnits, hasSize(1));
+    assertThat(acquisitionsUnits.get(0).getIsDeleted(), is(true));
   }
 
   @Test
