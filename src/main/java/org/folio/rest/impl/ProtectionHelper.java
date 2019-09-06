@@ -66,7 +66,7 @@ public class ProtectionHelper extends AbstractHelper {
               .filter(unit -> !unit.getIsDeleted())
               .collect(Collectors.toList());
 
-            if (applyMergingStrategy(activeUnits, operations)) {
+            if (!activeUnits.isEmpty() && applyMergingStrategy(activeUnits, operations)) {
               return verifyUserIsMemberOfOrdersUnits(extractUnitIds(activeUnits));
             }
             return CompletableFuture.completedFuture(null);
