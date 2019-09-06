@@ -197,7 +197,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     // Add all acq units as mock data
     addMockEntry(ACQUISITIONS_UNITS, unit1);
 
-    // Prepare order with 2 acq units (one is "soft deleted") and add it as mock data for update case
+    // Prepare order with one acq unit ("soft deleted")
     CompositePurchaseOrder order = prepareOrder(Collections.singletonList(unit1.getId()));
 
     ProtectedOperations.READ.process(COMPOSITE_ORDERS_PATH, encodePrettily(order), headers, APPLICATION_JSON,
