@@ -70,6 +70,7 @@ import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
+import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
@@ -438,13 +439,8 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * @return CompletableFuture with void.
    */
   CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
-    // Check if any item should be created
-    if (compPOL.getReceiptStatus() == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED) {
-      return completedFuture(null);
-    }
-
-    // In case of no inventory updates required create pieces only
-    if (inventoryUpdateNotRequired(compPOL)) {
+    // create pieces only, in case of no inventory updates and receiving is required
+    if (inventoryUpdateNotRequired(compPOL) && !isReceiptNotRequired(compPOL.getReceiptStatus())) {
       return createPieces(compPOL, Collections.emptyList())
         .thenRun(() ->
           logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId())
@@ -453,7 +449,17 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
     return inventoryHelper.handleInstanceRecord(compPOL)
       .thenCompose(inventoryHelper::handleHoldingsAndItemsRecords)
-      .thenCompose(piecesWithItemId -> createPieces(compPOL, piecesWithItemId));
+      .thenCompose(piecesWithItemId -> {
+        if (isReceiptNotRequired(compPOL.getReceiptStatus())) {
+          return completedFuture(null);
+        }
+        //create pieces only if receiving is required
+        return createPieces(compPOL, piecesWithItemId);
+      });
+  }
+
+  private boolean isReceiptNotRequired(ReceiptStatus receiptStatus) {
+    return receiptStatus == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
   }
 
   String buildNewPoLineNumber(PoLine poLineFromStorage, String poNumber) {

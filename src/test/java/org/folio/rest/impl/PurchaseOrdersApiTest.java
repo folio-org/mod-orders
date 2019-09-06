@@ -58,6 +58,7 @@ import static org.folio.rest.impl.MockServer.getCreatedInstances;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
 import static org.folio.rest.impl.MockServer.getCreatedPieces;
 import static org.folio.rest.impl.MockServer.getHoldingsSearches;
+import static org.folio.rest.impl.MockServer.getCreatedHoldings;
 import static org.folio.rest.impl.MockServer.getInstanceStatusesSearches;
 import static org.folio.rest.impl.MockServer.getInstanceTypesSearches;
 import static org.folio.rest.impl.MockServer.getInstancesSearches;
@@ -115,6 +116,7 @@ import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
+import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Cost;
@@ -183,6 +185,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   private static final String LISTED_PRINT_SERIAL_PATH = "po_listed_print_serial.json";
   private static final String MINIMAL_ORDER_PATH = "minimal_order.json";
   private static final String PO_CREATION_FAILURE_PATH = "po_creation_failure.json";
+  private static final String ELECTRONIC_FOR_CREATE_INVENTORY_TEST = "po_listed_electronic_monograph.json";
 
   private static final String NULL = "null";
   static final String PURCHASE_ORDER_ID = "purchaseOrderId";
@@ -2468,6 +2471,29 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     Headers headers = prepareHeaders(X_OKAPI_URL, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1, X_OKAPI_TOKEN, X_OKAPI_USER_ID);
     String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, PENDING_ORDER_APPROVED_FALSE);
     verifyPut(url, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 403).body().as(Errors.class);
+  }
+
+  @Test
+  public void testPostOrdersInventoryInteractionWithReceiptNotRequired() throws Exception {
+    logger.info("=== Test POST electronic PO, to create Instance and Holding even if receipt not required==");
+
+
+    JsonObject order = new JsonObject(getMockData(ELECTRONIC_FOR_CREATE_INVENTORY_TEST));
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    // Make sure that Order is Open
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    // Set CreateInventory value to create inventory instances and holdings
+    reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
+    reqData.getCompositePoLines().get(0).setReceiptStatus(ReceiptStatus.RECEIPT_NOT_REQUIRED);
+
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    assertNotNull(getCreatedInstances());
+    assertNotNull(getCreatedHoldings());
+    assertNull(getItemsSearches());
+    assertNull(getCreatedPieces());
   }
 
   private void prepareOrderForPostRequest(CompositePurchaseOrder reqData) {
