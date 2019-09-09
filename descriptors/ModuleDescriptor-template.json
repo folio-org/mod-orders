@@ -320,6 +320,52 @@
       ]
     },
     {
+      "id": "order-templates",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": ["GET"],
+          "pathPattern": "/orders/order-templates",
+          "permissionsRequired": ["orders.order-templates.collection.get"],
+          "modulePermissions": [
+            "orders-storage.order-templates.collection.get"
+          ]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/orders/order-templates",
+          "permissionsRequired": ["orders.order-templates.item.post"],
+          "modulePermissions": [
+            "orders-storage.order-templates.item.post"
+          ]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/orders/order-templates/{id}",
+          "permissionsRequired": ["orders.order-templates.item.get"],
+          "modulePermissions": [
+            "orders-storage.order-templates.item.get"
+          ]
+        },
+        {
+          "methods": ["PUT"],
+          "pathPattern": "/orders/order-templates/{id}",
+          "permissionsRequired": ["orders.order-templates.item.put"],
+          "modulePermissions": [
+            "orders-storage.order-templates.item.put"
+          ]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/orders/order-templates/{id}",
+          "permissionsRequired": ["orders.order-templates.item.delete"],
+          "modulePermissions": [
+            "orders-storage.order-templates.item.delete"
+          ]
+        }
+      ]
+    },
+    {
       "id": "acquisitions-units",
       "version": "1.1",
       "handlers": [
@@ -570,6 +616,43 @@
       "description": "Delete an existing piece"
     },
     {
+      "permissionName" : "orders.order-templates.collection.get",
+      "displayName" : "Orders - Get template collection",
+      "description" : "Get a collection of order templates"
+    },
+    {
+      "permissionName" : "orders.order-templates.item.post",
+      "displayName" : "Orders - Create an order template",
+      "description" : "Create a new order template"
+    },
+    {
+      "permissionName" : "orders.order-templates.item.get",
+      "displayName" : "Orders - Get an order template",
+      "description" : "Fetch an order templates"
+    },
+    {
+      "permissionName" : "orders.order-templates.item.put",
+      "displayName" : "Orders - Update an order template",
+      "description" : "Update an order template"
+    },
+    {
+      "permissionName" : "orders.order-templates.item.delete",
+      "displayName" : "Orders - Delete an order template",
+      "description" : "Delete an order template"
+    },
+    {
+      "permissionName" : "orders.order-templates.all",
+      "displayName" : "All order-templates permissions",
+      "description" : "All permissions for the order-templates",
+      "subPermissions" : [
+        "orders.order-templates.collection.get",
+        "orders.order-templates.item.post",
+        "orders.order-templates.item.get",
+        "orders.order-templates.item.put",
+        "orders.order-templates.item.delete"
+      ]
+    },
+    {
       "permissionName": "acquisitions-units.units.collection.get",
       "displayName": "Acquisitions units - get units",
       "description": "Get a collection of acquisitions units"
@@ -685,7 +768,8 @@
         "orders.pieces.item.post",
         "orders.pieces.item.put",
         "orders.pieces.item.delete",
-        "orders.acquisitions-units-assignments.all"
+        "orders.acquisitions-units-assignments.all",
+        "orders.order-templates.all"
       ]
     }
   ],

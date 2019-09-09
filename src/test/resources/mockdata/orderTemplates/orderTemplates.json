@@ -1,0 +1,117 @@
+{
+  "orderTemplates":[
+    {
+      "id": "4dee318b-f5b3-40dc-be93-cc89b8c45b6f",
+      "templateCode": "Amazon-B",
+      "templateDescription": "Use to create orders in FOLIO after they are placed on Amazon",
+      "templateName": "Amazon book orders",
+      "acquisitionMethod": "Purchase At Vendor System",
+      "approved": true,
+      "billTo" : "5f8a321e-6b38-4d90-92d4-bf08f91a2242",
+      "cancellationRestriction": true,
+      "cost": {
+        "currency": "USD",
+        "quantityPhysical": 1
+      },
+      "locations": [
+        {
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "quantityPhysical": 1
+        }
+      ],
+      "notes": [
+        "Check credit card statement to make sure payment shows up"
+      ],
+      "orderFormat": "Physical Resource",
+      "orderType": "One-Time",
+      "physical": {
+        "createInventory": "Instance, Holding, Item",
+        "materialSupplier": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892"
+      },
+      "shipTo" : "f7c36792-05f7-4c8c-969d-103ac6763187",
+      "poTags": {
+        "tagList": [
+          "amazon"
+        ]
+      },
+      "vendor": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+    },
+    {
+      "id": "2cec3275-a5c7-4ba1-afab-905ada8c5b65",
+      "templateCode": "Individual eBooks",
+      "templateDescription": "Be sure to fill in the proper vendor",
+      "templateName": "eBooks",
+      "acqUnitIds": [
+        "0ebb1f7d-983f-3026-8a4c-5318e0ebc041"
+      ],
+      "acquisitionMethod": "Purchase At Vendor System",
+      "approved": true,
+      "billTo" : "103c7625-0142-42f9-896e-cb51dd94a322",
+      "cancellationRestriction": true,
+      "cost": {
+        "currency": "USD",
+        "listUnitPriceElectronic": 1
+      },
+      "eresource": {
+        "createInventory": "Instance, Holding",
+        "materialType": "615b8413-82d5-4203-aa6e-e37984cb5ac3"
+      },
+      "locations": [
+        {
+          "locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5",
+          "quantityElectronic": 1
+        }
+      ],
+      "notes": [
+        "Check for activation & discovery"
+      ],
+      "orderFormat": "Electronic Resource",
+      "orderType": "One-Time",
+      "polTags": {
+        "tagList": [
+          "e-book"
+        ]
+      },
+      "receiptStatus": "Receipt Not Required"
+    },
+    {
+      "id": "43bb8a31-4e4b-463c-95c5-e163760f0092",
+      "receiptStatus": "Receipt Not Required",
+      "templateCode": "Packages: eJournals",
+      "templateName": "eJournal packages",
+      "acqUnitIds": [
+        "0ebb1f7d-983f-3026-8a4c-5318e0ebc041"
+      ],
+      "acquisitionMethod": "Purchase At Vendor System",
+      "approved": true,
+      "billTo" : "103c7625-0142-42f9-896e-cb51dd94a322",
+      "cancellationRestriction": true,
+      "collection": true,
+      "cost": {
+        "currency": "USD",
+        "quantityElectronic": 1
+      },
+      "eresource": {
+        "createInventory": "None",
+        "materialType": "615b8413-82d5-4203-aa6e-e37984cb5ac3"
+      },
+      "locations": [
+        {
+          "locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5",
+          "quantityElectronic": 1
+        }
+      ],
+      "manualPo": true,
+      "orderFormat": "Electronic Resource",
+      "orderType": "Ongoing",
+      "polTags": {
+        "tagList": [
+          "e-journal"
+        ]
+      },
+      "reEncumber": true
+    }
+  ],
+  "totalRecords":3
+}

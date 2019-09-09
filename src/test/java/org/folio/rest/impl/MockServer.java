@@ -12,6 +12,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHI
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
@@ -106,6 +107,8 @@ import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.OrderTemplate;
+import org.folio.rest.jaxrs.model.OrderTemplateCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 
@@ -144,12 +147,14 @@ public class MockServer {
   public static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
   private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
   private static final String ACQUISITIONS_UNITS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "acquisitionsUnits/units";
+  private static final String ORDER_TEMPLATES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "orderTemplates/";
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
   private static final String ORGANIZATIONS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "organizations/";
   static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "po_line_collection.json";
   private static final String IDENTIFIER_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
   static final String ACQUISITIONS_UNITS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/units.json";
   static final String ACQUISITIONS_MEMBERSHIPS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/memberships.json";
+  static final String ORDER_TEMPLATES_COLLECTION = ORDER_TEMPLATES_MOCK_DATA_PATH + "/orderTemplates.json";
 
   static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
@@ -359,6 +364,7 @@ public class MockServer {
     router.route(HttpMethod.POST, resourcesPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
     router.route(HttpMethod.POST, resourcesPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
     router.route(HttpMethod.POST, resourcesPath(PIECES)).handler(ctx -> handlePostGenericSubObj(ctx, PIECES));
+    router.route(HttpMethod.POST, resourcesPath(ORDER_TEMPLATES)).handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TEMPLATES));
 
     router.route(HttpMethod.POST, resourcesPath(ACQUISITIONS_UNITS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_UNITS));
     router.route(HttpMethod.POST, resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
@@ -393,6 +399,8 @@ public class MockServer {
     router.route(HttpMethod.GET, resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(this::handleGetAcquisitionsMemberships);
     router.route(HttpMethod.GET, resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(this::handleGetAcquisitionsMembership);
     router.route(HttpMethod.GET, "/isbn/convertTo13").handler(this::handleGetIsbnConverter);
+    router.route(HttpMethod.GET, resourcePath(ORDER_TEMPLATES)).handler(ctx -> handleGetGenericSubObj(ctx, ORDER_TEMPLATES));
+    router.route(HttpMethod.GET, resourcesPath(ORDER_TEMPLATES)).handler(this::handleGetOrderTemplates);
 
     router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
     router.route(HttpMethod.PUT, resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -403,6 +411,7 @@ public class MockServer {
     router.route(HttpMethod.PUT, "/holdings-storage/holdings/:id").handler(ctx -> handlePutGenericSubObj(ctx, ITEM_RECORDS));
     router.route(HttpMethod.PUT, resourcePath(ACQUISITIONS_UNITS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITIONS_UNITS));
     router.route(HttpMethod.PUT, resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
+    router.route(HttpMethod.PUT, resourcePath(ORDER_TEMPLATES)).handler(ctx -> handlePutGenericSubObj(ctx, ORDER_TEMPLATES));
 
     router.route(HttpMethod.DELETE, resourcePath(PURCHASE_ORDER)).handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER));
     router.route(HttpMethod.DELETE, resourcePath(PO_LINES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES));
@@ -411,6 +420,7 @@ public class MockServer {
     router.route(HttpMethod.DELETE, resourcePath(PIECES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PIECES));
     router.route(HttpMethod.DELETE, resourcePath(ACQUISITIONS_UNITS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_UNITS));
     router.route(HttpMethod.DELETE, resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
+    router.route(HttpMethod.DELETE, resourcePath(ORDER_TEMPLATES)).handler(ctx -> handleDeleteGenericSubObj(ctx, ORDER_TEMPLATES));
 
     router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
     return router;
@@ -1367,6 +1377,8 @@ public class MockServer {
         return AcquisitionsUnit.class;
       case ACQUISITIONS_MEMBERSHIPS:
         return AcquisitionsUnitMembership.class;
+      case ORDER_TEMPLATES:
+        return OrderTemplate.class;
     }
 
     fail("The sub-object is unknown");
@@ -1596,6 +1608,41 @@ public class MockServer {
       serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
     } else {
       serverResponse(ctx, 400, TEXT_PLAIN, String.format("ISBN value %s is invalid", isbn));
+    }
+  }
+
+  private void handleGetOrderTemplates(RoutingContext ctx) {
+    logger.info("handleGetOrderTemplates got: " + ctx.request().path());
+
+    String query = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+    addServerRqQuery(ORDER_TEMPLATES, query);
+
+    if (query.contains(BAD_QUERY)) {
+      serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
+    } else {
+
+      Matcher templateCodeMatcher = Pattern.compile(".*templateCode==(\\S+).*").matcher(query);
+      final String templateCode = templateCodeMatcher.find() ? templateCodeMatcher.group(1) : EMPTY;
+
+      OrderTemplateCollection templates;
+
+      try {
+        templates = new JsonObject(ApiTestBase.getMockData(ORDER_TEMPLATES_COLLECTION)).mapTo(OrderTemplateCollection.class);
+      } catch (IOException e) {
+        templates = new OrderTemplateCollection();
+      }
+
+      if (StringUtils.isNotEmpty(templateCode)) {
+        templates.getOrderTemplates().removeIf(template -> !template.getTemplateCode().equals(templateCode));
+        List<String> templateCodes = extractValuesFromQuery("templateCode", query);
+        if (!templateCodes.isEmpty()) {
+          templates.getOrderTemplates().removeIf(template -> !templateCodes.contains(template.getTemplateCode()));
+        }
+      }
+
+      JsonObject data = JsonObject.mapFrom(templates.withTotalRecords(templates.getOrderTemplates().size()));
+      addServerRqRsData(HttpMethod.GET, ORDER_TEMPLATES, data);
+      serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
     }
   }
 
