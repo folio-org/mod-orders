@@ -12,10 +12,10 @@ The primary focus of this release was to implement Teams-based operations restri
  * [MODORDERS-291](https://issues.folio.org/browse/MODORDERS-291) - Add approvedBy and approvalDate fields to purchase_order/composite_purchase_order
  * [MODORDERS-290](https://issues.folio.org/browse/MODORDERS-290) - Enforce new setting: approval required to open orders
  * [MODORDERS-286](https://issues.folio.org/browse/MODORDERS-286) - Restrict receive/checkin based on acquisitions units
- * [MODORDERS-285](https://issues.folio.org/browse/MODORDERS-285) - Restrict receive/checkin records based upon acquisitions unit	
  * [MODORDERS-283](https://issues.folio.org/browse/MODORDERS-283) - Validate/Normalize ISBNs upon order creation/update
  * [MODORDERS-280](https://issues.folio.org/browse/MODORDERS-280) - Orders App: Ability to assign tags to a Purchase Order (PO) and Purchase Order Line (POL)
  * [MODORDERS-256](https://issues.folio.org/browse/MODORDERS-256) - Restrict search/view of PO, POL, Piece records based upon acquisitions unit
+ * [MODORDERS-255](https://issues.folio.org/browse/MODORDERS-255) - Restrict deletion of PO, POL, Piece records based upon acquisitions unit
  * [MODORDERS-254](https://issues.folio.org/browse/MODORDERS-254) - Restrict updates of PO, POL, Piece records based upon acquisitions unit
  * [MODORDERS-251](https://issues.folio.org/browse/MODORDERS-251) - Restrict creation of PO, POL, Piece records based upon acquisitions unit
 
