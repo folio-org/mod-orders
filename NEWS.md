@@ -1,9 +1,9 @@
-## 8.0.0 - Unreleased
+## 9.0.0 - Unreleased
 
-## 7.1.0 - Released
+## 8.0.0 - Released
 The primary focus of this release was to implement Teams-based operations restriction logic and business logic improvements.
 
-[Full Changelog](https://github.com/folio-org/mod-orders/compare/v7.0.1...v7.1.0)
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v7.0.1...v8.0.0)
 
 ### Stories
  * [MODORDERS-298](https://issues.folio.org/browse/MODORDERS-298) - Temporarily disable interaction with encumbrance APIs
@@ -18,7 +18,7 @@ The primary focus of this release was to implement Teams-based operations restri
  * [MODORDERS-256](https://issues.folio.org/browse/MODORDERS-256) - Restrict search/view of PO, POL, Piece records based upon acquisitions unit
  * [MODORDERS-255](https://issues.folio.org/browse/MODORDERS-255) - Restrict deletion of PO, POL, Piece records based upon acquisitions unit
  * [MODORDERS-254](https://issues.folio.org/browse/MODORDERS-254) - Restrict updates of PO, POL, Piece records based upon acquisitions unit
- * [MODORDERS-251](https://issues.folio.org/browse/MODORDERS-251) - RRestrict creation of PO, POL, Piece records based upon acquisitions unit
+ * [MODORDERS-251](https://issues.folio.org/browse/MODORDERS-251) - Restrict creation of PO, POL, Piece records based upon acquisitions unit
 
 ## 7.0.1 - Released
 This release includes bug fix for issue related to order's closing.

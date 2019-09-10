@@ -403,7 +403,7 @@
   "requires": [
     {
       "id": "acquisitions-units-storage.units",
-      "version": "1.0"
+      "version": "1.1"
     },
     {
       "id": "acquisitions-units-storage.memberships",
@@ -415,7 +415,7 @@
     },
     {
       "id": "orders-storage.purchase-orders",
-      "version": "6.0"
+      "version": "6.1"
     },
     {
       "id": "orders-storage.alerts",
