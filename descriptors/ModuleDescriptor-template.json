@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "7.0",
+      "version": "7.1",
       "handlers": [
         {
           "methods": ["GET"],
@@ -321,7 +321,7 @@
     },
     {
       "id": "acquisitions-units",
-      "version": "1.0",
+      "version": "1.1",
       "handlers": [
         {
           "methods": ["GET"],
@@ -403,7 +403,7 @@
   "requires": [
     {
       "id": "acquisitions-units-storage.units",
-      "version": "1.0"
+      "version": "1.1"
     },
     {
       "id": "acquisitions-units-storage.memberships",
@@ -415,7 +415,7 @@
     },
     {
       "id": "orders-storage.purchase-orders",
-      "version": "6.0"
+      "version": "6.1"
     },
     {
       "id": "orders-storage.alerts",
@@ -439,7 +439,7 @@
     },
     {
       "id": "holdings-storage",
-      "version": "3.0"
+      "version": "3.1"
     },
     {
       "id": "orders-storage.po-number",
@@ -447,7 +447,7 @@
     },
     {
       "id": "inventory",
-      "version": "8.3 9.0"
+      "version": "8.3 9.4"
     },
     {
       "id": "instance-types",
@@ -459,7 +459,7 @@
     },
     {
       "id": "item-storage",
-      "version": "7.3"
+      "version": "7.5"
     },
     {
       "id": "identifier-types",
@@ -475,7 +475,7 @@
     },
     {
       "id":"organizations-storage.organizations",
-      "version": "2.0"
+      "version": "2.1"
     }
   ],
   "permissionSets": [

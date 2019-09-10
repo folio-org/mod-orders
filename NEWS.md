@@ -1,4 +1,23 @@
-## 8.0.0 - Unreleased
+## 8.1.0 - Unreleased
+
+## 8.0.0 - Released
+The primary focus of this release was to implement Teams-based operations restriction logic and business logic improvements.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v7.0.1...v8.0.0)
+
+### Stories
+ * [MODORDERS-298](https://issues.folio.org/browse/MODORDERS-298) - Temporarily disable interaction with encumbrance APIs
+ * [MODORDERS-294](https://issues.folio.org/browse/MODORDERS-294) - Disallow "isDeleted" acq units to be assigned to orders
+ * [MODORDERS-293](https://issues.folio.org/browse/MODORDERS-293) - Acquisition units - soft delete
+ * [MODORDERS-291](https://issues.folio.org/browse/MODORDERS-291) - Add approvedBy and approvalDate fields to purchase_order/composite_purchase_order
+ * [MODORDERS-290](https://issues.folio.org/browse/MODORDERS-290) - Enforce new setting: approval required to open orders
+ * [MODORDERS-286](https://issues.folio.org/browse/MODORDERS-286) - Restrict receive/checkin based on acquisitions units
+ * [MODORDERS-283](https://issues.folio.org/browse/MODORDERS-283) - Validate/Normalize ISBNs upon order creation/update
+ * [MODORDERS-280](https://issues.folio.org/browse/MODORDERS-280) - Orders App: Ability to assign tags to a Purchase Order (PO) and Purchase Order Line (POL)
+ * [MODORDERS-256](https://issues.folio.org/browse/MODORDERS-256) - Restrict search/view of PO, POL, Piece records based upon acquisitions unit
+ * [MODORDERS-255](https://issues.folio.org/browse/MODORDERS-255) - Restrict deletion of PO, POL, Piece records based upon acquisitions unit
+ * [MODORDERS-254](https://issues.folio.org/browse/MODORDERS-254) - Restrict updates of PO, POL, Piece records based upon acquisitions unit
+ * [MODORDERS-251](https://issues.folio.org/browse/MODORDERS-251) - Restrict creation of PO, POL, Piece records based upon acquisitions unit
 
 ## 7.0.1 - Released
 This release includes bug fix for issue related to order's closing.
