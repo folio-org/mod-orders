@@ -409,7 +409,13 @@ public class OrdersImpl implements Orders {
   @Validate
   public void putOrdersOrderTemplatesById(String id, String lang, OrderTemplate entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     OrderTemplatesHelper helper = new OrderTemplatesHelper(okapiHeaders, vertxContext, lang);
-    if (entity.getId() != null && !entity.getId().equals(id)) {
+
+    // Set template id if this is available only in path
+    if (StringUtils.isEmpty(entity.getId())) {
+      entity.setId(id);
+    }
+
+    if (!entity.getId().equals(id)) {
       helper.addProcessingError(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
       asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422)));
     } else {
