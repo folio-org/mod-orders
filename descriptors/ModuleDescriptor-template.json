@@ -484,6 +484,10 @@
       "version": "7.0"
     },
     {
+      "id": "orders-storage.order-templates",
+      "version": "1.0"
+    },
+    {
       "id": "holdings-storage",
       "version": "3.1"
     },
