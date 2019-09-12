@@ -439,12 +439,13 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * @return CompletableFuture with void.
    */
   CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
-    // create pieces only, in case of no inventory updates and receiving is required
-    if (inventoryUpdateNotRequired(compPOL) && !isReceiptNotRequired(compPOL.getReceiptStatus())) {
-      return createPieces(compPOL, Collections.emptyList())
-        .thenRun(() ->
-          logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId())
-        );
+    if (inventoryUpdateNotRequired(compPOL)) {
+      // don't create pieces, if no inventory updates and receiving not required
+      if (isReceiptNotRequired(compPOL.getReceiptStatus())) {
+        return completedFuture(null);
+      }
+      return createPieces(compPOL, Collections.emptyList()).thenRun(
+          () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId()));
     }
 
     return inventoryHelper.handleInstanceRecord(compPOL)
