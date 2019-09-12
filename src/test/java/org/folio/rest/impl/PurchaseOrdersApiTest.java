@@ -2477,7 +2477,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testPostOrdersInventoryInteractionWithReceiptNotRequired() throws Exception {
     logger.info("=== Test POST electronic PO, to create Instance and Holding even if receipt not required==");
 
-
     JsonObject order = new JsonObject(getMockData(ELECTRONIC_FOR_CREATE_INVENTORY_TEST));
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
     // Make sure that Order is Open
@@ -2492,6 +2491,31 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     assertNotNull(getCreatedInstances());
     assertNotNull(getCreatedHoldings());
+    assertNull(getItemsSearches());
+    assertNull(getCreatedPieces());
+  }
+
+  @Test
+  public void testPostOrdersNoInventoryInteractionWithReceiptNotRequired() throws Exception {
+    logger.info("=== Test POST PO, to have no inventory Interaction, with CreateInventory None and receipt not required==");
+
+    JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
+    // Get Open Order
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    // Make sure that Order moves to Open
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    // Set CreateInventory value to create nothing in inventory
+    reqData.getCompositePoLines().get(0).getPhysical().setCreateInventory(Physical.CreateInventory.NONE);
+    reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
+    reqData.getCompositePoLines().get(0).setReceiptStatus(ReceiptStatus.RECEIPT_NOT_REQUIRED);
+
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    // No inventory interation necessary with "Receipt Not Required" and CreateInventory "None"
+    assertNull(getInstancesSearches());
+    assertNull(getHoldingsSearches());
     assertNull(getItemsSearches());
     assertNull(getCreatedPieces());
   }
