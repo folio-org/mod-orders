@@ -1,14 +1,5 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.folio.rest.jaxrs.model.OrderTemplate;
-import org.folio.rest.jaxrs.model.OrderTemplateCollection;
-
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
@@ -16,6 +7,16 @@ import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import org.folio.rest.jaxrs.model.OrderTemplate;
+import org.folio.rest.jaxrs.model.OrderTemplateCollection;
+
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class OrderTemplatesHelper extends AbstractHelper {
 
@@ -44,7 +45,7 @@ public class OrderTemplatesHelper extends AbstractHelper {
     try {
       String endpoint = String.format(GET_ORDER_TEMPLATES_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
       handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-        .thenApply(json -> json.mapTo(OrderTemplateCollection.class))
+        .thenCompose(json -> VertxCompletableFuture.supplyBlockingAsync(ctx, () -> json.mapTo(OrderTemplateCollection.class)))
         .thenAccept(future::complete)
         .exceptionally(t -> {
           future.completeExceptionally(t.getCause());
