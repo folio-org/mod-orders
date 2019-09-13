@@ -45,7 +45,7 @@ public class ResourcePathResolver {
     apis.put(PO_LINE_NUMBER, "/orders-storage/po-line-number");
     apis.put(SEARCH_ORDERS, "/orders-storage/orders");
     apis.put(ORDER_LINES, "/orders-storage/order-lines");
-    apis.put(ORDER_TEMPLATES, "/order-storage/order-templates");
+    apis.put(ORDER_TEMPLATES, "/orders-storage/order-templates");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);
     SUB_OBJECT_ITEM_APIS = Collections.unmodifiableMap(
