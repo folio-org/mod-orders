@@ -23,7 +23,8 @@ types:
   errors: !include raml-util/schemas/errors.schema
   po-number: !include acq-models/mod-orders/schemas/po_number.json
   piece: !include acq-models/mod-orders-storage/schemas/piece.json
-
+  order-template: !include acq-models/mod-orders-storage/schemas/order_template.json
+  order-template-collection: !include acq-models/mod-orders-storage/schemas/order_template_collection.json
 
   UUID:
     type: string
@@ -272,3 +273,31 @@ resourceTypes:
                   value: !include examples/errors_500.sample
               text/plain:
                 example: "unable to delete Piece -- Internal server error, e.g. due to misconfiguration"
+  /order-templates:
+    type:
+      collection:
+        exampleCollection: !include acq-models/mod-orders-storage/examples/order_template_collection.sample
+        exampleItem: !include acq-models/mod-orders-storage/examples/order_template_post.sample
+        schemaCollection: order-template-collection
+        schemaItem: order-template
+    post:
+      description: Create new order template
+      is: [validate]
+    get:
+      description: Get list of order templates
+      is: [
+        searchable: {description: "with valid searchable fields: for example templateCode", example: "[\"templateCode\", \"Amazon\", \"=\"]"},
+        pageable
+      ]
+    /{id}:
+      uriParameters:
+        id:
+          description: The UUID of an Order Template
+          type: UUID
+      type:
+        collection-item:
+          exampleItem: !include acq-models/mod-orders-storage/examples/order_template_get.sample
+          schema: order-template
+      put:
+        description: Update order template
+        is: [validate]

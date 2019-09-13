@@ -41,7 +41,8 @@ import static org.hamcrest.Matchers.is;
   OrdersProtectionTest.class,
   LinesProtectionTest.class,
   PiecesProtectionTest.class,
-  ReceivingCheckinProtectionTest.class
+  ReceivingCheckinProtectionTest.class,
+  OrderTemplateTest.class
 })
 public class ApiTestSuite {
 
