@@ -376,7 +376,7 @@ public class ApiTestBase {
     logger.debug("Verifying event bus messages");
     // Wait until event bus registers message
     await().atLeast(50, MILLISECONDS)
-           .atMost(1, SECONDS)
+           .atMost(5, SECONDS)
            .until(() -> eventMessages, hasSize(msgQty));
     for (int i = 0; i < msgQty; i++) {
       Message<JsonObject> message = eventMessages.get(i);
@@ -392,7 +392,7 @@ public class ApiTestBase {
     logger.debug("Verifying event bus messages");
     // Wait until event bus registers message
     await().atLeast(50, MILLISECONDS)
-           .atMost(1, SECONDS)
+           .atMost(5, SECONDS)
            .until(() -> eventMessages, hasSize(msgQty));
     for (int i = 0; i < msgQty; i++) {
       Message<JsonObject> message = eventMessages.get(i);
