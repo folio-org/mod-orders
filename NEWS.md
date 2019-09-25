@@ -1,5 +1,13 @@
 ## 8.1.0 - Unreleased
 
+## 8.0.2 - Released
+Bugfix release to honor createInventory irrespective of Receipt Status
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v8.0.1...v8.0.2)
+
+### Bug Fixes
+ * [MODORDERS-304](https://issues.folio.org/browse/MODORDERS-304) - `Receipt Not Required` doesn't consider CreateInventory Settings
+ 
 ## 8.0.0 - Released
 The primary focus of this release was to implement Teams-based operations restriction logic and business logic improvements.
 
