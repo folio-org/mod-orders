@@ -15,7 +15,6 @@ import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import io.vertx.core.Context;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -27,6 +26,7 @@ import javax.ws.rs.core.Response;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -126,9 +126,8 @@ public abstract class AbstractHelper {
    * Some requests do not have body and in happy flow do not produce response body. The Accept header is required for calls to storage
    */
   private static void setDefaultHeaders(HttpClientInterface httpClient) {
-    Map<String, String> customHeader = new HashMap<>();
-    customHeader.put(HttpHeaders.ACCEPT.toString(), APPLICATION_JSON + ", " + TEXT_PLAIN);
-    httpClient.setDefaultHeaders(customHeader);
+    // The RMB's HttpModuleClient2.ACCEPT is in sentence case. Using the same format to avoid duplicates (issues migrating to RMB 27.1.1)
+    httpClient.setDefaultHeaders(Collections.singletonMap("Accept", APPLICATION_JSON + ", " + TEXT_PLAIN));
   }
 
   protected Errors getProcessingErrors() {
