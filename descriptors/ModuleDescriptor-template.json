@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "7.1",
+      "version": "8.0",
       "handlers": [
         {
           "methods": ["GET"],
@@ -481,7 +481,7 @@
     },
     {
       "id": "orders-storage.po-lines",
-      "version": "7.0"
+      "version": "8.0"
     },
     {
       "id": "orders-storage.order-templates",

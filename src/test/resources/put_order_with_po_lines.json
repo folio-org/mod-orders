@@ -33,7 +33,8 @@
         {
           "code": "EUROHIST",
           "fundId": "e9285a1c-1dfc-4380-868c-e74073003f43",
-          "percentage": 100.0,
+          "distributionType": "percentage",
+          "value": 100.0,
           "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08003"
         }
       ],
@@ -113,7 +114,8 @@
         {
           "code": "USHIST",
           "fundId": "65032151-39a5-4cef-8810-5350eb316300",
-          "percentage": 100.0,
+          "distributionType": "percentage",
+          "value": 100.0,
           "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08005"
         }
       ],
@@ -203,13 +205,15 @@
         {
           "code": "HIST",
           "fundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
-          "percentage": 80.0,
+          "distributionType": "percentage",
+          "value": 80.0,
           "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3"
         },
         {
           "code": "ENDOW-SUBN",
           "fundId": "1714f71f-b845-444b-a79e-a577487a6f7d",
-          "percentage": 20.0,
+          "distributionType": "percentage",
+          "value": 20.0,
           "encumbrance": "0466cb77-0344-43c6-85eb-0a64aa2934e5"
         }
       ],
@@ -328,7 +332,8 @@
         {
           "code": "MISCHIST",
           "fundId": "a89eccf0-57a6-495e-898d-32b9b2210f2f",
-          "percentage": 100.0,
+          "distributionType": "percentage",
+          "value": 100.0,
           "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08015"
         }
       ],
