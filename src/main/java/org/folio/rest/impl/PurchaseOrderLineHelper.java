@@ -43,9 +43,12 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.P
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -80,6 +83,7 @@ import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -888,30 +892,46 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   public CompletableFuture<Void> validateAndNormalizeISBN(CompositePoLine compPOL) {
-    if (compPOL.getDetails() != null && compPOL.getDetails()
-      .getProductIds() != null) {
+    if (HelperUtils.isProductIdsExist(compPOL)) {
       return inventoryHelper.getProductTypeUUID(ISBN)
-        .thenCompose(id -> validateIsbnValues(compPOL, id));
+        .thenCompose(id -> validateIsbnValues(compPOL, id)
+          .thenAccept(aVoid -> removeISBNDuplicates(compPOL, id)));
     }
     return completedFuture(null);
   }
 
-  CompletableFuture<Void> validateIsbnValues(CompositePoLine compPOL, String id) {
+  CompletableFuture<Void> validateIsbnValues(CompositePoLine compPOL, String isbnTypeId) {
     CompletableFuture[] futures = compPOL.getDetails()
       .getProductIds()
       .stream()
-      .map(productID -> {
-        if (productID.getProductIdType()
-          .equals(id)) {
-          return inventoryHelper.convertToISBN13(productID.getProductId())
-            .thenAccept(productID::setProductId);
-        }
-        return completedFuture(null);
-      })
+      .filter(productId -> isISBN(isbnTypeId, productId))
+      .map(productID -> inventoryHelper.convertToISBN13(productID.getProductId())
+        .thenAccept(productID::setProductId))
       .toArray(CompletableFuture[]::new);
 
     return VertxCompletableFuture.allOf(ctx, futures);
   }
+
+  private void removeISBNDuplicates(CompositePoLine compPOL, String isbnTypeId) {
+    Map<String, Set<ProductId>> uniqueISBNProductIds = new HashMap<>();
+    compPOL.getDetails().getProductIds()
+      .removeIf(productId -> isISBN(isbnTypeId, productId) && isDuplicate(productId, uniqueISBNProductIds));
+  }
+
+  private boolean isDuplicate(ProductId productId, Map<String, Set<ProductId>> uniqueISBNProductIds) {
+    if (!uniqueISBNProductIds.containsKey(productId.getProductId())) {
+      uniqueISBNProductIds.put(productId.getProductId(), new HashSet<>(Collections.singleton(productId)));
+    } else {
+      Set<ProductId> existingSet = uniqueISBNProductIds.get(productId.getProductId());
+      return StringUtils.isEmpty(productId.getQualifier()) || !existingSet.add(productId);
+    }
+    return false;
+  }
+
+  private boolean isISBN(String isbnTypeId, ProductId productId) {
+    return productId.getProductIdType().equals(isbnTypeId);
+  }
+
 }
 
 

@@ -35,6 +35,7 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
+import static org.folio.orders.utils.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.orders.utils.ErrorCodes.ITEM_CREATION_FAILED;
 import static org.folio.orders.utils.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
@@ -338,7 +339,7 @@ public class InventoryHelper extends AbstractHelper {
    */
   private CompletableFuture<String> getInstanceRecord(CompositePoLine compPOL) {
     // proceed with new Instance Record creation if no productId is provided
-    if (compPOL.getDetails() == null || compPOL.getDetails().getProductIds().isEmpty()) {
+    if (!isProductIdsExist(compPOL)) {
       return createInstanceRecord(compPOL);
     }
 
@@ -475,7 +476,7 @@ public class InventoryHelper extends AbstractHelper {
       instance.put(INSTANCE_CONTRIBUTORS, contributors);
     }
 
-    if (compPOL.getDetails() != null && compPOL.getDetails().getProductIds() != null) {
+    if (isProductIdsExist(compPOL)) {
       List<JsonObject> identifiers =
         compPOL.getDetails()
                .getProductIds()
@@ -721,6 +722,11 @@ public class InventoryHelper extends AbstractHelper {
 
   public CompletableFuture<String> convertToISBN13(String isbn) {
     String convertEndpoint = String.format("/isbn/convertTo13?isbn=%s&lang=%s", isbn, lang);
-    return handleGetRequest(convertEndpoint, httpClient, ctx, okapiHeaders, logger).thenApply(json -> json.getString("isbn"));
+    return handleGetRequest(convertEndpoint, httpClient, ctx, okapiHeaders, logger).thenApply(json -> json.getString("isbn"))
+      .exceptionally(throwable -> {
+        logger.error("Can't convert {} to isbn13", isbn);
+        List<Parameter> parameters = Collections.singletonList(new Parameter().withKey("isbn").withValue(isbn));
+        throw new HttpException(400, ISBN_NOT_VALID.toError().withParameters(parameters));
+      });
   }
 }

@@ -4,6 +4,11 @@
       "id": "8261054f-be78-422d-bd51-4ed9f33c3422",
       "name": "ISBN",
       "source": "folio"
+    },
+    {
+      "id": "fcca2643-406a-482a-b760-7a7f8aec640e",
+      "name": "Invalid ISBN",
+      "source": "folio"
     }
   ],
   "totalRecords": 1

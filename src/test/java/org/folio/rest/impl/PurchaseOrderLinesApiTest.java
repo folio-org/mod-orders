@@ -60,6 +60,8 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   private static final String LINE_BY_ID_PATH = "/orders/order-lines/%s";
   static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "minimalContent.json";
+  public static final String ISBN_PRODUCT_TYPE_ID = "8261054f-be78-422d-bd51-4ed9f33c3422";
+  public static final String INVALID_ISBN = "1234";
 
   @Test
   public void testPostOrderLine() {
@@ -684,7 +686,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     reqData.setId("0009662b-8b80-4001-b704-ca10971f175d");
     reqData.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
 
-    String isbn = "1234";
+    String isbn = INVALID_ISBN;
 
     reqData.getDetails().getProductIds().get(0).setProductId(isbn);
 
@@ -697,11 +699,13 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
         .getErrors()
         .get(0);
 
-      assertThat(err.getMessage(), equalTo(String.format("ISBN value %s is invalid", isbn)));
+    assertThat(err.getMessage(), equalTo(ISBN_NOT_VALID.getDescription()));
+    assertThat(err.getCode(), equalTo(ISBN_NOT_VALID.getCode()));
+    assertThat(err.getParameters().get(0).getValue(), equalTo(isbn));
   }
 
   @Test
-  public void testPostOrderLinetoConvertToIsbn13() {
+  public void testPostOrderLineToConvertToIsbn13() {
     logger.info("=== Test Post order line to verify ISBN 10 is normalized to ISBN 13 ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
@@ -710,13 +714,68 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     reqData.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
 
     String isbn = "0-19-852663-6";
-
+    ProductId productId = reqData.getDetails().getProductIds().get(0);
     reqData.getDetails().getProductIds().get(0).setProductId(isbn);
-
+    reqData.getDetails().getProductIds().add(new ProductId()
+      .withProductIdType(productId.getProductIdType())
+      .withQualifier(productId.getQualifier())
+      .withProductId(isbn));
+    assertThat(reqData.getDetails().getProductIds(), hasSize(2));
     CompositePoLine resp = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
         prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
 
+    assertThat(resp.getDetails().getProductIds(), hasSize(1));
     assertThat(resp.getDetails().getProductIds().get(0).getProductId(), equalTo("9780198526636"));
+  }
+
+  @Test
+  public void testPostOrderLineToRemoveISBNDuplicates() {
+    logger.info("=== Test Post order line to verify ISBN 13 is not repeated ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+    // To skip permission validation by units
+    reqData.setId("0009662b-8b80-4001-b704-ca10971f175d");
+    reqData.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
+    final String invalidIsbn = "fcca2643-406a-482a-b760-7a7f8aec640e";
+
+    reqData.getDetails().getProductIds().clear();
+
+    final String isbn113 = "9780198526636";
+    final String isbn110 = "0-19-852663-6";
+    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn113));
+    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn110));
+
+    final String isbn2 = "9780545010221";
+    final String qualifier1 = "(q1)";
+    final String qualifier2 = "(q2)";
+    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn2).withQualifier(qualifier1));
+    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn2).withQualifier(qualifier1));
+    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn2).withQualifier(qualifier2));
+    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn2));
+    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn2));
+
+    reqData.getDetails().getProductIds().add(new ProductId().withProductId(INVALID_ISBN).withProductIdType(invalidIsbn));
+
+    assertThat(reqData.getDetails().getProductIds(), hasSize(8));
+    CompositePoLine resp = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
+
+    assertThat(resp.getDetails().getProductIds(), hasSize(4));
+    assertThat(resp.getDetails().getProductIds().get(0).getProductId(), equalTo(isbn113));
+    assertThat(resp.getDetails().getProductIds().get(0).getQualifier(), nullValue());
+    assertThat(resp.getDetails().getProductIds().get(1).getProductId(), equalTo(isbn2));
+    assertThat(resp.getDetails().getProductIds().get(1).getQualifier(), equalTo(qualifier1));
+
+    assertThat(resp.getDetails().getProductIds().get(2).getProductId(), equalTo(isbn2));
+    assertThat(resp.getDetails().getProductIds().get(2).getQualifier(), equalTo(qualifier2));
+
+    assertThat(resp.getDetails().getProductIds().get(3).getProductId(), equalTo(INVALID_ISBN));
+
+  }
+
+  private ProductId createIsbnProductId(String isbn) {
+    return new ProductId().withProductIdType(ISBN_PRODUCT_TYPE_ID)
+      .withProductId(isbn);
   }
 
   @Test
@@ -725,7 +784,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
       .mapTo(CompositePoLine.class);
     reqData.setId(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
-    String isbn = "1234";
+    String isbn = INVALID_ISBN;
 
     reqData.getDetails().getProductIds().get(0).setProductId(isbn);
 
@@ -734,7 +793,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     Error err = response.getBody().as(Errors.class).getErrors().get(0);
 
-    assertThat(err.getMessage(), equalTo(String.format("ISBN value %s is invalid", isbn)));
+    assertThat(err.getMessage(), equalTo(ISBN_NOT_VALID.getDescription()));
+    assertThat(err.getCode(), equalTo(ISBN_NOT_VALID.getCode()));
+    assertThat(err.getParameters().get(0).getValue(), equalTo(isbn));
   }
 
   private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {

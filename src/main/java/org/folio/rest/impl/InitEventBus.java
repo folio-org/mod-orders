@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import io.vertx.core.Promise;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.resource.interfaces.PostDeployVerticle;
 import org.folio.spring.SpringContextUtil;
@@ -43,8 +44,8 @@ public class InitEventBus implements PostDeployVerticle {
       EventBus eb = vertx.eventBus();
 
       // Create consumers and assign handlers
-      Future<Void> orderStatusRegistrationHandler = Future.future();
-      Future<Void> receiptStatusConsistencyHandler = Future.future();
+      Promise<Void> orderStatusRegistrationHandler = Promise.promise();
+      Promise<Void> receiptStatusConsistencyHandler = Promise.promise();
 
       MessageConsumer<JsonObject> orderStatusConsumer = eb.localConsumer(MessageAddress.ORDER_STATUS.address);
       MessageConsumer<JsonObject> receiptStatusConsumer = eb.localConsumer(MessageAddress.RECEIPT_STATUS.address);
@@ -53,7 +54,7 @@ public class InitEventBus implements PostDeployVerticle {
       receiptStatusConsumer.handler(receiptStatusHandler)
         .completionHandler(receiptStatusConsistencyHandler);
 
-      CompositeFuture.all(orderStatusRegistrationHandler, receiptStatusConsistencyHandler)
+      CompositeFuture.all(orderStatusRegistrationHandler.future(), receiptStatusConsistencyHandler.future())
         .setHandler(result -> {
           if (result.succeeded()) {
             blockingCodeFuture.complete();
