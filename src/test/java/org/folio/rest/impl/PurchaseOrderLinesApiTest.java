@@ -1,30 +1,26 @@
 package org.folio.rest.impl;
 
-import io.restassured.response.Response;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.utils.ErrorCodes;
-import org.folio.orders.utils.POLineProtectedFields;
-import org.folio.rest.jaxrs.model.*;
-import org.folio.rest.jaxrs.model.Error;
-import org.junit.Test;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
-import static org.folio.orders.utils.ErrorCodes.*;
-import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
+import static org.folio.orders.utils.ErrorCodes.COST_ADDITIONAL_COST_INVALID;
+import static org.folio.orders.utils.ErrorCodes.COST_DISCOUNT_INVALID;
+import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
+import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
+import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
+import static org.folio.orders.utils.ErrorCodes.ISBN_NOT_VALID;
+import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
+import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
+import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
+import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
+import static org.folio.orders.utils.ErrorCodes.ORDER_OPEN;
+import static org.folio.orders.utils.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
+import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
+import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
+import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
+import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
+import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
@@ -34,8 +30,8 @@ import static org.folio.rest.impl.AcquisitionsUnitsHelper.NO_ACQ_UNIT_ASSIGNED_C
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ORDER_ID_WITH_PO_LINES;
 import static org.folio.rest.impl.MockServer.PO_NUMBER_ERROR_X_OKAPI_TENANT;
-import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getOrderLineSearches;
+import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getQueryParams;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -48,7 +44,40 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Contributor;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.ProductId;
+import org.junit.Test;
+
+import io.restassured.response.Response;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
@@ -740,19 +769,21 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     reqData.getDetails().getProductIds().clear();
 
-    final String isbn113 = "9780198526636";
-    final String isbn110 = "0-19-852663-6";
-    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn113));
-    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn110));
 
-    final String isbn2 = "9780545010221";
+    final String isbn1 = "9780545010221";
     final String qualifier1 = "(q1)";
     final String qualifier2 = "(q2)";
-    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn2).withQualifier(qualifier1));
-    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn2).withQualifier(qualifier1));
-    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn2).withQualifier(qualifier2));
-    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn2));
-    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn2));
+
+    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn1));
+    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn1).withQualifier(qualifier1));
+    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn1).withQualifier(qualifier1));
+    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn1).withQualifier(qualifier2));
+    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn1));
+
+    final String isbn213 = "9780198526636";
+    final String isbn210 = "0-19-852663-6";
+    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn210));
+    reqData.getDetails().getProductIds().add(createIsbnProductId(isbn213));
 
     reqData.getDetails().getProductIds().add(new ProductId().withProductId(INVALID_ISBN).withProductIdType(invalidIsbn));
 
@@ -761,14 +792,15 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
 
     assertThat(resp.getDetails().getProductIds(), hasSize(4));
-    assertThat(resp.getDetails().getProductIds().get(0).getProductId(), equalTo(isbn113));
-    assertThat(resp.getDetails().getProductIds().get(0).getQualifier(), nullValue());
-    assertThat(resp.getDetails().getProductIds().get(1).getProductId(), equalTo(isbn2));
-    assertThat(resp.getDetails().getProductIds().get(1).getQualifier(), equalTo(qualifier1));
+    assertThat(resp.getDetails().getProductIds().get(0).getProductId(), equalTo(isbn1));
+    assertThat(resp.getDetails().getProductIds().get(0).getQualifier(), equalTo(qualifier1));
 
-    assertThat(resp.getDetails().getProductIds().get(2).getProductId(), equalTo(isbn2));
-    assertThat(resp.getDetails().getProductIds().get(2).getQualifier(), equalTo(qualifier2));
+    assertThat(resp.getDetails().getProductIds().get(1).getProductId(), equalTo(isbn1));
+    assertThat(resp.getDetails().getProductIds().get(1).getQualifier(), equalTo(qualifier2));
 
+    assertThat(resp.getDetails().getProductIds().get(2).getProductId(), equalTo(isbn213));
+
+    assertThat(resp.getDetails().getProductIds().get(3).getQualifier(), nullValue());
     assertThat(resp.getDetails().getProductIds().get(3).getProductId(), equalTo(INVALID_ISBN));
 
   }

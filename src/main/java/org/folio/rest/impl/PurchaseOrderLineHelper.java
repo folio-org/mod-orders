@@ -4,6 +4,7 @@ import static io.vertx.core.json.JsonObject.mapFrom;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -43,17 +44,15 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.P
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -914,19 +913,35 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private void removeISBNDuplicates(CompositePoLine compPOL, String isbnTypeId) {
-    Map<String, Set<ProductId>> uniqueISBNProductIds = new HashMap<>();
-    compPOL.getDetails().getProductIds()
-      .removeIf(productId -> isISBN(isbnTypeId, productId) && isDuplicate(productId, uniqueISBNProductIds));
+
+    List<ProductId> notISBNs = getNonISBNProductIds(compPOL, isbnTypeId);
+
+    List<ProductId> isbns = getDeduplicatedISBNs(compPOL, isbnTypeId);
+
+    isbns.addAll(notISBNs);
+    compPOL.getDetails().setProductIds(isbns);
   }
 
-  private boolean isDuplicate(ProductId productId, Map<String, Set<ProductId>> uniqueISBNProductIds) {
-    if (!uniqueISBNProductIds.containsKey(productId.getProductId())) {
-      uniqueISBNProductIds.put(productId.getProductId(), new HashSet<>(Collections.singleton(productId)));
-    } else {
-      Set<ProductId> existingSet = uniqueISBNProductIds.get(productId.getProductId());
-      return StringUtils.isEmpty(productId.getQualifier()) || !existingSet.add(productId);
-    }
-    return false;
+  private List<ProductId> getDeduplicatedISBNs(CompositePoLine compPOL, String isbnTypeId) {
+    Map<String, List<ProductId>> uniqueISBNProductIds = compPOL.getDetails().getProductIds().stream()
+      .filter(productId -> isISBN(isbnTypeId, productId))
+      .distinct()
+      .collect(groupingBy(ProductId::getProductId));
+
+    return uniqueISBNProductIds.values().stream()
+      .flatMap(productIds -> productIds.stream()
+        .filter(isUniqueISBN(productIds)))
+      .collect(toList());
+  }
+
+  private Predicate<ProductId> isUniqueISBN(List<ProductId> productIds) {
+    return productId -> productIds.size() == 1 || StringUtils.isNotEmpty(productId.getQualifier());
+  }
+
+  private List<ProductId> getNonISBNProductIds(CompositePoLine compPOL, String isbnTypeId) {
+    return compPOL.getDetails().getProductIds().stream()
+      .filter(productId -> !isISBN(isbnTypeId, productId))
+      .collect(toList());
   }
 
   private boolean isISBN(String isbnTypeId, ProductId productId) {
@@ -934,5 +949,3 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
 }
-
-
