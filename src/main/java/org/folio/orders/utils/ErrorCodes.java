@@ -52,7 +52,8 @@ public enum ErrorCodes {
   USER_HAS_NO_PERMISSIONS("userHasNoPermission", "User does not have permissions - operation is restricted"),
   USER_HAS_NO_ACQ_PERMISSIONS("userHasNoAcqUnitsPermission", "User does not have permissions to manage acquisition units assignments - operation is restricted"),
   USER_HAS_NO_APPROVAL_PERMISSIONS("userHasNoApprovalPermission", "User does not have permissions to approve order - operation is restricted"),
-  APPROVAL_REQUIRED_TO_OPEN("orderApprovalRequired","Approval is required to open order");
+  APPROVAL_REQUIRED_TO_OPEN("orderApprovalRequired","Approval is required to open order"),
+  ISBN_NOT_VALID("invalidISBN", "ISBN value is invalid");
 
   private final String code;
   private final String description;

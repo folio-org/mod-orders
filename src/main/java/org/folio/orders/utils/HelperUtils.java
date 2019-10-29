@@ -1159,4 +1159,8 @@ public class HelperUtils {
       .map(HelperUtils::convertToPoLine)
       .collect(toList());
   }
+
+  public static boolean isProductIdsExist(CompositePoLine compPOL) {
+    return compPOL.getDetails() != null && CollectionUtils.isNotEmpty(compPOL.getDetails().getProductIds());
+  }
 }

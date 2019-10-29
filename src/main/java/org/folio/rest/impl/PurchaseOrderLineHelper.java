@@ -4,6 +4,7 @@ import static io.vertx.core.json.JsonObject.mapFrom;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -45,11 +46,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -80,6 +83,7 @@ import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
@@ -888,30 +892,60 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   public CompletableFuture<Void> validateAndNormalizeISBN(CompositePoLine compPOL) {
-    if (compPOL.getDetails() != null && compPOL.getDetails()
-      .getProductIds() != null) {
+    if (HelperUtils.isProductIdsExist(compPOL)) {
       return inventoryHelper.getProductTypeUUID(ISBN)
-        .thenCompose(id -> validateIsbnValues(compPOL, id));
+        .thenCompose(id -> validateIsbnValues(compPOL, id)
+          .thenAccept(aVoid -> removeISBNDuplicates(compPOL, id)));
     }
     return completedFuture(null);
   }
 
-  CompletableFuture<Void> validateIsbnValues(CompositePoLine compPOL, String id) {
+  CompletableFuture<Void> validateIsbnValues(CompositePoLine compPOL, String isbnTypeId) {
     CompletableFuture[] futures = compPOL.getDetails()
       .getProductIds()
       .stream()
-      .map(productID -> {
-        if (productID.getProductIdType()
-          .equals(id)) {
-          return inventoryHelper.convertToISBN13(productID.getProductId())
-            .thenAccept(productID::setProductId);
-        }
-        return completedFuture(null);
-      })
+      .filter(productId -> isISBN(isbnTypeId, productId))
+      .map(productID -> inventoryHelper.convertToISBN13(productID.getProductId())
+        .thenAccept(productID::setProductId))
       .toArray(CompletableFuture[]::new);
 
     return VertxCompletableFuture.allOf(ctx, futures);
   }
+
+  private void removeISBNDuplicates(CompositePoLine compPOL, String isbnTypeId) {
+
+    List<ProductId> notISBNs = getNonISBNProductIds(compPOL, isbnTypeId);
+
+    List<ProductId> isbns = getDeduplicatedISBNs(compPOL, isbnTypeId);
+
+    isbns.addAll(notISBNs);
+    compPOL.getDetails().setProductIds(isbns);
+  }
+
+  private List<ProductId> getDeduplicatedISBNs(CompositePoLine compPOL, String isbnTypeId) {
+    Map<String, List<ProductId>> uniqueISBNProductIds = compPOL.getDetails().getProductIds().stream()
+      .filter(productId -> isISBN(isbnTypeId, productId))
+      .distinct()
+      .collect(groupingBy(ProductId::getProductId));
+
+    return uniqueISBNProductIds.values().stream()
+      .flatMap(productIds -> productIds.stream()
+        .filter(isUniqueISBN(productIds)))
+      .collect(toList());
+  }
+
+  private Predicate<ProductId> isUniqueISBN(List<ProductId> productIds) {
+    return productId -> productIds.size() == 1 || StringUtils.isNotEmpty(productId.getQualifier());
+  }
+
+  private List<ProductId> getNonISBNProductIds(CompositePoLine compPOL, String isbnTypeId) {
+    return compPOL.getDetails().getProductIds().stream()
+      .filter(productId -> !isISBN(isbnTypeId, productId))
+      .collect(toList());
+  }
+
+  private boolean isISBN(String isbnTypeId, ProductId productId) {
+    return Objects.equals(productId.getProductIdType(), isbnTypeId);
+  }
+
 }
-
-

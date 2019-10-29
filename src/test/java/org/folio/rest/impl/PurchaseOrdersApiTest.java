@@ -7,6 +7,7 @@ import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
 import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
+import static org.folio.orders.utils.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
@@ -2313,11 +2314,13 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
         .getErrors()
         .get(0);
 
-      assertThat(err.getMessage(), equalTo(String.format("ISBN value %s is invalid", isbn)));
+    assertThat(err.getMessage(), equalTo(ISBN_NOT_VALID.getDescription()));
+    assertThat(err.getCode(), equalTo(ISBN_NOT_VALID.getCode()));
+    assertThat(err.getParameters().get(0).getValue(), equalTo(isbn));
   }
 
   @Test
-  public void testPostOrderstoConvertToIsbn13() throws Exception {
+  public void testPostOrdersToConvertToIsbn13() throws Exception {
     logger.info("=== Test Post order to verify ISBN 10 is normalized to ISBN 13 ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -2348,11 +2351,14 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
         .getErrors()
         .get(0);
 
-      assertThat(err.getMessage(), equalTo(String.format("ISBN value %s is invalid", isbn)));
+
+    assertThat(err.getMessage(), equalTo(ISBN_NOT_VALID.getDescription()));
+    assertThat(err.getCode(), equalTo(ISBN_NOT_VALID.getCode()));
+    assertThat(err.getParameters().get(0).getValue(), equalTo(isbn));
   }
 
   @Test
-  public void testPutOrderstoConvertToIsbn13() throws Exception {
+  public void testPutOrdersToConvertToIsbn13() throws Exception {
     logger.info("=== Test Put order to verify ISBN 10 is normalized to ISBN 13 ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);

@@ -305,6 +305,10 @@
                   <key>schema_paths</key>
                   <value>${jsonschema_paths}</value>
                 </systemProperty>
+                <systemProperty>
+                  <key>jsonschema2pojo.config.includeHashcodeAndEquals</key>
+                  <value>true</value>
+                </systemProperty>
               </systemProperties>
             </configuration>
           </execution>
