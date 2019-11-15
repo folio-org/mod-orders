@@ -762,11 +762,11 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     assertFalse(errors.getErrors().isEmpty());
     assertNotNull(errors.getErrors().get(0));
-    assertEquals("must match \"^[a-zA-Z0-9]{5,16}$\"", errors.getErrors().get(0).getMessage());
+    assertEquals("must match \"^[a-zA-Z0-9]{1,16}$\"", errors.getErrors().get(0).getMessage());
     assertFalse(errors.getErrors().get(0).getParameters().isEmpty());
     assertNotNull(errors.getErrors().get(0).getParameters().get(0));
     assertEquals("poNumber", errors.getErrors().get(0).getParameters().get(0).getKey());
-    assertEquals("123", errors.getErrors().get(0).getParameters().get(0).getValue());
+    assertEquals("123123123123123123123", errors.getErrors().get(0).getParameters().get(0).getValue());
   }
 
   @Test
