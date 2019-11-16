@@ -42,7 +42,7 @@ public class PoNumberApiTest extends ApiTestBase {
   public void testPoNumberValidateWithInvalidPattern()
   {
     JsonObject poNumber=new JsonObject();
-    poNumber.put(PO_NUMBER, "11");
+    poNumber.put(PO_NUMBER, "1111111111111111111111");
     verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422);
   }
 
