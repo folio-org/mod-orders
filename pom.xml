@@ -232,6 +232,7 @@
         <configuration>
           <includes>*.json</includes>
           <outputDirectory>${jsonschema2pojo_output_dir}</outputDirectory>
+          <generateBuilders>true</generateBuilders>
         </configuration>
         <executions>
           <execution>
@@ -242,7 +243,6 @@
             <configuration>
               <sourceDirectory>${basedir}/ramls/acq-models/mod-orders-storage/schemas</sourceDirectory>
               <targetPackage>org.folio.rest.acq.model</targetPackage>
-              <generateBuilders>true</generateBuilders>
             </configuration>
           </execution>
           <execution>

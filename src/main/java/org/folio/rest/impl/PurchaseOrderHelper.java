@@ -706,23 +706,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> createEncumbrances(CompositePurchaseOrder compPO) {
-    CompletableFuture<Void> completableFuture = new VertxCompletableFuture<>(ctx);
-
     FinanceHelper helper = new FinanceHelper(httpClient, okapiHeaders, ctx, lang);
-    CompletableFuture[] futures = compPO.getCompositePoLines()
-      .stream()
-      .map(helper::handleEncumbrances)
-      .toArray(CompletableFuture[]::new);
-
-    VertxCompletableFuture.allOf(ctx, futures)
-      .thenAccept(completableFuture::complete)
-      .exceptionally(fail -> {
-        logger.error(ErrorCodes.ENCUMBRANCE_CREATION_FAILURE.getDescription(), fail.getCause());
-        completableFuture.completeExceptionally(new HttpException(500, ErrorCodes.ENCUMBRANCE_CREATION_FAILURE));
-        return null;
-      });
-
-    return completableFuture;
+    return helper.handleEncumbrances(compPO);
   }
 
   private CompletableFuture<Void> updateInventory(CompositePurchaseOrder compPO) {

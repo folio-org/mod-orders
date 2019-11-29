@@ -65,12 +65,12 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
       logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
       logger.info("getPieceSearches()--->" + getPieceSearches());
       assertEquals(2, getPieceSearches().get(0).getJsonArray("pieces").size());
-      
+
       Piece piece0 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(0).mapTo(Piece.class);
       Piece piece1 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(1).mapTo(Piece.class);
       assertEquals(ReceivingStatus.EXPECTED, piece0.getReceivingStatus());
       assertEquals(ReceivingStatus.EXPECTED, piece1.getReceivingStatus());
-      
+
       PoLine poLine = getPoLineUpdates().get(0).mapTo(PoLine.class);
       assertEquals(ReceiptStatus.AWAITING_RECEIPT, poLine.getReceiptStatus());
 
@@ -87,7 +87,7 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
       logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
       logger.info("getPieceSearches()--->" + getPieceSearches());
       assertEquals(5, getPieceSearches().get(0).getJsonArray("pieces").size());
-      
+
       Piece piece0 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(0).mapTo(Piece.class);
       Piece piece1 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(1).mapTo(Piece.class);
       Piece piece2 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(2).mapTo(Piece.class);
@@ -98,14 +98,14 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
       assertEquals(ReceivingStatus.EXPECTED, piece2.getReceivingStatus());
       assertEquals(ReceivingStatus.EXPECTED, piece3.getReceivingStatus());
       assertEquals(ReceivingStatus.EXPECTED, piece4.getReceivingStatus());
-      
+
       PoLine poLine = getPoLineUpdates().get(0).mapTo(PoLine.class);
       assertEquals(ReceiptStatus.PARTIALLY_RECEIVED, poLine.getReceiptStatus());
 
       assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
     }));
   }
-  
+
   @Test
   public void testSuccessFullyReceivedStatusWhenAllPiecesSuccessfullyReceived(TestContext context) {
     logger.info("=== Test case to verify fully received status when all pieces successfully received ===");
@@ -115,7 +115,7 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
       logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
       logger.info("getPieceSearches()--->" + getPieceSearches());
       assertEquals(5, getPieceSearches().get(0).getJsonArray("pieces").size());
-      
+
       Piece piece0 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(0).mapTo(Piece.class);
       Piece piece1 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(1).mapTo(Piece.class);
       Piece piece2 = getPieceSearches().get(0).getJsonArray("pieces").getJsonObject(2).mapTo(Piece.class);
@@ -126,14 +126,14 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
       assertEquals(ReceivingStatus.RECEIVED, piece2.getReceivingStatus());
       assertEquals(ReceivingStatus.RECEIVED, piece3.getReceivingStatus());
       assertEquals(ReceivingStatus.RECEIVED, piece4.getReceivingStatus());
-      
+
       PoLine poLine = getPoLineUpdates().get(0).mapTo(PoLine.class);
       assertEquals(ReceiptStatus.FULLY_RECEIVED, poLine.getReceiptStatus());
 
       assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
     }));
   }
-  
+
   @Test
   public void testSuccessReceiptStatusWhenTotalPiecesEmpty(TestContext context) {
     logger.info("=== Test case to verify receipt status when total pieces empty ===");
@@ -148,11 +148,11 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
       assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
     }));
   }
-  
+
   @Test
   public void testPieceReceiptStatusFailureWhenNoMatchingPoLineForPiece(TestContext context) {
     logger.info("=== Test case when no poLines exists referenced by a piece which should throw a 404 Exception ===");
-    
+
     sendEvent(createBody(BAD_PO_LINE_404), context.asyncAssertFailure(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());
       logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
@@ -174,7 +174,7 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
   private void sendEvent(JsonObject data, Handler<AsyncResult<Message<String>>> replyHandler) {
     // Add okapi url header
     DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader(X_OKAPI_URL.getName(), X_OKAPI_URL.getValue());
-    
-    vertx.eventBus().send(TEST_ADDRESS, data, deliveryOptions, replyHandler);
+
+    vertx.eventBus().request(TEST_ADDRESS, data, deliveryOptions, replyHandler);
   }
 }

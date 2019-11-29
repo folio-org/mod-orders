@@ -1,34 +1,61 @@
 package org.folio.rest.impl;
 
-import static java.util.concurrent.CompletableFuture.allOf;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
+import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
-import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.function.BiConsumer;
 
 import javax.money.MonetaryAmount;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.commons.lang3.tuple.Pair;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.acq.model.finance.FiscalYear;
+import org.folio.rest.acq.model.finance.Fund;
+import org.folio.rest.acq.model.finance.FundCollection;
+import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.javamoney.moneta.function.MonetaryOperators;
+import org.jetbrains.annotations.NotNull;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import one.util.streamex.StreamEx;
 
 public class FinanceHelper extends AbstractHelper {
   private static final String ENCUMBRANCE_POST_ENDPOINT = resourcesPath(ENCUMBRANCES) + "?lang=%s";
-  private static final String ENCUMBRANCE_GET_ENDPOINT = resourcesPath(ENCUMBRANCES) + "?limit=%d&query=%s&lang=%s";
+  private static final String GET_CURRENT_FISCAL_YEAR_BY_ID = "/finance/ledgers/%s/current-fiscal-year?lang=%s";
+  private static final String GET_FUNDS_WITH_SEARCH_PARAMS = resourcesPath(FUNDS) + SEARCH_PARAMS;
 
   FinanceHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -37,102 +64,142 @@ public class FinanceHelper extends AbstractHelper {
   /**
    * Creates Encumbrance records associated with given PO line and updates PO line with corresponding links.
    *
-   * @param poLine Composite PO line to create encumbrances for
    * @return CompletableFuture with void on success.
    */
-  CompletableFuture<Void> handleEncumbrances(CompositePoLine poLine) {
-    return hasMissingEncumbrances(poLine) ?
-      getExistingEncumbrances(poLine).thenCompose(encumbrances -> createOrLinkEncumbrances(poLine, encumbrances)) :
-      CompletableFuture.completedFuture(null);
+  CompletableFuture<Void> handleEncumbrances(CompositePurchaseOrder compPo) {
+    List<Pair<Transaction, FundDistribution>> encumbranceDistributionPairs = buildEncumbrances(compPo);
+    List<Transaction> encumbrances = encumbranceDistributionPairs.stream()
+      .map(Pair::getLeft)
+      .collect(toList());
+    return setCurrentFiscalYear(encumbrances)
+      .thenCompose(aVoid -> createSummary(compPo.getId(), encumbrances.size()))
+      .thenCompose(vVoid -> createEncumbrances(encumbranceDistributionPairs));
   }
 
-  private CompletableFuture<Void> createOrLinkEncumbrances(CompositePoLine poLine, List<Transaction> encumbrances) {
-    return allOf(poLine.getFundDistribution()
-      .stream()
-      .filter(distribution -> Objects.isNull(distribution.getEncumbrance()))
-      .map(distribution -> handleEncumbrance(distribution, poLine, encumbrances))
+  private CompletableFuture<String> createSummary(String id, int number) {
+    if (number < 1) {
+      return CompletableFuture.completedFuture(id);
+    }
+    OrderTransactionSummary summary = new OrderTransactionSummary()
+      .withId(id)
+      .withNumTransactions(number);
+    return createRecordInStorage(JsonObject.mapFrom(summary), resourcesPath(ORDER_TRANSACTION_SUMMARIES));
+  }
+
+  private CompletableFuture<Void> createEncumbrances(List<Pair<Transaction, FundDistribution>> encumbranceDistributionPairs) {
+    return VertxCompletableFuture.allOf(ctx, encumbranceDistributionPairs.stream()
+      .map(pair -> createRecordInStorage(JsonObject.mapFrom(pair.getLeft()), String.format(ENCUMBRANCE_POST_ENDPOINT, lang))
+        .thenAccept(id -> pair.getValue()
+          .setEncumbrance(id)))
       .toArray(CompletableFuture[]::new));
   }
 
-  /**
-   * @param poLine Composite PO line to check if any encumbrance is missing
-   * @return {@code true} if there it at least one {@link FundDistribution} without linked encumbrance
-   */
-  private boolean hasMissingEncumbrances(CompositePoLine poLine) {
-    return Optional.ofNullable(poLine.getFundDistribution())
-      .map(distributions -> distributions.stream()
-        .map(FundDistribution::getEncumbrance)
-        .anyMatch(Objects::isNull))
-      .orElse(false);
+  private CompletableFuture<Void> setCurrentFiscalYear(List<Transaction> encumbrances) {
+    Map<String, List<Transaction>> groupedByFund = encumbrances.stream()
+      .collect(groupingBy(Transaction::getFromFundId));
+    return groupByLedgerIds(groupedByFund).thenCompose(groupedByLedgerId -> VertxCompletableFuture.allOf(ctx, groupedByLedgerId.entrySet()
+      .stream()
+      .map(entry -> getCurrentFiscalYear(entry.getKey()).thenAccept(fiscalYear -> entry.getValue()
+        .forEach(transaction -> transaction.setFiscalYearId(fiscalYear.getId()))))
+      .collect(toList())
+      .toArray(new CompletableFuture[0])));
   }
 
-  /**
-   * @param poLine Composite PO line to search encumbrances for
-   * @return list of encumbrance records which are not linked to any {@link FundDistribution}
-   */
-  private CompletableFuture<List<Transaction>> getExistingEncumbrances(CompositePoLine poLine) {
-    int limit = poLine.getFundDistribution().size();
-    String endpoint = String.format(ENCUMBRANCE_GET_ENDPOINT, limit, "poLineId==" + poLine.getId(), lang);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(json -> json.mapTo(TransactionCollection.class).getTransactions())
-      .thenApply(encumbrances -> filterLinkedEncumbrances(poLine.getFundDistribution(), encumbrances));
+  private CompletableFuture<Map<String, List<Transaction>>> groupByLedgerIds(Map<String, List<Transaction>> groupedByFund) {
+    return collectResultsOnSuccess(StreamEx.ofSubLists(new ArrayList<>(groupedByFund.entrySet()), MAX_IDS_FOR_GET_RQ)
+      .map(entries -> entries.stream()
+        .map(Map.Entry::getKey)
+        .distinct()
+        .collect(toList()))
+      .map(this::getFundsByIds)
+      .toList()).thenApply(
+          lists -> lists.stream()
+            .flatMap(Collection::stream)
+            .collect(HashMap::new, accumulator(groupedByFund), Map::putAll));
   }
 
-  private List<Transaction> filterLinkedEncumbrances(List<FundDistribution> fundDistributions, List<Transaction> encumbrances) {
-    encumbrances.removeIf(encumbrance -> fundDistributions.stream()
-      .anyMatch(fundDistribution -> encumbrance.getId()
-        .equals(fundDistribution.getEncumbrance())));
-    return encumbrances;
+  @NotNull
+  private BiConsumer<HashMap<String, List<Transaction>>, Fund> accumulator(Map<String, List<Transaction>> groupedByFund) {
+    return (map, fund) -> map.merge(fund.getLedgerId(), groupedByFund.get(fund.getId()), (transactions, transactions2) -> {
+      transactions.addAll(transactions2);
+      return transactions;
+    });
   }
 
-  private CompletableFuture<Void> handleEncumbrance(FundDistribution distribution, CompositePoLine poLine,
-                                                    List<Transaction> encumbrances) {
-    Transaction encumbrance = buildEncumbrance(distribution, poLine);
-    String existingEncumbranceId = matchExistingEncumbrance(encumbrances, encumbrance);
-    if (existingEncumbranceId != null) {
-      distribution.setEncumbrance(existingEncumbranceId);
-      return CompletableFuture.completedFuture(null);
-    } else {
-      return createRecordInStorage(JsonObject.mapFrom(encumbrance), String.format(ENCUMBRANCE_POST_ENDPOINT, lang))
-        .thenAccept(distribution::setEncumbrance);
-    }
+  private CompletableFuture<List<Fund>> getFundsByIds(List<String> ids) {
+    String query = convertIdsToCqlQuery(ids);
+    String queryParam = isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
+    String endpoint = String.format(GET_FUNDS_WITH_SEARCH_PARAMS, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
+
+    return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(entries -> entries.mapTo(FundCollection.class))
+      .thenApply(fundCollection -> {
+        if (ids.size() == fundCollection.getFunds().size()) {
+          return fundCollection.getFunds();
+        }
+        String missingIds = String.join(", ", CollectionUtils.subtract(ids, fundCollection.getFunds().stream().map(Fund::getId).collect(toList())));
+        throw new HttpException(400, FUNDS_NOT_FOUND.toError().withParameters(Collections.singletonList(new Parameter().withKey("funds").withValue(missingIds))));
+      });
   }
 
-  /**
-   * The method tries to match existing encumbrance record with the one build based on fund distribution without linked encumbrance.
-   * The matching logic is based on fund id and amount encumbered.
-   * If matched, the encumbrance is removed from the list and its id returned as a result.
-   *
-   * @param transactions list of existing encumbrances not linked to any fund distribution
-   * @param transaction new encumbrance record build based on particular fund distribution
-   * @return {@code null} or id of the existing encumbrance record if matched
-   */
-  private String matchExistingEncumbrance(List<Transaction> transactions, Transaction transaction) {
-    final Iterator<Transaction> each = transactions.iterator();
-    while (each.hasNext()) {
-      Transaction next = each.next();
-      if (StringUtils.equals(transaction.getFromFundId(), next.getFromFundId())
-        && Double.compare(transaction.getAmount(), next.getAmount()) == 0) {
-        each.remove();
-        return next.getId();
-      }
-    }
-    return null;
+  private List<Pair<Transaction, FundDistribution>> buildEncumbrances(CompositePurchaseOrder compPo) {
+
+    return compPo.getCompositePoLines()
+      .stream()
+      .flatMap(poLine -> poLine.getFundDistribution()
+        .stream()
+        .map(fundDistribution -> new MutablePair<>(buildEncumbrance(fundDistribution, poLine, compPo), fundDistribution)))
+      .collect(toList());
   }
 
-  private Transaction buildEncumbrance(FundDistribution distribution, CompositePoLine poLine) {
+  private CompletableFuture<FiscalYear> getCurrentFiscalYear(String ledgerId) {
+    String endpoint = String.format(GET_CURRENT_FISCAL_YEAR_BY_ID, ledgerId, lang);
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger).thenApply(entry -> entry.mapTo(FiscalYear.class))
+      .exceptionally(t -> {
+        if (isFiscalYearNotFound(t)) {
+          List<Parameter> parameters = Collections.singletonList(new Parameter().withValue(ledgerId)
+            .withKey("ledgerId"));
+          throw new HttpException(400, CURRENT_FISCAL_YEAR_NOT_FOUND.toError()
+            .withParameters(parameters));
+        }
+        throw new CompletionException(t.getCause());
+      });
+  }
+
+  private boolean isFiscalYearNotFound(Throwable t) {
+    return t.getCause() instanceof HttpException && ((HttpException) t.getCause()).getCode() == 404;
+  }
+
+  private Transaction buildEncumbrance(FundDistribution distribution, CompositePoLine poLine, CompositePurchaseOrder compPo) {
     MonetaryAmount estimatedPrice = calculateEstimatedPrice(poLine.getCost());
     Transaction encumbrance = new Transaction();
-//    encumbrance.getEncumbrance().se(poLine.getId());
-//    encumbrance.setAmountEncumbered(calculateAmountEncumbered(distribution, estimatedPrice));
-//    encumbrance.setFundId(distribution.getFundId());
+    encumbrance.setEncumbrance(new Encumbrance());
+    encumbrance.getEncumbrance()
+      .setSourcePoLineId(poLine.getId());
+    encumbrance.getEncumbrance()
+      .setSourcePurchaseOrderId(compPo.getId());
+    encumbrance.getEncumbrance()
+      .setReEncumber(compPo.getReEncumber());
+    encumbrance.getEncumbrance()
+      .setSubscription(compPo.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING);
+    encumbrance.getEncumbrance()
+      .setStatus(Encumbrance.Status.UNRELEASED);
+    encumbrance.getEncumbrance()
+      .setOrderType(Encumbrance.OrderType.fromValue(compPo.getOrderType()
+        .value()));
+    encumbrance.getEncumbrance()
+      .setInitialAmountEncumbered(calculateAmountEncumbered(distribution, estimatedPrice));
+    encumbrance.setFromFundId(distribution.getFundId());
     return encumbrance;
   }
 
   private double calculateAmountEncumbered(FundDistribution distribution, MonetaryAmount estimatedPrice) {
-    return estimatedPrice.with(MonetaryOperators.percent(distribution.getValue()))
-      .with(MonetaryOperators.rounding())
-      .getNumber()
-      .doubleValue();
+    if (distribution.getDistributionType() == FundDistribution.DistributionType.PERCENTAGE) {
+      return estimatedPrice.with(MonetaryOperators.percent(distribution.getValue()))
+        .with(MonetaryOperators.rounding())
+        .getNumber()
+        .doubleValue();
+    }
+    return distribution.getValue();
   }
 }
