@@ -45,7 +45,6 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.javamoney.moneta.function.MonetaryOperators;
-import org.jetbrains.annotations.NotNull;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
@@ -106,19 +105,22 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Map<String, List<Transaction>>> groupByLedgerIds(Map<String, List<Transaction>> groupedByFund) {
+    return getFunds(groupedByFund).thenApply(lists -> lists.stream()
+      .flatMap(Collection::stream)
+      .collect(HashMap::new, accumulator(groupedByFund), Map::putAll));
+  }
+
+  private CompletableFuture<List<List<Fund>>> getFunds(Map<String, List<Transaction>> groupedByFund) {
     return collectResultsOnSuccess(StreamEx.ofSubLists(new ArrayList<>(groupedByFund.entrySet()), MAX_IDS_FOR_GET_RQ)
       .map(entries -> entries.stream()
         .map(Map.Entry::getKey)
         .distinct()
         .collect(toList()))
       .map(this::getFundsByIds)
-      .toList()).thenApply(
-          lists -> lists.stream()
-            .flatMap(Collection::stream)
-            .collect(HashMap::new, accumulator(groupedByFund), Map::putAll));
+      .toList());
   }
 
-  @NotNull
+
   private BiConsumer<HashMap<String, List<Transaction>>, Fund> accumulator(Map<String, List<Transaction>> groupedByFund) {
     return (map, fund) -> map.merge(fund.getLedgerId(), groupedByFund.get(fund.getId()), (transactions, transactions2) -> {
       transactions.addAll(transactions2);
