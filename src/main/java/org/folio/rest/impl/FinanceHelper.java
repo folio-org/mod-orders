@@ -76,9 +76,6 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   private CompletableFuture<String> createSummary(String id, int number) {
-    if (number < 1) {
-      return CompletableFuture.completedFuture(id);
-    }
     OrderTransactionSummary summary = new OrderTransactionSummary()
       .withId(id)
       .withNumTransactions(number);
@@ -130,7 +127,7 @@ public class FinanceHelper extends AbstractHelper {
 
   private CompletableFuture<List<Fund>> getFundsByIds(List<String> ids) {
     String query = convertIdsToCqlQuery(ids);
-    String queryParam = isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
+    String queryParam = "&query=" + encodeQuery(query, logger);
     String endpoint = String.format(GET_FUNDS_WITH_SEARCH_PARAMS, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
 
     return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
@@ -144,7 +141,7 @@ public class FinanceHelper extends AbstractHelper {
       });
   }
 
-  private List<Pair<Transaction, FundDistribution>> buildEncumbrances(CompositePurchaseOrder compPo) {
+  private List<Pair<Transaction, FundDistribution>>  buildEncumbrances(CompositePurchaseOrder compPo) {
 
     return compPo.getCompositePoLines()
       .stream()
@@ -174,25 +171,31 @@ public class FinanceHelper extends AbstractHelper {
 
   private Transaction buildEncumbrance(FundDistribution distribution, CompositePoLine poLine, CompositePurchaseOrder compPo) {
     MonetaryAmount estimatedPrice = calculateEstimatedPrice(poLine.getCost());
-    Transaction encumbrance = new Transaction();
-    encumbrance.setEncumbrance(new Encumbrance());
-    encumbrance.getEncumbrance()
+    Transaction transaction = new Transaction();
+    transaction.setTransactionType(Transaction.TransactionType.ENCUMBRANCE);
+    transaction.setFromFundId(distribution.getFundId());
+    transaction.setSource(Transaction.Source.USER);
+    transaction.setCurrency(poLine.getCost().getCurrency());
+    transaction.setAmount(calculateAmountEncumbered(distribution, estimatedPrice));
+
+    transaction.setEncumbrance(new Encumbrance());
+    transaction.getEncumbrance()
       .setSourcePoLineId(poLine.getId());
-    encumbrance.getEncumbrance()
+    transaction.getEncumbrance()
       .setSourcePurchaseOrderId(compPo.getId());
-    encumbrance.getEncumbrance()
+    transaction.getEncumbrance()
       .setReEncumber(compPo.getReEncumber());
-    encumbrance.getEncumbrance()
+    transaction.getEncumbrance()
       .setSubscription(compPo.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING);
-    encumbrance.getEncumbrance()
+    transaction.getEncumbrance()
       .setStatus(Encumbrance.Status.UNRELEASED);
-    encumbrance.getEncumbrance()
+    transaction.getEncumbrance()
       .setOrderType(Encumbrance.OrderType.fromValue(compPo.getOrderType()
         .value()));
-    encumbrance.getEncumbrance()
-      .setInitialAmountEncumbered(calculateAmountEncumbered(distribution, estimatedPrice));
-    encumbrance.setFromFundId(distribution.getFundId());
-    return encumbrance;
+    transaction.getEncumbrance()
+      .setInitialAmountEncumbered(transaction.getAmount());
+
+    return transaction;
   }
 
   private double calculateAmountEncumbered(FundDistribution distribution, MonetaryAmount estimatedPrice) {

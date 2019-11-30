@@ -9,6 +9,7 @@ import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
 import static org.folio.orders.utils.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
 import static org.folio.orders.utils.ErrorCodes.FUNDS_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
@@ -711,6 +712,29 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(error.getCode(), equalTo(CURRENT_FISCAL_YEAR_NOT_FOUND.getCode()));
     assertThat(error.getParameters().get(0).getValue(), equalTo(ID_DOES_NOT_EXIST));
     assertThat(getCreatedEncumbrances(), hasSize(0));
+  }
+
+  @Test
+  public void testPutOrdersByIdCurrentFiscalYearServerError() {
+    logger.info("=== Test Put Order By Id, get Current fiscal year Internal Server Error ===");
+    CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
+
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    // Make sure that mock PO has 1 po line
+    assertEquals(1, reqData.getCompositePoLines().size());
+
+    CompositePoLine compositePoLine = reqData.getCompositePoLines().get(0);
+    Fund fund = new Fund().withCode("test").withName("name").withId(UUID.randomUUID().toString()).withLedgerId(ID_FOR_INTERNAL_SERVER_ERROR);
+    addMockEntry(FUNDS, fund);
+    removeAllEncumbranceLinks(reqData);
+    compositePoLine.getFundDistribution().forEach(fundDistribution -> fundDistribution.setFundId(fund.getId()));
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), APPLICATION_JSON, 500).as(Errors.class);
+
+    assertThat(errors.getErrors(), hasSize(1));
+    Error error = errors.getErrors().get(0);
+    assertThat(error.getCode(), equalTo(GENERIC_ERROR_CODE.getCode()));
   }
 
   @Test

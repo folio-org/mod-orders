@@ -706,8 +706,15 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> createEncumbrances(CompositePurchaseOrder compPO) {
-    FinanceHelper helper = new FinanceHelper(httpClient, okapiHeaders, ctx, lang);
-    return helper.handleEncumbrances(compPO);
+    if (isFundDistributionsPresent(compPO)) {
+      FinanceHelper helper = new FinanceHelper(httpClient, okapiHeaders, ctx, lang);
+      return helper.handleEncumbrances(compPO);
+    }
+    return CompletableFuture.completedFuture(null);
+  }
+
+  private boolean isFundDistributionsPresent(CompositePurchaseOrder compPO) {
+    return compPO.getCompositePoLines().stream().mapToLong(compositePoLine -> compositePoLine.getFundDistribution().size()).sum() >= 1;
   }
 
   private CompletableFuture<Void> updateInventory(CompositePurchaseOrder compPO) {
