@@ -2,8 +2,6 @@ package org.folio.rest.impl;
 
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
@@ -93,12 +91,18 @@ public class FinanceHelper extends AbstractHelper {
   private CompletableFuture<Void> setCurrentFiscalYear(List<Transaction> encumbrances) {
     Map<String, List<Transaction>> groupedByFund = encumbrances.stream()
       .collect(groupingBy(Transaction::getFromFundId));
-    return groupByLedgerIds(groupedByFund).thenCompose(groupedByLedgerId -> VertxCompletableFuture.allOf(ctx, groupedByLedgerId.entrySet()
-      .stream()
-      .map(entry -> getCurrentFiscalYear(entry.getKey()).thenAccept(fiscalYear -> entry.getValue()
-        .forEach(transaction -> transaction.setFiscalYearId(fiscalYear.getId()))))
-      .collect(toList())
-      .toArray(new CompletableFuture[0])));
+    return groupByLedgerIds(groupedByFund).thenCompose(groupedByLedgerId -> VertxCompletableFuture.allOf(ctx,
+        groupedByLedgerId.entrySet()
+          .stream()
+          .map(entry -> getCurrentFiscalYear(entry.getKey()).thenAccept(fiscalYear -> updateEncumbrances(entry, fiscalYear)))
+          .collect(toList())
+          .toArray(new CompletableFuture[0])));
+  }
+
+  private void updateEncumbrances(Map.Entry<String, List<Transaction>> entry, FiscalYear fiscalYear) {
+    entry.getValue()
+      .forEach(transaction -> transaction.withFiscalYearId(fiscalYear.getId())
+        .withCurrency(fiscalYear.getCurrency()));
   }
 
   private CompletableFuture<Map<String, List<Transaction>>> groupByLedgerIds(Map<String, List<Transaction>> groupedByFund) {
@@ -175,7 +179,6 @@ public class FinanceHelper extends AbstractHelper {
     transaction.setTransactionType(Transaction.TransactionType.ENCUMBRANCE);
     transaction.setFromFundId(distribution.getFundId());
     transaction.setSource(Transaction.Source.USER);
-    transaction.setCurrency(poLine.getCost().getCurrency());
     transaction.setAmount(calculateAmountEncumbered(distribution, estimatedPrice));
 
     transaction.setEncumbrance(new Encumbrance());

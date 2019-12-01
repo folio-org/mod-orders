@@ -41,7 +41,7 @@
             "orders-storage.reporting-codes.item.put",
             "configuration.entries.collection.get",
             "finance.encumbrances.item.post",
-            "finance.funds.item.get",
+            "finance.funds.collection.get",
             "finance.ledgers.current-fiscal-year.item.get",
             "finance.order-transaction-summaries.item.post",
             "inventory.instances.collection.get",
