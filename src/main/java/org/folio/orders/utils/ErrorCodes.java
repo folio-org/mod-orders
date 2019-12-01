@@ -53,7 +53,9 @@ public enum ErrorCodes {
   USER_HAS_NO_ACQ_PERMISSIONS("userHasNoAcqUnitsPermission", "User does not have permissions to manage acquisition units assignments - operation is restricted"),
   USER_HAS_NO_APPROVAL_PERMISSIONS("userHasNoApprovalPermission", "User does not have permissions to approve order - operation is restricted"),
   APPROVAL_REQUIRED_TO_OPEN("orderApprovalRequired","Approval is required to open order"),
-  ISBN_NOT_VALID("invalidISBN", "ISBN value is invalid");
+  ISBN_NOT_VALID("invalidISBN", "ISBN value is invalid"),
+  FUNDS_NOT_FOUND("fundsNotFound", "The fund records are not found"),
+  CURRENT_FISCAL_YEAR_NOT_FOUND("currentFYearNotFound", "Current fiscal year not found for ledger");
 
   private final String code;
   private final String description;

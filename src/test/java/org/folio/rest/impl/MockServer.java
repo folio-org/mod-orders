@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import static java.time.temporal.ChronoUnit.DAYS;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
@@ -11,8 +12,11 @@ import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
+import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
@@ -46,6 +50,7 @@ import static org.folio.rest.impl.ApiTestBase.encodePrettily;
 import static org.folio.rest.impl.ApiTestBase.getMinimalContentCompositePoLine;
 import static org.folio.rest.impl.ApiTestBase.getMinimalContentCompositePurchaseOrder;
 import static org.folio.rest.impl.ApiTestBase.getMockAsJson;
+import static org.folio.rest.impl.ApiTestBase.getMockData;
 import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEMS;
 import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
@@ -74,9 +79,11 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -102,6 +109,11 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.SequenceNumber;
+import org.folio.rest.acq.model.finance.FiscalYear;
+import org.folio.rest.acq.model.finance.Fund;
+import org.folio.rest.acq.model.finance.FundCollection;
+import org.folio.rest.acq.model.finance.OrderTransactionSummary;
+import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
@@ -111,6 +123,8 @@ import org.folio.rest.jaxrs.model.OrderTemplate;
 import org.folio.rest.jaxrs.model.OrderTemplateCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.PurchaseOrders;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
@@ -128,8 +142,6 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import one.util.streamex.StreamEx;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
 
 public class MockServer {
 
@@ -155,6 +167,7 @@ public class MockServer {
   static final String ACQUISITIONS_UNITS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/units.json";
   static final String ACQUISITIONS_MEMBERSHIPS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/memberships.json";
   static final String ORDER_TEMPLATES_COLLECTION = ORDER_TEMPLATES_MOCK_DATA_PATH + "/orderTemplates.json";
+  private static final String FUNDS_PATH = BASE_MOCK_DATA_PATH + "funds/funds.json";
 
   static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
@@ -168,6 +181,7 @@ public class MockServer {
   static final Header PO_NUMBER_ERROR_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, PO_NUMBER_ERROR_TENANT);
 
   private static final String TOTAL_RECORDS = "totalRecords";
+  private static final String QUERY = "query";
   private static final String ITEM_RECORDS = "itemRecords";
   private static final String INSTANCE_RECORD = "instanceRecord";
   private static final String HOLDINGS_RECORD = "holdingRecord";
@@ -176,6 +190,7 @@ public class MockServer {
   private static final String INSTANCE_STATUSES = "instanceStatuses";
   private static final String IDENTIFIER_TYPES = "identifierTypes";
   private static final String ISBN_CONVERT13 = "ISBN13";
+  private static final String CURRENT_FISCAL_YEAR = "currentFiscalYear";
 
   static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
@@ -305,6 +320,19 @@ public class MockServer {
     return getCollectionRecords(getRqRsEntries(HttpMethod.GET, ACQUISITIONS_MEMBERSHIPS));
   }
 
+  static List<Transaction> getCreatedEncumbrances() {
+    List<JsonObject> jsonObjects = serverRqRs.get(ENCUMBRANCES, HttpMethod.POST);
+    return jsonObjects == null ? Collections.emptyList()
+      : jsonObjects.stream()
+      .map(json -> json.mapTo(Transaction.class))
+      .collect(Collectors.toList());
+  }
+
+  static List<JsonObject> getCreatedOrderSummaries() {
+    return Optional.ofNullable(serverRqRs.get(ORDER_TRANSACTION_SUMMARIES, HttpMethod.POST)).orElse(Collections.emptyList());
+  }
+
+
   private static List<JsonObject> getCollectionRecords(List<JsonObject> entries) {
     return entries.stream()
       .filter(json -> !json.containsKey(ID))
@@ -356,74 +384,149 @@ public class MockServer {
     Router router = Router.router(vertx);
 
     router.route().handler(BodyHandler.create());
-    router.route(HttpMethod.POST, resourcesPath(PURCHASE_ORDER)).handler(this::handlePostPurchaseOrder);
-    router.route(HttpMethod.POST, "/inventory/instances").handler(this::handlePostInstanceRecord);
-    router.route(HttpMethod.POST, "/item-storage/items").handler(this::handlePostItemStorRecord);
-    router.route(HttpMethod.POST, "/holdings-storage/holdings").handler(this::handlePostHoldingRecord);
-    router.route(HttpMethod.POST, resourcesPath(PO_LINES)).handler(this::handlePostPOLine);
-    router.route(HttpMethod.POST, resourcesPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
-    router.route(HttpMethod.POST, resourcesPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
-    router.route(HttpMethod.POST, resourcesPath(PIECES)).handler(ctx -> handlePostGenericSubObj(ctx, PIECES));
-    router.route(HttpMethod.POST, resourcesPath(ORDER_TEMPLATES)).handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TEMPLATES));
+    router.post(resourcesPath(PURCHASE_ORDER)).handler(this::handlePostPurchaseOrder);
+    router.post("/inventory/instances").handler(this::handlePostInstanceRecord);
+    router.post("/item-storage/items").handler(this::handlePostItemStorRecord);
+    router.post("/holdings-storage/holdings").handler(this::handlePostHoldingRecord);
+    router.post(resourcesPath(PO_LINES)).handler(this::handlePostPOLine);
+    router.post(resourcesPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
+    router.post(resourcesPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
+    router.post(resourcesPath(PIECES)).handler(ctx -> handlePostGenericSubObj(ctx, PIECES));
+    router.post(resourcesPath(ORDER_TEMPLATES)).handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TEMPLATES));
+    router.post(resourcesPath(ORDER_TRANSACTION_SUMMARIES))
+      .handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TRANSACTION_SUMMARIES));
+    router.post(resourcesPath(ENCUMBRANCES))
+      .handler(ctx -> handlePostGenericSubObj(ctx, ENCUMBRANCES));
 
-    router.route(HttpMethod.POST, resourcesPath(ACQUISITIONS_UNITS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_UNITS));
-    router.route(HttpMethod.POST, resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
+    router.post(resourcesPath(ACQUISITIONS_UNITS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_UNITS));
+    router.post(resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
 
-    router.route(HttpMethod.GET, resourcePath(PURCHASE_ORDER)).handler(this::handleGetPurchaseOrderById);
-    router.route(HttpMethod.GET, resourcesPath(PURCHASE_ORDER)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, PURCHASE_ORDER));
-    router.route(HttpMethod.GET, resourcesPath(SEARCH_ORDERS)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, SEARCH_ORDERS));
-    router.route(HttpMethod.GET, "/instance-types").handler(this::handleGetInstanceType);
-    router.route(HttpMethod.GET, "/instance-statuses").handler(this::handleGetInstanceStatus);
-    router.route(HttpMethod.GET, "/inventory/instances").handler(this::handleGetInstanceRecord);
-    router.route(HttpMethod.GET, "/item-storage/items").handler(this::handleGetItemRecordsFromStorage);
-    router.route(HttpMethod.GET, "/inventory/items").handler(this::handleGetInventoryItemRecords);
-    router.route(HttpMethod.GET, "/holdings-storage/holdings").handler(this::handleGetHoldingsRecords);
-    router.route(HttpMethod.GET, "/holdings-storage/holdings/:id").handler(this::handleGetHolding);
-    router.route(HttpMethod.GET, "/loan-types").handler(this::handleGetLoanType);
-    router.route(HttpMethod.GET, "/organizations-storage/organizations/:id").handler(this::getOrganizationById);
-    router.route(HttpMethod.GET, "/organizations-storage/organizations").handler(this::handleGetAccessProviders);
-    router.route(HttpMethod.GET, "/identifier-types").handler(this::handleGetIdentifierType);
-    router.route(HttpMethod.GET, resourcesPath(PO_LINES)).handler(ctx -> handleGetPoLines(ctx, PO_LINES));
-    router.route(HttpMethod.GET, resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
-    router.route(HttpMethod.GET, resourcePath(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
-    router.route(HttpMethod.GET, resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
-    router.route(HttpMethod.GET, resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
-    router.route(HttpMethod.GET, resourcesPath(PIECES)).handler(this::handleGetPieces);
-    router.route(HttpMethod.GET, resourcePath(PIECES)).handler(this::handleGetPieceById);
-    router.route(HttpMethod.GET, resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
-    router.route(HttpMethod.GET, resourcesPath(PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
-    router.route(HttpMethod.GET, "/contributor-name-types").handler(this::handleGetContributorNameTypes);
-    router.route(HttpMethod.GET, resourcesPath(ORDER_LINES)).handler(ctx -> handleGetPoLines(ctx, ORDER_LINES));
-    router.route(HttpMethod.GET, resourcesPath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnits);
-    router.route(HttpMethod.GET, resourcePath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnit);
-    router.route(HttpMethod.GET, resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(this::handleGetAcquisitionsMemberships);
-    router.route(HttpMethod.GET, resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(this::handleGetAcquisitionsMembership);
-    router.route(HttpMethod.GET, "/isbn/convertTo13").handler(this::handleGetIsbnConverter);
-    router.route(HttpMethod.GET, resourcePath(ORDER_TEMPLATES)).handler(ctx -> handleGetGenericSubObj(ctx, ORDER_TEMPLATES));
-    router.route(HttpMethod.GET, resourcesPath(ORDER_TEMPLATES)).handler(this::handleGetOrderTemplates);
+    router.get(resourcePath(PURCHASE_ORDER)).handler(this::handleGetPurchaseOrderById);
+    router.get(resourcesPath(PURCHASE_ORDER)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, PURCHASE_ORDER));
+    router.get(resourcesPath(SEARCH_ORDERS)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, SEARCH_ORDERS));
+    router.get("/instance-types").handler(this::handleGetInstanceType);
+    router.get("/instance-statuses").handler(this::handleGetInstanceStatus);
+    router.get("/inventory/instances").handler(this::handleGetInstanceRecord);
+    router.get("/item-storage/items").handler(this::handleGetItemRecordsFromStorage);
+    router.get("/inventory/items").handler(this::handleGetInventoryItemRecords);
+    router.get("/holdings-storage/holdings").handler(this::handleGetHoldingsRecords);
+    router.get("/holdings-storage/holdings/:id").handler(this::handleGetHolding);
+    router.get("/loan-types").handler(this::handleGetLoanType);
+    router.get("/organizations-storage/organizations/:id").handler(this::getOrganizationById);
+    router.get("/organizations-storage/organizations").handler(this::handleGetAccessProviders);
+    router.get("/identifier-types").handler(this::handleGetIdentifierType);
+    router.get(resourcesPath(PO_LINES)).handler(ctx -> handleGetPoLines(ctx, PO_LINES));
+    router.get(resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
+    router.get(resourcePath(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
+    router.get(resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
+    router.get(resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
+    router.get(resourcesPath(PIECES)).handler(this::handleGetPieces);
+    router.get(resourcePath(PIECES)).handler(this::handleGetPieceById);
+    router.get(resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
+    router.get(resourcesPath(PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
+    router.get("/contributor-name-types").handler(this::handleGetContributorNameTypes);
+    router.get(resourcesPath(ORDER_LINES)).handler(ctx -> handleGetPoLines(ctx, ORDER_LINES));
+    router.get(resourcesPath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnits);
+    router.get(resourcePath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnit);
+    router.get(resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(this::handleGetAcquisitionsMemberships);
+    router.get(resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(this::handleGetAcquisitionsMembership);
+    router.get("/isbn/convertTo13").handler(this::handleGetIsbnConverter);
+    router.get(resourcePath(ORDER_TEMPLATES)).handler(ctx -> handleGetGenericSubObj(ctx, ORDER_TEMPLATES));
+    router.get(resourcesPath(ORDER_TEMPLATES)).handler(this::handleGetOrderTemplates);
+    router.get("/finance/ledgers/:id/current-fiscal-year").handler(this::handleGetCurrentFiscalYearByLedgerId);
+    router.get(resourcesPath(FUNDS)).handler(this::handleGetFunds);
 
-    router.route(HttpMethod.PUT, resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
-    router.route(HttpMethod.PUT, resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
-    router.route(HttpMethod.PUT, resourcePath(PIECES)).handler(ctx -> handlePutGenericSubObj(ctx, PIECES));
-    router.route(HttpMethod.PUT, resourcePath(REPORTING_CODES)).handler(ctx -> handlePutGenericSubObj(ctx, REPORTING_CODES));
-    router.route(HttpMethod.PUT, resourcePath(ALERTS)).handler(ctx -> handlePutGenericSubObj(ctx, ALERTS));
-    router.route(HttpMethod.PUT, "/inventory/items/:id").handler(ctx -> handlePutGenericSubObj(ctx, ITEM_RECORDS));
-    router.route(HttpMethod.PUT, "/holdings-storage/holdings/:id").handler(ctx -> handlePutGenericSubObj(ctx, ITEM_RECORDS));
-    router.route(HttpMethod.PUT, resourcePath(ACQUISITIONS_UNITS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITIONS_UNITS));
-    router.route(HttpMethod.PUT, resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
-    router.route(HttpMethod.PUT, resourcePath(ORDER_TEMPLATES)).handler(ctx -> handlePutGenericSubObj(ctx, ORDER_TEMPLATES));
+    router.put(resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
+    router.put(resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
+    router.put(resourcePath(PIECES)).handler(ctx -> handlePutGenericSubObj(ctx, PIECES));
+    router.put(resourcePath(REPORTING_CODES)).handler(ctx -> handlePutGenericSubObj(ctx, REPORTING_CODES));
+    router.put(resourcePath(ALERTS)).handler(ctx -> handlePutGenericSubObj(ctx, ALERTS));
+    router.put("/inventory/items/:id").handler(ctx -> handlePutGenericSubObj(ctx, ITEM_RECORDS));
+    router.put("/holdings-storage/holdings/:id").handler(ctx -> handlePutGenericSubObj(ctx, ITEM_RECORDS));
+    router.put(resourcePath(ACQUISITIONS_UNITS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITIONS_UNITS));
+    router.put(resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
+    router.put(resourcePath(ORDER_TEMPLATES)).handler(ctx -> handlePutGenericSubObj(ctx, ORDER_TEMPLATES));
 
-    router.route(HttpMethod.DELETE, resourcePath(PURCHASE_ORDER)).handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER));
-    router.route(HttpMethod.DELETE, resourcePath(PO_LINES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES));
-    router.route(HttpMethod.DELETE, resourcePath(ALERTS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ALERTS));
-    router.route(HttpMethod.DELETE, resourcePath(REPORTING_CODES)).handler(ctx -> handleDeleteGenericSubObj(ctx, REPORTING_CODES));
-    router.route(HttpMethod.DELETE, resourcePath(PIECES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PIECES));
-    router.route(HttpMethod.DELETE, resourcePath(ACQUISITIONS_UNITS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_UNITS));
-    router.route(HttpMethod.DELETE, resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
-    router.route(HttpMethod.DELETE, resourcePath(ORDER_TEMPLATES)).handler(ctx -> handleDeleteGenericSubObj(ctx, ORDER_TEMPLATES));
+    router.delete(resourcePath(PURCHASE_ORDER)).handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER));
+    router.delete(resourcePath(PO_LINES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES));
+    router.delete(resourcePath(ALERTS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ALERTS));
+    router.delete(resourcePath(REPORTING_CODES)).handler(ctx -> handleDeleteGenericSubObj(ctx, REPORTING_CODES));
+    router.delete(resourcePath(PIECES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PIECES));
+    router.delete(resourcePath(ACQUISITIONS_UNITS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_UNITS));
+    router.delete(resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
+    router.delete(resourcePath(ORDER_TEMPLATES)).handler(ctx -> handleDeleteGenericSubObj(ctx, ORDER_TEMPLATES));
 
     router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
     return router;
+  }
+
+  private void handleGetFunds(RoutingContext ctx) {
+    String query = StringUtils.trimToEmpty(ctx.request().getParam(QUERY));
+    addServerRqQuery(FUNDS, query);
+    if (query.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+    } else {
+      try {
+
+        List<String> ids = Collections.emptyList();
+        if (query.startsWith("id==")) {
+          ids = extractIdsFromQuery(query);
+        }
+
+        JsonObject collection = getFundsByIds(ids);
+        addServerRqRsData(HttpMethod.GET, FUNDS, collection);
+
+        ctx.response()
+          .setStatusCode(200)
+          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+          .end(collection.encodePrettily());
+      } catch (Exception e) {
+        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+      }
+    }
+  }
+
+  private JsonObject getFundsByIds(List<String> fundIds) {
+    Supplier<List<Fund>> getFromFile = () -> {
+      try {
+        return new JsonObject(getMockData(FUNDS_PATH)).mapTo(FundCollection.class).getFunds();
+      } catch (IOException e) {
+        return Collections.emptyList();
+      }
+    };
+
+    List<Fund> funds = getMockEntries(FUNDS, Fund.class).orElseGet(getFromFile);
+
+    if (!fundIds.isEmpty()) {
+      funds.removeIf(item -> !fundIds.contains(item.getId()));
+    }
+
+    Object record = new FundCollection().withFunds(funds).withTotalRecords(funds.size());
+
+
+    return JsonObject.mapFrom(record);
+  }
+
+  private void handleGetCurrentFiscalYearByLedgerId(RoutingContext ctx) {
+    logger.info("got: " + ctx.request().path());
+    String id = ctx.request().getParam(ID);
+    logger.info("id: " + id);
+
+    addServerRqRsData(HttpMethod.GET, PO_LINES, new JsonObject().put(ID, id));
+
+    if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+    } else if (ID_DOES_NOT_EXIST.equals(id)) {
+      serverResponse(ctx, 404, APPLICATION_JSON, id);
+    } else  {
+      FiscalYear fiscalYear = new FiscalYear();
+      fiscalYear.setId(UUID.randomUUID().toString());
+      fiscalYear.setCode("test2020");
+      fiscalYear.setName("test");
+      fiscalYear.setPeriodStart(Date.from(Instant.now().minus(365, DAYS)));
+      fiscalYear.setPeriodEnd(Date.from(Instant.now().plus(365, DAYS)));
+      serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(fiscalYear).encodePrettily());
+    }
   }
 
   private void handleGetPoLineNumber(RoutingContext ctx) {
@@ -1379,6 +1482,10 @@ public class MockServer {
         return AcquisitionsUnitMembership.class;
       case ORDER_TEMPLATES:
         return OrderTemplate.class;
+      case ORDER_TRANSACTION_SUMMARIES:
+        return OrderTransactionSummary.class;
+      case ENCUMBRANCES:
+        return Transaction.class;
     }
 
     fail("The sub-object is unknown");

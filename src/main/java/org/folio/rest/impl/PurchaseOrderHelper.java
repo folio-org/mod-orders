@@ -366,7 +366,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     compPO.setDateOrdered(new Date());
     return fetchCompositePoLines(compPO)
       .thenCompose(this::updateInventory)
-      .thenCompose(ok -> createEncumbrances())
+      .thenCompose(ok -> createEncumbrances(compPO))
       .thenAccept(ok -> changePoLineStatuses(compPO))
       .thenCompose(ok -> updatePoLinesSummary(compPO))
       .thenCompose(ok -> updateOrderSummary(compPO));
@@ -705,9 +705,16 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return VertxCompletableFuture.allOf(ctx, futures);
   }
 
-  private CompletableFuture<Void> createEncumbrances() {
-    // MODORDERS-298 Temporarily disable interaction with encumbrance APIs
+  private CompletableFuture<Void> createEncumbrances(CompositePurchaseOrder compPO) {
+    if (isFundDistributionsPresent(compPO)) {
+      FinanceHelper helper = new FinanceHelper(httpClient, okapiHeaders, ctx, lang);
+      return helper.handleEncumbrances(compPO);
+    }
     return CompletableFuture.completedFuture(null);
+  }
+
+  private boolean isFundDistributionsPresent(CompositePurchaseOrder compPO) {
+    return compPO.getCompositePoLines().stream().mapToLong(compositePoLine -> compositePoLine.getFundDistribution().size()).sum() >= 1;
   }
 
   private CompletableFuture<Void> updateInventory(CompositePurchaseOrder compPO) {

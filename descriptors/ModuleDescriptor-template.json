@@ -40,8 +40,10 @@
             "orders-storage.reporting-codes.item.post",
             "orders-storage.reporting-codes.item.put",
             "configuration.entries.collection.get",
-            "finance-storage.encumbrances.collection.get",
-            "finance-storage.encumbrances.item.post",
+            "finance.encumbrances.item.post",
+            "finance.funds.collection.get",
+            "finance.ledgers.current-fiscal-year.item.get",
+            "finance.order-transaction-summaries.item.post",
             "inventory.instances.collection.get",
             "inventory.instances.item.post",
             "inventory-storage.instance-types.collection.get",
@@ -101,8 +103,10 @@
             "orders-storage.reporting-codes.item.put",
             "orders-storage.reporting-codes.item.delete",
             "configuration.entries.collection.get",
-            "finance-storage.encumbrances.collection.get",
-            "finance-storage.encumbrances.item.post",
+            "finance.funds.collection.get",
+            "finance.encumbrances.item.post",
+            "finance.ledgers.current-fiscal-year.item.get",
+            "finance.order-transaction-summaries.item.post",
             "inventory.instances.collection.get",
             "inventory.instances.item.post",
             "inventory-storage.instance-types.collection.get",
@@ -526,6 +530,22 @@
     {
       "id":"organizations-storage.organizations",
       "version": "2.1"
+    },
+    {
+      "id": "finance.funds",
+      "version": "1.0"
+    },
+    {
+      "id": "finance.transactions",
+      "version": "1.0"
+    },
+    {
+      "id": "finance.order-transaction-summaries",
+      "version": "1.0"
+    },
+    {
+      "id": "finance.ledgers",
+      "version": "1.0"
     }
   ],
   "permissionSets": [

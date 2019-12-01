@@ -190,6 +190,6 @@ public class OrderStatusTest extends ApiTestBase {
     // Add okapi url header
     DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader(X_OKAPI_URL.getName(), X_OKAPI_URL.getValue());
 
-    vertx.eventBus().send(TEST_ADDRESS, data, deliveryOptions, replyHandler);
+    vertx.eventBus().request(TEST_ADDRESS, data, deliveryOptions, replyHandler);
   }
 }
