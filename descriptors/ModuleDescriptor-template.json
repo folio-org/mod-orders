@@ -768,7 +768,8 @@
         "inventory-storage.identifier-types.collection.get",
         "acquisitions-units-storage.units.collection.get",
         "acquisitions-units-storage.memberships.collection.get"
-      ]
+      ],
+      "visible": false
     },
     {
       "permissionName": "modperms.orders.item.post",
@@ -810,7 +811,8 @@
         "acquisitions-units-storage.memberships.collection.get",
         "inventory-storage.identifier-types.collection.get",
         "isbn-utils.convert-to-13.get"
-      ]
+      ],
+      "visible": false
     }
   ],
   "launchDescriptor": {
