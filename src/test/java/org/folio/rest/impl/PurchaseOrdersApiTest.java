@@ -628,6 +628,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
 
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    reqData.setReEncumber(null);
     // Make sure that mock PO has 1 po line
     assertEquals(1, reqData.getCompositePoLines().size());
 
