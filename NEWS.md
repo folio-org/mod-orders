@@ -1,4 +1,22 @@
-## 8.1.0 - Unreleased
+## 9.1.0 - Unreleased
+
+## 9.0.0 - Released
+The primary focus of this release was to re-integration with encumbrance API, implementation of Order-Templates API and business logic improvements.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v8.0.2...v9.0.0)
+
+### Stories
+ * [MODORDERS-339](https://issues.folio.org/browse/MODORDERS-339) - Use JVM features to manage container memory
+ * [MODORDERS-334](https://issues.folio.org/browse/MODORDERS-334) - Update purchase order number pattern
+ * [MODORDERS-316](https://issues.folio.org/browse/MODORDERS-316) - Prevent duplicate ISBNs
+ * [MODORDERS-310](https://issues.folio.org/browse/MODORDERS-310) - Update mod-orders to use the new version of the schema with qualifier field
+ * [MODORDERS-307](https://issues.folio.org/browse/MODORDERS-307) - Fund Distribution schema changes
+ * [MODORDERS-303](https://issues.folio.org/browse/MODORDERS-303) - Perform API tests in separate tenant
+ * [MODORDERS-302](https://issues.folio.org/browse/MODORDERS-302) - Create order-templates API
+ * [MODORDERS-299](https://issues.folio.org/browse/MODORDERS-299) - Re-integrate with encumbrance API
+ 
+### Bug Fixes
+ * [MODORDERS-343](https://issues.folio.org/browse/MODORDERS-343) - Cannot open order that is not connected to an instance
 
 ## 8.0.2 - Released
 Bugfix release to honor createInventory irrespective of Receipt Status
