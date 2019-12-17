@@ -64,6 +64,7 @@ public class InventoryHelper extends AbstractHelper {
   static final String HOLDING_PERMANENT_LOCATION_ID = "permanentLocationId";
   static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
   static final String ITEM_BARCODE = "barcode";
+  static final String ITEM_LEVEL_CALL_NUMBER = "itemLevelCallNumber";
   static final String ITEM_STATUS = "status";
   static final String ITEM_STATUS_NAME = "name";
   static final String ITEM_STATUS_ON_ORDER = "On order";
@@ -189,7 +190,9 @@ public class InventoryHelper extends AbstractHelper {
     if (StringUtils.isNotEmpty(receivedItem.getBarcode())) {
       itemRecord.put(ITEM_BARCODE, receivedItem.getBarcode());
     }
-
+    if (StringUtils.isNotEmpty(receivedItem.getCallNumber())) {
+      itemRecord.put(ITEM_LEVEL_CALL_NUMBER, receivedItem.getCallNumber());
+    }
     return handlePutRequest(endpoint, itemRecord, httpClient, ctx, okapiHeaders, logger);
   }
 
@@ -201,7 +204,9 @@ public class InventoryHelper extends AbstractHelper {
     if (StringUtils.isNotEmpty(checkinPiece.getBarcode())) {
       itemRecord.put(ITEM_BARCODE, checkinPiece.getBarcode());
     }
-
+    if (StringUtils.isNotEmpty(checkinPiece.getCallNumber())) {
+      itemRecord.put(ITEM_LEVEL_CALL_NUMBER, checkinPiece.getCallNumber());
+    }
     return handlePutRequest(endpoint, itemRecord, httpClient, ctx, okapiHeaders, logger);
   }
 

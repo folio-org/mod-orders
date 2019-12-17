@@ -7,6 +7,7 @@
         {
           "id": "601f5e02-7f5f-44e6-8f04-f647aba9035e",
           "barcode": "6015021",
+          "callNumber": "PR 8923 W6 L36 1990 c.3",
           "comment": "Checkin Physical",
           "caption": "Vol. 1",
           "createItem": false,
@@ -23,6 +24,7 @@
         {
           "id": "280d63bc-db44-49ba-b7fe-1f230a2eed19",
           "barcode": "6015022",
+          "callNumber": "BF2050 .M335 1999",
           "comment": "Checkin Physical",
           "caption": "Vol. 2",
           "createItem": false,
