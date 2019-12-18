@@ -7,6 +7,7 @@
         {
           "id": "5e317dc2-deeb-4429-b2a1-91e5cd0fd5f7",
           "barcode": "",
+          "callNumber": "PR 8923 W6 L36 1990 c.3",
           "comment": "Very important note",
           "caption": "Vol. 1",
           "createItem": false,
@@ -23,6 +24,7 @@
         {
           "id": "71d9322b-5cdd-45d8-ad45-c7f3044802e7",
           "barcode": "",
+          "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
           "caption": "Vol. 2",
           "createItem": false,

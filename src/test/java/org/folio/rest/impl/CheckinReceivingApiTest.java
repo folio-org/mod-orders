@@ -12,6 +12,7 @@ import static org.folio.orders.utils.ErrorCodes.PIECE_POL_MISMATCH;
 import static org.folio.orders.utils.ErrorCodes.PIECE_UPDATE_FAILED;
 import static org.folio.rest.impl.InventoryHelper.ITEM_BARCODE;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS;
+import static org.folio.rest.impl.InventoryHelper.ITEM_LEVEL_CALL_NUMBER;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_NAME;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_ON_ORDER;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
@@ -217,6 +218,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     itemUpdates.forEach(item -> {
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
+      assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), is(nullValue()));
       assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_ON_ORDER));
     });
     polUpdates.forEach(pol -> {
@@ -332,6 +334,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
       assertThat(item.getString(ITEM_BARCODE), not(isEmptyString()));
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
       assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo("Received"));
+      assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), not(isEmptyString()));
     });
     polUpdates.forEach(pol -> {
       PoLine poLine = pol.mapTo(PoLine.class);
@@ -591,6 +594,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     itemUpdates.forEach(item -> {
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
+      assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), is(nullValue()));
       assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_ON_ORDER));
     });
     polUpdates.forEach(pol -> {
@@ -640,6 +644,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     itemUpdates.forEach(item -> {
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
+      assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), is(nullValue()));
       assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_ON_ORDER));
     });
     polUpdates.forEach(pol -> {
