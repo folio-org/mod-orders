@@ -34,6 +34,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -442,6 +443,7 @@ public class ApiTestBase {
       .withId(UUID.randomUUID().toString())
       .withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
       .withFormat(Piece.Format.PHYSICAL)
+      .withReceiptDate(new Date())
       .withPoLineId(poLineId);
   }
 

@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "8.0",
+      "version": "9.0",
       "handlers": [
         {
           "methods": ["GET"],
@@ -401,11 +401,11 @@
     },
     {
       "id": "orders-storage.pieces",
-      "version": "3.1"
+      "version": "4"
     },
     {
       "id": "orders-storage.receiving-history",
-      "version": "3.1"
+      "version": "3.2"
     },
     {
       "id": "orders-storage.reporting-codes",

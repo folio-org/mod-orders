@@ -6,6 +6,7 @@
       "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
       "poLineId": "9b68e7c2-8818-4387-a405-6567232c1c6f",
       "receivingStatus": "Expected",
+      "receiptDate": "2018-10-09T00:00:00.000Z",
       "receivedDate": ""
     },
     {
@@ -14,6 +15,7 @@
       "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
       "poLineId": "9b68e7c2-8818-4387-a405-6567232c1c6f",
       "receivingStatus": "Expected",
+      "receiptDate": "2018-10-09T00:00:00.000Z",
       "receivedDate": ""
     },
     {
@@ -22,6 +24,7 @@
       "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
       "poLineId": "9b68e7c2-8818-4387-a405-6567232c1c6f",
       "receivingStatus": "Expected",
+      "receiptDate": "2018-10-09T00:00:00.000Z",
       "receivedDate": ""
     },
     {
@@ -30,6 +33,7 @@
       "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
       "poLineId": "9b68e7c2-8818-4387-a405-6567232c1c6f",
       "receivingStatus": "Expected",
+      "receiptDate": "2018-10-09T00:00:00.000Z",
       "receivedDate": ""
     }
   ],
