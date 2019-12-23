@@ -85,6 +85,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.ReportingCode;
+import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.Context;
@@ -191,7 +192,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
           return getCompositePurchaseOrder(compPOL.getPurchaseOrderId())
             // The PO Line can be created only for order in Pending state
             .thenApply(this::validateOrderState)
-            .thenCompose(po -> protectionHelper.isOperationRestricted(po.getAcqUnitIds(),ProtectedOperationType.CREATE).thenApply(vVoid -> po))
+            .thenCompose(po -> protectionHelper.isOperationRestricted(po.getAcqUnitIds(), ProtectedOperationType.CREATE).thenApply(vVoid -> po))
             .thenCompose(po -> createPoLine(compPOL, po));
         } else {
           return completedFuture(null);
@@ -225,6 +226,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
     subObjFuts.add(createAlerts(compPoLine, line));
     subObjFuts.add(createReportingCodes(compPoLine, line));
+    line.remove("instanceId");
 
     return allOf(subObjFuts.toArray(new CompletableFuture[0]))
       .thenCompose(v -> generateLineNumber(compOrder))
@@ -443,6 +445,9 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * @return CompletableFuture with void.
    */
   CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
+    if (compPOL.getIsPackage()) {
+      return completedFuture(null);
+    }
     if (inventoryUpdateNotRequired(compPOL)) {
       // don't create pieces, if no inventory updates and receiving not required
       if (isReceiptNotRequired(compPOL.getReceiptStatus())) {
@@ -538,7 +543,24 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private CompletionStage<CompositePoLine> populateCompositeLine(JsonObject poline) {
-    return HelperUtils.operateOnPoLine(HttpMethod.GET, poline, httpClient, ctx, okapiHeaders, logger);
+    return HelperUtils.operateOnPoLine(HttpMethod.GET, poline, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(this::getLineWithTitles);
+  }
+
+  private CompletableFuture<CompositePoLine> getLineWithTitles(CompositePoLine line) {
+     if (!line.getIsPackage()) {
+       return new TitlesHelper(httpClient, okapiHeaders, ctx, lang)
+         .getTitles("poLineId==" + line.getId(), 0, 1)
+         .thenApply(titleCollection -> {
+           List<Title> titles = titleCollection.getTitles();
+           if (!titles.isEmpty()) {
+             line.setInstanceId(titles.get(0).getInstanceId());
+           }
+           return line;
+         });
+    } else {
+       return CompletableFuture.completedFuture(line);
+     }
   }
 
   private String buildPoLineNumber(String poNumber, String sequence) {

@@ -106,7 +106,8 @@
       "tags": {
         "tagList": []
       },
-      "title": "American Chemical Society Web Editions",
+      "titleOrPackage": "American Chemical Society Web Editions",
+      "isPackage": false,
       "vendorDetail": {
         "instructions": "",
         "noteFromVendor": "",

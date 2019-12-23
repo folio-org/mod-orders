@@ -41,6 +41,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIPT_STATUS;
 import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
@@ -141,6 +142,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
 import org.folio.rest.jaxrs.model.Renewal;
+import org.folio.rest.jaxrs.model.Title;
 import org.junit.Test;
 
 import io.restassured.http.Header;
@@ -1271,6 +1273,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().forEach(s -> s.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING));
     reqData.getCompositePoLines().forEach(s -> s.setPaymentStatus(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED));
 
+    reqData.getCompositePoLines().forEach(this::createMockTitle);
+
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
     int polCount = reqData.getCompositePoLines().size();
@@ -1279,6 +1283,11 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     verifyInventoryInteraction(reqData, polCount - 1);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED.value(), reqData.getCompositePoLines().size());
+  }
+
+  private void createMockTitle(CompositePoLine line) {
+    Title title = new Title().withTitle(line.getTitleOrPackage()).withPoLineId(line.getId());
+    MockServer.addMockEntry(TITLES, JsonObject.mapFrom(title));
   }
 
   @Test
@@ -1628,7 +1637,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     boolean instanceIdExists = false;
     for (JsonObject jsonObj : polUpdates) {
       PoLine line = jsonObj.mapTo(PoLine.class);
-      if (StringUtils.isNotEmpty(line.getInstanceId())) {
+      if (StringUtils.isNotEmpty(getInstanceId(line))) {
         instanceIdExists = true;
         break;
       }

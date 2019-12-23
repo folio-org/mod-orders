@@ -12,6 +12,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,13 +42,13 @@ public class VendorHelper extends AbstractHelper {
   private static final String PO_LINE_NUMBER = "poLineNumber";
 
 
-  public VendorHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
-    super(okapiHeaders, ctx, lang);
+  public VendorHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+    super(httpClient, okapiHeaders, ctx, lang);
   }
 
   /**
    * Checks if vendor in {@link CompositePurchaseOrder} exists in Organizations
-   * and has status "Active" with isvendor flag enabled. If not, adds
+   * and has status "Active" with isVendor flag enabled. If not, adds
    * corresponding error to {@link Errors} object.
    *
    * @param compPO

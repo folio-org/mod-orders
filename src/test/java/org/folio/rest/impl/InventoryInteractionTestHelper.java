@@ -34,6 +34,7 @@ import static org.folio.orders.utils.HelperUtils.getPhysicalCostQuantity;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.isHoldingCreationRequiredForLocation;
 import static org.folio.rest.impl.ApiTestBase.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.rest.impl.ApiTestBase.getInstanceId;
 import static org.folio.rest.impl.InventoryHelper.CONFIG_NAME_INSTANCE_STATUS_CODE;
 import static org.folio.rest.impl.InventoryHelper.CONFIG_NAME_INSTANCE_TYPE_CODE;
 import static org.folio.rest.impl.InventoryHelper.CONFIG_NAME_LOAN_TYPE_NAME;
@@ -106,10 +107,10 @@ class InventoryInteractionTestHelper {
         boolean instanceLinked = false;
         for (JsonObject jsonObj : polUpdates) {
           PoLine line = jsonObj.mapTo(PoLine.class);
-          if (StringUtils.equals(line.getId(), compLine.getId()) && StringUtils.isNotEmpty(line.getInstanceId())) {
+          if (StringUtils.equals(line.getId(), compLine.getId()) && StringUtils.isNotEmpty(getInstanceId(line))) {
             instanceLinked = true;
             // Populate instance id in the req data for further validation
-            compLine.setInstanceId(line.getInstanceId());
+            compLine.setInstanceId(getInstanceId(line));
             break;
           }
         }
@@ -201,7 +202,7 @@ class InventoryInteractionTestHelper {
   private static void verifyInstanceCreated(Header tenant, List<JsonObject> inventoryInstances, CompositePoLine pol) {
     boolean verified = false;
     for (JsonObject instance : inventoryInstances) {
-      if (pol.getTitle().equals(instance.getString("title"))) {
+      if (pol.getTitleOrPackage().equals(instance.getString("title"))) {
         verifyInstanceRecordRequest(tenant, instance, pol);
         verified = true;
         break;
@@ -354,7 +355,7 @@ class InventoryInteractionTestHelper {
   }
 
   private static void verifyInstanceRecordRequest(Header tenant, JsonObject instance, CompositePoLine line) {
-    assertThat(instance.getString(INSTANCE_TITLE), equalTo(line.getTitle()));
+    assertThat(instance.getString(INSTANCE_TITLE), equalTo(line.getTitleOrPackage()));
     assertThat(instance.getString(INSTANCE_SOURCE), equalTo("FOLIO"));
     assertThat(instance.getString(INSTANCE_STATUS_ID), equalTo(getInstanceStatusId(tenant)));
     assertThat(instance.getString(INSTANCE_TYPE_ID), equalTo(getInstanceTypeId(tenant)));

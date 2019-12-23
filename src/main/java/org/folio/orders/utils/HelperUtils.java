@@ -7,29 +7,40 @@ import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.ErrorCodes.PROHIBITED_FIELD_CHANGING;
-import static org.folio.orders.utils.ResourcePathResolver.*;
+import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.*;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import org.apache.commons.collections4.map.CaseInsensitiveMap;
-import org.apache.commons.lang3.ArrayUtils;
-import org.folio.rest.acq.model.Piece;
-import org.folio.rest.jaxrs.model.PoLine;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.EnumMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -39,17 +50,30 @@ import javax.money.CurrencyUnit;
 import javax.money.Monetary;
 import javax.money.MonetaryAmount;
 
-import one.util.streamex.IntStreamEx;
-import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.map.CaseInsensitiveMap;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.acq.model.Piece;
 import org.folio.rest.client.ConfigurationsClient;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.Alert;
+import org.folio.rest.jaxrs.model.CloseReason;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
-import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.ReportingCode;
+import org.folio.rest.jaxrs.model.TitleCollection;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.parser.JsonPathParser;
@@ -63,6 +87,8 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import one.util.streamex.IntStreamEx;
+import one.util.streamex.StreamEx;
 
 public class HelperUtils {
 
@@ -85,6 +111,7 @@ public class HelperUtils {
   private static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = resourcesPath(PO_LINES) + "?limit=%s&query=purchaseOrderId==%s&" + LANG + "=%s";
   private static final String GET_PURCHASE_ORDER_BYID = resourceByIdPath(PURCHASE_ORDER) + URL_WITH_LANG_PARAM;
   private static final String GET_PURCHASE_ORDER_BYPONUMBER_QUERY = resourcesPath(PURCHASE_ORDER) + "?query=poNumber==%s&" + LANG + "=%s";
+  private static final String GET_TITLES_BY_QUERY = resourcesPath(TITLES) + "?limit=%s&offset=%s%s";
 
   private static final int DEFAULT_PORT = 9130;
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
@@ -94,6 +121,7 @@ public class HelperUtils {
 
   private static final Pattern HOST_PORT_PATTERN = Pattern.compile("https?://([^:/]+)(?::?(\\d+)?)");
   private static final Pattern CQL_SORT_BY_PATTERN = Pattern.compile("(.*)(\\ssortBy\\s.*)", Pattern.CASE_INSENSITIVE);
+  public static final String INSTANCE_ID = "instanceId";
 
   private HelperUtils() {
 
@@ -130,13 +158,13 @@ public class HelperUtils {
 
 
   /**
-   *  Retrieves PO lines from storage by PO id as JsonArray of poLines (/acq-models/mod-orders-storage/schemas/po_line.json objects)
+   *  Retrieves PO lines from storage by PO id as List<JsonObjects> of poLines (/acq-models/mod-orders-storage/schemas/po_line.json objects)
    */
-  public static CompletableFuture<JsonArray> getPoLines(String id, String lang, HttpClientInterface httpClient, Context ctx,
+  public static CompletableFuture<List<JsonObject>> getPoLines(String id, String lang, HttpClientInterface httpClient, Context ctx,
                                                           Map<String, String> okapiHeaders, Logger logger) {
     String endpoint = String.format(GET_ALL_POLINES_QUERY_WITH_LIMIT, MAX_POLINE_LIMIT, id, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(body -> body.getJsonArray(PO_LINES));
+      .thenApply(body -> body.getJsonArray(PO_LINES).stream().map(o -> ((JsonObject) o)).collect(toList()));
   }
 
   /**
@@ -152,57 +180,49 @@ public class HelperUtils {
       Context ctx, Map<String, String> okapiHeaders, Logger logger) {
 
     return getPoLines(orderId, lang, httpClient,ctx, okapiHeaders, logger)
-      .thenCompose(jsonArray -> {
-        List<CompletableFuture<JsonObject>> futures = new ArrayList<>();
-
-        for (int i = 0; i < jsonArray.size(); i++) {
-          JsonObject line = jsonArray.getJsonObject(i);
-          futures.add(deletePoLine(line, httpClient, ctx, okapiHeaders, logger));
-        }
-
-        return VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]));
-      })
+      .thenCompose(jsonObjects -> VertxCompletableFuture.allOf(ctx, jsonObjects.stream()
+        .map(line -> deletePoLine(line, httpClient, ctx, okapiHeaders, logger)).toArray(CompletableFuture[]::new)))
       .exceptionally(t -> {
         logger.error("Exception deleting poLine data for order id={}:", t, orderId);
         throw new CompletionException(t.getCause());
       });
   }
 
-  public static CompletableFuture<JsonObject> deletePoLine(JsonObject line, HttpClientInterface httpClient, Context ctx,
+  public static CompletableFuture<Void> deletePoLine(JsonObject line, HttpClientInterface httpClient, Context ctx,
                                                            Map<String, String> okapiHeaders, Logger logger) {
     return operateOnPoLine(HttpMethod.DELETE, line, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(poline -> {
         String polineId = poline.getId();
-        return operateOnObject(HttpMethod.DELETE, resourceByIdPath(PO_LINES, polineId), httpClient, ctx, okapiHeaders, logger);
+        return operateOnObject(HttpMethod.DELETE, resourceByIdPath(PO_LINES, polineId), httpClient, ctx, okapiHeaders, logger)
+          .thenApply(entries -> null);
       });
   }
 
-  public static CompletableFuture<List<CompositePoLine>> getCompositePoLines(String id, String lang, HttpClientInterface httpClient,
+
+  public static CompletableFuture<List<CompositePoLine>> getCompositePoLines(String orderId, String lang, HttpClientInterface httpClient,
                                                                     Context ctx, Map<String, String> okapiHeaders, Logger logger) {
     CompletableFuture<List<CompositePoLine>> future = new VertxCompletableFuture<>(ctx);
 
-    getPoLines(id, lang, httpClient,ctx, okapiHeaders, logger)
-      .thenAccept(jsonArray -> {
-        List<CompletableFuture<CompositePoLine>> futures = new ArrayList<>();
-
-        for (int i = 0; i < jsonArray.size(); i++) {
-          JsonObject line = jsonArray.getJsonObject(i);
-          futures.add(operateOnPoLine(HttpMethod.GET, line, httpClient, ctx, okapiHeaders, logger));
-        }
-
-        collectResultsOnSuccess(futures)
+    getPoLines(orderId, lang, httpClient,ctx, okapiHeaders, logger)
+      .thenCompose(HelperUtils::getInstanceIds)
+      .thenAccept(jsonLines ->
+        collectResultsOnSuccess(jsonLines.stream().map(line -> operateOnPoLine(HttpMethod.GET, line, httpClient, ctx, okapiHeaders, logger)).collect(toList()))
           .thenAccept(future::complete)
           .exceptionally(t -> {
             future.completeExceptionally(t.getCause());
             return null;
-          });
-      })
+          })
+      )
       .exceptionally(t -> {
         logger.error("Exception gathering poLine data:", t);
         future.completeExceptionally(t);
         return null;
       });
     return future;
+  }
+
+  private static CompletableFuture<List<JsonObject>> getInstanceIds(List<JsonObject> jsonLines) {
+    return null;
   }
 
   public static CompletableFuture<CompositePoLine> operateOnPoLine(HttpMethod operation, JsonObject line, HttpClientInterface httpClient,
@@ -231,6 +251,7 @@ public class HelperUtils {
       });
     return future;
   }
+
 
   private static List<CompletableFuture<Void>> operateOnSubObjsIfPresent(HttpMethod operation, JsonObject pol, String field,
                                                                 HttpClientInterface httpClient, Context ctx, Map<String, String> okapiHeaders, Logger logger) {
@@ -942,6 +963,24 @@ public class HelperUtils {
     return future;
   }
 
+  public static CompletableFuture<TitleCollection> getTitles(String endpoint, HttpClientInterface
+    httpClient, Context ctx, Map<String, String> okapiHeaders,
+                                                             Logger logger) {
+    CompletableFuture<TitleCollection> future = new VertxCompletableFuture<>(ctx);
+    try {
+      handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+        .thenCompose(json -> VertxCompletableFuture.supplyBlockingAsync(ctx, () -> json.mapTo(TitleCollection.class)))
+        .thenAccept(future::complete)
+        .exceptionally(t -> {
+          future.completeExceptionally(t.getCause());
+          return null;
+        });
+    } catch (Exception e) {
+      future.completeExceptionally(e);
+    }
+    return future;
+  }
+
   /**
    * Retrieve configuration for mod-orders from mod-configuration.
    * @param okapiHeaders the headers provided by okapi
@@ -1093,6 +1132,7 @@ public class HelperUtils {
     JsonObject pol = JsonObject.mapFrom(compPoLine);
     pol.remove(ALERTS);
     pol.remove(REPORTING_CODES);
+    pol.remove(INSTANCE_ID);
     PoLine poLine = pol.mapTo(PoLine.class);
     poLine.setAlerts(compPoLine.getAlerts().stream().map(Alert::getId).collect(toList()));
     poLine.setReportingCodes(compPoLine.getReportingCodes().stream().map(ReportingCode::getId).collect(toList()));
@@ -1147,9 +1187,9 @@ public class HelperUtils {
     return objectFromStorage;
   }
 
-  public static List<PoLine> convertToPoLines(JsonArray linesArray) {
+  public static List<PoLine> convertJsonToPoLines(List<JsonObject> linesArray) {
     return linesArray.stream()
-                     .map(json -> ((JsonObject) json).mapTo(PoLine.class))
+                     .map(json -> json.mapTo(PoLine.class))
                      .collect(toList());
   }
 

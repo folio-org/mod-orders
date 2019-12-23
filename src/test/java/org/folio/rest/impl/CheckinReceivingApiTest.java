@@ -478,12 +478,13 @@ public class CheckinReceivingApiTest extends ApiTestBase {
             && !receivedItem.getLocationId()
               .equals(piece.getLocationId())
             && HelperUtils.isHoldingsUpdateRequired(poline.getEresource(), poline.getPhysical())) {
-          expectedHoldings.add(poline.getInstanceId() + receivedItem.getLocationId());
+          expectedHoldings.add(getInstanceId(poline) + receivedItem.getLocationId());
         }
       }
     }
     Assert.assertEquals(expectedHoldings.size(), getCreatedHoldings().size());
   }
+
 
   @Test
   public void testPostReceivingWithErrorSearchingForPiece() {

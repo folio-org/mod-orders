@@ -46,5 +46,6 @@
   "requester": "Leo Bulero",
   "rush": true,
   "source": "User",
-  "title": "Harry Potter and the Sorcerer's Stone"
+  "titleOrPackage": "Harry Potter and the Sorcerer's Stone",
+  "isPackage": false
 }

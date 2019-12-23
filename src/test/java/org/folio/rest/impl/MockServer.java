@@ -25,6 +25,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
@@ -109,6 +110,8 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.SequenceNumber;
+import org.folio.rest.acq.model.Title;
+import org.folio.rest.acq.model.TitleCollection;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.FundCollection;
@@ -168,6 +171,7 @@ public class MockServer {
   static final String ACQUISITIONS_MEMBERSHIPS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/memberships.json";
   static final String ORDER_TEMPLATES_COLLECTION = ORDER_TEMPLATES_MOCK_DATA_PATH + "/orderTemplates.json";
   private static final String FUNDS_PATH = BASE_MOCK_DATA_PATH + "funds/funds.json";
+  private static final String TITLES_PATH = BASE_MOCK_DATA_PATH + "titles/titles.json";
 
   static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
@@ -397,6 +401,7 @@ public class MockServer {
       .handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TRANSACTION_SUMMARIES));
     router.post(resourcesPath(ENCUMBRANCES))
       .handler(ctx -> handlePostGenericSubObj(ctx, ENCUMBRANCES));
+    router.post(resourcesPath(TITLES)).handler(ctx -> handlePostGenericSubObj(ctx, TITLES));
 
     router.post(resourcesPath(ACQUISITIONS_UNITS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_UNITS));
     router.post(resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
@@ -435,6 +440,7 @@ public class MockServer {
     router.get(resourcesPath(ORDER_TEMPLATES)).handler(this::handleGetOrderTemplates);
     router.get("/finance/ledgers/:id/current-fiscal-year").handler(this::handleGetCurrentFiscalYearByLedgerId);
     router.get(resourcesPath(FUNDS)).handler(this::handleGetFunds);
+    router.get(resourcesPath(TITLES)).handler(this::handleTitlesFunds);
 
     router.put(resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
     router.put(resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -446,6 +452,7 @@ public class MockServer {
     router.put(resourcePath(ACQUISITIONS_UNITS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITIONS_UNITS));
     router.put(resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
     router.put(resourcePath(ORDER_TEMPLATES)).handler(ctx -> handlePutGenericSubObj(ctx, ORDER_TEMPLATES));
+    router.put(resourcePath(TITLES)).handler(ctx -> handlePutGenericSubObj(ctx, TITLES));
 
     router.delete(resourcePath(PURCHASE_ORDER)).handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER));
     router.delete(resourcePath(PO_LINES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES));
@@ -458,6 +465,53 @@ public class MockServer {
 
     router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
     return router;
+  }
+
+  private void handleTitlesFunds(RoutingContext ctx) {
+    String query = StringUtils.trimToEmpty(ctx.request().getParam(QUERY));
+    addServerRqQuery(TITLES, query);
+    if (query.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+    } else {
+      try {
+
+        List<String> ids = Collections.emptyList();
+        if (query.startsWith("id==")) {
+          ids = extractIdsFromQuery(query);
+        }
+
+        JsonObject collection = getTitlesByIds(ids);
+        addServerRqRsData(HttpMethod.GET, TITLES, collection);
+
+        ctx.response()
+          .setStatusCode(200)
+          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+          .end(collection.encodePrettily());
+      } catch (Exception e) {
+        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+      }
+    }
+  }
+
+  private JsonObject getTitlesByIds(List<String> titleIds) {
+    Supplier<List<Title>> getFromFile = () -> {
+      try {
+        return new JsonObject(getMockData(TITLES_PATH)).mapTo(TitleCollection.class).getTitles();
+      } catch (IOException e) {
+        return Collections.emptyList();
+      }
+    };
+
+    List<Title> titles = getMockEntries(TITLES, Title.class).orElseGet(getFromFile);
+
+    if (!titleIds.isEmpty()) {
+      titles.removeIf(item -> !titleIds.contains(item.getId()));
+    }
+
+    Object record = new TitleCollection().withTitles(titles).withTotalRecords(titles.size());
+
+
+    return JsonObject.mapFrom(record);
   }
 
   private void handleGetFunds(RoutingContext ctx) {

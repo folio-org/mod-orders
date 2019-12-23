@@ -30,7 +30,8 @@
       "receiptDate": "2019-04-24T14:22:29.087+0000",
       "receiptStatus": "Receipt Not Required",
       "source": "User",
-      "title": "Title"
+      "titleOrPackage": "Title",
+      "isPackage": false
     }
   ]
 }

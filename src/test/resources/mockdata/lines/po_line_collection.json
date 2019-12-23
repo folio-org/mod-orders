@@ -94,7 +94,7 @@
           "important"
         ]
       },
-      "title": "Kayak Fishing in the Northern Gulf Coast",
+      "titleOrPackage": "Kayak Fishing in the Northern Gulf Coast",
       "vendorDetail": {
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
@@ -208,7 +208,7 @@
           "important"
         ]
       },
-      "title": "Kayak Fishing in the Northern Gulf Coast",
+      "titleOrPackage": "Kayak Fishing in the Northern Gulf Coast",
       "vendorDetail": {
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
@@ -287,7 +287,7 @@
       "tags": {
         "tagList": []
       },
-      "title": "Harry Potter and the Sorcerer's Stone",
+      "titleOrPackage": "Harry Potter and the Sorcerer's Stone",
       "metadata": {
         "createdDate": "2019-02-20T19:49:43.854+0000",
         "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
@@ -355,7 +355,7 @@
       "requester": "Leo Bulero",
       "rush": true,
       "source": "User",
-      "title": "Harry Potter and the Sorcerer's Stone",
+      "titleOrPackage": "Harry Potter and the Sorcerer's Stone",
       "metadata": {
         "createdDate": "2019-02-20T19:49:43.854+0000",
         "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
@@ -426,7 +426,7 @@
       "tags": {
         "tagList": []
       },
-      "title": "Harry Potter and the Chamber of Secrets",
+      "titleOrPackage": "Harry Potter and the Chamber of Secrets",
       "metadata": {
         "createdDate": "2019-02-20T19:49:43.877+0000",
         "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
@@ -544,7 +544,7 @@
       "rush": true,
       "selector": "ABCD",
       "source": "EDI",
-      "title": "Kayak Fishing in the Northern Gulf Coast",
+      "titleOrPackage": "Kayak Fishing in the Northern Gulf Coast",
       "vendorDetail": {
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
@@ -636,7 +636,7 @@
       "rush": false,
       "selector": "Woods",
       "source": "User",
-      "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
+      "titleOrPackage": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
       "vendorDetail": {
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
@@ -721,7 +721,7 @@
             "tags": {
               "tagList": []
             },
-            "title": "BEST AMERICAN SCIENCE FICTION AND FANTASY.",
+            "titleOrPackage": "BEST AMERICAN SCIENCE FICTION AND FANTASY.",
             "vendorDetail": {
                 "instructions": "Next Volume | Listed Print Serial",
                 "refNumber": "99974828485",
@@ -789,7 +789,7 @@
            "tags": {
              "tagList": []
            },
-            "title": "Country Madness",
+            "titleOrPackage": "Country Madness",
             "vendorDetail": {
                 "instructions": "Next Volume | Listed Print Serial",
                 "refNumber": "99974828485",
