@@ -67,7 +67,13 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get"
           ]
-        },
+        }
+      ]
+    },
+    {
+      "id": "order-lines",
+      "version": "1.0",
+      "handlers": [
         {
           "methods": ["GET"],
           "pathPattern": "/orders/order-lines",
