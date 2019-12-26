@@ -185,9 +185,9 @@ public class MockServer {
 
   private static final String PO_NUMBER_ERROR_TENANT = "po_number_error_tenant";
   static final String FUND_CANNOT_BE_PAID_TENANT = "Fund cannot be paid tenant";
-  static final String BUDGET_IS_INACTIVE_TENANT = "Fund cannot be paid tenant";
-  static final String LEDGER_NOT_FOUND_FOR_TRANSACTION_TENANT = "Fund cannot be paid tenant";
-  static final String BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT = "Fund cannot be paid tenant";
+  static final String BUDGET_IS_INACTIVE_TENANT = "Cannot create encumbrance from the not active budget";
+  static final String LEDGER_NOT_FOUND_FOR_TRANSACTION_TENANT = "Ledger not found for transaction";
+  static final String BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT = "Budget not found for transaction";
   static final Header PO_NUMBER_ERROR_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, PO_NUMBER_ERROR_TENANT);
 
   private static final String TOTAL_RECORDS = "totalRecords";
@@ -1507,6 +1507,7 @@ public class MockServer {
     }
 
     String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
+
     if (INTERNAL_SERVER_ERROR.getReasonPhrase().equals(tenant)) {
       serverResponse(ctx, 500, TEXT_PLAIN, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else if (FUND_CANNOT_BE_PAID_TENANT.equals(tenant)){
@@ -1541,7 +1542,7 @@ public class MockServer {
 
       serverResponse(ctx, 422, APPLICATION_JSON, JsonObject.mapFrom(errors).encodePrettily());
 
-    }else {
+    } else {
       JsonObject body = ctx.getBodyAsJson();
       if (body.getString(ID) == null) {
         body.put(ID, UUID.randomUUID().toString());
