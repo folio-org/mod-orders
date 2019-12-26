@@ -87,8 +87,7 @@ public class FinanceHelper extends AbstractHelper {
   private CompletableFuture<Void> createEncumbrances(List<Pair<Transaction, FundDistribution>> encumbranceDistributionPairs) {
     return VertxCompletableFuture.allOf(ctx, encumbranceDistributionPairs.stream()
       .map(pair -> createRecordInStorage(JsonObject.mapFrom(pair.getLeft()), String.format(ENCUMBRANCE_POST_ENDPOINT, lang))
-        .thenAccept(id -> pair.getValue()
-          .setEncumbrance(id))
+        .thenAccept(id -> pair.getValue().setEncumbrance(id))
         .exceptionally(fail -> {
           checkForCustomTransactionError(fail);
           return null;
