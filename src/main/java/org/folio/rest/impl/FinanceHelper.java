@@ -88,7 +88,7 @@ public class FinanceHelper extends AbstractHelper {
         .thenAccept(id -> pair.getValue().setEncumbrance(id))
         .exceptionally(fail -> {
           checkForCustomTransactionError(fail);
-          throw new CompletionException(new HttpException(422, FUND_CANNOT_BE_PAID));
+          throw new CompletionException(fail);
         }))
       .toArray(CompletableFuture[]::new));
   }
