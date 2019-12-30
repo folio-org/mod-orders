@@ -2,6 +2,7 @@ package org.folio.orders.rest.exceptions;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.FinanceErrorCodes;
 import org.folio.rest.jaxrs.model.Error;
 
 public class HttpException extends RuntimeException {
@@ -17,6 +18,12 @@ public class HttpException extends RuntimeException {
   }
 
   public HttpException(int code, ErrorCodes errCodes) {
+    super(errCodes.getDescription());
+    this.error = new Error().withCode(errCodes.getCode()).withMessage(errCodes.getDescription());
+    this.code = code;
+  }
+
+  public HttpException(int code, FinanceErrorCodes errCodes) {
     super(errCodes.getDescription());
     this.error = new Error().withCode(errCodes.getCode()).withMessage(errCodes.getDescription());
     this.code = code;
