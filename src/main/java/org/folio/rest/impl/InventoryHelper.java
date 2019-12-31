@@ -67,6 +67,7 @@ public class InventoryHelper extends AbstractHelper {
   static final String ITEM_LEVEL_CALL_NUMBER = "itemLevelCallNumber";
   static final String ITEM_STATUS = "status";
   static final String ITEM_STATUS_NAME = "name";
+  static final String ITEM_STATUS_IN_PROCESS = "In process";
   static final String ITEM_STATUS_ON_ORDER = "On order";
   static final String ITEM_MATERIAL_TYPE_ID = "materialTypeId";
   static final String ITEM_PERMANENT_LOAN_TYPE_ID = "permanentLoanTypeId";
@@ -186,7 +187,11 @@ public class InventoryHelper extends AbstractHelper {
     String endpoint = String.format(UPDATE_ITEM_ENDPOINT, itemRecord.getString(ID), lang);
 
     // Update item record with receiving details
-    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus()));
+    if (StringUtils.isEmpty(receivedItem.getItemStatus())) {
+      itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ITEM_STATUS_IN_PROCESS));
+    } else {
+      itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus()));
+    }
     if (StringUtils.isNotEmpty(receivedItem.getBarcode())) {
       itemRecord.put(ITEM_BARCODE, receivedItem.getBarcode());
     }
@@ -200,7 +205,11 @@ public class InventoryHelper extends AbstractHelper {
     String endpoint = String.format(UPDATE_ITEM_ENDPOINT, itemRecord.getString(ID), lang);
 
     // Update item record with checkIn details
-    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus()));
+    if (StringUtils.isEmpty(checkinPiece.getItemStatus())) {
+      itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ITEM_STATUS_IN_PROCESS));
+    } else {
+      itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus()));
+    }
     if (StringUtils.isNotEmpty(checkinPiece.getBarcode())) {
       itemRecord.put(ITEM_BARCODE, checkinPiece.getBarcode());
     }
