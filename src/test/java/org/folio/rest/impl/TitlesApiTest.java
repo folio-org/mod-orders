@@ -5,9 +5,11 @@ import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.rest.impl.MockServer.TITLES_MOCK_DATA_PATH;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertEquals;
 
 import org.folio.HttpStatus;
 import org.folio.rest.acq.model.Title;
+import org.folio.rest.jaxrs.model.TitleCollection;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 
@@ -23,6 +25,7 @@ public class TitlesApiTest extends ApiTestBase {
   private static final String TITLES_ID_PATH = TITLES_ENDPOINT + "/%s";
   static final String VALID_UUID = "c3e26c0e-d6a6-46fb-9309-d494cd0c82de";
   static final String CONSISTENT_RECEIVED_STATUS_TITLE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
+  static final String SAMPLE_TITLE_ID = "9a665b22-9fe5-4c95-b4ee-837a5433c95d";
   private JsonObject titleJsonReqData = getMockAsJson(TITLES_MOCK_DATA_PATH + "title.json");
 
   @Test
@@ -51,6 +54,17 @@ public class TitlesApiTest extends ApiTestBase {
     int status500 = HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt();
     verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID,
       new Header(X_ECHO_STATUS, String.valueOf(status500))), APPLICATION_JSON, status500);
+  }
+
+  @Test
+  public void testGetTitleById() {
+    logger.info("=== Test Get Title By Id ===");
+
+    final Title resp = verifySuccessGet(String.format(TITLES_ID_PATH, SAMPLE_TITLE_ID), Title.class);
+
+    logger.info(JsonObject.mapFrom(resp).encodePrettily());
+
+    assertEquals(SAMPLE_TITLE_ID, resp.getId());
   }
 
   @Test
