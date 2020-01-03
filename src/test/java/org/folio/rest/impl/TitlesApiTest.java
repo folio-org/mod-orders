@@ -57,6 +57,17 @@ public class TitlesApiTest extends ApiTestBase {
   }
 
   @Test
+  public void testGetTitles() {
+    logger.info("=== Test Get Titles  ===");
+
+    final TitleCollection resp = verifySuccessGet(String.format(TITLES_ENDPOINT), TitleCollection.class);
+
+    logger.info(JsonObject.mapFrom(resp).encodePrettily());
+
+    assertEquals(1, resp.getTitles().size());
+  }
+
+  @Test
   public void testGetTitleById() {
     logger.info("=== Test Get Title By Id ===");
 

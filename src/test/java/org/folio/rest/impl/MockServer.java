@@ -144,6 +144,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import one.util.streamex.StreamEx;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.rest.jaxrs.model.TitleCollection;
 
 public class MockServer {
 
@@ -440,7 +441,7 @@ public class MockServer {
     router.get(resourcesPath(ORDER_TEMPLATES)).handler(this::handleGetOrderTemplates);
     router.get("/finance/ledgers/:id/current-fiscal-year").handler(this::handleGetCurrentFiscalYearByLedgerId);
     router.get(resourcesPath(FUNDS)).handler(this::handleGetFunds);
-    router.get(resourcesPath(TITLES)).handler(ctx -> handleGetGenericSubObj(ctx, TITLES));
+    router.get(resourcesPath(TITLES)).handler(this::handleGetTitles);
     router.get(resourcePath(TITLES)).handler(this::handleGetOrderTitleById);
 
     router.put(resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
@@ -1273,6 +1274,25 @@ public class MockServer {
         .end(data.encodePrettily());
     }
   }
+
+  private void handleGetTitles(RoutingContext ctx) {
+    logger.info("handleGetTitles got: " + ctx.request().path());
+    TitleCollection titles;
+    try {
+      titles = new JsonObject(ApiTestBase.getMockData(TITLES_MOCK_DATA_PATH + "titles.json")).mapTo(TitleCollection.class);
+      JsonObject data = JsonObject.mapFrom(titles);
+      addServerRqRsData(HttpMethod.GET, TITLES, data);
+
+      ctx.response()
+        .setStatusCode(200)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .end(data.encodePrettily());
+    } catch (Exception e) {
+      titles = new TitleCollection();
+      titles.setTotalRecords(0);
+    }
+  }
+
 
   private List<String> extractIdsFromQuery(String query) {
     return extractValuesFromQuery(ID, query);
