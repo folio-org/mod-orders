@@ -1,5 +1,6 @@
 package org.folio.orders.utils;
 
+import static io.vertx.core.Future.succeededFuture;
 import static java.util.Objects.nonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
@@ -20,9 +21,13 @@ import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.apache.commons.lang3.ArrayUtils;
 import org.folio.rest.acq.model.Piece;
+import org.folio.rest.impl.AbstractHelper;
 import org.folio.rest.jaxrs.model.PoLine;
 
 import java.io.UnsupportedEncodingException;
@@ -38,6 +43,7 @@ import java.util.stream.Collectors;
 import javax.money.CurrencyUnit;
 import javax.money.Monetary;
 import javax.money.MonetaryAmount;
+import javax.ws.rs.Path;
 
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
@@ -1162,5 +1168,15 @@ public class HelperUtils {
 
   public static boolean isProductIdsExist(CompositePoLine compPOL) {
     return compPOL.getDetails() != null && CollectionUtils.isNotEmpty(compPOL.getDetails().getProductIds());
+  }
+
+  public static Void handleErrorResponse(Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, AbstractHelper helper,
+                                   Throwable t) {
+    asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(t)));
+    return null;
+  }
+
+  public static String getEndpoint(Class<?> clazz) {
+    return clazz.getAnnotation(Path.class).value();
   }
 }
