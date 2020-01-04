@@ -505,8 +505,4 @@ public class ApiTestBase {
   public static String getRandomId() {
     return UUID.randomUUID().toString();
   }
-
-  public static String buildQueryParam(String query) {
-    return "?query=" + query;
-  }
 }
