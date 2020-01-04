@@ -29,7 +29,7 @@ public class TitlesImpl implements OrdersTitles {
 
     TitlesHelper titlesHelper = new TitlesHelper(okapiHeaders, vertxContext, lang);
     titlesHelper.getTitles(limit, offset, query)
-      .thenAccept(types -> asyncResultHandler.handle(succeededFuture(titlesHelper.buildOkResponse(types))))
+      .thenAccept(titles -> asyncResultHandler.handle(succeededFuture(titlesHelper.buildOkResponse(titles))))
       .exceptionally(fail -> handleErrorResponse(asyncResultHandler, titlesHelper, fail));
   }
 
@@ -60,7 +60,7 @@ public class TitlesImpl implements OrdersTitles {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     TitlesHelper titlesHelper = new TitlesHelper(okapiHeaders, vertxContext, lang);
     titlesHelper.deleteTitle(id)
-      .thenAccept(types -> asyncResultHandler.handle(succeededFuture(titlesHelper.buildNoContentResponse())))
+      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(titlesHelper.buildNoContentResponse())))
       .exceptionally(fail -> handleErrorResponse(asyncResultHandler, titlesHelper, fail));
   }
 
@@ -79,7 +79,7 @@ public class TitlesImpl implements OrdersTitles {
     }
 
     titlesHelper.updateTitle(entity)
-      .thenAccept(types -> asyncResultHandler.handle(succeededFuture(titlesHelper.buildNoContentResponse())))
+      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(titlesHelper.buildNoContentResponse())))
       .exceptionally(fail -> handleErrorResponse(asyncResultHandler, titlesHelper, fail));
   }
 
