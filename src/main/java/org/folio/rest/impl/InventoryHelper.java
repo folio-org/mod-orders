@@ -187,11 +187,7 @@ public class InventoryHelper extends AbstractHelper {
     String endpoint = String.format(UPDATE_ITEM_ENDPOINT, itemRecord.getString(ID), lang);
 
     // Update item record with receiving details
-    if (StringUtils.isEmpty(receivedItem.getItemStatus())) {
-      itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ITEM_STATUS_IN_PROCESS));
-    } else {
-      itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus()));
-    }
+    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus()));
     if (StringUtils.isNotEmpty(receivedItem.getBarcode())) {
       itemRecord.put(ITEM_BARCODE, receivedItem.getBarcode());
     }
@@ -205,11 +201,7 @@ public class InventoryHelper extends AbstractHelper {
     String endpoint = String.format(UPDATE_ITEM_ENDPOINT, itemRecord.getString(ID), lang);
 
     // Update item record with checkIn details
-    if (StringUtils.isEmpty(checkinPiece.getItemStatus())) {
-      itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ITEM_STATUS_IN_PROCESS));
-    } else {
-      itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus()));
-    }
+    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus()));
     if (StringUtils.isNotEmpty(checkinPiece.getBarcode())) {
       itemRecord.put(ITEM_BARCODE, checkinPiece.getBarcode());
     }
