@@ -1,0 +1,47 @@
+#%RAML 1.0
+title: "Titles"
+baseUri: http://github.com/org/folio/mod-orders-storage
+version: v1.0
+
+documentation:
+  - title: Titles
+    content: <b>CRUD API to manage Titles.</b>
+
+types:
+    title: !include acq-models/mod-orders-storage/schemas/title.json
+    title_collection: !include acq-models/mod-orders-storage/schemas/title_collection.json
+    UUID:
+     type: string
+     pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+
+traits:
+    pageable:  !include raml-util/traits/pageable.raml
+    searchable: !include raml-util/traits/searchable.raml
+    language: !include raml-util/traits/language.raml
+
+resourceTypes:
+    collection: !include raml-util/rtypes/collection.raml
+    collection-item: !include raml-util/rtypes/item-collection.raml
+
+/orders/titles:
+  type:
+    collection:
+      exampleCollection: !include acq-models/mod-orders-storage/examples/title_collection.sample
+      exampleItem: !include acq-models/mod-orders-storage/examples/title_post.sample
+      schemaCollection: title_collection
+      schemaItem: title
+  get:
+    description: Get list of titles
+    is: [
+      searchable: {description: "with valid searchable fields: for example title", example: "[\"title\", \"TITLE\", \"=\"]"},
+      pageable
+    ]
+  /{id}:
+    uriParameters:
+      id:
+        description: The UUID of a Title
+        type: UUID
+    type:
+      collection-item:
+        exampleItem: !include acq-models/mod-orders-storage/examples/title_get.sample
+        schema: title
