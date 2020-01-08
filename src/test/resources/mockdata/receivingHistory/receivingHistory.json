@@ -15,6 +15,7 @@
         "poLineNumber": "268758-03",
         "poLineReceiptStatus": "Partially Received",
         "purchaseOrderId": "0804ddec-6545-404a-b54d-a693f505681d",
+        "receiptDate": "2018-10-09T00:00:00.000Z",
         "receivingNote": "ASD FGH ABCDEFGHIJKLMNOPQ",
         "receivingStatus": "Expected",
         "supplement": true,
@@ -32,6 +33,7 @@
         "poLineNumber": "12345678-1",
         "poLineReceiptStatus": "Fully Received",
         "purchaseOrderId": "6eee8eb9-db1a-46e2-a8ad-780f19974efa",
+        "receiptDate": "2018-10-09T00:00:00.000Z",
         "receivedDate": "2018-10-09T00:00:00.000Z",
         "receivingStatus": "Received",
         "title": "Harry Potter and the Sorcerer's Stone"
