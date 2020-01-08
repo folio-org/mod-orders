@@ -42,7 +42,8 @@ import static org.hamcrest.Matchers.is;
   LinesProtectionTest.class,
   PiecesProtectionTest.class,
   ReceivingCheckinProtectionTest.class,
-  OrderTemplateTest.class
+  OrderTemplateTest.class,
+  TitlesApiTest.class
 })
 public class ApiTestSuite {
 
