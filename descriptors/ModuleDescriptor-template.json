@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "9.0",
+      "version": "8.0",
       "handlers": [
         {
           "methods": ["GET"],
@@ -67,13 +67,7 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get"
           ]
-        }
-      ]
-    },
-    {
-      "id": "order-lines",
-      "version": "1.0",
-      "handlers": [
+        },
         {
           "methods": ["GET"],
           "pathPattern": "/orders/order-lines",
@@ -150,13 +144,7 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get"
           ]
-        }
-      ]
-    },
-    {
-      "id": "po-number",
-      "version": "1.0",
-      "handlers": [
+        },
         {
           "methods": ["POST"],
           "pathPattern": "/orders/po-number/validate",
@@ -172,13 +160,7 @@
           "modulePermissions": [
             "orders-storage.po-number.get"
           ]
-        }
-      ]
-    },
-    {
-      "id": "receiving",
-      "version": "1.0",
-      "handlers": [
+        },
         {
           "methods": ["POST"],
           "pathPattern": "/orders/receive",
@@ -198,13 +180,7 @@
             "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.purchase-orders.collection.get"
           ]
-        }
-      ]
-    },
-    {
-      "id": "check-in",
-      "version": "1.0",
-      "handlers": [
+        },
         {
           "methods": ["POST"],
           "pathPattern": "/orders/check-in",
@@ -224,13 +200,7 @@
             "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.purchase-orders.collection.get"
           ]
-        }
-      ]
-    },
-    {
-      "id": "pieces",
-      "version": "1.0",
-      "handles": [
+        },
         {
           "methods": ["GET"],
           "pathPattern": "/orders/receiving-history",
