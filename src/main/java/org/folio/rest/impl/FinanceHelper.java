@@ -2,8 +2,12 @@ package org.folio.rest.impl;
 
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
+import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.FUNDS_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
+import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
@@ -30,7 +34,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.FinanceErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.FiscalYear;
@@ -216,10 +219,16 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   public void checkForCustomTransactionError(Throwable fail) {
-    for (FinanceErrorCodes financeErrorCode : FinanceErrorCodes.values()) {
-      if (fail.getCause().getMessage().contains(financeErrorCode.getDescription())) {
-        throw new CompletionException(new HttpException(422, financeErrorCode));
-      }
+    if (fail.getCause().getMessage().contains(BUDGET_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
+      throw new CompletionException(new HttpException(422, BUDGET_NOT_FOUND_FOR_TRANSACTION));
+    } else if (fail.getCause().getMessage().contains(LEDGER_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
+      throw new CompletionException(new HttpException(422, LEDGER_NOT_FOUND_FOR_TRANSACTION));
+    } else if (fail.getCause().getMessage().contains(BUDGET_IS_INACTIVE.getDescription())) {
+      throw new CompletionException(new HttpException(422, BUDGET_IS_INACTIVE));
+    } else if (fail.getCause().getMessage().contains(FUND_CANNOT_BE_PAID.getDescription())) {
+      throw new CompletionException(new HttpException(422, FUND_CANNOT_BE_PAID));
+    } else {
+      throw new CompletionException(fail.getCause());
     }
   }
 
