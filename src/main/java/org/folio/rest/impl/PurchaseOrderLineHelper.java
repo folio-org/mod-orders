@@ -591,8 +591,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       int remainingPiecesQuantity = expectedQty - existingPiecesQuantities.getOrDefault(format, 0);
       if (remainingPiecesQuantity > 0) {
         for (int i = 0; i < remainingPiecesQuantity; i++) {
-          piecesToCreate.add(new Piece().withReceiptDate(compPOL.getReceiptDate()).withFormat(format)
-            .withPoLineId(compPOL.getId()));
+          piecesToCreate.add(new Piece().withFormat(format).withPoLineId(compPOL.getId()));
         }
       }
     });
@@ -614,10 +613,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
           int remainingPiecesQuantity = expectedQty - quantityWithoutItem.getOrDefault(format, 0);
           if (remainingPiecesQuantity > 0) {
             for (int i = 0; i < remainingPiecesQuantity; i++) {
-              piecesToCreate.add(new Piece().withReceiptDate(compPOL.getReceiptDate())
-                .withFormat(format)
-                .withLocationId(locationId)
-                .withPoLineId(compPOL.getId()));
+              piecesToCreate.add(new Piece().withFormat(format).withLocationId(locationId).withPoLineId(compPOL.getId()));
             }
           }
         });

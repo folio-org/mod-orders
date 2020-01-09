@@ -303,7 +303,6 @@ public class InventoryHelper extends AbstractHelper {
                 .map(itemId -> new Piece().withFormat(pieceFormat)
                                           .withItemId(itemId)
                                           .withPoLineId(polId)
-                                          .withReceiptDate(compPOL.getReceiptDate())
                                           .withLocationId(locationId))
                 .toList();
             }));
