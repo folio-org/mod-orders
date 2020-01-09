@@ -285,6 +285,7 @@ class InventoryInteractionTestHelper {
           assertThat(itemIds, hasItem(piece.getItemId()));
         }
         assertThat(piece.getFormat(), notNullValue());
+        assertThat(piece.getReceiptDate(), is(poLine.getReceiptDate()));
       });
 
       totalForAllPoLines += expectedTotal;

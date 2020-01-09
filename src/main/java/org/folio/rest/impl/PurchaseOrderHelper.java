@@ -2,10 +2,12 @@ package org.folio.rest.impl;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
+import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.AcqDesiredPermissions.ASSIGN;
 import static org.folio.orders.utils.AcqDesiredPermissions.MANAGE;
 import static org.folio.orders.utils.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
+import static org.folio.orders.utils.ErrorCodes.MISSING_RECEIPT_DATE;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
@@ -46,6 +48,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -365,11 +368,27 @@ public class PurchaseOrderHelper extends AbstractHelper {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
     return fetchCompositePoLines(compPO)
+      .thenApply(this::validateTransitionToOpen)
       .thenCompose(this::updateInventory)
       .thenCompose(ok -> createEncumbrances(compPO))
       .thenAccept(ok -> changePoLineStatuses(compPO))
       .thenCompose(ok -> updatePoLinesSummary(compPO))
       .thenCompose(ok -> updateOrderSummary(compPO));
+  }
+
+  private CompositePurchaseOrder validateTransitionToOpen(CompositePurchaseOrder compositePurchaseOrder) {
+    List<CompositePoLine> lines = compositePurchaseOrder.getCompositePoLines().stream()
+      .filter(this::isReceiptDateMissing).collect(Collectors.toList());
+    if (CollectionUtils.isNotEmpty(lines)) {
+      List<Parameter> parameters = lines.stream().map(line -> new Parameter().withKey("poLineId").withValue(line.getId())).collect(Collectors.toList());
+      Error error = MISSING_RECEIPT_DATE.toError().withParameters(parameters);
+      throw new HttpException(BAD_REQUEST.getStatusCode(), error);
+    }
+    return compositePurchaseOrder;
+  }
+
+  private boolean isReceiptDateMissing(CompositePoLine line) {
+    return Objects.isNull(line.getReceiptDate()) && line.getReceiptStatus() != CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
   }
 
   /**

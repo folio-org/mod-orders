@@ -2575,6 +2575,29 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
+  public void testPostOpenOrderWithPoLinesMissingReceiptDate() throws Exception {
+    logger.info("===  Test case trying to open order with poLines without receiptDate and receipt required ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+
+    reqData.getCompositePoLines().forEach(line -> line.withReceiptDate(null).withReceiptStatus(ReceiptStatus.PENDING));
+
+
+    Response resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 400);
+
+    Error err = resp.getBody()
+      .as(Errors.class)
+      .getErrors()
+      .get(0);
+
+    assertThat(err.getCode(), equalTo(ErrorCodes.MISSING_RECEIPT_DATE.getCode()));
+    assertThat(err.getParameters(), hasSize(2));
+  }
+
+  @Test
   public void testPutOrderWithUserNotHavingApprovalPermissions() {
     logger.info("=== Test PUT PO, with User not having Approval permission==");
 
@@ -2597,6 +2620,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     // Set CreateInventory value to create inventory instances and holdings
     reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
     reqData.getCompositePoLines().get(0).setReceiptStatus(ReceiptStatus.RECEIPT_NOT_REQUIRED);
+    reqData.getCompositePoLines().get(0).setReceiptDate(null);
 
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
