@@ -106,6 +106,7 @@ class InventoryInteractionTestHelper {
       if (itemsQuantity > 0) {
         boolean instanceLinked = false;
         for (JsonObject jsonObj : polUpdates) {
+          jsonObj.remove("instanceId");
           PoLine line = jsonObj.mapTo(PoLine.class);
           if (StringUtils.equals(line.getId(), compLine.getId()) && StringUtils.isNotEmpty(getInstanceId(line))) {
             instanceLinked = true;

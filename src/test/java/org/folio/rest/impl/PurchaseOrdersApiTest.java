@@ -4,6 +4,7 @@ import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
 import static org.folio.orders.utils.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
@@ -393,6 +394,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("=== Test Listed Print Monograph in Open status ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     prepareOrderForPostRequest(reqData);
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     reqData.getCompositePoLines().forEach(poLine -> {
@@ -511,10 +513,11 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     // Get Open Order
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     // Make sure that mock po has 2 po lines
-    assertEquals(2, reqData.getCompositePoLines().size());
+    assertThat(reqData.getCompositePoLines(), hasSize(2));
     // Make sure that mock po has the first PO line with 3 locations
-    assertEquals(3, reqData.getCompositePoLines().get(0).getLocations().size());
+    assertThat(reqData.getCompositePoLines().get(0).getLocations(), hasSize(3));
 
     // Make sure that Order moves to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
@@ -574,10 +577,11 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     // Get Open Order
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     // Make sure that mock po has 2 po lines
-    assertEquals(2, reqData.getCompositePoLines().size());
+    assertThat(reqData.getCompositePoLines(), hasSize(2));
     // Make sure that mock po has the first PO line with 3 locations
-    assertEquals(3, reqData.getCompositePoLines().get(0).getLocations().size());
+    assertThat(reqData.getCompositePoLines().get(0).getLocations(), hasSize(3));
 
     // Make sure that Order moves to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
@@ -632,7 +636,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     reqData.setReEncumber(null);
     // Make sure that mock PO has 1 po line
-    assertEquals(1, reqData.getCompositePoLines().size());
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
 
     reqData.setManualPo(false);
     CompositePoLine compositePoLine = reqData.getCompositePoLines().get(0);
@@ -650,7 +654,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     // MODORDERS-243
     removeAllEncumbranceLinks(reqData);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-
+    addMockTitles(reqData.getCompositePoLines());
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
     List<JsonObject> createdPieces = getCreatedPieces();
@@ -672,10 +676,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testPutOrdersByIdFundsNotFound() {
     logger.info("=== Test Put Order By Id Funds not found ===");
     CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
-
+    addMockTitles(reqData.getCompositePoLines());
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     // Make sure that mock PO has 1 po line
-    assertEquals(1, reqData.getCompositePoLines().size());
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
 
     CompositePoLine compositePoLine = reqData.getCompositePoLines().get(0);
 
@@ -696,10 +700,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testPutOrdersByIdCurrentFiscalYearNotFound() {
     logger.info("=== Test Put Order By Id Current fiscal year not found ===");
     CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
-
+    addMockTitles(reqData.getCompositePoLines());
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     // Make sure that mock PO has 1 po line
-    assertEquals(1, reqData.getCompositePoLines().size());
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
 
     CompositePoLine compositePoLine = reqData.getCompositePoLines().get(0);
     Fund fund = new Fund().withCode("test").withName("name").withId(UUID.randomUUID().toString()).withLedgerId(ID_DOES_NOT_EXIST);
@@ -721,10 +725,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testPutOrdersByIdCurrentFiscalYearServerError() {
     logger.info("=== Test Put Order By Id, get Current fiscal year Internal Server Error ===");
     CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
-
+    addMockTitles(reqData.getCompositePoLines());
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     // Make sure that mock PO has 1 po line
-    assertEquals(1, reqData.getCompositePoLines().size());
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
 
     CompositePoLine compositePoLine = reqData.getCompositePoLines().get(0);
     Fund fund = new Fund().withCode("test").withName("name").withId(UUID.randomUUID().toString()).withLedgerId(ID_FOR_INTERNAL_SERVER_ERROR);
@@ -747,7 +751,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     // Make sure that mock PO has 1 po line
-    assertEquals(1, reqData.getCompositePoLines().size());
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
 
     CompositePoLine compositePoLine = reqData.getCompositePoLines().get(0);
 
@@ -767,7 +771,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     // Make sure that mock PO has 2 po lines
-    assertEquals(2, reqData.getCompositePoLines().size());
+    assertThat(reqData.getCompositePoLines(), hasSize(2));
+    addMockTitles(reqData.getCompositePoLines());
 
     reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
@@ -776,6 +781,12 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     List<JsonObject> createdPieces = getCreatedPieces();
     verifyPiecesQuantityForSuccessCase(reqData, createdPieces);
     verifyPiecesCreated(items, reqData.getCompositePoLines(), createdPieces);
+  }
+
+  private void addMockTitles(List<CompositePoLine> poLines) {
+    poLines.stream()
+      .filter(line -> !line.getIsPackage() && isNotEmpty(line.getId()))
+      .forEach(line -> addMockEntry(TITLES, getTitle(line)));
   }
 
   @Test
@@ -1293,6 +1304,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   @Test
   public void testPutOrdersByIdInstanceCreation() throws Exception {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     Map<String, String> uuids = new HashMap<>();
@@ -1313,10 +1325,11 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     // Get Open Order
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     // Make sure that mock po has 2 po lines
-    assertEquals(2, reqData.getCompositePoLines().size());
+    assertThat(reqData.getCompositePoLines(), hasSize(2));
     // Make sure that mock po has the first PO line with 3 locations
-    assertEquals(3, reqData.getCompositePoLines().get(0).getLocations().size());
+    assertThat(reqData.getCompositePoLines().get(0).getLocations(), hasSize(3));
 
     // Make sure that Order moves to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
@@ -1338,6 +1351,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
     // Get Open Order
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     // Make sure that Order moves to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
@@ -1365,7 +1379,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     // Set CreateInventory value to create inventory Instance
     reqData.getCompositePoLines().get(0).getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE);
     reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE);
-
+    addMockTitles(reqData.getCompositePoLines());
 
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
@@ -1383,7 +1397,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
     // Make sure that Order moves to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-
     // Set CreateInventory value to create inventory instances and holdings
     reqData.getCompositePoLines().get(0).getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
     reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
@@ -1423,6 +1436,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
     // Get Open Order
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     // Make sure that Order moves to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
@@ -1446,6 +1460,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
     // Get Open Order
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     // Make sure that Order moves to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
@@ -1473,9 +1488,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     // Get Open Order
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
-
+    addMockTitles(reqData.getCompositePoLines());
     // Make sure that mock PO has 2 po lines
-    assertEquals(2, reqData.getCompositePoLines().size());
+    assertThat(reqData.getCompositePoLines(), hasSize(2));
 
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     // MODORDERS-183 Set the second POLine checkinItems true
@@ -1497,6 +1512,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     // Get Open Order
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     reqData.getCompositePoLines().clear();
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
@@ -1529,6 +1545,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     // One item for each location will be found
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     // Emulate items creation issue
     reqData.getCompositePoLines().get(0).getPhysical().setMaterialType(ID_FOR_INTERNAL_SERVER_ERROR);
     assertThat(reqData.getCompositePoLines().get(0).getLocations(), hasSize(3));
@@ -1563,6 +1580,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("=== Test Put Order By Id to change status of Order to Open - Storage errors expected and no interaction with Inventory===");
 
     CompositePurchaseOrder reqData = new JsonObject(getMockData(ORDER_FOR_FAILURE_CASE_MOCK_DATA_PATH)).mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
     final Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData),
@@ -1586,10 +1604,11 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    addMockTitles(reqData.getCompositePoLines());
 
     int polCount = reqData.getCompositePoLines().size();
     // Make sure that mock PO has 2 lines
-    assertEquals(2, polCount);
+    assertThat(reqData.getCompositePoLines(), hasSize(2));
     // Make sure that inventory interaction is expected for each PO line
     for (CompositePoLine pol : reqData.getCompositePoLines()) {
       assertTrue(calculateInventoryItemsQuantity(pol) > 0);
@@ -1894,6 +1913,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     for (int i = 0; i < reqData.getCompositePoLines().size(); i++) {
       reqData.getCompositePoLines().get(i).setPoLineNumber("number-" + i);
     }
+    addMockTitles(reqData.getCompositePoLines());
 
     // Purchase order is OK
     Errors activeVendorActiveAccessProviderErrors = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
@@ -1946,6 +1966,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("=== Test Put Order By Id to change status of Order to Open for different vendor's status ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     for (int i = 0; i < reqData.getCompositePoLines().size(); i++) {
       reqData.getCompositePoLines().get(i).setPoLineNumber("number-" + i);
@@ -2001,6 +2022,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("=== Test Put Order to change status of Order to Open - vendor with unexpected content ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
 
     // Prepare order
@@ -2060,6 +2082,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("===  Test case when order status update is expected from Open to Closed ===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     reqData.setVendor(ACTIVE_VENDOR_ID);
     assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
 
@@ -2081,6 +2104,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("===  Test case when order status update is expected from Open to Closed ===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     reqData.setVendor(ACTIVE_VENDOR_ID);
     assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
 
@@ -2236,6 +2260,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     MockServer.serverRqRs.clear();
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     reqData.getCompositePoLines().remove(1);
     assertThat( reqData.getCompositePoLines(), hasSize(1));
@@ -2276,6 +2301,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     MockServer.serverRqRs.clear();
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     reqData.getCompositePoLines().remove(1);
     assertThat( reqData.getCompositePoLines(), hasSize(1));
@@ -2311,10 +2337,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     MockServer.serverRqRs.clear();
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     reqData.getCompositePoLines().remove(1);
-    assertThat( reqData.getCompositePoLines(), hasSize(1));
-
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
     Headers headers = prepareHeaders(INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT_HEADER, X_OKAPI_USER_ID);
 
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
@@ -2323,7 +2349,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(getInstanceStatusesSearches(), hasSize(1));
     assertThat(getInstanceTypesSearches(), hasSize(1));
     clearServiceInteractions();
-
+    addMockTitles(reqData.getCompositePoLines());
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
 
     assertThat(getLoanTypesSearches(), nullValue());
@@ -2349,6 +2375,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   @Test
   public void testInventoryHelperEmptyContributors() throws Exception {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     reqData.getCompositePoLines()
       .remove(1);
@@ -2371,6 +2398,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   @Test
   public void testInventoryHelperMissingContributorNameTypeThrowsProperError() throws Exception {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     reqData.getCompositePoLines()
       .remove(1);
@@ -2572,6 +2600,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("===  Test case when approval is not required to open order, and order not approved, set required Fields when opening Order ===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     reqData.setApproved(false);
     reqData.setVendor(ACTIVE_VENDOR_ID);
     assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
@@ -2602,7 +2631,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
     // Make sure that Order is Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-
+    addMockTitles(reqData.getCompositePoLines());
     // Set CreateInventory value to create inventory instances and holdings
     reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
     reqData.getCompositePoLines().get(0).setReceiptStatus(ReceiptStatus.RECEIPT_NOT_REQUIRED);
@@ -2623,6 +2652,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
     // Get Open Order
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    addMockTitles(reqData.getCompositePoLines());
     // Make sure that Order moves to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
@@ -2664,6 +2694,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   private Error verifyMissingInventoryEntryErrorHandling(Header header) throws Exception {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    addMockTitles(reqData.getCompositePoLines());
     reqData.getCompositePoLines()
       .remove(1);
     assertThat(reqData.getCompositePoLines(), hasSize(1));

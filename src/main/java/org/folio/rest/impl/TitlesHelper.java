@@ -1,38 +1,58 @@
 package org.folio.rest.impl;
 
-import static java.util.stream.Collectors.toMap;
-import static org.folio.orders.utils.HelperUtils.buildQuery;
-import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.handlePutRequest;
-import static org.folio.orders.utils.ResourcePathResolver.TITLES;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import one.util.streamex.StreamEx;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonObject;
-import one.util.streamex.StreamEx;
+import static java.util.stream.Collectors.toMap;
+import static org.folio.orders.utils.HelperUtils.buildQuery;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 public class TitlesHelper extends AbstractHelper {
-
   private static final String GET_TITLES_BY_QUERY = resourcesPath(TITLES) + SEARCH_PARAMS;
 
-  public TitlesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+  TitlesHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
+    super(okapiHeaders, ctx, lang);
+  }
+
+  TitlesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
   }
 
-  public CompletableFuture<TitleCollection> getTitles(String query, int offset, int limit) {
-      String endpoint = String.format(GET_TITLES_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
-      return HelperUtils.getTitles(endpoint, httpClient, ctx, okapiHeaders, logger);
+  public CompletableFuture<Title> createTitle(Title title) {
+    return createRecordInStorage(JsonObject.mapFrom(title), resourcesPath(TITLES)).thenApply(title::withId);
+  }
+
+  public CompletableFuture<TitleCollection> getTitles(int limit, int offset, String query) {
+    String endpoint = String.format(GET_TITLES_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
+    return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(json -> VertxCompletableFuture.supplyBlockingAsync(ctx, () -> json.mapTo(TitleCollection.class)));
+  }
+
+  public CompletableFuture<Title> getTitle(String id) {
+    return HelperUtils.handleGetRequest(resourceByIdPath(TITLES, id), httpClient, ctx, okapiHeaders,logger)
+      .thenApply(json -> json.mapTo(Title.class));
+  }
+
+  public CompletableFuture<Void> updateTitle(Title title) {
+    return HelperUtils.handlePutRequest(resourceByIdPath(TITLES, title.getId()), JsonObject.mapFrom(title), httpClient, ctx, okapiHeaders, logger);
+  }
+
+  public CompletableFuture<Void> deleteTitle(String id) {
+    return HelperUtils.handleDeleteRequest(resourceByIdPath(TITLES, id), httpClient, ctx, okapiHeaders, logger);
   }
 
   public CompletableFuture<Map<String, Title>> getTitlesByPoLineIds(List<String> poLineIds) {
@@ -48,7 +68,7 @@ public class TitlesHelper extends AbstractHelper {
   }
 
   private CompletableFuture<List<Title>> getTitlesByQuery(String query) {
-    return getTitles(query, 0, MAX_IDS_FOR_GET_RQ )
+    return getTitles(MAX_IDS_FOR_GET_RQ, 0, query)
       .thenApply(TitleCollection::getTitles)
       .exceptionally(e -> {
         logger.error("The issue happened getting PO Lines", e);
@@ -56,8 +76,4 @@ public class TitlesHelper extends AbstractHelper {
       });
   }
 
-  CompletableFuture<Void> updateTitle(Title title) {
-    String endpoint = resourceByIdPath(TITLES, title.getId());
-    return handlePutRequest(endpoint, JsonObject.mapFrom(title), httpClient, ctx, okapiHeaders, logger);
-  }
 }

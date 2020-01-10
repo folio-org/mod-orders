@@ -1,55 +1,47 @@
 #%RAML 1.0
 title: "Titles"
-baseUri: http://github.com/folio-org/mod-orders
+baseUri: http://github.com/org/folio/mod-orders-storage
 version: v1.0
 
 documentation:
   - title: Titles
-    content: <b>CRUD APIs used to manage titles.</b>
+    content: <b>CRUD API to manage Titles.</b>
 
 types:
-  title: !include acq-models/mod-orders-storage/schemas/title.json
-  title-collection: !include acq-models/mod-orders-storage/schemas/title_collection.json
-  errors: !include raml-util/schemas/errors.schema
-  UUID:
-    type: string
-    pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+    title: !include acq-models/mod-orders-storage/schemas/title.json
+    title_collection: !include acq-models/mod-orders-storage/schemas/title_collection.json
+    UUID:
+     type: string
+     pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
 
 traits:
-  validate: !include raml-util/traits/validation.raml
-  pageable:  !include raml-util/traits/pageable.raml
-  searchable: !include raml-util/traits/searchable.raml
-  language: !include raml-util/traits/language.raml
+    pageable:  !include raml-util/traits/pageable.raml
+    searchable: !include raml-util/traits/searchable.raml
+    language: !include raml-util/traits/language.raml
 
 resourceTypes:
-  collection: !include raml-util/rtypes/collection.raml
-  collection-item: !include raml-util/rtypes/item-collection.raml
+    collection: !include raml-util/rtypes/collection.raml
+    collection-item: !include raml-util/rtypes/item-collection.raml
 
 /orders/titles:
   type:
     collection:
       exampleCollection: !include acq-models/mod-orders-storage/examples/title_collection.sample
       exampleItem: !include acq-models/mod-orders-storage/examples/title_post.sample
-      schemaCollection: title-collection
+      schemaCollection: title_collection
       schemaItem: title
-  post:
-    description: Create new title
-    is: [validate]
   get:
-    description: Get list of titles.
+    description: Get list of titles
     is: [
-      searchable: {description: "with valid searchable fields: for example title", example: "[\"title\", \"Harry Potter\"]"},
+      searchable: {description: "with valid searchable fields: for example title", example: "[\"title\", \"TITLE\", \"=\"]"},
       pageable
     ]
   /{id}:
     uriParameters:
       id:
-        description: The UUID of a title
+        description: The UUID of a Title
         type: UUID
     type:
       collection-item:
         exampleItem: !include acq-models/mod-orders-storage/examples/title_get.sample
         schema: title
-    put:
-      description: Update title
-      is: [validate]

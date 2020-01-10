@@ -37,6 +37,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,6 +55,7 @@ import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
@@ -447,7 +449,15 @@ public class ApiTestBase {
       .withId(UUID.randomUUID().toString())
       .withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
       .withFormat(Piece.Format.PHYSICAL)
+      //.withReceiptDate(new Date())
       .withPoLineId(poLineId);
+  }
+
+  public static Title getTitle(CompositePoLine poLine) {
+    return new Title().withId(UUID.randomUUID().toString())
+      .withPoLineId(poLine.getId())
+      .withTitle(poLine.getTitleOrPackage())
+      .withProductIds(Optional.ofNullable(poLine.getDetails()).orElseGet(Details::new).getProductIds());
   }
 
 
@@ -513,6 +523,10 @@ public class ApiTestBase {
 
 
   static String getInstanceId(PoLine poline) {
-    return serverRqRs.get(TITLES, HttpMethod.PUT).stream().map(title -> title.mapTo(Title.class)).filter(title -> poline.getId().equals(title.getPoLineId())).findFirst().get().getInstanceId();
+    return Optional.ofNullable(serverRqRs.get(TITLES, HttpMethod.PUT)).orElseGet(Collections::emptyList).stream()
+      .map(title -> title.mapTo(Title.class))
+      .filter(title -> poline.getId().equals(title.getPoLineId()))
+      .map(Title::getInstanceId)
+      .findFirst().orElse(null);
   }
 }

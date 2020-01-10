@@ -367,6 +367,42 @@
       ]
     },
     {
+      "id": "titles",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": ["GET"],
+          "pathPattern": "/orders/titles",
+          "permissionsRequired": ["orders.titles.collection.get"],
+          "modulePermissions": ["orders-storage.titles.collection.get"]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/orders/titles",
+          "permissionsRequired": ["orders.titles.item.post"],
+          "modulePermissions": ["orders-storage.titles.item.post"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/orders/titles/{id}",
+          "permissionsRequired": ["orders.titles.item.get"],
+          "modulePermissions": ["orders-storage.titles.item.get"]
+        },
+        {
+          "methods": ["PUT"],
+          "pathPattern": "/orders/titles/{id}",
+          "permissionsRequired": ["orders.titles.item.put"],
+          "modulePermissions": ["orders-storage.titles.item.put"]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/orders/titles/{id}",
+          "permissionsRequired": ["orders.titles.item.delete"],
+          "modulePermissions": ["orders-storage.titles.item.delete"]
+        }
+      ]
+    },
+    {
       "id": "_jsonSchemas",
       "version": "1.0",
       "interfaceType" : "multiple",
@@ -401,11 +437,11 @@
     },
     {
       "id": "orders-storage.pieces",
-      "version": "3.1"
+      "version": "4.0"
     },
     {
       "id": "orders-storage.receiving-history",
-      "version": "3.1"
+      "version": "3.2"
     },
     {
       "id": "orders-storage.reporting-codes",
@@ -473,6 +509,10 @@
     },
     {
       "id": "finance.ledgers",
+      "version": "1.0"
+    },
+    {
+      "id": "orders-storage.titles",
       "version": "1.0"
     }
   ],
@@ -698,6 +738,43 @@
       ]
     },
     {
+      "permissionName": "orders.titles.collection.get",
+      "displayName": "Titles - get titles collection",
+      "description": "Get titles collection"
+    },
+    {
+      "permissionName": "orders.titles.item.post",
+      "displayName": "Titles - create a new title",
+      "description": "Create a new title"
+    },
+    {
+      "permissionName": "orders.titles.item.get",
+      "displayName": "Titles - get an existing title",
+      "description": "Get an existing title"
+    },
+    {
+      "permissionName": "orders.titles.item.put",
+      "displayName": "Titles - modify an existing title",
+      "description": "Modify an existing title"
+    },
+    {
+      "permissionName": "orders.titles.item.delete",
+      "displayName": "Titles - delete an existing title",
+      "description": "Delete an existing title"
+    },
+    {
+      "permissionName": "orders.titles.all",
+      "displayName": "All titles perms",
+      "description": "All permissions for the titles",
+      "subPermissions": [
+        "orders.titles.collection.get",
+        "orders.titles.item.post",
+        "orders.titles.item.get",
+        "orders.titles.item.put",
+        "orders.titles.item.delete"
+      ]
+    },
+    {
       "permissionName": "orders.all",
       "displayName": "orders - all permissions",
       "description": "Entire set of permissions needed to use orders",
@@ -721,7 +798,8 @@
         "orders.pieces.item.put",
         "orders.pieces.item.delete",
         "orders.acquisitions-units-assignments.all",
-        "orders.order-templates.all"
+        "orders.order-templates.all",
+        "orders.titles.all"
       ]
     },
     {

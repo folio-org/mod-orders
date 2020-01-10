@@ -3,6 +3,7 @@ package org.folio.rest.impl;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
+import static org.folio.orders.utils.HelperUtils.handleErrorResponse;
 import static org.folio.orders.utils.HelperUtils.validatePoLine;
 
 import java.util.ArrayList;
@@ -328,12 +329,6 @@ public class OrdersImpl implements Orders {
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(receivingHistory)));
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
-  }
-
-  private Void handleErrorResponse(Handler<AsyncResult<Response>> asyncResultHandler, AbstractHelper helper,
-      Throwable t) {
-    asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(t)));
-    return null;
   }
 
   @Override

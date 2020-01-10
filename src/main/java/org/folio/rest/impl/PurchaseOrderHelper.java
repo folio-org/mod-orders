@@ -318,8 +318,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     getPurchaseOrderById(id, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
       .thenAccept(compPO -> protectionHelper.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.READ)
-        .thenAccept(ok -> getSortedCompositeOrderLines(id)
-          .thenApply(compPO::withCompositePoLines)
+        .thenAccept(ok -> fetchCompositeLinesWithInstanceId(compPO)
           .thenApply(this::populateOrderSummary)
           .thenAccept(future::complete)
           .exceptionally(t -> {
@@ -339,14 +338,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
       });
 
     return future;
-  }
-
-  private CompletableFuture<List<CompositePoLine>> getSortedCompositeOrderLines(String orderId) {
-    return getCompositePoLines(orderId, lang, httpClient, ctx, okapiHeaders, logger)
-    .thenApply(poLines -> {
-      orderLineHelper.sortPoLinesByPoLineNumber(poLines);
-      return poLines;
-    });
   }
 
   private CompositePurchaseOrder populateOrderSummary(CompositePurchaseOrder compPO) {
@@ -370,7 +361,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   public CompletableFuture<Void> openOrder(CompositePurchaseOrder compPO) {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
-    return fetchCompositePoLines(compPO)
+    return fetchCompositeLinesWithInstanceId(compPO)
       .thenCompose(this::verifyTitles)
       .thenCompose(this::updateInventory)
       .thenCompose(ok -> createEncumbrances(compPO))
@@ -392,9 +383,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
     return fetchNonPackageTitles(compPO)
       .thenAccept(lineIdTitle -> compPO.getCompositePoLines().forEach(line -> {
-        if (lineIdTitle.containsKey(line.getId())) {
-          line.setInstanceId(lineIdTitle.get(line.getId()).getInstanceId());
-        } else {
+        if (!lineIdTitle.containsKey(line.getId())) {
           throw new HttpException(400, TITLE_NOT_FOUND);
         }
       }))
@@ -633,10 +622,31 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private CompletableFuture<CompositePurchaseOrder> fetchCompositePoLines(CompositePurchaseOrder compPO) {
     if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-      return getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
+      return  getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
+        .thenApply(poLines -> {
+          orderLineHelper.sortPoLinesByPoLineNumber(poLines);
+          return poLines;
+        })
         .thenApply(compPO::withCompositePoLines);
+    } else {
+      return completedFuture(compPO);
     }
-    return completedFuture(compPO);
+  }
+
+  private CompletableFuture<CompositePurchaseOrder> fetchCompositeLinesWithInstanceId(CompositePurchaseOrder compPO) {
+    return fetchCompositePoLines(compPO)
+      .thenCompose(this::fetchNonPackageTitles)
+      .thenApply(stringTitleMap -> {
+        getNonPackageLines(compPO.getCompositePoLines())
+          .forEach(line -> populateInstanceId(stringTitleMap, line));
+        return compPO;
+      });
+  }
+
+  private void populateInstanceId(Map<String, Title> stringTitleMap, CompositePoLine line) {
+    if (stringTitleMap.containsKey(line.getId())) {
+      line.setInstanceId(stringTitleMap.get(line.getId()).getInstanceId());
+    }
   }
 
   private void changePoLineStatuses(CompositePurchaseOrder compPO) {

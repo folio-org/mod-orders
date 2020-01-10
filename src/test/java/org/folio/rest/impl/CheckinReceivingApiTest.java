@@ -12,6 +12,7 @@ import static org.folio.orders.utils.ErrorCodes.PIECE_POL_MISMATCH;
 import static org.folio.orders.utils.ErrorCodes.PIECE_UPDATE_FAILED;
 import static org.folio.rest.impl.InventoryHelper.ITEM_BARCODE;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS;
+import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_IN_PROCESS;
 import static org.folio.rest.impl.InventoryHelper.ITEM_LEVEL_CALL_NUMBER;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_NAME;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_ON_ORDER;
@@ -168,6 +169,11 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     assertThat(polSearches, hasSize(1));
     assertThat(polUpdates, hasSize(1));
 
+    itemUpdates.forEach(item -> {
+      assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
+      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_IN_PROCESS));
+    });
+    
     polUpdates.forEach(pol -> {
       PoLine poLine = pol.mapTo(PoLine.class);
       assertThat(poLine.getCheckinItems(), is(true));
@@ -242,7 +248,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     toBeCheckedInList.add(new ToBeCheckedIn()
       .withCheckedIn(1)
       .withPoLineId(poLineId)
-      .withCheckInPieces(Arrays.asList(new CheckInPiece().withItemStatus("In process"), new CheckInPiece().withItemStatus("In process"))));
+      .withCheckInPieces(Arrays.asList(new CheckInPiece().withItemStatus(ITEM_STATUS_IN_PROCESS), new CheckInPiece().withItemStatus(ITEM_STATUS_IN_PROCESS))));
 
     CheckinCollection request = new CheckinCollection()
       .withToBeCheckedIn(toBeCheckedInList)
@@ -423,9 +429,16 @@ public class CheckinReceivingApiTest extends ApiTestBase {
       PIECE_POL_MISMATCH.getCode(), PIECE_NOT_FOUND.getCode(), ITEM_UPDATE_FAILED.getCode(), ITEM_NOT_FOUND.getCode(),
       PIECE_UPDATE_FAILED.getCode()));
 
+    List<JsonObject> itemUpdates = getItemUpdates();
     List<JsonObject> polUpdates = getPoLineUpdates();
     assertThat(getPoLineSearches(), hasSize(1));
     assertThat(polUpdates, hasSize(1));
+    assertThat(itemUpdates, hasSize(6));
+
+    itemUpdates.forEach(item -> {
+      assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
+      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_IN_PROCESS));
+    });
 
     polUpdates.forEach(pol -> {
       PoLine poLine = pol.mapTo(PoLine.class);

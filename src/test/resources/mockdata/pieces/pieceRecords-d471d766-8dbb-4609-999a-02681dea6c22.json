@@ -10,6 +10,7 @@
       "poLineId": "d471d766-8dbb-4609-999a-02681dea6c22",
       "receivingStatus": "Expected",
       "supplement": true,
+      "receiptDate": "2018-10-09T00:00:00.000Z",
       "receivedDate": "2019-06-06T00:00:00.000Z"
     },
     {
@@ -19,6 +20,7 @@
       "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
       "poLineId": "d471d766-8dbb-4609-999a-02681dea6c22",
       "receivingStatus": "Expected",
+      "receiptDate": "2018-10-09T00:00:00.000Z",
       "receivedDate": "2019-03-05T08:06:58.473+0000"
     }
   ],

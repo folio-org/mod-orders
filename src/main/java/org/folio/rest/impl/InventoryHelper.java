@@ -67,6 +67,7 @@ public class InventoryHelper extends AbstractHelper {
   static final String ITEM_LEVEL_CALL_NUMBER = "itemLevelCallNumber";
   static final String ITEM_STATUS = "status";
   static final String ITEM_STATUS_NAME = "name";
+  static final String ITEM_STATUS_IN_PROCESS = "In process";
   static final String ITEM_STATUS_ON_ORDER = "On order";
   static final String ITEM_MATERIAL_TYPE_ID = "materialTypeId";
   static final String ITEM_PERMANENT_LOAN_TYPE_ID = "permanentLoanTypeId";

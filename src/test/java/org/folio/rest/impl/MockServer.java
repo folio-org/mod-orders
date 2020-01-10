@@ -161,6 +161,7 @@ public class MockServer {
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
   public static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
   private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
+  public static final String TITLES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "titles/";
   private static final String ACQUISITIONS_UNITS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "acquisitionsUnits/units";
   private static final String ORDER_TEMPLATES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "orderTemplates/";
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
@@ -211,7 +212,7 @@ public class MockServer {
     // Setup Mock Server...
     HttpServer server = vertx.createHttpServer();
     CompletableFuture<HttpServer> deploymentComplete = new CompletableFuture<>();
-    server.requestHandler(defineRoutes()::accept).listen(port, result -> {
+    server.requestHandler(defineRoutes()).listen(port, result -> {
       if(result.succeeded()) {
         deploymentComplete.complete(result.result());
       }
@@ -401,7 +402,8 @@ public class MockServer {
       .handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TRANSACTION_SUMMARIES));
     router.post(resourcesPath(ENCUMBRANCES))
       .handler(ctx -> handlePostGenericSubObj(ctx, ENCUMBRANCES));
-    router.post(resourcesPath(TITLES)).handler(ctx -> handlePostGenericSubObj(ctx, TITLES));
+    router.post(resourcesPath(TITLES))
+      .handler(ctx -> handlePostGenericSubObj(ctx, TITLES));
 
     router.post(resourcesPath(ACQUISITIONS_UNITS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_UNITS));
     router.post(resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
@@ -440,7 +442,8 @@ public class MockServer {
     router.get(resourcesPath(ORDER_TEMPLATES)).handler(this::handleGetOrderTemplates);
     router.get("/finance/ledgers/:id/current-fiscal-year").handler(this::handleGetCurrentFiscalYearByLedgerId);
     router.get(resourcesPath(FUNDS)).handler(this::handleGetFunds);
-    router.get(resourcesPath(TITLES)).handler(this::handleTitlesFunds);
+    router.get(resourcesPath(TITLES)).handler(this::handleGetTitles);
+    router.get(resourcePath(TITLES)).handler(this::handleGetOrderTitleById);
 
     router.put(resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
     router.put(resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -462,38 +465,13 @@ public class MockServer {
     router.delete(resourcePath(ACQUISITIONS_UNITS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_UNITS));
     router.delete(resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
     router.delete(resourcePath(ORDER_TEMPLATES)).handler(ctx -> handleDeleteGenericSubObj(ctx, ORDER_TEMPLATES));
+    router.delete(resourcePath(TITLES)).handler(ctx -> handleDeleteGenericSubObj(ctx, TITLES));
 
     router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
     return router;
   }
 
-  private void handleTitlesFunds(RoutingContext ctx) {
-    String query = StringUtils.trimToEmpty(ctx.request().getParam(QUERY));
-    addServerRqQuery(TITLES, query);
-    if (query.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
-    } else {
-      try {
-
-        List<String> ids = Collections.emptyList();
-        if (query.startsWith("id==")) {
-          ids = extractIdsFromQuery(query);
-        }
-
-        JsonObject collection = getTitlesByIds(ids);
-        addServerRqRsData(HttpMethod.GET, TITLES, collection);
-
-        ctx.response()
-          .setStatusCode(200)
-          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-          .end(collection.encodePrettily());
-      } catch (Exception e) {
-        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
-      }
-    }
-  }
-
-  private JsonObject getTitlesByIds(List<String> titleIds) {
+  private JsonObject getTitlesByPoLineIds(List<String> poLineIds) {
     Supplier<List<Title>> getFromFile = () -> {
       try {
         return new JsonObject(getMockData(TITLES_PATH)).mapTo(TitleCollection.class).getTitles();
@@ -504,8 +482,8 @@ public class MockServer {
 
     List<Title> titles = getMockEntries(TITLES, Title.class).orElseGet(getFromFile);
 
-    if (!titleIds.isEmpty()) {
-      titles.removeIf(item -> !titleIds.contains(item.getId()));
+    if (!poLineIds.isEmpty()) {
+      titles.removeIf(item -> !poLineIds.contains(item.getPoLineId()));
     }
 
     Object record = new TitleCollection().withTitles(titles).withTotalRecords(titles.size());
@@ -1319,6 +1297,33 @@ public class MockServer {
     }
   }
 
+  private void handleGetTitles(RoutingContext ctx) {
+    String query = StringUtils.trimToEmpty(ctx.request().getParam(QUERY));
+    addServerRqQuery(TITLES, query);
+    if (query.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+    } else {
+      try {
+
+        List<String> ids = Collections.emptyList();
+        if (query.startsWith("poLineId==")) {
+          ids = extractValuesFromQuery("poLineId", query);
+        }
+
+        JsonObject collection = getTitlesByPoLineIds(ids);
+        addServerRqRsData(HttpMethod.GET, TITLES, collection);
+
+        ctx.response()
+          .setStatusCode(200)
+          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+          .end(collection.encodePrettily());
+      } catch (Exception e) {
+        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+      }
+    }
+  }
+
+
   private List<String> extractIdsFromQuery(String query) {
     return extractValuesFromQuery(ID, query);
   }
@@ -1540,6 +1545,8 @@ public class MockServer {
         return OrderTransactionSummary.class;
       case ENCUMBRANCES:
         return Transaction.class;
+      case TITLES:
+        return Title.class;
     }
 
     fail("The sub-object is unknown");
@@ -1562,6 +1569,9 @@ public class MockServer {
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
         .end();
     } else {
+      if (!pol.getIsPackage() && getMockEntries(TITLES, Title.class).orElseGet(Collections::emptyList).isEmpty()) {
+        addMockEntry(TITLES, new Title().withId(UUID.randomUUID().toString()).withPoLineId(pol.getId()).withTitle(pol.getTitleOrPackage()));
+      }
       ctx.response()
         .setStatusCode(201)
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
@@ -1804,6 +1814,35 @@ public class MockServer {
       JsonObject data = JsonObject.mapFrom(templates.withTotalRecords(templates.getOrderTemplates().size()));
       addServerRqRsData(HttpMethod.GET, ORDER_TEMPLATES, data);
       serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
+    }
+  }
+
+
+  private void handleGetOrderTitleById(RoutingContext ctx) {
+    logger.info("got: " + ctx.request().path());
+    String id = ctx.request().getParam(ID);
+    logger.info("id: " + id);
+
+    addServerRqRsData(HttpMethod.GET, TITLES, new JsonObject().put(ID, id));
+
+    if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+    } else {
+      try {
+
+        // Attempt to find title in mock server memory
+        JsonObject existantTitle = getMockEntry(TITLES, id).orElse(null);
+
+        // If previous step has no result then attempt to find title in stubs
+        if (existantTitle == null) {
+          Title title = new JsonObject(ApiTestBase.getMockData(String.format("%s%s.json", TITLES_MOCK_DATA_PATH, id))).mapTo(Title.class);
+          existantTitle = JsonObject.mapFrom(title);
+        }
+
+        serverResponse(ctx, 200, APPLICATION_JSON, existantTitle.encodePrettily());
+      } catch (IOException e) {
+        serverResponse(ctx, 404, APPLICATION_JSON, id);
+      }
     }
   }
 

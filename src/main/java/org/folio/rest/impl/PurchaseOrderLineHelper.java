@@ -216,7 +216,9 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    */
   CompletableFuture<CompositePoLine> createPoLine(CompositePoLine compPoLine, CompositePurchaseOrder compOrder) {
     // The id is required because sub-objects are being created first
-    compPoLine.setId(UUID.randomUUID().toString());
+    if (isEmpty(compPoLine.getId())) {
+      compPoLine.setId(UUID.randomUUID().toString());
+    }
     compPoLine.setPurchaseOrderId(compOrder.getId());
     updateEstimatedPrice(compPoLine);
     updateLocationsQuantity(compPoLine.getLocations());
@@ -550,7 +552,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private CompletableFuture<CompositePoLine> getLineWithTitles(CompositePoLine line) {
      if (!line.getIsPackage()) {
        return new TitlesHelper(httpClient, okapiHeaders, ctx, lang)
-         .getTitles("poLineId==" + line.getId(), 0, 1)
+         .getTitles(1, 0, "poLineId==" + line.getId())
          .thenApply(titleCollection -> {
            List<Title> titles = titleCollection.getTitles();
            if (!titles.isEmpty()) {
