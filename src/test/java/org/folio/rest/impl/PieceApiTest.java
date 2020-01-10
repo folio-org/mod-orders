@@ -6,12 +6,16 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.folio.HttpStatus;
 import org.folio.rest.acq.model.Piece;
+import org.folio.rest.jaxrs.model.Errors;
 import org.junit.Test;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
+import static org.folio.orders.utils.ErrorCodes.MISSING_RECEIPT_DATE;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -54,15 +58,32 @@ public class PieceApiTest extends ApiTestBase {
     verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID,
       new Header(X_ECHO_STATUS, String.valueOf(status500))), APPLICATION_JSON, status500);
   }
-  
+
+  @Test
+  public void testPostPieceWithoutReceiptDate() {
+    logger.info("=== Test POST Piece (Create Piece) without receiptDate===");
+
+    Piece postPieceRq = pieceJsonReqData.mapTo(Piece.class);
+    // To skip unit's permission validation
+    postPieceRq.setPoLineId("0009662b-8b80-4001-b704-ca10971f175d");
+    postPieceRq.setReceiptDate(null);
+
+    Errors errors = verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(errors.getErrors(), hasSize(1));
+    assertThat(errors.getErrors().get(0).getCode(), is(MISSING_RECEIPT_DATE.getCode()));
+
+  }
+
   @Test
   public void testPutPiecesByIdTest() throws Exception {
     logger.info("=== Test update piece by id - valid Id 204 ===");
-    
+
     String reqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord.json");
 
     verifyPut(String.format(PIECES_ID_PATH, VALID_UUID), reqData, "", 204);
-    
+
     // Message sent to event bus
     verifyReceiptStatusUpdateEvent(1);
   }
@@ -70,11 +91,11 @@ public class PieceApiTest extends ApiTestBase {
   @Test
   public void testPutPiecesByIdConsistentReceiptStatusTest() throws Exception {
     logger.info("=== Test update piece by id when receipt status is consistent - valid Id 204 ===");
-    
+
     String reqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-received-consistent-receipt-status-5b454292-6aaa-474f-9510-b59a564e0c8d2.json");
 
     verifyPut(String.format(PIECES_ID_PATH, CONSISTENT_RECEIVED_STATUS_PIECE_UUID), reqData, "", 204);
-    
+
     // Message not sent to event bus
     verifyReceiptStatusUpdateEvent(0);
   }
@@ -82,7 +103,7 @@ public class PieceApiTest extends ApiTestBase {
   @Test
   public void testPutPiecesByNonExistentId() {
     logger.info("=== Test update piece by id - Id does not exists 404 ===");
-    
+
     Piece reqData = pieceJsonReqData.mapTo(Piece.class);
     reqData.setId(ID_DOES_NOT_EXIST);
     String jsonBody = JsonObject.mapFrom(reqData)
@@ -94,7 +115,7 @@ public class PieceApiTest extends ApiTestBase {
   @Test
   public void testPutPiecesWithError() {
     logger.info("=== Test update piece by id - internal error from storage 500 ===");
-    
+
     Piece reqData = pieceJsonReqData.mapTo(Piece.class);
     reqData.setId(ID_FOR_INTERNAL_SERVER_ERROR);
     String jsonBody = JsonObject.mapFrom(reqData)
@@ -109,13 +130,13 @@ public class PieceApiTest extends ApiTestBase {
 
     verifyDeleteResponse(String.format(PIECES_ID_PATH, VALID_UUID), "", 204);
   }
-  
+
   @Test
   public void deletePiecesByIdWithInvalidFormatTest() {
     logger.info("=== Test delete piece by id - bad Id format 400 ===");
     verifyDeleteResponse(String.format(PIECES_ID_PATH, ID_BAD_FORMAT), TEXT_PLAIN, 400);
   }
-  
+
   @Test
   public void deleteNotExistentPieceTest() {
     logger.info("=== Test delete piece by id - id does not exists 404 ===");
