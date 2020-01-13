@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import static org.folio.orders.utils.ErrorCodes.MISSING_RECEIPT_DATE;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
@@ -12,9 +13,11 @@ import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import org.folio.orders.events.handlers.MessageAddress;
+import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
@@ -37,9 +40,16 @@ public class PiecesHelper extends AbstractHelper {
   }
 
   CompletableFuture<Piece> createPiece(Piece piece) {
-    return getOrderByPoLineId(piece.getPoLineId())
-      .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE))
-      .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(piece), resourcesPath(PIECES)).thenApply(piece::withId));
+    CompletableFuture<Piece> future = new CompletableFuture<>();
+    if (Objects.isNull(piece.getReceiptDate())) {
+      future.completeExceptionally(new HttpException(422, MISSING_RECEIPT_DATE));
+      return future;
+    } else {
+      future = getOrderByPoLineId(piece.getPoLineId())
+        .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE))
+        .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(piece), resourcesPath(PIECES)).thenApply(piece::withId));
+    }
+    return future;
   }
 
   // Flow to update piece

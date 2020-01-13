@@ -55,7 +55,8 @@ public enum ErrorCodes {
   APPROVAL_REQUIRED_TO_OPEN("orderApprovalRequired","Approval is required to open order"),
   ISBN_NOT_VALID("invalidISBN", "ISBN value is invalid"),
   FUNDS_NOT_FOUND("fundsNotFound", "The fund records are not found"),
-  CURRENT_FISCAL_YEAR_NOT_FOUND("currentFYearNotFound", "Current fiscal year not found for ledger");
+  CURRENT_FISCAL_YEAR_NOT_FOUND("currentFYearNotFound", "Current fiscal year not found for ledger"),
+  MISSING_RECEIPT_DATE("missingReceiptDate", "receiptDate cannot be null");
 
   private final String code;
   private final String description;
