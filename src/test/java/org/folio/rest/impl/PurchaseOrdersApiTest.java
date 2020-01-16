@@ -2680,6 +2680,26 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
+  public void testPostOrdersInventoryInteractionWithPackagePoLine() throws Exception {
+    logger.info("=== Test POST electronic PO, to no interaction with inventory if poLine.isPackage=true ==");
+
+    JsonObject order = new JsonObject(getMockData(ELECTRONIC_FOR_CREATE_INVENTORY_TEST));
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    // Make sure that Order is Open
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    // Set CreateInventory value to create inventory instances and holdings
+    reqData.getCompositePoLines().get(0).setIsPackage(true);
+
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    assertNull(getCreatedInstances());
+    assertNull(getCreatedHoldings());
+    assertNull(getItemsSearches());
+    assertNull(getCreatedPieces());
+  }
+
+  @Test
   public void testPostOrdersNoInventoryInteractionWithReceiptNotRequired() throws Exception {
     logger.info("=== Test POST PO, to have no inventory Interaction, with CreateInventory None and receipt not required==");
 
