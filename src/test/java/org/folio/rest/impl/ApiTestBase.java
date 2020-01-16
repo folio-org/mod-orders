@@ -5,7 +5,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.awaitility.Awaitility.await;
 import static org.folio.orders.utils.ErrorCodes.PROHIBITED_FIELD_CHANGING;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
@@ -223,7 +222,7 @@ public class ApiTestBase {
     }
   }
 
-  static JsonObject getMockAsJson(String path, String id) {
+  public static JsonObject getMockAsJson(String path, String id) {
     return getMockAsJson(String.format("%s%s.json", path, id));
   }
 
@@ -449,7 +448,7 @@ public class ApiTestBase {
       .withId(UUID.randomUUID().toString())
       .withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
       .withFormat(Piece.Format.PHYSICAL)
-      //.withReceiptDate(new Date())
+      .withReceiptDate(new Date())
       .withPoLineId(poLineId);
   }
 
@@ -457,6 +456,7 @@ public class ApiTestBase {
     return new Title().withId(UUID.randomUUID().toString())
       .withPoLineId(poLine.getId())
       .withTitle(poLine.getTitleOrPackage())
+      .withInstanceId(poLine.getInstanceId())
       .withProductIds(Optional.ofNullable(poLine.getDetails()).orElseGet(Details::new).getProductIds());
   }
 

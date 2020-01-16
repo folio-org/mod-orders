@@ -7,7 +7,9 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
 import static org.folio.orders.utils.ErrorCodes.PROHIBITED_FIELD_CHANGING;
+import static org.folio.orders.utils.ErrorCodes.TITLE_NOT_FOUND;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
@@ -25,20 +27,6 @@ import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
-import org.apache.commons.collections4.map.CaseInsensitiveMap;
-import org.apache.commons.lang3.ArrayUtils;
-import org.folio.rest.acq.model.Piece;
-import org.folio.rest.impl.AbstractHelper;
-import org.folio.rest.impl.TitlesHelper;
-import org.folio.rest.jaxrs.model.PoLine;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
@@ -74,6 +62,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.client.ConfigurationsClient;
+import org.folio.rest.impl.AbstractHelper;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -89,14 +78,16 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.ReportingCode;
-import org.folio.rest.jaxrs.model.TitleCollection;
+import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.parser.JsonPathParser;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
+import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
@@ -974,24 +965,6 @@ public class HelperUtils {
     return future;
   }
 
-  public static CompletableFuture<TitleCollection> getTitles(String endpoint, HttpClientInterface
-    httpClient, Context ctx, Map<String, String> okapiHeaders,
-                                                             Logger logger) {
-    CompletableFuture<TitleCollection> future = new VertxCompletableFuture<>(ctx);
-    try {
-      handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-        .thenCompose(json -> VertxCompletableFuture.supplyBlockingAsync(ctx, () -> json.mapTo(TitleCollection.class)))
-        .thenAccept(future::complete)
-        .exceptionally(t -> {
-          future.completeExceptionally(t.getCause());
-          return null;
-        });
-    } catch (Exception e) {
-      future.completeExceptionally(e);
-    }
-    return future;
-  }
-
   /**
    * Retrieve configuration for mod-orders from mod-configuration.
    * @param okapiHeaders the headers provided by okapi
@@ -1223,5 +1196,27 @@ public class HelperUtils {
 
   public static String getEndpoint(Class<?> clazz) {
     return clazz.getAnnotation(Path.class).value();
+  }
+
+  public static boolean isMultipleTitles(Map<String, List<Title>> titles) {
+    return titles.entrySet().stream().anyMatch(stringListEntry -> stringListEntry.getValue().size() != 1);
+  }
+
+  public static Map<String, List<Title>> verifyNonPackageTitles(Map<String, List<Title>> lineIdTitles, List<String> poLineIds) {
+    verifyAllNonPackageTitlesExist(lineIdTitles, poLineIds);
+    verifyNonPackageLinesHaveSingleTitle(lineIdTitles);
+    return lineIdTitles;
+  }
+
+  private static void verifyNonPackageLinesHaveSingleTitle(Map<String, List<Title>> lineIdTitles) {
+    if (isMultipleTitles(lineIdTitles)) {
+      throw new HttpException(400, MULTIPLE_NONPACKAGE_TITLES);
+    }
+  }
+
+  public static void verifyAllNonPackageTitlesExist(Map<String, List<Title>> lineIdTitles, List<String> poLineIds) {
+    if (lineIdTitles.size() < poLineIds.size()) {
+      throw new HttpException(400, TITLE_NOT_FOUND);
+    }
   }
 }

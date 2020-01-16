@@ -544,12 +544,13 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       });
   }
 
+
   private CompletionStage<CompositePoLine> populateCompositeLine(JsonObject poline) {
     return HelperUtils.operateOnPoLine(HttpMethod.GET, poline, httpClient, ctx, okapiHeaders, logger)
-      .thenCompose(this::getLineWithTitles);
+      .thenCompose(this::getLineWithInstanceId);
   }
 
-  private CompletableFuture<CompositePoLine> getLineWithTitles(CompositePoLine line) {
+  private CompletableFuture<CompositePoLine> getLineWithInstanceId(CompositePoLine line) {
      if (!line.getIsPackage()) {
        return new TitlesHelper(httpClient, okapiHeaders, ctx, lang)
          .getTitles(1, 0, "poLineId==" + line.getId())

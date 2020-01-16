@@ -5,6 +5,7 @@ import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
@@ -121,6 +122,7 @@ import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.OrderTemplate;
 import org.folio.rest.jaxrs.model.OrderTemplateCollection;
@@ -160,13 +162,13 @@ public class MockServer {
   static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
   public static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
-  private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
+  public static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
   public static final String TITLES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "titles/";
   private static final String ACQUISITIONS_UNITS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "acquisitionsUnits/units";
   private static final String ORDER_TEMPLATES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "orderTemplates/";
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
   private static final String ORGANIZATIONS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "organizations/";
-  static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "po_line_collection.json";
+  public static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "po_line_collection.json";
   private static final String IDENTIFIER_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
   static final String ACQUISITIONS_UNITS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/units.json";
   static final String ACQUISITIONS_MEMBERSHIPS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/memberships.json";
@@ -206,6 +208,12 @@ public class MockServer {
   MockServer(int port) {
     this.port = port;
     this.vertx = Vertx.vertx();
+  }
+
+  public static void addMockTitles(List<CompositePoLine> poLines) {
+    poLines.stream()
+      .filter(line -> !line.getIsPackage() && isNotEmpty(line.getId()))
+      .forEach(line -> addMockEntry(TITLES, ApiTestBase.getTitle(line)));
   }
 
   void start() throws InterruptedException, ExecutionException, TimeoutException {
@@ -296,6 +304,10 @@ public class MockServer {
 
   static List<JsonObject> getOrderLineSearches() {
     return serverRqRs.get(ORDER_LINES, HttpMethod.GET);
+  }
+
+  static List<JsonObject> getTitlesSearches() {
+    return serverRqRs.get(TITLES, HttpMethod.GET);
   }
 
   static List<JsonObject> getLoanTypesSearches() {
@@ -1019,36 +1031,34 @@ public class MockServer {
       List<JsonObject> postedPoLines = getRqRsEntries(HttpMethod.OTHER, type);
 
       try {
-        PoLineCollection poLineCollection;
+        PoLineCollection poLineCollection = new PoLineCollection();
+        if (postedPoLines.isEmpty()) {
+          if (poId.equals(ORDER_ID_WITH_PO_LINES) || !polIds.isEmpty()) {
+            poLineCollection = new JsonObject(ApiTestBase.getMockData(POLINES_COLLECTION)).mapTo(PoLineCollection.class);
 
-        if (poId.equals(ORDER_ID_WITH_PO_LINES) || !polIds.isEmpty()) {
-          poLineCollection = new JsonObject(ApiTestBase.getMockData(POLINES_COLLECTION)).mapTo(PoLineCollection.class);
-
-          // Filter PO Lines either by PO id or by expected line ids
-          Iterator<PoLine> iterator = poLineCollection.getPoLines().iterator();
-          while (iterator.hasNext()) {
-            PoLine poLine = iterator.next();
-            if (polIds.isEmpty() ? !poId.equals(poLine.getPurchaseOrderId()) : !polIds.contains(poLine.getId())) {
-              iterator.remove();
+            // Filter PO Lines either by PO id or by expected line ids
+            Iterator<PoLine> iterator = poLineCollection.getPoLines().iterator();
+            while (iterator.hasNext()) {
+              PoLine poLine = iterator.next();
+              if (polIds.isEmpty() ? !poId.equals(poLine.getPurchaseOrderId()) : !polIds.contains(poLine.getId())) {
+                iterator.remove();
+              }
             }
-          }
-          poLineCollection.setTotalRecords(poLineCollection.getPoLines().size());
-        } else {
-          String filePath;
-          if (ID_FOR_PRINT_MONOGRAPH_ORDER.equals(poId)) {
-            filePath = LISTED_PRINT_MONOGRAPH_PATH;
+            poLineCollection.setTotalRecords(poLineCollection.getPoLines().size());
           } else {
-            filePath = String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, poId);
+            String filePath;
+            if (ID_FOR_PRINT_MONOGRAPH_ORDER.equals(poId)) {
+              filePath = LISTED_PRINT_MONOGRAPH_PATH;
+            } else {
+              filePath = String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, poId);
+            }
+            JsonObject compPO = new JsonObject(ApiTestBase.getMockData(filePath));
+            // Build PoLineCollection to make sure content is valid
+            poLineCollection = buildPoLineCollection(tenant, compPO.getJsonArray(COMPOSITE_PO_LINES));
           }
-          JsonObject compPO = new JsonObject(ApiTestBase.getMockData(filePath));
-          // Build PoLineCollection to make sure content is valid
-          poLineCollection = buildPoLineCollection(tenant, compPO.getJsonArray(COMPOSITE_PO_LINES));
-        }
-
+        } else {
         // Attempt to find POLine in mock server memory
-        if (postedPoLines != null) {
           poLineCollection.getPoLines().addAll(postedPoLines.stream()
-            .filter(json -> queryParam.contains(json.getString(ID)))
             .map(jsonObj -> jsonObj.mapTo(PoLine.class))
             .collect(Collectors.toList()));
         }

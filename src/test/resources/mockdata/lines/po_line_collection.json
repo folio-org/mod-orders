@@ -397,7 +397,7 @@
           "code": "Code 1",
           "description": "License Agreement 1"
         },
-        "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
+        "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892"
       },
       "locations": [
         {
@@ -475,7 +475,7 @@
         },
         "trial": false,
         "userLimit": 10,
-        "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
+        "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892"
       },
       "fundDistribution": [
         {
@@ -533,7 +533,6 @@
       "receiptDate": "2019-03-05T08:06:58.721+0000",
       "receiptStatus": "Fully Received",
       "reportingCodes": [
-        "9397990a-96f9-4c55-a958-f5f6941b9e68"
       ],
       "requester": "Leo Bulero",
       "rush": true,
@@ -646,154 +645,154 @@
       }
     },
     {
-            "id": "9b68e7c2-8818-4387-a405-6567232c1c6f",
-            "acquisitionMethod": "Purchase At Vendor System",
-            "alerts": [],
-            "checkinItems": true,
-            "claims": [
-                {
-                    "claimed": true,
-                    "grace": 45
-                }
-            ],
-            "collection": false,
-            "contributors": [],
-            "cost": {
-                "currency": "USD",
-                "listUnitPrice": 0,
-                "listUnitPriceElectronic": 2,
-                "quantityPhysical": 2,
-                "quantityElectronic": 2,
-                "poLineEstimatedPrice": 4
-            },
-            "details": {
-                "productIds": []
-            },
-            "eresource": {
-               "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
-               "activated": false,
-               "activationDue": 10,
-               "createInventory": "Instance",
-               "expectedActivation": "2018-10-09T00:00:00.000Z",
-               "license": {
-                   "code": "Code 1",
-                   "description": "License Agreement 1"
-                 },
-               "trial": false,
-                "userLimit": 10
-            },
-            "fundDistribution": [
-                {
-                  "code": "STATE-SUBN",
-                  "fundId": "e54b1f4d-7d05-4b1a-9368-3c36b75d8ac6",
-                  "distributionType": "percentage",
-                  "value": 100
-                }
-            ],
-            "locations": [
-                {
-                    "locationId": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
-                    "quantity": 4,
-                    "quantityPhysical": 2,
-                    "quantityElectronic": 2
-                }
-            ],
-            "orderFormat": "P/E Mix",
-            "paymentStatus": "Awaiting Payment",
-            "physical": {
-                "expectedReceiptDate": "2019-04-17T18:56:45.237+0000",
-                "volumes": [],
-                "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8"
-            },
-            "poLineNumber": "10110-1",
-            "publisher": "MARINER BOOKS",
-            "purchaseOrderId": "f6328932-cca2-4758-8547-b9435b783fbb",
-            "receiptStatus": "Awaiting Receipt",
-            "reportingCodes": [],
-            "source": "User",
-            "tags": {
-              "tagList": []
-            },
-            "titleOrPackage": "BEST AMERICAN SCIENCE FICTION AND FANTASY.",
-            "vendorDetail": {
-                "instructions": "Next Volume | Listed Print Serial",
-                "refNumber": "99974828485",
-                "refNumberType": "Supplier's unique order line reference number"
-            },
-            "metadata": {
-                "createdDate": "2019-03-18T18:56:45.333+0000",
-                "createdByUserId": "a564c58b-fe32-5729-ab90-12df37840a76",
-                "updatedDate": "2019-03-18T18:56:45.477+0000",
-                "updatedByUserId": "a564c58b-fe32-5729-ab90-12df37840a76"
-            }
-        },
-         {
-            "id": "7c98369b-89e4-4b2a-9793-ba36c056fc97",
-            "acquisitionMethod": "Purchase At Vendor System",
-            "alerts": [],
-            "checkinItems": true,
-            "claims": [
-                {
-                    "claimed": true,
-                    "grace": 45
-                }
-            ],
-            "collection": false,
-            "contributors": [],
-            "cost": {
-                "currency": "USD",
-                "listUnitPrice": 2,
-                "quantityPhysical": 2,
-                "poLineEstimatedPrice": 4
-            },
-            "details": {
-                "productIds": []
-            },
-            "fundDistribution": [
-                {
-                  "code": "STATE-SUBN",
-                  "fundId": "e54b1f4d-7d05-4b1a-9368-3c36b75d8ac6",
-                  "distributionType": "percentage",
-                  "value": 100
-                }
-            ],
-            "locations": [
-                {
-                    "locationId": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
-                    "quantity": 4,
-                    "quantityPhysical": 2,
-                    "quantityElectronic": 2
-                }
-            ],
-            "orderFormat": "Physical Resource",
-            "paymentStatus": "Awaiting Payment",
-            "physical": {
-                "expectedReceiptDate": "2019-04-17T18:56:45.237+0000",
-                "volumes": [],
-                "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8"
-            },
-            "poLineNumber": "12345-1",
-            "publisher": "MARINER BOOKS",
-            "purchaseOrderId": "707cefd7-cccd-437d-b4bf-456f9c3dde6d",
-            "receiptStatus": "Partially Received",
-            "reportingCodes": [],
-            "source": "User",
-           "tags": {
-             "tagList": []
-           },
-            "titleOrPackage": "Country Madness",
-            "vendorDetail": {
-                "instructions": "Next Volume | Listed Print Serial",
-                "refNumber": "99974828485",
-                "refNumberType": "Supplier's unique order line reference number"
-            },
-            "metadata": {
-                "createdDate": "2019-03-18T18:56:45.333+0000",
-                "createdByUserId": "a564c58b-fe32-5729-ab90-12df37840a76",
-                "updatedDate": "2019-03-18T18:56:45.477+0000",
-                "updatedByUserId": "a564c58b-fe32-5729-ab90-12df37840a76"
-            }
+      "id": "9b68e7c2-8818-4387-a405-6567232c1c6f",
+      "acquisitionMethod": "Purchase At Vendor System",
+      "alerts": [],
+      "checkinItems": true,
+      "claims": [
+        {
+          "claimed": true,
+          "grace": 45
         }
+      ],
+      "collection": false,
+      "contributors": [],
+      "cost": {
+        "currency": "USD",
+        "listUnitPrice": 0,
+        "listUnitPriceElectronic": 2,
+        "quantityPhysical": 2,
+        "quantityElectronic": 2,
+        "poLineEstimatedPrice": 4
+      },
+      "details": {
+        "productIds": []
+      },
+      "eresource": {
+        "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
+        "activated": false,
+        "activationDue": 10,
+        "createInventory": "Instance",
+        "expectedActivation": "2018-10-09T00:00:00.000Z",
+        "license": {
+          "code": "Code 1",
+          "description": "License Agreement 1"
+        },
+        "trial": false,
+        "userLimit": 10
+      },
+      "fundDistribution": [
+        {
+          "code": "STATE-SUBN",
+          "fundId": "e54b1f4d-7d05-4b1a-9368-3c36b75d8ac6",
+          "distributionType": "percentage",
+          "value": 100
+        }
+      ],
+      "locations": [
+        {
+          "locationId": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+          "quantity": 4,
+          "quantityPhysical": 2,
+          "quantityElectronic": 2
+        }
+      ],
+      "orderFormat": "P/E Mix",
+      "paymentStatus": "Awaiting Payment",
+      "physical": {
+        "expectedReceiptDate": "2019-04-17T18:56:45.237+0000",
+        "volumes": [],
+        "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8"
+      },
+      "poLineNumber": "10110-1",
+      "publisher": "MARINER BOOKS",
+      "purchaseOrderId": "f6328932-cca2-4758-8547-b9435b783fbb",
+      "receiptStatus": "Awaiting Receipt",
+      "reportingCodes": [],
+      "source": "User",
+      "tags": {
+        "tagList": []
+      },
+      "titleOrPackage": "BEST AMERICAN SCIENCE FICTION AND FANTASY.",
+      "vendorDetail": {
+        "instructions": "Next Volume | Listed Print Serial",
+        "refNumber": "99974828485",
+        "refNumberType": "Supplier's unique order line reference number"
+      },
+      "metadata": {
+        "createdDate": "2019-03-18T18:56:45.333+0000",
+        "createdByUserId": "a564c58b-fe32-5729-ab90-12df37840a76",
+        "updatedDate": "2019-03-18T18:56:45.477+0000",
+        "updatedByUserId": "a564c58b-fe32-5729-ab90-12df37840a76"
+      }
+    },
+    {
+      "id": "7c98369b-89e4-4b2a-9793-ba36c056fc97",
+      "acquisitionMethod": "Purchase At Vendor System",
+      "alerts": [],
+      "checkinItems": true,
+      "claims": [
+        {
+          "claimed": true,
+          "grace": 45
+        }
+      ],
+      "collection": false,
+      "contributors": [],
+      "cost": {
+        "currency": "USD",
+        "listUnitPrice": 2,
+        "quantityPhysical": 2,
+        "poLineEstimatedPrice": 4
+      },
+      "details": {
+        "productIds": []
+      },
+      "fundDistribution": [
+        {
+          "code": "STATE-SUBN",
+          "fundId": "e54b1f4d-7d05-4b1a-9368-3c36b75d8ac6",
+          "distributionType": "percentage",
+          "value": 100
+        }
+      ],
+      "locations": [
+        {
+          "locationId": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+          "quantity": 4,
+          "quantityPhysical": 2,
+          "quantityElectronic": 2
+        }
+      ],
+      "orderFormat": "Physical Resource",
+      "paymentStatus": "Awaiting Payment",
+      "physical": {
+        "expectedReceiptDate": "2019-04-17T18:56:45.237+0000",
+        "volumes": [],
+        "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8"
+      },
+      "poLineNumber": "12345-1",
+      "publisher": "MARINER BOOKS",
+      "purchaseOrderId": "707cefd7-cccd-437d-b4bf-456f9c3dde6d",
+      "receiptStatus": "Partially Received",
+      "reportingCodes": [],
+      "source": "User",
+      "tags": {
+        "tagList": []
+      },
+      "titleOrPackage": "Country Madness",
+      "vendorDetail": {
+        "instructions": "Next Volume | Listed Print Serial",
+        "refNumber": "99974828485",
+        "refNumberType": "Supplier's unique order line reference number"
+      },
+      "metadata": {
+        "createdDate": "2019-03-18T18:56:45.333+0000",
+        "createdByUserId": "a564c58b-fe32-5729-ab90-12df37840a76",
+        "updatedDate": "2019-03-18T18:56:45.477+0000",
+        "updatedByUserId": "a564c58b-fe32-5729-ab90-12df37840a76"
+      }
+    }
   ],
   "totalRecords": 8
 }

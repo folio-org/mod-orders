@@ -1,8 +1,8 @@
 package org.folio.orders.events.handlers;
 
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
-import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getOkapiHeaders;
+import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;

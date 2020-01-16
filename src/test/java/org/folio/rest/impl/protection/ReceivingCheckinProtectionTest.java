@@ -1,22 +1,5 @@
 package org.folio.rest.impl.protection;
 
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
-import org.folio.HttpStatus;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.*;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
-
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
@@ -24,9 +7,41 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.hamcrest.core.Every.everyItem;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import org.folio.HttpStatus;
+import org.folio.rest.impl.MockServer;
+import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.ProcessingStatus;
+import org.folio.rest.jaxrs.model.ReceivingCollection;
+import org.folio.rest.jaxrs.model.ReceivingItemResult;
+import org.folio.rest.jaxrs.model.ReceivingResults;
+import org.folio.rest.jaxrs.model.ToBeCheckedIn;
+import org.folio.rest.jaxrs.model.ToBeReceived;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 
 @RunWith(JUnitParamsRunner.class)
 public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
@@ -125,11 +140,13 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
 
     addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withAcqUnitIds(NOT_PROTECTED_UNITS).withId(ORDER_WITH_NOT_PROTECTED_UNITS_ID)));
     addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withAcqUnitIds(PROTECTED_UNITS).withId(ORDER_WITH_PROTECTED_UNITS_ID)));
+    List<CompositePoLine> poLines = new ArrayList<>();
+    poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(EXPECTED_FLOW_PO_LINE_ID));
+    poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_1));
+    poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2));
+    poLines.forEach(line -> addMockEntry(PO_LINES, JsonObject.mapFrom(line)));
 
-    addMockEntry(PO_LINES, JsonObject.mapFrom(getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(EXPECTED_FLOW_PO_LINE_ID)));
-    addMockEntry(PO_LINES, JsonObject.mapFrom(getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_1)));
-    addMockEntry(PO_LINES, JsonObject.mapFrom(getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2)));
-
+    MockServer.addMockTitles(poLines);
     ReceivingCollection toBeReceivedRq = new ReceivingCollection();
 
     List<ToBeReceived> toBeReceivedList = new ArrayList<>();
@@ -169,9 +186,13 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
     addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withAcqUnitIds(NOT_PROTECTED_UNITS).withId(ORDER_WITH_NOT_PROTECTED_UNITS_ID)));
     addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withAcqUnitIds(PROTECTED_UNITS).withId(ORDER_WITH_PROTECTED_UNITS_ID)));
 
-    addMockEntry(PO_LINES, JsonObject.mapFrom(getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(EXPECTED_FLOW_PO_LINE_ID)));
-    addMockEntry(PO_LINES, JsonObject.mapFrom(getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_1)));
-    addMockEntry(PO_LINES, JsonObject.mapFrom(getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2)));
+    List<CompositePoLine> poLines = new ArrayList<>();
+    poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(EXPECTED_FLOW_PO_LINE_ID));
+    poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_1));
+    poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2));
+    poLines.forEach(line -> addMockEntry(PO_LINES, JsonObject.mapFrom(line)));
+
+    MockServer.addMockTitles(poLines);
 
     CheckinCollection toBeCheckedInRq = new CheckinCollection();
 
@@ -214,6 +235,8 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
     CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId()).withId(EXPECTED_FLOW_PO_LINE_ID);
     addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
 
+    MockServer.addMockTitles(Collections.singletonList(poLine));
+
     CheckinCollection toBeCheckedInRq = new CheckinCollection();
 
     List<ToBeCheckedIn> toBeCheckedInList
@@ -234,6 +257,7 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
     CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId()).withId(EXPECTED_FLOW_PO_LINE_ID);
     addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
 
+    MockServer.addMockTitles(Collections.singletonList(poLine));
     ReceivingCollection toBeReceivedRq = new ReceivingCollection();
 
     List<ToBeReceived> toBeReceivedList

@@ -56,7 +56,8 @@ public enum ErrorCodes {
   ISBN_NOT_VALID("invalidISBN", "ISBN value is invalid"),
   FUNDS_NOT_FOUND("fundsNotFound", "The fund records are not found"),
   CURRENT_FISCAL_YEAR_NOT_FOUND("currentFYearNotFound", "Current fiscal year not found for ledger"),
-  TITLE_NOT_FOUND("titleNotFound", "Order cannot be open as the associated title not found");
+  TITLE_NOT_FOUND("titleNotFound", "Associated title not found for non package PO Line"),
+  MULTIPLE_NONPACKAGE_TITLES("multipleNonPackageTitles", "Non package PO Line must contain only one title.");
 
   private final String code;
   private final String description;

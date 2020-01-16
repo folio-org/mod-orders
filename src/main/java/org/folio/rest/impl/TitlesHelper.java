@@ -1,25 +1,26 @@
 package org.folio.rest.impl;
 
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import one.util.streamex.StreamEx;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.Title;
-import org.folio.rest.jaxrs.model.TitleCollection;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-
-import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.groupingBy;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+
+import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.jaxrs.model.Title;
+import org.folio.rest.jaxrs.model.TitleCollection;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import one.util.streamex.StreamEx;
 
 public class TitlesHelper extends AbstractHelper {
   private static final String GET_TITLES_BY_QUERY = resourcesPath(TITLES) + SEARCH_PARAMS;
@@ -55,7 +56,7 @@ public class TitlesHelper extends AbstractHelper {
     return HelperUtils.handleDeleteRequest(resourceByIdPath(TITLES, id), httpClient, ctx, okapiHeaders, logger);
   }
 
-  public CompletableFuture<Map<String, Title>> getTitlesByPoLineIds(List<String> poLineIds) {
+  public CompletableFuture<Map<String, List<Title>>> getTitlesByPoLineIds(List<String> poLineIds) {
     return collectResultsOnSuccess(StreamEx
       .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ)
       // Transform piece id's to CQL query
@@ -64,7 +65,7 @@ public class TitlesHelper extends AbstractHelper {
       .map(this::getTitlesByQuery)
       .toList())
       .thenApply(lists -> StreamEx.of(lists)
-        .toFlatList(Function.identity()).stream().collect(toMap(Title::getPoLineId, Function.identity())));
+        .toFlatList(Function.identity()).stream().collect(groupingBy(Title::getPoLineId)));
   }
 
   private CompletableFuture<List<Title>> getTitlesByQuery(String query) {

@@ -502,18 +502,25 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
   public CompletableFuture<List<CompositePoLine>> getCompositePoLines(List<String> poLineIds) {
     return getPoLines(poLineIds)
-      .thenCompose(poLines -> new TitlesHelper(httpClient, okapiHeaders, ctx, lang).getTitlesByPoLineIds(poLineIds)
-        .thenApply(titles -> poLines.stream().map(poLine -> convertToCompositePoLine(poLine, titles)).collect(Collectors.toList())));
+      .thenCompose(poLines -> {
+        List<String> ids = poLines.stream().filter(poLine -> !poLine.getIsPackage()).map(PoLine::getId).collect(Collectors.toList());
+        return new TitlesHelper(httpClient, okapiHeaders, ctx, lang).getTitlesByPoLineIds(ids)
+          .thenApply( lineIdTitles -> HelperUtils.verifyNonPackageTitles(lineIdTitles, ids))
+          .thenApply(titles -> populateInstanceId(poLines, titles));
+      });
   }
 
-  protected CompositePoLine convertToCompositePoLine(PoLine poLine, Map<String, Title> titles) {
+  private List<CompositePoLine> populateInstanceId(List<PoLine> poLines, Map<String, List<Title>> titles) {
+    return poLines.stream().map(poLine -> convertToCompositePoLine(poLine, titles)).collect(Collectors.toList());
+  }
+
+  protected CompositePoLine convertToCompositePoLine(PoLine poLine, Map<String, List<Title>> titles) {
     poLine.setAlerts(null);
     poLine.setReportingCodes(null);
     JsonObject jsonLine = JsonObject.mapFrom(poLine);
-    Title title = titles.get(poLine.getId());
+    Title title = titles.get(poLine.getId()).get(0);
     return jsonLine.mapTo(CompositePoLine.class).withInstanceId(title.getInstanceId()).withTitleOrPackage(title.getTitle());
   }
-
 
   private CompletableFuture<List<PoLine>> getPoLinesByQuery(String query) {
     return poLineHelper.getPoLines(MAX_IDS_FOR_GET_RQ, 0, query)

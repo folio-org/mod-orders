@@ -6,7 +6,6 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.AcqDesiredPermissions.ASSIGN;
 import static org.folio.orders.utils.AcqDesiredPermissions.MANAGE;
 import static org.folio.orders.utils.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
-import static org.folio.orders.utils.ErrorCodes.TITLE_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
@@ -25,6 +24,7 @@ import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.HelperUtils.verifyNonPackageTitles;
 import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.POProtectedFields.getFieldNames;
 import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder;
@@ -43,7 +43,6 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.P
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -74,12 +73,12 @@ import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
+import org.folio.rest.jaxrs.model.Title;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.folio.rest.jaxrs.model.Title;
 
 public class PurchaseOrderHelper extends AbstractHelper {
 
@@ -90,7 +89,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   // Using variable to "cache" lines for particular order base on assumption that the helper is stateful and new instance is used
   private List<PoLine> orderLines;
-  private Map<String, Title> lineIdTitleMap;
 
   private final PoNumberHelper poNumberHelper;
   private final PurchaseOrderLineHelper orderLineHelper;
@@ -318,8 +316,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
     getPurchaseOrderById(id, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
       .thenAccept(compPO -> protectionHelper.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.READ)
-        .thenAccept(ok -> fetchCompositeLinesWithInstanceId(compPO)
-          .thenApply(this::populateOrderSummary)
+        .thenAccept(ok -> fetchCompositePoLines(compPO)
+          .thenCompose(this::fetchNonPackageTitles)
+          .thenAccept(linesIdTitles -> populateInstanceId(linesIdTitles, compPO.getCompositePoLines()))
+          .thenApply(v -> populateOrderSummary(compPO))
           .thenAccept(future::complete)
           .exceptionally(t -> {
             logger.error("Failed to get lines for order with id={}", t.getCause(), id);
@@ -361,46 +361,31 @@ public class PurchaseOrderHelper extends AbstractHelper {
   public CompletableFuture<Void> openOrder(CompositePurchaseOrder compPO) {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
-    return fetchCompositeLinesWithInstanceId(compPO)
-      .thenCompose(this::verifyTitles)
-      .thenCompose(this::updateInventory)
-      .thenCompose(ok -> createEncumbrances(compPO))
-      .thenCompose(ok -> updateTitlesInstanceId(compPO))
-      .thenAccept(ok -> changePoLineStatuses(compPO))
-      .thenCompose(ok -> updatePoLinesSummary(compPO))
-      .thenCompose(ok -> updateOrderSummary(compPO));
-  }
-
-  private CompletableFuture<Void> updateTitlesInstanceId(CompositePurchaseOrder compPO) {
-    return fetchNonPackageTitles(compPO)
-      .thenCompose(lineIdTitle -> VertxCompletableFuture.allOf(ctx,
-        getNonPackageLines(compPO.getCompositePoLines()).stream()
-          .map(line -> titlesHelper.updateTitle(lineIdTitle.get(line.getId()).withInstanceId(line.getInstanceId())))
-          .toArray(CompletableFuture[]::new)));
-  }
-
-  private CompletableFuture<CompositePurchaseOrder> verifyTitles(CompositePurchaseOrder compPO) {
-
-    return fetchNonPackageTitles(compPO)
-      .thenAccept(lineIdTitle -> compPO.getCompositePoLines().forEach(line -> {
-        if (!lineIdTitle.containsKey(line.getId())) {
-          throw new HttpException(400, TITLE_NOT_FOUND);
-        }
-      }))
-      .thenApply(aVoid -> compPO);
-  }
-
-  private CompletableFuture<Map<String, Title>> fetchNonPackageTitles(CompositePurchaseOrder compPO) {
-    if (lineIdTitleMap != null) {
-      return CompletableFuture.completedFuture(new HashMap<>(lineIdTitleMap));
-    }
-
-    return titlesHelper
-      .getTitlesByPoLineIds(getNonPackageLineIds(compPO.getCompositePoLines()))
-      .thenApply(lineIdTitle -> {
-        this.lineIdTitleMap = lineIdTitle;
-        return new HashMap<>(lineIdTitle);
+    return fetchCompositePoLines(compPO)
+      .thenCompose(this::fetchNonPackageTitles)
+      .thenCompose(lineIdTitles -> {
+        populateInstanceId(lineIdTitles, compPO.getCompositePoLines());
+        verifyNonPackageTitles(lineIdTitles, getNonPackageLineIds(compPO.getCompositePoLines()));
+        return updateInventory(compPO)
+          .thenCompose(ok -> createEncumbrances(compPO))
+          .thenCompose(ok -> updateTitlesInstanceId(lineIdTitles, compPO))
+          .thenAccept(ok -> changePoLineStatuses(compPO))
+          .thenCompose(ok -> updatePoLinesSummary(compPO))
+          .thenCompose(ok -> updateOrderSummary(compPO));
       });
+  }
+
+  private CompletableFuture<Void> updateTitlesInstanceId(Map<String, List<Title>> lineIdTitles, CompositePurchaseOrder compPO) {
+    return  VertxCompletableFuture.allOf(ctx,
+        getNonPackageLines(compPO.getCompositePoLines()).stream()
+          .map(line -> titlesHelper.updateTitle(lineIdTitles.get(line.getId()).get(0).withInstanceId(line.getInstanceId()))          )
+          .toArray(CompletableFuture[]::new));
+  }
+
+
+  private CompletableFuture<Map<String, List<Title>>> fetchNonPackageTitles(CompositePurchaseOrder compPO) {
+    List<String> lineIds = getNonPackageLineIds(compPO.getCompositePoLines());
+    return titlesHelper.getTitlesByPoLineIds(lineIds);
   }
 
   private List<CompositePoLine> getNonPackageLines(List<CompositePoLine> compositePoLines) {
@@ -633,20 +618,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
     }
   }
 
-  private CompletableFuture<CompositePurchaseOrder> fetchCompositeLinesWithInstanceId(CompositePurchaseOrder compPO) {
-    return fetchCompositePoLines(compPO)
-      .thenCompose(this::fetchNonPackageTitles)
-      .thenApply(stringTitleMap -> {
-        getNonPackageLines(compPO.getCompositePoLines())
-          .forEach(line -> populateInstanceId(stringTitleMap, line));
-        return compPO;
-      });
-  }
-
-  private void populateInstanceId(Map<String, Title> stringTitleMap, CompositePoLine line) {
-    if (stringTitleMap.containsKey(line.getId())) {
-      line.setInstanceId(stringTitleMap.get(line.getId()).getInstanceId());
-    }
+  private void populateInstanceId(Map<String, List<Title>> lineIdsTitles, List<CompositePoLine> lines) {
+    getNonPackageLines(lines).forEach(line -> {
+      if (lineIdsTitles.containsKey(line.getId())) {
+        line.setInstanceId(lineIdsTitles.get(line.getId()).get(0).getInstanceId());
+      }
+    });
   }
 
   private void changePoLineStatuses(CompositePurchaseOrder compPO) {
