@@ -2,13 +2,17 @@ package org.folio.rest.impl;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
+import static org.folio.orders.utils.ErrorCodes.MISSING_RECEIPT_DATE;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
+import static org.hamcrest.core.Is.is;
 
 import org.folio.HttpStatus;
 import org.folio.rest.acq.model.Piece;
+import org.folio.rest.jaxrs.model.Errors;
 import org.junit.Test;
 
 import io.restassured.http.Header;
@@ -54,6 +58,23 @@ public class PieceApiTest extends ApiTestBase {
     int status500 = HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt();
     verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID,
       new Header(X_ECHO_STATUS, String.valueOf(status500))), APPLICATION_JSON, status500);
+  }
+
+  @Test
+  public void testPostPieceWithoutReceiptDate() {
+    logger.info("=== Test POST Piece (Create Piece) without receiptDate===");
+
+    Piece postPieceRq = pieceJsonReqData.mapTo(Piece.class);
+    // To skip unit's permission validation
+    postPieceRq.setPoLineId("0009662b-8b80-4001-b704-ca10971f175d");
+    postPieceRq.setReceiptDate(null);
+
+    Errors errors = verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(errors.getErrors(), hasSize(1));
+    assertThat(errors.getErrors().get(0).getCode(), is(MISSING_RECEIPT_DATE.getCode()));
+
   }
 
   @Test
