@@ -118,7 +118,6 @@ public class HelperUtils {
   private static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = resourcesPath(PO_LINES) + "?limit=%s&query=purchaseOrderId==%s&" + LANG + "=%s";
   private static final String GET_PURCHASE_ORDER_BYID = resourceByIdPath(PURCHASE_ORDER) + URL_WITH_LANG_PARAM;
   private static final String GET_PURCHASE_ORDER_BYPONUMBER_QUERY = resourcesPath(PURCHASE_ORDER) + "?query=poNumber==%s&" + LANG + "=%s";
-  private static final String GET_TITLES_BY_QUERY = resourcesPath(TITLES) + "?limit=%s&offset=%s%s";
 
   private static final int DEFAULT_PORT = 9130;
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";

@@ -447,7 +447,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * @return CompletableFuture with void.
    */
   CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
-    if (compPOL.getIsPackage()) {
+    if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return completedFuture(null);
     }
     if (inventoryUpdateNotRequired(compPOL)) {
@@ -551,7 +551,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private CompletableFuture<CompositePoLine> getLineWithInstanceId(CompositePoLine line) {
-     if (!line.getIsPackage()) {
+     if (!Boolean.TRUE.equals(line.getIsPackage())) {
        return new TitlesHelper(httpClient, okapiHeaders, ctx, lang)
          .getTitles(1, 0, "poLineId==" + line.getId())
          .thenApply(titleCollection -> {

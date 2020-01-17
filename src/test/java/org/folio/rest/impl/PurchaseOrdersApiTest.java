@@ -2687,7 +2687,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
     // Make sure that Order is Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    // Set CreateInventory value to create inventory instances and holdings
+
     reqData.getCompositePoLines().get(0).setIsPackage(true);
 
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),

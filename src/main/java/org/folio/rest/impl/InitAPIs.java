@@ -1,19 +1,19 @@
 package org.folio.rest.impl;
 
-import com.fasterxml.jackson.databind.DeserializationConfig;
-import com.fasterxml.jackson.databind.SerializationConfig;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.jackson.DatabindCodec;
 import org.folio.config.ApplicationConfig;
 import org.folio.rest.resource.interfaces.InitAPI;
 import org.folio.rest.tools.utils.ObjectMapperTool;
 import org.folio.spring.SpringContextUtil;
+
+import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.databind.SerializationConfig;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.jackson.DatabindCodec;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
