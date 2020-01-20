@@ -34,7 +34,6 @@ public class InitAPIs implements InitAPI {
         DatabindCodec.prettyMapper().setConfig(serializationConfig);
         DatabindCodec.mapper().setConfig(deserializationConfig);
         DatabindCodec.prettyMapper().setConfig(deserializationConfig);
-
         SpringContextUtil.init(vertx, context, ApplicationConfig.class);
         handler.complete();
       },

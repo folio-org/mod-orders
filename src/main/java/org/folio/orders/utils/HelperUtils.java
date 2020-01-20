@@ -15,7 +15,6 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
-import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
@@ -101,7 +100,6 @@ public class HelperUtils {
 
   public static final String ID = "id";
   public static final String COMPOSITE_PO_LINES = "compositePoLines";
-  public static final String ACQ_UNIT_IDS = "acqUnitIds";
   public static final String CONFIGS = "configs";
   public static final String CONFIG_NAME = "configName";
   public static final String CONFIG_VALUE = "value";
