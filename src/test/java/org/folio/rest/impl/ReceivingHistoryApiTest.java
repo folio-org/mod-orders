@@ -10,12 +10,12 @@ import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 import org.junit.Test;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
 import static org.folio.rest.impl.AcquisitionsUnitsHelper.NO_ACQ_UNIT_ASSIGNED_CQL;
-import static org.folio.rest.impl.MockServer.INTERNAL_SERVER_ERROR;
 import static org.folio.rest.impl.MockServer.getQueryParams;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -98,7 +98,7 @@ public class ReceivingHistoryApiTest extends ApiTestBase {
   @Test
   public void testGetReceivingHistoryForPurchaseOrderWithError() {
     logger.info("=== Test Get Receiving History - With purchase Order query Error===");
-    String endpointQuery = String.format("%s?query=purchaseOrderId=%s", ORDERS_RECEIVING_HISTORY_ENDPOINT, INTERNAL_SERVER_ERROR);
+    String endpointQuery = String.format("%s?query=purchaseOrderId=%s", ORDERS_RECEIVING_HISTORY_ENDPOINT, INTERNAL_SERVER_ERROR.getReasonPhrase());
 
     verifyGet(endpointQuery, APPLICATION_JSON, 500);
 

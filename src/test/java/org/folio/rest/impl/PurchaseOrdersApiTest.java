@@ -60,6 +60,10 @@ import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInstanceL
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInventoryInteraction;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesCreated;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesQuantityForSuccessCase;
+import static org.folio.rest.impl.MockServer.BUDGET_IS_INACTIVE_TENANT;
+import static org.folio.rest.impl.MockServer.BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT;
+import static org.folio.rest.impl.MockServer.FUND_CANNOT_BE_PAID_TENANT;
+import static org.folio.rest.impl.MockServer.LEDGER_NOT_FOUND_FOR_TRANSACTION_TENANT;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.getContributorNameTypesSearches;
 import static org.folio.rest.impl.MockServer.getCreatedEncumbrances;
@@ -2723,6 +2727,35 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertNull(getHoldingsSearches());
     assertNull(getItemsSearches());
     assertNull(getCreatedPieces());
+  }
+
+  @Test
+  public void testPostOpenOrderWithEncumbranceCreationError() throws Exception {
+    logger.info("=== Test Placement of minimal order ===");
+
+    MockServer.serverRqRs.clear();
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.getCompositePoLines().remove(1);
+    assertThat( reqData.getCompositePoLines(), hasSize(1));
+
+
+    Header errorHeader = new Header(OKAPI_HEADER_TENANT, FUND_CANNOT_BE_PAID_TENANT);
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(errorHeader, X_OKAPI_USER_ID), APPLICATION_JSON, 422);
+
+    errorHeader = new Header(OKAPI_HEADER_TENANT, BUDGET_IS_INACTIVE_TENANT);
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(errorHeader, X_OKAPI_USER_ID), APPLICATION_JSON, 422);
+
+    errorHeader = new Header(OKAPI_HEADER_TENANT, LEDGER_NOT_FOUND_FOR_TRANSACTION_TENANT);
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(errorHeader, X_OKAPI_USER_ID), APPLICATION_JSON, 422);
+
+    errorHeader = new Header(OKAPI_HEADER_TENANT, BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT);
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(errorHeader, X_OKAPI_USER_ID), APPLICATION_JSON, 422);
+
   }
 
   private void prepareOrderForPostRequest(CompositePurchaseOrder reqData) {
