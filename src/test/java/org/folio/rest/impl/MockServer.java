@@ -4,7 +4,12 @@ import static java.time.temporal.ChronoUnit.DAYS;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
+import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
+import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
+import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
+import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
@@ -120,6 +125,8 @@ import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.OrderTemplate;
 import org.folio.rest.jaxrs.model.OrderTemplateCollection;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -173,7 +180,6 @@ public class MockServer {
   static final String ORDER_TEMPLATES_COLLECTION = ORDER_TEMPLATES_MOCK_DATA_PATH + "/orderTemplates.json";
   private static final String FUNDS_PATH = BASE_MOCK_DATA_PATH + "funds/funds.json";
 
-  static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";
   static final String ORDER_ID_WITH_PO_LINES = "ab18897b-0e40-4f31-896b-9c9adc979a87";
@@ -182,6 +188,10 @@ public class MockServer {
   static final String PO_NUMBER_VALUE = "228D126";
 
   private static final String PO_NUMBER_ERROR_TENANT = "po_number_error_tenant";
+  static final String FUND_CANNOT_BE_PAID_TENANT = "Fund cannot be paid tenant";
+  static final String BUDGET_IS_INACTIVE_TENANT = "Cannot create encumbrance from the not active budget";
+  static final String LEDGER_NOT_FOUND_FOR_TRANSACTION_TENANT = "Ledger not found for transaction";
+  static final String BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT = "Budget not found for transaction";
   static final Header PO_NUMBER_ERROR_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, PO_NUMBER_ERROR_TENANT);
 
   private static final String TOTAL_RECORDS = "totalRecords";
@@ -399,8 +409,7 @@ public class MockServer {
     router.post(resourcesPath(ORDER_TEMPLATES)).handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TEMPLATES));
     router.post(resourcesPath(ORDER_TRANSACTION_SUMMARIES))
       .handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TRANSACTION_SUMMARIES));
-    router.post(resourcesPath(ENCUMBRANCES))
-      .handler(ctx -> handlePostGenericSubObj(ctx, ENCUMBRANCES));
+    router.post(resourcesPath(ENCUMBRANCES)).handler(this::handleTransactionPostEntry);
     router.post(resourcesPath(TITLES))
       .handler(ctx -> handlePostGenericSubObj(ctx, TITLES));
 
@@ -474,7 +483,7 @@ public class MockServer {
     String query = StringUtils.trimToEmpty(ctx.request().getParam(QUERY));
     addServerRqQuery(FUNDS, query);
     if (query.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       try {
 
@@ -491,7 +500,7 @@ public class MockServer {
           .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
           .end(collection.encodePrettily());
       } catch (Exception e) {
-        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
       }
     }
   }
@@ -525,7 +534,7 @@ public class MockServer {
     addServerRqRsData(HttpMethod.GET, PO_LINES, new JsonObject().put(ID, id));
 
     if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else if (ID_DOES_NOT_EXIST.equals(id)) {
       serverResponse(ctx, 404, APPLICATION_JSON, id);
     } else  {
@@ -589,7 +598,7 @@ public class MockServer {
     logger.info("handlePostItemRecord got: " + bodyAsString);
 
     if (bodyAsString.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       JsonObject bodyAsJson = ctx.getBodyAsJson();
       bodyAsJson.put(ID, UUID.randomUUID().toString());
@@ -685,7 +694,7 @@ public class MockServer {
           .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
           .end(items.encodePrettily());
       } catch (Exception e) {
-        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
       }
     }
   }
@@ -916,7 +925,7 @@ public class MockServer {
       JsonObject receivingHistory;
       if (queryParam.contains(RECEIVING_HISTORY_PURCHASE_ORDER_ID)) {
         receivingHistory = new JsonObject(ApiTestBase.getMockData(RECEIVING_HISTORY_MOCK_DATA_PATH + "receivingHistory.json"));
-      } else if(queryParam.contains(INTERNAL_SERVER_ERROR)) {
+      } else if(queryParam.contains(INTERNAL_SERVER_ERROR.getReasonPhrase())) {
         throw new HttpException(500, "Exception in orders-storage module");
       }
       else if(queryParam.contains(BAD_QUERY)) {
@@ -952,7 +961,7 @@ public class MockServer {
       }
       serverResponse(ctx, 200, APPLICATION_JSON, ApiTestBase.getMockData(String.format(CONFIG_MOCK_PATH, tenant)));
     } catch (IOException e) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     }
 
   }
@@ -964,7 +973,7 @@ public class MockServer {
     if (ID_DOES_NOT_EXIST.equals(id)) {
       serverResponse(ctx, 404, TEXT_PLAIN, id);
     } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id) || ORDER_DELETE_ERROR_TENANT.equals(tenant)) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       ctx.response()
         .setStatusCode(204)
@@ -1132,7 +1141,7 @@ public class MockServer {
     addServerRqRsData(HttpMethod.GET, PO_LINES, new JsonObject().put(ID, id));
 
     if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else if (MIN_PO_LINE_ID.equals(id)) {
       serverResponse(ctx, 200, APPLICATION_JSON, encodePrettily(getMinimalContentCompositePoLine()));
     } else {
@@ -1173,7 +1182,7 @@ public class MockServer {
     if (ID_DOES_NOT_EXIST.equals(id)) {
       serverResponse(ctx, 404, APPLICATION_JSON, id);
     } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       ctx.response()
         .setStatusCode(200)
@@ -1257,8 +1266,7 @@ public class MockServer {
           }
         }
 
-        pieces.setTotalRecords(pieces.getPieces()
-          .size());
+        pieces.setTotalRecords(pieces.getPieces().size());
 
       } catch (Exception e) {
         pieces = new PieceCollection();
@@ -1317,7 +1325,7 @@ public class MockServer {
     if (ID_DOES_NOT_EXIST.equals(id)) {
       serverResponse(ctx, 404, APPLICATION_JSON, id);
     } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id) || ctx.getBodyAsString().contains("500500500500")) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       ctx.response()
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
@@ -1446,7 +1454,7 @@ public class MockServer {
     logger.info("handlePostGeneric {} got: {}", objectType, ctx.getBodyAsString());
 
     if (objectType.equals(ctx.request().getHeader(HEADER_SERVER_ERROR))) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       String id = UUID.randomUUID().toString();
       JsonObject body = ctx.getBodyAsJson();
@@ -1489,12 +1497,90 @@ public class MockServer {
         respBody = "Access requires permission: foo.bar.baz";
         break;
       case 500:
-        respBody = INTERNAL_SERVER_ERROR;
+        respBody = INTERNAL_SERVER_ERROR.getReasonPhrase();
         break;
     }
 
     addServerRqRsData(HttpMethod.POST, subObj, body);
     serverResponse(ctx, status, contentType, respBody);
+  }
+
+  private void handleTransactionPostEntry(RoutingContext ctx) {
+    logger.info("got: " + ctx.getBodyAsString());
+
+    String echoStatus = ctx.request().getHeader(X_ECHO_STATUS);
+
+    if (echoStatus != null && !echoStatus.equals("201")){
+      int status;
+      String respBody = "";
+      try {
+        status = Integer.parseInt(echoStatus);
+        switch (status) {
+          case 400:
+            respBody = "Unable to add -- malformed JSON at 13:3";
+            break;
+          case 403:
+            respBody = "Access requires permission: foo.bar.baz";
+            break;
+          case 500:
+            respBody = INTERNAL_SERVER_ERROR.getReasonPhrase();
+            break;
+        }
+        serverResponse(ctx, status, APPLICATION_JSON, respBody);
+        return;
+
+      } catch (NumberFormatException e) {
+        logger.error("Exception parsing " + X_ECHO_STATUS, e);
+      }
+
+    }
+
+    String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
+
+    if (INTERNAL_SERVER_ERROR.getReasonPhrase().equals(tenant)) {
+      serverResponse(ctx, 500, TEXT_PLAIN, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
+    } else if (FUND_CANNOT_BE_PAID_TENANT.equals(tenant)){
+      Errors errors = new Errors();
+      List<Error> errorList = new ArrayList<>();
+      errorList.add(new Error().withCode(FUND_CANNOT_BE_PAID.getCode()).withMessage(FUND_CANNOT_BE_PAID.getDescription()));
+      errors.withErrors(errorList);
+
+      serverResponse(ctx, 422, APPLICATION_JSON, JsonObject.mapFrom(errors).encodePrettily());
+
+    } else if (BUDGET_IS_INACTIVE_TENANT.equals(tenant)){
+      Errors errors = new Errors();
+      List<Error> errorList = new ArrayList<>();
+      errorList.add(new Error().withCode(BUDGET_IS_INACTIVE.getCode()).withMessage(BUDGET_IS_INACTIVE.getDescription()));
+      errors.withErrors(errorList);
+
+      serverResponse(ctx, 422, APPLICATION_JSON, JsonObject.mapFrom(errors).encodePrettily());
+
+    } else if (LEDGER_NOT_FOUND_FOR_TRANSACTION_TENANT.equals(tenant)){
+      Errors errors = new Errors();
+      List<Error> errorList = new ArrayList<>();
+      errorList.add(new Error().withCode(LEDGER_NOT_FOUND_FOR_TRANSACTION.getCode()).withMessage(LEDGER_NOT_FOUND_FOR_TRANSACTION.getDescription()));
+      errors.withErrors(errorList);
+
+      serverResponse(ctx, 422, APPLICATION_JSON, JsonObject.mapFrom(errors).encodePrettily());
+
+    } else if (BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT.equals(tenant)){
+      Errors errors = new Errors();
+      List<Error> errorList = new ArrayList<>();
+      errorList.add(new Error().withCode(BUDGET_NOT_FOUND_FOR_TRANSACTION.getCode()).withMessage(BUDGET_NOT_FOUND_FOR_TRANSACTION.getDescription()));
+      errors.withErrors(errorList);
+
+      serverResponse(ctx, 422, APPLICATION_JSON, JsonObject.mapFrom(errors).encodePrettily());
+
+    } else {
+      JsonObject body = ctx.getBodyAsJson();
+      if (body.getString(ID) == null) {
+        body.put(ID, UUID.randomUUID().toString());
+      }
+
+      addServerRqRsData(HttpMethod.POST, ENCUMBRANCES, body);
+      serverResponse(ctx, 201, APPLICATION_JSON, JsonObject.mapFrom(body)
+        .encodePrettily());
+    }
   }
 
   private Class<?> getSubObjClass(String subObj) {
@@ -1793,7 +1879,7 @@ public class MockServer {
     addServerRqRsData(HttpMethod.GET, TITLES, new JsonObject().put(ID, id));
 
     if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       try {
 
