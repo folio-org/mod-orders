@@ -1319,7 +1319,7 @@ public class MockServer {
     String query = StringUtils.trimToEmpty(ctx.request().getParam(QUERY));
     addServerRqQuery(TITLES, query);
     if (query.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       try {
 
@@ -1336,7 +1336,7 @@ public class MockServer {
           .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
           .end(collection.encodePrettily());
       } catch (Exception e) {
-        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR);
+        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
       }
     }
   }
