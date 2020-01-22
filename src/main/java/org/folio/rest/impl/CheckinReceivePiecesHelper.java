@@ -505,7 +505,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       .thenCompose(poLines -> {
         List<String> ids = poLines.stream().filter(poLine -> !poLine.getIsPackage()).map(PoLine::getId).collect(Collectors.toList());
         return new TitlesHelper(httpClient, okapiHeaders, ctx, lang).getTitlesByPoLineIds(ids)
-          .thenApply( lineIdTitles -> HelperUtils.verifyNonPackageTitles(lineIdTitles, ids))
+          .thenApply(lineIdTitles -> HelperUtils.verifyNonPackageTitles(lineIdTitles, ids))
           .thenApply(titles -> populateInstanceId(poLines, titles));
       });
   }
