@@ -554,7 +554,7 @@
     },
     {
       "id": "inventory",
-      "version": "9.6"
+      "version": "9.6 10.0"
     },
     {
       "id": "instance-types",
@@ -566,7 +566,7 @@
     },
     {
       "id": "item-storage",
-      "version": "7.8"
+      "version": "7.8 8.0"
     },
     {
       "id": "identifier-types",
