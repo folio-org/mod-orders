@@ -110,7 +110,6 @@ public class OrdersImpl implements Orders {
   public void putOrdersCompositeOrdersById(String orderId, String lang, CompositePurchaseOrder compPO,
       Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-
     // Set order id from path if not specified in body
     populateOrderId(orderId, compPO);
 

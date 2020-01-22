@@ -1,28 +1,33 @@
 package org.folio.orders.events.handlers;
 
+import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
+import static org.folio.rest.impl.MockServer.PO_LINES_MOCK_DATA_PATH;
+import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
-import static org.folio.rest.impl.MockServer.getPieceSearches;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertEquals;
 
+import java.util.Collections;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.hamcrest.Matchers.nullValue;
-import static org.hamcrest.Matchers.instanceOf;
+import javax.ws.rs.core.Response;
 
 import org.folio.rest.acq.model.Piece;
-import org.folio.rest.acq.model.PoLine.ReceiptStatus;
-import org.folio.rest.acq.model.PoLine;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
+import org.folio.rest.acq.model.PoLine;
+import org.folio.rest.acq.model.PoLine.ReceiptStatus;
 import org.folio.rest.impl.ApiTestBase;
+import org.folio.rest.impl.MockServer;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.ws.rs.core.Response;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -82,6 +87,9 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
   public void testSuccessPartiallyReceivedStatusWhenAtleastOneSuccessfullyReceivedPiece(TestContext context) {
     logger.info("=== Test case to verify partially received status when at least one successfully received piece ===");
 
+    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
+    MockServer.addMockTitles(Collections.singletonList(compositePoLine));
+
     sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE_PARTIALLY_RECEIVED), context.asyncAssertSuccess(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());
       logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
@@ -109,6 +117,9 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
   @Test
   public void testSuccessFullyReceivedStatusWhenAllPiecesSuccessfullyReceived(TestContext context) {
     logger.info("=== Test case to verify fully received status when all pieces successfully received ===");
+
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_MOCK_DATA_PATH, POLINE_UUID_TIED_TO_PIECE_FULLY_RECEIVED).mapTo(CompositePoLine.class);
+    MockServer.addMockTitles(Collections.singletonList(compositePoLine));
 
     sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE_FULLY_RECEIVED), context.asyncAssertSuccess(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());

@@ -95,7 +95,8 @@
   "tags": {
     "tagList": []
   },
-  "title": "Taxes, tributes and tributary lands in the making of Scandinavian kingdoms in the Middle Ages",
+  "titleOrPackage": "Taxes, tributes and tributary lands in the making of Scandinavian kingdoms in the Middle Ages",
+  "isPackage": false,
   "vendorDetail": {
     "instructions": "",
     "noteFromVendor": "",

@@ -4,7 +4,6 @@
       "id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
       "edition": "First edition",
       "checkinItems": false,
-      "instanceId": "8343e5a0-fed8-11e8-8eb2-f2801f1b9fd1",
       "agreementId": "bdc75fea-fed8-11e8-8eb2-f2801f1b9fd1",
       "acquisitionMethod": "Purchase At Vendor System",
       "alerts": [
@@ -94,7 +93,7 @@
           "important"
         ]
       },
-      "title": "Kayak Fishing in the Northern Gulf Coast",
+      "titleOrPackage": "Kayak Fishing in the Northern Gulf Coast",
       "vendorDetail": {
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
@@ -111,7 +110,6 @@
       "id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
       "edition": "First edition",
       "checkinItems": false,
-      "instanceId": "8343e5a0-fed8-11e8-8eb2-f2801f1b9fd1",
       "agreementId": "bdc75fea-fed8-11e8-8eb2-f2801f1b9fd1",
       "acquisitionMethod": "Purchase At Vendor System",
       "alerts": [
@@ -208,7 +206,7 @@
           "important"
         ]
       },
-      "title": "Kayak Fishing in the Northern Gulf Coast",
+      "titleOrPackage": "Kayak Fishing in the Northern Gulf Coast",
       "vendorDetail": {
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
@@ -223,7 +221,6 @@
     },
     {
       "id": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
-      "instanceId": "b252d8f4-e14f-4f27-9f11-876b1f8ed13a",
       "acquisitionMethod": "Purchase At Vendor System",
       "alerts": [],
       "cancellationRestriction": false,
@@ -287,7 +284,7 @@
       "tags": {
         "tagList": []
       },
-      "title": "Harry Potter and the Sorcerer's Stone",
+      "titleOrPackage": "Harry Potter and the Sorcerer's Stone",
       "metadata": {
         "createdDate": "2019-02-20T19:49:43.854+0000",
         "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
@@ -297,7 +294,6 @@
     },
     {
       "id": "cf447221-29b9-481e-947c-9ad545f22888",
-      "instanceId": "b252d8f4-e14f-4f27-9f11-876b1f8ed13a",
       "acquisitionMethod": "Purchase At Vendor System",
       "cancellationRestriction": false,
       "collection": false,
@@ -355,7 +351,7 @@
       "requester": "Leo Bulero",
       "rush": true,
       "source": "User",
-      "title": "Harry Potter and the Sorcerer's Stone",
+      "titleOrPackage": "Harry Potter and the Sorcerer's Stone",
       "metadata": {
         "createdDate": "2019-02-20T19:49:43.854+0000",
         "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
@@ -401,7 +397,7 @@
           "code": "Code 1",
           "description": "License Agreement 1"
         },
-        "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
+        "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892"
       },
       "locations": [
         {
@@ -426,7 +422,7 @@
       "tags": {
         "tagList": []
       },
-      "title": "Harry Potter and the Chamber of Secrets",
+      "titleOrPackage": "Harry Potter and the Chamber of Secrets",
       "metadata": {
         "createdDate": "2019-02-20T19:49:43.877+0000",
         "createdByUserId": "a6ff14ad-8a65-57f9-bb89-f4654a3923fb",
@@ -436,7 +432,6 @@
     },
     {
       "id": "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56",
-      "instanceId": "b82e1191-453d-4d41-91c5-b5c386018685",
       "acquisitionMethod": "Purchase At Vendor System",
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
@@ -480,7 +475,7 @@
         },
         "trial": false,
         "userLimit": 10,
-        "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
+        "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892"
       },
       "fundDistribution": [
         {
@@ -538,13 +533,12 @@
       "receiptDate": "2019-03-05T08:06:58.721+0000",
       "receiptStatus": "Fully Received",
       "reportingCodes": [
-        "9397990a-96f9-4c55-a958-f5f6941b9e68"
       ],
       "requester": "Leo Bulero",
       "rush": true,
       "selector": "ABCD",
       "source": "EDI",
-      "title": "Kayak Fishing in the Northern Gulf Coast",
+      "titleOrPackage": "Kayak Fishing in the Northern Gulf Coast",
       "vendorDetail": {
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
@@ -561,7 +555,6 @@
     },
     {
       "id": "f217a5c2-2c56-4d05-9412-a96cfc8e52de",
-      "instanceId": "9085cdef-0758-4d8f-8c35-54795739472e",
       "acquisitionMethod": "Purchase",
       "alerts": [],
       "cancellationRestriction": false,
@@ -636,7 +629,7 @@
       "rush": false,
       "selector": "Woods",
       "source": "User",
-      "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
+      "titleOrPackage": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
       "vendorDetail": {
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
@@ -652,156 +645,154 @@
       }
     },
     {
-            "id": "9b68e7c2-8818-4387-a405-6567232c1c6f",
-            "instanceId": "bd7a5971-af97-4974-a33f-53b7090fa13a",
-            "acquisitionMethod": "Purchase At Vendor System",
-            "alerts": [],
-            "checkinItems": true,
-            "claims": [
-                {
-                    "claimed": true,
-                    "grace": 45
-                }
-            ],
-            "collection": false,
-            "contributors": [],
-            "cost": {
-                "currency": "USD",
-                "listUnitPrice": 0,
-                "listUnitPriceElectronic": 2,
-                "quantityPhysical": 2,
-                "quantityElectronic": 2,
-                "poLineEstimatedPrice": 4
-            },
-            "details": {
-                "productIds": []
-            },
-            "eresource": {
-               "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
-               "activated": false,
-               "activationDue": 10,
-               "createInventory": "Instance",
-               "expectedActivation": "2018-10-09T00:00:00.000Z",
-               "license": {
-                   "code": "Code 1",
-                   "description": "License Agreement 1"
-                 },
-               "trial": false,
-                "userLimit": 10
-            },
-            "fundDistribution": [
-                {
-                  "code": "STATE-SUBN",
-                  "fundId": "e54b1f4d-7d05-4b1a-9368-3c36b75d8ac6",
-                  "distributionType": "percentage",
-                  "value": 100
-                }
-            ],
-            "locations": [
-                {
-                    "locationId": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
-                    "quantity": 4,
-                    "quantityPhysical": 2,
-                    "quantityElectronic": 2
-                }
-            ],
-            "orderFormat": "P/E Mix",
-            "paymentStatus": "Awaiting Payment",
-            "physical": {
-                "expectedReceiptDate": "2019-04-17T18:56:45.237+0000",
-                "volumes": [],
-                "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8"
-            },
-            "poLineNumber": "10110-1",
-            "publisher": "MARINER BOOKS",
-            "purchaseOrderId": "f6328932-cca2-4758-8547-b9435b783fbb",
-            "receiptStatus": "Awaiting Receipt",
-            "reportingCodes": [],
-            "source": "User",
-            "tags": {
-              "tagList": []
-            },
-            "title": "BEST AMERICAN SCIENCE FICTION AND FANTASY.",
-            "vendorDetail": {
-                "instructions": "Next Volume | Listed Print Serial",
-                "refNumber": "99974828485",
-                "refNumberType": "Supplier's unique order line reference number"
-            },
-            "metadata": {
-                "createdDate": "2019-03-18T18:56:45.333+0000",
-                "createdByUserId": "a564c58b-fe32-5729-ab90-12df37840a76",
-                "updatedDate": "2019-03-18T18:56:45.477+0000",
-                "updatedByUserId": "a564c58b-fe32-5729-ab90-12df37840a76"
-            }
-        },
-         {
-            "id": "7c98369b-89e4-4b2a-9793-ba36c056fc97",
-            "instanceId": "bd7a5971-af97-4974-a33f-53b7090fa13a",
-            "acquisitionMethod": "Purchase At Vendor System",
-            "alerts": [],
-            "checkinItems": true,
-            "claims": [
-                {
-                    "claimed": true,
-                    "grace": 45
-                }
-            ],
-            "collection": false,
-            "contributors": [],
-            "cost": {
-                "currency": "USD",
-                "listUnitPrice": 2,
-                "quantityPhysical": 2,
-                "poLineEstimatedPrice": 4
-            },
-            "details": {
-                "productIds": []
-            },
-            "fundDistribution": [
-                {
-                  "code": "STATE-SUBN",
-                  "fundId": "e54b1f4d-7d05-4b1a-9368-3c36b75d8ac6",
-                  "distributionType": "percentage",
-                  "value": 100
-                }
-            ],
-            "locations": [
-                {
-                    "locationId": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
-                    "quantity": 4,
-                    "quantityPhysical": 2,
-                    "quantityElectronic": 2
-                }
-            ],
-            "orderFormat": "Physical Resource",
-            "paymentStatus": "Awaiting Payment",
-            "physical": {
-                "expectedReceiptDate": "2019-04-17T18:56:45.237+0000",
-                "volumes": [],
-                "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8"
-            },
-            "poLineNumber": "12345-1",
-            "publisher": "MARINER BOOKS",
-            "purchaseOrderId": "707cefd7-cccd-437d-b4bf-456f9c3dde6d",
-            "receiptStatus": "Partially Received",
-            "reportingCodes": [],
-            "source": "User",
-           "tags": {
-             "tagList": []
-           },
-            "title": "Country Madness",
-            "vendorDetail": {
-                "instructions": "Next Volume | Listed Print Serial",
-                "refNumber": "99974828485",
-                "refNumberType": "Supplier's unique order line reference number"
-            },
-            "metadata": {
-                "createdDate": "2019-03-18T18:56:45.333+0000",
-                "createdByUserId": "a564c58b-fe32-5729-ab90-12df37840a76",
-                "updatedDate": "2019-03-18T18:56:45.477+0000",
-                "updatedByUserId": "a564c58b-fe32-5729-ab90-12df37840a76"
-            }
+      "id": "9b68e7c2-8818-4387-a405-6567232c1c6f",
+      "acquisitionMethod": "Purchase At Vendor System",
+      "alerts": [],
+      "checkinItems": true,
+      "claims": [
+        {
+          "claimed": true,
+          "grace": 45
         }
+      ],
+      "collection": false,
+      "contributors": [],
+      "cost": {
+        "currency": "USD",
+        "listUnitPrice": 0,
+        "listUnitPriceElectronic": 2,
+        "quantityPhysical": 2,
+        "quantityElectronic": 2,
+        "poLineEstimatedPrice": 4
+      },
+      "details": {
+        "productIds": []
+      },
+      "eresource": {
+        "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
+        "activated": false,
+        "activationDue": 10,
+        "createInventory": "Instance",
+        "expectedActivation": "2018-10-09T00:00:00.000Z",
+        "license": {
+          "code": "Code 1",
+          "description": "License Agreement 1"
+        },
+        "trial": false,
+        "userLimit": 10
+      },
+      "fundDistribution": [
+        {
+          "code": "STATE-SUBN",
+          "fundId": "e54b1f4d-7d05-4b1a-9368-3c36b75d8ac6",
+          "distributionType": "percentage",
+          "value": 100
+        }
+      ],
+      "locations": [
+        {
+          "locationId": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+          "quantity": 4,
+          "quantityPhysical": 2,
+          "quantityElectronic": 2
+        }
+      ],
+      "orderFormat": "P/E Mix",
+      "paymentStatus": "Awaiting Payment",
+      "physical": {
+        "expectedReceiptDate": "2019-04-17T18:56:45.237+0000",
+        "volumes": [],
+        "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8"
+      },
+      "poLineNumber": "10110-1",
+      "publisher": "MARINER BOOKS",
+      "purchaseOrderId": "f6328932-cca2-4758-8547-b9435b783fbb",
+      "receiptStatus": "Awaiting Receipt",
+      "reportingCodes": [],
+      "source": "User",
+      "tags": {
+        "tagList": []
+      },
+      "titleOrPackage": "BEST AMERICAN SCIENCE FICTION AND FANTASY.",
+      "vendorDetail": {
+        "instructions": "Next Volume | Listed Print Serial",
+        "refNumber": "99974828485",
+        "refNumberType": "Supplier's unique order line reference number"
+      },
+      "metadata": {
+        "createdDate": "2019-03-18T18:56:45.333+0000",
+        "createdByUserId": "a564c58b-fe32-5729-ab90-12df37840a76",
+        "updatedDate": "2019-03-18T18:56:45.477+0000",
+        "updatedByUserId": "a564c58b-fe32-5729-ab90-12df37840a76"
+      }
+    },
+    {
+      "id": "7c98369b-89e4-4b2a-9793-ba36c056fc97",
+      "acquisitionMethod": "Purchase At Vendor System",
+      "alerts": [],
+      "checkinItems": true,
+      "claims": [
+        {
+          "claimed": true,
+          "grace": 45
+        }
+      ],
+      "collection": false,
+      "contributors": [],
+      "cost": {
+        "currency": "USD",
+        "listUnitPrice": 2,
+        "quantityPhysical": 2,
+        "poLineEstimatedPrice": 4
+      },
+      "details": {
+        "productIds": []
+      },
+      "fundDistribution": [
+        {
+          "code": "STATE-SUBN",
+          "fundId": "e54b1f4d-7d05-4b1a-9368-3c36b75d8ac6",
+          "distributionType": "percentage",
+          "value": 100
+        }
+      ],
+      "locations": [
+        {
+          "locationId": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+          "quantity": 4,
+          "quantityPhysical": 2,
+          "quantityElectronic": 2
+        }
+      ],
+      "orderFormat": "Physical Resource",
+      "paymentStatus": "Awaiting Payment",
+      "physical": {
+        "expectedReceiptDate": "2019-04-17T18:56:45.237+0000",
+        "volumes": [],
+        "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8"
+      },
+      "poLineNumber": "12345-1",
+      "publisher": "MARINER BOOKS",
+      "purchaseOrderId": "707cefd7-cccd-437d-b4bf-456f9c3dde6d",
+      "receiptStatus": "Partially Received",
+      "reportingCodes": [],
+      "source": "User",
+      "tags": {
+        "tagList": []
+      },
+      "titleOrPackage": "Country Madness",
+      "vendorDetail": {
+        "instructions": "Next Volume | Listed Print Serial",
+        "refNumber": "99974828485",
+        "refNumberType": "Supplier's unique order line reference number"
+      },
+      "metadata": {
+        "createdDate": "2019-03-18T18:56:45.333+0000",
+        "createdByUserId": "a564c58b-fe32-5729-ab90-12df37840a76",
+        "updatedDate": "2019-03-18T18:56:45.477+0000",
+        "updatedByUserId": "a564c58b-fe32-5729-ab90-12df37840a76"
+      }
+    }
   ],
   "totalRecords": 8
 }

@@ -61,7 +61,7 @@
       "requester": "Leo Bulero",
       "rush": true,
       "source": "User",
-      "title": "Harry Potter and the Sorcerer's Stone"
+      "titleOrPackage": "Harry Potter and the Sorcerer's Stone"
     },
     {
       "acquisitionMethod": "Purchase At Vendor System",
@@ -102,7 +102,7 @@
       "requester": "Leo Bulero",
       "rush": true,
       "source": "User",
-      "title": "Harry Potter and the Chamber of Secrets"
+      "titleOrPackage": "Harry Potter and the Chamber of Secrets"
     }
   ]
 }

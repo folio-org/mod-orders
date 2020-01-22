@@ -1,34 +1,5 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import one.util.streamex.IntStreamEx;
-import one.util.streamex.StreamEx;
-
-import org.apache.commons.collections4.ListUtils;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.rest.exceptions.InventoryException;
-import org.folio.orders.utils.ErrorCodes;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.acq.model.Piece;
-import org.folio.rest.jaxrs.model.*;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.rest.tools.utils.TenantTool;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.stream.Collectors;
-
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.joining;
@@ -41,8 +12,51 @@ import static org.folio.orders.utils.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_LOAN_TYPE;
-import static org.folio.orders.utils.HelperUtils.*;
+import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantity;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.groupLocationsById;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
+import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
 import static org.folio.rest.acq.model.Piece.Format.ELECTRONIC;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.stream.Collectors;
+
+import org.apache.commons.collections4.ListUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.rest.exceptions.InventoryException;
+import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.acq.model.Piece;
+import org.folio.rest.jaxrs.model.CheckInPiece;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Contributor;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.rest.jaxrs.model.ReceivedItem;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.rest.tools.utils.TenantTool;
+
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import one.util.streamex.IntStreamEx;
+import one.util.streamex.StreamEx;
 
 public class InventoryHelper extends AbstractHelper {
 
@@ -457,7 +471,7 @@ public class InventoryHelper extends AbstractHelper {
 
     // MODORDERS-145 The Source and source code are required by schema
     instance.put(INSTANCE_SOURCE, SOURCE_FOLIO);
-    instance.put(INSTANCE_TITLE, compPOL.getTitle());
+    instance.put(INSTANCE_TITLE, compPOL.getTitleOrPackage());
 
     if (compPOL.getEdition() != null) {
       instance.put(INSTANCE_EDITIONS, new JsonArray(singletonList(compPOL.getEdition())));

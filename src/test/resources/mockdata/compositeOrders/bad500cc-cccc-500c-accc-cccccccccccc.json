@@ -9,7 +9,6 @@
     {
       "id": "4132b641-df5d-4970-8328-566e0c3ac889",
       "checkinItems": false,
-      "instanceId": "b475cb53-97a6-4112-9712-64e5e3ca4c00",
       "acquisitionMethod": "Purchase At Vendor System",
       "cost": {
         "listUnitPrice": 1.0,
@@ -30,7 +29,8 @@
       "receiptDate": "2019-04-24T14:22:29.087+0000",
       "receiptStatus": "Receipt Not Required",
       "source": "User",
-      "title": "Title"
+      "titleOrPackage": "Title",
+      "isPackage": false
     }
   ]
 }

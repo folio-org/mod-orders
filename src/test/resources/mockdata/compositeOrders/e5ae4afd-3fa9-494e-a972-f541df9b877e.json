@@ -109,7 +109,8 @@
           ""
         ]
       },
-      "title": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
+      "titleOrPackage": "Roitt's essential immunology / Peter J. Delves, Seamus J. Martin, Dennis R. Burton, Ivan M. Roitt.",
+      "isPackage": false,
       "vendorDetail": {
         "instructions": "",
         "noteFromVendor": "",

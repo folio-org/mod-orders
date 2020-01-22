@@ -6,6 +6,7 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.awaitility.Awaitility.await;
 import static org.folio.orders.utils.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
@@ -14,6 +15,7 @@ import static org.folio.rest.impl.AcquisitionsMembershipsTests.USER_ID_ASSIGNED_
 import static org.folio.rest.impl.ApiTestSuite.mockPort;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
+import static org.folio.rest.impl.MockServer.serverRqRs;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.Matchers.equalTo;
@@ -52,12 +54,15 @@ import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReceivedItem;
+import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.rest.jaxrs.model.ToBeReceived;
 import org.folio.rest.tools.parser.JsonPathParser;
@@ -217,7 +222,7 @@ public class ApiTestBase {
     }
   }
 
-  static JsonObject getMockAsJson(String path, String id) {
+  public static JsonObject getMockAsJson(String path, String id) {
     return getMockAsJson(String.format("%s%s.json", path, id));
   }
 
@@ -447,6 +452,14 @@ public class ApiTestBase {
       .withPoLineId(poLineId);
   }
 
+  public static Title getTitle(CompositePoLine poLine) {
+    return new Title().withId(UUID.randomUUID().toString())
+      .withPoLineId(poLine.getId())
+      .withTitle(poLine.getTitleOrPackage())
+      .withInstanceId(poLine.getInstanceId())
+      .withProductIds(Optional.ofNullable(poLine.getDetails()).orElseGet(Details::new).getProductIds());
+  }
+
 
   public static CompositePoLine getMinimalContentCompositePoLine() {
     return getMinimalContentCompositePoLine(MIN_PO_ID);
@@ -460,7 +473,7 @@ public class ApiTestBase {
       .withPhysical(new Physical().withMaterialType("2d1398ae-e1aa-4c7c-b9c9-15adf8cf6425"))
       .withCost(new Cost().withCurrency("EUR").withQuantityPhysical(1).withListUnitPrice(10.0))
       .withLocations(Collections.singletonList(new Location().withLocationId("2a00b0be-1447-42a1-a112-124450991899").withQuantityPhysical(1)))
-      .withTitle("Title")
+      .withTitleOrPackage("Title")
       .withPurchaseOrderId(orderId);
   }
 
@@ -506,5 +519,14 @@ public class ApiTestBase {
 
   public static String getRandomId() {
     return UUID.randomUUID().toString();
+  }
+
+
+  static String getInstanceId(PoLine poline) {
+    return Optional.ofNullable(serverRqRs.get(TITLES, HttpMethod.PUT)).orElseGet(Collections::emptyList).stream()
+      .map(title -> title.mapTo(Title.class))
+      .filter(title -> poline.getId().equals(title.getPoLineId()))
+      .map(Title::getInstanceId)
+      .findFirst().orElse(null);
   }
 }

@@ -11,7 +11,8 @@
       "poLineNumber": "12345-1",
       "source": "User",
       "orderFormat":"Physical Resource",
-      "title": "title"
+      "titleOrPackage": "title",
+      "isPackage": false
     },
     {
       "acquisitionMethod": "Approval Plan",
@@ -21,7 +22,8 @@
       "poLineNumber": "12345-2",
       "source": "User",
       "orderFormat":"Physical Resource",
-      "title": "title"
+      "titleOrPackage": "title",
+      "isPackage": false
     },
     {
       "acquisitionMethod": "Approval Plan",
@@ -31,7 +33,8 @@
       "poLineNumber": "12345-3",
       "source": "User",
       "orderFormat":"Physical Resource",
-      "title": "title"
+      "titleOrPackage": "title",
+      "isPackage": false
     },
     {
       "acquisitionMethod": "Approval Plan",
@@ -41,7 +44,8 @@
       "poLineNumber": "12345-4",
       "source": "User",
       "orderFormat":"Physical Resource",
-      "title": "title"
+      "titleOrPackage": "title",
+      "isPackage": false
     }
   ]
 }
