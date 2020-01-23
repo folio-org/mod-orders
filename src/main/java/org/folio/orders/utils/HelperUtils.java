@@ -21,6 +21,7 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED;
@@ -1035,13 +1036,21 @@ public class HelperUtils {
 
   public static boolean inventoryUpdateNotRequired(CompositePoLine compPOL) {
     // in case of "Other" order format check Physical createInventory value only
-    if (compPOL.getOrderFormat() == OTHER) {
-      return compPOL.getPhysical() == null || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE;
+    if (compPOL.getOrderFormat() == OTHER || compPOL.getOrderFormat() == PHYSICAL_RESOURCE) {
+      return isUpdateNotRequiredForPhysical(compPOL);
+    } else if (compPOL.getOrderFormat() == ELECTRONIC_RESOURCE) {
+      return isUpdateNotRequiredForEresource(compPOL);
+    } else {
+      return isUpdateNotRequiredForPhysical(compPOL) && isUpdateNotRequiredForEresource(compPOL);
     }
-    boolean physicalUpdateNotRequired = (compPOL.getPhysical() == null || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE);
-    boolean eresourceUpdateNotRequired = (compPOL.getEresource() == null || compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.NONE);
+  }
 
-    return physicalUpdateNotRequired && eresourceUpdateNotRequired;
+  private static boolean isUpdateNotRequiredForEresource(CompositePoLine compPOL) {
+    return compPOL.getEresource() == null || compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.NONE;
+  }
+
+  private static boolean isUpdateNotRequiredForPhysical(CompositePoLine compPOL) {
+    return compPOL.getPhysical() == null || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE;
   }
 
   public static boolean isHoldingsUpdateRequired(Eresource eresource, Physical physical) {
