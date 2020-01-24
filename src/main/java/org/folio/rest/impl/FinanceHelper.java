@@ -10,9 +10,11 @@ import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.convertFundIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
 import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
@@ -26,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.function.BiConsumer;
 
 import javax.money.MonetaryAmount;
@@ -35,6 +38,8 @@ import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.acq.model.finance.Budget;
+import org.folio.rest.acq.model.finance.BudgetCollection;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
@@ -46,6 +51,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.Context;
@@ -57,6 +63,7 @@ public class FinanceHelper extends AbstractHelper {
   private static final String ENCUMBRANCE_POST_ENDPOINT = resourcesPath(ENCUMBRANCES) + "?lang=%s";
   private static final String GET_CURRENT_FISCAL_YEAR_BY_ID = "/finance/ledgers/%s/current-fiscal-year?lang=%s";
   private static final String GET_FUNDS_WITH_SEARCH_PARAMS = resourcesPath(FUNDS) + SEARCH_PARAMS;
+  private static final String GET_BUDGETS_WITH_SEARCH_PARAMS = resourcesPath(BUDGETS) + SEARCH_PARAMS;
 
   FinanceHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -73,8 +80,18 @@ public class FinanceHelper extends AbstractHelper {
       .map(Pair::getLeft)
       .collect(toList());
     return setCurrentFiscalYear(encumbrances)
-      .thenCompose(aVoid -> createSummary(compPo.getId(), encumbrances.size()))
-      .thenCompose(vVoid -> createEncumbrances(encumbranceDistributionPairs));
+      .thenCompose(v -> checkEnoughMoneyInBudgets(encumbrances))
+      .thenCompose(v -> createSummary(compPo.getId(), encumbrances.size()))
+      .thenCompose(summaryId -> createEncumbrances(encumbranceDistributionPairs));
+  }
+
+  private CompletionStage<Void> checkEnoughMoneyInBudgets(List<Transaction> encumbrances) {
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+    Map<String, List<Transaction>> groupedByFund = encumbrances.stream()
+      .collect(groupingBy(Transaction::getFromFundId));
+    encumbrances.stream().map(v -> getBudgets(groupedByFund)).collect(toList());
+    future.complete(null);
+    return future;
   }
 
   private CompletableFuture<String> createSummary(String id, int number) {
@@ -128,6 +145,22 @@ public class FinanceHelper extends AbstractHelper {
       .toList());
   }
 
+  private CompletableFuture<List<List<Budget>>> getBudgetsByChunks(Map<String, List<Transaction>> groupedByFund) {
+    return collectResultsOnSuccess(StreamEx.ofSubLists(new ArrayList<>(groupedByFund.entrySet()), MAX_IDS_FOR_GET_RQ)
+      .map(entries -> entries.stream()
+        .map(Map.Entry::getKey)
+        .distinct()
+        .collect(toList()))
+      .map(this::getBudgetsByFundIds)
+      .toList());
+  }
+
+  private CompletableFuture<List<List<Budget>>> getBudgets(Map<String, List<Transaction>> groupedByFund) {
+   return getBudgetsByChunks(groupedByFund).thenApply(lists -> lists.stream()
+      .flatMap(Collection::stream)
+      .collect(HashMap::new, accumulator(groupedByFund), Map::putAll));
+  }
+
 
   private BiConsumer<HashMap<String, List<Transaction>>, Fund> accumulator(Map<String, List<Transaction>> groupedByFund) {
     return (map, fund) -> map.merge(fund.getLedgerId(), groupedByFund.get(fund.getId()), (transactions, transactions2) -> {
@@ -149,6 +182,22 @@ public class FinanceHelper extends AbstractHelper {
         }
         String missingIds = String.join(", ", CollectionUtils.subtract(ids, fundCollection.getFunds().stream().map(Fund::getId).collect(toList())));
         throw new HttpException(400, FUNDS_NOT_FOUND.toError().withParameters(Collections.singletonList(new Parameter().withKey("funds").withValue(missingIds))));
+      });
+  }
+
+  private CompletableFuture<List<Budget>> getBudgetsByFundIds(List<String> ids) {
+    String query = convertFundIdsToCqlQuery(ids);
+    String queryParam = "&query=" + encodeQuery(query, logger);
+    String endpoint = String.format(GET_BUDGETS_WITH_SEARCH_PARAMS, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
+
+    return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(entries -> entries.mapTo(BudgetCollection.class))
+      .thenApply(budgetCollection -> {
+        if (ids.size() == budgetCollection.getBudgets().size()) {
+          return budgetCollection.getBudgets();
+        }
+        String missingIds = String.join(", ", CollectionUtils.subtract(ids, budgetCollection.getBudgets().stream().map(Budget::getId).collect(toList())));
+        throw new HttpException(400, FUNDS_NOT_FOUND.toError().withParameters(Collections.singletonList(new Parameter().withKey("budgets").withValue(missingIds))));
       });
   }
 
@@ -230,6 +279,30 @@ public class FinanceHelper extends AbstractHelper {
     } else {
       throw new CompletionException(fail.getCause());
     }
+  }
+
+  /**
+   * Calculates remaining amount for encumbrance
+   * [remaining amount] = (allocated * allowableEncumbered) - (allocated - (unavailable + available)) - (encumbered + awaitingPayment)
+   *
+   * @param budget     processed budget
+   * @param currency   processed transaction currency
+   * @return remaining amount for encumbrance
+   */
+  private Double getBudgetRemainingAmountForEncumbrance(Budget budget, String currency) {
+    Money allocated = Money.of(budget.getAllocated(), currency);
+    // get allowableEncumbered converted from percentage value
+    Double allowableEncumbered = Money.of(budget.getAllowableEncumbrance(), currency).divide(100d).getNumber().doubleValue();
+    Money unavailable = Money.of(budget.getUnavailable(), currency);
+    Money available = Money.of(budget.getAvailable(), currency);
+    Money encumbered = Money.of(budget.getEncumbered(), currency);
+    Money awaitingPayment = Money.of(budget.getAwaitingPayment(), currency);
+
+    Money result = allocated.multiply(allowableEncumbered);
+    result = result.subtract(allocated.subtract(unavailable.add(available)));
+    result = result.subtract(encumbered.add(awaitingPayment));
+
+    return result.getNumber().doubleValue();
   }
 
 }

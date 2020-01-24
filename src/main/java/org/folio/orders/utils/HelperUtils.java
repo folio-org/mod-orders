@@ -73,6 +73,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 public class HelperUtils {
 
   public static final String ID = "id";
+  public static final String FUND_ID = "fundId";
   public static final String COMPOSITE_PO_LINES = "compositePoLines";
   public static final String ACQ_UNIT_IDS = "acqUnitIds";
   public static final String CONFIGS = "configs";
@@ -837,6 +838,10 @@ public class HelperUtils {
    */
   public static String convertIdsToCqlQuery(Collection<String> ids) {
     return convertIdsToCqlQuery(ids, ID, true);
+  }
+
+  public static String convertFundIdsToCqlQuery(Collection<String> ids) {
+    return convertIdsToCqlQuery(ids, FUND_ID, true);
   }
 
   /**
