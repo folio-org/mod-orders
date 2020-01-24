@@ -42,7 +42,6 @@ import static org.folio.rest.impl.InventoryHelper.ITEM_PERMANENT_LOAN_TYPE_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_NAME;
-import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_ON_ORDER;
 import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
 import static org.folio.rest.impl.MockServer.CONFIG_MOCK_PATH;
 import static org.folio.rest.impl.MockServer.INSTANCE_STATUSES_MOCK_DATA_PATH;
@@ -88,6 +87,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.ReceivedItem;
 
 import io.restassured.http.Header;
 import io.vertx.core.json.JsonArray;
@@ -386,7 +386,7 @@ class InventoryInteractionTestHelper {
     assertThat(item.getString(ITEM_HOLDINGS_RECORD_ID), not(isEmptyOrNullString()));
     assertThat(item.getString(ITEM_PERMANENT_LOAN_TYPE_ID), equalTo(getLoanTypeId(tenant)));
     assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
-    assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_ON_ORDER));
+    assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.ON_ORDER.value()));
   }
 
   private static String getInstanceStatusId(Header tenant) {

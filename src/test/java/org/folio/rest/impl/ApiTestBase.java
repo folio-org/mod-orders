@@ -142,7 +142,6 @@ public class ApiTestBase {
   static final Header EMPTY_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, EMPTY_CONFIG_TENANT);
   public static final String PROTECTED_READ_ONLY_TENANT = "protected_read";
 
-  private static final String STATUS_RECEIVED = "Received";
   private static final String LOCATION_ID = "f34d27c6-a8eb-461b-acd6-5dea81771e70";
 
   private static boolean runningOnOwn;
@@ -498,11 +497,11 @@ public class ApiTestBase {
   }
 
   public static CheckInPiece getCheckInPiece(String id) {
-    return new CheckInPiece().withItemStatus(STATUS_RECEIVED).withLocationId(LOCATION_ID).withId(id);
+    return new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.IN_PROCESS).withLocationId(LOCATION_ID).withId(id);
   }
 
   public static ReceivedItem getReceivedItem(String pieceId) {
-    return new ReceivedItem().withItemStatus(STATUS_RECEIVED).withLocationId(LOCATION_ID).withPieceId(pieceId);
+    return new ReceivedItem().withItemStatus(ReceivedItem.ItemStatus.IN_PROCESS).withLocationId(LOCATION_ID).withPieceId(pieceId);
   }
 
   public static ToBeCheckedIn getToBeCheckedIn(String poLineId, String pieceId) {
