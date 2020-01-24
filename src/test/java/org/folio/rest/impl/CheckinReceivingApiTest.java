@@ -13,9 +13,7 @@ import static org.folio.orders.utils.ErrorCodes.PIECE_UPDATE_FAILED;
 import static org.folio.rest.impl.InventoryHelper.ITEM_BARCODE;
 import static org.folio.rest.impl.InventoryHelper.ITEM_LEVEL_CALL_NUMBER;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS;
-import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_IN_PROCESS;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_NAME;
-import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_ON_ORDER;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
@@ -26,6 +24,7 @@ import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPieceUpdates;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
+import static org.folio.rest.jaxrs.model.ReceivedItem.ItemStatus.ON_ORDER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
@@ -179,7 +178,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     itemUpdates.forEach(item -> {
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
-      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_IN_PROCESS));
+      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(CheckInPiece.ItemStatus.IN_PROCESS.value()));
     });
 
     polUpdates.forEach(pol -> {
@@ -236,7 +235,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     itemUpdates.forEach(item -> {
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
       assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), is(nullValue()));
-      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_ON_ORDER));
+      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ON_ORDER.value()));
     });
     polUpdates.forEach(pol -> {
       PoLine poLine = pol.mapTo(PoLine.class);
@@ -262,7 +261,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     toBeCheckedInList.add(new ToBeCheckedIn()
       .withCheckedIn(1)
       .withPoLineId(poLineId)
-      .withCheckInPieces(Arrays.asList(new CheckInPiece().withItemStatus(ITEM_STATUS_IN_PROCESS), new CheckInPiece().withItemStatus(ITEM_STATUS_IN_PROCESS))));
+      .withCheckInPieces(Arrays.asList(new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.ON_ORDER), new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.IN_PROCESS))));
 
     CheckinCollection request = new CheckinCollection()
       .withToBeCheckedIn(toBeCheckedInList)
@@ -360,7 +359,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     itemUpdates.forEach(item -> {
       assertThat(item.getString(ITEM_BARCODE), not(isEmptyString()));
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
-      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo("Received"));
+      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.IN_PROCESS.value()));
       assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), not(isEmptyString()));
     });
     polUpdates.forEach(pol -> {
@@ -462,7 +461,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     itemUpdates.forEach(item -> {
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
-      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_IN_PROCESS));
+      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.IN_PROCESS.value()));
     });
 
     polUpdates.forEach(pol -> {
@@ -637,7 +636,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     itemUpdates.forEach(item -> {
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
       assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), is(nullValue()));
-      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_ON_ORDER));
+      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.ON_ORDER.value()));
     });
     polUpdates.forEach(pol -> {
       PoLine poLine = pol.mapTo(PoLine.class);
@@ -690,7 +689,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     itemUpdates.forEach(item -> {
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
       assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), is(nullValue()));
-      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_ON_ORDER));
+      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.ON_ORDER.value()));
     });
     polUpdates.forEach(pol -> {
       PoLine poLine = pol.mapTo(PoLine.class);
