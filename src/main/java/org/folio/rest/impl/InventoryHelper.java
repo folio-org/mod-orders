@@ -81,8 +81,6 @@ public class InventoryHelper extends AbstractHelper {
   static final String ITEM_LEVEL_CALL_NUMBER = "itemLevelCallNumber";
   static final String ITEM_STATUS = "status";
   static final String ITEM_STATUS_NAME = "name";
-  static final String ITEM_STATUS_IN_PROCESS = "In process";
-  static final String ITEM_STATUS_ON_ORDER = "On order";
   static final String ITEM_MATERIAL_TYPE_ID = "materialTypeId";
   static final String ITEM_PERMANENT_LOAN_TYPE_ID = "permanentLoanTypeId";
   static final String ITEM_PURCHASE_ORDER_LINE_IDENTIFIER = "purchaseOrderLineIdentifier";
@@ -201,7 +199,7 @@ public class InventoryHelper extends AbstractHelper {
     String endpoint = String.format(UPDATE_ITEM_ENDPOINT, itemRecord.getString(ID), lang);
 
     // Update item record with receiving details
-    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus()));
+    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
     if (StringUtils.isNotEmpty(receivedItem.getBarcode())) {
       itemRecord.put(ITEM_BARCODE, receivedItem.getBarcode());
     }
@@ -215,7 +213,7 @@ public class InventoryHelper extends AbstractHelper {
     String endpoint = String.format(UPDATE_ITEM_ENDPOINT, itemRecord.getString(ID), lang);
 
     // Update item record with checkIn details
-    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus()));
+    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
     if (StringUtils.isNotEmpty(checkinPiece.getBarcode())) {
       itemRecord.put(ITEM_BARCODE, checkinPiece.getBarcode());
     }
@@ -231,7 +229,7 @@ public class InventoryHelper extends AbstractHelper {
    * @return {@code true} if the item status is "On order"
    */
   public boolean isOnOrderItemStatus(ReceivedItem receivedItem) {
-    return ITEM_STATUS_ON_ORDER.equalsIgnoreCase(receivedItem.getItemStatus());
+    return ReceivedItem.ItemStatus.ON_ORDER == receivedItem.getItemStatus();
   }
 
   /**
@@ -240,7 +238,7 @@ public class InventoryHelper extends AbstractHelper {
    * @return {@code true} if the item status is "On order"
    */
   public boolean isOnOrderPieceStatus(CheckInPiece checkinPiece) {
-    return ITEM_STATUS_ON_ORDER.equalsIgnoreCase(checkinPiece.getItemStatus());
+    return CheckInPiece.ItemStatus.ON_ORDER == checkinPiece.getItemStatus();
   }
 
   CompletableFuture<String> getOrCreateHoldingsRecord(String instanceId, String locationId) {
@@ -626,7 +624,7 @@ public class InventoryHelper extends AbstractHelper {
       .thenApply(loanTypeId -> {
         JsonObject itemRecord = new JsonObject();
         itemRecord.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
-        itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ITEM_STATUS_ON_ORDER));
+        itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ReceivedItem.ItemStatus.ON_ORDER.value()));
         itemRecord.put(ITEM_PERMANENT_LOAN_TYPE_ID, loanTypeId);
         itemRecord.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
         return itemRecord;

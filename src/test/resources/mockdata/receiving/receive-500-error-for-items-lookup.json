@@ -7,7 +7,7 @@
         {
           "barcode": 21111311113,
           "comment": "Expected error itemNotRetrieved",
-          "itemStatus": "Received",
+          "itemStatus": "In process",
           "locationId": "168f8a86-d26c-406e-813f-c7527f241ac3",
           "pieceId": "46dd0dad-9f35-431f-8f40-556bc389e628"
         }
