@@ -1385,7 +1385,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersCreateInventoryNone() throws Exception {
+  public void testPostOrdersCreateInventoryPhysicalNone() throws Exception {
+    logger.info("=== Test POST Order By Id to change status of Order to Open - inventory interaction not required for Physical Resource  ===");
+
     JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
     // Get Open Order
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
@@ -1393,17 +1395,51 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     // Make sure that Order moves to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
-    // Set CreateInventory value to create nothing in inventory
+    // Set CreateInventory value to create nothing in inventory + fix from MODORDERS-264
+    reqData.getCompositePoLines().get(0).setOrderFormat(OrderFormat.PHYSICAL_RESOURCE);
     reqData.getCompositePoLines().get(0).getPhysical().setCreateInventory(Physical.CreateInventory.NONE);
-    reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
+    reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
+    reqData.getCompositePoLines().get(0).getCost().setQuantityElectronic(0);
+    reqData.getCompositePoLines().get(0).getCost().setListUnitPriceElectronic(0d);
+    reqData.getCompositePoLines().get(0).getLocations().get(0).setQuantityElectronic(0);
 
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
+    verifyInstanceNotCreated();
+  }
+
+  @Test
+  public void testPostOrdersCreateInventoryElcetronicNone() throws Exception {
+    logger.info("=== Test POST Order By Id to change status of Order to Open - inventory interaction not required for Electronic Resource  ===");
+
+    JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
+    // Get Open Order
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    MockServer.addMockTitles(reqData.getCompositePoLines());
+    // Make sure that Order moves to Open
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    // Set CreateInventory value to create nothing in inventory + fix from MODORDERS-264
+    reqData.getCompositePoLines().get(0).setOrderFormat(OrderFormat.ELECTRONIC_RESOURCE);
+    reqData.getCompositePoLines().get(0).getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
+    reqData.getCompositePoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
+    reqData.getCompositePoLines().get(0).getCost().setQuantityPhysical(0);
+    reqData.getCompositePoLines().get(0).getCost().setListUnitPrice(0d);
+    reqData.getCompositePoLines().get(0).getLocations().get(0).setQuantityPhysical(0);
+
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    verifyInstanceNotCreated();
+  }
+
+  private void verifyInstanceNotCreated() {
     assertNull(getInstancesSearches());
     assertNull(getHoldingsSearches());
     assertNull(getItemsSearches());
     assertNotNull(getCreatedPieces());
+    assertNull(getCreatedInstances());
   }
 
   @Test
