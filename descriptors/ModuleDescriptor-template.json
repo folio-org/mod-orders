@@ -582,7 +582,7 @@
     },
     {
       "id":"organizations-storage.organizations",
-      "version": "2.1"
+      "version": "3.0"
     },
     {
       "id": "finance.funds",
