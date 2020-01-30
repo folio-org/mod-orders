@@ -186,6 +186,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   private static final String ORDER_ID_WITHOUT_PO_LINES = "50fb922c-3fa9-494e-a972-f2801f1b9fd1";
   private static final String ORDER_WITHOUT_WORKFLOW_STATUS = "41d56e59-46db-4d5e-a1ad-a178228913e5";
   static final String ORDER_WIT_PO_LINES_FOR_SORTING =  "9a952cd0-842b-4e71-bddd-014eb128dc8e";
+  static final String VALID_FUND_ID =  "fb7b70f1-b898-4924-a991-0e4b6312bb5f";
 
   // API paths
   public final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
@@ -2674,7 +2675,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().forEach(poLine ->
       poLine.getFundDistribution().forEach(fundDistribution -> {
         fundDistribution.setEncumbrance(null);
-        fundDistribution.setFundId(UUID.randomUUID().toString());
+        fundDistribution.setFundId(VALID_FUND_ID);
         addMockEntry(FUNDS, new Fund()
           .withId(fundDistribution.getFundId())
           .withCode("Test-" + fundDistribution.getFundId())
