@@ -9,6 +9,7 @@ import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
 import static org.folio.orders.utils.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
 import static org.folio.orders.utils.ErrorCodes.FUNDS_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
@@ -1327,6 +1328,34 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertNotNull(getHoldingsSearches());
     assertNull(getItemsSearches());
     assertNull(getCreatedPieces());
+  }
+
+  @Test
+  public void testPostOpenOrdersWithExtraLargeCost() throws Exception {
+    logger.info("=== Test POST Order By Id with extra large unit cost - error expected ===");
+
+    // Get Open Order
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    // Make sure that mock po has 2 po lines
+    assertEquals(2, reqData.getCompositePoLines().size());
+
+    // Make sure that Order moves to Open
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    // Set extra large cost for non electronic format
+    reqData.getCompositePoLines()
+      .forEach(s -> {
+        if (s.getOrderFormat()!= OrderFormat.ELECTRONIC_RESOURCE) {
+          s.getCost().setListUnitPrice((double) Integer.MAX_VALUE);
+        }
+      });
+
+    Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
+      .toString(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_TOKEN, X_OKAPI_USER_ID), APPLICATION_JSON, 422)
+        .as(Errors.class);
+
+    assertEquals(FUND_CANNOT_BE_PAID.getCode(), errors.getErrors().get(0).getCode());
+
   }
 
   @Test
