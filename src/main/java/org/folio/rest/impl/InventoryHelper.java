@@ -1,34 +1,5 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import one.util.streamex.IntStreamEx;
-import one.util.streamex.StreamEx;
-
-import org.apache.commons.collections4.ListUtils;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.rest.exceptions.InventoryException;
-import org.folio.orders.utils.ErrorCodes;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.acq.model.Piece;
-import org.folio.rest.jaxrs.model.*;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.rest.tools.utils.TenantTool;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.stream.Collectors;
-
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.joining;
@@ -41,8 +12,51 @@ import static org.folio.orders.utils.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_LOAN_TYPE;
-import static org.folio.orders.utils.HelperUtils.*;
+import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantity;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.groupLocationsById;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
+import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
 import static org.folio.rest.acq.model.Piece.Format.ELECTRONIC;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.stream.Collectors;
+
+import org.apache.commons.collections4.ListUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.rest.exceptions.InventoryException;
+import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.acq.model.Piece;
+import org.folio.rest.jaxrs.model.CheckInPiece;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Contributor;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.rest.jaxrs.model.ReceivedItem;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.rest.tools.utils.TenantTool;
+
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import one.util.streamex.IntStreamEx;
+import one.util.streamex.StreamEx;
 
 public class InventoryHelper extends AbstractHelper {
 
@@ -67,8 +81,6 @@ public class InventoryHelper extends AbstractHelper {
   static final String ITEM_LEVEL_CALL_NUMBER = "itemLevelCallNumber";
   static final String ITEM_STATUS = "status";
   static final String ITEM_STATUS_NAME = "name";
-  static final String ITEM_STATUS_IN_PROCESS = "In process";
-  static final String ITEM_STATUS_ON_ORDER = "On order";
   static final String ITEM_MATERIAL_TYPE_ID = "materialTypeId";
   static final String ITEM_PERMANENT_LOAN_TYPE_ID = "permanentLoanTypeId";
   static final String ITEM_PURCHASE_ORDER_LINE_IDENTIFIER = "purchaseOrderLineIdentifier";
@@ -187,7 +199,7 @@ public class InventoryHelper extends AbstractHelper {
     String endpoint = String.format(UPDATE_ITEM_ENDPOINT, itemRecord.getString(ID), lang);
 
     // Update item record with receiving details
-    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus()));
+    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
     if (StringUtils.isNotEmpty(receivedItem.getBarcode())) {
       itemRecord.put(ITEM_BARCODE, receivedItem.getBarcode());
     }
@@ -201,7 +213,7 @@ public class InventoryHelper extends AbstractHelper {
     String endpoint = String.format(UPDATE_ITEM_ENDPOINT, itemRecord.getString(ID), lang);
 
     // Update item record with checkIn details
-    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus()));
+    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
     if (StringUtils.isNotEmpty(checkinPiece.getBarcode())) {
       itemRecord.put(ITEM_BARCODE, checkinPiece.getBarcode());
     }
@@ -217,7 +229,7 @@ public class InventoryHelper extends AbstractHelper {
    * @return {@code true} if the item status is "On order"
    */
   public boolean isOnOrderItemStatus(ReceivedItem receivedItem) {
-    return ITEM_STATUS_ON_ORDER.equalsIgnoreCase(receivedItem.getItemStatus());
+    return ReceivedItem.ItemStatus.ON_ORDER == receivedItem.getItemStatus();
   }
 
   /**
@@ -226,7 +238,7 @@ public class InventoryHelper extends AbstractHelper {
    * @return {@code true} if the item status is "On order"
    */
   public boolean isOnOrderPieceStatus(CheckInPiece checkinPiece) {
-    return ITEM_STATUS_ON_ORDER.equalsIgnoreCase(checkinPiece.getItemStatus());
+    return CheckInPiece.ItemStatus.ON_ORDER == checkinPiece.getItemStatus();
   }
 
   CompletableFuture<String> getOrCreateHoldingsRecord(String instanceId, String locationId) {
@@ -457,7 +469,7 @@ public class InventoryHelper extends AbstractHelper {
 
     // MODORDERS-145 The Source and source code are required by schema
     instance.put(INSTANCE_SOURCE, SOURCE_FOLIO);
-    instance.put(INSTANCE_TITLE, compPOL.getTitle());
+    instance.put(INSTANCE_TITLE, compPOL.getTitleOrPackage());
 
     if (compPOL.getEdition() != null) {
       instance.put(INSTANCE_EDITIONS, new JsonArray(singletonList(compPOL.getEdition())));
@@ -612,7 +624,7 @@ public class InventoryHelper extends AbstractHelper {
       .thenApply(loanTypeId -> {
         JsonObject itemRecord = new JsonObject();
         itemRecord.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
-        itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ITEM_STATUS_ON_ORDER));
+        itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ReceivedItem.ItemStatus.ON_ORDER.value()));
         itemRecord.put(ITEM_PERMANENT_LOAN_TYPE_ID, loanTypeId);
         itemRecord.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
         return itemRecord;

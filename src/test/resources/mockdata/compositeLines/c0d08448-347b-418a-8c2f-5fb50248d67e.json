@@ -107,7 +107,8 @@
       "important"
     ]
   },
-  "title": "Kayak Fishing in the Northern Gulf Coast",
+  "titleOrPackage": "Kayak Fishing in the Northern Gulf Coast",
+  "isPackage": false,
   "vendorDetail": {
     "instructions": "ABCDEFG",
     "noteFromVendor": "ABCDEFGHIKJKLMNOP",

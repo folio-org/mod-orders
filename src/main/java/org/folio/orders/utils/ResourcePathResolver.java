@@ -27,11 +27,11 @@ public class ResourcePathResolver {
   public static final String SEARCH_ORDERS = "searchOrders";
   public static final String ORDER_LINES = "orderLines";
   public static final String ORDER_TEMPLATES = "orderTemplates";
+  public static final String TITLES = "titles";
   public static final String ENCUMBRANCES = "finance.encumbrances";
   public static final String FUNDS = "finance.funds";
   public static final String BUDGETS = "finance.budgets";
   public static final String ORDER_TRANSACTION_SUMMARIES = "finance.order-summaries";
-  public static final String TITLES = "titles";
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
   private static final Map<String, String> SUB_OBJECT_COLLECTION_APIS;

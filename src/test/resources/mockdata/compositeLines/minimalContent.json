@@ -10,5 +10,6 @@
 	"physical": {
 		"createInventory": "None"
 	},
-	"title": "Test title"
+	"titleOrPackage": "Test title",
+  "isPackage": false
 }

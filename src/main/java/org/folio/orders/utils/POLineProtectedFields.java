@@ -40,7 +40,7 @@ public enum POLineProtectedFields {
   RUSH("rush"),
   SOURCE("source"),
   SELECTOR("selector"),
-  TITLE("title"),
+  TITLE_OR_PACKAGE("titleOrPackage"),
   VENDORDETAIL_INSTRUCTION_TO_VENDOR("vendorDetail.instructions"),
   VENDORDETAIL_VENDOR_ACCOUNT("vendorDetail.vendorAccount");
 

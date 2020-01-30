@@ -1,8 +1,8 @@
 package org.folio.orders.events.handlers;
 
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
-import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getOkapiHeaders;
+import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
@@ -60,13 +60,13 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
       getPurchaseOrderById(orderId, lang, httpClient, ctx, okapiHeaders, logger)
         .thenAccept(orderJson -> {
           PurchaseOrder purchaseOrder = orderJson.mapTo(PurchaseOrder.class);
-          
+
           if (purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.PENDING) {
             future.complete(null);
           } else {
             // Get purchase order lines to check if order status needs to be changed.
             getPoLines(orderId, lang, httpClient, ctx, okapiHeaders, logger)
-              .thenCompose(linesArray -> supplyBlockingAsync(ctx, () -> HelperUtils.convertToPoLines(linesArray)))
+              .thenCompose(linesArray -> supplyBlockingAsync(ctx, () -> HelperUtils.convertJsonToPoLines(linesArray)))
               .thenCompose(poLines -> updateOrderStatus(okapiHeaders, httpClient, purchaseOrder, poLines))
               .thenAccept(future::complete)
               .exceptionally(e -> {

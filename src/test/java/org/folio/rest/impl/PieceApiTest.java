@@ -1,23 +1,24 @@
 package org.folio.rest.impl;
 
-import io.restassured.http.Header;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
+import static org.folio.orders.utils.ErrorCodes.MISSING_RECEIPT_DATE;
+import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
+import static org.hamcrest.core.Is.is;
+
 import org.folio.HttpStatus;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.jaxrs.model.Errors;
 import org.junit.Test;
 
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
-import static org.folio.orders.utils.ErrorCodes.MISSING_RECEIPT_DATE;
-import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
+import io.restassured.http.Header;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class PieceApiTest extends ApiTestBase {
 

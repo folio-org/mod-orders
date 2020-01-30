@@ -1,27 +1,5 @@
 package org.folio.rest.impl;
 
-import io.restassured.http.Header;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.acq.model.Piece;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Contributor;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.PoLine;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
 import static org.folio.orders.utils.HelperUtils.CONFIGS;
 import static org.folio.orders.utils.HelperUtils.CONFIG_NAME;
 import static org.folio.orders.utils.HelperUtils.CONFIG_VALUE;
@@ -34,6 +12,7 @@ import static org.folio.orders.utils.HelperUtils.getPhysicalCostQuantity;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.isHoldingCreationRequiredForLocation;
 import static org.folio.rest.impl.ApiTestBase.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.rest.impl.ApiTestBase.getInstanceId;
 import static org.folio.rest.impl.InventoryHelper.CONFIG_NAME_INSTANCE_STATUS_CODE;
 import static org.folio.rest.impl.InventoryHelper.CONFIG_NAME_INSTANCE_TYPE_CODE;
 import static org.folio.rest.impl.InventoryHelper.CONFIG_NAME_LOAN_TYPE_NAME;
@@ -63,7 +42,6 @@ import static org.folio.rest.impl.InventoryHelper.ITEM_PERMANENT_LOAN_TYPE_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_NAME;
-import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_ON_ORDER;
 import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
 import static org.folio.rest.impl.MockServer.CONFIG_MOCK_PATH;
 import static org.folio.rest.impl.MockServer.INSTANCE_STATUSES_MOCK_DATA_PATH;
@@ -93,6 +71,30 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.acq.model.Piece;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Contributor;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.ReceivedItem;
+
+import io.restassured.http.Header;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+
 class InventoryInteractionTestHelper {
 
   private static final Logger logger = LoggerFactory.getLogger(InventoryInteractionTestHelper.class);
@@ -105,11 +107,12 @@ class InventoryInteractionTestHelper {
       if (itemsQuantity > 0) {
         boolean instanceLinked = false;
         for (JsonObject jsonObj : polUpdates) {
+          jsonObj.remove("instanceId");
           PoLine line = jsonObj.mapTo(PoLine.class);
-          if (StringUtils.equals(line.getId(), compLine.getId()) && StringUtils.isNotEmpty(line.getInstanceId())) {
+          if (StringUtils.equals(line.getId(), compLine.getId()) && StringUtils.isNotEmpty(getInstanceId(line))) {
             instanceLinked = true;
             // Populate instance id in the req data for further validation
-            compLine.setInstanceId(line.getInstanceId());
+            compLine.setInstanceId(getInstanceId(line));
             break;
           }
         }
@@ -201,7 +204,7 @@ class InventoryInteractionTestHelper {
   private static void verifyInstanceCreated(Header tenant, List<JsonObject> inventoryInstances, CompositePoLine pol) {
     boolean verified = false;
     for (JsonObject instance : inventoryInstances) {
-      if (pol.getTitle().equals(instance.getString("title"))) {
+      if (pol.getTitleOrPackage().equals(instance.getString("title"))) {
         verifyInstanceRecordRequest(tenant, instance, pol);
         verified = true;
         break;
@@ -354,7 +357,7 @@ class InventoryInteractionTestHelper {
   }
 
   private static void verifyInstanceRecordRequest(Header tenant, JsonObject instance, CompositePoLine line) {
-    assertThat(instance.getString(INSTANCE_TITLE), equalTo(line.getTitle()));
+    assertThat(instance.getString(INSTANCE_TITLE), equalTo(line.getTitleOrPackage()));
     assertThat(instance.getString(INSTANCE_SOURCE), equalTo("FOLIO"));
     assertThat(instance.getString(INSTANCE_STATUS_ID), equalTo(getInstanceStatusId(tenant)));
     assertThat(instance.getString(INSTANCE_TYPE_ID), equalTo(getInstanceTypeId(tenant)));
@@ -383,7 +386,7 @@ class InventoryInteractionTestHelper {
     assertThat(item.getString(ITEM_HOLDINGS_RECORD_ID), not(isEmptyOrNullString()));
     assertThat(item.getString(ITEM_PERMANENT_LOAN_TYPE_ID), equalTo(getLoanTypeId(tenant)));
     assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
-    assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_ON_ORDER));
+    assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.ON_ORDER.value()));
   }
 
   private static String getInstanceStatusId(Header tenant) {

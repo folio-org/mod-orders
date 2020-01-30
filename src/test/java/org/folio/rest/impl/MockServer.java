@@ -10,6 +10,7 @@ import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.FUND_ID;
@@ -117,6 +118,8 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.SequenceNumber;
+import org.folio.rest.acq.model.Title;
+import org.folio.rest.acq.model.TitleCollection;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.BudgetCollection;
 import org.folio.rest.acq.model.finance.FiscalYear;
@@ -128,6 +131,7 @@ import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -154,8 +158,6 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import one.util.streamex.StreamEx;
-import org.folio.rest.jaxrs.model.Title;
-import org.folio.rest.jaxrs.model.TitleCollection;
 
 public class MockServer {
 
@@ -171,18 +173,19 @@ public class MockServer {
   static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
   public static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
-  private static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
+  public static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
   public static final String TITLES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "titles/";
   private static final String ACQUISITIONS_UNITS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "acquisitionsUnits/units";
   private static final String ORDER_TEMPLATES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "orderTemplates/";
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
   private static final String ORGANIZATIONS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "organizations/";
-  static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "po_line_collection.json";
+  public static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "po_line_collection.json";
   private static final String IDENTIFIER_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
   static final String ACQUISITIONS_UNITS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/units.json";
   static final String ACQUISITIONS_MEMBERSHIPS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/memberships.json";
   static final String ORDER_TEMPLATES_COLLECTION = ORDER_TEMPLATES_MOCK_DATA_PATH + "/orderTemplates.json";
-  public static final String FUNDS_PATH = BASE_MOCK_DATA_PATH + "funds/funds.json";
+  private static final String FUNDS_PATH = BASE_MOCK_DATA_PATH + "funds/funds.json";
+  private static final String TITLES_PATH = BASE_MOCK_DATA_PATH + "titles/titles.json";
   public static final String BUDGETS_PATH = BASE_MOCK_DATA_PATH + "budgets/budgets.json";
 
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
@@ -220,6 +223,12 @@ public class MockServer {
   MockServer(int port) {
     this.port = port;
     this.vertx = Vertx.vertx();
+  }
+
+  public static void addMockTitles(List<CompositePoLine> poLines) {
+    poLines.stream()
+      .filter(line -> !line.getIsPackage() && isNotEmpty(line.getId()))
+      .forEach(line -> addMockEntry(TITLES, ApiTestBase.getTitle(line)));
   }
 
   void start() throws InterruptedException, ExecutionException, TimeoutException {
@@ -310,6 +319,10 @@ public class MockServer {
 
   static List<JsonObject> getOrderLineSearches() {
     return serverRqRs.get(ORDER_LINES, HttpMethod.GET);
+  }
+
+  static List<JsonObject> getTitlesSearches() {
+    return serverRqRs.get(TITLES, HttpMethod.GET);
   }
 
   static List<JsonObject> getLoanTypesSearches() {
@@ -483,6 +496,27 @@ public class MockServer {
 
     router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
     return router;
+  }
+
+  private JsonObject getTitlesByPoLineIds(List<String> poLineIds) {
+    Supplier<List<Title>> getFromFile = () -> {
+      try {
+        return new JsonObject(getMockData(TITLES_PATH)).mapTo(TitleCollection.class).getTitles();
+      } catch (IOException e) {
+        return Collections.emptyList();
+      }
+    };
+
+    List<Title> titles = getMockEntries(TITLES, Title.class).orElseGet(getFromFile);
+
+    if (!poLineIds.isEmpty()) {
+      titles.removeIf(item -> !poLineIds.contains(item.getPoLineId()));
+    }
+
+    Object record = new TitleCollection().withTitles(titles).withTotalRecords(titles.size());
+
+
+    return JsonObject.mapFrom(record);
   }
 
   private void handleGetFunds(RoutingContext ctx) {
@@ -1058,36 +1092,34 @@ public class MockServer {
       List<JsonObject> postedPoLines = getRqRsEntries(HttpMethod.OTHER, type);
 
       try {
-        PoLineCollection poLineCollection;
+        PoLineCollection poLineCollection = new PoLineCollection();
+        if (postedPoLines.isEmpty()) {
+          if (poId.equals(ORDER_ID_WITH_PO_LINES) || !polIds.isEmpty()) {
+            poLineCollection = new JsonObject(ApiTestBase.getMockData(POLINES_COLLECTION)).mapTo(PoLineCollection.class);
 
-        if (poId.equals(ORDER_ID_WITH_PO_LINES) || !polIds.isEmpty()) {
-          poLineCollection = new JsonObject(ApiTestBase.getMockData(POLINES_COLLECTION)).mapTo(PoLineCollection.class);
-
-          // Filter PO Lines either by PO id or by expected line ids
-          Iterator<PoLine> iterator = poLineCollection.getPoLines().iterator();
-          while (iterator.hasNext()) {
-            PoLine poLine = iterator.next();
-            if (polIds.isEmpty() ? !poId.equals(poLine.getPurchaseOrderId()) : !polIds.contains(poLine.getId())) {
-              iterator.remove();
+            // Filter PO Lines either by PO id or by expected line ids
+            Iterator<PoLine> iterator = poLineCollection.getPoLines().iterator();
+            while (iterator.hasNext()) {
+              PoLine poLine = iterator.next();
+              if (polIds.isEmpty() ? !poId.equals(poLine.getPurchaseOrderId()) : !polIds.contains(poLine.getId())) {
+                iterator.remove();
+              }
             }
-          }
-          poLineCollection.setTotalRecords(poLineCollection.getPoLines().size());
-        } else {
-          String filePath;
-          if (ID_FOR_PRINT_MONOGRAPH_ORDER.equals(poId)) {
-            filePath = LISTED_PRINT_MONOGRAPH_PATH;
+            poLineCollection.setTotalRecords(poLineCollection.getPoLines().size());
           } else {
-            filePath = String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, poId);
+            String filePath;
+            if (ID_FOR_PRINT_MONOGRAPH_ORDER.equals(poId)) {
+              filePath = LISTED_PRINT_MONOGRAPH_PATH;
+            } else {
+              filePath = String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, poId);
+            }
+            JsonObject compPO = new JsonObject(ApiTestBase.getMockData(filePath));
+            // Build PoLineCollection to make sure content is valid
+            poLineCollection = buildPoLineCollection(tenant, compPO.getJsonArray(COMPOSITE_PO_LINES));
           }
-          JsonObject compPO = new JsonObject(ApiTestBase.getMockData(filePath));
-          // Build PoLineCollection to make sure content is valid
-          poLineCollection = buildPoLineCollection(tenant, compPO.getJsonArray(COMPOSITE_PO_LINES));
-        }
-
+        } else {
         // Attempt to find POLine in mock server memory
-        if (postedPoLines != null) {
           poLineCollection.getPoLines().addAll(postedPoLines.stream()
-            .filter(json -> queryParam.contains(json.getString(ID)))
             .map(jsonObj -> jsonObj.mapTo(PoLine.class))
             .collect(Collectors.toList()));
         }
@@ -1336,20 +1368,28 @@ public class MockServer {
   }
 
   private void handleGetTitles(RoutingContext ctx) {
-    logger.info("handleGetTitles got: " + ctx.request().path());
-    TitleCollection titles;
-    try {
-      titles = new JsonObject(ApiTestBase.getMockData(TITLES_MOCK_DATA_PATH + "titles.json")).mapTo(TitleCollection.class);
-      JsonObject data = JsonObject.mapFrom(titles);
-      addServerRqRsData(HttpMethod.GET, TITLES, data);
+    String query = StringUtils.trimToEmpty(ctx.request().getParam(QUERY));
+    addServerRqQuery(TITLES, query);
+    if (query.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
+    } else {
+      try {
 
-      ctx.response()
-        .setStatusCode(200)
-        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .end(data.encodePrettily());
-    } catch (Exception e) {
-      titles = new TitleCollection();
-      titles.setTotalRecords(0);
+        List<String> ids = Collections.emptyList();
+        if (query.startsWith("poLineId==")) {
+          ids = extractValuesFromQuery("poLineId", query);
+        }
+
+        JsonObject collection = getTitlesByPoLineIds(ids);
+        addServerRqRsData(HttpMethod.GET, TITLES, collection);
+
+        ctx.response()
+          .setStatusCode(200)
+          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+          .end(collection.encodePrettily());
+      } catch (Exception e) {
+        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
+      }
     }
   }
 
@@ -1681,6 +1721,9 @@ public class MockServer {
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
         .end();
     } else {
+      if (!pol.getIsPackage() && getMockEntries(TITLES, Title.class).orElseGet(Collections::emptyList).isEmpty()) {
+        addMockEntry(TITLES, new Title().withId(UUID.randomUUID().toString()).withPoLineId(pol.getId()).withTitle(pol.getTitleOrPackage()));
+      }
       ctx.response()
         .setStatusCode(201)
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)

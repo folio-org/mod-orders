@@ -11,11 +11,9 @@ import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_RETRIEVED;
 import static org.folio.orders.utils.ErrorCodes.PIECE_POL_MISMATCH;
 import static org.folio.orders.utils.ErrorCodes.PIECE_UPDATE_FAILED;
 import static org.folio.rest.impl.InventoryHelper.ITEM_BARCODE;
-import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS;
-import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_IN_PROCESS;
 import static org.folio.rest.impl.InventoryHelper.ITEM_LEVEL_CALL_NUMBER;
+import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_NAME;
-import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_ON_ORDER;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
@@ -26,6 +24,7 @@ import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPieceUpdates;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
+import static org.folio.rest.jaxrs.model.ReceivedItem.ItemStatus.ON_ORDER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
@@ -40,6 +39,7 @@ import static org.hamcrest.Matchers.nullValue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -54,6 +54,7 @@ import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
@@ -81,6 +82,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   @Test
   public void testPostCheckInElectronicWithNoItems() {
     logger.info("=== Test POST Checkin - CheckIn Electronic resource");
+
+    CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(7).mapTo(CompositePoLine.class);
+    MockServer.addMockTitles(Collections.singletonList(poLines));
 
     CheckinCollection checkInRq = getMockAsJson(CHECKIN_RQ_MOCK_DATA_PATH + "checkin-pe-mix-2-electronic-resources.json").mapTo(CheckinCollection.class);
 
@@ -125,6 +129,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   @Test
   public void testPostCheckInPhysicalWithItemsPartialSuccess() {
     logger.info("=== Test POST Checkin - CheckIn physical resource with only one item updated");
+
+    CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(7).mapTo(CompositePoLine.class);
+    MockServer.addMockTitles(Collections.singletonList(poLines));
 
     CheckinCollection checkInRq = getMockAsJson(CHECKIN_RQ_MOCK_DATA_PATH + "checkin-pe-mix-2-physical-resources.json").mapTo(CheckinCollection.class);
 
@@ -171,9 +178,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     itemUpdates.forEach(item -> {
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
-      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_IN_PROCESS));
+      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(CheckInPiece.ItemStatus.IN_PROCESS.value()));
     });
-    
+
     polUpdates.forEach(pol -> {
       PoLine poLine = pol.mapTo(PoLine.class);
       assertThat(poLine.getCheckinItems(), is(true));
@@ -188,6 +195,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   @Test
   public void testPostCheckinRevertPhysicalResource() {
     logger.info("=== Test POST Check-in - Revert received Physical resource");
+
+    CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(8).mapTo(CompositePoLine.class);
+    MockServer.addMockTitles(Collections.singletonList(poLines));
 
     CheckinCollection checkinReq = getMockAsJson(
       CHECKIN_RQ_MOCK_DATA_PATH + "revert-checkin-physical-1-resource.json").mapTo(CheckinCollection.class);
@@ -225,7 +235,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     itemUpdates.forEach(item -> {
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
       assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), is(nullValue()));
-      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_ON_ORDER));
+      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ON_ORDER.value()));
     });
     polUpdates.forEach(pol -> {
       PoLine poLine = pol.mapTo(PoLine.class);
@@ -244,11 +254,14 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     String poLineId = "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56";
 
+    CompositePoLine poLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
+    MockServer.addMockTitles(Collections.singletonList(poLine));
+
     List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
     toBeCheckedInList.add(new ToBeCheckedIn()
       .withCheckedIn(1)
       .withPoLineId(poLineId)
-      .withCheckInPieces(Arrays.asList(new CheckInPiece().withItemStatus(ITEM_STATUS_IN_PROCESS), new CheckInPiece().withItemStatus(ITEM_STATUS_IN_PROCESS))));
+      .withCheckInPieces(Arrays.asList(new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.ON_ORDER), new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.IN_PROCESS))));
 
     CheckinCollection request = new CheckinCollection()
       .withToBeCheckedIn(toBeCheckedInList)
@@ -278,6 +291,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(null);
 
     clearServiceInteractions();
+
+    MockServer.addMockTitles(Collections.singletonList(poLine));
+
     checkResultWithErrors(request, 1);
     assertThat(getPieceSearches(), hasSize(2));
     assertThat(getPieceUpdates(), hasSize(1));
@@ -291,6 +307,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(null);
 
     clearServiceInteractions();
+    MockServer.addMockTitles(Collections.singletonList(poLine));
     checkResultWithErrors(request, 2);
     assertThat(getPieceSearches(), hasSize(1));
     assertThat(getPieceUpdates(), nullValue());
@@ -302,6 +319,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   @Test
   public void testPostReceivingPhysicalAll() {
     logger.info("=== Test POST Receiving - Receive physical resources");
+
+    CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(2).mapTo(CompositePoLine.class);
+    MockServer.addMockTitles(Collections.singletonList(poLines));
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-physical-all-resources.json").mapTo(ReceivingCollection.class);
 
@@ -339,7 +359,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     itemUpdates.forEach(item -> {
       assertThat(item.getString(ITEM_BARCODE), not(isEmptyString()));
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
-      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo("Received"));
+      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.IN_PROCESS.value()));
       assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), not(isEmptyString()));
     });
     polUpdates.forEach(pol -> {
@@ -355,6 +375,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   @Test
   public void testPostReceivingElectronicPartially() {
     logger.info("=== Test POST Receiving - Receive partially electronic resources");
+
+    CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(4).mapTo(CompositePoLine.class);
+    MockServer.addMockTitles(Collections.singletonList(poLines));
 
     ReceivingCollection receiving = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-electronic-5-of-10-resources-no-items.json").mapTo(ReceivingCollection.class);
 
@@ -400,7 +423,8 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     logger.info("=== Test POST Receiving - Receive physical resources with different errors");
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-physical-resources-6-of-10-with-errors.json").mapTo(ReceivingCollection.class);
-
+    CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(3).mapTo(CompositePoLine.class);
+    MockServer.addMockTitles(Collections.singletonList(poLines));
     ReceivingResults results = verifyPostResponse(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
 
@@ -437,7 +461,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     itemUpdates.forEach(item -> {
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
-      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_IN_PROCESS));
+      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.IN_PROCESS.value()));
     });
 
     polUpdates.forEach(pol -> {
@@ -491,12 +515,13 @@ public class CheckinReceivingApiTest extends ApiTestBase {
             && !receivedItem.getLocationId()
               .equals(piece.getLocationId())
             && HelperUtils.isHoldingsUpdateRequired(poline.getEresource(), poline.getPhysical())) {
-          expectedHoldings.add(poline.getInstanceId() + receivedItem.getLocationId());
+          expectedHoldings.add(getInstanceId(poline) + receivedItem.getLocationId());
         }
       }
     }
     Assert.assertEquals(expectedHoldings.size(), getCreatedHoldings().size());
   }
+
 
   @Test
   public void testPostReceivingWithErrorSearchingForPiece() {
@@ -572,6 +597,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   public void testPostReceivingRevertMixedResources() {
     logger.info("=== Test POST Receiving - Revert received P/E Mix resources");
 
+    CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
+    MockServer.addMockTitles(Collections.singletonList(poLines));
+
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "revert-pe-mix-4-of-5-resources.json").mapTo(ReceivingCollection.class);
 
     ReceivingResults results = verifyPostResponse(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
@@ -608,7 +636,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     itemUpdates.forEach(item -> {
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
       assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), is(nullValue()));
-      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_ON_ORDER));
+      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.ON_ORDER.value()));
     });
     polUpdates.forEach(pol -> {
       PoLine poLine = pol.mapTo(PoLine.class);
@@ -623,6 +651,9 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   @Test
   public void testPostReceivingRevertElectronicResource() {
     logger.info("=== Test POST Receiving - Revert received electronic resource");
+
+    CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(6).mapTo(CompositePoLine.class);
+    MockServer.addMockTitles(Collections.singletonList(poLines));
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "revert-electronic-1-of-1-resource.json").mapTo(ReceivingCollection.class);
 
@@ -658,7 +689,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     itemUpdates.forEach(item -> {
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
       assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), is(nullValue()));
-      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ITEM_STATUS_ON_ORDER));
+      assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.ON_ORDER.value()));
     });
     polUpdates.forEach(pol -> {
       PoLine poLine = pol.mapTo(PoLine.class);

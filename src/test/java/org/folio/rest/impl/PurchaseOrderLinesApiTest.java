@@ -25,14 +25,17 @@ import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
 import static org.folio.rest.impl.AcquisitionsUnitsHelper.NO_ACQ_UNIT_ASSIGNED_CQL;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ORDER_ID_WITH_PO_LINES;
 import static org.folio.rest.impl.MockServer.PO_NUMBER_ERROR_X_OKAPI_TENANT;
+import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.getOrderLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getQueryParams;
+import static org.folio.rest.impl.MockServer.getTitlesSearches;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -55,11 +58,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.rest.acq.model.Title;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
@@ -455,7 +460,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     allProtectedFieldsModification.put(POLineProtectedFields.ACQUISITION_METHOD.getFieldName(),
         CompositePoLine.AcquisitionMethod.APPROVAL_PLAN.value());
-    allProtectedFieldsModification.put(POLineProtectedFields.TITLE.getFieldName(), "Testing ProtectedFields");
+    allProtectedFieldsModification.put(POLineProtectedFields.TITLE_OR_PACKAGE.getFieldName(), "Testing ProtectedFields");
     allProtectedFieldsModification.put(POLineProtectedFields.DONOR.getFieldName(), "Donor");
     allProtectedFieldsModification.put(POLineProtectedFields.COST_CURRENCY.getFieldName(), "EUR");
     allProtectedFieldsModification.put(POLineProtectedFields.ERESOURCE_USER_LIMIT.getFieldName(), 100);
@@ -611,8 +616,8 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderLineById() {
-    logger.info("=== Test Get Orderline By Id ===");
+  public void testGetOrderLineByIdWithoutTitle() {
+    logger.info("=== Test Get Orderline By Id without title ===");
 
     final CompositePoLine resp = verifySuccessGet(String.format(LINE_BY_ID_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE), CompositePoLine.class);
 
@@ -621,6 +626,70 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertEquals(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE, resp.getId());
     assertEquals(1, getPoLineSearches().size());
     assertNull(getOrderLineSearches());
+    assertThat(getTitlesSearches(), hasSize(1));
+  }
+
+  @Test
+  public void testGetOrderLineByIdWithTitleNoInstanceId() {
+    logger.info("=== Test Get Orderline By Id with title but without instanceId ===");
+
+    addMockEntry(TITLES, new Title().withId(UUID.randomUUID().toString())
+      .withPoLineId(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
+      .withTitle("Title"));
+
+    final CompositePoLine resp = verifySuccessGet(String.format(LINE_BY_ID_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE), CompositePoLine.class);
+
+    logger.info(JsonObject.mapFrom(resp).encodePrettily());
+
+    assertEquals(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE, resp.getId());
+    assertThat(getPoLineSearches(), hasSize(1));
+    assertNull(getOrderLineSearches());
+    assertThat(getTitlesSearches(), hasSize(1));
+  }
+
+  @Test
+  public void testGetOrderLineByIdWithTitle() {
+    logger.info("=== Test Get Orderline By Id with title ===");
+
+    String instanceId = UUID.randomUUID().toString();
+
+    addMockEntry(TITLES, new Title().withId(UUID.randomUUID().toString())
+      .withPoLineId(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
+      .withTitle("Title")
+      .withInstanceId(instanceId));
+
+    final CompositePoLine resp = verifySuccessGet(String.format(LINE_BY_ID_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE), CompositePoLine.class);
+
+    logger.info(JsonObject.mapFrom(resp).encodePrettily());
+
+    assertEquals(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE, resp.getId());
+    assertThat(getPoLineSearches(), hasSize(1));
+    assertNull(getOrderLineSearches());
+    assertThat(getTitlesSearches(), hasSize(1));
+    assertThat(instanceId, is(resp.getInstanceId()));
+  }
+
+  @Test
+  public void testGetPackageOrderLineByIdWithTitle() {
+    logger.info("=== Test Get Orderline By Id with title ===");
+
+    String instanceId = UUID.randomUUID().toString();
+    String polineId = UUID.randomUUID().toString();
+    addMockEntry(TITLES, new Title().withId(UUID.randomUUID().toString())
+      .withPoLineId(polineId)
+      .withTitle("Title")
+      .withInstanceId(instanceId));
+    addMockEntry(PO_LINES, getMinimalContentCompositePoLine().withIsPackage(true).withId(polineId));
+
+    final CompositePoLine resp = verifySuccessGet(String.format(LINE_BY_ID_PATH, polineId), CompositePoLine.class);
+
+    logger.info(JsonObject.mapFrom(resp).encodePrettily());
+
+    assertEquals(polineId, resp.getId());
+    assertThat(getPoLineSearches(), hasSize(1));
+    assertNull(getOrderLineSearches());
+    assertThat(getTitlesSearches(), nullValue());
+    assertThat(resp.getInstanceId(), nullValue());
   }
 
   @Test

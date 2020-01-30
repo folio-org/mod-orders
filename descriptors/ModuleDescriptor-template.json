@@ -4,12 +4,16 @@
   "provides": [
     {
       "id": "orders",
-      "version": "8.0",
+      "version": "9.0",
       "handlers": [
         {
-          "methods": ["GET"],
+          "methods": [
+            "GET"
+          ],
           "pathPattern": "/orders/composite-orders",
-          "permissionsRequired": ["orders.collection.get"],
+          "permissionsRequired": [
+            "orders.collection.get"
+          ],
           "modulePermissions": [
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
@@ -17,9 +21,13 @@
           ]
         },
         {
-          "methods": ["POST"],
+          "methods": [
+            "POST"
+          ],
           "pathPattern": "/orders/composite-orders",
-          "permissionsRequired": ["orders.item.post"],
+          "permissionsRequired": [
+            "orders.item.post"
+          ],
           "permissionsDesired": [
             "orders.acquisitions-units-assignments.assign",
             "orders.item.approve"
@@ -29,22 +37,31 @@
           ]
         },
         {
-          "methods": ["GET"],
+          "methods": [
+            "GET"
+          ],
           "pathPattern": "/orders/composite-orders/{id}",
-          "permissionsRequired": ["orders.item.get"],
+          "permissionsRequired": [
+            "orders.item.get"
+          ],
           "modulePermissions": [
             "orders-storage.purchase-orders.item.get",
             "orders-storage.po-lines.collection.get",
             "orders-storage.alerts.item.get",
             "orders-storage.reporting-codes.item.get",
+            "configuration.entries.collection.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get"
           ]
         },
         {
-          "methods": ["PUT"],
+          "methods": [
+            "PUT"
+          ],
           "pathPattern": "/orders/composite-orders/{id}",
-          "permissionsRequired": ["orders.item.put"],
+          "permissionsRequired": [
+            "orders.item.put"
+          ],
           "permissionsDesired": [
             "orders.acquisitions-units-assignments.manage",
             "orders.item.approve"
@@ -54,9 +71,13 @@
           ]
         },
         {
-          "methods": ["DELETE"],
+          "methods": [
+            "DELETE"
+          ],
           "pathPattern": "/orders/composite-orders/{id}",
-          "permissionsRequired": ["orders.item.delete"],
+          "permissionsRequired": [
+            "orders.item.delete"
+          ],
           "modulePermissions": [
             "orders-storage.purchase-orders.item.get",
             "orders-storage.purchase-orders.item.delete",
@@ -67,11 +88,21 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get"
           ]
-        },
+        }
+      ]
+    },
+    {
+      "id": "order-lines",
+      "version": "1.0",
+      "handlers": [
         {
-          "methods": ["GET"],
+          "methods": [
+            "GET"
+          ],
           "pathPattern": "/orders/order-lines",
-          "permissionsRequired": ["orders.po-lines.collection.get"],
+          "permissionsRequired": [
+            "orders.po-lines.collection.get"
+          ],
           "modulePermissions": [
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
@@ -79,9 +110,13 @@
           ]
         },
         {
-          "methods": ["POST"],
+          "methods": [
+            "POST"
+          ],
           "pathPattern": "/orders/order-lines",
-          "permissionsRequired": ["orders.po-lines.item.post"],
+          "permissionsRequired": [
+            "orders.po-lines.item.post"
+          ],
           "modulePermissions": [
             "orders-storage.purchase-orders.item.get",
             "orders-storage.po-line-number.get",
@@ -97,22 +132,32 @@
           ]
         },
         {
-          "methods": ["GET"],
+          "methods": [
+            "GET"
+          ],
           "pathPattern": "/orders/order-lines/{id}",
-          "permissionsRequired": ["orders.po-lines.item.get"],
+          "permissionsRequired": [
+            "orders.po-lines.item.get"
+          ],
           "modulePermissions": [
             "orders-storage.po-lines.item.get",
             "orders-storage.alerts.item.get",
             "orders-storage.reporting-codes.item.get",
             "orders-storage.purchase-orders.item.get",
+            "orders-storage.titles.collection.get",
+            "configuration.entries.collection.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get"
           ]
         },
         {
-          "methods": ["PUT"],
+          "methods": [
+            "PUT"
+          ],
           "pathPattern": "/orders/order-lines/{id}",
-          "permissionsRequired": ["orders.po-lines.item.put"],
+          "permissionsRequired": [
+            "orders.po-lines.item.put"
+          ],
           "modulePermissions": [
             "orders-storage.alerts.item.post",
             "orders-storage.alerts.item.put",
@@ -132,9 +177,13 @@
           ]
         },
         {
-          "methods": ["DELETE"],
+          "methods": [
+            "DELETE"
+          ],
           "pathPattern": "/orders/order-lines/{id}",
-          "permissionsRequired": ["orders.po-lines.item.delete"],
+          "permissionsRequired": [
+            "orders.po-lines.item.delete"
+          ],
           "modulePermissions": [
             "orders-storage.purchase-orders.item.get",
             "orders-storage.po-lines.item.get",
@@ -144,27 +193,51 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get"
           ]
-        },
+        }
+      ]
+    },
+    {
+      "id": "po-number",
+      "version": "1.0",
+      "handlers": [
         {
-          "methods": ["POST"],
+          "methods": [
+            "POST"
+          ],
           "pathPattern": "/orders/po-number/validate",
-          "permissionsRequired": ["orders.po-number.item.post"],
+          "permissionsRequired": [
+            "orders.po-number.item.post"
+          ],
           "modulePermissions": [
             "orders-storage.purchase-orders.collection.get"
           ]
         },
         {
-          "methods": ["GET"],
+          "methods": [
+            "GET"
+          ],
           "pathPattern": "/orders/po-number",
-          "permissionsRequired": ["orders.po-number.item.get"],
+          "permissionsRequired": [
+            "orders.po-number.item.get"
+          ],
           "modulePermissions": [
             "orders-storage.po-number.get"
           ]
-        },
+        }
+      ]
+    },
+    {
+      "id": "receiving",
+      "version": "1.0",
+      "handlers": [
         {
-          "methods": ["POST"],
+          "methods": [
+            "POST"
+          ],
           "pathPattern": "/orders/receive",
-          "permissionsRequired": ["orders.receiving.collection.post"],
+          "permissionsRequired": [
+            "orders.receiving.collection.post"
+          ],
           "modulePermissions": [
             "orders-storage.pieces.collection.get",
             "orders-storage.pieces.item.put",
@@ -172,6 +245,7 @@
             "orders-storage.po-lines.item.put",
             "orders-storage.purchase-orders.item.get",
             "orders-storage.purchase-orders.item.put",
+            "orders-storage.titles.collection.get",
             "inventory.items.collection.get",
             "inventory.items.item.put",
             "inventory-storage.holdings.collection.get",
@@ -182,9 +256,13 @@
           ]
         },
         {
-          "methods": ["POST"],
+          "methods": [
+            "POST"
+          ],
           "pathPattern": "/orders/check-in",
-          "permissionsRequired": ["orders.check-in.collection.post"],
+          "permissionsRequired": [
+            "orders.check-in.collection.post"
+          ],
           "modulePermissions": [
             "orders-storage.pieces.collection.get",
             "orders-storage.pieces.item.put",
@@ -192,6 +270,7 @@
             "orders-storage.po-lines.item.put",
             "orders-storage.purchase-orders.item.get",
             "orders-storage.purchase-orders.item.put",
+            "orders-storage.titles.collection.get",
             "inventory.items.collection.get",
             "inventory.items.item.put",
             "inventory-storage.holdings.collection.get",
@@ -202,15 +281,25 @@
           ]
         },
         {
-          "methods": ["GET"],
+          "methods": [
+            "GET"
+          ],
           "pathPattern": "/orders/receiving-history",
-          "permissionsRequired": ["orders.receiving-history.collection.get"],
+          "permissionsRequired": [
+            "orders.receiving-history.collection.get"
+          ],
           "modulePermissions": [
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.receiving-history.collection.get"
           ]
-        },
+        }
+      ]
+    },
+    {
+      "id": "pieces",
+      "version": "1.0",
+      "handlers": [
         {
           "methods": ["POST"],
           "pathPattern": "/orders/pieces",
@@ -449,7 +538,7 @@
     },
     {
       "id": "orders-storage.po-lines",
-      "version": "8.0"
+      "version": "9.0"
     },
     {
       "id": "orders-storage.order-templates",
@@ -465,7 +554,7 @@
     },
     {
       "id": "inventory",
-      "version": "9.6"
+      "version": "9.6 10.0"
     },
     {
       "id": "instance-types",
@@ -477,7 +566,7 @@
     },
     {
       "id": "item-storage",
-      "version": "7.8"
+      "version": "7.8 8.0"
     },
     {
       "id": "identifier-types",
@@ -493,7 +582,7 @@
     },
     {
       "id":"organizations-storage.organizations",
-      "version": "2.1"
+      "version": "3.0"
     },
     {
       "id": "finance.funds",
@@ -825,6 +914,8 @@
         "orders-storage.reporting-codes.item.get",
         "orders-storage.reporting-codes.item.put",
         "orders-storage.reporting-codes.item.delete",
+        "orders-storage.titles.collection.get",
+        "orders-storage.titles.item.put",
         "configuration.entries.collection.get",
         "finance.funds.collection.get",
         "finance.encumbrances.item.post",
@@ -868,6 +959,8 @@
         "orders-storage.po-number.get",
         "orders-storage.reporting-codes.item.post",
         "orders-storage.reporting-codes.item.put",
+        "orders-storage.titles.collection.get",
+        "orders-storage.titles.item.put",
         "configuration.entries.collection.get",
         "finance.encumbrances.item.post",
         "finance.funds.collection.get",

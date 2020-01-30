@@ -1,8 +1,23 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
+import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.ORGANIZATION_NOT_A_VENDOR;
+import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
+import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
+import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
 import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
@@ -12,24 +27,11 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
-import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
-import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
-import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
-import static org.folio.orders.utils.ErrorCodes.ORGANIZATION_NOT_A_VENDOR;
-import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 
 public class VendorHelper extends AbstractHelper {
@@ -41,13 +43,13 @@ public class VendorHelper extends AbstractHelper {
   private static final String PO_LINE_NUMBER = "poLineNumber";
 
 
-  public VendorHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
-    super(okapiHeaders, ctx, lang);
+  public VendorHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+    super(httpClient, okapiHeaders, ctx, lang);
   }
 
   /**
    * Checks if vendor in {@link CompositePurchaseOrder} exists in Organizations
-   * and has status "Active" with isvendor flag enabled. If not, adds
+   * and has status "Active" with isVendor flag enabled. If not, adds
    * corresponding error to {@link Errors} object.
    *
    * @param compPO
