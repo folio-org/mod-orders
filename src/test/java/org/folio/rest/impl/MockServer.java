@@ -182,8 +182,8 @@ public class MockServer {
   static final String ACQUISITIONS_UNITS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/units.json";
   static final String ACQUISITIONS_MEMBERSHIPS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/memberships.json";
   static final String ORDER_TEMPLATES_COLLECTION = ORDER_TEMPLATES_MOCK_DATA_PATH + "/orderTemplates.json";
-  private static final String FUNDS_PATH = BASE_MOCK_DATA_PATH + "funds/funds.json";
-  private static final String BUDGETS_PATH = BASE_MOCK_DATA_PATH + "budgets/budgets.json";
+  public static final String FUNDS_PATH = BASE_MOCK_DATA_PATH + "funds/funds.json";
+  public static final String BUDGETS_PATH = BASE_MOCK_DATA_PATH + "budgets/budgets.json";
 
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";

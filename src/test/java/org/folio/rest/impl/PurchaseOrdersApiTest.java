@@ -66,17 +66,17 @@ import static org.folio.rest.impl.MockServer.LEDGER_NOT_FOUND_FOR_TRANSACTION_TE
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.getContributorNameTypesSearches;
 import static org.folio.rest.impl.MockServer.getCreatedEncumbrances;
+import static org.folio.rest.impl.MockServer.getCreatedHoldings;
 import static org.folio.rest.impl.MockServer.getCreatedInstances;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
+import static org.folio.rest.impl.MockServer.getCreatedOrderSummaries;
 import static org.folio.rest.impl.MockServer.getCreatedPieces;
 import static org.folio.rest.impl.MockServer.getHoldingsSearches;
-import static org.folio.rest.impl.MockServer.getCreatedHoldings;
 import static org.folio.rest.impl.MockServer.getInstanceStatusesSearches;
 import static org.folio.rest.impl.MockServer.getInstanceTypesSearches;
 import static org.folio.rest.impl.MockServer.getInstancesSearches;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
 import static org.folio.rest.impl.MockServer.getLoanTypesSearches;
-import static org.folio.rest.impl.MockServer.getCreatedOrderSummaries;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
 import static org.folio.rest.impl.MockServer.getQueryParams;
@@ -2675,12 +2675,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().forEach(poLine ->
       poLine.getFundDistribution().forEach(fundDistribution -> {
         fundDistribution.setEncumbrance(null);
-        fundDistribution.setFundId(VALID_FUND_ID);
-        addMockEntry(FUNDS, new Fund()
-          .withId(fundDistribution.getFundId())
-          .withCode("Test-" + fundDistribution.getFundId())
-          .withName("Test")
-          .withLedgerId(UUID.randomUUID().toString()))          ;
       })
     );
   }
