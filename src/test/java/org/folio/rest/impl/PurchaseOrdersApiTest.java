@@ -1392,6 +1392,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     // Get Open Order
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    MockServer.addMockTitles(reqData.getCompositePoLines());
+
     // Make sure that mock po has 2 po lines
     assertEquals(2, reqData.getCompositePoLines().size());
 
