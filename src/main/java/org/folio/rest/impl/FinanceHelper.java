@@ -20,7 +20,6 @@ import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -30,11 +29,13 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.BiConsumer;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import javax.money.MonetaryAmount;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -52,6 +53,8 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.javamoney.moneta.Money;
+import org.javamoney.moneta.function.MonetaryFunctions;
 import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.Context;
@@ -64,6 +67,7 @@ public class FinanceHelper extends AbstractHelper {
   private static final String GET_CURRENT_FISCAL_YEAR_BY_ID = "/finance/ledgers/%s/current-fiscal-year?lang=%s";
   private static final String GET_FUNDS_WITH_SEARCH_PARAMS = resourcesPath(FUNDS) + SEARCH_PARAMS;
   private static final String GET_BUDGETS_WITH_SEARCH_PARAMS = resourcesPath(BUDGETS) + SEARCH_PARAMS;
+  private String systemCurrency;
 
   FinanceHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -79,26 +83,37 @@ public class FinanceHelper extends AbstractHelper {
     List<Transaction> encumbrances = encumbranceDistributionPairs.stream()
       .map(Pair::getLeft)
       .collect(toList());
-    return setCurrentFiscalYear(encumbrances)
+    return retrieveSystemCurrency()
+      .thenCompose(v -> setCurrentFiscalYear(encumbrances))
       .thenCompose(v -> checkEnoughMoneyForTransactions(encumbrances))
       .thenCompose(v -> createSummary(compPo.getId(), encumbrances.size()))
       .thenCompose(summaryId -> createEncumbrances(encumbranceDistributionPairs));
+  }
+
+  private CompletableFuture<Void> retrieveSystemCurrency() {
+    return getSystemCurrency().thenAccept(currency -> systemCurrency = currency);
   }
 
   private CompletableFuture<Void> checkEnoughMoneyForTransactions(List<Transaction> encumbrances) {
     Map<String, List<Transaction>> groupedByFund = encumbrances.stream()
       .collect(groupingBy(Transaction::getFromFundId));
 
-    Map<String, Double> transactionAmountsByFunds = encumbrances.stream()
-      .collect(Collectors.groupingBy(Transaction::getFromFundId, Collectors.summingDouble(Transaction::getAmount)));
+    Map<String, MonetaryAmount> transactionAmountsByFunds = encumbrances.stream()
+      .collect(groupingBy(Transaction::getFromFundId, sumTransactionAmounts()));
 
     return getBudgets(groupedByFund).thenAccept(budgets -> checkEnoughMoneyInBudgets(budgets, transactionAmountsByFunds));
   }
 
-  private void checkEnoughMoneyInBudgets(List<Budget> budgets, Map<String, Double> transactionAmountsByFunds) {
+  private Collector<Transaction, ?, MonetaryAmount> sumTransactionAmounts() {
+    return Collectors.mapping(tx -> Money.of(tx.getAmount(), systemCurrency),
+        Collectors.reducing(Money.of(0, systemCurrency), MonetaryFunctions::sum));
+  }
+
+  private void checkEnoughMoneyInBudgets(List<Budget> budgets, Map<String, MonetaryAmount> transactionAmountsByFunds) {
     budgets.forEach(budget -> {
-      double remainingAmount = getBudgetRemainingAmountForEncumbrance(budget);
-      if (transactionAmountsByFunds.get(budget.getFundId()) > remainingAmount) {
+      MonetaryAmount remainingAmount = getBudgetRemainingAmountForEncumbrance(budget);
+      MonetaryAmount transactionAmount = transactionAmountsByFunds.get(budget.getFundId());
+      if (remainingAmount.subtract(transactionAmount).isNegative()) {
         throw new CompletionException(new HttpException(422, FUND_CANNOT_BE_PAID));
       }
     });
@@ -137,7 +152,7 @@ public class FinanceHelper extends AbstractHelper {
   private void updateEncumbrances(Map.Entry<String, List<Transaction>> entry, FiscalYear fiscalYear) {
     entry.getValue()
       .forEach(transaction -> transaction.withFiscalYearId(fiscalYear.getId())
-        .withCurrency(fiscalYear.getCurrency()));
+        .withCurrency(StringUtils.isNotEmpty(fiscalYear.getCurrency()) ? fiscalYear.getCurrency() : systemCurrency));
   }
 
   private CompletableFuture<Map<String, List<Transaction>>> groupByLedgerIds(Map<String, List<Transaction>> groupedByFund) {
@@ -247,6 +262,7 @@ public class FinanceHelper extends AbstractHelper {
     transaction.setFromFundId(distribution.getFundId());
     transaction.setSource(Transaction.Source.USER);
     transaction.setAmount(calculateAmountEncumbered(distribution, estimatedPrice));
+    transaction.setCurrency(systemCurrency);
 
     transaction.setEncumbrance(new Encumbrance());
     transaction.getEncumbrance()
@@ -299,20 +315,19 @@ public class FinanceHelper extends AbstractHelper {
    * @param budget     processed budget
    * @return remaining amount for encumbrance
    */
-  private Double getBudgetRemainingAmountForEncumbrance(Budget budget) {
-    BigDecimal allocated = BigDecimal.valueOf(budget.getAllocated());
+  private Money getBudgetRemainingAmountForEncumbrance(Budget budget) {
+    Money allocated = Money.of(budget.getAllocated(), systemCurrency);
     // get allowableEncumbered converted from percentage value
-    BigDecimal allowableEncumbered = BigDecimal.valueOf(budget.getAllowableEncumbrance()).divide(BigDecimal.valueOf(100));
-    BigDecimal unavailable = BigDecimal.valueOf(budget.getUnavailable());
-    BigDecimal available = BigDecimal.valueOf(budget.getAvailable());
-    BigDecimal encumbered = BigDecimal.valueOf(budget.getEncumbered());
-    BigDecimal awaitingPayment = BigDecimal.valueOf(budget.getAwaitingPayment());
+    double allowableEncumbered = Money.of(budget.getAllowableEncumbrance(), systemCurrency).divide(100d).getNumber().doubleValue();
+    Money unavailable = Money.of(budget.getUnavailable(), systemCurrency);
+    Money available = Money.of(budget.getAvailable(), systemCurrency);
+    Money encumbered = Money.of(budget.getEncumbered(), systemCurrency);
+    Money awaitingPayment = Money.of(budget.getAwaitingPayment(), systemCurrency);
 
-    BigDecimal result = allocated.multiply(allowableEncumbered);
+    Money result = allocated.multiply(allowableEncumbered);
     result = result.subtract(allocated.subtract(unavailable.add(available)));
     result = result.subtract(encumbered.add(awaitingPayment));
 
-    return result.doubleValue();
+    return result;
   }
-
 }
