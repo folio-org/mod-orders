@@ -250,7 +250,6 @@ public class OrdersImpl implements Orders {
           return;
         }
         helper.updateOrderLine(poLine)
-          .thenCompose(vo -> helper.validateAndNormalizeISBN(poLine))
           .thenAccept(v -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
           .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
       })

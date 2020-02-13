@@ -117,6 +117,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     super(httpClient, okapiHeaders, ctx, lang);
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
+
   }
 
   PurchaseOrderLineHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -363,6 +364,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
         .thenCompose(compOrder -> {
           validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage, compOrder);
           return protectionHelper.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE)
+            .thenCompose(vVoid -> validateAndNormalizeISBN(compOrderLine))
             .thenApply(aVoid -> lineFromStorage);
         })
       )
