@@ -477,9 +477,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     checkPreventProtectedFieldsModificationRule(url, body, allProtectedFieldsModification);
 
-    // 3 calls each to fetch Order Line , Purchase Order and ISBN validation
+    // 3 calls each to fetch Order Line , Purchase Order
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES));
 
     // Verify no message sent via event bus
