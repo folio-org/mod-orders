@@ -477,7 +477,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     checkPreventProtectedFieldsModificationRule(url, body, allProtectedFieldsModification);
 
-    // 3 calls each to fetch Order Line , Purchase Order
+    // 2 calls each to fetch Order Line , Purchase Order
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
     assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES));
