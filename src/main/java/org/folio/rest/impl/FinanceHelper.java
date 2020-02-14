@@ -38,6 +38,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Budget;
@@ -50,6 +51,7 @@ import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -101,7 +103,25 @@ public class FinanceHelper extends AbstractHelper {
     Map<String, MonetaryAmount> transactionAmountsByFunds = encumbrances.stream()
       .collect(groupingBy(Transaction::getFromFundId, sumTransactionAmounts()));
 
-    return getBudgets(groupedByFund).thenAccept(budgets -> checkEnoughMoneyInBudgets(budgets, transactionAmountsByFunds));
+    return getBudgets(groupedByFund).thenAccept(budgets -> {
+      verifyAllBudgetsAreActive(budgets);
+      checkEnoughMoneyInBudgets(budgets, transactionAmountsByFunds);
+    });
+  }
+
+  private void verifyAllBudgetsAreActive(List<Budget> budgets) {
+    List<String> notActiveBudgets = budgets.stream()
+      .filter(budget -> budget.getBudgetStatus() != Budget.BudgetStatus.ACTIVE)
+      .map(Budget::getId)
+      .collect(toList());
+    if (!notActiveBudgets.isEmpty()) {
+      throw new HttpException(HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt(), buildBudgetNotActiveError(notActiveBudgets));
+    }
+  }
+
+  private Error buildBudgetNotActiveError(List<String> notActiveBudgets) {
+    return BUDGET_IS_INACTIVE.toError()
+      .withAdditionalProperty(BUDGETS, notActiveBudgets);
   }
 
   private Collector<Transaction, ?, MonetaryAmount> sumTransactionAmounts() {
@@ -113,7 +133,7 @@ public class FinanceHelper extends AbstractHelper {
     budgets.forEach(budget -> {
       MonetaryAmount remainingAmount = getBudgetRemainingAmountForEncumbrance(budget);
       MonetaryAmount transactionAmount = transactionAmountsByFunds.get(budget.getFundId());
-      if (remainingAmount.subtract(transactionAmount).isNegative()) {
+      if (transactionAmount.isGreaterThan(remainingAmount)) {
         throw new CompletionException(new HttpException(422, FUND_CANNOT_BE_PAID));
       }
     });
@@ -310,7 +330,7 @@ public class FinanceHelper extends AbstractHelper {
 
   /**
    * Calculates remaining amount for encumbrance
-   * [remaining amount] = (allocated * allowableEncumbered) - (allocated - (unavailable + available)) - (encumbered + awaitingPayment)
+   * [remaining amount] = (allocated * allowableEncumbered) - (allocated - (unavailable + available)) - (encumbered + awaitingPayment + expenditures)
    *
    * @param budget     processed budget
    * @return remaining amount for encumbrance
@@ -323,9 +343,10 @@ public class FinanceHelper extends AbstractHelper {
     Money available = Money.of(budget.getAvailable(), systemCurrency);
     Money encumbered = Money.of(budget.getEncumbered(), systemCurrency);
     Money awaitingPayment = Money.of(budget.getAwaitingPayment(), systemCurrency);
+    Money expenditures = Money.of(budget.getExpenditures(), systemCurrency);
 
     Money result = allocated.multiply(allowableEncumbered);
-    result = result.subtract(allocated.subtract(unavailable.add(available)));
+    result = result.subtract(allocated.subtract(unavailable.add(available).add(expenditures)));
     result = result.subtract(encumbered.add(awaitingPayment));
 
     return result;
