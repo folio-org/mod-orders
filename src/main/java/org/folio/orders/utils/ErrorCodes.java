@@ -62,7 +62,9 @@ public enum ErrorCodes {
   BUDGET_NOT_FOUND_FOR_TRANSACTION("budgetNotFoundForTransaction", "Budget not found for transaction"),
   LEDGER_NOT_FOUND_FOR_TRANSACTION("ledgerNotFoundForTransaction", "Ledger not found for transaction"),
   BUDGET_IS_INACTIVE("budgetIsInactive", "Cannot create encumbrance from the not active budget"),
-  FUND_CANNOT_BE_PAID("fundCannotBePaid", "Fund cannot be paid due to restrictions");
+  FUND_CANNOT_BE_PAID("fundCannotBePaid", "Fund cannot be paid due to restrictions"),
+  MISSING_ONGOING("missingOngoing", "Ongoing field must be present for Ongoing order"),
+  ONGOING_NOT_ALLOWED("ongoingNotAllowed", "Ongoing field must be absent for One-time order");
 
   private final String code;
   private final String description;
