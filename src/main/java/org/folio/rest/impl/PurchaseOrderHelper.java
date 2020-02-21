@@ -417,7 +417,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenCompose(v -> validatePoLineLimit(compPO))
       .thenCompose(v -> validateVendor(compPO))
       .thenAccept(v -> validateRenewalInfo(compPO))
-      .thenCompose(v -> completedFuture(getErrors().isEmpty()));
+      .thenApply(v -> getErrors().isEmpty());
   }
 
 
