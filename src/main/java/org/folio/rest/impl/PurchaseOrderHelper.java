@@ -420,7 +420,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenApply(v -> getErrors().isEmpty());
   }
 
-
   CompletableFuture<Void> validateIsbnValues(CompositePurchaseOrder compPO) {
     CompletableFuture[] futures = compPO.getCompositePoLines()
       .stream()
@@ -429,7 +428,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
     return VertxCompletableFuture.allOf(ctx, futures);
   }
-
 
   CompletableFuture<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO) {
     CompletableFuture[] futures = compPO.getCompositePoLines()
