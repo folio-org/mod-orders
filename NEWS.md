@@ -1,5 +1,11 @@
 ## 9.1.0 - Unreleased
 
+## 9.0.1 - Released
+
+### Bug Fixes
+
+* [MODORDERS-361](https://issues.folio.org/browse/MODORDERS-361) - Cannot edit any receving note fields for POLs created in Daisy
+
 ## 9.0.0 - Released
 The primary focus of this release was to re-integration with encumbrance API, implementation of Order-Templates API and business logic improvements.
 
