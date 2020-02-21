@@ -1,9 +1,11 @@
 ## 9.1.0 - Unreleased
 
 ## 9.0.1 - Released
+Bugfix release for fixing issues with edit any receving note fields for POLs 
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v9.0.0...v9.0.1)
 
 ### Bug Fixes
-
 * [MODORDERS-361](https://issues.folio.org/browse/MODORDERS-361) - Cannot edit any receving note fields for POLs created in Daisy
 
 ## 9.0.0 - Released
