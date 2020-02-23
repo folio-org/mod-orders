@@ -7,6 +7,7 @@ import io.vertx.core.json.JsonObject;
 import org.folio.orders.events.handlers.OrderStatusTest;
 import org.folio.orders.events.handlers.ReceiptStatusConsistencyTest;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.impl.crud.ConfigurationCrudTest;
 import org.folio.rest.impl.protection.LinesProtectionTest;
 import org.folio.rest.impl.protection.OrdersProtectionTest;
 import org.folio.rest.impl.protection.PiecesProtectionTest;
@@ -43,7 +44,8 @@ import static org.hamcrest.Matchers.is;
   PiecesProtectionTest.class,
   ReceivingCheckinProtectionTest.class,
   OrderTemplateTest.class,
-  TitlesApiTest.class
+  TitlesApiTest.class,
+  ConfigurationCrudTest.class
 })
 public class ApiTestSuite {
 

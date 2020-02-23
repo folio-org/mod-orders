@@ -100,9 +100,10 @@ public class ApiTestBase {
 
   static final String INVALID_LANG = "?lang=english";
   static final String BAD_QUERY = "unprocessableQuery";
-  static final String ID = "id";
+  public static final String ID = "id";
 
-  static final String ID_BAD_FORMAT = "123-45-678-90-abc";
+  public static final String EXISTED_ID = "763643c2-0f80-4908-b18b-780d3e8cd136";
+  public static final String ID_BAD_FORMAT = "123-45-678-90-abc";
   protected static final String ID_DOES_NOT_EXIST = "d25498e7-3ae6-45fe-9612-ec99e2700d2f";
   protected static final String ID_FOR_INTERNAL_SERVER_ERROR = "168f8a86-d26c-406e-813f-c7527f241ac3";
   protected static final String PO_ID_GET_LINES_INTERNAL_SERVER_ERROR = "bad500bb-bbbb-500b-bbbb-bbbbbbbbbbbb";
@@ -117,7 +118,7 @@ public class ApiTestBase {
 
   static final String COMP_ORDER_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/";
 
-  static final String X_ECHO_STATUS = "X-Okapi-Echo-Status";
+  public static final String X_ECHO_STATUS = "X-Okapi-Echo-Status";
   static final String EMPTY_CONFIG_TENANT = "config_empty";
   static final String NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT = "nonExistContributorNameType";
   static final String INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT = "hasCodeLikeInstanceStatus";
@@ -265,7 +266,7 @@ public class ApiTestBase {
     return verifyPut(url, body.encodePrettily(), expectedContentType, expectedCode);
   }
 
-  Response verifyPut(String url, String body, String expectedContentType, int expectedCode) {
+  protected Response verifyPut(String url, String body, String expectedContentType, int expectedCode) {
     return verifyPut(url, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), expectedContentType, expectedCode);
   }
 
