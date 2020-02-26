@@ -7,8 +7,7 @@
   "poNumber": "S60402",
   "orderType": "Ongoing",
   "reEncumber": false,
-  "renewal": {
-     "cycle": "6 Months",
+  "ongoing": {
      "interval": 182,
      "manualRenewal": true,
      "reviewPeriod": 30,

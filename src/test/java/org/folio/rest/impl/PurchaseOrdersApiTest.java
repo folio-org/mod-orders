@@ -14,7 +14,9 @@ import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
+import static org.folio.orders.utils.ErrorCodes.MISSING_ONGOING;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
+import static org.folio.orders.utils.ErrorCodes.ONGOING_NOT_ALLOWED;
 import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
 import static org.folio.orders.utils.ErrorCodes.ORDER_OPEN;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
@@ -110,6 +112,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -127,6 +130,7 @@ import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.POProtectedFields;
+import org.folio.rest.acq.model.Ongoing;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 import org.folio.rest.jaxrs.model.CloseReason;
@@ -146,7 +150,6 @@ import org.folio.rest.jaxrs.model.Physical.CreateInventory;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
-import org.folio.rest.jaxrs.model.Renewal;
 import org.folio.rest.jaxrs.model.Title;
 import org.hamcrest.beans.HasPropertyWithValue;
 import org.hamcrest.core.Every;
@@ -214,7 +217,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   static final Header ERROR_ORDER_DELETE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, ORDER_DELETE_ERROR_TENANT);
 
   public static final Header ALL_DESIRED_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(AcqDesiredPermissions.getValues()).encode());
-  public static final Header APPROVAL_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(Arrays.asList("orders.item.approve")).encode());
+  public static final Header APPROVAL_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(Collections.singletonList("orders.item.approve")).encode());
 
 
   @Test
@@ -354,6 +357,92 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     // Check that no other calls are made by the business logic to other services, except for ISBN validation
     assertEquals(2, MockServer.serverRqRs.size());
+  }
+
+  @Test
+  public void testPostOneTimeOrderWithOngoingFields() {
+    logger.info("=== Test Order creation - Ongoing field validation fails ===");
+
+    CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
+    reqData.setOrderType(CompositePurchaseOrder.OrderType.ONE_TIME);
+    reqData.setOngoing(new org.folio.rest.jaxrs.model.Ongoing());
+
+    final Errors response = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
+    assertThat(response.getErrors(), hasSize(1));
+    Error error = response.getErrors().get(0);
+
+    assertThat(error.getCode(), is(ONGOING_NOT_ALLOWED.getCode()));
+
+    // Check that no other calls are made by the business logic to other services
+    assertEquals(0, MockServer.serverRqRs.size());
+  }
+
+  @Test
+  public void testPostOngoingOrderWithoutOngoingFields() {
+    logger.info("=== Test Order creation - Ongoing field validation fails ===");
+
+    CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
+    reqData.setOrderType(CompositePurchaseOrder.OrderType.ONGOING);
+    reqData.setOngoing(null);
+
+    final Errors response = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
+    assertThat(response.getErrors(), hasSize(1));
+    Error error = response.getErrors().get(0);
+
+    assertThat(error.getCode(), is(MISSING_ONGOING.getCode()));
+
+    // Check that no other calls are made by the business logic to other services
+    assertEquals(0, MockServer.serverRqRs.size());
+  }
+
+  @Test
+  public void testPutOneTimeOrderWithOngoingField() {
+    logger.info("=== Test Order update - Ongoing field validation fails ===");
+
+    CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    reqData.setOrderType(CompositePurchaseOrder.OrderType.ONE_TIME);
+    reqData.setOngoing(new org.folio.rest.jaxrs.model.Ongoing());
+
+    addMockEntry(PURCHASE_ORDER, reqData);
+
+    final Errors response = verifyPut(COMPOSITE_ORDERS_PATH + "/" + reqData.getId(), JsonObject.mapFrom(reqData),
+      APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(response.getErrors(), hasSize(1));
+    Error error = response.getErrors().get(0);
+
+    assertThat(error.getCode(), is(ONGOING_NOT_ALLOWED.getCode()));
+
+    MockServer.serverRqRs.columnKeySet().remove(HttpMethod.OTHER);
+    // Check that no any calls made by the business logic to other services
+    assertEquals(0, MockServer.serverRqRs.size());
+  }
+
+  @Test
+  public void testPutOngoingOrderWithoutOngoingField() {
+    logger.info("=== Test Order update - Ongoing field validation fails ===");
+
+    CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    reqData.setOrderType(CompositePurchaseOrder.OrderType.ONGOING);
+    reqData.setOngoing(null);
+
+    addMockEntry(PURCHASE_ORDER, reqData);
+
+    final Errors response = verifyPut(COMPOSITE_ORDERS_PATH + "/" + reqData.getId(), JsonObject.mapFrom(reqData),
+      APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(response.getErrors(), hasSize(1));
+    Error error = response.getErrors().get(0);
+
+    assertThat(error.getCode(), is(MISSING_ONGOING.getCode()));
+
+    MockServer.serverRqRs.columnKeySet().remove(HttpMethod.OTHER);
+    // Check that no any calls made by the business logic to other services
+    assertEquals(0, MockServer.serverRqRs.size());
   }
 
   @Test
@@ -842,9 +931,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     JsonObject request = new JsonObject();
     request.put("poNumber", PoNumberApiTest.EXISTING_PO_NUMBER);
-    request.put("orderType", "Ongoing");
+    request.put("orderType", CompositePurchaseOrder.OrderType.ONE_TIME.value());
     request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
-    String body= request.toString();
+    String body = request.toString();
 
      verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
        prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID), APPLICATION_JSON, 400);
@@ -857,7 +946,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     JsonObject request = new JsonObject();
     request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
-    request.put("orderType", "Ongoing");
+    request.put("orderType", CompositePurchaseOrder.OrderType.ONE_TIME.value());
     String body= request.toString();
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
@@ -1271,7 +1360,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     JsonObject request = new JsonObject();
     request.put("poNumber", PoNumberApiTest.EXISTING_PO_NUMBER);
-    request.put("orderType", "Ongoing");
+    request.put("orderType", CompositePurchaseOrder.OrderType.ONE_TIME.value());
     request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), request, APPLICATION_JSON, 400);
@@ -2288,9 +2377,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     allProtectedFieldsModification.put(POProtectedFields.VENDOR.getFieldName(), "d1b79c8d-4950-482f-8e42-04f9aae3cb40");
     allProtectedFieldsModification.put(POProtectedFields.ORDER_TYPE.getFieldName(),
         CompositePurchaseOrder.OrderType.ONGOING.value());
-    Renewal renewal = new Renewal();
-    renewal.setManualRenewal(true);
-    allProtectedFieldsModification.put(POProtectedFields.RENEWAL.getFieldName(), JsonObject.mapFrom(renewal));
+    Ongoing ongoing = new Ongoing();
+    ongoing.setManualRenewal(true);
+    allProtectedFieldsModification.put(POProtectedFields.ONGOING.getFieldName(), JsonObject.mapFrom(ongoing));
 
     checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, reqData, allProtectedFieldsModification);
   }
@@ -2350,9 +2439,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     allProtectedFieldsModification.put(POProtectedFields.VENDOR.getFieldName(), "d1b79c8d-4950-482f-8e42-04f9aae3cb40");
     allProtectedFieldsModification.put(POProtectedFields.ORDER_TYPE.getFieldName(),
         CompositePurchaseOrder.OrderType.ONE_TIME.value());
-    Renewal renewal = new Renewal();
-    renewal.setManualRenewal(true);
-    allProtectedFieldsModification.put(POProtectedFields.RENEWAL.getFieldName(), JsonObject.mapFrom(renewal));
+    allProtectedFieldsModification.put(POProtectedFields.ONGOING.getFieldName(), null);
     CloseReason closeReason = new CloseReason();
     closeReason.setNote("testing reason on Closed Order");
     closeReason.setReason("Complete");
