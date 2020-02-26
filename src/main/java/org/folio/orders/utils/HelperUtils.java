@@ -851,12 +851,12 @@ public class HelperUtils {
    * @param ids list of id's
    * @return String representing CQL query to get records by id's
    */
-  public static String convertIdsToCqlQuery(Collection<String> ids) {
-    return convertIdsToCqlQuery(ids, ID, true);
+  public static String convertIdsToCqlQuery(Collection<String> ids, String idField) {
+    return convertIdsToCqlQuery(ids, idField, true);
   }
 
-  public static String convertFundIdsToCqlQuery(Collection<String> ids) {
-    return convertIdsToCqlQuery(ids, FUND_ID, true);
+  public static String convertIdsToCqlQuery(Collection<String> ids) {
+    return convertIdsToCqlQuery(ids, ID, true);
   }
 
   /**
