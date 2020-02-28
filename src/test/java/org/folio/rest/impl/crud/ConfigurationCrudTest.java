@@ -74,8 +74,6 @@ public class ConfigurationCrudTest extends ApiTestBase {
   public void testGetCollectionCrud() {
     logger.info(String.format("=== Test GET : %s ===", entity.name()));
     verifyGet(entity.getEndpoint(), APPLICATION_JSON, 200).then()
-      .log()
-      .all()
       .body("totalRecords", notNullValue());
   }
 
@@ -83,8 +81,6 @@ public class ConfigurationCrudTest extends ApiTestBase {
   public void testGetCollectionCrudInternalServerError() {
     logger.info(String.format("=== Test GET : %s ===", entity.name()));
     verifyGet(entity.getEndpoint() + "?query=id==" + ID_FOR_INTERNAL_SERVER_ERROR, APPLICATION_JSON, 500).then()
-      .log()
-      .all()
       .body("errors", notNullValue());
   }
 
@@ -92,8 +88,6 @@ public class ConfigurationCrudTest extends ApiTestBase {
   public void testGetByIdCrud() {
     logger.info(String.format("=== Test GET by id : %s ===", entity.name()));
     verifyGet(entity.getEndpoint() + "/" + EXISTED_ID, APPLICATION_JSON, 200).then()
-      .log()
-      .all()
       .body(ID, notNullValue());
   }
 
@@ -107,8 +101,6 @@ public class ConfigurationCrudTest extends ApiTestBase {
   public void testGetByIdCrudNotFound() {
     logger.info(String.format("=== Test GET by id : %s (not found) ===", entity.name()));
     verifyGet(entity.getEndpoint() + "/" + ID_DOES_NOT_EXIST, APPLICATION_JSON, 404).then()
-      .log()
-      .all()
       .body("errors", notNullValue());
   }
 
@@ -116,8 +108,6 @@ public class ConfigurationCrudTest extends ApiTestBase {
   public void testGetByIdCrudInternalServerError() {
     logger.info(String.format("=== Test GET by id : %s (internal server error) ===", entity.name()));
     verifyGet(entity.getEndpoint() + "/" + ID_FOR_INTERNAL_SERVER_ERROR, APPLICATION_JSON, 500).then()
-      .log()
-      .all()
       .body("errors", notNullValue());
   }
 
@@ -130,8 +120,17 @@ public class ConfigurationCrudTest extends ApiTestBase {
   }
 
   @Test
+  public void testPutCrudIdMismatchTest() {
+    logger.info(String.format("=== Test PUT (id mismatch) : %s ===", entity.name()));
+    JsonObject json = entity.getTestSample();
+    json.put(ID, UUID.randomUUID().toString());
+    verifyPut(entity.getEndpoint() + "/" + EXISTED_ID, json.encode(), "", 422).then()
+      .body("errors", notNullValue());;
+  }
+
+  @Test
   public void testPutCrudObjectWithoutIdTest() {
-    logger.info(String.format("=== Test PUT : %s ===", entity.name()));
+    logger.info(String.format("=== Test PUT (object without id) : %s ===", entity.name()));
     JsonObject json = entity.getTestSample();
     json.remove(ID);
     verifyPut(entity.getEndpoint() + "/" + EXISTED_ID, json.encode(), "", 204);
