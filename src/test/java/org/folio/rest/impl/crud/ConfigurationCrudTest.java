@@ -130,6 +130,14 @@ public class ConfigurationCrudTest extends ApiTestBase {
   }
 
   @Test
+  public void testPutCrudObjectWithoutIdTest() {
+    logger.info(String.format("=== Test PUT : %s ===", entity.name()));
+    JsonObject json = entity.getTestSample();
+    json.remove(ID);
+    verifyPut(entity.getEndpoint() + "/" + EXISTED_ID, json.encode(), "", 204);
+  }
+
+  @Test
   public void testPutCrudNotFound() {
     logger.info(String.format("=== Test PUT : %s (not found) ===", entity.name()));
     JsonObject json = entity.getTestSample();

@@ -21,7 +21,10 @@ public class CrudObjectResolver {
     objects.put(Suffix.class, new SuffixCrudObject());
   }
 
+  private CrudObjectResolver() {
+  }
+
   public static <T> GenericCrudObject<T> getCrudObject(Class<T> clazz) {
-    return (GenericCrudObject<T>) objects.get(clazz);
+    return objects.get(clazz);
   }
 }

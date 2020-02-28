@@ -38,7 +38,7 @@ public class BaseCrudHelper<T, E> extends AbstractHelper {
   }
 
   public void get(String query, int offset, int limit, Handler<AsyncResult<Response>> asyncResultHandler) {
-    String endpoint = String.format(resourcesPath(crudObject.getName()) + SEARCH_PARAMS, limit, offset, buildQuery(query, logger), lang);
+    String endpoint = resourcesPath(crudObject.getName()) + String.format(SEARCH_PARAMS, limit, offset, buildQuery(query, logger), lang);
     HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(json -> VertxCompletableFuture.supplyBlockingAsync(ctx, () -> json.mapTo(collectionClazz)))
       .thenAccept(objects -> asyncResultHandler.handle(succeededFuture(this.buildOkResponse(objects))))
