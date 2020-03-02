@@ -55,7 +55,6 @@ import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -102,11 +101,6 @@ public class FinanceHelper extends AbstractHelper {
   }
 
 
-  private Error buildBudgetNotActiveError(List<String> notActiveBudgets) {
-    return BUDGET_IS_INACTIVE.toError()
-      .withAdditionalProperty(BUDGETS, notActiveBudgets);
-  }
-
   private Collector<Transaction, ?, MonetaryAmount> sumTransactionAmounts() {
     return Collectors.mapping(tx -> Money.of(tx.getAmount(), systemCurrency),
       Collectors.reducing(Money.of(0, systemCurrency), MonetaryFunctions::sum));
@@ -134,48 +128,49 @@ public class FinanceHelper extends AbstractHelper {
   private CompletableFuture<Void> prepareEncumbrances(List<Transaction> encumbrances) {
     Map<String, List<Transaction>> groupedByFund = encumbrances.stream()
       .collect(groupingBy(Transaction::getFromFundId));
-    return groupByLedgerIds(groupedByFund).thenCombine(getBudgets(groupedByFund), (transactionsGroupedByLedgerId, budgets) -> {
-      getLedgersByIds(new ArrayList<>(transactionsGroupedByLedgerId.keySet()))
-        .thenAccept(ledgers -> checkEncumbranceRestrictions(transactionsGroupedByLedgerId, budgets, ledgers));
-      return transactionsGroupedByLedgerId;
-    })
-      .thenCompose(transactionsGroupedByLedgerId -> VertxCompletableFuture.allOf(ctx,
-        transactionsGroupedByLedgerId.entrySet()
+    return groupByLedgerIds(groupedByFund)
+      .thenCompose(trsGroupedByLedgerId -> checkEncumbranceRestrictions(trsGroupedByLedgerId, groupedByFund)
+        .thenApply(v -> trsGroupedByLedgerId))
+      .thenCompose(trsGroupedByLedgerId -> VertxCompletableFuture.allOf(ctx,
+        trsGroupedByLedgerId.entrySet()
           .stream()
           .map(entry -> getCurrentFiscalYear(entry.getKey()).thenAccept(fiscalYear -> updateEncumbrances(entry, fiscalYear)))
           .collect(toList())
           .toArray(new CompletableFuture[0])));
   }
 
-  private void checkEncumbranceRestrictions(Map<String, List<Transaction>> transactionsGroupedByLedgerId, List<Budget> budgets, List<Ledger> ledgers) {
-    verifyAllBudgetsAreActive(budgets);
+  private CompletableFuture<Void> checkEncumbranceRestrictions(Map<String, List<Transaction>> trsGroupedByLedgerId,
+      Map<String, List<Transaction>> groupedByFund) {
+    return getBudgets(groupedByFund).thenCombine(getLedgersByIds(new ArrayList<>(trsGroupedByLedgerId.keySet())),
+        (budgets, ledgers) -> {
+          trsGroupedByLedgerId.forEach((ledgerId, transactions) -> {
+            Ledger processedLedger = ledgers.stream()
+              .filter(ledger -> ledger.getId().equals(ledgerId))
+              .findFirst()
+              .orElseThrow(() -> new HttpException(HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt(), LEDGER_NOT_FOUND_FOR_TRANSACTION.toError()));
 
-    transactionsGroupedByLedgerId.forEach((ledgerId, transactions) -> {
-      Ledger processedLedger = ledgers.stream().filter(ledger -> ledger.getId().equals(ledgerId)).findFirst().get();
-      if (processedLedger.getRestrictEncumbrance()){
-        checkEnoughMoneyForTransactions(transactions);
-      }
-    });
+            verifyBudgetsForEncumbrancesAreActive(budgets, transactions);
+
+            if (processedLedger.getRestrictEncumbrance()) {
+              checkEnoughMoneyForTransactions(transactions, budgets);
+            }
+          });
+          return null;
+        });
   }
 
-  private void verifyAllBudgetsAreActive(List<Budget> budgets) {
-    List<String> notActiveBudgets = budgets.stream()
-      .filter(budget -> budget.getBudgetStatus() != Budget.BudgetStatus.ACTIVE)
-      .map(Budget::getId)
-      .collect(toList());
-    if (!notActiveBudgets.isEmpty()) {
-      throw new HttpException(HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt(), buildBudgetNotActiveError(notActiveBudgets));
-    }
+  private void verifyBudgetsForEncumbrancesAreActive(List<Budget> budgets, List<Transaction> transactions) {
+    transactions.forEach(tr -> budgets.stream()
+      .filter(budget -> budget.getFundId().equals(tr.getFromFundId()))
+      .filter(budget -> budget.getBudgetStatus() == Budget.BudgetStatus.ACTIVE)
+      .findFirst()
+      .orElseThrow(() -> new HttpException(HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt(), BUDGET_IS_INACTIVE.toError())));
   }
 
-  private CompletableFuture<Void> checkEnoughMoneyForTransactions(List<Transaction> encumbrances) {
-    Map<String, List<Transaction>> groupedByFund = encumbrances.stream()
-      .collect(groupingBy(Transaction::getFromFundId));
-
+  private void checkEnoughMoneyForTransactions(List<Transaction> encumbrances, List<Budget> budgets) {
     Map<String, MonetaryAmount> transactionAmountsByFunds = encumbrances.stream()
       .collect(groupingBy(Transaction::getFromFundId, sumTransactionAmounts()));
-
-    return getBudgets(groupedByFund).thenAccept(budgets -> checkEnoughMoneyInBudgets(budgets, transactionAmountsByFunds));
+    checkEnoughMoneyInBudgets(budgets, transactionAmountsByFunds);
   }
 
   private void checkEnoughMoneyInBudgets(List<Budget> budgets, Map<String, MonetaryAmount> transactionAmountsByFunds) {
