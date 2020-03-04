@@ -1,49 +1,73 @@
 {
-  "ledgers" : [ {
-    "id" : "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61",
-    "name" : "Ongoing",
-    "code" : "ONGOING",
-    "description" : "Funds used for all recurring purchases",
-    "fiscalYearOneId" : "8da275b8-e099-49a1-9a31-b8241ff26ffc",
-    "ledgerStatus" : "Frozen",
-    "currency" : "USD",
-    "acqUnitIds" : [ "0ebb1f7d-983f-3026-8a4c-5318e0ebc041" ],
-    "restrictEncumbrance" : true,
-    "restrictExpenditures" : true,
-    "metadata" : {
-      "createdDate" : "2020-03-02T01:28:27.552+0000",
-      "updatedDate" : "2020-03-02T01:28:27.552+0000"
+  "ledgers": [
+    {
+      "id": "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61",
+      "name": "Ongoing",
+      "code": "ONGOING",
+      "description": "Funds used for all recurring purchases",
+      "fiscalYearOneId": "8da275b8-e099-49a1-9a31-b8241ff26ffc",
+      "ledgerStatus": "Frozen",
+      "currency": "USD",
+      "acqUnitIds": [
+        "0ebb1f7d-983f-3026-8a4c-5318e0ebc041"
+      ],
+      "restrictEncumbrance": true,
+      "restrictExpenditures": true
+    },
+    {
+      "id": "133a7916-f05e-4df4-8f7f-09eb2a7076d1",
+      "name": "One-time",
+      "code": "ONETIME",
+      "description": "Funds used for any non-recurring purchases",
+      "fiscalYearOneId": "684b5dc5-92f6-4db7-b996-b549d88f5e4e",
+      "ledgerStatus": "Active",
+      "currency": "USD",
+      "acqUnitIds": [],
+      "restrictEncumbrance": false,
+      "restrictExpenditures": false
+    },
+    {
+      "id": "7cef8378-7cbd-1fae-bcdd-8b9d7c0af9de",
+      "name": "Main Library",
+      "code": "MAIN-LIB",
+      "description": "This is the ledger for the Main Library",
+      "fiscalYearOneId": "8da275b8-e099-49a1-9a31-b8241ff26ffc",
+      "ledgerStatus": "Active",
+      "currency": "USD",
+      "acqUnitIds": [
+        "0ebb1f7d-983f-3026-8a4c-5318e0ebc041"
+      ],
+      "restrictEncumbrance": true,
+      "restrictExpenditures": true
+    },
+    {
+      "id": "168f8a86-d26c-406e-813f-c7527f241ac3",
+      "name": "InternalServerErrorLedger",
+      "code": "INTERNAL_SERVER_ERROR_LEDGER",
+      "description": "This is the ledger for InternalServerError",
+      "fiscalYearOneId": "8da275b8-e099-49a1-9a31-b8241ff26ffc",
+      "ledgerStatus": "Active",
+      "currency": "USD",
+      "acqUnitIds": [
+        "0ebb1f7d-983f-3026-8a4c-5318e0ebc041"
+      ],
+      "restrictEncumbrance": false,
+      "restrictExpenditures": false
+    },
+    {
+      "id": "d25498e7-3ae6-45fe-9612-ec99e2700d2f",
+      "name": "fiscalYearNotExists",
+      "code": "FISCAL_YEAR_NOT_EXISTS",
+      "description": "This is the ledger for InternalServerError",
+      "fiscalYearOneId": "d25498e7-3ae6-45fe-9612-ec99e2700d2f",
+      "ledgerStatus": "Active",
+      "currency": "USD",
+      "acqUnitIds": [
+        "0ebb1f7d-983f-3026-8a4c-5318e0ebc041"
+      ],
+      "restrictEncumbrance": false,
+      "restrictExpenditures": false
     }
-  }, {
-    "id" : "133a7916-f05e-4df4-8f7f-09eb2a7076d1",
-    "name" : "One-time",
-    "code" : "ONETIME",
-    "description" : "Funds used for any non-recurring purchases",
-    "fiscalYearOneId" : "684b5dc5-92f6-4db7-b996-b549d88f5e4e",
-    "ledgerStatus" : "Active",
-    "currency" : "USD",
-    "acqUnitIds" : [ ],
-    "restrictEncumbrance" : false,
-    "restrictExpenditures" : false,
-    "metadata" : {
-      "createdDate" : "2020-03-02T01:28:27.602+0000",
-      "updatedDate" : "2020-03-02T01:28:27.602+0000"
-    }
-  }, {
-    "id" : "7cef8378-7cbd-1fae-bcdd-8b9d7c0af9de",
-    "name" : "Main Library",
-    "code" : "MAIN-LIB",
-    "description" : "This is the ledger for the Main Library",
-    "fiscalYearOneId" : "8da275b8-e099-49a1-9a31-b8241ff26ffc",
-    "ledgerStatus" : "Active",
-    "currency" : "USD",
-    "acqUnitIds" : [ "0ebb1f7d-983f-3026-8a4c-5318e0ebc041" ],
-    "restrictEncumbrance" : true,
-    "restrictExpenditures" : true,
-    "metadata" : {
-      "createdDate" : "2020-03-02T01:28:27.618+0000",
-      "updatedDate" : "2020-03-02T01:28:27.618+0000"
-    }
-  } ],
-  "totalRecords" : 3
+  ],
+  "totalRecords": 5
 }

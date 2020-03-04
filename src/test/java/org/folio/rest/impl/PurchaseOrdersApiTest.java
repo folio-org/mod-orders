@@ -111,7 +111,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -121,6 +120,7 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -196,6 +196,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   private static final String ORDER_WITHOUT_WORKFLOW_STATUS = "41d56e59-46db-4d5e-a1ad-a178228913e5";
   static final String ORDER_WIT_PO_LINES_FOR_SORTING =  "9a952cd0-842b-4e71-bddd-014eb128dc8e";
   static final String VALID_FUND_ID =  "fb7b70f1-b898-4924-a991-0e4b6312bb5f";
+  static final String FUND_ID_RESTRICTED =  "72330c92-087e-4cdc-a82e-acadd9332659";
+  static final String VALID_LEDGER_ID =  "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
 
   // API paths
   public final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
@@ -803,7 +805,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(reqData.getCompositePoLines(), hasSize(1));
 
     CompositePoLine compositePoLine = reqData.getCompositePoLines().get(0);
-    Fund fund = new Fund().withCode("test").withName("name").withId(UUID.randomUUID().toString()).withLedgerId(ID_DOES_NOT_EXIST);
+    Fund fund = new Fund().withCode("test").withName("name").withId(VALID_FUND_ID).withLedgerId(ID_DOES_NOT_EXIST);
     addMockEntry(FUNDS, fund);
     removeAllEncumbranceLinks(reqData);
     compositePoLine.getFundDistribution().forEach(fundDistribution -> fundDistribution.setFundId(fund.getId()));
@@ -828,7 +830,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(reqData.getCompositePoLines(), hasSize(1));
 
     CompositePoLine compositePoLine = reqData.getCompositePoLines().get(0);
-    Fund fund = new Fund().withCode("test").withName("name").withId(UUID.randomUUID().toString()).withLedgerId(ID_FOR_INTERNAL_SERVER_ERROR);
+    Fund fund = new Fund().withCode("test").withName("name").withId(VALID_FUND_ID).withLedgerId(ID_FOR_INTERNAL_SERVER_ERROR);
     addMockEntry(FUNDS, fund);
     removeAllEncumbranceLinks(reqData);
     compositePoLine.getFundDistribution().forEach(fundDistribution -> fundDistribution.setFundId(fund.getId()));
@@ -1496,6 +1498,11 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
           s.getCost().setListUnitPrice((double) Integer.MAX_VALUE);
         }
       });
+
+    // set restricted fund
+    reqData.getCompositePoLines().stream()
+      .flatMap(poline -> poline.getFundDistribution().stream())
+      .forEach(fd -> fd.setFundId(FUND_ID_RESTRICTED));
 
     Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
       .toString(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_TOKEN, X_OKAPI_USER_ID), APPLICATION_JSON, 422)

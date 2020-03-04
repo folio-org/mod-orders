@@ -265,7 +265,7 @@ public class FinanceHelper extends AbstractHelper {
           return budgetCollection.getBudgets();
         }
         String missingIds = String.join(", ", CollectionUtils.subtract(ids, budgetCollection.getBudgets().stream().map(Budget::getId).collect(toList())));
-        throw new HttpException(400, FUNDS_NOT_FOUND.toError().withParameters(Collections.singletonList(new Parameter().withKey("budgets").withValue(missingIds))));
+        throw new HttpException(400, BUDGET_NOT_FOUND_FOR_TRANSACTION.toError().withParameters(Collections.singletonList(new Parameter().withKey("budgets").withValue(missingIds))));
       });
   }
 
@@ -281,7 +281,7 @@ public class FinanceHelper extends AbstractHelper {
           return ledgerCollection.getLedgers();
         }
         String missingIds = String.join(", ", CollectionUtils.subtract(ledgerIds, ledgerCollection.getLedgers().stream().map(Ledger::getId).collect(toList())));
-        throw new HttpException(400, FUNDS_NOT_FOUND.toError().withParameters(Collections.singletonList(new Parameter().withKey("ledgers").withValue(missingIds))));
+        throw new HttpException(400, LEDGER_NOT_FOUND_FOR_TRANSACTION.toError().withParameters(Collections.singletonList(new Parameter().withKey("ledgers").withValue(missingIds))));
       });
   }
 

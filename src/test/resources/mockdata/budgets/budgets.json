@@ -461,7 +461,29 @@
         "createdDate": "2020-01-30T01:28:17.839+0000",
         "updatedDate": "2020-01-30T01:28:17.839+0000"
       }
+    },
+    {
+      "id": "012e7da4-003c-48ff-9feb-f3745044da35",
+      "name": "RESTRICTED-FY2019",
+      "budgetStatus": "Active",
+      "allowableEncumbrance": 110.0,
+      "allowableExpenditure": 100.0,
+      "allocated": 11000.0,
+      "awaitingPayment": 0.0,
+      "available": 13500.0,
+      "encumbered": 0.0,
+      "expenditures": 0.0,
+      "unavailable": 0.0,
+      "overEncumbrance": 0.0,
+      "overExpended": 0.0,
+      "fundId": "72330c92-087e-4cdc-a82e-acadd9332659",
+      "fiscalYearId": "8da275b8-e099-49a1-9a31-b8241ff26ffc",
+      "acqUnitIds": [],
+      "metadata": {
+        "createdDate": "2020-01-30T01:28:17.839+0000",
+        "updatedDate": "2020-01-30T01:28:17.839+0000"
+      }
     }
   ],
-  "totalRecords": 21
+  "totalRecords": 22
 }

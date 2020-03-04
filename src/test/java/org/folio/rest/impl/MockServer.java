@@ -587,7 +587,7 @@ public class MockServer {
 
         List<String> ids = Collections.emptyList();
         if (query.startsWith("id==")) {
-          ids = extractfundIdsFromQuery(query);
+          ids = extractIdsFromQuery(query);
         }
 
         JsonObject collection = getLedgersByIds(ids);
