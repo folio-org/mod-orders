@@ -259,7 +259,7 @@ public class FinanceHelper extends AbstractHelper {
     String endpoint = String.format(GET_BUDGETS_WITH_SEARCH_PARAMS, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
 
     return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(entries -> entries.mapTo(BudgetCollection.class))
+      .thenCompose(entries -> VertxCompletableFuture.supplyBlockingAsync(ctx, () -> entries.mapTo(BudgetCollection.class)))
       .thenApply(budgetCollection -> {
         if (ids.size() == budgetCollection.getBudgets().size()) {
           return budgetCollection.getBudgets();
@@ -275,7 +275,7 @@ public class FinanceHelper extends AbstractHelper {
     String endpoint = String.format(GET_LEDGERS_WITH_SEARCH_PARAMS, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
 
     return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(entries -> entries.mapTo(LedgerCollection.class))
+      .thenCompose(entries -> VertxCompletableFuture.supplyBlockingAsync(ctx, () -> entries.mapTo(LedgerCollection.class)))
       .thenApply(ledgerCollection -> {
         if (ledgerIds.size() == ledgerCollection.getLedgers().size()) {
           return ledgerCollection.getLedgers();
