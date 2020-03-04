@@ -15,7 +15,7 @@ import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.impl.crud.CrudObjectResolver;
-import org.folio.rest.impl.crud.objects.GenericCrudObject;
+import org.folio.rest.impl.crud.models.GenericCrudObject;
 
 
 import javax.ws.rs.core.Response;

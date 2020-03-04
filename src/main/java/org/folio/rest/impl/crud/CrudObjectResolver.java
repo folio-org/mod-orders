@@ -1,9 +1,9 @@
 package org.folio.rest.impl.crud;
 
-import org.folio.rest.impl.crud.objects.GenericCrudObject;
-import org.folio.rest.impl.crud.objects.PrefixCrudObject;
-import org.folio.rest.impl.crud.objects.ReasonForClosureCrudObject;
-import org.folio.rest.impl.crud.objects.SuffixCrudObject;
+import org.folio.rest.impl.crud.models.GenericCrudObject;
+import org.folio.rest.impl.crud.models.PrefixCrudObject;
+import org.folio.rest.impl.crud.models.ReasonForClosureCrudObject;
+import org.folio.rest.impl.crud.models.SuffixCrudObject;
 import org.folio.rest.jaxrs.model.Prefix;
 import org.folio.rest.jaxrs.model.ReasonForClosure;
 import org.folio.rest.jaxrs.model.Suffix;

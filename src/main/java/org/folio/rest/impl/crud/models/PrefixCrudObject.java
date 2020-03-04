@@ -1,4 +1,4 @@
-package org.folio.rest.impl.crud.objects;
+package org.folio.rest.impl.crud.models;
 
 import org.folio.rest.jaxrs.model.Prefix;
 

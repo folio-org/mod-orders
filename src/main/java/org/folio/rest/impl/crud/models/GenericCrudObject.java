@@ -1,4 +1,4 @@
-package org.folio.rest.impl.crud.objects;
+package org.folio.rest.impl.crud.models;
 
 public interface GenericCrudObject<T> {
   T withId(T object, String id);
