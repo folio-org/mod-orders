@@ -31,6 +31,9 @@ public class ResourcePathResolver {
   public static final String ENCUMBRANCES = "finance.encumbrances";
   public static final String FUNDS = "finance.funds";
   public static final String ORDER_TRANSACTION_SUMMARIES = "finance.order-summaries";
+  public static final String REASONS_FOR_CLOSURE = "configuration.reasons-for-closure";
+  public static final String PREFIXES = "configuration.prefixes";
+  public static final String SUFFIXES = "configuration.suffixes";
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
   private static final Map<String, String> SUB_OBJECT_COLLECTION_APIS;
@@ -54,6 +57,9 @@ public class ResourcePathResolver {
     apis.put(FUNDS, "/finance/funds");
     apis.put(ORDER_TRANSACTION_SUMMARIES, "/finance/order-transaction-summaries");
     apis.put(TITLES, "/orders-storage/titles");
+    apis.put(REASONS_FOR_CLOSURE, "/orders-storage/configuration/reasons-for-closure");
+    apis.put(PREFIXES, "/orders-storage/configuration/prefixes");
+    apis.put(SUFFIXES, "/orders-storage/configuration/suffixes");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);
     SUB_OBJECT_ITEM_APIS = Collections.unmodifiableMap(
