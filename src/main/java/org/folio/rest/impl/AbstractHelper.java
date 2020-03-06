@@ -4,13 +4,35 @@ import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.HttpHeaders.LOCATION;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
+import static javax.ws.rs.core.Response.Status.CREATED;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
-import static javax.ws.rs.core.Response.Status.CREATED;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
-import static org.folio.orders.utils.HelperUtils.*;
+import static org.folio.orders.utils.HelperUtils.LANG;
+import static org.folio.orders.utils.HelperUtils.loadConfiguration;
+import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import javax.ws.rs.core.Response;
+
+import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.events.handlers.MessageAddress;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.tools.client.HttpClientFactory;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.rest.tools.utils.TenantTool;
 
 import io.vertx.core.Context;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -21,32 +43,14 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
-import javax.ws.rs.core.Response;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.rest.tools.utils.TenantTool;
-
 public abstract class AbstractHelper {
   public static final String ID = HelperUtils.ID;
   public static final String ORDER_IDS = "orderIds";
   public static final String OKAPI_HEADERS = "okapiHeaders";
   public static final String ERROR_CAUSE = "cause";
   public static final String OKAPI_URL = "x-okapi-url";
+  public static final String LOCALE_SETTINGS = "localeSettings";
+  public static final String CURRENCY_USD = "USD";
   static final int MAX_IDS_FOR_GET_RQ = 15;
   static final String SEARCH_PARAMS = "?limit=%s&offset=%s%s&lang=%s";
 
@@ -295,5 +299,21 @@ public abstract class AbstractHelper {
     ctx.owner()
       .eventBus()
       .send(messageAddress.address, data, deliveryOptions);
+  }
+
+  protected CompletableFuture<String> getSystemCurrency() {
+    CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
+    getTenantConfiguration().thenApply(config -> {
+      String localeSettings = config.getString(LOCALE_SETTINGS);
+      String systemCurrency;
+      if (StringUtils.isEmpty(localeSettings)) {
+        systemCurrency = CURRENCY_USD;
+      } else {
+        systemCurrency = new JsonObject(config.getString(LOCALE_SETTINGS)).getString("currency", "USD");
+      }
+      return future.complete(systemCurrency);
+    })
+      .exceptionally(future::completeExceptionally);
+    return future;
   }
 }

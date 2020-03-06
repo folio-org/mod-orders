@@ -30,6 +30,8 @@ public class ResourcePathResolver {
   public static final String TITLES = "titles";
   public static final String ENCUMBRANCES = "finance.encumbrances";
   public static final String FUNDS = "finance.funds";
+  public static final String BUDGETS = "finance.budgets";
+  public static final String LEDGERS = "finance.ledgers";
   public static final String ORDER_TRANSACTION_SUMMARIES = "finance.order-summaries";
   public static final String REASONS_FOR_CLOSURE = "configuration.reasons-for-closure";
   public static final String PREFIXES = "configuration.prefixes";
@@ -55,6 +57,8 @@ public class ResourcePathResolver {
     apis.put(ORDER_TEMPLATES, "/orders-storage/order-templates");
     apis.put(ENCUMBRANCES, "/finance/encumbrances");
     apis.put(FUNDS, "/finance/funds");
+    apis.put(BUDGETS, "/finance/budgets");
+    apis.put(LEDGERS, "/finance/ledgers");
     apis.put(ORDER_TRANSACTION_SUMMARIES, "/finance/order-transaction-summaries");
     apis.put(TITLES, "/orders-storage/titles");
     apis.put(REASONS_FOR_CLOSURE, "/orders-storage/configuration/reasons-for-closure");
