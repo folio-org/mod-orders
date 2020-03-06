@@ -100,6 +100,7 @@ import one.util.streamex.StreamEx;
 public class HelperUtils {
 
   public static final String ID = "id";
+  public static final String FUND_ID = "fundId";
   public static final String COMPOSITE_PO_LINES = "compositePoLines";
   public static final String CONFIGS = "configs";
   public static final String CONFIG_NAME = "configName";
@@ -850,6 +851,10 @@ public class HelperUtils {
    * @param ids list of id's
    * @return String representing CQL query to get records by id's
    */
+  public static String convertIdsToCqlQuery(Collection<String> ids, String idField) {
+    return convertIdsToCqlQuery(ids, idField, true);
+  }
+
   public static String convertIdsToCqlQuery(Collection<String> ids) {
     return convertIdsToCqlQuery(ids, ID, true);
   }

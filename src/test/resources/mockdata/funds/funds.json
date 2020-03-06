@@ -23,6 +23,12 @@
       "name": "European History",
       "code": "EUROHIST",
       "ledgerId": "133a7916-f05e-4df4-8f7f-09eb2a7076d1"
+    },
+    {
+      "id": "72330c92-087e-4cdc-a82e-acadd9332659",
+      "name": "with restricted ledger",
+      "code": "RESTRICTED",
+      "ledgerId": "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61"
     }
   ],
   "totalRecords": 4

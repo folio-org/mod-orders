@@ -6,6 +6,8 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.AcqDesiredPermissions.ASSIGN;
 import static org.folio.orders.utils.AcqDesiredPermissions.MANAGE;
 import static org.folio.orders.utils.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
+import static org.folio.orders.utils.ErrorCodes.MISSING_ONGOING;
+import static org.folio.orders.utils.ErrorCodes.ONGOING_NOT_ALLOWED;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
@@ -509,19 +511,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenAccept(v -> addProcessingErrors(HelperUtils.validateOrder(compPO)))
       .thenCompose(v -> validateIsbnValues(compPO))
       .thenCompose(v -> validatePoLineLimit(compPO))
-      .thenCompose(isLimitValid -> {
-        if (!getErrors().isEmpty()) {
-          return completedFuture(false);
-        }
-        if (isLimitValid) {
-          return validateVendor(compPO);
-        }
-
-        return completedFuture(isLimitValid);
-      });
-
+      .thenCompose(v -> validateVendor(compPO))
+      .thenAccept(v -> validateRenewalInfo(compPO))
+      .thenApply(v -> getErrors().isEmpty());
   }
-
 
   CompletableFuture<Void> validateIsbnValues(CompositePurchaseOrder compPO) {
     CompletableFuture[] futures = compPO.getCompositePoLines()
@@ -531,7 +524,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
     return VertxCompletableFuture.allOf(ctx, futures);
   }
-
 
   CompletableFuture<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO) {
     CompletableFuture[] futures = compPO.getCompositePoLines()
@@ -591,7 +583,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return completedFuture(null);
   }
 
-  private CompletableFuture<Boolean> validateVendor(CompositePurchaseOrder compPO) {
+  private CompletableFuture<Void> validateVendor(CompositePurchaseOrder compPO) {
     if (compPO.getWorkflowStatus() == WorkflowStatus.OPEN) {
       VendorHelper vendorHelper = new VendorHelper(httpClient, okapiHeaders, ctx, lang);
       return fetchCompositePoLines(compPO)
@@ -600,33 +592,30 @@ public class PurchaseOrderHelper extends AbstractHelper {
           addProcessingErrors(errors.getErrors());
           return vendorHelper.validateAccessProviders(compPO);
         })
-        .thenApply(errors -> {
-          addProcessingErrors(errors.getErrors());
-          return getErrors().isEmpty();
-        });
+        .thenAccept(errors -> addProcessingErrors(errors.getErrors()));
     }
-    return completedFuture(true);
+    return completedFuture(null);
   }
 
-  private CompletableFuture<Boolean> validatePoLineLimit(CompositePurchaseOrder compPO) {
+  private void validateRenewalInfo(CompositePurchaseOrder compPO) {
+    if (compPO.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING && Objects.isNull(compPO.getOngoing())) {
+      addProcessingError(MISSING_ONGOING.toError());
+    } else if (compPO.getOrderType() == CompositePurchaseOrder.OrderType.ONE_TIME && Objects.nonNull(compPO.getOngoing())) {
+      addProcessingError(ONGOING_NOT_ALLOWED.toError());
+    }
+  }
+
+  private CompletableFuture<Void> validatePoLineLimit(CompositePurchaseOrder compPO) {
     if (CollectionUtils.isNotEmpty(compPO.getCompositePoLines())) {
-      CompletableFuture<Boolean> future = new VertxCompletableFuture<>(ctx);
-      getTenantConfiguration()
+       return getTenantConfiguration()
         .thenAccept(config -> {
           int limit = getPoLineLimit(config);
           if (compPO.getCompositePoLines().size() > limit) {
             addProcessingError(ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
           }
-          future.complete(getErrors().isEmpty());
-        })
-        .exceptionally(t -> {
-          future.completeExceptionally(t);
-          return null;
         });
-
-      return future;
     }
-    return completedFuture(true);
+    return completedFuture(null);
   }
 
   private CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO) {

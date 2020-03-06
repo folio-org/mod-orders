@@ -10,8 +10,7 @@
   "orderType": "Ongoing",
   "poNumber": "268758",
   "reEncumber": false,
-  "renewal": {
-     "cycle": "Manual",
+  "ongoing": {
      "interval": 0,
      "manualRenewal": true,
      "reviewPeriod": 0,

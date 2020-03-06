@@ -12,7 +12,7 @@ public enum POProtectedFields {
   ORDER_TYPE("orderType"),
   RE_ENCUMBER("reEncumber"),
   BILL_TO("billTo"),
-  RENEWAL("renewal"),
+  ONGOING("ongoing"),
   TEMPLATE("template"),
   VENDOR("vendor");
 

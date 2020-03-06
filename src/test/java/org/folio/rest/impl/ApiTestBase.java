@@ -100,9 +100,10 @@ public class ApiTestBase {
 
   static final String INVALID_LANG = "?lang=english";
   static final String BAD_QUERY = "unprocessableQuery";
-  static final String ID = "id";
+  public static final String ID = "id";
 
-  static final String ID_BAD_FORMAT = "123-45-678-90-abc";
+  public static final String EXISTED_ID = "763643c2-0f80-4908-b18b-780d3e8cd136";
+  public static final String ID_BAD_FORMAT = "123-45-678-90-abc";
   protected static final String ID_DOES_NOT_EXIST = "d25498e7-3ae6-45fe-9612-ec99e2700d2f";
   protected static final String ID_FOR_INTERNAL_SERVER_ERROR = "168f8a86-d26c-406e-813f-c7527f241ac3";
   protected static final String PO_ID_GET_LINES_INTERNAL_SERVER_ERROR = "bad500bb-bbbb-500b-bbbb-bbbbbbbbbbbb";
@@ -117,7 +118,7 @@ public class ApiTestBase {
 
   static final String COMP_ORDER_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/";
 
-  static final String X_ECHO_STATUS = "X-Okapi-Echo-Status";
+  public static final String X_ECHO_STATUS = "X-Okapi-Echo-Status";
   static final String EMPTY_CONFIG_TENANT = "config_empty";
   static final String NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT = "nonExistContributorNameType";
   static final String INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT = "hasCodeLikeInstanceStatus";
@@ -135,7 +136,7 @@ public class ApiTestBase {
   public static final Header NON_EXIST_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "ordersimpltest");
   public static final Header X_OKAPI_USER_ID = new Header(OKAPI_USERID_HEADER, "440c89e3-7f6c-578a-9ea8-310dad23605e");
   static final Header X_OKAPI_USER_ID_WITH_ACQ_UNITS = new Header(OKAPI_USERID_HEADER, USER_ID_ASSIGNED_TO_ACQ_UNITS);
-  protected static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
+  protected static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkaWt1X2FkbWluIiwidXNlcl9pZCI6ImJmZTI2MjM0LTMzNjktNTdhYS05ZjhhLWU2ZWVhY2M0YTgzYiIsImlhdCI6MTU4MzE1Nzg5OCwidGVuYW50IjoiZGlrdSJ9.Mk7u4KaCywSuYtBgCT44oGcVC0C8jUMY9KjsUnug48I");
   protected static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_10");
   static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_1");
   static final Header INVALID_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "invalid_config");
@@ -265,7 +266,7 @@ public class ApiTestBase {
     return verifyPut(url, body.encodePrettily(), expectedContentType, expectedCode);
   }
 
-  Response verifyPut(String url, String body, String expectedContentType, int expectedCode) {
+  protected Response verifyPut(String url, String body, String expectedContentType, int expectedCode) {
     return verifyPut(url, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), expectedContentType, expectedCode);
   }
 

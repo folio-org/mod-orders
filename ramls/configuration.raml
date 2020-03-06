@@ -1,0 +1,116 @@
+#%RAML 1.0
+title: "mod-orders"
+baseUri: http://github.com/folio-org/mod-orders
+version: v1.0
+
+documentation:
+  - title: Orders configuration
+    content: <b>API for managing purchase orders configuration</b>
+
+types:
+    reason_for_closure: !include acq-models/mod-orders-storage/schemas/reason_for_closure.json
+    reason_for_closure_collection: !include acq-models/mod-orders-storage/schemas/reason_for_closure_collection.json
+    prefix: !include acq-models/mod-orders-storage/schemas/prefix.json
+    prefix_collection: !include acq-models/mod-orders-storage/schemas/prefix_collection.json
+    suffix: !include acq-models/mod-orders-storage/schemas/suffix.json
+    suffix_collection: !include acq-models/mod-orders-storage/schemas/suffix_collection.json
+    errors: !include raml-util/schemas/errors.schema
+    UUID:
+     type: string
+     pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+
+traits:
+    validate: !include raml-util/traits/validation.raml
+    pageable:  !include raml-util/traits/pageable.raml
+    searchable: !include raml-util/traits/searchable.raml
+    language: !include raml-util/traits/language.raml
+
+resourceTypes:
+    collection: !include raml-util/rtypes/collection.raml
+    collection-item: !include raml-util/rtypes/item-collection.raml
+
+/orders/configuration:
+  /reasons-for-closure:
+    type:
+      collection:
+        exampleCollection: !include acq-models/mod-orders-storage/examples/reason_for_closure_collection.sample
+        exampleItem: !include acq-models/mod-orders-storage/examples/reason_for_closure_post.sample
+        schemaCollection: reason_for_closure_collection
+        schemaItem: reason_for_closure
+    post:
+      description: Create new reason for closure
+      is: [validate]
+    get:
+      description: Get list of reasons for closure
+      is: [
+        searchable: {description: "with valid searchable fields: for example reasonForClosure", example: "[\"reasonForClosure\", \"Denied\", \"=\"]"},
+        pageable
+      ]
+    /{id}:
+      uriParameters:
+        id:
+          description: The UUID of a reason for closure
+          type: UUID
+      type:
+        collection-item:
+          exampleItem: !include acq-models/mod-orders-storage/examples/reason_for_closure_get.sample
+          schema: reason_for_closure
+      put:
+        description: Update reason for closure
+        is: [validate]
+  /prefixes:
+    type:
+      collection:
+        exampleCollection: !include acq-models/mod-orders-storage/examples/prefix_collection.sample
+        exampleItem: !include acq-models/mod-orders-storage/examples/prefix_post.sample
+        schemaCollection: prefix_collection
+        schemaItem: prefix
+    post:
+      description: Create new prefix
+      is: [validate]
+    get:
+      description: Get list of prefixes
+      is: [
+        searchable: {description: "with valid searchable fields: for example prefix", example: "[\"prefix\", \"Prx\", \"=\"]"},
+        pageable
+      ]
+    /{id}:
+      uriParameters:
+        id:
+          description: The UUID of a prefix
+          type: UUID
+      type:
+        collection-item:
+          exampleItem: !include acq-models/mod-orders-storage/examples/prefix_get.sample
+          schema: prefix
+      put:
+        description: Update prefix
+        is: [validate]
+  /suffixes:
+    type:
+      collection:
+        exampleCollection: !include acq-models/mod-orders-storage/examples/suffix_collection.sample
+        exampleItem: !include acq-models/mod-orders-storage/examples/suffix_post.sample
+        schemaCollection: suffix_collection
+        schemaItem: suffix
+    post:
+      description: Create new suffix
+      is: [validate]
+    get:
+      description: Get list of suffixes
+      is: [
+        searchable: {description: "with valid searchable fields: for example suffix", example: "[\"code\", \"Sfx\", \"=\"]"},
+        pageable
+      ]
+    /{id}:
+      uriParameters:
+        id:
+          description: The UUID of a suffix
+          type: UUID
+      type:
+        collection-item:
+          exampleItem: !include acq-models/mod-orders-storage/examples/suffix_get.sample
+          schema: suffix
+      put:
+        description: Update suffix
+        is: [validate]

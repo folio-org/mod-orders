@@ -107,13 +107,13 @@
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-unit</artifactId>
-      <version>3.8.4</version>
+      <version>3.8.5</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.rest-assured</groupId>
       <artifactId>rest-assured</artifactId>
-      <version>4.1.2</version>
+      <version>4.2.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -140,7 +140,7 @@
     <dependency>
       <groupId>one.util</groupId>
       <artifactId>streamex</artifactId>
-      <version>0.7.0</version>
+      <version>0.7.2</version>
     </dependency>
     <dependency>
       <groupId>org.javamoney</groupId>
@@ -163,7 +163,7 @@
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-slf4j-impl</artifactId>
-      <version>2.12.1</version>
+      <version>2.13.0</version>
     </dependency>
      <dependency>
      <groupId>org.folio</groupId>
@@ -225,6 +225,10 @@
         <version>0.5.1</version>
         <configuration>
           <includes>*.json</includes>
+          <excludes>
+            <exclude>reason_for_closure.json</exclude>
+            <exclude>reason_for_closure_collection.json</exclude>
+          </excludes>
           <outputDirectory>${jsonschema2pojo_output_dir}</outputDirectory>
           <generateBuilders>true</generateBuilders>
         </configuration>
@@ -535,7 +539,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.1.1</version>
+        <version>3.2.2</version>
         <executions>
           <execution>
             <phase>package</phase>
