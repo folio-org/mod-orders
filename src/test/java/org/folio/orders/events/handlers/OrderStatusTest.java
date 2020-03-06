@@ -1,9 +1,15 @@
 package org.folio.orders.events.handlers;
 
+import static org.folio.rest.impl.InventoryHelper.ITEMS;
+import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
+import static org.folio.rest.impl.MockServer.getItemUpdates;
+import static org.folio.rest.impl.MockServer.getItemsSearches;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderRetrievals;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
+import static org.folio.rest.impl.MockServer.getQueryParams;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
@@ -69,6 +75,14 @@ public class OrderStatusTest extends ApiTestBase {
       assertThat(purchaseOrder.getCloseReason(), notNullValue());
       assertThat(purchaseOrder.getCloseReason().getReason(), equalTo(HelperUtils.REASON_COMPLETE));
       assertThat(result.body(), equalTo(Response.Status.OK.getReasonPhrase()));
+
+      assertThat(getItemsSearches(), notNullValue());
+      assertThat(getItemsSearches(), hasSize(1));
+      assertThat(getItemUpdates(), notNullValue());
+      assertThat(getItemUpdates(), hasSize(getItemsSearches().get(0).getJsonArray(ITEMS).size()));
+
+      assertThat(getQueryParams(ITEM_RECORDS), hasSize(1));
+      assertThat(getQueryParams(ITEM_RECORDS).get(0), containsString("status.name==On order"));
     }));
   }
 
@@ -92,6 +106,14 @@ public class OrderStatusTest extends ApiTestBase {
       assertThat(getPurchaseOrderUpdates(), hasSize(1));
       assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(), is(WorkflowStatus.OPEN));
       assertThat(result.body(), equalTo(Response.Status.OK.getReasonPhrase()));
+
+      assertThat(getItemsSearches(), notNullValue());
+      assertThat(getItemsSearches(), hasSize(1));
+      assertThat(getItemUpdates(), notNullValue());
+      assertThat(getItemUpdates(), hasSize(getItemsSearches().get(0).getJsonArray(ITEMS).size()));
+
+      assertThat(getQueryParams(ITEM_RECORDS), hasSize(1));
+      assertThat(getQueryParams(ITEM_RECORDS).get(0), containsString("status.name==Order closed"));
     }));
   }
 

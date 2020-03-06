@@ -89,7 +89,7 @@ public class InventoryHelper extends AbstractHelper {
   static final String CONTRIBUTOR_NAME_TYPES = "contributorNameTypes";
   static final String INSTANCE_STATUSES = "instanceStatuses";
   static final String INSTANCE_TYPES = "instanceTypes";
-  static final String ITEMS = "items";
+  public static final String ITEMS = "items";
   static final String LOAN_TYPES = "loantypes";
 
   // mod-configuration: config names and default values

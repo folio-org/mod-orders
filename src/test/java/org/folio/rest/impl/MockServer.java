@@ -58,6 +58,7 @@ import static org.folio.rest.impl.ApiTestBase.getMinimalContentCompositePoLine;
 import static org.folio.rest.impl.ApiTestBase.getMinimalContentCompositePurchaseOrder;
 import static org.folio.rest.impl.ApiTestBase.getMockAsJson;
 import static org.folio.rest.impl.ApiTestBase.getMockData;
+
 import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEMS;
 import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
@@ -73,6 +74,7 @@ import static org.folio.rest.impl.PurchaseOrdersApiTest.ID_FOR_PRINT_MONOGRAPH_O
 import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_ACCESS_PROVIDER_A;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_ACCESS_PROVIDER_B;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_VENDOR_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ITEMS_NOT_FOUND;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.LISTED_PRINT_MONOGRAPH_PATH;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.MOD_VENDOR_INTERNAL_ERROR_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_ACCESS_PROVIDER_A;
@@ -199,7 +201,7 @@ public class MockServer {
 
   private static final String TOTAL_RECORDS = "totalRecords";
   private static final String QUERY = "query";
-  private static final String ITEM_RECORDS = "itemRecords";
+  public static final String ITEM_RECORDS = "itemRecords";
   private static final String INSTANCE_RECORD = "instanceRecord";
   private static final String HOLDINGS_RECORD = "holdingRecord";
   private static final String CONTRIBUTOR_NAME_TYPES = "contributorNameTypes";
@@ -292,11 +294,11 @@ public class MockServer {
     return serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST);
   }
 
-  static List<JsonObject> getItemsSearches() {
+  public static List<JsonObject> getItemsSearches() {
     return serverRqRs.get(ITEM_RECORDS, HttpMethod.GET);
   }
 
-  static List<JsonObject> getItemUpdates() {
+  public static List<JsonObject> getItemUpdates() {
     return serverRqRs.get(ITEM_RECORDS, HttpMethod.PUT);
   }
 
@@ -377,7 +379,7 @@ public class MockServer {
     serverRqQueries.clear();
   }
 
-  static List<String> getQueryParams(String resourceType) {
+  public static List<String> getQueryParams(String resourceType) {
     return serverRqQueries.getOrDefault(resourceType, Collections.emptyList());
   }
 
@@ -701,9 +703,21 @@ public class MockServer {
 
     String query = ctx.request().getParam("query");
 
+    addServerRqQuery(ITEM_RECORDS, query);
+
     if (query.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
       addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, new JsonObject());
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
+    } else if (query.contains(ITEMS_NOT_FOUND)) {
+      JsonObject items = new JsonObject();
+      items.put(ITEMS, new JsonArray());
+      items.put(TOTAL_RECORDS, 0);
+      addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
+
+      ctx.response()
+        .setStatusCode(200)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .end(items.encodePrettily());
     } else {
       try {
         JsonObject items = new JsonObject(ApiTestBase.getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
@@ -720,7 +734,7 @@ public class MockServer {
           }
         }
 
-        items.put("totalRecords", jsonArray.size());
+        items.put(TOTAL_RECORDS, jsonArray.size());
         addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
 
         ctx.response()

@@ -15,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.impl.AbstractHelper;
+import org.folio.rest.impl.PurchaseOrderHelper;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -88,14 +89,15 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
   }
 
   CompletableFuture<Void> updateOrderStatus(Map<String, String> okapiHeaders, HttpClientInterface httpClient, PurchaseOrder purchaseOrder, List<PoLine> poLines) {
-    String orderId = purchaseOrder.getId();
-    if (HelperUtils.changeOrderStatus(purchaseOrder, poLines)) {
-      logger.debug("Workflow status update required for order with id={}", orderId);
-
-      return handlePutRequest(resourceByIdPath(PURCHASE_ORDER, orderId), JsonObject.mapFrom(purchaseOrder),
-        httpClient, ctx, okapiHeaders, logger);
-    }
-    return VertxCompletableFuture.completedFuture(null);
+    PurchaseOrder.WorkflowStatus initialStatus = purchaseOrder.getWorkflowStatus();
+    PurchaseOrderHelper helper = new PurchaseOrderHelper(httpClient, okapiHeaders, ctx, lang);
+    return helper.handleFinalOrderStatus(purchaseOrder, poLines, initialStatus.value())
+      .thenCompose(aVoid -> {
+        if (purchaseOrder.getWorkflowStatus() != initialStatus) {
+          return helper.updateOrderSummary(purchaseOrder);
+        }
+        return CompletableFuture.completedFuture(null);
+      });
   }
 
 }

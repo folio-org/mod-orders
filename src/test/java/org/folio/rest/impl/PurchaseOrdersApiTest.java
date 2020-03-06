@@ -4,6 +4,7 @@ import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.containsAny;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
 import static org.folio.orders.utils.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
@@ -55,6 +56,7 @@ import static org.folio.rest.impl.InventoryHelper.DEFAULT_INSTANCE_TYPE_CODE;
 import static org.folio.rest.impl.InventoryHelper.DEFAULT_LOAN_TYPE_NAME;
 import static org.folio.rest.impl.InventoryHelper.INSTANCE_STATUS_ID;
 import static org.folio.rest.impl.InventoryHelper.INSTANCE_TYPE_ID;
+import static org.folio.rest.impl.InventoryHelper.ITEMS;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.joinExistingAndNewItems;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInstanceLinksForUpdatedOrder;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInventoryInteraction;
@@ -63,6 +65,7 @@ import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesQua
 import static org.folio.rest.impl.MockServer.BUDGET_IS_INACTIVE_TENANT;
 import static org.folio.rest.impl.MockServer.BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT;
 import static org.folio.rest.impl.MockServer.FUND_CANNOT_BE_PAID_TENANT;
+import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
 import static org.folio.rest.impl.MockServer.LEDGER_NOT_FOUND_FOR_TRANSACTION_TENANT;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.getContributorNameTypesSearches;
@@ -76,6 +79,7 @@ import static org.folio.rest.impl.MockServer.getHoldingsSearches;
 import static org.folio.rest.impl.MockServer.getInstanceStatusesSearches;
 import static org.folio.rest.impl.MockServer.getInstanceTypesSearches;
 import static org.folio.rest.impl.MockServer.getInstancesSearches;
+import static org.folio.rest.impl.MockServer.getItemUpdates;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
 import static org.folio.rest.impl.MockServer.getLoanTypesSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
@@ -213,6 +217,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
   public static final Header ALL_DESIRED_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(AcqDesiredPermissions.getValues()).encode());
   public static final Header APPROVAL_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(Arrays.asList("orders.item.approve")).encode());
+  static final String ITEMS_NOT_FOUND = UUID.randomUUID().toString();
 
 
   @Test
@@ -2189,6 +2194,43 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(respData.getCloseReason(), notNullValue());
     assertThat(respData.getCloseReason().getReason(), equalTo(HelperUtils.REASON_COMPLETE));
 
+    assertThat(getItemsSearches(), notNullValue());
+    assertThat(getItemsSearches(), hasSize(1));
+    assertThat(getItemUpdates(), notNullValue());
+    assertThat(getItemUpdates(), hasSize(getItemsSearches().get(0).getJsonArray(ITEMS).size()));
+
+    assertThat(getQueryParams(ITEM_RECORDS), hasSize(1));
+    assertThat(getQueryParams(ITEM_RECORDS).get(0), containsAny("status.name==On order", reqData.getCompositePoLines().get(0).getId()));
+  }
+
+  @Test
+  public void testPostOrderToAutomaticallyChangeStatusFromOpenToClosedNoItemsFound() {
+
+    logger.info("===  Test case when order status update is expected from Open to Closed no On order items in inventory ===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
+    reqData.getCompositePoLines().get(0).setId(ITEMS_NOT_FOUND);
+
+    MockServer.addMockTitles(reqData.getCompositePoLines());
+    addMockEntry(ITEM_RECORDS, new JsonObject());
+
+    reqData.setVendor(ACTIVE_VENDOR_ID);
+
+    assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
+
+    CompositePurchaseOrder respData = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    assertThat(respData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.CLOSED));
+    assertThat(respData.getCloseReason(), notNullValue());
+    assertThat(respData.getCloseReason().getReason(), equalTo(HelperUtils.REASON_COMPLETE));
+
+    assertThat(getItemsSearches(), notNullValue());
+    assertThat(getItemsSearches(), hasSize(1));
+    assertThat(getItemUpdates(), nullValue());
+
+    assertThat(getQueryParams(ITEM_RECORDS), hasSize(1));
+    assertThat(getQueryParams(ITEM_RECORDS).get(0), containsAny("status.name==On order", reqData.getCompositePoLines().get(0).getId()));
   }
 
   @Test
@@ -2205,6 +2247,30 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(), is(PurchaseOrder.WorkflowStatus.OPEN));
 
+    assertThat(getItemsSearches(), notNullValue());
+    assertThat(getItemsSearches(), hasSize(1));
+    assertThat(getItemUpdates(), notNullValue());
+    assertThat(getItemUpdates(), hasSize(getItemsSearches().get(0).getJsonArray(ITEMS).size()));
+
+    assertThat(getQueryParams(ITEM_RECORDS), hasSize(1));
+    assertThat(getQueryParams(ITEM_RECORDS).get(0), containsAny("status.name==Order closed", reqData.getCompositePoLines().get(0).getId()));
+  }
+
+  @Test
+  public void testUpdateOrderWithoutPoLineToWithClosedStatus() {
+    logger.info("===  Test Put Order to change status of Order from Pending to Closed without PO Lines - no items searches and updates ===");
+
+    CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()),
+      JsonObject.mapFrom(reqData), EMPTY, 204);
+
+    assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(), is(PurchaseOrder.WorkflowStatus.CLOSED));
+
+    assertThat(getItemsSearches(), nullValue());
+    assertThat(getItemUpdates(), nullValue());
+    assertThat(getQueryParams(ITEM_RECORDS), hasSize(0));
   }
 
   @Test
