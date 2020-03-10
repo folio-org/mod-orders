@@ -4,9 +4,6 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supply
 import static org.folio.orders.utils.HelperUtils.getOkapiHeaders;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
-import static org.folio.orders.utils.HelperUtils.handlePutRequest;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 
 import java.util.ArrayList;
 import java.util.List;
