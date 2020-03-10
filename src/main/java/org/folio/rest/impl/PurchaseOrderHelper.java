@@ -266,7 +266,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .ofSubLists(lineIds, MAX_IDS_FOR_GET_RQ)
       // Get item records from Inventory storage
       .map(ids -> {
-        String query = encodeQuery(String.format("status.name==%s+and+%s", itemStatus, HelperUtils.convertIdsToCqlQuery(ids, InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, true)), logger);
+        String query = encodeQuery(String.format("status.name==%s and %s", itemStatus, HelperUtils.convertIdsToCqlQuery(ids, InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, true)), logger);
         return inventoryHelper.getItemRecordsByQuery(query);
       })
       .toList();
