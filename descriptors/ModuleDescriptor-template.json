@@ -711,6 +711,10 @@
       "version": "1.0"
     },
     {
+      "id": "finance.budgets",
+      "version": "1.0"
+    },
+    {
       "id": "orders-storage.titles",
       "version": "1.0"
     },
@@ -1154,6 +1158,8 @@
         "orders-storage.titles.item.put",
         "configuration.entries.collection.get",
         "finance.funds.collection.get",
+        "finance.budgets.collection.get",
+        "finance.ledgers.collection.get",
         "finance.encumbrances.item.post",
         "finance.ledgers.current-fiscal-year.item.get",
         "finance.order-transaction-summaries.item.post",
@@ -1201,6 +1207,8 @@
         "configuration.entries.collection.get",
         "finance.encumbrances.item.post",
         "finance.funds.collection.get",
+        "finance.budgets.collection.get",
+        "finance.ledgers.collection.get",
         "finance.ledgers.current-fiscal-year.item.get",
         "finance.order-transaction-summaries.item.post",
         "inventory.instances.collection.get",
