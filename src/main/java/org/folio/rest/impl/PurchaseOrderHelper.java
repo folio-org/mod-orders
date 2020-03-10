@@ -230,16 +230,16 @@ public class PurchaseOrderHelper extends AbstractHelper {
   public CompletableFuture<Void> handleFinalOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines, String initialOrdersStatus) {
 
     return VertxCompletableFuture.supplyBlockingAsync(ctx, () -> changeOrderStatus(purchaseOrder, poLines)).thenCompose(u -> {
-      if (isTransitionToClosed(purchaseOrder.getWorkflowStatus(), initialOrdersStatus)) {
+      if (isOrderClosing(purchaseOrder.getWorkflowStatus(), initialOrdersStatus)) {
         return closeOrder(poLines);
-      } else if (isReopeningClosedOrder(purchaseOrder.getWorkflowStatus(), initialOrdersStatus)) {
+      } else if (isOrderReopening(purchaseOrder.getWorkflowStatus(), initialOrdersStatus)) {
         return reopenOrder(poLines);
       }
       return CompletableFuture.completedFuture(null);
     });
   }
 
-  private boolean isTransitionToClosed(PurchaseOrder.WorkflowStatus newStatus, String initialStatus) {
+  private boolean isOrderClosing(PurchaseOrder.WorkflowStatus newStatus, String initialStatus) {
     return newStatus == PurchaseOrder.WorkflowStatus.CLOSED && !Objects.equals(newStatus.value(), initialStatus);
   }
 
@@ -258,7 +258,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return items;
   }
 
-  private CompletableFuture<List<JsonObject>> getsItemsByStatus(List<PoLine> compositePoLines, String itemStatus) {
+  private CompletableFuture<List<JsonObject>> getItemsByStatus(List<PoLine> compositePoLines, String itemStatus) {
     InventoryHelper inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
     List<String> lineIds = compositePoLines.stream().map(PoLine::getId).collect(toList());
     // Split all id's by maximum number of id's for get query
@@ -275,7 +275,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenApply(lists -> StreamEx.of(lists).toFlatList(jsonObjects -> jsonObjects));
   }
 
-  private boolean isReopeningClosedOrder(PurchaseOrder.WorkflowStatus newStatus, String initialOrderStatus) {
+  private boolean isOrderReopening(PurchaseOrder.WorkflowStatus newStatus, String initialOrderStatus) {
     return newStatus == PurchaseOrder.WorkflowStatus.OPEN && CLOSED.value().equals(initialOrderStatus);
   }
 
@@ -290,7 +290,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> updateItemsStatusInInventory(List<PoLine> poLines, String currentStatus, String newStatus) {
-    return getsItemsByStatus(poLines, currentStatus)
+    return getItemsByStatus(poLines, currentStatus)
       .thenApply(items -> updateStatusName(items, newStatus))
       .thenCompose(this::updateItemsInInventory);
   }
