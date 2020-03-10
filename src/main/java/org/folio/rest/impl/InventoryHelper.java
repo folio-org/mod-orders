@@ -89,7 +89,7 @@ public class InventoryHelper extends AbstractHelper {
   static final String CONTRIBUTOR_NAME_TYPES = "contributorNameTypes";
   static final String INSTANCE_STATUSES = "instanceStatuses";
   static final String INSTANCE_TYPES = "instanceTypes";
-  static final String ITEMS = "items";
+  public static final String ITEMS = "items";
   static final String LOAN_TYPES = "loantypes";
 
   // mod-configuration: config names and default values
@@ -189,6 +189,23 @@ public class InventoryHelper extends AbstractHelper {
   }
 
   /**
+   * Returns list of item records for specified query.
+   *
+   * @param query
+   * @return future with list of item records
+   */
+  public CompletableFuture<List<JsonObject>> getItemRecordsByQuery(String query) {
+    String endpoint = buildLookupEndpoint(ITEMS, query, Integer.MAX_VALUE, lang);
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(this::extractItems);
+  }
+
+  public CompletableFuture<Void> updateItem(JsonObject item) {
+    String endpoint = String.format(UPDATE_ITEM_ENDPOINT, item.getString(ID), lang);
+    return handlePutRequest(endpoint, item, httpClient, ctx, okapiHeaders, logger);
+  }
+
+  /**
    * Returns list of item records for specified id's.
    *
    * @param itemRecord item record
@@ -196,7 +213,6 @@ public class InventoryHelper extends AbstractHelper {
    * @return future with list of item records
    */
   public CompletableFuture<Void> receiveItem(JsonObject itemRecord, ReceivedItem receivedItem) {
-    String endpoint = String.format(UPDATE_ITEM_ENDPOINT, itemRecord.getString(ID), lang);
 
     // Update item record with receiving details
     itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
@@ -206,11 +222,10 @@ public class InventoryHelper extends AbstractHelper {
     if (StringUtils.isNotEmpty(receivedItem.getCallNumber())) {
       itemRecord.put(ITEM_LEVEL_CALL_NUMBER, receivedItem.getCallNumber());
     }
-    return handlePutRequest(endpoint, itemRecord, httpClient, ctx, okapiHeaders, logger);
+    return updateItem(itemRecord);
   }
 
   public CompletableFuture<Void> checkinItem(JsonObject itemRecord, CheckInPiece checkinPiece) {
-    String endpoint = String.format(UPDATE_ITEM_ENDPOINT, itemRecord.getString(ID), lang);
 
     // Update item record with checkIn details
     itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
@@ -220,7 +235,7 @@ public class InventoryHelper extends AbstractHelper {
     if (StringUtils.isNotEmpty(checkinPiece.getCallNumber())) {
       itemRecord.put(ITEM_LEVEL_CALL_NUMBER, checkinPiece.getCallNumber());
     }
-    return handlePutRequest(endpoint, itemRecord, httpClient, ctx, okapiHeaders, logger);
+    return updateItem(itemRecord);
   }
 
   /**

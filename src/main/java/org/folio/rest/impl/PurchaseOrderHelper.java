@@ -15,10 +15,12 @@ import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.convertToCompositePurchaseOrder;
 import static org.folio.orders.utils.HelperUtils.deletePoLine;
 import static org.folio.orders.utils.HelperUtils.deletePoLines;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.getCompositePoLines;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
@@ -39,6 +41,7 @@ import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.CLOSED;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
@@ -77,11 +80,13 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import one.util.streamex.StreamEx;
 
 public class PurchaseOrderHelper extends AbstractHelper {
 
@@ -98,14 +103,17 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private final ProtectionHelper protectionHelper;
   private TitlesHelper titlesHelper;
 
-
-  PurchaseOrderHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
-    super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
+  public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+    super(httpClient, okapiHeaders, ctx, lang);
 
     poNumberHelper = new PoNumberHelper(httpClient, okapiHeaders, ctx, lang);
     orderLineHelper = new PurchaseOrderLineHelper(httpClient, okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
     titlesHelper = new TitlesHelper(httpClient, okapiHeaders, ctx, lang);
+  }
+
+  PurchaseOrderHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
+    this(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
   }
 
   /**
@@ -200,9 +208,91 @@ public class PurchaseOrderHelper extends AbstractHelper {
           if (isTransitionToOpen(poFromStorage, compPO)) {
             return checkOrderApprovalRequired(compPO).thenCompose(ok -> openOrder(compPO));
           } else {
-            return updateOrderSummary(compPO);
+            return CompletableFuture.completedFuture(null);
           }
-        }));
+        })
+        .thenCompose(ok -> handleFinalOrderStatus(compPO, poFromStorage.getWorkflowStatus().value()))
+      );
+  }
+
+  public CompletableFuture<Void> handleFinalOrderStatus(CompositePurchaseOrder compPO, String initialOrdersStatus) {
+
+    PurchaseOrder purchaseOrder = convertToPurchaseOrder(compPO).mapTo(PurchaseOrder.class);
+    return VertxCompletableFuture.supplyBlockingAsync(ctx, () -> HelperUtils.convertToPoLines(compPO.getCompositePoLines()))
+      .thenCompose(poLines -> handleFinalOrderStatus(purchaseOrder, poLines, initialOrdersStatus))
+      .thenAccept(aVoid -> {
+        compPO.setWorkflowStatus(WorkflowStatus.fromValue(purchaseOrder.getWorkflowStatus().value()));
+        compPO.setCloseReason(purchaseOrder.getCloseReason());
+      })
+      .thenCompose(aVoid -> updateOrderSummary(purchaseOrder));
+  }
+
+  public CompletableFuture<Void> handleFinalOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines, String initialOrdersStatus) {
+
+    return VertxCompletableFuture.supplyBlockingAsync(ctx, () -> changeOrderStatus(purchaseOrder, poLines)).thenCompose(u -> {
+      if (isOrderClosing(purchaseOrder.getWorkflowStatus(), initialOrdersStatus)) {
+        return closeOrder(poLines);
+      } else if (isOrderReopening(purchaseOrder.getWorkflowStatus(), initialOrdersStatus)) {
+        return reopenOrder(poLines);
+      }
+      return CompletableFuture.completedFuture(null);
+    });
+  }
+
+  private boolean isOrderClosing(PurchaseOrder.WorkflowStatus newStatus, String initialStatus) {
+    return newStatus == PurchaseOrder.WorkflowStatus.CLOSED && !Objects.equals(newStatus.value(), initialStatus);
+  }
+
+  /**
+   * Handles transition of related order to CLOSED status.
+   *
+   * @param poLines PO Lines associated with closing order
+   * @return CompletableFuture that indicates when transition is completed
+   */
+  private CompletableFuture<Void> closeOrder(List<PoLine> poLines) {
+    return updateItemsStatusInInventory(poLines, "On order", "Order closed");
+  }
+
+  private List<JsonObject> updateStatusName(List<JsonObject> items, String s) {
+    items.forEach(item -> item.getJsonObject("status").put("name", s));
+    return items;
+  }
+
+  private CompletableFuture<List<JsonObject>> getItemsByStatus(List<PoLine> compositePoLines, String itemStatus) {
+    InventoryHelper inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
+    List<String> lineIds = compositePoLines.stream().map(PoLine::getId).collect(toList());
+    // Split all id's by maximum number of id's for get query
+    List<CompletableFuture<List<JsonObject>>> futures = StreamEx
+      .ofSubLists(lineIds, MAX_IDS_FOR_GET_RQ)
+      // Get item records from Inventory storage
+      .map(ids -> {
+        String query = encodeQuery(String.format("status.name==%s and %s", itemStatus, HelperUtils.convertIdsToCqlQuery(ids, InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, true)), logger);
+        return inventoryHelper.getItemRecordsByQuery(query);
+      })
+      .toList();
+
+    return collectResultsOnSuccess(futures)
+      .thenApply(lists -> StreamEx.of(lists).toFlatList(jsonObjects -> jsonObjects));
+  }
+
+  private boolean isOrderReopening(PurchaseOrder.WorkflowStatus newStatus, String initialOrderStatus) {
+    return newStatus == PurchaseOrder.WorkflowStatus.OPEN && CLOSED.value().equals(initialOrderStatus);
+  }
+
+  /**
+   * Handles transition of related order from CLOSED to OPEN status.
+   *
+   * @param poLines PO Lines associated with closing order
+   * @return CompletableFuture that indicates when transition is completed
+   */
+  private CompletableFuture<Void> reopenOrder(List<PoLine> poLines) {
+    return updateItemsStatusInInventory(poLines, "Order closed", "On order");
+  }
+
+  private CompletableFuture<Void> updateItemsStatusInInventory(List<PoLine> poLines, String currentStatus, String newStatus) {
+    return getItemsByStatus(poLines, currentStatus)
+      .thenApply(items -> updateStatusName(items, newStatus))
+      .thenCompose(this::updateItemsInInventory);
   }
 
   private boolean isTransitionToApproved(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO) {
@@ -373,15 +463,21 @@ public class PurchaseOrderHelper extends AbstractHelper {
           .thenCompose(ok -> createEncumbrances(compPO))
           .thenCompose(ok -> updateTitlesInstanceId(lineIdTitles, compPO))
           .thenAccept(ok -> changePoLineStatuses(compPO))
-          .thenCompose(ok -> updatePoLinesSummary(compPO))
-          .thenCompose(ok -> updateOrderSummary(compPO));
+          .thenCompose(ok -> updatePoLinesSummary(compPO));
       });
+  }
+
+  private CompletableFuture<Void> updateItemsInInventory(List<JsonObject> items) {
+    InventoryHelper inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
+    return VertxCompletableFuture.allOf(ctx, items.stream()
+      .map(inventoryHelper::updateItem)
+      .toArray(CompletableFuture[]::new));
   }
 
   private CompletableFuture<Void> updateTitlesInstanceId(Map<String, List<Title>> lineIdTitles, CompositePurchaseOrder compPO) {
     return  VertxCompletableFuture.allOf(ctx,
         getNonPackageLines(compPO.getCompositePoLines()).stream()
-          .map(line -> titlesHelper.updateTitle(lineIdTitles.get(line.getId()).get(0).withInstanceId(line.getInstanceId()))          )
+          .map(line -> titlesHelper.updateTitle(lineIdTitles.get(line.getId()).get(0).withInstanceId(line.getInstanceId())))
           .toArray(CompletableFuture[]::new));
   }
 
@@ -537,8 +633,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenAccept(compPO::setCompositePoLines)
       .thenCompose(v -> {
         if (finalStatus == OPEN) {
-          return checkOrderApprovalRequired(compPO).
-              thenCompose(ok -> openOrder(compPO));
+          return checkOrderApprovalRequired(compPO)
+            .thenCompose(ok -> openOrder(compPO))
+            .thenCompose(ok -> handleFinalOrderStatus(compPO, finalStatus.value()));
         }
         return completedFuture(null);
       })
@@ -689,18 +786,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .map(line -> orderLineHelper.updateOrderLineSummary(line.getId(), JsonObject.mapFrom(line))).toArray(CompletableFuture[]::new));
   }
 
-  private CompletableFuture<Void> updateOrderSummary(CompositePurchaseOrder compPO) {
+  public CompletableFuture<Void> updateOrderSummary(PurchaseOrder purchaseOrder) {
     logger.debug("Updating order...");
-    PurchaseOrder purchaseOrder = convertToPurchaseOrder(compPO).mapTo(PurchaseOrder.class);
-    List<PoLine> poLines = HelperUtils.convertToPoLines(compPO.getCompositePoLines());
-
-    if (changeOrderStatus(purchaseOrder, poLines)) {
-      logger.debug("Workflow status update required for order with id={}", compPO.getId());
-      compPO.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.fromValue(purchaseOrder.getWorkflowStatus().value()));
-      compPO.setCloseReason(purchaseOrder.getCloseReason());
-    }
-
-    return handlePutRequest(resourceByIdPath(PURCHASE_ORDER, compPO.getId()), JsonObject.mapFrom(purchaseOrder), httpClient, ctx, okapiHeaders, logger);
+    return handlePutRequest(resourceByIdPath(PURCHASE_ORDER, purchaseOrder.getId()), JsonObject.mapFrom(purchaseOrder), httpClient, ctx, okapiHeaders, logger);
   }
 
   /**
@@ -875,7 +963,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
         return new ArrayList<>(orderLines);
       });
   }
-
 
   private boolean isUserNotHaveApprovePermission() {
     return !getProvidedPermissions().contains(PERMISSION_ORDER_APPROVE);
