@@ -124,7 +124,6 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -2359,6 +2358,82 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     assertThat(getQueryParams(ITEM_RECORDS), hasSize(1));
     assertThat(getQueryParams(ITEM_RECORDS).get(0), containsAny("status.name==On order", reqData.getCompositePoLines().get(0).getId()));
+  }
+
+  @Test
+  public void testPutOrderWithoutPoLinesToChangeStatusFromOpenToClosedItemsHaveToBeUpdate() {
+    logger.info("===  Test case when order status updated from Open to Closed no PO Lines in payload - related items have to be updated ===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
+    List<CompositePoLine> poLines = reqData.getCompositePoLines();
+    poLines.forEach(line -> {
+      line.setPurchaseOrderId(PO_ID_OPEN_TO_BE_CLOSED);
+      line.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
+      addMockEntry(PO_LINES, line);
+    });
+    MockServer.addMockTitles(poLines);
+
+    reqData.setCompositePoLines(Collections.emptyList());
+    reqData.setVendor(ACTIVE_VENDOR_ID);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
+    reqData.setCloseReason(new CloseReason().withReason("Test"));
+
+    reqData.setReEncumber(false);
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()),
+      JsonObject.mapFrom(reqData), EMPTY, 204);
+
+    PurchaseOrder purchaseOrder = getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class);
+    assertThat(purchaseOrder.getWorkflowStatus(), is(PurchaseOrder.WorkflowStatus.CLOSED));
+    assertThat(purchaseOrder.getCloseReason(), notNullValue());
+    assertThat(purchaseOrder.getCloseReason().getReason(), equalTo("Test"));
+
+    assertThat(getItemsSearches(), notNullValue());
+    assertThat(getItemsSearches(), hasSize(1));
+    assertThat(getItemUpdates(), notNullValue());
+    assertThat(getItemUpdates(), hasSize(getItemsSearches().get(0).getJsonArray(ITEMS).size()));
+
+    assertThat(getQueryParams(ITEM_RECORDS), hasSize(1));
+    assertThat(getQueryParams(ITEM_RECORDS).get(0), containsAny("status.name==On order", poLines.get(0).getId()));
+
+  }
+
+  @Test
+  public void testPutOrderWithoutPoLinesToReOpenItemsHaveToBeUpdate() {
+    logger.info("===  Test case when order status updated from Closed to Open no PO Lines in payload - related items have to be updated ===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_CLOSED_STATUS).mapTo(CompositePurchaseOrder.class);
+    List<CompositePoLine> poLines = reqData.getCompositePoLines();
+    poLines.forEach(line -> {
+      line.setPurchaseOrderId(PO_ID_CLOSED_STATUS);
+      line.setReceiptStatus(ReceiptStatus.FULLY_RECEIVED);
+      line.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
+      line.getEresource().setAccessProvider(ACTIVE_VENDOR_ID);
+      addMockEntry(PO_LINES, line);
+    });
+    addMockEntry(PURCHASE_ORDER, reqData.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED));
+    MockServer.addMockTitles(poLines);
+
+    reqData.setCompositePoLines(Collections.emptyList());
+    reqData.setVendor(ACTIVE_VENDOR_ID);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    reqData.setReEncumber(false);
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()),
+      JsonObject.mapFrom(reqData), EMPTY, 204);
+
+    PurchaseOrder purchaseOrder = getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class);
+    assertThat(purchaseOrder.getWorkflowStatus(), is(PurchaseOrder.WorkflowStatus.OPEN));
+
+    assertThat(getItemsSearches(), notNullValue());
+    assertThat(getItemsSearches(), hasSize(1));
+    assertThat(getItemUpdates(), notNullValue());
+    assertThat(getItemUpdates(), hasSize(getItemsSearches().get(0).getJsonArray(ITEMS).size()));
+
+    assertThat(getQueryParams(ITEM_RECORDS), hasSize(1));
+    assertThat(getQueryParams(ITEM_RECORDS).get(0), containsAny("status.name==Order closed", poLines.get(0).getId()));
+
   }
 
   @Test

@@ -94,14 +94,14 @@ public class VendorHelper extends AbstractHelper {
 
   /**
    * Checks if access providers in exist and have status Active. If any false, adds corresponding error to {@link Errors} object.
-   * @param compPO composite purchase order
+   * @param poLines list of composite purchase order lines
    * @return CompletableFuture with {@link Errors} object
    */
-  public CompletableFuture<Errors> validateAccessProviders(CompositePurchaseOrder compPO) {
+  public CompletableFuture<Errors> validateAccessProviders(List<CompositePoLine> poLines) {
     CompletableFuture<Errors> future = new VertxCompletableFuture<>(ctx);
 
     Map<String, List<CompositePoLine>> poLinesMap =
-      compPO.getCompositePoLines().stream()
+      poLines.stream()
         .filter(p -> (p.getEresource() != null && p.getEresource().getAccessProvider() != null))
         .collect(Collectors.groupingBy(p -> p.getEresource().getAccessProvider()));
 
@@ -109,7 +109,7 @@ public class VendorHelper extends AbstractHelper {
 
     List<Error> errors = new ArrayList<>();
     if (!ids.isEmpty()) {
-      logger.debug("Validating {} access provider(s) for order with id={}", ids.size(), compPO.getId());
+      logger.debug("Validating {} access provider(s) for order with id={}", ids.size(), poLines.get(0).getPurchaseOrderId());
 
       getAccessProvidersByIds(ids).thenApply(organizations -> {
         // Validate access provider status Active
@@ -135,7 +135,7 @@ public class VendorHelper extends AbstractHelper {
           return null;
         });
     } else {
-      logger.debug("Order with id={} does not have any access provider to validate", compPO.getId());
+      logger.debug("Order does not have any access provider to validate");
       future.complete(handleAndReturnErrors(errors));
     }
     return future;
@@ -199,7 +199,7 @@ public class VendorHelper extends AbstractHelper {
    * Retrieves set of access providers
    *
    * @param accessProviderIds - {@link Set<String>} of access providers id
-   * @return CompletableFuture with {@link List<Vendor>} of vendors
+   * @return CompletableFuture with {@link List<Organization>} of vendors
    */
   private CompletableFuture<List<Organization>> getAccessProvidersByIds(Set<String> accessProviderIds) {
     String query = convertIdsToCqlQuery(new ArrayList<>(accessProviderIds));
