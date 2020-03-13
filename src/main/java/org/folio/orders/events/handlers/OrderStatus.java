@@ -1,6 +1,7 @@
 package org.folio.orders.events.handlers;
 
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
+import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
 import static org.folio.orders.utils.HelperUtils.getOkapiHeaders;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
@@ -88,10 +89,11 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
   CompletableFuture<Void> updateOrderStatus(Map<String, String> okapiHeaders, HttpClientInterface httpClient, PurchaseOrder purchaseOrder, List<PoLine> poLines) {
     PurchaseOrder.WorkflowStatus initialStatus = purchaseOrder.getWorkflowStatus();
     PurchaseOrderHelper helper = new PurchaseOrderHelper(httpClient, okapiHeaders, ctx, lang);
-    return helper.handleFinalOrderStatus(purchaseOrder, poLines, initialStatus.value())
-      .thenCompose(aVoid -> {
-        if (purchaseOrder.getWorkflowStatus() != initialStatus) {
-          return helper.updateOrderSummary(purchaseOrder);
+    return VertxCompletableFuture.supplyBlockingAsync(ctx, () -> changeOrderStatus(purchaseOrder, poLines))
+      .thenCompose(isStatusChanged -> {
+        if (isStatusChanged) {
+          return helper.handleFinalOrderStatus(purchaseOrder, poLines, initialStatus.value())
+            .thenCompose(aVoid -> helper.updateOrderSummary(purchaseOrder));
         }
         return CompletableFuture.completedFuture(null);
       });
