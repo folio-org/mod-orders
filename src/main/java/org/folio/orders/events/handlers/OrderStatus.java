@@ -91,7 +91,7 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
     PurchaseOrderHelper helper = new PurchaseOrderHelper(httpClient, okapiHeaders, ctx, lang);
     return VertxCompletableFuture.supplyBlockingAsync(ctx, () -> changeOrderStatus(purchaseOrder, poLines))
       .thenCompose(isStatusChanged -> {
-        if (isStatusChanged) {
+        if (Boolean.TRUE.equals(isStatusChanged)) {
           return helper.handleFinalOrderStatus(purchaseOrder, poLines, initialStatus.value())
             .thenCompose(aVoid -> helper.updateOrderSummary(purchaseOrder));
         }
