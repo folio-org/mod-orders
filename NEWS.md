@@ -1,4 +1,28 @@
-## 9.1.0 - Unreleased
+## 10.1.0 - Unreleased
+
+## 10.0.0 - Released
+
+The main focus of this release was to introduce new APIs and business logic **orders reasons for closure, prefixes, suffixes, titles**.
+The following APIs were  identified from the orders API without changing URLs: **receive, pieces, po number and order lines**.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v9.0.0...v10.0.0)
+
+### Stories
+ * [MODORDERS-354](https://issues.folio.org/browse/MODORDERS-354) - Divide the interface into smaller ones
+ * [MODORDERS-353](https://issues.folio.org/browse/MODORDERS-353) - Migrate to new major version of item-storage, inventory, circulation
+ * [MODORDERS-351](https://issues.folio.org/browse/MODORDERS-351) - Validate renewal/subscription information
+ * [MODORDERS-350](https://issues.folio.org/browse/MODORDERS-350) - Update piece schema (receipt date)
+ * [MODORDERS-349](https://issues.folio.org/browse/MODORDERS-349) - Make title schema changes to all APIs
+ * [MODORDERS-348](https://issues.folio.org/browse/MODORDERS-348) - CRUD APIs for titles
+ * [MODORDERS-346](https://issues.folio.org/browse/MODORDERS-346) - Schema changes for check-in and Receiving Packages
+ * [MODORDERS-342](https://issues.folio.org/browse/MODORDERS-342) - Check enough money in budgets while creating encumbrances
+ * [MODORDERS-341](https://issues.folio.org/browse/MODORDERS-341) - Set item status to "Order closed"
+ * [MODORDERS-340](https://issues.folio.org/browse/MODORDERS-340) - Add call number while receiving and checkin
+ * [MODORDERS-328](https://issues.folio.org/browse/MODORDERS-328) - Migrate orders settings from mod-configuration
+ * [MODORDERS-315](https://issues.folio.org/browse/MODORDERS-315) - Default to "In process" for item status during receiving/check-in
+ 
+### Bug Fixes
+ * [MODORDERS-264](https://issues.folio.org/browse/MODORDERS-264) - Order creates instance when it's not supposed to
 
 ## 9.0.0 - Released
 The primary focus of this release was to re-integration with encumbrance API, implementation of Order-Templates API and business logic improvements.

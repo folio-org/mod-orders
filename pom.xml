@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-orders</artifactId>
-  <version>9.1.0-SNAPSHOT</version>
+  <version>10.1.0-SNAPSHOT</version>
 
   <name>Orders Business Logic</name>
   <description>Business logic to manage orders in FOLIO</description>
@@ -224,7 +224,7 @@
         <artifactId>jsonschema2pojo-maven-plugin</artifactId>
         <version>0.5.1</version>
         <configuration>
-          <includes>*.json</includes>
+          <includes><include>*.json</include></includes>
           <excludes>
             <exclude>reason_for_closure.json</exclude>
             <exclude>reason_for_closure_collection.json</exclude>

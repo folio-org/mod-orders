@@ -657,7 +657,7 @@
     },
     {
       "id": "holdings-storage",
-      "version": "3.1 4.0"
+      "version": "3.1 4.1"
     },
     {
       "id": "orders-storage.po-number",
@@ -665,7 +665,7 @@
     },
     {
       "id": "inventory",
-      "version": "9.6 10.0"
+      "version": "9.6 10.2"
     },
     {
       "id": "instance-types",
@@ -677,7 +677,7 @@
     },
     {
       "id": "item-storage",
-      "version": "7.8 8.0"
+      "version": "7.8 8.2"
     },
     {
       "id": "identifier-types",
@@ -709,7 +709,7 @@
     },
     {
       "id": "finance.ledgers",
-      "version": "1.0"
+      "version": "1.3"
     },
     {
       "id": "finance.budgets",
