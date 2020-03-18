@@ -20,7 +20,8 @@ import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
-import static org.folio.orders.utils.HelperUtils.isHoldingsUpdateRequired;
+import static org.folio.orders.utils.HelperUtils.isHoldingUpdateRequiredForEresource;
+import static org.folio.orders.utils.HelperUtils.isHoldingUpdateRequiredForPhysical;
 import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
@@ -258,7 +259,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   }
 
   private boolean holdingUpdateOnCheckinReceiveRequired(Piece piece, String locationId, CompositePoLine poLine) {
-    return isHoldingsUpdateRequired(poLine.getEresource(), poLine.getPhysical())
+    boolean isHoldingUpdateRequired;
+    if (piece.getFormat() == Piece.Format.ELECTRONIC) {
+      isHoldingUpdateRequired = isHoldingUpdateRequiredForEresource(poLine.getEresource());
+    } else {
+      isHoldingUpdateRequired = isHoldingUpdateRequiredForPhysical(poLine.getPhysical());
+    }
+    return isHoldingUpdateRequired
       && StringUtils.isNotEmpty(locationId)
       && !StringUtils.equals(locationId, piece.getLocationId());
   }
@@ -750,10 +757,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       .flatMap(List::stream)
       .forEach(piece -> {
         CompositePoLine poLine = searchPoLineById(poLines, piece);
-        if (poLine == null) {
-          logger.error("POLine associated with piece '{}' cannot be found", piece.getId());
-          return;
-        }
         String receivedPieceLocationId = pieceLocationsGroupedByPoLine.get(poLine.getId())
           .get(piece.getId());
 

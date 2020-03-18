@@ -6,11 +6,11 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.FUND_ID;
@@ -65,9 +65,6 @@ import static org.folio.rest.impl.ApiTestBase.getMinimalContentCompositePoLine;
 import static org.folio.rest.impl.ApiTestBase.getMinimalContentCompositePurchaseOrder;
 import static org.folio.rest.impl.ApiTestBase.getMockAsJson;
 import static org.folio.rest.impl.ApiTestBase.getMockData;
-import static org.folio.rest.impl.crud.CrudTestEntities.PREFIX;
-import static org.folio.rest.impl.crud.CrudTestEntities.REASON_FOR_CLOSURE;
-import static org.folio.rest.impl.crud.CrudTestEntities.SUFFIX;
 import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEMS;
 import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
@@ -93,6 +90,9 @@ import static org.folio.rest.impl.PurchaseOrdersApiTest.ORGANIZATION_NOT_VENDOR;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.VENDOR_WITH_BAD_CONTENT;
 import static org.folio.rest.impl.ReceivingHistoryApiTest.RECEIVING_HISTORY_PURCHASE_ORDER_ID;
+import static org.folio.rest.impl.crud.CrudTestEntities.PREFIX;
+import static org.folio.rest.impl.crud.CrudTestEntities.REASON_FOR_CLOSURE;
+import static org.folio.rest.impl.crud.CrudTestEntities.SUFFIX;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -120,7 +120,6 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.isbn.IsbnUtil;
@@ -155,8 +154,13 @@ import org.folio.rest.jaxrs.model.Prefix;
 import org.folio.rest.jaxrs.model.PrefixCollection;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
+import org.folio.rest.jaxrs.model.ReasonForClosure;
+import org.folio.rest.jaxrs.model.ReasonForClosureCollection;
+import org.folio.rest.jaxrs.model.Suffix;
+import org.folio.rest.jaxrs.model.SuffixCollection;
 
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 
 import io.restassured.http.Header;
@@ -172,10 +176,6 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import one.util.streamex.StreamEx;
-import org.folio.rest.jaxrs.model.ReasonForClosure;
-import org.folio.rest.jaxrs.model.ReasonForClosureCollection;
-import org.folio.rest.jaxrs.model.Suffix;
-import org.folio.rest.jaxrs.model.SuffixCollection;
 
 public class MockServer {
 
@@ -1451,49 +1451,54 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       PieceCollection pieces;
-      try {
-        if (query.contains("poLineId==")) {
-          List<String> conditions = StreamEx
-            .split(query, " or ")
-            .flatMap(s -> StreamEx.split(s, " and "))
-            .toList();
+      if (getMockEntries(PIECES, Piece.class).isPresent()) {
+        pieces = new PieceCollection().withPieces(getMockEntries(PIECES, Piece.class).get());
+        pieces.setTotalRecords(pieces.getPieces().size());
+      } else {
+        try {
+          if (query.contains("poLineId==")) {
+            List<String> conditions = StreamEx
+              .split(query, " or ")
+              .flatMap(s -> StreamEx.split(s, " and "))
+              .toList();
 
-          String polId = EMPTY;
-          String status = EMPTY;
-          for (String condition : conditions) {
-            if (condition.startsWith("poLineId")) {
-              polId = condition.split("poLineId==")[1];
-            } else if (condition.startsWith("receivingStatus")) {
-              status = condition.split("receivingStatus==")[1];
+            String polId = EMPTY;
+            String status = EMPTY;
+            for (String condition : conditions) {
+              if (condition.startsWith("poLineId")) {
+                polId = condition.split("poLineId==")[1];
+              } else if (condition.startsWith("receivingStatus")) {
+                status = condition.split("receivingStatus==")[1];
+              }
+            }
+            logger.info("poLineId: " + polId);
+            logger.info("receivingStatus: " + status);
+
+            String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", polId);
+            pieces = new JsonObject(ApiTestBase.getMockData(path)).mapTo(PieceCollection.class);
+
+            // Filter piece records by receiving status
+            if (StringUtils.isNotEmpty(status)) {
+              Piece.ReceivingStatus receivingStatus = Piece.ReceivingStatus.fromValue(status);
+              pieces.getPieces()
+                .removeIf(piece -> receivingStatus != piece.getReceivingStatus());
+            }
+          } else {
+            pieces = new JsonObject(ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecordsCollection.json")).mapTo(PieceCollection.class);
+
+            if (query.contains("id==")) {
+              List<String> pieceIds = extractIdsFromQuery(query);
+              pieces.getPieces()
+                .removeIf(piece -> !pieceIds.contains(piece.getId()));
             }
           }
-          logger.info("poLineId: " + polId);
-          logger.info("receivingStatus: " + status);
 
-          String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", polId);
-          pieces = new JsonObject(ApiTestBase.getMockData(path)).mapTo(PieceCollection.class);
+          pieces.setTotalRecords(pieces.getPieces().size());
 
-          // Filter piece records by receiving status
-          if (StringUtils.isNotEmpty(status)) {
-            Piece.ReceivingStatus receivingStatus = Piece.ReceivingStatus.fromValue(status);
-            pieces.getPieces()
-              .removeIf(piece -> receivingStatus != piece.getReceivingStatus());
-          }
-        } else {
-          pieces = new JsonObject(ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecordsCollection.json")).mapTo(PieceCollection.class);
-
-          if (query.contains("id==")) {
-            List<String> pieceIds = extractIdsFromQuery(query);
-            pieces.getPieces()
-              .removeIf(piece -> !pieceIds.contains(piece.getId()));
-          }
+        } catch (Exception e) {
+          pieces = new PieceCollection();
+          pieces.setTotalRecords(0);
         }
-
-        pieces.setTotalRecords(pieces.getPieces().size());
-
-      } catch (Exception e) {
-        pieces = new PieceCollection();
-        pieces.setTotalRecords(0);
       }
 
       JsonObject data = JsonObject.mapFrom(pieces);
