@@ -1062,12 +1062,12 @@ public class HelperUtils {
     return isHoldingUpdateRequiredForEresource(eresource) || isHoldingUpdateRequiredForPhysical(physical);
   }
 
-  private static boolean isHoldingUpdateRequiredForPhysical(Physical physical) {
+  public static boolean isHoldingUpdateRequiredForPhysical(Physical physical) {
      return physical != null && (physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING
         || physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
   }
 
-  private static boolean isHoldingUpdateRequiredForEresource(Eresource eresource) {
+  public static boolean isHoldingUpdateRequiredForEresource(Eresource eresource) {
     return eresource != null && (eresource.getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING
         || eresource.getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
   }
