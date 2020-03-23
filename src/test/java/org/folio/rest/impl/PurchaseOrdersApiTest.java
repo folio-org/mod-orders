@@ -178,6 +178,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   private static final String ORDER_WITHOUT_VENDOR_ID = "order_without_vendor_id.json";
   public static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
   private static final String ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON = "put_order_with_mismatch_id_in_po_lines.json";
+  private static final String ORDER_WITHOUT_MATERIAL_TYPE_JSON = "order_po_line_without_material_type.json";
 
   static final String ACTIVE_VENDOR_ID = "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1";
   static final String INACTIVE_VENDOR_ID = "b1ef7e96-98f3-4f0d-9820-98c322c989d2";
@@ -3138,12 +3139,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   @Test
   public void testPostShouldBeSuccessIfOrderInPendingStatusAndMaterialTypeIsAbsentInOrderLine() {
     logger.info("===Test Post Successful test completion if material type is absent and Order in PENDING status ===");
-    CompositePurchaseOrder reqData = getMockAsJson(ORDER_WITH_PO_LINES_JSON).mapTo(CompositePurchaseOrder.class);
-
-    reqData.getCompositePoLines().forEach(poLine ->{
-      removeMaterialType(poLine);
-    });
-
+    CompositePurchaseOrder reqData = getMockAsJson(ORDER_WITHOUT_MATERIAL_TYPE_JSON).mapTo(CompositePurchaseOrder.class);
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
       .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201);
   }
@@ -3151,13 +3147,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   @Test
   public void testPostShouldFailedIfOrderIsNotInPendingStatusAndMaterialTypeIsAbsentInOrderLine() {
     logger.info("===Test Post Failed test completion if material type is absent and Order in OPEN status ===");
-    CompositePurchaseOrder reqData = getMockAsJson(ORDER_WITH_PO_LINES_JSON).mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder reqData = getMockAsJson(ORDER_WITHOUT_MATERIAL_TYPE_JSON).mapTo(CompositePurchaseOrder.class);
 
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    reqData.getCompositePoLines().forEach(poLine ->{
-      removeMaterialType(poLine);
-    });
-
     List<Error> errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
       .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422)
       .as(Errors.class)
@@ -3169,24 +3161,35 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   @Test
   public void testPutShouldFailedIfOrderTransitFromPendingToOpenStatusAndMaterialTypeIsAbsentInOrderLine() {
     logger.info("===Test Success Post Failed test completion if material type is absent and Order in PENDING status");
-    CompositePurchaseOrder reqData = getMockAsJson(ORDER_WITH_PO_LINES_JSON).mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder reqData = getMockAsJson(ORDER_WITHOUT_MATERIAL_TYPE_JSON).mapTo(CompositePurchaseOrder.class);
     reqData.getCompositePoLines().forEach(poLine ->{
       removeMaterialType(poLine);
     });
 
-    String orderId = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
+    CompositePurchaseOrder po = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
       .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201)
-      .as(CompositePurchaseOrder.class)
-      .getId();
+      .as(CompositePurchaseOrder.class);
 
+    prepareCompositeOrderPutRequest(po, reqData);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
-    List<Error> errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, orderId), JsonObject.mapFrom(reqData)
+    List<Error> errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, po.getId()), JsonObject.mapFrom(reqData)
       .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422)
       .as(Errors.class)
       .getErrors();
 
     assertThat(errors.get(0).getMessage(), equalTo(MISSING_MATERIAL_TYPE.getDescription()));
+  }
+
+  private void prepareCompositeOrderPutRequest(CompositePurchaseOrder po, CompositePurchaseOrder compositeOrderPutRequest) {
+    CompositePoLine originPoLine = po.getCompositePoLines().get(0);
+
+    compositeOrderPutRequest.setId(po.getId());
+    compositeOrderPutRequest.setPoNumber(po.getPoNumber());
+    CompositePoLine poLineUpdated = compositeOrderPutRequest.getCompositePoLines().get(0);
+    poLineUpdated.setId(originPoLine.getId());
+    poLineUpdated.setPoLineNumber(originPoLine.getPoLineNumber());
+    poLineUpdated.setPurchaseOrderId(po.getId());
   }
 
   private void removeMaterialType(CompositePoLine poLine) {
