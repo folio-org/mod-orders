@@ -12,7 +12,6 @@ import static org.folio.orders.utils.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.orders.utils.ErrorCodes.TITLE_NOT_FOUND;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
@@ -22,7 +21,6 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
@@ -66,13 +64,11 @@ import org.folio.rest.impl.AbstractHelper;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
@@ -97,7 +93,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
 
-public class HelperUtils {
+public final class HelperUtils {
 
   public static final String ID = "id";
   public static final String FUND_ID = "fundId";
@@ -359,54 +355,6 @@ public class HelperUtils {
       .joining(") " + operator + " (", "(", ")") + sorting;
   }
 
-  public static List<Error> validateOrder(CompositePurchaseOrder compositeOrder) {
-    if (CollectionUtils.isEmpty(compositeOrder.getCompositePoLines())) {
-      return Collections.emptyList();
-    }
-
-    List<Error> errors = new ArrayList<>();
-    for (CompositePoLine compositePoLine : compositeOrder.getCompositePoLines()) {
-      errors.addAll(validatePoLine(compositePoLine));
-    }
-    return errors;
-  }
-
-  public static List<Error> validatePoLine(CompositePoLine compPOL) {
-    CompositePoLine.OrderFormat orderFormat = compPOL.getOrderFormat();
-    if (orderFormat == P_E_MIX) {
-      return validatePoLineWithMixedFormat(compPOL);
-    } else if (orderFormat == ELECTRONIC_RESOURCE) {
-      return validatePoLineWithElectronicFormat(compPOL);
-    } else if (orderFormat == CompositePoLine.OrderFormat.PHYSICAL_RESOURCE) {
-      return validatePoLineWithPhysicalFormat(compPOL);
-    } else if (orderFormat == CompositePoLine.OrderFormat.OTHER) {
-      return validatePoLineWithOtherFormat(compPOL);
-    }
-
-    return Collections.emptyList();
-  }
-
-  private static List<Error> validatePoLineWithMixedFormat(CompositePoLine compPOL) {
-
-    List<ErrorCodes> errors = new ArrayList<>();
-    // The quantity of the physical and electronic resources in the cost must be specified
-    if (getPhysicalCostQuantity(compPOL) == 0) {
-      errors.add(ErrorCodes.ZERO_COST_PHYSICAL_QTY);
-    }
-    if (getElectronicCostQuantity(compPOL) == 0) {
-      errors.add(ErrorCodes.ZERO_COST_ELECTRONIC_QTY);
-    }
-
-    if (isMaterialMissing(compPOL)) {
-      errors.add(ErrorCodes.MISSING_MATERIAL_TYPE);
-    }
-
-    errors.addAll(validateLocations(compPOL));
-    errors.addAll(validateCostPrices(compPOL));
-
-    return convertErrorCodesToErrors(compPOL, errors);
-  }
-
   public static int getPhysicalCostQuantity(CompositePoLine compPOL) {
     return defaultIfNull(compPOL.getCost().getQuantityPhysical(), 0);
   }
@@ -415,7 +363,7 @@ public class HelperUtils {
     return defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0);
   }
 
-  private static List<ErrorCodes> validateLocations(CompositePoLine compPOL) {
+  public static List<ErrorCodes> validateLocations(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
     List<Location> locations = compPOL.getLocations();
 
@@ -450,123 +398,6 @@ public class HelperUtils {
   private static boolean isLocationsEresourceQuantityNotValid(CompositePoLine compPOL) {
     int electronicQuantity = getElectronicLocationsQuantity(compPOL.getLocations());
     return (isHoldingUpdateRequiredForEresource(compPOL.getEresource()) || electronicQuantity > 0) && (electronicQuantity != getElectronicCostQuantity(compPOL));
-  }
-
-  private static List<ErrorCodes> validateCostPrices(CompositePoLine compLine) {
-    List<ErrorCodes> errors = new ArrayList<>();
-    Cost cost = compLine.getCost();
-    CompositePoLine.OrderFormat orderFormat = compLine.getOrderFormat();
-    // Using default value as -1 to avoid null checks
-    double unitPrice = defaultIfNull(cost.getListUnitPrice(), -1d);
-    if (orderFormat == ELECTRONIC_RESOURCE) {
-      if (unitPrice > 0d) {
-        errors.add(ErrorCodes.COST_UNIT_PRICE_INVALID);
-      }
-    } else if (unitPrice < 0d) {
-      errors.add(ErrorCodes.COST_UNIT_PRICE_INVALID);
-    }
-
-    double unitPriceElectronic = defaultIfNull(cost.getListUnitPriceElectronic(), -1d);
-    if (orderFormat == ELECTRONIC_RESOURCE || orderFormat == P_E_MIX) {
-      if (unitPriceElectronic < 0d) {
-        errors.add(ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID);
-      }
-    } else if (unitPriceElectronic > 0d) {
-      errors.add(ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID);
-    }
-
-    double additionalCost = defaultIfNull(cost.getAdditionalCost(), 0d);
-    if (additionalCost < 0d) {
-      errors.add(ErrorCodes.COST_ADDITIONAL_COST_INVALID);
-    }
-
-    if (isDiscountNotValid(cost)) {
-      errors.add(ErrorCodes.COST_DISCOUNT_INVALID);
-    }
-
-    return errors;
-  }
-
-  /**
-   * Checks if discount is negative or exceed cost totalPrice
-   *
-   * @param cost for which discount is checked
-   * @return true if cost.discount not valid
-   */
-  private static boolean isDiscountNotValid(Cost cost) {
-    double discount = defaultIfNull(cost.getDiscount(), 0d);
-    return (discount < 0d || cost.getDiscountType() == Cost.DiscountType.PERCENTAGE && discount > 100d)
-      || (discount > 0d && cost.getDiscountType() == Cost.DiscountType.AMOUNT && calculateEstimatedPrice(cost).isNegative());
-  }
-
-  private static List<Error> validatePoLineWithPhysicalFormat(CompositePoLine compPOL) {
-    List<ErrorCodes> errors = new ArrayList<>();
-
-    // The quantity of the physical resources in the cost must be specified
-    if (getPhysicalCostQuantity(compPOL) == 0) {
-      errors.add(ErrorCodes.ZERO_COST_PHYSICAL_QTY);
-    }
-    // The quantity of the electronic resources in the cost must not be specified
-    if (getElectronicCostQuantity(compPOL) > 0) {
-      errors.add(ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY);
-    }
-
-    if (isMaterialMissing(compPOL)) {
-      errors.add(ErrorCodes.MISSING_MATERIAL_TYPE);
-    }
-
-    errors.addAll(validateLocations(compPOL));
-    errors.addAll(validateCostPrices(compPOL));
-
-    return convertErrorCodesToErrors(compPOL, errors);
-  }
-
-  private static List<Error> validatePoLineWithElectronicFormat(CompositePoLine compPOL) {
-    List<ErrorCodes> errors = new ArrayList<>();
-
-    // The quantity of the electronic resources in the cost must be specified
-    if (getElectronicCostQuantity(compPOL) == 0) {
-      errors.add(ErrorCodes.ZERO_COST_ELECTRONIC_QTY);
-    }
-    // The quantity of the physical resources in the cost must not be specified
-    if (getPhysicalCostQuantity(compPOL) > 0) {
-      errors.add(ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY);
-    }
-
-
-    if (isMaterialMissing(compPOL)) {
-      errors.add(ErrorCodes.MISSING_MATERIAL_TYPE);
-    }
-
-    errors.addAll(validateLocations(compPOL));
-    errors.addAll(validateCostPrices(compPOL));
-
-    return convertErrorCodesToErrors(compPOL, errors);
-  }
-
-  private static List<Error> validatePoLineWithOtherFormat(CompositePoLine compPOL) {
-    return validatePoLineWithPhysicalFormat(compPOL);
-  }
-
-  /**
-   * The method converts {@link ErrorCodes} elements to {@link Error} adding additionally {@link Parameter} with PO Line number is presents
-   * @param compPOL Composite PO Line
-   * @param errors list of static {@link ErrorCodes}
-   * @return List of {@link Error} elements
-   */
-  private static List<Error> convertErrorCodesToErrors(CompositePoLine compPOL, List<ErrorCodes> errors) {
-    return errors.stream()
-                 .map(errorCode -> {
-                   Error error = errorCode.toError();
-                   String poLineNumber = compPOL.getPoLineNumber();
-                   if (StringUtils.isNotEmpty(poLineNumber)) {
-                     error.getParameters()
-                          .add(new Parameter().withKey(PO_LINE_NUMBER)
-                                              .withValue(poLineNumber));
-                   }
-                   return error;
-                 })
-                 .collect(toList());
   }
 
   /**
@@ -1074,23 +905,6 @@ public class HelperUtils {
 
   public static boolean isItemsUpdateRequired(CompositePoLine compPOL) {
     return isItemsUpdateRequiredForPhysical(compPOL) || isItemsUpdateRequiredForEresource(compPOL);
-  }
-
-  private static boolean isMaterialMissing(CompositePoLine compPOL) {
-    boolean isMissing = false;
-    if (compPOL.getOrderFormat().equals(OrderFormat.ELECTRONIC_RESOURCE)
-        || compPOL.getOrderFormat().equals(OrderFormat.P_E_MIX)) {
-      isMissing = compPOL.getEresource().getCreateInventory() == (Eresource.CreateInventory.INSTANCE_HOLDING_ITEM)
-          && isEmpty(compPOL.getEresource().getMaterialType());
-    }
-
-    if (!compPOL.getOrderFormat().equals(OrderFormat.ELECTRONIC_RESOURCE)) {
-      isMissing = isMissing
-          || (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM
-          && isEmpty(compPOL.getPhysical().getMaterialType()));
-    }
-
-    return isMissing;
   }
 
   public static boolean changeOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines) {

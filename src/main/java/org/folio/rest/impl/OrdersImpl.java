@@ -4,7 +4,7 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.orders.utils.HelperUtils.handleErrorResponse;
-import static org.folio.orders.utils.HelperUtils.validatePoLine;
+import static org.folio.orders.utils.validators.CompositePoLineValidationUtil.validatePoLine;
 
 import java.util.ArrayList;
 import java.util.List;
