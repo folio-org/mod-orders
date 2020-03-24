@@ -363,41 +363,12 @@ public final class HelperUtils {
     return defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0);
   }
 
-  public static List<ErrorCodes> validateLocations(CompositePoLine compPOL) {
-    List<ErrorCodes> errors = new ArrayList<>();
-    List<Location> locations = compPOL.getLocations();
-
-    // The total quantity of the physical and electronic resources of all locations must match specified in the cost
-    if (isLocationsEresourceQuantityNotValid(compPOL)) {
-      errors.add(ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH);
-    }
-    if (isLocationsPhysicalQuantityNotValid(compPOL)) {
-      errors.add(ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH);
-    }
-
-    // The total quantity of any location must exceed 0
-    if (locations.stream().anyMatch(location -> calculateTotalLocationQuantity(location) == 0)) {
-      errors.add(ErrorCodes.ZERO_LOCATION_QTY);
-    }
-    return errors;
-  }
-
 
   public static Integer calculateTotalLocationQuantity(Location location) {
     int quantity = 0;
     quantity += defaultIfNull(location.getQuantityElectronic(), 0);
     quantity += defaultIfNull(location.getQuantityPhysical(), 0);
     return quantity;
-  }
-
-  private static boolean isLocationsPhysicalQuantityNotValid(CompositePoLine compPOL) {
-    int physicalQuantity = getPhysicalLocationsQuantity(compPOL.getLocations());
-    return (isHoldingUpdateRequiredForPhysical(compPOL.getPhysical()) || physicalQuantity > 0) && (physicalQuantity != getPhysicalCostQuantity(compPOL));
-  }
-
-  private static boolean isLocationsEresourceQuantityNotValid(CompositePoLine compPOL) {
-    int electronicQuantity = getElectronicLocationsQuantity(compPOL.getLocations());
-    return (isHoldingUpdateRequiredForEresource(compPOL.getEresource()) || electronicQuantity > 0) && (electronicQuantity != getElectronicCostQuantity(compPOL));
   }
 
   /**
@@ -597,7 +568,7 @@ public final class HelperUtils {
       .doubleValue();
   }
 
-  private static int getPhysicalLocationsQuantity(List<Location> locations) {
+  public static int getPhysicalLocationsQuantity(List<Location> locations) {
     if (CollectionUtils.isNotEmpty(locations)) {
       return locations.stream()
                       .map(Location::getQuantityPhysical)
@@ -609,7 +580,7 @@ public final class HelperUtils {
     }
   }
 
-  private static int getElectronicLocationsQuantity(List<Location> locations) {
+  public static int getElectronicLocationsQuantity(List<Location> locations) {
     if (CollectionUtils.isNotEmpty(locations)) {
       return locations.stream()
                       .map(Location::getQuantityElectronic)

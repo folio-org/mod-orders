@@ -4,6 +4,10 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
+import static org.folio.orders.utils.HelperUtils.getElectronicCostQuantity;
+import static org.folio.orders.utils.HelperUtils.getPhysicalCostQuantity;
+import static org.folio.orders.utils.HelperUtils.isHoldingUpdateRequiredForEresource;
+import static org.folio.orders.utils.HelperUtils.isHoldingUpdateRequiredForPhysical;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
@@ -21,6 +25,7 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
 
@@ -49,14 +54,14 @@ public final class CompositePoLineValidationUtil {
 
     List<ErrorCodes> errors = new ArrayList<>();
     // The quantity of the physical and electronic resources in the cost must be specified
-    if (HelperUtils.getPhysicalCostQuantity(compPOL) == 0) {
+    if (getPhysicalCostQuantity(compPOL) == 0) {
       errors.add(ErrorCodes.ZERO_COST_PHYSICAL_QTY);
     }
-    if (HelperUtils.getElectronicCostQuantity(compPOL) == 0) {
+    if (getElectronicCostQuantity(compPOL) == 0) {
       errors.add(ErrorCodes.ZERO_COST_ELECTRONIC_QTY);
     }
 
-    errors.addAll(HelperUtils.validateLocations(compPOL));
+    errors.addAll(validateLocations(compPOL));
     errors.addAll(validateCostPrices(compPOL));
 
     return convertErrorCodesToErrors(compPOL, errors);
@@ -99,19 +104,48 @@ public final class CompositePoLineValidationUtil {
     return Collections.emptyList();
   }
 
+  public static List<ErrorCodes> validateLocations(CompositePoLine compPOL) {
+    List<ErrorCodes> errors = new ArrayList<>();
+    List<Location> locations = compPOL.getLocations();
+
+    // The total quantity of the physical and electronic resources of all locations must match specified in the cost
+    if (isLocationsEresourceQuantityNotValid(compPOL)) {
+      errors.add(ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH);
+    }
+    if (isLocationsPhysicalQuantityNotValid(compPOL)) {
+      errors.add(ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH);
+    }
+
+    // The total quantity of any location must exceed 0
+    if (locations.stream().anyMatch(location -> HelperUtils.calculateTotalLocationQuantity(location) == 0)) {
+      errors.add(ErrorCodes.ZERO_LOCATION_QTY);
+    }
+    return errors;
+  }
+
+  private static boolean isLocationsPhysicalQuantityNotValid(CompositePoLine compPOL) {
+    int physicalQuantity = HelperUtils.getPhysicalLocationsQuantity(compPOL.getLocations());
+    return (isHoldingUpdateRequiredForPhysical(compPOL.getPhysical()) || physicalQuantity > 0) && (physicalQuantity != getPhysicalCostQuantity(compPOL));
+  }
+
+  private static boolean isLocationsEresourceQuantityNotValid(CompositePoLine compPOL) {
+    int electronicQuantity = HelperUtils.getElectronicLocationsQuantity(compPOL.getLocations());
+    return (isHoldingUpdateRequiredForEresource(compPOL.getEresource()) || electronicQuantity > 0) && (electronicQuantity != getElectronicCostQuantity(compPOL));
+  }
+
   private static List<Error> validatePoLineWithPhysicalFormat(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
 
     // The quantity of the physical resources in the cost must be specified
-    if (HelperUtils.getPhysicalCostQuantity(compPOL) == 0) {
+    if (getPhysicalCostQuantity(compPOL) == 0) {
       errors.add(ErrorCodes.ZERO_COST_PHYSICAL_QTY);
     }
     // The quantity of the electronic resources in the cost must not be specified
-    if (HelperUtils.getElectronicCostQuantity(compPOL) > 0) {
+    if (getElectronicCostQuantity(compPOL) > 0) {
       errors.add(ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY);
     }
 
-    errors.addAll(HelperUtils.validateLocations(compPOL));
+    errors.addAll(validateLocations(compPOL));
     errors.addAll(validateCostPrices(compPOL));
 
     return convertErrorCodesToErrors(compPOL, errors);
@@ -121,15 +155,15 @@ public final class CompositePoLineValidationUtil {
     List<ErrorCodes> errors = new ArrayList<>();
 
     // The quantity of the electronic resources in the cost must be specified
-    if (HelperUtils.getElectronicCostQuantity(compPOL) == 0) {
+    if (getElectronicCostQuantity(compPOL) == 0) {
       errors.add(ErrorCodes.ZERO_COST_ELECTRONIC_QTY);
     }
     // The quantity of the physical resources in the cost must not be specified
-    if (HelperUtils.getPhysicalCostQuantity(compPOL) > 0) {
+    if (getPhysicalCostQuantity(compPOL) > 0) {
       errors.add(ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY);
     }
 
-    errors.addAll(HelperUtils.validateLocations(compPOL));
+    errors.addAll(validateLocations(compPOL));
     errors.addAll(validateCostPrices(compPOL));
 
     return convertErrorCodesToErrors(compPOL, errors);
@@ -183,7 +217,7 @@ public final class CompositePoLineValidationUtil {
   private static boolean isDiscountNotValid(Cost cost) {
     double discount = defaultIfNull(cost.getDiscount(), 0d);
     return (discount < 0d || cost.getDiscountType() == Cost.DiscountType.PERCENTAGE && discount > 100d)
-        || (discount > 0d && cost.getDiscountType() == Cost.DiscountType.AMOUNT && calculateEstimatedPrice(cost).isNegative());
+      || (discount > 0d && cost.getDiscountType() == Cost.DiscountType.AMOUNT && calculateEstimatedPrice(cost).isNegative());
   }
 
   /**
