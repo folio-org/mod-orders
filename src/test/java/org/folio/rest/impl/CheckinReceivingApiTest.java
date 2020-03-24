@@ -394,8 +394,15 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     poLine.setEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE)); // holding mustn't be created
     poLine.setPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING)); // holding must be created
 
-    Piece physicalPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED).withFormat(org.folio.rest.jaxrs.model.Piece.Format.PHYSICAL);
-    Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED).withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
+
+    String locationForPhysical = UUID.randomUUID().toString();
+    String locationForElectronic = UUID.randomUUID().toString();
+
+    Piece physicalPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.PHYSICAL)
+      .withLocationId(locationForPhysical);
+    Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
 
     addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
     addMockEntry(PO_LINES, poLine);
@@ -413,9 +420,6 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     CheckinCollection request = new CheckinCollection()
       .withToBeCheckedIn(toBeCheckedInList)
       .withTotalRecords(2);
-
-    String locationForPhysical = UUID.randomUUID().toString();
-    String locationForElectronic = UUID.randomUUID().toString();
 
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setId(physicalPiece.getId());
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(locationForPhysical);
