@@ -266,8 +266,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       isHoldingUpdateRequired = isHoldingUpdateRequiredForPhysical(poLine.getPhysical());
     }
     return isHoldingUpdateRequired
-      && StringUtils.isNotEmpty(locationId)
-      && !StringUtils.equals(locationId, piece.getLocationId());
+      && StringUtils.isNotEmpty(locationId);
   }
 
   /**
