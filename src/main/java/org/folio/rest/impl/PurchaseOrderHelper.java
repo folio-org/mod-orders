@@ -71,6 +71,7 @@ import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
@@ -207,6 +208,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
         .thenCompose(v -> updatePoLines(poFromStorage, compPO))
         .thenCompose(v -> {
           if (isTransitionToOpen(poFromStorage, compPO)) {
+            validateMaterialTypes(compPO);
             return checkOrderApprovalRequired(compPO).thenCompose(ok -> openOrder(compPO));
           } else {
             return CompletableFuture.completedFuture(null);
@@ -516,7 +518,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
   public CompletableFuture<Boolean> validateOrder(CompositePurchaseOrder compPO) {
 
     return setCreateInventoryDefaultValues(compPO)
-      .thenAccept(v -> addProcessingErrors(HelperUtils.validateOrder(compPO)))
+      .thenAccept(v -> validateOrderPoLines(compPO))
+      .thenAccept(v -> validateMaterialTypes(compPO))
       .thenCompose(v -> validateIsbnValues(compPO))
       .thenCompose(v -> validatePoLineLimit(compPO))
       .thenCompose(v -> validateVendor(compPO))
@@ -524,7 +527,16 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenApply(v -> getErrors().isEmpty());
   }
 
-  CompletableFuture<Void> validateIsbnValues(CompositePurchaseOrder compPO) {
+  public CompletableFuture<Void> validateOrderPoLines(CompositePurchaseOrder compositeOrder) {
+    List<Error> errors = new ArrayList<>();
+    for (CompositePoLine compositePoLine : compositeOrder.getCompositePoLines()) {
+      errors.addAll(CompositePoLineValidationUtil.validatePoLine(compositePoLine));
+    }
+    addProcessingErrors(errors);
+    return completedFuture(null);
+  }
+
+  private CompletableFuture<Void> validateIsbnValues(CompositePurchaseOrder compPO) {
     CompletableFuture[] futures = compPO.getCompositePoLines()
       .stream()
       .map(orderLineHelper::validateAndNormalizeISBN)
@@ -533,7 +545,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return VertxCompletableFuture.allOf(ctx, futures);
   }
 
-  CompletableFuture<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO) {
+  private CompletableFuture<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO) {
     CompletableFuture[] futures = compPO.getCompositePoLines()
       .stream()
       .map(orderLineHelper::setTenantDefaultCreateInventoryValues)
@@ -545,7 +557,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   /**
    * Validates purchase order which already exists in the storage.
    * Checks PO Number presence, validates that provided order id corresponds to one set in order and its lines.
-   * If all is okay, {@link #validateOrder(CompositePurchaseOrder)} is called afterwards.
+   * If all is okay, {@link #validateOrderPoLines(CompositePurchaseOrder)} is called afterwards.
    * @param orderId Purchase Order id
    * @param compPO Purchase Order to validate
    * @return completable future which might be completed with {@code true} if order is valid, {@code false} if not valid or an exception if processing fails
@@ -986,5 +998,14 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private boolean isUserNotHaveApprovePermission() {
     return !getProvidedPermissions().contains(PERMISSION_ORDER_APPROVE);
+  }
+
+  private void validateMaterialTypes(CompositePurchaseOrder purchaseOrder){
+    if (purchaseOrder.getWorkflowStatus() != PENDING) {
+        List<Error> errors = CompositePoLineValidationUtil.checkMaterialsAvailability(purchaseOrder.getCompositePoLines());
+        if (!errors.isEmpty()) {
+          throw new HttpException(422, errors.get(0));
+        }
+    }
   }
 }

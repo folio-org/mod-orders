@@ -1,0 +1,84 @@
+{
+  "approved" : true,
+  "billTo" : "5f8a321e-6b38-4d90-92d4-bf08f91a2242",
+  "manualPo" : true,
+  "notes" : [ "Check credit card statement to make sure payment shows up" ],
+  "orderType" : "One-Time",
+  "reEncumber" : false,
+  "shipTo" : "f7c36792-05f7-4c8c-969d-103ac6763187",
+  "template" : "4dee318b-f5b3-40dc-be93-cc89b8c45b6f",
+  "totalEstimatedPrice" : 1.0,
+  "totalItems" : 1,
+  "vendor" : "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "workflowStatus" : "Pending",
+  "compositePoLines" : [ {
+    "checkinItems" : false,
+    "acquisitionMethod" : "Purchase",
+    "alerts" : [ ],
+    "cancellationRestriction" : true,
+    "claims" : [ ],
+    "collection" : false,
+    "contributors" : [ ],
+    "cost" : {
+      "listUnitPrice" : 1.0,
+      "currency" : "USD",
+      "discountType" : "percentage",
+      "quantityPhysical" : 1,
+      "poLineEstimatedPrice" : 1.0
+    },
+    "details" : {
+      "productIds" : [ ],
+      "subscriptionInterval" : 0
+    },
+    "eresource" : {
+      "activated" : false,
+      "createInventory" : "Instance, Holding",
+      "trial" : false,
+      "accessProvider" : "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+    },
+    "fundDistribution" : [ {
+      "fundId" : "4428a37c-8bae-4f0d-865d-970d83d5ad55",
+      "distributionType" : "percentage",
+      "value" : 100.0
+    } ],
+    "isPackage" : false,
+    "locations" : [ {
+      "locationId" : "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "quantity" : 1,
+      "quantityPhysical" : 1
+    } ],
+    "orderFormat" : "Other",
+    "paymentStatus" : "Pending",
+    "physical" : {
+      "materialSupplier" : "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
+      "volumes" : [ ]
+    },
+    "purchaseOrderId" : "7d377831-ffe2-4325-b971-10fdf6cd6d70",
+    "receiptDate" : "2020-03-16T00:00:00.000+0000",
+    "receiptStatus" : "Pending",
+    "reportingCodes" : [ ],
+    "rush" : false,
+    "source" : "User",
+    "titleOrPackage" : "GOBI record service",
+    "vendorDetail" : {
+      "instructions" : "",
+      "vendorAccount" : "1234"
+    },
+    "metadata" : {
+      "createdDate" : "2020-03-16T13:52:50.976+0000",
+      "createdByUserId" : "d37e0da5-811e-57de-828a-948657d9f49f",
+      "updatedDate" : "2020-03-16T13:52:50.976+0000",
+      "updatedByUserId" : "d37e0da5-811e-57de-828a-948657d9f49f"
+    }
+  } ],
+  "acqUnitIds" : [ ],
+  "tags" : {
+    "tagList" : [ "amazon" ]
+  },
+  "metadata" : {
+    "createdDate" : "2020-03-16T13:48:48.036+0000",
+    "createdByUserId" : "d37e0da5-811e-57de-828a-948657d9f49f",
+    "updatedDate" : "2020-03-16T13:48:48.036+0000",
+    "updatedByUserId" : "d37e0da5-811e-57de-828a-948657d9f49f"
+  }
+}

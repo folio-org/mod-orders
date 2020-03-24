@@ -327,7 +327,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     final Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData),
       APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(9));
+    assertThat(response.getErrors(), hasSize(8));
     List<String> errorCodes = response.getErrors()
       .stream()
       .map(Error::getCode)
@@ -340,8 +340,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
       COST_ADDITIONAL_COST_INVALID.getCode(),
       COST_DISCOUNT_INVALID.getCode(),
       ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
-      PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
-      MISSING_MATERIAL_TYPE.getCode()));
+      PHYSICAL_COST_LOC_QTY_MISMATCH.getCode()));
 
 
     // Check that no any calls made by the business logic to other services
