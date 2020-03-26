@@ -670,37 +670,35 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompositePurchaseOrder validateFundDistributionTotal(CompositePurchaseOrder compPO) {
-    if (compPO.getWorkflowStatus() == WorkflowStatus.OPEN) {
-      for (CompositePoLine cPoLine : compPO.getCompositePoLines()) {
+    for (CompositePoLine cPoLine : compPO.getCompositePoLines()) {
 
-        if (cPoLine.getCost().getPoLineEstimatedPrice() != null) {
-          Double poLineEstimatedPrice = cPoLine.getCost().getPoLineEstimatedPrice();
-          String currency = cPoLine.getCost().getCurrency();
-          MonetaryAmount remainingAmount = Money.of(poLineEstimatedPrice, currency);
+      if (cPoLine.getCost().getPoLineEstimatedPrice() != null) {
+        Double poLineEstimatedPrice = cPoLine.getCost().getPoLineEstimatedPrice();
+        String currency = cPoLine.getCost().getCurrency();
+        MonetaryAmount remainingAmount = Money.of(poLineEstimatedPrice, currency);
 
-          for (FundDistribution fundDistribution : cPoLine.getFundDistribution()) {
-            DistributionType dType = fundDistribution.getDistributionType();
-            Double value = fundDistribution.getValue();
-            MonetaryAmount amountValueMoney = Money.of(value, currency);
-            MonetaryAmount percentToAmount = null;
+        for (FundDistribution fundDistribution : cPoLine.getFundDistribution()) {
+          DistributionType dType = fundDistribution.getDistributionType();
+          Double value = fundDistribution.getValue();
+          MonetaryAmount amountValueMoney = Money.of(value, currency);
+          MonetaryAmount percentToAmount = null;
 
-            if (dType == DistributionType.PERCENTAGE) {
-              /**
-               * calculate remaining amount to carry forward, required if there are more fund distributions with percentage and
-               * percentToAmount = poLineEstimatedPrice * value/100;
-               */
-              MonetaryAmount poLineEstimatedPriceMoney = Money.of(poLineEstimatedPrice, currency);
-              // convert percent to amount
-              percentToAmount = poLineEstimatedPriceMoney.with(MonetaryOperators.percent(value));
-              amountValueMoney = percentToAmount;
-            }
+          if (dType == DistributionType.PERCENTAGE) {
+            /**
+             * calculate remaining amount to carry forward, required if there are more fund distributions with percentage and
+             * percentToAmount = poLineEstimatedPrice * value/100;
+             */
+            MonetaryAmount poLineEstimatedPriceMoney = Money.of(poLineEstimatedPrice, currency);
+            // convert percent to amount
+            percentToAmount = poLineEstimatedPriceMoney.with(MonetaryOperators.percent(value));
+            amountValueMoney = percentToAmount;
+          }
 
-            remainingAmount = remainingAmount.subtract(amountValueMoney);
+          remainingAmount = remainingAmount.subtract(amountValueMoney);
 
-            MonetaryAmount zeroMoney = Money.of(0, currency);
-            if (remainingAmount.isLessThan(zeroMoney)) {
-              throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL);
-            }
+          MonetaryAmount zeroMoney = Money.of(0, currency);
+          if (remainingAmount.isLessThan(zeroMoney)) {
+            throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL);
           }
         }
       }

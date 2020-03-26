@@ -323,9 +323,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(error.getCode(), is(INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode()));
   }
 
-
-
-
   @Test
   public void testInvalidFundDistributionTotalAmount() throws Exception {
     logger.info("===  Test fund distribution total must add upto totalEstimatedPrice - invalid total amount ===");
@@ -357,7 +354,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     assertThat(error.getCode(), is(INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode()));
   }
-  
+
   @Test
   public void testListedPrintMonograph() throws Exception {
     logger.info("=== Test Listed Print Monograph ===");
