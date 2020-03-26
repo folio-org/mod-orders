@@ -203,6 +203,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   static final String VALID_FUND_ID =  "fb7b70f1-b898-4924-a991-0e4b6312bb5f";
   static final String FUND_ID_RESTRICTED =  "72330c92-087e-4cdc-a82e-acadd9332659";
   static final String VALID_LEDGER_ID =  "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
+  public static final String ORDER_WITHOUT_MATERIAL_TYPES_ID =  "0cb6741d-4a00-47e5-a902-5678eb24478d";
 
   // API paths
   public final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
@@ -3206,10 +3207,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
       .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201)
       .as(CompositePurchaseOrder.class);
 
-    prepareCompositeOrderPutRequest(po, reqData);
+    CompositePurchaseOrder putReq = prepareCompositeOrderOpenRequest(po);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
-    List<Error> errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, po.getId()), JsonObject.mapFrom(reqData)
+    List<Error> errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_WITHOUT_MATERIAL_TYPES_ID), JsonObject.mapFrom(putReq)
       .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422)
       .as(Errors.class)
       .getErrors();
@@ -3217,15 +3218,20 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(errors.get(0).getMessage(), equalTo(MISSING_MATERIAL_TYPE.getDescription()));
   }
 
-  private void prepareCompositeOrderPutRequest(CompositePurchaseOrder po, CompositePurchaseOrder compositeOrderPutRequest) {
-    CompositePoLine originPoLine = po.getCompositePoLines().get(0);
-
-    compositeOrderPutRequest.setId(po.getId());
+  private CompositePurchaseOrder prepareCompositeOrderOpenRequest(CompositePurchaseOrder po) {
+    CompositePurchaseOrder compositeOrderPutRequest = new CompositePurchaseOrder();
+    compositeOrderPutRequest.setId(ORDER_WITHOUT_MATERIAL_TYPES_ID);
+    compositeOrderPutRequest.setOrderType(CompositePurchaseOrder.OrderType.ONE_TIME);
+    compositeOrderPutRequest.setOrderType(po.getOrderType());
+    compositeOrderPutRequest.setApproved(false);
     compositeOrderPutRequest.setPoNumber(po.getPoNumber());
-    CompositePoLine poLineUpdated = compositeOrderPutRequest.getCompositePoLines().get(0);
-    poLineUpdated.setId(originPoLine.getId());
-    poLineUpdated.setPoLineNumber(originPoLine.getPoLineNumber());
-    poLineUpdated.setPurchaseOrderId(po.getId());
+    compositeOrderPutRequest.setTotalEstimatedPrice(po.getTotalEstimatedPrice());
+    compositeOrderPutRequest.setTotalItems(po.getTotalItems());
+    compositeOrderPutRequest.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    compositeOrderPutRequest.setVendor(po.getVendor());
+    compositeOrderPutRequest.setMetadata(po.getMetadata());
+
+    return compositeOrderPutRequest;
   }
 
   private void removeMaterialType(CompositePoLine poLine) {

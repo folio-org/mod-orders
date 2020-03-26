@@ -208,7 +208,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
         .thenCompose(v -> updatePoLines(poFromStorage, compPO))
         .thenCompose(v -> {
           if (isTransitionToOpen(poFromStorage, compPO)) {
-            validateMaterialTypes(compPO);
             return checkOrderApprovalRequired(compPO).thenCompose(ok -> openOrder(compPO));
           } else {
             return CompletableFuture.completedFuture(null);
@@ -465,6 +464,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
     return getOrderWithLines(compPO)
+      .thenApply(this::validateMaterialTypes)
       .thenCompose(this::fetchNonPackageTitles)
       .thenCompose(lineIdTitles -> {
         populateInstanceId(lineIdTitles, compPO.getCompositePoLines());
@@ -519,7 +519,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
     return setCreateInventoryDefaultValues(compPO)
       .thenAccept(v -> validateOrderPoLines(compPO))
-      .thenAccept(v -> validateMaterialTypes(compPO))
       .thenCompose(v -> validateIsbnValues(compPO))
       .thenCompose(v -> validatePoLineLimit(compPO))
       .thenCompose(v -> validateVendor(compPO))
@@ -1000,12 +999,13 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return !getProvidedPermissions().contains(PERMISSION_ORDER_APPROVE);
   }
 
-  private void validateMaterialTypes(CompositePurchaseOrder purchaseOrder){
+  private CompositePurchaseOrder validateMaterialTypes(CompositePurchaseOrder purchaseOrder){
     if (purchaseOrder.getWorkflowStatus() != PENDING) {
         List<Error> errors = CompositePoLineValidationUtil.checkMaterialsAvailability(purchaseOrder.getCompositePoLines());
         if (!errors.isEmpty()) {
           throw new HttpException(422, errors.get(0));
         }
     }
+    return purchaseOrder;
   }
 }
