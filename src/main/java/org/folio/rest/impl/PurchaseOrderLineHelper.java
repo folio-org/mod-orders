@@ -379,7 +379,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> updateTitleForNonPackageWithInstanceId(CompositePoLine compPol) {
-    if (!compPol.getIsPackage().booleanValue() && compPol.getInstanceId() != null) {
+    if (Boolean.FALSE.equals(compPol.getIsPackage()) && compPol.getInstanceId() != null) {
       return titleHelper.getTitlesByPoLineIds(Collections.singletonList(compPol.getId()))
         .thenApply(titles -> titles.get(compPol.getId()).get(0)
           .withInstanceId(compPol.getInstanceId()))

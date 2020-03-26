@@ -220,7 +220,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private CompletableFuture<Void> updateTitlesByNonPackageInstanceIds(List<CompositePoLine> compPOLines) {
     List<String> lineIds = compPOLines.stream()
-      .filter(line -> !line.getIsPackage() && line.getInstanceId() != null)
+      .filter(line -> Boolean.FALSE.equals(line.getIsPackage()) && line.getInstanceId() != null)
       .map(CompositePoLine::getId)
       .collect(toList());
 
