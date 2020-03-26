@@ -61,6 +61,7 @@ import static org.folio.rest.impl.InventoryHelper.DEFAULT_LOAN_TYPE_NAME;
 import static org.folio.rest.impl.InventoryHelper.INSTANCE_STATUS_ID;
 import static org.folio.rest.impl.InventoryHelper.INSTANCE_TYPE_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEMS;
+import static org.folio.rest.impl.InventoryHelper.ITEM_MATERIAL_TYPE_ID;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.joinExistingAndNewItems;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInstanceLinksForUpdatedOrder;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInventoryInteraction;
@@ -1009,7 +1010,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
     List<JsonObject> items = joinExistingAndNewItems();
     List<JsonObject> createdPieces = getCreatedPieces();
-    verifyPiecesQuantityForSuccessCase(reqData, createdPieces);
+    verifyPiecesQuantityForSuccessCase(reqData.getCompositePoLines(), createdPieces);
     verifyPiecesCreated(items, reqData.getCompositePoLines(), createdPieces);
   }
 
@@ -1556,6 +1557,41 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     verifyInventoryInteraction(reqData, polCount - 1);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED.value(), reqData.getCompositePoLines().size());
+  }
+
+  @Test
+  public void testPutOrdersByIdToOpenOrderWithLocationButCreateInventoryNoneForOneOfResources() {
+    logger.info("=== Test Put Order By Id to open order - P/E Mix PO Line, location specified but create inventory is None for electronic resource ===");
+
+    CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
+    CompositePoLine line = getMinimalContentCompositePoLine();
+
+    reqData.withVendor(ACTIVE_VENDOR_ID);
+    line.setOrderFormat(OrderFormat.P_E_MIX);
+    line.setEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.NONE).withAccessProvider(reqData.getVendor()));
+    line.setPhysical(new Physical().withCreateInventory(CreateInventory.INSTANCE_HOLDING_ITEM).withMaterialType(ITEM_MATERIAL_TYPE_ID));
+    line.setPoLineNumber(reqData.getPoNumber() + "-1");
+
+    line.setLocations(Collections.singletonList(new Location().withLocationId(UUID.randomUUID()
+        .toString())
+        .withQuantityElectronic(2)
+        .withQuantityPhysical(2)));
+
+    line.setCost(new Cost().withCurrency("USD")
+        .withListUnitPrice(1.0)
+        .withListUnitPriceElectronic(1.0)
+        .withQuantityElectronic(2)
+        .withQuantityPhysical(2));
+
+    addMockEntry(PURCHASE_ORDER, reqData);
+    addMockEntry(PO_LINES, line);
+    createMockTitle(line);
+
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
+
+    List<JsonObject> createdPieces = getCreatedPieces();
+    verifyPiecesQuantityForSuccessCase(Collections.singletonList(line), createdPieces);
   }
 
   private void createMockTitle(CompositePoLine line) {
