@@ -12,7 +12,6 @@ import static org.folio.orders.utils.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_LOAN_TYPE;
-import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantity;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
@@ -292,7 +291,7 @@ public class InventoryHelper extends AbstractHelper {
    * @return future with list of piece objects
    */
   private CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, String holdingId, List<Location> locations) {
-    Map<Piece.Format, Integer> piecesWithItemsQuantities = calculatePiecesQuantity(compPOL, locations, true);
+    Map<Piece.Format, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, locations);
     int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
     String polId = compPOL.getId();
 

@@ -12,7 +12,6 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
-import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantity;
 import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantityWithoutLocation;
 import static org.folio.orders.utils.HelperUtils.calculateTotalLocationQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
@@ -633,7 +632,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
         List<Piece> filteredExpectedPiecesWithItem = filterByLocationId(expectedPiecesWithItem, locationId);
         piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
 
-        Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = calculatePiecesQuantity(compPOL, locations, false);
+        Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = HelperUtils.calculatePiecesWithoutItemIdQuantity(compPOL, locations);
         Map<Piece.Format, Integer> quantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(filteredExistingPieces);
         expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
           int remainingPiecesQuantity = expectedQty - quantityWithoutItem.getOrDefault(format, 0);
