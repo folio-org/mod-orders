@@ -63,6 +63,7 @@ public final class CompositePoLineValidationUtil {
 
     errors.addAll(validateLocations(compPOL));
     errors.addAll(validateCostPrices(compPOL));
+    errors.addAll(validatePackagePoLine(compPOL));
 
     return convertErrorCodesToErrors(compPOL, errors);
   }
@@ -147,6 +148,7 @@ public final class CompositePoLineValidationUtil {
 
     errors.addAll(validateLocations(compPOL));
     errors.addAll(validateCostPrices(compPOL));
+    errors.addAll(validatePackagePoLine(compPOL));
 
     return convertErrorCodesToErrors(compPOL, errors);
   }
@@ -165,6 +167,7 @@ public final class CompositePoLineValidationUtil {
 
     errors.addAll(validateLocations(compPOL));
     errors.addAll(validateCostPrices(compPOL));
+    errors.addAll(validatePackagePoLine(compPOL));
 
     return convertErrorCodesToErrors(compPOL, errors);
   }
@@ -251,5 +254,16 @@ public final class CompositePoLineValidationUtil {
           .withValue(poLineNumber));
     }
     return error;
+  }
+
+  private static List<ErrorCodes> validatePackagePoLine(CompositePoLine compPOL) {
+     List<ErrorCodes> errors = new ArrayList<>();
+
+     // The quantity of the electronic resources in the cost must be specified
+     if (compPOL.getIsPackage() && compPOL.getInstanceId() != null) {
+       errors.add(ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE);
+     }
+
+     return errors;
   }
 }

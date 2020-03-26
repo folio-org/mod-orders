@@ -112,11 +112,13 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   private final InventoryHelper inventoryHelper;
   private final ProtectionHelper protectionHelper;
+  private final TitlesHelper titleHelper;
 
   PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
+    titleHelper = new TitlesHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   PurchaseOrderLineHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -371,8 +373,20 @@ class PurchaseOrderLineHelper extends AbstractHelper {
         // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
         // update
         compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
-        return updateOrderLine(compOrderLine, lineFromStorage).thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage));
+        return updateOrderLine(compOrderLine, lineFromStorage)
+          .thenCompose(ok -> updateTitleForNonPackageWithInstanceId(compOrderLine))
+          .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage));
       });
+  }
+
+  private CompletableFuture<Void> updateTitleForNonPackageWithInstanceId(CompositePoLine compPol) {
+    if (!compPol.getIsPackage().booleanValue() && compPol.getInstanceId() != null) {
+      return titleHelper.getTitlesByPoLineIds(Collections.singletonList(compPol.getId()))
+        .thenApply(titles -> titles.get(compPol.getId()).get(0)
+          .withInstanceId(compPol.getInstanceId()))
+        .thenCompose(titleHelper::updateTitle);
+    }
+    return completedFuture(null);
   }
 
   private void validatePOLineProtectedFieldsChanged(CompositePoLine compOrderLine, JsonObject lineFromStorage, CompositePurchaseOrder purchaseOrder) {
