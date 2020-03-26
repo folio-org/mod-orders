@@ -237,21 +237,20 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
     prepareOrderForPostRequest(reqData);
-    
+
     reqData.setWorkflowStatus(WorkflowStatus.OPEN);
-    reqData.setTotalEstimatedPrice(29.99);
+
     // Make sure expected number of PO Lines available
     assertThat(reqData.getCompositePoLines(), hasSize(1));
-    
-    // Calculate remaining Percentage for fundDistribution1 = 100 - 40 = 60%
+
+    // Calculate remaining Percentage for fundDistribution1 = 47.98 - 19.192(40%) = 28.788
     reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.PERCENTAGE);
     reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(40d);
-    
-    // Calculate remaining Percentage for fundDistribution2 = 60 - 60 = 0%
+
+    // Calculate remaining Percentage for fundDistribution2 = 28.788 - 23.99(50%) = 4.798
     reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.PERCENTAGE);
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(60d);
-    
-    // Percentage >= 0 is valid
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(50d);
+
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
         prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 201);
   }
@@ -263,21 +262,22 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
     prepareOrderForPostRequest(reqData);
-    
+
     reqData.setWorkflowStatus(WorkflowStatus.OPEN);
-    reqData.setTotalEstimatedPrice(29.99);
+
     // Make sure expected number of PO Lines available
     assertThat(reqData.getCompositePoLines(), hasSize(1));
-    
-    // Calculate remaining Percentage for fundDistribution1 = 100 - 100 = 0
+
+    // Calculated poLineEstimatedPrice = 47.98
+    // Calculate remaining Amount for fundDistribution1 = 47.98 - 47.98(100%) = 0
     reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.PERCENTAGE);
     reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(100d);
-    
-    // Calculate remaining Percentage for fundDistribution2 = 0 - 100 = -100
+
+    // Calculate remaining Amount for fundDistribution2 = 0 - 47.98(100%) = -47.98
     reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.PERCENTAGE);
     reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(100d);
-    
-    // Percentage < 0 is not allowed
+
+    // Amount < 0 is not allowed
     Errors errorResponse = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
         prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
 
@@ -287,28 +287,28 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     assertThat(error.getCode(), is(INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode()));
   }
-  
+
   @Test
   public void testInvalidFundDistributionTotalAmountPercentage() throws Exception {
     logger.info("===  Test fund distribution total must add upto totalEstimatedPrice - invalid total amount and percentage ===");
 
     JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
-    
+
     reqData.setWorkflowStatus(WorkflowStatus.OPEN);
-    reqData.setTotalEstimatedPrice(392d);
+
     // Make sure expected number of PO Lines available
     assertThat(reqData.getCompositePoLines(), hasSize(1));
-    
-    // Calculate remaining Amount for fundDistribution1 = 392 - 60 = 332
+
+    // Calculated poLineEstimatedPrice = 47.98
+    // Calculate remaining Amount for fundDistribution1 = 47.98 - 10 = 37.98
     reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.AMOUNT);
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(60d);
-    
-    // Calculate remaining percentage for fundDistribution2 = 332/392 * 100 = 84.695%
-    // So 85% is not allowed
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(10d);
+
+    // Calculate remaining percentage for fundDistribution2 = 37.98 - 40.783(85%) = -2.803
     reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.PERCENTAGE);
     reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(85d);
-    
+
     Errors errorResponse = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
         prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
 
@@ -318,37 +318,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     assertThat(error.getCode(), is(INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode()));
   }
-  
-  @Test
-  public void testInvalidFundDistributionTotalPercentageAmount() throws Exception {
-    logger.info("===  Test fund distribution total must add upto totalEstimatedPrice - invalid total percentage and amount ===");
 
-    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
-    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
-    
-    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
-    reqData.setTotalEstimatedPrice(392d);
-    // Make sure expected number of PO Lines available
-    assertThat(reqData.getCompositePoLines(), hasSize(1));
-    
-    // Calculate remaining percentage for fundDistribution1 = 332/392 * 100 = 84.695%
-    // So 85% is not allowed
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.PERCENTAGE);
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(85d);
-    
-    // Calculate remaining Amount for fundDistribution2 = 392 - 60 = 332
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.AMOUNT);
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(60d);
-    
-    Errors errorResponse = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-        prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(errorResponse.getErrors(), hasSize(1));
 
-    Error error = errorResponse.getErrors().get(0);
-
-    assertThat(error.getCode(), is(INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode()));
-  }
 
   @Test
   public void testInvalidFundDistributionTotalAmount() throws Exception {
@@ -356,20 +328,21 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
-    
+
     reqData.setWorkflowStatus(WorkflowStatus.OPEN);
     reqData.setTotalEstimatedPrice(200d);
     // Make sure expected number of PO Lines available
     assertThat(reqData.getCompositePoLines(), hasSize(1));
-    
-    // Calculate remaining Amount for fundDistribution1 = 200 - 101 = 99
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.AMOUNT);
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(101d);
 
-    // Calculate remaining Amount for fundDistribution2 = 99 - 101 = -2
+    // Calculated poLineEstimatedPrice = 47.98
+    // Calculate remaining Amount for fundDistribution1 = 47.98 - 40 = 7.98
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.AMOUNT);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(40d);
+
+    // Calculate remaining Amount for fundDistribution2 = 7.98 - 8 = -0.02
     reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.AMOUNT);
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(101d);
-    
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(8d);
+
     // Amount < 0 is not allowed
     Errors errorResponse = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
         prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
