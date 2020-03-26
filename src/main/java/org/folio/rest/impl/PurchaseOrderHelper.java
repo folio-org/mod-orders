@@ -11,6 +11,7 @@ import static org.folio.orders.utils.ErrorCodes.MISSING_ONGOING;
 import static org.folio.orders.utils.ErrorCodes.ONGOING_NOT_ALLOWED;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS;
+import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
@@ -61,6 +62,8 @@ import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.money.MonetaryAmount;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -77,12 +80,16 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.javamoney.moneta.Money;
+import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
@@ -522,6 +529,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenCompose(v -> validateIsbnValues(compPO))
       .thenCompose(v -> validatePoLineLimit(compPO))
       .thenCompose(v -> validateVendor(compPO))
+      .thenCompose(v -> validateFundDistributionTotal(compPO))
       .thenAccept(v -> validateRenewalInfo(compPO))
       .thenApply(v -> getErrors().isEmpty());
   }
@@ -659,6 +667,57 @@ public class PurchaseOrderHelper extends AbstractHelper {
         return completedFuture(null);
       })
       .thenApply(v -> compPO);
+  }
+
+  private CompletableFuture<Void> validateFundDistributionTotal(CompositePurchaseOrder compPO) {
+    if (compPO.getWorkflowStatus() == WorkflowStatus.OPEN && compPO.getTotalEstimatedPrice() != null) {
+      Double totalEstimatedPrice = compPO.getTotalEstimatedPrice();
+      Double remainingPercent = 100.0;
+
+      for (CompositePoLine cPoLine : compPO.getCompositePoLines()) {
+        String currency = cPoLine.getCost().getCurrency();
+        MonetaryAmount remainingAmount = Money.of(totalEstimatedPrice, currency);
+
+        for (FundDistribution fundDistribution : cPoLine.getFundDistribution()) {
+          DistributionType dType = fundDistribution.getDistributionType();
+
+          if (dType == DistributionType.PERCENTAGE) {
+            Double percentValue = fundDistribution.getValue();
+            remainingPercent -= percentValue;
+
+            MonetaryAmount totalEstimatedPriceMoney = Money.of(totalEstimatedPrice, currency);
+            /**
+             * calculate remaining amount to carry forward, required if there are more fund distributions with percentage and amount
+             * currentAmount = totalEstimatedPrice * value/100;
+             * remainingAmount = totalEstimatedPrice - currentAmount;
+             */
+            MonetaryAmount currentAmount = totalEstimatedPriceMoney.with(MonetaryOperators.percent(percentValue));
+            remainingAmount = remainingAmount.subtract(currentAmount);
+
+            if (remainingPercent < 0) {
+              throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL);
+            }
+          } else if (dType == DistributionType.AMOUNT) {
+            Double amountValue = fundDistribution.getValue();
+            MonetaryAmount amountValueMoney = Money.of(amountValue, currency);
+            remainingAmount = remainingAmount.subtract(amountValueMoney);
+
+            /**
+             * calculate remaining percentage to carry forward, required if there are more fund distributions with amount and percentage
+             * remainingPercentage = remainingAmount/totalEstimatedPrice * 100
+             */
+            MonetaryAmount divideResult = remainingAmount.divide(totalEstimatedPrice);
+            remainingPercent = divideResult.multiply(100).getNumber().doubleValue();
+
+            MonetaryAmount zeroMoney = Money.of(0, currency);
+            if (remainingAmount.isLessThan(zeroMoney)) {
+              throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL);
+            }
+          }
+        }
+      }
+    }
+    return completedFuture(null);
   }
 
   /**
