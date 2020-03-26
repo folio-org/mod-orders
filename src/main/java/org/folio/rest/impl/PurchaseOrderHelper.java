@@ -687,7 +687,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
             if (dType == DistributionType.PERCENTAGE) {
               /**
                * calculate remaining amount to carry forward, required if there are more fund distributions with percentage and
-               * amount percentToAmount = totalEstimatedPrice * value/100;
+               * percentToAmount = poLineEstimatedPrice * value/100;
                */
               MonetaryAmount poLineEstimatedPriceMoney = Money.of(poLineEstimatedPrice, currency);
               // convert percent to amount

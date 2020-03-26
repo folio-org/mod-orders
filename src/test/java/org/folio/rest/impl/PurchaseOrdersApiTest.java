@@ -243,6 +243,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     // Make sure expected number of PO Lines available
     assertThat(reqData.getCompositePoLines(), hasSize(1));
 
+    // Calculated poLineEstimatedPrice = 47.98
     // Calculate remaining Percentage for fundDistribution1 = 47.98 - 19.192(40%) = 28.788
     reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.PERCENTAGE);
     reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(40d);
@@ -251,8 +252,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.PERCENTAGE);
     reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(50d);
 
-    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-        prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 201);
+    final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+        prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+    
+    assertThat(resp.getCompositePoLines().get(0).getCost().getPoLineEstimatedPrice(), equalTo(47.98));
   }
 
   @Test
