@@ -12,6 +12,7 @@ import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH
 import static org.folio.orders.utils.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
+import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
 import static org.folio.orders.utils.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
 import static org.folio.orders.utils.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
@@ -144,11 +145,13 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
@@ -229,7 +232,130 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public static final Header ALL_DESIRED_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(AcqDesiredPermissions.getValues()).encode());
   public static final Header APPROVAL_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(Collections.singletonList("orders.item.approve")).encode());
   static final String ITEMS_NOT_FOUND = UUID.randomUUID().toString();
+  
+  @Test
+  public void testValidFundDistributionTotalPercentage() throws Exception {
+    logger.info("=== Test fund distribution total must add upto totalEstimatedPrice - valid total percentage ===");
 
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    prepareOrderForPostRequest(reqData);
+
+    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
+
+    // Make sure expected number of PO Lines available
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
+
+    // Calculated poLineEstimatedPrice = 47.98
+    // Calculate remaining Percentage for fundDistribution1 = 47.98 - 23.99(50%) = 23.99
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.PERCENTAGE);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(50d);
+
+    // Calculate remaining Percentage for fundDistribution2 = 23.99 - 23.99(50%) = 0.0
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.PERCENTAGE);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(50d);
+
+    final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+        prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+    
+    assertThat(resp.getCompositePoLines().get(0).getCost().getPoLineEstimatedPrice(), equalTo(47.98));
+  }
+
+  @Test
+  public void testInvalidFundDistributionTotalPercentage() throws Exception {
+    logger.info("===  Test fund distribution total must add upto totalEstimatedPrice - invalid total percentage ===");
+
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    prepareOrderForPostRequest(reqData);
+
+    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
+
+    // Make sure expected number of PO Lines available
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
+
+    // Calculated poLineEstimatedPrice = 47.98
+    // Calculate remaining Amount for fundDistribution1 = 47.98 - 47.98(100%) = 0
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.PERCENTAGE);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(100d);
+
+    // Calculate remaining Amount for fundDistribution2 = 0 - 47.98(100%) = -47.98
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.PERCENTAGE);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(100d);
+
+    // Amount < 0 is not allowed
+    Errors errorResponse = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+        prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(errorResponse.getErrors(), hasSize(1));
+
+    Error error = errorResponse.getErrors().get(0);
+
+    assertThat(error.getCode(), is(INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode()));
+  }
+
+  @Test
+  public void testInvalidFundDistributionTotalAmountPercentage() throws Exception {
+    logger.info("===  Test fund distribution total must add upto totalEstimatedPrice - invalid total amount and percentage ===");
+
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+
+    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
+
+    // Make sure expected number of PO Lines available
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
+
+    // Calculated poLineEstimatedPrice = 47.98
+    // Calculate remaining Amount for fundDistribution1 = 47.98 - 10 = 37.98
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.AMOUNT);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(10d);
+
+    // Calculate remaining percentage for fundDistribution2 = 37.98 - 40.783(85%) = -2.803
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.PERCENTAGE);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(85d);
+
+    Errors errorResponse = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+        prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(errorResponse.getErrors(), hasSize(1));
+
+    Error error = errorResponse.getErrors().get(0);
+
+    assertThat(error.getCode(), is(INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode()));
+  }
+
+  @Test
+  public void testInvalidFundDistributionTotalAmount() throws Exception {
+    logger.info("===  Test fund distribution total must add upto totalEstimatedPrice - invalid total amount ===");
+
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+
+    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
+    reqData.setTotalEstimatedPrice(200d);
+    // Make sure expected number of PO Lines available
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
+
+    // Calculated poLineEstimatedPrice = 47.98
+    // Calculate remaining Amount for fundDistribution1 = 47.98 - 40 = 7.98
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.AMOUNT);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(40d);
+
+    // Calculate remaining Amount for fundDistribution2 = 7.98 - 8 = -0.02
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.AMOUNT);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(8d);
+
+    // Amount < 0 is not allowed
+    Errors errorResponse = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+        prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(errorResponse.getErrors(), hasSize(1));
+
+    Error error = errorResponse.getErrors().get(0);
+
+    assertThat(error.getCode(), is(INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode()));
+  }
 
   @Test
   public void testListedPrintMonograph() throws Exception {
@@ -3283,5 +3409,4 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     return order;
   }
-
 }

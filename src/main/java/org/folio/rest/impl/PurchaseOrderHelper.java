@@ -11,6 +11,7 @@ import static org.folio.orders.utils.ErrorCodes.MISSING_ONGOING;
 import static org.folio.orders.utils.ErrorCodes.ONGOING_NOT_ALLOWED;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS;
+import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
@@ -61,6 +62,8 @@ import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.money.MonetaryAmount;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -77,12 +80,16 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.javamoney.moneta.Money;
+import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
@@ -479,6 +486,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
     return getOrderWithLines(compPO)
+      .thenApply(this::validateFundDistributionTotal)
       .thenApply(this::validateMaterialTypes)
       .thenCompose(this::fetchNonPackageTitles)
       .thenCompose(lineIdTitles -> {
@@ -674,6 +682,41 @@ public class PurchaseOrderHelper extends AbstractHelper {
         return completedFuture(null);
       })
       .thenApply(v -> compPO);
+  }
+
+  private CompositePurchaseOrder validateFundDistributionTotal(CompositePurchaseOrder compPO) {
+    for (CompositePoLine cPoLine : compPO.getCompositePoLines()) {
+
+      if (cPoLine.getCost().getPoLineEstimatedPrice() != null && !cPoLine.getFundDistribution().isEmpty()) {
+        Double poLineEstimatedPrice = cPoLine.getCost().getPoLineEstimatedPrice();
+        String currency = cPoLine.getCost().getCurrency();
+        MonetaryAmount remainingAmount = Money.of(poLineEstimatedPrice, currency);
+
+        for (FundDistribution fundDistribution : cPoLine.getFundDistribution()) {
+          DistributionType dType = fundDistribution.getDistributionType();
+          Double value = fundDistribution.getValue();
+          MonetaryAmount amountValueMoney = Money.of(value, currency);
+          MonetaryAmount percentToAmount = null;
+
+          if (dType == DistributionType.PERCENTAGE) {
+            /**
+             * calculate remaining amount to carry forward, required if there are more fund distributions with percentage and
+             * percentToAmount = poLineEstimatedPrice * value/100;
+             */
+            MonetaryAmount poLineEstimatedPriceMoney = Money.of(poLineEstimatedPrice, currency);
+            // convert percent to amount
+            percentToAmount = poLineEstimatedPriceMoney.with(MonetaryOperators.percent(value));
+            amountValueMoney = percentToAmount;
+          }
+
+          remainingAmount = remainingAmount.subtract(amountValueMoney);
+        }
+        if (!remainingAmount.isZero()) {
+          throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL);
+        }
+      }
+    }
+    return compPO;
   }
 
   /**
