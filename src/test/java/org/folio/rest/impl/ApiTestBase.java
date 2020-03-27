@@ -15,6 +15,7 @@ import static org.folio.rest.impl.AcquisitionsMembershipsTests.USER_ID_ASSIGNED_
 import static org.folio.rest.impl.ApiTestSuite.mockPort;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
+import static org.folio.rest.impl.MockServer.getPoLineUpdates;
 import static org.folio.rest.impl.MockServer.serverRqRs;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyIterable;
@@ -528,5 +529,13 @@ public class ApiTestBase {
       .filter(title -> poline.getId().equals(title.getPoLineId()))
       .map(Title::getInstanceId)
       .findFirst().orElse(null);
+  }
+
+  public static void validateSavedPoLines() {
+    getPoLineUpdates()
+      .forEach(poline -> {
+        logger.info("validate poline {}", poline.getString(ID));
+        poline.mapTo(PoLine.class);
+      });
   }
 }
