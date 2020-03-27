@@ -672,7 +672,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private CompositePurchaseOrder validateFundDistributionTotal(CompositePurchaseOrder compPO) {
     for (CompositePoLine cPoLine : compPO.getCompositePoLines()) {
 
-      if (cPoLine.getCost().getPoLineEstimatedPrice() != null) {
+      if (cPoLine.getCost().getPoLineEstimatedPrice() != null && cPoLine.getFundDistribution().size() >0 ) {
         Double poLineEstimatedPrice = cPoLine.getCost().getPoLineEstimatedPrice();
         String currency = cPoLine.getCost().getCurrency();
         MonetaryAmount remainingAmount = Money.of(poLineEstimatedPrice, currency);
@@ -695,11 +695,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
           }
 
           remainingAmount = remainingAmount.subtract(amountValueMoney);
-
-          MonetaryAmount zeroMoney = Money.of(0, currency);
-          if (remainingAmount.isLessThan(zeroMoney)) {
-            throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL);
-          }
+        }
+        if (!remainingAmount.isZero()) {
+          throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL);
         }
       }
     }

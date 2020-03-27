@@ -245,11 +245,11 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(reqData.getCompositePoLines(), hasSize(1));
 
     // Calculated poLineEstimatedPrice = 47.98
-    // Calculate remaining Percentage for fundDistribution1 = 47.98 - 19.192(40%) = 28.788
+    // Calculate remaining Percentage for fundDistribution1 = 47.98 - 23.99(50%) = 23.99
     reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.PERCENTAGE);
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(40d);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(50d);
 
-    // Calculate remaining Percentage for fundDistribution2 = 28.788 - 23.99(50%) = 4.798
+    // Calculate remaining Percentage for fundDistribution2 = 23.99 - 23.99(50%) = 0.0
     reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.PERCENTAGE);
     reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(50d);
 
