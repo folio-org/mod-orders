@@ -465,6 +465,8 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     Title updatedTitle = getUpdatedTitles().get(0).mapTo(Title.class);
 
     assertEquals(instanceUUID, updatedTitle.getInstanceId());
+
+    validateSavedPoLines();
   }
 
   @Test

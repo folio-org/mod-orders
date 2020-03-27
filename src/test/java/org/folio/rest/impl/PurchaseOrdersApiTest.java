@@ -1495,6 +1495,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     MockServer.getUpdatedTitles()
       .forEach(title -> assertTrue(uuids.containsValue(title.getString(INSTANCE_ID))));
+    validateSavedPoLines();
+
   }
 
   @Test

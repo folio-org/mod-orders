@@ -36,6 +36,17 @@ public final class CompositePoLineValidationUtil {
   }
 
   public static List<Error> validatePoLine(CompositePoLine compPOL) {
+    List<Error> errors = new ArrayList<>();
+
+    errors.addAll(validatePoLineFormats(compPOL));
+    errors.addAll(validatePackagePoLine(compPOL));
+    errors.addAll(validateLocations(compPOL));
+    errors.addAll(validateCostPrices(compPOL));
+
+    return errors;
+  }
+
+  public static List<Error> validatePoLineFormats(CompositePoLine compPOL) {
     CompositePoLine.OrderFormat orderFormat = compPOL.getOrderFormat();
     if (orderFormat == P_E_MIX) {
       return validatePoLineWithMixedFormat(compPOL);
@@ -60,10 +71,6 @@ public final class CompositePoLineValidationUtil {
     if (getElectronicCostQuantity(compPOL) == 0) {
       errors.add(ErrorCodes.ZERO_COST_ELECTRONIC_QTY);
     }
-
-    errors.addAll(validateLocations(compPOL));
-    errors.addAll(validateCostPrices(compPOL));
-    errors.addAll(validatePackagePoLine(compPOL));
 
     return convertErrorCodesToErrors(compPOL, errors);
   }
@@ -105,7 +112,7 @@ public final class CompositePoLineValidationUtil {
     return Collections.emptyList();
   }
 
-  public static List<ErrorCodes> validateLocations(CompositePoLine compPOL) {
+  public static List<Error> validateLocations(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
     List<Location> locations = compPOL.getLocations();
 
@@ -121,7 +128,7 @@ public final class CompositePoLineValidationUtil {
     if (locations.stream().anyMatch(location -> HelperUtils.calculateTotalLocationQuantity(location) == 0)) {
       errors.add(ErrorCodes.ZERO_LOCATION_QTY);
     }
-    return errors;
+    return convertErrorCodesToErrors(compPOL, errors);
   }
 
   private static boolean isLocationsPhysicalQuantityNotValid(CompositePoLine compPOL) {
@@ -146,10 +153,6 @@ public final class CompositePoLineValidationUtil {
       errors.add(ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY);
     }
 
-    errors.addAll(validateLocations(compPOL));
-    errors.addAll(validateCostPrices(compPOL));
-    errors.addAll(validatePackagePoLine(compPOL));
-
     return convertErrorCodesToErrors(compPOL, errors);
   }
 
@@ -165,10 +168,6 @@ public final class CompositePoLineValidationUtil {
       errors.add(ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY);
     }
 
-    errors.addAll(validateLocations(compPOL));
-    errors.addAll(validateCostPrices(compPOL));
-    errors.addAll(validatePackagePoLine(compPOL));
-
     return convertErrorCodesToErrors(compPOL, errors);
   }
 
@@ -176,7 +175,7 @@ public final class CompositePoLineValidationUtil {
     return validatePoLineWithPhysicalFormat(compPOL);
   }
 
-  private static List<ErrorCodes> validateCostPrices(CompositePoLine compLine) {
+  private static List<Error> validateCostPrices(CompositePoLine compLine) {
     List<ErrorCodes> errors = new ArrayList<>();
     Cost cost = compLine.getCost();
     CompositePoLine.OrderFormat orderFormat = compLine.getOrderFormat();
@@ -208,7 +207,7 @@ public final class CompositePoLineValidationUtil {
       errors.add(ErrorCodes.COST_DISCOUNT_INVALID);
     }
 
-    return errors;
+    return convertErrorCodesToErrors(compLine, errors);
   }
 
   /**
@@ -256,13 +255,13 @@ public final class CompositePoLineValidationUtil {
     return error;
   }
 
-  private static List<ErrorCodes> validatePackagePoLine(CompositePoLine compPOL) {
+  private static List<Error> validatePackagePoLine(CompositePoLine compPOL) {
      List<ErrorCodes> errors = new ArrayList<>();
 
      if (Boolean.TRUE.equals(compPOL.getIsPackage()) && compPOL.getInstanceId() != null) {
        errors.add(ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE);
      }
 
-     return errors;
+     return convertErrorCodesToErrors(compPOL, errors);
   }
 }
