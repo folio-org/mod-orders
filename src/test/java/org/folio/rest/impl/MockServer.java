@@ -344,6 +344,10 @@ public class MockServer {
     return serverRqRs.get(TITLES, HttpMethod.GET);
   }
 
+  static List<JsonObject> getUpdatedTitles() {
+    return serverRqRs.get(TITLES, HttpMethod.PUT);
+  }
+
   static List<JsonObject> getLoanTypesSearches() {
     return serverRqRs.get(LOAN_TYPES, HttpMethod.GET);
   }
