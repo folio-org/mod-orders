@@ -259,8 +259,7 @@ public final class CompositePoLineValidationUtil {
   private static List<ErrorCodes> validatePackagePoLine(CompositePoLine compPOL) {
      List<ErrorCodes> errors = new ArrayList<>();
 
-     // The quantity of the electronic resources in the cost must be specified
-     if (compPOL.getIsPackage() && compPOL.getInstanceId() != null) {
+     if (Boolean.TRUE.equals(compPOL.getIsPackage()) && compPOL.getInstanceId() != null) {
        errors.add(ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE);
      }
 
