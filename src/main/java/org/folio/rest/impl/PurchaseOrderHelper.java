@@ -687,7 +687,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private CompositePurchaseOrder validateFundDistributionTotal(CompositePurchaseOrder compPO) {
     for (CompositePoLine cPoLine : compPO.getCompositePoLines()) {
 
-      if (cPoLine.getCost().getPoLineEstimatedPrice() != null && !cPoLine.getFundDistribution().isEmpty() ) {
+      if (cPoLine.getCost().getPoLineEstimatedPrice() != null && !cPoLine.getFundDistribution().isEmpty()) {
         Double poLineEstimatedPrice = cPoLine.getCost().getPoLineEstimatedPrice();
         String currency = cPoLine.getCost().getCurrency();
         MonetaryAmount remainingAmount = Money.of(poLineEstimatedPrice, currency);
