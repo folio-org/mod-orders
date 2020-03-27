@@ -206,6 +206,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           return completedFuture(null);
         })
         .thenCompose(v -> updatePoLines(poFromStorage, compPO))
+        .thenCompose(v -> updateTitlesByNonPackageInstanceIds(compPO.getCompositePoLines()))
         .thenCompose(v -> {
           if (isTransitionToOpen(poFromStorage, compPO)) {
             return checkOrderApprovalRequired(compPO).thenCompose(ok -> openOrder(compPO));
@@ -215,6 +216,20 @@ public class PurchaseOrderHelper extends AbstractHelper {
         })
         .thenCompose(ok -> handleFinalOrderStatus(compPO, poFromStorage.getWorkflowStatus().value()))
       );
+  }
+
+  private CompletableFuture<Void> updateTitlesByNonPackageInstanceIds(List<CompositePoLine> compPOLines) {
+    List<String> lineIds = compPOLines.stream()
+      .filter(line -> Boolean.FALSE.equals(line.getIsPackage()) && line.getInstanceId() != null)
+      .map(CompositePoLine::getId)
+      .collect(toList());
+
+    if (lineIds.isEmpty()) {
+      return completedFuture(null);
+    }
+
+    return titlesHelper.getTitlesByPoLineIds(lineIds)
+      .thenCompose(titlesByPoLineIds -> updateTitlesInstanceId(titlesByPoLineIds, compPOLines));
   }
 
   public CompletableFuture<Void> handleFinalOrderStatus(CompositePurchaseOrder compPO, String initialOrdersStatus) {
@@ -471,7 +486,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
         verifyNonPackageTitles(lineIdTitles, getNonPackageLineIds(compPO.getCompositePoLines()));
         return updateInventory(compPO)
           .thenCompose(ok -> createEncumbrances(compPO))
-          .thenCompose(ok -> updateTitlesInstanceId(lineIdTitles, compPO))
+          .thenCompose(ok -> updateTitlesInstanceId(lineIdTitles, compPO.getCompositePoLines()))
           .thenAccept(ok -> changePoLineStatuses(compPO))
           .thenCompose(ok -> updatePoLinesSummary(compPO));
       });
@@ -484,9 +499,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .toArray(CompletableFuture[]::new));
   }
 
-  private CompletableFuture<Void> updateTitlesInstanceId(Map<String, List<Title>> lineIdTitles, CompositePurchaseOrder compPO) {
+  private CompletableFuture<Void> updateTitlesInstanceId(Map<String, List<Title>> lineIdTitles, List<CompositePoLine> compPOLs) {
     return  VertxCompletableFuture.allOf(ctx,
-        getNonPackageLines(compPO.getCompositePoLines()).stream()
+        getNonPackageLines(compPOLs).stream()
           .map(line -> titlesHelper.updateTitle(lineIdTitles.get(line.getId()).get(0).withInstanceId(line.getInstanceId())))
           .toArray(CompletableFuture[]::new));
   }

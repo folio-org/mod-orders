@@ -169,6 +169,8 @@
             "orders-storage.reporting-codes.item.post",
             "orders-storage.reporting-codes.item.put",
             "orders-storage.reporting-codes.item.delete",
+            "orders-storage.titles.collection.get",
+            "orders-storage.titles.item.put",
             "configuration.entries.collection.get",
             "inventory-storage.identifier-types.collection.get",
             "inventory.items.item.put",
