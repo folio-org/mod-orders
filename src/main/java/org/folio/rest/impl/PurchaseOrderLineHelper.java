@@ -9,6 +9,7 @@ import static java.util.stream.Collectors.toList;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.HelperUtils.INSTANCE_ID;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
@@ -17,7 +18,6 @@ import static org.folio.orders.utils.HelperUtils.calculateTotalLocationQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
-import static org.folio.orders.utils.HelperUtils.convertToPoLine;
 import static org.folio.orders.utils.HelperUtils.deletePoLine;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
@@ -382,9 +382,14 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private CompletableFuture<Void> updateTitleForNonPackageWithInstanceId(CompositePoLine compPol) {
     if (Boolean.FALSE.equals(compPol.getIsPackage()) && compPol.getInstanceId() != null) {
       return titleHelper.getTitlesByPoLineIds(Collections.singletonList(compPol.getId()))
-        .thenApply(titles -> titles.get(compPol.getId()).get(0)
-          .withInstanceId(compPol.getInstanceId()))
-        .thenCompose(titleHelper::updateTitle);
+        .thenCompose(titles -> {
+          if (!titles.isEmpty()) {
+            return titleHelper.updateTitle(titles.get(compPol.getId())
+              .get(0)
+              .withInstanceId(compPol.getInstanceId()));
+          }
+          return completedFuture(null);
+        });
     }
     return completedFuture(null);
   }
@@ -747,10 +752,11 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
     futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage));
+    updatedLineJson.remove(INSTANCE_ID);
 
     // Once all operations completed, return updated PO Line with new sub-object id's as json object
     return allOf(futures.toArray(new CompletableFuture[0]))
-      .thenApply(v -> mapFrom(convertToPoLine(compOrderLine)));
+      .thenApply(v -> updatedLineJson);
   }
 
   private CompletableFuture<String> handleSubObjOperation(String prop, JsonObject subObjContent, String storageId) {
