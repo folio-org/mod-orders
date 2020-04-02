@@ -64,7 +64,9 @@ public enum ErrorCodes {
   BUDGET_IS_INACTIVE("budgetIsInactive", "Cannot create encumbrance from the not active budget"),
   FUND_CANNOT_BE_PAID("fundCannotBePaid", "Fund cannot be paid due to restrictions"),
   MISSING_ONGOING("missingOngoing", "Ongoing field must be present for Ongoing order"),
-  ONGOING_NOT_ALLOWED("ongoingNotAllowed", "Ongoing field must be absent for One-time order");
+  ONGOING_NOT_ALLOWED("ongoingNotAllowed", "Ongoing field must be absent for One-time order"),
+  INCORRECT_FUND_DISTRIBUTION_TOTAL("incorrectFundDistributionTotal","Fund distribution total must add to 100% or totalPrice"),
+  INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE("InstanceIdNotAllowedForPackagePoLine", "Instance id not allowed for package poline");
 
   private final String code;
   private final String description;

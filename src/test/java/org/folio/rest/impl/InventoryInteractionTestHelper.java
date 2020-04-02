@@ -139,7 +139,7 @@ class InventoryInteractionTestHelper {
     // All existing and created items
     List<JsonObject> items = joinExistingAndNewItems();
 
-    verifyPiecesQuantityForSuccessCase(reqData, createdPieces);
+    verifyPiecesQuantityForSuccessCase(reqData.getCompositePoLines(), createdPieces);
 
     for (CompositePoLine pol : reqData.getCompositePoLines()) {
       verifyInstanceCreated(tenant, createdInstances, pol);
@@ -181,9 +181,9 @@ class InventoryInteractionTestHelper {
     logger.debug("--------------------------- Pieces created -------------------------------\n" + new JsonArray(createdPieces).encodePrettily());
   }
 
-  static void verifyPiecesQuantityForSuccessCase(CompositePurchaseOrder reqData, List<JsonObject> createdPieces) {
+  static void verifyPiecesQuantityForSuccessCase(List<CompositePoLine> poLines, List<JsonObject> createdPieces) {
     int totalQuantity = 0;
-    for (CompositePoLine poLine : reqData.getCompositePoLines()) {
+    for (CompositePoLine poLine : poLines) {
       if (poLine.getCheckinItems() != null && poLine.getCheckinItems()) continue;
       totalQuantity += calculateTotalQuantity(poLine);
     }
@@ -322,8 +322,8 @@ class InventoryInteractionTestHelper {
   }
 
   private static void verifyItemsCreated(Header tenant, List<JsonObject> inventoryItems, CompositePoLine pol) {
-    Map<Piece.Format, Integer> expectedItemsPerResourceType = HelperUtils.calculatePiecesQuantity(pol,
-      pol.getLocations(), true);
+    Map<Piece.Format, Integer> expectedItemsPerResourceType = HelperUtils.calculatePiecesWithItemIdQuantity(pol,
+      pol.getLocations());
 
     Map<String, List<JsonObject>> itemsByMaterial = inventoryItems.stream()
       .filter(item -> pol.getId().equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER)))

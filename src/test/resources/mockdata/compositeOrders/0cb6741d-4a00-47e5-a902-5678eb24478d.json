@@ -1,4 +1,5 @@
 {
+  "id": "0cb6741d-4a00-47e5-a902-5678eb24478d",
   "approved": true,
   "assignedTo": "ab18897b-0e40-4f31-896b-9c9adc979a88",
   "manualPo": false,
@@ -7,28 +8,20 @@
     "ABCDEFGHIJKLMNOPQRST",
     "ABCDEFGHIJKLMNOPQRSTUV"
   ],
-  "orderType": "Ongoing",
-  "poNumber": "268758",
+  "poNumber": "228D126",
+  "orderType": "One-Time",
   "reEncumber": false,
-  "ongoing": {
-     "interval": 0,
-     "manualRenewal": true,
-     "reviewPeriod": 0,
-     "renewalDate": "2019-04-09T00:00:00.000Z"
-  },
   "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
-  "workflowStatus": "Open",
-  "metadata": {
-    "createdDate": "2010-10-08T03:53:00.000",
-    "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
-  },
+  "workflowStatus": "Pending",
   "compositePoLines": [
     {
+      "id": "3fc83599-41cc-4439-a901-29de3a3e9720",
+      "checkinItems": false,
       "acquisitionMethod": "Purchase At Vendor System",
       "alerts": [
         {
-          "alert": "Receipt overdue",
-          "id": "9a665b22-9fe5-4c95-b4ee-837a5433c95d"
+          "id": "bf4a9a32-2ba5-4495-b807-eaf894740a4c",
+          "alert": "Receipt overdue"
         }
       ],
       "cancellationRestriction": false,
@@ -36,7 +29,7 @@
       "claims": [
         {
           "claimed": false,
-          "sent": "2018-10-09T00:00:00.000Z",
+          "sent": "2018-10-09T00:00:00.000+0000",
           "grace": 30
         }
       ],
@@ -48,11 +41,11 @@
         }
       ],
       "cost": {
+        "listUnitPriceElectronic": 24.99,
         "currency": "USD",
-        "listUnitPrice": 24.99,
-        "listUnitPriceElectronic": 22.99,
-        "quantityElectronic": 1,
-        "quantityPhysical": 1
+        "discountType": "percentage",
+        "quantityElectronic": 2,
+        "poLineEstimatedPrice": 49.98
       },
       "description": "ABCDEFGH",
       "details": {
@@ -63,75 +56,60 @@
             "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422"
           }
         ],
-        "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+        "subscriptionFrom": "2018-10-09T00:00:00.000+0000",
         "subscriptionInterval": 824,
-        "subscriptionTo": "2020-10-09T00:00:00.000Z"
+        "subscriptionTo": "2020-10-09T00:00:00.000+0000"
       },
       "donor": "ABCDEFGHIJKLM",
       "eresource": {
         "activated": false,
-        "activationDue": 0,
-        "createInventory": "None",
+        "activationDue": 10,
+        "createInventory": "Instance, Holding, Item",
         "trial": false,
+        "expectedActivation": "2018-10-09T00:00:00.000+0000",
         "userLimit": 10,
-        "accessProvider": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
-        "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
+        "accessProvider": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
       "fundDistribution": [
         {
-          "code": "HIST",
-          "fundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
-          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3",
+          "code": "EUROHIST",
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08003",
+          "fundId": "e9285a1c-1dfc-4380-868c-e74073003f43",
           "distributionType": "percentage",
-          "value": 80
-        },
-        {
-          "code": "GENRL",
-          "fundId": "1b6d3338-186e-4e35-9e75-1b886b0da53e",
-          "distributionType": "percentage",
-          "value": 20.0,
-          "encumbrance": "0466cb77-0344-43c6-85eb-0a64aa2934e5"
+          "value": 100.0
         }
       ],
+      "isPackage": false,
       "locations": [
         {
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "quantity": 2,
-          "quantityElectronic": 1,
-          "quantityPhysical": 1
+          "quantityElectronic": 2
         }
       ],
-      "orderFormat": "P/E Mix",
+      "orderFormat": "Electronic Resource",
       "paymentStatus": "Awaiting Payment",
-      "physical": {
-        "createInventory": "Instance, Holding, Item",
-        "volumes": [
-          "vol.1"
-        ],
-        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
-        "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8",
-        "receiptDue": "2018-10-10T00:00:00.000Z"
-      },
       "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
-      "poLineNumber": "268758-03",
+      "poLineNumber": "228D126-1",
       "publicationDate": "2017",
       "publisher": "Schiffer Publishing",
-      "receiptDate": "2018-10-09T00:00:00.000Z",
+      "purchaseOrderId": "0cb6741d-4a00-47e5-a902-5678eb24478d",
+      "receiptDate": "2018-10-09T00:00:00.000+0000",
       "receiptStatus": "Awaiting Receipt",
       "reportingCodes": [
         {
+          "id": "3d81b889-c163-4f16-a20d-d2f29437a6b5",
           "code": "CODE1",
-          "id": "5926dcd7-85f5-4504-8283-712595ebc38b",
           "description": "ABCDEF"
         },
         {
+          "id": "f4aded1c-5818-4ecc-95c2-3a46a8154d7c",
           "code": "CODE2",
-          "id": "fa316c04-8101-4e72-8aaf-01281bac718f",
           "description": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         },
         {
+          "id": "127c2b31-d3b3-49e0-97dc-70ccce3a779a",
           "code": "CODE3",
-          "id": "ea68b696-3125-4940-bf91-1d128323473e",
           "description": "ABCDE"
         }
       ],
@@ -153,9 +131,18 @@
         "vendorAccount": "8910-10"
       },
       "metadata": {
-        "createdDate": "2010-10-08T03:53:00.000",
+        "createdDate": "2010-10-08T03:53:00.000+0000",
         "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
       }
     }
-  ]
+  ],
+  "acqUnitIds": [
+
+  ],
+  "metadata": {
+    "createdDate": "2020-03-25T16:46:02.584+0000",
+    "createdByUserId": "440c89e3-7f6c-578a-9ea8-310dad23605e",
+    "updatedDate": "2020-03-25T16:46:02.584+0000",
+    "updatedByUserId": "440c89e3-7f6c-578a-9ea8-310dad23605e"
+  }
 }

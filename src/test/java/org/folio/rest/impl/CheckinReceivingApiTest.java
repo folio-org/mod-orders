@@ -10,6 +10,12 @@ import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_RETRIEVED;
 import static org.folio.orders.utils.ErrorCodes.PIECE_POL_MISMATCH;
 import static org.folio.orders.utils.ErrorCodes.PIECE_UPDATE_FAILED;
+import static org.folio.orders.utils.HelperUtils.isHoldingUpdateRequiredForEresource;
+import static org.folio.orders.utils.HelperUtils.isHoldingUpdateRequiredForPhysical;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEM_BARCODE;
 import static org.folio.rest.impl.InventoryHelper.ITEM_LEVEL_CALL_NUMBER;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS;
@@ -17,7 +23,10 @@ import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_NAME;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
+import static org.folio.rest.impl.MockServer.addMockEntry;
+import static org.folio.rest.impl.MockServer.addMockTitles;
 import static org.folio.rest.impl.MockServer.getCreatedHoldings;
+import static org.folio.rest.impl.MockServer.getHoldingsSearches;
 import static org.folio.rest.impl.MockServer.getItemUpdates;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
@@ -49,13 +58,15 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.folio.HttpStatus;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
@@ -250,7 +261,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
   @Test
   public void testPostCheckInLocationId() {
-   logger.info("=== Test POST Checkin - locationId checking");
+   logger.info("=== Test POST Checkin - locationId checking ===");
 
     String poLineId = "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56";
 
@@ -318,7 +329,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
   @Test
   public void testPostReceivingPhysicalAll() {
-    logger.info("=== Test POST Receiving - Receive physical resources");
+    logger.info("=== Test POST Receiving - Receive physical resources ===");
 
     CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(2).mapTo(CompositePoLine.class);
     MockServer.addMockTitles(Collections.singletonList(poLines));
@@ -370,6 +381,57 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     // Verify messages sent via event bus
     verifyOrderStatusUpdateEvent(1);
+  }
+
+  @Test
+  public void testPostCheckinElectronicPhysicalChangeLocationIdHoldingIsCreatedForPhysicalPiece() {
+
+    logger.info("=== Test POST check-in - Check-in physical and electronic resource with new locationId ===");
+
+    CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder();
+    CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId());
+    poLine.setOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
+    poLine.setEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE)); // holding mustn't be created
+    poLine.setPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING)); // holding must be created
+
+
+    String locationForPhysical = UUID.randomUUID().toString();
+    String locationForElectronic = UUID.randomUUID().toString();
+
+    Piece physicalPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.PHYSICAL)
+      .withLocationId(locationForPhysical);
+    Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
+
+    addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    addMockEntry(PO_LINES, poLine);
+    addMockEntry(PIECES, physicalPiece);
+    addMockEntry(PIECES, electronicPiece);
+
+    MockServer.addMockTitles(Collections.singletonList(poLine));
+
+    List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
+    toBeCheckedInList.add(new ToBeCheckedIn()
+      .withCheckedIn(1)
+      .withPoLineId(poLine.getId())
+      .withCheckInPieces(Arrays.asList(new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.ON_ORDER), new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.ON_ORDER))));
+
+    CheckinCollection request = new CheckinCollection()
+      .withToBeCheckedIn(toBeCheckedInList)
+      .withTotalRecords(2);
+
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setId(physicalPiece.getId());
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(locationForPhysical);
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setId(electronicPiece.getId());
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(locationForElectronic);
+
+    checkResultWithErrors(request, 0);
+    assertThat(getHoldingsSearches(), hasSize(1));
+    assertThat(getCreatedHoldings(), hasSize(1));
+
+    assertThat(getCreatedHoldings().get(0).getString(HOLDING_PERMANENT_LOCATION_ID), is(locationForPhysical));
+
   }
 
   @Test
@@ -499,14 +561,13 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     receivingRq.getToBeReceived()
       .get(0)
       .getReceivedItems()
-      .stream()
       .forEach(recItem -> pieceIds.add(recItem.getPieceId()));
 
     // get processed pieces from mock collection
     pieces.getPieces()
       .removeIf(piece -> !pieceIds.contains(piece.getId()));
 
-    for (Piece piece : pieces.getPieces()) {
+    for (org.folio.rest.acq.model.Piece piece : pieces.getPieces()) {
       for (ReceivedItem receivedItem : receivingRq.getToBeReceived()
         .get(0)
         .getReceivedItems()) {
@@ -514,12 +575,20 @@ public class CheckinReceivingApiTest extends ApiTestBase {
           .equals(piece.getId())
             && !receivedItem.getLocationId()
               .equals(piece.getLocationId())
-            && HelperUtils.isHoldingsUpdateRequired(poline.getEresource(), poline.getPhysical())) {
+            && isHoldingsUpdateRequired(piece, poline)) {
           expectedHoldings.add(getInstanceId(poline) + receivedItem.getLocationId());
         }
       }
     }
     Assert.assertEquals(expectedHoldings.size(), getCreatedHoldings().size());
+  }
+
+  private boolean isHoldingsUpdateRequired(org.folio.rest.acq.model.Piece piece, PoLine poLine) {
+    if (piece.getFormat() == org.folio.rest.acq.model.Piece.Format.ELECTRONIC) {
+     return isHoldingUpdateRequiredForEresource(poLine.getEresource());
+    } else {
+      return isHoldingUpdateRequiredForPhysical(poLine.getPhysical());
+    }
   }
 
 
@@ -563,7 +632,11 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     logger.info("=== Test POST Receiving - Receive resources with error searching for item");
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-500-error-for-items-lookup.json").mapTo(ReceivingCollection.class);
-
+    receivingRq.getToBeReceived().forEach(toBeReceived -> {
+      CompositePoLine poLine = getMinimalContentCompositePoLine().withId(toBeReceived.getPoLineId());
+      addMockEntry(PO_LINES, poLine);
+      addMockTitles(Collections.singletonList(poLine));
+    });
     ReceivingResults results = verifyPostResponse(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
 

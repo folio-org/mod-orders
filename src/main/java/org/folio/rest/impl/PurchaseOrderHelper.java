@@ -11,6 +11,7 @@ import static org.folio.orders.utils.ErrorCodes.MISSING_ONGOING;
 import static org.folio.orders.utils.ErrorCodes.ONGOING_NOT_ALLOWED;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS;
+import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
@@ -61,6 +62,8 @@ import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.money.MonetaryAmount;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -71,17 +74,22 @@ import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrders;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.javamoney.moneta.Money;
+import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
@@ -205,6 +213,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           return completedFuture(null);
         })
         .thenCompose(v -> updatePoLines(poFromStorage, compPO))
+        .thenCompose(v -> updateTitlesByNonPackageInstanceIds(compPO.getCompositePoLines()))
         .thenCompose(v -> {
           if (isTransitionToOpen(poFromStorage, compPO)) {
             return checkOrderApprovalRequired(compPO).thenCompose(ok -> openOrder(compPO));
@@ -214,6 +223,20 @@ public class PurchaseOrderHelper extends AbstractHelper {
         })
         .thenCompose(ok -> handleFinalOrderStatus(compPO, poFromStorage.getWorkflowStatus().value()))
       );
+  }
+
+  private CompletableFuture<Void> updateTitlesByNonPackageInstanceIds(List<CompositePoLine> compPOLines) {
+    List<String> lineIds = compPOLines.stream()
+      .filter(line -> Boolean.FALSE.equals(line.getIsPackage()) && line.getInstanceId() != null)
+      .map(CompositePoLine::getId)
+      .collect(toList());
+
+    if (lineIds.isEmpty()) {
+      return completedFuture(null);
+    }
+
+    return titlesHelper.getTitlesByPoLineIds(lineIds)
+      .thenCompose(titlesByPoLineIds -> updateTitlesInstanceId(titlesByPoLineIds, compPOLines));
   }
 
   public CompletableFuture<Void> handleFinalOrderStatus(CompositePurchaseOrder compPO, String initialOrdersStatus) {
@@ -463,13 +486,15 @@ public class PurchaseOrderHelper extends AbstractHelper {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
     return getOrderWithLines(compPO)
+      .thenApply(this::validateFundDistributionTotal)
+      .thenApply(this::validateMaterialTypes)
       .thenCompose(this::fetchNonPackageTitles)
       .thenCompose(lineIdTitles -> {
         populateInstanceId(lineIdTitles, compPO.getCompositePoLines());
         verifyNonPackageTitles(lineIdTitles, getNonPackageLineIds(compPO.getCompositePoLines()));
         return updateInventory(compPO)
           .thenCompose(ok -> createEncumbrances(compPO))
-          .thenCompose(ok -> updateTitlesInstanceId(lineIdTitles, compPO))
+          .thenCompose(ok -> updateTitlesInstanceId(lineIdTitles, compPO.getCompositePoLines()))
           .thenAccept(ok -> changePoLineStatuses(compPO))
           .thenCompose(ok -> updatePoLinesSummary(compPO));
       });
@@ -482,9 +507,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .toArray(CompletableFuture[]::new));
   }
 
-  private CompletableFuture<Void> updateTitlesInstanceId(Map<String, List<Title>> lineIdTitles, CompositePurchaseOrder compPO) {
+  private CompletableFuture<Void> updateTitlesInstanceId(Map<String, List<Title>> lineIdTitles, List<CompositePoLine> compPOLs) {
     return  VertxCompletableFuture.allOf(ctx,
-        getNonPackageLines(compPO.getCompositePoLines()).stream()
+        getNonPackageLines(compPOLs).stream()
           .map(line -> titlesHelper.updateTitle(lineIdTitles.get(line.getId()).get(0).withInstanceId(line.getInstanceId())))
           .toArray(CompletableFuture[]::new));
   }
@@ -516,7 +541,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   public CompletableFuture<Boolean> validateOrder(CompositePurchaseOrder compPO) {
 
     return setCreateInventoryDefaultValues(compPO)
-      .thenAccept(v -> addProcessingErrors(HelperUtils.validateOrder(compPO)))
+      .thenAccept(v -> validateOrderPoLines(compPO))
       .thenCompose(v -> validateIsbnValues(compPO))
       .thenCompose(v -> validatePoLineLimit(compPO))
       .thenCompose(v -> validateVendor(compPO))
@@ -524,7 +549,16 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenApply(v -> getErrors().isEmpty());
   }
 
-  CompletableFuture<Void> validateIsbnValues(CompositePurchaseOrder compPO) {
+  public CompletableFuture<Void> validateOrderPoLines(CompositePurchaseOrder compositeOrder) {
+    List<Error> errors = new ArrayList<>();
+    for (CompositePoLine compositePoLine : compositeOrder.getCompositePoLines()) {
+      errors.addAll(CompositePoLineValidationUtil.validatePoLine(compositePoLine));
+    }
+    addProcessingErrors(errors);
+    return completedFuture(null);
+  }
+
+  private CompletableFuture<Void> validateIsbnValues(CompositePurchaseOrder compPO) {
     CompletableFuture[] futures = compPO.getCompositePoLines()
       .stream()
       .map(orderLineHelper::validateAndNormalizeISBN)
@@ -533,7 +567,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return VertxCompletableFuture.allOf(ctx, futures);
   }
 
-  CompletableFuture<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO) {
+  private CompletableFuture<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO) {
     CompletableFuture[] futures = compPO.getCompositePoLines()
       .stream()
       .map(orderLineHelper::setTenantDefaultCreateInventoryValues)
@@ -545,7 +579,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   /**
    * Validates purchase order which already exists in the storage.
    * Checks PO Number presence, validates that provided order id corresponds to one set in order and its lines.
-   * If all is okay, {@link #validateOrder(CompositePurchaseOrder)} is called afterwards.
+   * If all is okay, {@link #validateOrderPoLines(CompositePurchaseOrder)} is called afterwards.
    * @param orderId Purchase Order id
    * @param compPO Purchase Order to validate
    * @return completable future which might be completed with {@code true} if order is valid, {@code false} if not valid or an exception if processing fails
@@ -648,6 +682,41 @@ public class PurchaseOrderHelper extends AbstractHelper {
         return completedFuture(null);
       })
       .thenApply(v -> compPO);
+  }
+
+  private CompositePurchaseOrder validateFundDistributionTotal(CompositePurchaseOrder compPO) {
+    for (CompositePoLine cPoLine : compPO.getCompositePoLines()) {
+
+      if (cPoLine.getCost().getPoLineEstimatedPrice() != null && !cPoLine.getFundDistribution().isEmpty()) {
+        Double poLineEstimatedPrice = cPoLine.getCost().getPoLineEstimatedPrice();
+        String currency = cPoLine.getCost().getCurrency();
+        MonetaryAmount remainingAmount = Money.of(poLineEstimatedPrice, currency);
+
+        for (FundDistribution fundDistribution : cPoLine.getFundDistribution()) {
+          DistributionType dType = fundDistribution.getDistributionType();
+          Double value = fundDistribution.getValue();
+          MonetaryAmount amountValueMoney = Money.of(value, currency);
+          MonetaryAmount percentToAmount = null;
+
+          if (dType == DistributionType.PERCENTAGE) {
+            /**
+             * calculate remaining amount to carry forward, required if there are more fund distributions with percentage and
+             * percentToAmount = poLineEstimatedPrice * value/100;
+             */
+            MonetaryAmount poLineEstimatedPriceMoney = Money.of(poLineEstimatedPrice, currency);
+            // convert percent to amount
+            percentToAmount = poLineEstimatedPriceMoney.with(MonetaryOperators.percent(value));
+            amountValueMoney = percentToAmount;
+          }
+
+          remainingAmount = remainingAmount.subtract(amountValueMoney);
+        }
+        if (!remainingAmount.isZero()) {
+          throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL);
+        }
+      }
+    }
+    return compPO;
   }
 
   /**
@@ -986,5 +1055,15 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private boolean isUserNotHaveApprovePermission() {
     return !getProvidedPermissions().contains(PERMISSION_ORDER_APPROVE);
+  }
+
+  private CompositePurchaseOrder validateMaterialTypes(CompositePurchaseOrder purchaseOrder){
+    if (purchaseOrder.getWorkflowStatus() != PENDING) {
+        List<Error> errors = CompositePoLineValidationUtil.checkMaterialsAvailability(purchaseOrder.getCompositePoLines());
+        if (!errors.isEmpty()) {
+          throw new HttpException(422, errors.get(0));
+        }
+    }
+    return purchaseOrder;
   }
 }

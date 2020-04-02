@@ -7,8 +7,8 @@ import static org.folio.orders.utils.ErrorCodes.COST_DISCOUNT_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
 import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
+import static org.folio.orders.utils.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
 import static org.folio.orders.utils.ErrorCodes.ISBN_NOT_VALID;
-import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
@@ -36,6 +36,7 @@ import static org.folio.rest.impl.MockServer.getOrderLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getQueryParams;
 import static org.folio.rest.impl.MockServer.getTitlesSearches;
+import static org.folio.rest.impl.MockServer.getUpdatedTitles;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -46,6 +47,7 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -327,7 +329,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     final Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData),
       APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(9));
+    assertThat(response.getErrors(), hasSize(8));
     List<String> errorCodes = response.getErrors()
       .stream()
       .map(Error::getCode)
@@ -340,8 +342,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
       COST_ADDITIONAL_COST_INVALID.getCode(),
       COST_DISCOUNT_INVALID.getCode(),
       ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
-      PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
-      MISSING_MATERIAL_TYPE.getCode()));
+      PHYSICAL_COST_LOC_QTY_MISMATCH.getCode()));
 
 
     // Check that no any calls made by the business logic to other services
@@ -445,6 +446,45 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     // Verify no message sent via event bus
     verifyOrderStatusUpdateEvent(0);
+  }
+
+  @Test
+  public void testUpdateNonPackagePoLineWithInstanceId() {
+    logger.info("=== Test PUT Order Line By Id - No Order update event sent on success ===");
+
+    String lineId = ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE;
+    CompositePoLine compositePoLine = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
+    String url = String.format(LINE_BY_ID_PATH, lineId);
+
+    String instanceUUID = UUID.randomUUID().toString();
+    compositePoLine.setIsPackage(false);
+    compositePoLine.setInstanceId(instanceUUID);
+
+    verifyPut(url, JsonObject.mapFrom(compositePoLine), "", 204);
+    assertThat(getUpdatedTitles(), notNullValue());
+    Title updatedTitle = getUpdatedTitles().get(0).mapTo(Title.class);
+
+    assertEquals(instanceUUID, updatedTitle.getInstanceId());
+
+    validateSavedPoLines();
+  }
+
+  @Test
+  public void testUpdatePackagePoLineWithInstanceId() {
+    logger.info("=== Test PUT Order Line By Id - No Order update event sent on success ===");
+
+    String lineId = ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE;
+    CompositePoLine compositePoLine = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
+    String url = String.format(LINE_BY_ID_PATH, lineId);
+
+    compositePoLine.setIsPackage(true);
+    compositePoLine.setInstanceId(UUID.randomUUID().toString());
+
+    Errors errors = verifyPut(url, JsonObject.mapFrom(compositePoLine), "", 422).then()
+      .extract()
+      .as(Errors.class);
+
+    assertEquals(INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE.getCode(), errors.getErrors().get(0).getCode());
   }
 
 

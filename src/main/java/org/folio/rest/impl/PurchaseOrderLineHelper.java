@@ -9,10 +9,10 @@ import static java.util.stream.Collectors.toList;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.HelperUtils.INSTANCE_ID;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
-import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantity;
 import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantityWithoutLocation;
 import static org.folio.orders.utils.HelperUtils.calculateTotalLocationQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
@@ -27,7 +27,6 @@ import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.inventoryUpdateNotRequired;
 import static org.folio.orders.utils.HelperUtils.operateOnObject;
-import static org.folio.orders.utils.HelperUtils.validatePoLine;
 import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
@@ -39,6 +38,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.orders.utils.validators.CompositePoLineValidationUtil.validatePoLine;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
@@ -112,11 +112,13 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   private final InventoryHelper inventoryHelper;
   private final ProtectionHelper protectionHelper;
+  private final TitlesHelper titleHelper;
 
   PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
+    titleHelper = new TitlesHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   PurchaseOrderLineHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -371,8 +373,25 @@ class PurchaseOrderLineHelper extends AbstractHelper {
         // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
         // update
         compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
-        return updateOrderLine(compOrderLine, lineFromStorage).thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage));
+        return updateTitleForNonPackageWithInstanceId(compOrderLine)
+          .thenCompose(ok -> updateOrderLine(compOrderLine, lineFromStorage))
+          .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage));
       });
+  }
+
+  private CompletableFuture<Void> updateTitleForNonPackageWithInstanceId(CompositePoLine compPol) {
+    if (Boolean.FALSE.equals(compPol.getIsPackage()) && compPol.getInstanceId() != null) {
+      return titleHelper.getTitlesByPoLineIds(Collections.singletonList(compPol.getId()))
+        .thenCompose(titles -> {
+          if (!titles.isEmpty()) {
+            return titleHelper.updateTitle(titles.get(compPol.getId())
+              .get(0)
+              .withInstanceId(compPol.getInstanceId()));
+          }
+          return completedFuture(null);
+        });
+    }
+    return completedFuture(null);
   }
 
   private void validatePOLineProtectedFieldsChanged(CompositePoLine compOrderLine, JsonObject lineFromStorage, CompositePurchaseOrder purchaseOrder) {
@@ -633,7 +652,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
         List<Piece> filteredExpectedPiecesWithItem = filterByLocationId(expectedPiecesWithItem, locationId);
         piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
 
-        Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = calculatePiecesQuantity(compPOL, locations, false);
+        Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = HelperUtils.calculatePiecesWithoutItemIdQuantity(compPOL, locations);
         Map<Piece.Format, Integer> quantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(filteredExistingPieces);
         expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
           int remainingPiecesQuantity = expectedQty - quantityWithoutItem.getOrDefault(format, 0);
@@ -733,6 +752,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
     futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage));
+    updatedLineJson.remove(INSTANCE_ID);
 
     // Once all operations completed, return updated PO Line with new sub-object id's as json object
     return allOf(futures.toArray(new CompletableFuture[0]))

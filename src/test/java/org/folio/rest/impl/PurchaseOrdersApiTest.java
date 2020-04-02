@@ -12,6 +12,8 @@ import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH
 import static org.folio.orders.utils.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
+import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
+import static org.folio.orders.utils.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
 import static org.folio.orders.utils.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
@@ -32,6 +34,7 @@ import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
+import static org.folio.orders.utils.HelperUtils.INSTANCE_ID;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
@@ -60,6 +63,7 @@ import static org.folio.rest.impl.InventoryHelper.DEFAULT_LOAN_TYPE_NAME;
 import static org.folio.rest.impl.InventoryHelper.INSTANCE_STATUS_ID;
 import static org.folio.rest.impl.InventoryHelper.INSTANCE_TYPE_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEMS;
+import static org.folio.rest.impl.InventoryHelper.ITEM_MATERIAL_TYPE_ID;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.joinExistingAndNewItems;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInstanceLinksForUpdatedOrder;
 import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInventoryInteraction;
@@ -141,11 +145,13 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
@@ -176,8 +182,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
   private static final String ORDER_WITHOUT_PO_LINES = "order_without_po_lines.json";
   private static final String ORDER_WITHOUT_VENDOR_ID = "order_without_vendor_id.json";
-  private static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
+  public static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
   private static final String ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON = "put_order_with_mismatch_id_in_po_lines.json";
+  private static final String ORDER_WITHOUT_MATERIAL_TYPE_JSON = "order_po_line_without_material_type.json";
 
   static final String ACTIVE_VENDOR_ID = "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1";
   static final String INACTIVE_VENDOR_ID = "b1ef7e96-98f3-4f0d-9820-98c322c989d2";
@@ -201,6 +208,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   static final String VALID_FUND_ID =  "fb7b70f1-b898-4924-a991-0e4b6312bb5f";
   static final String FUND_ID_RESTRICTED =  "72330c92-087e-4cdc-a82e-acadd9332659";
   static final String VALID_LEDGER_ID =  "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
+  public static final String ORDER_WITHOUT_MATERIAL_TYPES_ID =  "0cb6741d-4a00-47e5-a902-5678eb24478d";
 
   // API paths
   public final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
@@ -224,7 +232,130 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public static final Header ALL_DESIRED_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(AcqDesiredPermissions.getValues()).encode());
   public static final Header APPROVAL_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(Collections.singletonList("orders.item.approve")).encode());
   static final String ITEMS_NOT_FOUND = UUID.randomUUID().toString();
+  
+  @Test
+  public void testValidFundDistributionTotalPercentage() throws Exception {
+    logger.info("=== Test fund distribution total must add upto totalEstimatedPrice - valid total percentage ===");
 
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    prepareOrderForPostRequest(reqData);
+
+    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
+
+    // Make sure expected number of PO Lines available
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
+
+    // Calculated poLineEstimatedPrice = 47.98
+    // Calculate remaining Percentage for fundDistribution1 = 47.98 - 23.99(50%) = 23.99
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.PERCENTAGE);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(50d);
+
+    // Calculate remaining Percentage for fundDistribution2 = 23.99 - 23.99(50%) = 0.0
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.PERCENTAGE);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(50d);
+
+    final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+        prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+    
+    assertThat(resp.getCompositePoLines().get(0).getCost().getPoLineEstimatedPrice(), equalTo(47.98));
+  }
+
+  @Test
+  public void testInvalidFundDistributionTotalPercentage() throws Exception {
+    logger.info("===  Test fund distribution total must add upto totalEstimatedPrice - invalid total percentage ===");
+
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    prepareOrderForPostRequest(reqData);
+
+    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
+
+    // Make sure expected number of PO Lines available
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
+
+    // Calculated poLineEstimatedPrice = 47.98
+    // Calculate remaining Amount for fundDistribution1 = 47.98 - 47.98(100%) = 0
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.PERCENTAGE);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(100d);
+
+    // Calculate remaining Amount for fundDistribution2 = 0 - 47.98(100%) = -47.98
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.PERCENTAGE);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(100d);
+
+    // Amount < 0 is not allowed
+    Errors errorResponse = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+        prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(errorResponse.getErrors(), hasSize(1));
+
+    Error error = errorResponse.getErrors().get(0);
+
+    assertThat(error.getCode(), is(INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode()));
+  }
+
+  @Test
+  public void testInvalidFundDistributionTotalAmountPercentage() throws Exception {
+    logger.info("===  Test fund distribution total must add upto totalEstimatedPrice - invalid total amount and percentage ===");
+
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+
+    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
+
+    // Make sure expected number of PO Lines available
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
+
+    // Calculated poLineEstimatedPrice = 47.98
+    // Calculate remaining Amount for fundDistribution1 = 47.98 - 10 = 37.98
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.AMOUNT);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(10d);
+
+    // Calculate remaining percentage for fundDistribution2 = 37.98 - 40.783(85%) = -2.803
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.PERCENTAGE);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(85d);
+
+    Errors errorResponse = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+        prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(errorResponse.getErrors(), hasSize(1));
+
+    Error error = errorResponse.getErrors().get(0);
+
+    assertThat(error.getCode(), is(INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode()));
+  }
+
+  @Test
+  public void testInvalidFundDistributionTotalAmount() throws Exception {
+    logger.info("===  Test fund distribution total must add upto totalEstimatedPrice - invalid total amount ===");
+
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+
+    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
+    reqData.setTotalEstimatedPrice(200d);
+    // Make sure expected number of PO Lines available
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
+
+    // Calculated poLineEstimatedPrice = 47.98
+    // Calculate remaining Amount for fundDistribution1 = 47.98 - 40 = 7.98
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.AMOUNT);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(40d);
+
+    // Calculate remaining Amount for fundDistribution2 = 7.98 - 8 = -0.02
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.AMOUNT);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(8d);
+
+    // Amount < 0 is not allowed
+    Errors errorResponse = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+        prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
+
+    assertThat(errorResponse.getErrors(), hasSize(1));
+
+    Error error = errorResponse.getErrors().get(0);
+
+    assertThat(error.getCode(), is(INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode()));
+  }
 
   @Test
   public void testListedPrintMonograph() throws Exception {
@@ -346,7 +477,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     final Errors response = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
-    assertThat(response.getErrors(), hasSize(12));
+    assertThat(response.getErrors(), hasSize(11));
     Set<String> errorCodes = response.getErrors()
                                      .stream()
                                      .map(Error::getCode)
@@ -358,8 +489,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
                                               PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
                                               ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
                                               COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
-                                              COST_UNIT_PRICE_INVALID.getCode(),
-                                              MISSING_MATERIAL_TYPE.getCode()));
+                                              COST_UNIT_PRICE_INVALID.getCode()));
 
     // Check that no other calls are made by the business logic to other services, except for ISBN validation
     assertEquals(2, MockServer.serverRqRs.size());
@@ -882,7 +1012,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
     List<JsonObject> items = joinExistingAndNewItems();
     List<JsonObject> createdPieces = getCreatedPieces();
-    verifyPiecesQuantityForSuccessCase(reqData, createdPieces);
+    verifyPiecesQuantityForSuccessCase(reqData.getCompositePoLines(), createdPieces);
     verifyPiecesCreated(items, reqData.getCompositePoLines(), createdPieces);
   }
 
@@ -1431,6 +1561,41 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED.value(), reqData.getCompositePoLines().size());
   }
 
+  @Test
+  public void testPutOrdersByIdToOpenOrderWithLocationButCreateInventoryNoneForOneOfResources() {
+    logger.info("=== Test Put Order By Id to open order - P/E Mix PO Line, location specified but create inventory is None for electronic resource ===");
+
+    CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
+    CompositePoLine line = getMinimalContentCompositePoLine();
+
+    reqData.withVendor(ACTIVE_VENDOR_ID);
+    line.setOrderFormat(OrderFormat.P_E_MIX);
+    line.setEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.NONE).withAccessProvider(reqData.getVendor()));
+    line.setPhysical(new Physical().withCreateInventory(CreateInventory.INSTANCE_HOLDING_ITEM).withMaterialType(ITEM_MATERIAL_TYPE_ID));
+    line.setPoLineNumber(reqData.getPoNumber() + "-1");
+
+    line.setLocations(Collections.singletonList(new Location().withLocationId(UUID.randomUUID()
+        .toString())
+        .withQuantityElectronic(2)
+        .withQuantityPhysical(2)));
+
+    line.setCost(new Cost().withCurrency("USD")
+        .withListUnitPrice(1.0)
+        .withListUnitPriceElectronic(1.0)
+        .withQuantityElectronic(2)
+        .withQuantityPhysical(2));
+
+    addMockEntry(PURCHASE_ORDER, reqData);
+    addMockEntry(PO_LINES, line);
+    createMockTitle(line);
+
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
+
+    List<JsonObject> createdPieces = getCreatedPieces();
+    verifyPiecesQuantityForSuccessCase(Collections.singletonList(line), createdPieces);
+  }
+
   private void createMockTitle(CompositePoLine line) {
     Title title = new Title().withTitle(line.getTitleOrPackage()).withPoLineId(line.getId());
     MockServer.addMockEntry(TITLES, JsonObject.mapFrom(title));
@@ -1452,6 +1617,42 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().forEach(p -> assertThat(uuids.get(p.getId()), is(p.getInstanceId())));
     // Verify that new instances didn't created
     assertThat(MockServer.getCreatedInstances(), nullValue());
+    assertThat(MockServer.getUpdatedTitles(), notNullValue());
+
+    MockServer.getUpdatedTitles()
+      .forEach(title -> assertTrue(uuids.containsValue(title.getString(INSTANCE_ID))));
+    validateSavedPoLines();
+
+  }
+
+  @Test
+  public void testPutOrdersWithPackagePolinesAndInstanceIdSpecified() throws Exception {
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
+
+    reqData.getCompositePoLines()
+      .forEach(p -> {
+        p.setInstanceId(UUID.randomUUID().toString());
+        p.setIsPackage(true);
+      });
+    // Update order
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 422)
+      .then()
+      .extract()
+      .as(Errors.class);
+
+    assertEquals(INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE.getCode(), errors.getErrors().get(0).getCode());
+
+    // test with transition to open
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 422)
+      .then()
+      .extract()
+      .as(Errors.class);
+
+    assertEquals(INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE.getCode(), errors.getErrors().get(0).getCode());
   }
 
   @Test
@@ -3136,11 +3337,76 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     }
   }
 
+  @Test
+  public void testPostShouldBeSuccessIfOrderInPendingStatusAndMaterialTypeIsAbsentInOrderLine() {
+    logger.info("===Test Post Successful test completion if material type is absent and Order in PENDING status ===");
+    CompositePurchaseOrder reqData = getMockAsJson(ORDER_WITHOUT_MATERIAL_TYPE_JSON).mapTo(CompositePurchaseOrder.class);
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
+      .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201);
+  }
+
+  @Test
+  public void testPostShouldFailedIfOrderIsNotInPendingStatusAndMaterialTypeIsAbsentInOrderLine() {
+    logger.info("===Test Post Failed test completion if material type is absent and Order in OPEN status ===");
+    CompositePurchaseOrder reqData = getMockAsJson(ORDER_WITHOUT_MATERIAL_TYPE_JSON).mapTo(CompositePurchaseOrder.class);
+
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    List<Error> errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
+      .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422)
+      .as(Errors.class)
+      .getErrors();
+
+    assertThat(errors.get(0).getMessage(), equalTo(MISSING_MATERIAL_TYPE.getDescription()));
+  }
+
+  @Test
+  public void testPutShouldFailedIfOrderTransitFromPendingToOpenStatusAndMaterialTypeIsAbsentInOrderLine() {
+    logger.info("===Test Success Post Failed test completion if material type is absent and Order in PENDING status");
+    CompositePurchaseOrder reqData = getMockAsJson(ORDER_WITHOUT_MATERIAL_TYPE_JSON).mapTo(CompositePurchaseOrder.class);
+    reqData.getCompositePoLines().forEach(this::removeMaterialType);
+
+    CompositePurchaseOrder po = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
+      .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201)
+      .as(CompositePurchaseOrder.class);
+
+    CompositePurchaseOrder putReq = prepareCompositeOrderOpenRequest(po);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
+    List<Error> errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_WITHOUT_MATERIAL_TYPES_ID), JsonObject.mapFrom(putReq)
+      .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422)
+      .as(Errors.class)
+      .getErrors();
+
+    assertThat(errors.get(0).getMessage(), equalTo(MISSING_MATERIAL_TYPE.getDescription()));
+  }
+
+  private CompositePurchaseOrder prepareCompositeOrderOpenRequest(CompositePurchaseOrder po) {
+    CompositePurchaseOrder compositeOrderPutRequest = new CompositePurchaseOrder();
+    compositeOrderPutRequest.setId(ORDER_WITHOUT_MATERIAL_TYPES_ID);
+    compositeOrderPutRequest.setOrderType(CompositePurchaseOrder.OrderType.ONE_TIME);
+    compositeOrderPutRequest.setOrderType(po.getOrderType());
+    compositeOrderPutRequest.setApproved(false);
+    compositeOrderPutRequest.setPoNumber(po.getPoNumber());
+    compositeOrderPutRequest.setTotalEstimatedPrice(po.getTotalEstimatedPrice());
+    compositeOrderPutRequest.setTotalItems(po.getTotalItems());
+    compositeOrderPutRequest.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    compositeOrderPutRequest.setVendor(po.getVendor());
+    compositeOrderPutRequest.setMetadata(po.getMetadata());
+
+    return compositeOrderPutRequest;
+  }
+
+  private void removeMaterialType(CompositePoLine poLine) {
+    if (poLine.getPhysical() != null)
+      poLine.getPhysical().setMaterialType(null);
+    if (poLine.getEresource() != null)
+      poLine.getEresource().setMaterialType(null);
+  }
+
   private static JsonObject getMockDraftOrder() throws Exception {
     JsonObject order = new JsonObject(getMockData(LISTED_PRINT_MONOGRAPH_PATH));
     order.put("workflowStatus", "Pending");
 
     return order;
   }
-
 }
