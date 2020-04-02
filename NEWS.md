@@ -4,6 +4,8 @@
 
 Bugfix release to fix issues with PO Line update and inventory interaction during receiving and order opening
 
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v10.0.0...v10.0.1)
+
 ### Stories
  * [MODORDERS-360](https://issues.folio.org/browse/MODORDERS-360) - Create holding when receiving a piece and location is changed
  
