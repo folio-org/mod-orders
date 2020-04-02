@@ -1,5 +1,18 @@
 ## 10.1.0 - Unreleased
 
+## 10.0.1 - Released
+
+Bugfix release to fix issues with PO Line update and inventory interaction during receiving and order opening
+
+### Stories
+ * [MODORDERS-360](https://issues.folio.org/browse/MODORDERS-360) - Create holding when receiving a piece and location is changed
+ 
+### Bug Fixes
+ * [MODORDERS-371](https://issues.folio.org/browse/MODORDERS-371) - Extra pieces are created for "PO Line" with type for "P/E Mix"
+ * [MODORDERS-368](https://issues.folio.org/browse/MODORDERS-368) - Can't update POL with a specified instanceId
+ * [MODORDERS-345](https://issues.folio.org/browse/MODORDERS-345) - Fund distribution totals must add upto 100%
+ * [MODORDERS-176](https://issues.folio.org/browse/MODORDERS-176) - Failure in inventory interaction, fails the order
+
 ## 10.0.0 - Released
 
 The main focus of this release was to introduce new APIs and business logic **orders reasons for closure, prefixes, suffixes, titles**.
