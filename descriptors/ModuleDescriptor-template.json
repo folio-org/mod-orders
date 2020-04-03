@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "10.0",
+      "version": "10.1",
       "handlers": [
         {
           "methods": [
@@ -93,7 +93,7 @@
     },
     {
       "id": "order-lines",
-      "version": "1.0",
+      "version": "1.1",
       "handlers": [
         {
           "methods": [
@@ -232,7 +232,7 @@
     },
     {
       "id": "receiving",
-      "version": "1.0",
+      "version": "1.1",
       "handlers": [
         {
           "methods": [
@@ -651,7 +651,7 @@
     },
     {
       "id": "orders-storage.po-lines",
-      "version": "9.0"
+      "version": "9.1"
     },
     {
       "id": "orders-storage.order-templates",
@@ -699,23 +699,23 @@
     },
     {
       "id": "finance.funds",
-      "version": "1.0"
+      "version": "1.1"
     },
     {
       "id": "finance.transactions",
-      "version": "1.0 2.0"
+      "version": "1.0 2.1"
     },
     {
       "id": "finance.order-transaction-summaries",
-      "version": "1.0"
+      "version": "1.1"
     },
     {
       "id": "finance.ledgers",
-      "version": "1.3"
+      "version": "1.4"
     },
     {
       "id": "finance.budgets",
-      "version": "1.0"
+      "version": "1.1"
     },
     {
       "id": "orders-storage.titles",
