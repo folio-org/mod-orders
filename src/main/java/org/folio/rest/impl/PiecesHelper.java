@@ -40,16 +40,10 @@ public class PiecesHelper extends AbstractHelper {
   }
 
   CompletableFuture<Piece> createPiece(Piece piece) {
-    CompletableFuture<Piece> future = new CompletableFuture<>();
-    if (Objects.isNull(piece.getReceiptDate())) {
-      future.completeExceptionally(new HttpException(422, MISSING_RECEIPT_DATE));
-      return future;
-    } else {
-      future = getOrderByPoLineId(piece.getPoLineId())
+      return getOrderByPoLineId(piece.getPoLineId())
         .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE))
-        .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(piece), resourcesPath(PIECES)).thenApply(piece::withId));
-    }
-    return future;
+        .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(piece), resourcesPath(PIECES))
+        .thenApply(piece::withId));
   }
 
   // Flow to update piece
