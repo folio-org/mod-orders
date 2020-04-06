@@ -1,5 +1,14 @@
 ## 10.1.0 - Unreleased
 
+## 10.0.2 - Released
+
+Bugfix release to make field for Piece optional 
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v10.0.1...v10.0.2)
+
+### Bug Fixes
+ * [MODORDERS-376](https://issues.folio.org/browse/MODORDERS-376) - Make field "Piece.receiptDate" optional
+
 ## 10.0.1 - Released
 
 Bugfix release to fix issues with PO Line update and inventory interaction during receiving and order opening
