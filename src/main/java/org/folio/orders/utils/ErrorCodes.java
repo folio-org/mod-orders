@@ -56,7 +56,6 @@ public enum ErrorCodes {
   ISBN_NOT_VALID("invalidISBN", "ISBN value is invalid"),
   FUNDS_NOT_FOUND("fundsNotFound", "The fund records are not found"),
   CURRENT_FISCAL_YEAR_NOT_FOUND("currentFYearNotFound", "Current fiscal year not found for ledger"),
-  MISSING_RECEIPT_DATE("missingReceiptDate", "receiptDate cannot be null"),
   TITLE_NOT_FOUND("titleNotFound", "Associated title not found for non package PO Line"),
   MULTIPLE_NONPACKAGE_TITLES("multipleNonPackageTitles", "Non package PO Line must contain only one title."),
   BUDGET_NOT_FOUND_FOR_TRANSACTION("budgetNotFoundForTransaction", "Budget not found for transaction"),
