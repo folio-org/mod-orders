@@ -1,5 +1,11 @@
 ## 10.1.0 - Unreleased
 
+## 10.0.3 - Released
+
+Bugfix release to fix dependency interface version
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v10.0.2...v10.0.3)
+
 ## 10.0.2 - Released
 
 Bugfix release to make field for Piece optional 
