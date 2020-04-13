@@ -48,6 +48,7 @@
             "orders-storage.purchase-orders.item.get",
             "orders-storage.po-lines.collection.get",
             "orders-storage.alerts.item.get",
+            "orders-storage.titles.collection.get",
             "orders-storage.reporting-codes.item.get",
             "configuration.entries.collection.get",
             "acquisitions-units-storage.units.collection.get",
