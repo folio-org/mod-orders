@@ -28,17 +28,20 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 public class PiecesHelper extends AbstractHelper {
 
   private ProtectionHelper protectionHelper;
+  private InventoryHelper inventoryHelper;
 
   private static final String DELETE_PIECE_BY_ID = resourceByIdPath(PIECES, "%s") + "?lang=%s";
 
   public PiecesHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
+    inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   CompletableFuture<Piece> createPiece(Piece piece) {
       return getOrderByPoLineId(piece.getPoLineId())
         .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE))
+        .thenCompose(v -> inventoryHelper.updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId()))
         .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(piece), resourcesPath(PIECES))
         .thenApply(piece::withId));
   }

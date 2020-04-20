@@ -22,6 +22,7 @@ import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
 import static org.folio.rest.acq.model.Piece.Format.ELECTRONIC;
 
+import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -759,6 +760,20 @@ public class InventoryHelper extends AbstractHelper {
         logger.error("Can't convert {} to isbn13", isbn);
         List<Parameter> parameters = Collections.singletonList(new Parameter().withKey("isbn").withValue(isbn));
         throw new HttpException(400, ISBN_NOT_VALID.toError().withParameters(parameters));
+      });
+  }
+
+  public CompletableFuture<Void> updateItemWithPoLineId(String itemId, String poLineId) {
+    if (itemId == null || poLineId == null) return CompletableFuture.completedFuture(null);
+
+    return getItemRecordsByIds(ImmutableList.of(itemId))
+      .thenCompose(items -> {
+        if (items.isEmpty()) {
+          logger.error("Can't find any item with {} to update purchaseOrderLineIdentifier", itemId);
+          return CompletableFuture.completedFuture(null);
+        } else {
+          return updateItem(items.get(0).put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId));
+        }
       });
   }
 }
