@@ -20,7 +20,6 @@ public enum ErrorCodes {
   PIECE_UPDATE_FAILED("pieceUpdateFailed", "The piece record failed to be updated"),
   ITEM_CREATION_FAILED("itemCreationFailed", "The item record failed to be created"),
   ITEM_UPDATE_FAILED("itemUpdateFailed", "The item record failed to be updated"),
-  ITEM_NOT_FOUND("itemNotFound", "The item record is not found"),
   ITEM_NOT_RETRIEVED("itemNotRetrieved", "The item record is not retrieved"),
   ZERO_COST_PHYSICAL_QTY("zeroCostQtyPhysical", "Physical cost quantity must be specified"),
   ZERO_COST_ELECTRONIC_QTY("zeroCostQtyElectronic", "Electronic cost quantity must be specified"),

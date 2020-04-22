@@ -1,7 +1,6 @@
 package org.folio.rest.impl;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.orders.utils.ErrorCodes.LOC_NOT_PROVIDED;
@@ -33,6 +32,7 @@ import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPieceUpdates;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
+import static org.folio.rest.jaxrs.model.ProcessingStatus.Type.SUCCESS;
 import static org.folio.rest.jaxrs.model.ReceivedItem.ItemStatus.ON_ORDER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -138,7 +138,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostCheckInPhysicalWithItemsPartialSuccess() {
+  public void testPostCheckInPhysicalWithMissingItem() {
     logger.info("=== Test POST Checkin - CheckIn physical resource with only one item updated");
 
     CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(7).mapTo(CompositePoLine.class);
@@ -152,19 +152,12 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     assertThat(results.getTotalRecords(), equalTo(checkInRq.getTotalRecords()));
     ReceivingResult receivingResult = results.getReceivingResults().get(0);
 
-    Set<String> errorCodes = new HashSet<>();
     for (ReceivingItemResult receivingItemResult : receivingResult.getReceivingItemResults()) {
       assertThat(receivingItemResult.getPieceId(), not(isEmptyString()));
       assertThat(receivingItemResult.getProcessingStatus(), not(nullValue()));
-      if (receivingItemResult.getProcessingStatus().getType() == ProcessingStatus.Type.SUCCESS) {
-        assertThat(receivingItemResult.getProcessingStatus().getError(), nullValue());
-      } else {
-        assertThat(receivingItemResult.getProcessingStatus().getError(), not(nullValue()));
-        errorCodes.add(receivingItemResult.getProcessingStatus().getError().getCode());
-      }
+      assertThat(receivingItemResult.getProcessingStatus().getType(), is(SUCCESS));
+      assertThat(receivingItemResult.getProcessingStatus().getError(), nullValue());
     }
-
-    assertThat(errorCodes, containsInAnyOrder(ITEM_NOT_FOUND.getCode()));
 
     List<JsonObject> pieceSearches = getPieceSearches();
     List<JsonObject> pieceUpdates = getPieceUpdates();
@@ -181,7 +174,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     assertThat(polUpdates, not(nullValue()));
 
     assertThat(pieceSearches, hasSize(2));
-    assertThat(pieceUpdates, hasSize(1));
+    assertThat(pieceUpdates, hasSize(2));
     assertThat(itemsSearches, hasSize(1));
     assertThat(itemUpdates, hasSize(1));
     assertThat(polSearches, hasSize(1));
@@ -496,14 +489,14 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     ReceivingResult receivingResult = results.getReceivingResults().get(0);
 
     assertThat(receivingResult.getPoLineId(), not(isEmptyString()));
-    assertThat(receivingResult.getProcessedSuccessfully(), is(4));
-    assertThat(receivingResult.getProcessedWithError(), is(6));
+    assertThat(receivingResult.getProcessedSuccessfully(), is(5));
+    assertThat(receivingResult.getProcessedWithError(), is(5));
 
     Set<String> errorCodes = new HashSet<>();
     for (ReceivingItemResult receivingItemResult : receivingResult.getReceivingItemResults()) {
       assertThat(receivingItemResult.getPieceId(), not(isEmptyString()));
       assertThat(receivingItemResult.getProcessingStatus(), not(nullValue()));
-      if (receivingItemResult.getProcessingStatus().getType() == ProcessingStatus.Type.SUCCESS) {
+      if (receivingItemResult.getProcessingStatus().getType() == SUCCESS) {
         assertThat(receivingItemResult.getProcessingStatus().getError(), nullValue());
       } else {
         assertThat(receivingItemResult.getProcessingStatus().getError(), not(nullValue()));
@@ -512,7 +505,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     }
 
     assertThat(errorCodes, containsInAnyOrder(PIECE_ALREADY_RECEIVED.getCode(),
-      PIECE_POL_MISMATCH.getCode(), PIECE_NOT_FOUND.getCode(), ITEM_UPDATE_FAILED.getCode(), ITEM_NOT_FOUND.getCode(),
+      PIECE_POL_MISMATCH.getCode(), PIECE_NOT_FOUND.getCode(), ITEM_UPDATE_FAILED.getCode(),
       PIECE_UPDATE_FAILED.getCode()));
 
     List<JsonObject> itemUpdates = getItemUpdates();
@@ -811,7 +804,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
       for (ReceivingItemResult receivingItemResult : receivingResult.getReceivingItemResults()) {
         assertThat(receivingItemResult.getPieceId(), not(isEmptyString()));
         assertThat(receivingItemResult.getProcessingStatus(), not(nullValue()));
-        assertThat(receivingItemResult.getProcessingStatus().getType(), is(ProcessingStatus.Type.SUCCESS));
+        assertThat(receivingItemResult.getProcessingStatus().getType(), is(SUCCESS));
         assertThat(receivingItemResult.getProcessingStatus().getError(), nullValue());
 
         pieceIdsByPol.computeIfAbsent(receivingResult.getPoLineId(), k -> new HashSet<>())
