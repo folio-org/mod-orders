@@ -61,7 +61,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
 
     String poLineIdUpdate = messageFromEventBus.getString("poLineIdUpdate");
     String query = String.format(PIECES_ENDPOINT, poLineIdUpdate, LIMIT);
-    
+
     // 1. Get all pieces for poLineId
     getPieces(query, httpClient, okapiHeaders, logger).thenAccept(piecesCollection -> {
       List<org.folio.rest.acq.model.Piece> listOfPieces = piecesCollection.getPieces();
@@ -103,7 +103,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     JsonObject messageContent = new JsonObject();
     messageContent.put(OKAPI_HEADERS, okapiHeaders);
     messageContent.put(ORDER_IDS, new JsonArray(poIds));
-    sendEvent(MessageAddress.ORDER_STATUS, messageContent);
+    sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, messageContent);
   }
 
   private CompletableFuture<PoLine.ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine,
@@ -123,7 +123,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
 
   private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity,
       List<org.folio.rest.acq.model.Piece> pieces) {
-    
+
     if (expectedPiecesQuantity == 0) {
       return CompletableFuture.completedFuture(FULLY_RECEIVED);
     }

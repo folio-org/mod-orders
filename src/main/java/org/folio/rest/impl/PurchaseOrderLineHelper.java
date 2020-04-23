@@ -406,7 +406,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
         // See MODORDERS-218
         if (!StringUtils.equals(poLine.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value())
           || !StringUtils.equals(poLine.getPaymentStatus().value(), compOrderLine.getPaymentStatus().value())) {
-          sendEvent(MessageAddress.ORDER_STATUS, createUpdateOrderMessage(compOrderLine));
+          sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, createUpdateOrderMessage(compOrderLine));
         }
       });
   }

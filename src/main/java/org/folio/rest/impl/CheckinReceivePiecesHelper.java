@@ -425,7 +425,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    *          value
    * @return map passed as a parameter
    */
-  CompletableFuture<Map<String, List<Piece>>> updatePoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine) {
+  protected CompletableFuture<Map<String, List<Piece>>> updatePoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine) {
     List<String> poLineIdsForUpdatedPieces = getPoLineIdsForUpdatedPieces(piecesGroupedByPoLine);
     // Once all PO Lines are retrieved from storage check if receipt status
     // requires update and persist in storage
@@ -466,13 +466,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
         .distinct()
         .toList();
 
-      sendEvent(MessageAddress.ORDER_STATUS, new JsonObject().put(ORDER_IDS, new JsonArray(poIds)));
+      sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, new JsonObject().put(ORDER_IDS, new JsonArray(poIds)));
 
       logger.debug("Event to verify order status - sent");
     }
   }
 
-  private List<String> getPoLineIdsForUpdatedPieces(Map<String, List<Piece>> piecesGroupedByPoLine) {
+  protected List<String> getPoLineIdsForUpdatedPieces(Map<String, List<Piece>> piecesGroupedByPoLine) {
     return EntryStream
       .of(piecesGroupedByPoLine)
       .filter(entry -> entry.getValue()
@@ -537,7 +537,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       });
   }
 
-  private List<Piece> getSuccessfullyProcessedPieces(String poLineId, Map<String, List<Piece>> piecesGroupedByPoLine) {
+  protected List<Piece> getSuccessfullyProcessedPieces(String poLineId, Map<String, List<Piece>> piecesGroupedByPoLine) {
     return StreamEx.of(piecesGroupedByPoLine.get(poLineId))
       .filter(this::isSuccessfullyProcessedPiece)
       .toList();
@@ -550,7 +550,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    *          list of pieces
    * @return resulting PO Line status
    */
-  private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine, List<Piece> pieces) {
+  protected CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine, List<Piece> pieces) {
     // Search for pieces with Expected status
     return pieces.isEmpty()
       // No successfully pieces processed - receipt status unchanged

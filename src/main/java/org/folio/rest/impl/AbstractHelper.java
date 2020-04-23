@@ -44,8 +44,8 @@ import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public abstract class AbstractHelper {
-  public static final String ID = HelperUtils.ID;
   public static final String ORDER_IDS = "orderIds";
+  public static final String ID = HelperUtils.ID;
   public static final String OKAPI_HEADERS = "okapiHeaders";
   public static final String ERROR_CAUSE = "cause";
   public static final String OKAPI_URL = "x-okapi-url";
