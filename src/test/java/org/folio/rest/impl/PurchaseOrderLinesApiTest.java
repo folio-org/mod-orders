@@ -449,27 +449,6 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdateNonPackagePoLineWithInstanceId() {
-    logger.info("=== Test PUT Order Line By Id - No Order update event sent on success ===");
-
-    String lineId = ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE;
-    CompositePoLine compositePoLine = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
-    String url = String.format(LINE_BY_ID_PATH, lineId);
-
-    String instanceUUID = UUID.randomUUID().toString();
-    compositePoLine.setIsPackage(false);
-    compositePoLine.setInstanceId(instanceUUID);
-
-    verifyPut(url, JsonObject.mapFrom(compositePoLine), "", 204);
-    assertThat(getUpdatedTitles(), notNullValue());
-    Title updatedTitle = getUpdatedTitles().get(0).mapTo(Title.class);
-
-    assertEquals(instanceUUID, updatedTitle.getInstanceId());
-
-    validateSavedPoLines();
-  }
-
-  @Test
   public void testUpdatePackagePoLineWithInstanceId() {
     logger.info("=== Test PUT Order Line By Id - No Order update event sent on success ===");
 
