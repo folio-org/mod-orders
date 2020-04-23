@@ -2,12 +2,8 @@ package org.folio.orders.events.handlers;
 
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
-import static org.folio.orders.utils.HelperUtils.getOkapiHeaders;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
-import static org.folio.rest.impl.CheckinHelper.IS_ITEM_ORDER_CLOSED_PRESENT;
-import static org.folio.rest.impl.CheckinHelper.ORDER_ID;
-import static org.folio.rest.impl.CheckinHelper.ORDER_ITEM_STATUS_MAP;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +11,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.impl.AbstractHelper;
 import org.folio.rest.impl.PurchaseOrderHelper;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
@@ -23,38 +18,33 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
-@Component("checkInOrderStatusChangeHandler")
-public class CheckInOrderStatusChangeHandler extends AbstractHelper implements Handler<Message<JsonObject>> {
+@Component("orderStatusHandler")
+public class ReceiveOrderStatusChangeHandler extends AbstractOrderStatusHandler {
 
   @Autowired
-  public CheckInOrderStatusChangeHandler(Vertx vertx) {
-    super(vertx.getOrCreateContext());
+  public ReceiveOrderStatusChangeHandler(Vertx vertx) {
+    super(vertx);
   }
 
   @Override
   public void handle(Message<JsonObject> message) {
     JsonObject body = message.body();
-
     logger.debug("Received message body: {}", body);
-
-    Map<String, String> okapiHeaders = getOkapiHeaders(message);
-    HttpClientInterface httpClient = getHttpClient(okapiHeaders, true);
-
-    JsonArray orderItemStatusArray = body.getJsonArray(ORDER_ITEM_STATUS_MAP);
     String lang = body.getString(HelperUtils.LANG);
+    HttpClientInterface httpClient = getHttpClient(message);
 
     List<CompletableFuture<Void>> futures = new ArrayList<>();
+    JsonArray orderItemStatusArray = messageAsJsonArray(EVENT_PAYLOAD, message);
     for (Object orderItemStatus : orderItemStatusArray.getList()) {
-      JsonObject orderItemStatusMap = JsonObject.class.cast(orderItemStatus);
-      String orderId = orderItemStatusMap.getString(ORDER_ID);
-      boolean orderItemOrderClosedPresent = orderItemStatusMap.getBoolean(IS_ITEM_ORDER_CLOSED_PRESENT);
+      JsonObject ordersPayload = JsonObject.class.cast(orderItemStatus);
+      String orderId = ordersPayload.getString(ORDER_ID);
+
       // Add future which would hold result of operation
       CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
       futures.add(future);
@@ -66,9 +56,7 @@ public class CheckInOrderStatusChangeHandler extends AbstractHelper implements H
 
           if (purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.PENDING) {
             future.complete(null);
-          } else if (purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.CLOSED && orderItemOrderClosedPresent) {
-            future.complete(null);
-          }  else {
+          } else {
             // Get purchase order lines to check if order status needs to be changed.
             getPoLines(orderId, lang, httpClient, ctx, okapiHeaders, logger)
               .thenCompose(linesArray -> supplyBlockingAsync(ctx, () -> HelperUtils.convertJsonToPoLines(linesArray)))

@@ -4,7 +4,7 @@ import io.restassured.RestAssured;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import org.folio.orders.events.handlers.OrderStatusTest;
+import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
 import org.folio.orders.events.handlers.ReceiptStatusConsistencyTest;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.impl.crud.ConfigurationCrudTest;
@@ -37,7 +37,7 @@ import static org.hamcrest.Matchers.is;
   PieceApiTest.class,
   ReceivingHistoryApiTest.class,
   PoNumberApiTest.class,
-  OrderStatusTest.class,
+  ReceiveOrderStatusChangeHandlerTest.class,
   ReceiptStatusConsistencyTest.class,
   OrdersProtectionTest.class,
   LinesProtectionTest.class,

@@ -36,8 +36,6 @@ import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 
 public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
-  public static final String ORDER_ITEM_STATUS_MAP = "orderItemStatusMap";
-  public static final String ORDER_ID = "orderId";
   public static final String IS_ITEM_ORDER_CLOSED_PRESENT = "isItemOrderClosedPresent";
   /**
    * Map with PO line id as a key and value is map with piece id as a key and
@@ -268,7 +266,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
                                       .put(IS_ITEM_ORDER_CLOSED_PRESENT, entry.getValue()))
         .collect(toList());
       sendEvent(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE
-        , new JsonObject().put(ORDER_ITEM_STATUS_MAP, new JsonArray(orderClosedStatusesJsonList)));
+        , new JsonObject().put(EVENT_PAYLOAD, new JsonArray(orderClosedStatusesJsonList)));
       logger.debug("Event to verify order status - sent");
     }
   }

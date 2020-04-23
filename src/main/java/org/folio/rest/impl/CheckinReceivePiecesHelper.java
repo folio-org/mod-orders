@@ -460,13 +460,14 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       logger.debug("Sending event to verify order status");
 
       // Collect order ids which should be processed
-      List<String> poIds = StreamEx
+      List<JsonObject> poIds = StreamEx
         .of(poLines)
         .map(PoLine::getPurchaseOrderId)
         .distinct()
+        .map(orderId -> new JsonObject().put(ORDER_ID, orderId))
         .toList();
 
-      sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, new JsonObject().put(ORDER_IDS, new JsonArray(poIds)));
+      sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, new JsonObject().put(EVENT_PAYLOAD, new JsonArray(poIds)));
 
       logger.debug("Event to verify order status - sent");
     }

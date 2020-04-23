@@ -102,7 +102,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     poIds.add(poLine.getPurchaseOrderId());
     JsonObject messageContent = new JsonObject();
     messageContent.put(OKAPI_HEADERS, okapiHeaders);
-    messageContent.put(ORDER_IDS, new JsonArray(poIds));
+    messageContent.put(EVENT_PAYLOAD, new JsonArray(poIds));
     sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, messageContent);
   }
 
