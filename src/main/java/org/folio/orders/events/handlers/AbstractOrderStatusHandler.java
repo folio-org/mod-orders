@@ -81,7 +81,7 @@ public abstract class AbstractOrderStatusHandler extends AbstractHelper implemen
   }
 
   protected CompletableFuture<Void> updateOrderStatus(Map<String, String> okapiHeaders, HttpClientInterface httpClient,
-      PurchaseOrder purchaseOrder, List<PoLine> poLines) {
+    PurchaseOrder purchaseOrder, List<PoLine> poLines) {
     PurchaseOrder.WorkflowStatus initialStatus = purchaseOrder.getWorkflowStatus();
     PurchaseOrderHelper helper = new PurchaseOrderHelper(httpClient, okapiHeaders, ctx, lang);
     return VertxCompletableFuture.supplyBlockingAsync(ctx, () -> changeOrderStatus(purchaseOrder, poLines))

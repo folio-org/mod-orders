@@ -1,5 +1,6 @@
 package org.folio.orders.events.handlers;
 
+import static org.folio.orders.events.handlers.MessageAddress.RECEIVE_ORDER_STATUS_UPDATE;
 import static org.folio.rest.impl.AbstractHelper.ORDER_ID;
 import static org.folio.rest.impl.CheckinHelper.IS_ITEM_ORDER_CLOSED_PRESENT;
 import static org.folio.rest.impl.InventoryHelper.ITEMS;
@@ -53,7 +54,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 public class ReceiveOrderStatusChangeHandlerTest extends ApiTestBase {
   private static final Logger logger = LoggerFactory.getLogger(ReceiveOrderStatusChangeHandlerTest.class);
 
-  private static final String TEST_ADDRESS = "testAddress";
   private static final String PO_ID_OPEN_TO_BE_CLOSED_500_ON_UPDATE = "bad500cc-cccc-500c-accc-cccccccccccc";
 
   private static Vertx vertx;
@@ -63,7 +63,7 @@ public class ReceiveOrderStatusChangeHandlerTest extends ApiTestBase {
     ApiTestBase.before();
 
     vertx = Vertx.vertx();
-    vertx.eventBus().consumer(TEST_ADDRESS, new ReceiveOrderStatusChangeHandler(vertx));
+    vertx.eventBus().consumer(RECEIVE_ORDER_STATUS_UPDATE.address, new ReceiveOrderStatusChangeHandler(vertx));
   }
 
   @Test
@@ -220,6 +220,6 @@ public class ReceiveOrderStatusChangeHandlerTest extends ApiTestBase {
     // Add okapi url header
     DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader(X_OKAPI_URL.getName(), X_OKAPI_URL.getValue());
 
-    vertx.eventBus().request(TEST_ADDRESS, data, deliveryOptions, replyHandler);
+    vertx.eventBus().request(RECEIVE_ORDER_STATUS_UPDATE.address, data, deliveryOptions, replyHandler);
   }
 }
