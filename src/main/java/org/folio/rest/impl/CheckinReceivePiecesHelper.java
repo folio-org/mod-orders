@@ -467,7 +467,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
         .map(orderId -> new JsonObject().put(ORDER_ID, orderId))
         .toList();
 
-      sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, new JsonObject().put(EVENT_PAYLOAD, new JsonArray(poIds)));
+      JsonObject messageContent = new JsonObject();
+      messageContent.put(OKAPI_HEADERS, okapiHeaders);
+      messageContent.put(EVENT_PAYLOAD, new JsonArray(poIds));
+      sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, messageContent);
 
       logger.debug("Event to verify order status - sent");
     }

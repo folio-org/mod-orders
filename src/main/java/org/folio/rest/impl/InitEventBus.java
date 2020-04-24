@@ -27,8 +27,8 @@ public class InitEventBus implements PostDeployVerticle {
   private final Logger logger = LoggerFactory.getLogger(InitEventBus.class);
 
   @Autowired
-  @Qualifier("orderStatusHandler")
-  Handler<Message<JsonObject>> orderStatusHandler;
+  @Qualifier("receiveOrderStatusChangeHandler")
+  Handler<Message<JsonObject>> receiveOrderStatusChangeHandler;
 
   @Autowired
   @Qualifier("checkInOrderStatusChangeHandler")
@@ -55,7 +55,7 @@ public class InitEventBus implements PostDeployVerticle {
       MessageConsumer<JsonObject> orderStatusConsumer = eb.localConsumer(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address);
       MessageConsumer<JsonObject> checkInOrderStatusChangeConsumer = eb.localConsumer(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address);
       MessageConsumer<JsonObject> receiptStatusConsumer = eb.localConsumer(MessageAddress.RECEIPT_STATUS.address);
-      orderStatusConsumer.handler(orderStatusHandler)
+      orderStatusConsumer.handler(receiveOrderStatusChangeHandler)
         .completionHandler(orderStatusRegistrationHandler);
       checkInOrderStatusChangeConsumer.handler(checkInOrderStatusChangeHandler)
         .completionHandler(checkInOrderStatusRegistrationHandler);

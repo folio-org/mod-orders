@@ -4,6 +4,7 @@ import io.restassured.RestAssured;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import org.folio.orders.events.handlers.CheckInOrderStatusChangeChangeHandlerTest;
 import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
 import org.folio.orders.events.handlers.ReceiptStatusConsistencyTest;
 import org.folio.rest.RestVerticle;
@@ -45,7 +46,8 @@ import static org.hamcrest.Matchers.is;
   ReceivingCheckinProtectionTest.class,
   OrderTemplateTest.class,
   TitlesApiTest.class,
-  ConfigurationCrudTest.class
+  ConfigurationCrudTest.class,
+  CheckInOrderStatusChangeChangeHandlerTest.class
 })
 public class ApiTestSuite {
 

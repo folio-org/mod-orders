@@ -17,10 +17,9 @@ import org.folio.rest.impl.PurchaseOrderHelper;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.springframework.beans.factory.annotation.Autowired;
 
+import io.vertx.core.Context;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -28,9 +27,8 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public abstract class AbstractOrderStatusHandler extends AbstractHelper implements Handler<Message<JsonObject>> {
 
-  @Autowired
-  public AbstractOrderStatusHandler(Vertx vertx) {
-    super(vertx.getOrCreateContext());
+  protected AbstractOrderStatusHandler(Context ctx) {
+    super(ctx);
   }
 
   @Override
@@ -38,7 +36,9 @@ public abstract class AbstractOrderStatusHandler extends AbstractHelper implemen
     JsonObject body = message.body();
     logger.debug("Received message body: {}", body);
     String lang = body.getString(HelperUtils.LANG);
-    HttpClientInterface httpClient = getHttpClient(message);
+
+    Map<String, String> okapiHeaders = getOkapiHeaders(message);
+    HttpClientInterface httpClient = getHttpClient(okapiHeaders, true);
 
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     JsonArray orderItemStatusArray = messageAsJsonArray(EVENT_PAYLOAD, message);
@@ -98,11 +98,6 @@ public abstract class AbstractOrderStatusHandler extends AbstractHelper implemen
     JsonObject body = message.body();
     logger.debug("Received message body: {}", body);
     return body.getJsonArray(rootElement);
-  }
-
-  protected HttpClientInterface getHttpClient(Message<JsonObject> message) {
-    Map<String, String> okapiHeaders = getOkapiHeaders(message);
-    return getHttpClient(okapiHeaders, true);
   }
 
   protected abstract boolean isOrdersStatusChangeSkip(PurchaseOrder purchaseOrder, JsonObject ordersPayload);

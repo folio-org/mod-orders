@@ -7,12 +7,12 @@ import org.springframework.stereotype.Component;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
-@Component("orderStatusHandler")
+@Component("receiveOrderStatusChangeHandler")
 public class ReceiveOrderStatusChangeHandler extends AbstractOrderStatusHandler {
 
   @Autowired
   public ReceiveOrderStatusChangeHandler(Vertx vertx) {
-    super(vertx);
+    super(vertx.getOrCreateContext());
   }
 
   @Override

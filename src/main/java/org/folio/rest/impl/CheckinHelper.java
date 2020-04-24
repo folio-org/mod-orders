@@ -265,8 +265,11 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
         .map(entry -> new JsonObject().put(ORDER_ID, entry.getKey())
                                       .put(IS_ITEM_ORDER_CLOSED_PRESENT, entry.getValue()))
         .collect(toList());
-      sendEvent(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE
-        , new JsonObject().put(EVENT_PAYLOAD, new JsonArray(orderClosedStatusesJsonList)));
+
+      JsonObject messageContent = new JsonObject();
+      messageContent.put(OKAPI_HEADERS, okapiHeaders);
+      messageContent.put(EVENT_PAYLOAD, new JsonArray(orderClosedStatusesJsonList));
+      sendEvent(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE, messageContent);
       logger.debug("Event to verify order status - sent");
     }
   }

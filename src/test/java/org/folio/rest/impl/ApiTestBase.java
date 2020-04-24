@@ -168,7 +168,7 @@ public class ApiTestBase {
       };
     }
 
-    @Bean("orderStatusHandler")
+    @Bean("receiveOrderStatusChangeHandler")
     @Primary
     public Handler<Message<JsonObject>> mockedOrderStatusHandler() {
       // As an implementation just add received message to list

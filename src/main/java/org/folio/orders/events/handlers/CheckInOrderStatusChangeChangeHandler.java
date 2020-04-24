@@ -9,12 +9,13 @@ import org.springframework.stereotype.Component;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
+
 @Component("checkInOrderStatusChangeHandler")
-public class CheckInOrderStatusChangeChangeHandler extends ReceiveOrderStatusChangeHandler {
+public class CheckInOrderStatusChangeChangeHandler extends AbstractOrderStatusHandler {
 
   @Autowired
   public CheckInOrderStatusChangeChangeHandler(Vertx vertx) {
-    super(vertx);
+    super(vertx.getOrCreateContext());
   }
 
   @Override
@@ -22,6 +23,5 @@ public class CheckInOrderStatusChangeChangeHandler extends ReceiveOrderStatusCha
     boolean orderItemOrderClosedPresent = ordersPayload.getBoolean(IS_ITEM_ORDER_CLOSED_PRESENT);
     return  (purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.PENDING)
           || (purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.CLOSED && orderItemOrderClosedPresent) ;
-
   }
 }
