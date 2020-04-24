@@ -412,7 +412,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private JsonObject createUpdateOrderMessage(CompositePoLine compOrderLine) {
-    return new JsonObject().put(EVENT_PAYLOAD, new JsonArray().add(compOrderLine.getPurchaseOrderId()));
+    return new JsonObject().put(EVENT_PAYLOAD, new JsonArray().add(new JsonObject().put(ORDER_ID, compOrderLine.getPurchaseOrderId())));
   }
 
   /**

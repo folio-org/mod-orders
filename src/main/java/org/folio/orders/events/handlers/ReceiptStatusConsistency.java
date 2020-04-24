@@ -98,10 +98,15 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
   }
 
   private void updateOrderStatus(PoLine poLine, Map<String, String> okapiHeaders) {
-    List<String> poIds = new ArrayList<>();
-    poIds.add(poLine.getPurchaseOrderId());
+    List<JsonObject> poIds = StreamEx
+      .of(poLine)
+      .map(PoLine::getPurchaseOrderId)
+      .distinct()
+      .map(orderId -> new JsonObject().put(ORDER_ID, orderId))
+      .toList();
     JsonObject messageContent = new JsonObject();
     messageContent.put(OKAPI_HEADERS, okapiHeaders);
+    // Collect order ids which should be processed
     messageContent.put(EVENT_PAYLOAD, new JsonArray(poIds));
     sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, messageContent);
   }
