@@ -768,8 +768,7 @@ public class InventoryHelper extends AbstractHelper {
 
     return getItemRecordsByIds(ImmutableList.of(itemId))
       .thenCompose(items -> {
-        if (items.isEmpty()) {
-          logger.error("Can't find any item with {} to update purchaseOrderLineIdentifier", itemId);
+        if (items.isEmpty() || poLineId.equals(items.get(0).getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER))) {
           return CompletableFuture.completedFuture(null);
         } else {
           return updateItem(items.get(0).put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId));

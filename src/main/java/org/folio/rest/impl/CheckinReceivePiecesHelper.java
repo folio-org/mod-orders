@@ -4,7 +4,6 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.groupingBy;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.orders.utils.ErrorCodes.LOC_NOT_PROVIDED;
@@ -316,7 +315,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
   /**
    * Checks if all expected piece records found in the storage. If any is
-   * missing, adds corresponding error
+   * missing, remove from piece reference to item and exclude piece from {@param piecesWithItems}
    *
    * @param expectedItemIds
    *          list of expected item id's
@@ -335,7 +334,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
         .filter(id -> !foundItemIds.contains(id))
         .forEach(itemId -> {
           Piece piece = piecesWithItems.get(itemId);
-          addError(piece.getPoLineId(), piece.getId(), ITEM_NOT_FOUND.toError());
+          piece.setItemId(null);
+          piecesWithItems.remove(itemId);
         });
     }
   }
