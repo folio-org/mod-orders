@@ -259,7 +259,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
   private boolean holdingUpdateOnCheckinReceiveRequired(Piece piece, String locationId, CompositePoLine poLine) {
     boolean isHoldingUpdateRequired;
-    if (piece.getFormat() == Piece.Format.ELECTRONIC) {
+    if (piece.getFormat() == Piece.PieceFormat.ELECTRONIC) {
       isHoldingUpdateRequired = isHoldingUpdateRequiredForEresource(poLine.getEresource());
     } else {
       isHoldingUpdateRequired = isHoldingUpdateRequiredForPhysical(poLine.getPhysical());
@@ -674,7 +674,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     // Check if locationId doesn't presented in piece from request and retrieved from storage
     // Corresponding piece from collection
     if (getLocationId(piece) == null && !isRevertToOnOrder(piece)) {
-      if (piece.getFormat() == Piece.Format.ELECTRONIC) {
+      if (piece.getFormat() == Piece.PieceFormat.ELECTRONIC) {
         // Check E-Resource
         if (poLine.getEresource() != null && poLine.getEresource().getCreateInventory() != Eresource.CreateInventory.NONE
           && poLine.getEresource().getCreateInventory() != Eresource.CreateInventory.INSTANCE) {

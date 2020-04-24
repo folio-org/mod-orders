@@ -232,7 +232,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public static final Header ALL_DESIRED_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(AcqDesiredPermissions.getValues()).encode());
   public static final Header APPROVAL_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(Collections.singletonList("orders.item.approve")).encode());
   static final String ITEMS_NOT_FOUND = UUID.randomUUID().toString();
-  
+
   @Test
   public void testValidFundDistributionTotalPercentage() throws Exception {
     logger.info("=== Test fund distribution total must add upto totalEstimatedPrice - valid total percentage ===");
@@ -257,7 +257,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
         prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
-    
+
     assertThat(resp.getCompositePoLines().get(0).getCost().getPoLineEstimatedPrice(), equalTo(47.98));
   }
 
@@ -1609,19 +1609,13 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     Map<String, String> uuids = new HashMap<>();
     // Populate instanceIds
     reqData.getCompositePoLines().forEach(p -> p.setInstanceId(uuids.compute(p.getId(), (k, v) -> UUID.randomUUID().toString())));
-    MockServer.addMockTitles(reqData.getCompositePoLines());
     // Update order
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
     verifyInstanceLinksForUpdatedOrder(reqData);
     // Verify instanceIds conformity
-    reqData.getCompositePoLines().forEach(p -> assertThat(uuids.get(p.getId()), is(p.getInstanceId())));
+    reqData.getCompositePoLines().forEach(compPoline -> assertThat(uuids.get(compPoline.getId()), is(compPoline.getInstanceId())));
     // Verify that new instances didn't created
     assertThat(MockServer.getCreatedInstances(), nullValue());
-    assertThat(MockServer.getUpdatedTitles(), notNullValue());
-
-    MockServer.getUpdatedTitles()
-      .forEach(title -> assertTrue(uuids.containsValue(title.getString(INSTANCE_ID))));
-    validateSavedPoLines();
 
   }
 
