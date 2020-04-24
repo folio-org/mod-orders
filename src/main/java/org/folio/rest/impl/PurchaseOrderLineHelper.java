@@ -387,13 +387,13 @@ class PurchaseOrderLineHelper extends AbstractHelper {
         // See MODORDERS-218
         if (!StringUtils.equals(poLine.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value())
           || !StringUtils.equals(poLine.getPaymentStatus().value(), compOrderLine.getPaymentStatus().value())) {
-          sendEvent(MessageAddress.ORDER_STATUS, createUpdateOrderMessage(compOrderLine));
+          sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, createUpdateOrderMessage(compOrderLine));
         }
       });
   }
 
   private JsonObject createUpdateOrderMessage(CompositePoLine compOrderLine) {
-    return new JsonObject().put(ORDER_IDS, new JsonArray().add(compOrderLine.getPurchaseOrderId()));
+    return new JsonObject().put(EVENT_PAYLOAD, new JsonArray().add(new JsonObject().put(ORDER_ID, compOrderLine.getPurchaseOrderId())));
   }
 
   /**

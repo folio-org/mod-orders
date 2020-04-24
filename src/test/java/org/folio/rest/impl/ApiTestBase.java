@@ -10,7 +10,7 @@ import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
-import static org.folio.rest.impl.AbstractHelper.ORDER_IDS;
+import static org.folio.rest.impl.AbstractHelper.EVENT_PAYLOAD;
 import static org.folio.rest.impl.AcquisitionsMembershipsTests.USER_ID_ASSIGNED_TO_ACQ_UNITS;
 import static org.folio.rest.impl.ApiTestSuite.mockPort;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
@@ -71,6 +71,7 @@ import org.hamcrest.Matchers;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -157,7 +158,17 @@ public class ApiTestBase {
   @Configuration
   static class ContextConfiguration {
 
-    @Bean("orderStatusHandler")
+    @Bean("checkInOrderStatusChangeHandler")
+    @Primary
+    public Handler<Message<JsonObject>> mockedCheckInOrderStatusChangeHandler() {
+      // As an implementation just add received message to list
+      return message -> {
+        logger.info("New message sent to {} address", message.address());
+        eventMessages.add(message);
+      };
+    }
+
+    @Bean("receiveOrderStatusChangeHandler")
     @Primary
     public Handler<Message<JsonObject>> mockedOrderStatusHandler() {
       // As an implementation just add received message to list
@@ -166,6 +177,7 @@ public class ApiTestBase {
         eventMessages.add(message);
       };
     }
+
 
     @Bean("receiptStatusHandler")
     @Primary
@@ -379,6 +391,22 @@ public class ApiTestBase {
     }
   }
 
+  void verifyCheckinOrderStatusUpdateEvent(int msgQty) {
+    logger.debug("Verifying event bus messages");
+    // Wait until event bus registers message
+    await().atLeast(50, MILLISECONDS)
+      .atMost(5, SECONDS)
+      .until(() -> eventMessages, hasSize(msgQty));
+    for (int i = 0; i < msgQty; i++) {
+      Message<JsonObject> message = eventMessages.get(i);
+      assertThat(message.address(), equalTo(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address));
+      assertThat(message.headers(), not(emptyIterable()));
+      assertThat(message.body(), notNullValue());
+      assertThat(message.body().getJsonArray(EVENT_PAYLOAD), iterableWithSize(1));
+      assertThat(message.body().getString(HelperUtils.LANG), not(isEmptyOrNullString()));
+    }
+  }
+
   void verifyOrderStatusUpdateEvent(int msgQty) {
     logger.debug("Verifying event bus messages");
     // Wait until event bus registers message
@@ -387,10 +415,10 @@ public class ApiTestBase {
            .until(() -> eventMessages, hasSize(msgQty));
     for (int i = 0; i < msgQty; i++) {
       Message<JsonObject> message = eventMessages.get(i);
-      assertThat(message.address(), equalTo(MessageAddress.ORDER_STATUS.address));
+      assertThat(message.address(), equalTo(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address));
       assertThat(message.headers(), not(emptyIterable()));
       assertThat(message.body(), notNullValue());
-      assertThat(message.body().getJsonArray(ORDER_IDS), iterableWithSize(1));
+      assertThat(message.body().getJsonArray(EVENT_PAYLOAD), iterableWithSize(1));
       assertThat(message.body().getString(HelperUtils.LANG), not(isEmptyOrNullString()));
     }
   }
