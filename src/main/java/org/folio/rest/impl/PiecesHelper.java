@@ -54,6 +54,7 @@ public class PiecesHelper extends AbstractHelper {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
     getOrderByPoLineId(piece.getPoLineId())
       .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE))
+      .thenCompose(v -> inventoryHelper.updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId()))
       .thenAccept(vVoid ->
         getPieceById(piece.getId()).thenAccept(pieceStorage -> {
           ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
