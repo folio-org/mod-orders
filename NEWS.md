@@ -11,7 +11,7 @@ The main focus of this bugfix release was to fix bugs related to receiving and i
  * [MODORDERS-384](https://issues.folio.org/browse/MODORDERS-384) - Item status not set to order closed
  * [MODORDERS-383](https://issues.folio.org/browse/MODORDERS-383) - Can not receive piece when item has been deleted
  * [MODORDERS-380](https://issues.folio.org/browse/MODORDERS-380) - Can not receive when order is closed
- * [MODORDERS-379](https://issues.folio.org/browse/MODORDERS-380) - Title in POL view in order search not hyperlinked when order creates instance
+ * [MODORDERS-379](https://issues.folio.org/browse/MODORDERS-379) - Title in POL view in order search not hyperlinked when order creates instance
  
 ## 10.0.3 - Released
 
