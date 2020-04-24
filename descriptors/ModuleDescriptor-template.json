@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "10.2",
+      "version": "10.3",
       "handlers": [
         {
           "methods": [
@@ -94,7 +94,7 @@
     },
     {
       "id": "order-lines",
-      "version": "1.1",
+      "version": "1.2",
       "handlers": [
         {
           "methods": [
@@ -171,7 +171,6 @@
             "orders-storage.reporting-codes.item.put",
             "orders-storage.reporting-codes.item.delete",
             "orders-storage.titles.collection.get",
-            "orders-storage.titles.item.put",
             "configuration.entries.collection.get",
             "inventory-storage.identifier-types.collection.get",
             "inventory.items.item.put",
@@ -329,7 +328,9 @@
             "orders-storage.po-lines.item.get",
             "orders-storage.purchase-orders.item.get",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "inventory.items.item.put",
+            "inventory.items.collection.get"
           ]
         },
         {
@@ -1160,7 +1161,6 @@
         "orders-storage.reporting-codes.item.put",
         "orders-storage.reporting-codes.item.delete",
         "orders-storage.titles.collection.get",
-        "orders-storage.titles.item.put",
         "configuration.entries.collection.get",
         "finance.funds.collection.get",
         "finance.budgets.collection.get",

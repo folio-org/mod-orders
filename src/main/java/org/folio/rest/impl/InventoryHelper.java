@@ -20,7 +20,7 @@ import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
-import static org.folio.rest.acq.model.Piece.Format.ELECTRONIC;
+import static org.folio.rest.acq.model.Piece.PieceFormat.ELECTRONIC;
 
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
@@ -292,7 +292,7 @@ public class InventoryHelper extends AbstractHelper {
    * @return future with list of piece objects
    */
   private CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, String holdingId, List<Location> locations) {
-    Map<Piece.Format, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, locations);
+    Map<Piece.PieceFormat, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, locations);
     int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
     String polId = compPOL.getId();
 
@@ -305,7 +305,7 @@ public class InventoryHelper extends AbstractHelper {
     return searchForExistingItems(compPOL, holdingId, piecesWithItemsQty)
       .thenCompose(existingItems -> {
         String locationId = locations.get(0).getLocationId();
-        List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.Format.values().length);
+        List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.PieceFormat.values().length);
 
         piecesWithItemsQuantities.forEach((pieceFormat, expectedQuantity) -> {
           // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix

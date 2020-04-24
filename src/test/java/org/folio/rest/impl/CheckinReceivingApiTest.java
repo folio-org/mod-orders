@@ -577,7 +577,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   }
 
   private boolean isHoldingsUpdateRequired(org.folio.rest.acq.model.Piece piece, PoLine poLine) {
-    if (piece.getFormat() == org.folio.rest.acq.model.Piece.Format.ELECTRONIC) {
+    if (piece.getFormat() == org.folio.rest.acq.model.Piece.PieceFormat.ELECTRONIC) {
      return isHoldingUpdateRequiredForEresource(poLine.getEresource());
     } else {
       return isHoldingUpdateRequiredForPhysical(poLine.getPhysical());
