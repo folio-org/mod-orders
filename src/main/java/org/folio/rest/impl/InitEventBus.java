@@ -27,13 +27,17 @@ public class InitEventBus implements PostDeployVerticle {
   private final Logger logger = LoggerFactory.getLogger(InitEventBus.class);
 
   @Autowired
-  @Qualifier("orderStatusHandler")
-  Handler<Message<JsonObject>> orderStatusHandler;
+  @Qualifier("receiveOrderStatusChangeHandler")
+  Handler<Message<JsonObject>> receiveOrderStatusChangeHandler;
+
+  @Autowired
+  @Qualifier("checkInOrderStatusChangeHandler")
+  Handler<Message<JsonObject>> checkInOrderStatusChangeHandler;
 
   @Autowired
   @Qualifier("receiptStatusHandler")
   Handler<Message<JsonObject>> receiptStatusHandler;
-  
+
   public InitEventBus() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
   }
@@ -45,16 +49,21 @@ public class InitEventBus implements PostDeployVerticle {
 
       // Create consumers and assign handlers
       Promise<Void> orderStatusRegistrationHandler = Promise.promise();
+      Promise<Void> checkInOrderStatusRegistrationHandler = Promise.promise();
       Promise<Void> receiptStatusConsistencyHandler = Promise.promise();
 
-      MessageConsumer<JsonObject> orderStatusConsumer = eb.localConsumer(MessageAddress.ORDER_STATUS.address);
+      MessageConsumer<JsonObject> orderStatusConsumer = eb.localConsumer(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address);
+      MessageConsumer<JsonObject> checkInOrderStatusChangeConsumer = eb.localConsumer(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address);
       MessageConsumer<JsonObject> receiptStatusConsumer = eb.localConsumer(MessageAddress.RECEIPT_STATUS.address);
-      orderStatusConsumer.handler(orderStatusHandler)
+      orderStatusConsumer.handler(receiveOrderStatusChangeHandler)
         .completionHandler(orderStatusRegistrationHandler);
+      checkInOrderStatusChangeConsumer.handler(checkInOrderStatusChangeHandler)
+        .completionHandler(checkInOrderStatusRegistrationHandler);
       receiptStatusConsumer.handler(receiptStatusHandler)
         .completionHandler(receiptStatusConsistencyHandler);
 
-      CompositeFuture.all(orderStatusRegistrationHandler.future(), receiptStatusConsistencyHandler.future())
+      CompositeFuture.all(orderStatusRegistrationHandler.future(), receiptStatusConsistencyHandler.future()
+            , checkInOrderStatusRegistrationHandler.future())
         .setHandler(result -> {
           if (result.succeeded()) {
             blockingCodeFuture.complete();

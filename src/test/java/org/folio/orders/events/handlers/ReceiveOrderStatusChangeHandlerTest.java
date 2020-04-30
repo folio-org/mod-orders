@@ -1,5 +1,8 @@
 package org.folio.orders.events.handlers;
 
+import static org.folio.orders.events.handlers.MessageAddress.RECEIVE_ORDER_STATUS_UPDATE;
+import static org.folio.rest.impl.AbstractHelper.ORDER_ID;
+import static org.folio.rest.impl.CheckinHelper.IS_ITEM_ORDER_CLOSED_PRESENT;
 import static org.folio.rest.impl.InventoryHelper.ITEMS;
 import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
 import static org.folio.rest.impl.MockServer.getItemUpdates;
@@ -17,9 +20,11 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
-import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.ws.rs.core.Response;
 
@@ -46,10 +51,9 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
-public class OrderStatusTest extends ApiTestBase {
-  private static final Logger logger = LoggerFactory.getLogger(OrderStatusTest.class);
+public class ReceiveOrderStatusChangeHandlerTest extends ApiTestBase {
+  private static final Logger logger = LoggerFactory.getLogger(ReceiveOrderStatusChangeHandlerTest.class);
 
-  private static final String TEST_ADDRESS = "testAddress";
   private static final String PO_ID_OPEN_TO_BE_CLOSED_500_ON_UPDATE = "bad500cc-cccc-500c-accc-cccccccccccc";
 
   private static Vertx vertx;
@@ -59,7 +63,7 @@ public class OrderStatusTest extends ApiTestBase {
     ApiTestBase.before();
 
     vertx = Vertx.vertx();
-    vertx.eventBus().consumer(TEST_ADDRESS, new OrderStatus(vertx));
+    vertx.eventBus().consumer(RECEIVE_ORDER_STATUS_UPDATE.address, new ReceiveOrderStatusChangeHandler(vertx));
   }
 
   @Test
@@ -205,13 +209,17 @@ public class OrderStatusTest extends ApiTestBase {
   }
 
   private JsonObject createBody(String... ids) {
-    return new JsonObject().put(AbstractHelper.ORDER_IDS, new JsonArray(Arrays.asList(ids)));
+    List<JsonObject> orderObjects =
+      Stream.of(ids)
+        .map(id -> new JsonObject().put(ORDER_ID, id).put(IS_ITEM_ORDER_CLOSED_PRESENT, false))
+        .collect(Collectors.toList());
+    return new JsonObject().put(AbstractHelper.EVENT_PAYLOAD, new JsonArray(orderObjects));
   }
 
   private void sendEvent(JsonObject data, Handler<AsyncResult<Message<String>>> replyHandler) {
     // Add okapi url header
     DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader(X_OKAPI_URL.getName(), X_OKAPI_URL.getValue());
 
-    vertx.eventBus().request(TEST_ADDRESS, data, deliveryOptions, replyHandler);
+    vertx.eventBus().request(RECEIVE_ORDER_STATUS_UPDATE.address, data, deliveryOptions, replyHandler);
   }
 }
