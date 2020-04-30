@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "10.3",
+      "version": "10.4",
       "handlers": [
         {
           "methods": [
@@ -302,7 +302,7 @@
     },
     {
       "id": "pieces",
-      "version": "1.2",
+      "version": "1.3",
       "handlers": [
         {
           "methods": ["POST"],
@@ -343,7 +343,9 @@
             "orders-storage.po-lines.item.get",
             "orders-storage.purchase-orders.item.get",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "acquisitions-units-storage.memberships.collection.get",
+            "circulation.requests.collection.get"
           ]
         }
       ]

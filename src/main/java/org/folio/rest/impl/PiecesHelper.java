@@ -1,11 +1,6 @@
 package org.folio.rest.impl;
 
-import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
-import static org.folio.orders.utils.HelperUtils.getPoLineById;
-import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
-import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.HelperUtils.*;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
@@ -15,7 +10,11 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.folio.orders.events.handlers.MessageAddress;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
@@ -24,6 +23,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 public class PiecesHelper extends AbstractHelper {
 
@@ -31,6 +31,14 @@ public class PiecesHelper extends AbstractHelper {
   private InventoryHelper inventoryHelper;
 
   private static final String DELETE_PIECE_BY_ID = resourceByIdPath(PIECES, "%s") + "?lang=%s";
+
+  private static final String GET_PIECES_BY_QUERY = resourcesPath(PIECES) + SEARCH_PARAMS;
+
+  public PiecesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+    super(httpClient, okapiHeaders, ctx, lang);
+    protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
+    inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
+  }
 
   public PiecesHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
@@ -110,9 +118,16 @@ public class PiecesHelper extends AbstractHelper {
 
   public CompletableFuture<Void> deletePiece(String id) {
     return getPieceById(id)
-      .thenCompose(piece -> getOrderByPoLineId(piece.getPoLineId()))
-      .thenCompose(purchaseOrder -> protectionHelper.isOperationRestricted(purchaseOrder.getAcqUnitIds(), DELETE))
-      .thenCompose(aVoid -> handleDeleteRequest(String.format(DELETE_PIECE_BY_ID, id, lang), httpClient, ctx, okapiHeaders, logger));
+      .thenCompose(piece -> getOrderByPoLineId(piece.getPoLineId())
+        .thenCompose(purchaseOrder -> protectionHelper.isOperationRestricted(purchaseOrder.getAcqUnitIds(), DELETE))
+        .thenCompose(vVoid -> inventoryHelper.getRequestsByItemId(piece.getItemId()))
+        .thenAccept(items -> {
+          if (items.isEmpty()) {
+            throw new HttpException(422, ErrorCodes.REQUEST_NOT_FOUND.toError());
+          }
+        })
+        .thenCompose(aVoid -> handleDeleteRequest(String.format(DELETE_PIECE_BY_ID, id, lang), httpClient, ctx, okapiHeaders, logger))
+      );
   }
 
 
@@ -121,5 +136,11 @@ public class PiecesHelper extends AbstractHelper {
       .thenApply(json -> json.mapTo(PoLine.class))
       .thenCompose(poLine -> getPurchaseOrderById(poLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger))
       .thenApply(jsonObject -> jsonObject.mapTo(CompositePurchaseOrder.class));
+  }
+
+  public CompletableFuture<PieceCollection> getPieces(int limit, int offset, String query) {
+    String endpoint = String.format(GET_PIECES_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
+    return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(json -> VertxCompletableFuture.supplyBlockingAsync(ctx, () -> json.mapTo(PieceCollection.class)));
   }
 }
