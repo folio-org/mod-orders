@@ -71,7 +71,6 @@ import org.hamcrest.Matchers;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -148,6 +147,9 @@ public class ApiTestBase {
   private static final String LOCATION_ID = "f34d27c6-a8eb-461b-acd6-5dea81771e70";
 
   private static boolean runningOnOwn;
+
+  public static final String PIECE_ID = "0f1bb087-72e9-44ce-a145-bfc2e7b005cf";
+  public static final String ITEM_ID = "522a501a-56b5-48d9-b28a-3a8f02482d97";
 
   // The variable is defined in main thread but the value is going to be inserted in vert.x event loop thread
   private static volatile List<Message<JsonObject>> eventMessages = new ArrayList<>();
@@ -474,9 +476,10 @@ public class ApiTestBase {
 
   public static Piece getMinimalContentPiece(String poLineId) {
     return new Piece()
-      .withId(UUID.randomUUID().toString())
+      .withId(PIECE_ID)
       .withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
       .withFormat(Piece.Format.PHYSICAL)
+      .withItemId(ITEM_ID)
       .withReceiptDate(new Date())
       .withPoLineId(poLineId);
   }
