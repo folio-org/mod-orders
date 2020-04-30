@@ -12,8 +12,15 @@ import static org.folio.orders.utils.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_LOAN_TYPE;
-import static org.folio.orders.utils.HelperUtils.*;
-import static org.folio.rest.acq.model.Piece.Format.ELECTRONIC;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.groupLocationsById;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
+import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
+import static org.folio.rest.acq.model.Piece.PieceFormat.ELECTRONIC;
 
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
@@ -299,7 +306,7 @@ public class InventoryHelper extends AbstractHelper {
    * @return future with list of piece objects
    */
   private CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, String holdingId, List<Location> locations) {
-    Map<Piece.Format, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, locations);
+    Map<Piece.PieceFormat, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, locations);
     int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
     String polId = compPOL.getId();
 
@@ -312,7 +319,7 @@ public class InventoryHelper extends AbstractHelper {
     return searchForExistingItems(compPOL, holdingId, piecesWithItemsQty)
       .thenCompose(existingItems -> {
         String locationId = locations.get(0).getLocationId();
-        List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.Format.values().length);
+        List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.PieceFormat.values().length);
 
         piecesWithItemsQuantities.forEach((pieceFormat, expectedQuantity) -> {
           // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
@@ -775,8 +782,7 @@ public class InventoryHelper extends AbstractHelper {
 
     return getItemRecordsByIds(ImmutableList.of(itemId))
       .thenCompose(items -> {
-        if (items.isEmpty()) {
-          logger.error("Can't find any item with {} to update purchaseOrderLineIdentifier", itemId);
+        if (items.isEmpty() || poLineId.equals(items.get(0).getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER))) {
           return CompletableFuture.completedFuture(null);
         } else {
           return updateItem(items.get(0).put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId));

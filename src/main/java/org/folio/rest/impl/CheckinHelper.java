@@ -1,11 +1,15 @@
 package org.folio.rest.impl;
 
 import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -15,21 +19,24 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 
 import io.vertx.core.Context;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 
 public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
-
+  public static final String IS_ITEM_ORDER_CLOSED_PRESENT = "isItemOrderClosedPresent";
   /**
    * Map with PO line id as a key and value is map with piece id as a key and
    * {@link CheckInPiece} as a value
@@ -40,8 +47,9 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
                 Context ctx, String lang) {
     super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
     // Convert request to map representation
-    checkinPieces = groupCheckinPiecesByPoLineId(checkinCollection);
-
+    CheckinCollection checkinCollectionClone = JsonObject.mapFrom(checkinCollection).mapTo(CheckinCollection.class);
+    checkinPieces = groupCheckinPiecesByPoLineId(checkinCollectionClone);
+    updateCheckInPiecesStatus();
     // Logging quantity of the piece records to be checked in
     if (logger.isDebugEnabled()) {
       int poLinesQty = checkinPieces.size();
@@ -73,7 +81,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       // 5. Update received piece records in the storage
       .thenCompose(this::storeUpdatedPieceRecords)
       // 6. Update PO Line status
-      .thenCompose(this::updatePoLinesStatus)
+      .thenCompose(piecesGroupedByPoLine -> updateOrderAndPoLinesStatus(piecesGroupedByPoLine, checkinCollection))
       // 7. Return results to the client
       .thenApply(piecesGroupedByPoLine -> prepareResponseBody(checkinCollection, piecesGroupedByPoLine));
   }
@@ -87,7 +95,10 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
             lists -> StreamEx.of(lists)
               .flatMap(List::stream)
               .filter(checkInPiece -> checkInPiece.getLocationId() != null)
-              .toMap(CheckInPiece::getId, CheckInPiece::getLocationId))));
+              .toMap(CheckInPiece::getId, CheckInPiece::getLocationId)
+          )
+        )
+      );
     }
 
   private ReceivingResults prepareResponseBody(CheckinCollection checkinCollection,
@@ -205,8 +216,86 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     return piecesGroupedByPoLine;
   }
 
+  private void updateCheckInPiecesStatus() {
+    checkinPieces.values()
+      .stream()
+      .map(Map::values)
+      .flatMap(Collection::stream)
+      .forEach(checkInPiece -> {
+        if (CheckInPiece.ItemStatus.ORDER_CLOSED.equals(checkInPiece.getItemStatus())) {
+          checkInPiece.setItemStatus(CheckInPiece.ItemStatus.IN_PROCESS);
+        }
+      });
+  }
+
+  private CompletableFuture<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine,
+      CheckinCollection checkinCollection) {
+    List<String> poLineIdsForUpdatedPieces = getPoLineIdsForUpdatedPieces(piecesGroupedByPoLine);
+    // Once all PO Lines are retrieved from storage check if receipt status
+    // requires update and persist in storage
+    return getPoLines(poLineIdsForUpdatedPieces).thenCompose(poLines -> {
+      // Calculate expected status for each PO Line and update with new one if
+      // required
+      List<CompletableFuture<String>> futures = new ArrayList<>();
+      for (PoLine poLine : poLines) {
+        List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
+        futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces)
+          .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, ctx, okapiHeaders, logger)));
+      }
+
+      return collectResultsOnSuccess(futures).thenAccept(updatedPoLines -> {
+        logger.debug("{} out of {} PO Line(s) updated with new status", updatedPoLines.size(), piecesGroupedByPoLine.size());
+
+        // Send event to check order status for successfully processed PO Lines
+        List<PoLine> successPoLines = StreamEx.of(poLines)
+          .filter(line -> updatedPoLines.contains(line.getId()))
+          .toList();
+        updateOrderStatus(successPoLines, checkinCollection);
+      });
+    })
+      .thenApply(ok -> piecesGroupedByPoLine);
+  }
+
+  private void updateOrderStatus(List<PoLine> poLines, CheckinCollection checkinCollection) {
+    if (!poLines.isEmpty()) {
+      logger.debug("Sending event to verify order status");
+
+      Map<String, Boolean> orderClosedStatusesMap = groupCheckinPiecesByPoLineId(checkinCollection, poLines);
+      List<JsonObject> orderClosedStatusesJsonList = orderClosedStatusesMap.entrySet().stream()
+        .map(entry -> new JsonObject().put(ORDER_ID, entry.getKey())
+                                      .put(IS_ITEM_ORDER_CLOSED_PRESENT, entry.getValue()))
+        .collect(toList());
+
+      JsonObject messageContent = new JsonObject();
+      messageContent.put(OKAPI_HEADERS, okapiHeaders);
+      messageContent.put(EVENT_PAYLOAD, new JsonArray(orderClosedStatusesJsonList));
+      sendEvent(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE, messageContent);
+      logger.debug("Event to verify order status - sent");
+    }
+  }
+
+  private Map<String, Boolean> groupCheckinPiecesByPoLineId(CheckinCollection checkinCollection, List<PoLine> poLines) {
+    Map<String, Map<String, CheckInPiece>> poLineCheckInPieces = groupCheckinPiecesByPoLineId(checkinCollection);
+    Map<String, List<PoLine>> orderIdOrderLineMap = poLines.stream().collect(groupingBy(PoLine::getPurchaseOrderId));
+
+   Map<String, Boolean> orderClosedStatusesMap = new HashMap<>();
+    orderIdOrderLineMap.forEach((orderId, orderPoLines) ->
+      orderPoLines.forEach(orderPoLine -> {
+        boolean isItemOrderClosedPresent =
+        poLineCheckInPieces.get(orderPoLine.getId()).values()
+                           .stream()
+                           .filter(checkinPiece -> CheckInPiece.ItemStatus.ORDER_CLOSED.equals(checkinPiece.getItemStatus()))
+                           .map(CheckInPiece::getItemStatus)
+                           .findAny()
+                           .isPresent();
+      orderClosedStatusesMap.put(orderId, isItemOrderClosedPresent);
+    }));
+    return orderClosedStatusesMap;
+  }
+
   @Override
   String getLocationId(Piece piece) {
     return checkinPieces.get(piece.getPoLineId()).get(piece.getId()).getLocationId();
   }
+
 }

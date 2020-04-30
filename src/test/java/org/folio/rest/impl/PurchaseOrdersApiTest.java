@@ -1573,14 +1573,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
     verifyInstanceLinksForUpdatedOrder(reqData);
     // Verify instanceIds conformity
-    reqData.getCompositePoLines().forEach(p -> assertThat(uuids.get(p.getId()), is(p.getInstanceId())));
+    reqData.getCompositePoLines().forEach(compPoline -> assertThat(uuids.get(compPoline.getId()), is(compPoline.getInstanceId())));
     // Verify that new instances didn't created
     assertThat(MockServer.getCreatedInstances(), nullValue());
-    assertThat(MockServer.getUpdatedTitles(), notNullValue());
-
-    MockServer.getUpdatedTitles()
-      .forEach(title -> assertTrue(uuids.containsValue(title.getString(INSTANCE_ID))));
-    validateSavedPoLines();
 
   }
 

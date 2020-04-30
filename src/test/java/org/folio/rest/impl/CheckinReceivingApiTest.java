@@ -134,7 +134,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     });
 
     // Verify message is sent via event bus
-    verifyOrderStatusUpdateEvent(1);
+    verifyCheckinOrderStatusUpdateEvent(1);
   }
 
   @Test
@@ -193,7 +193,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     });
 
     // Verify message is sent via event bus
-    verifyOrderStatusUpdateEvent(1);
+    verifyCheckinOrderStatusUpdateEvent(1);
   }
 
   @Test
@@ -249,7 +249,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     });
 
     // Verify message is sent via event bus
-    verifyOrderStatusUpdateEvent(1);
+    verifyCheckinOrderStatusUpdateEvent(1);
   }
 
   @Test
@@ -287,7 +287,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     assertThat(getPieceUpdates(), hasSize(2));
     assertThat(getPoLineSearches(), hasSize(1));
     assertThat(getPoLineUpdates(), hasSize(1));
-    verifyOrderStatusUpdateEvent(1);
+    verifyCheckinOrderStatusUpdateEvent(1);
 
 
     // Negative cases:
@@ -303,7 +303,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     assertThat(getPieceUpdates(), hasSize(1));
     assertThat(getPoLineSearches(), hasSize(1));
     assertThat(getPoLineUpdates(), hasSize(1));
-    verifyOrderStatusUpdateEvent(1);
+    verifyCheckinOrderStatusUpdateEvent(1);
 
 
     // 2. All CheckInPieces and corresponding Pieces without locationId
@@ -581,7 +581,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   }
 
   private boolean isHoldingsUpdateRequired(org.folio.rest.acq.model.Piece piece, PoLine poLine) {
-    if (piece.getFormat() == org.folio.rest.acq.model.Piece.Format.ELECTRONIC) {
+    if (piece.getFormat() == org.folio.rest.acq.model.Piece.PieceFormat.ELECTRONIC) {
      return isHoldingUpdateRequiredForEresource(poLine.getEresource());
     } else {
       return isHoldingUpdateRequiredForPhysical(poLine.getPhysical());

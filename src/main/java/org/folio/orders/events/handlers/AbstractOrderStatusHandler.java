@@ -17,40 +17,34 @@ import org.folio.rest.impl.PurchaseOrderHelper;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
+import io.vertx.core.Context;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
-@Component("orderStatusHandler")
-public class OrderStatus extends AbstractHelper implements Handler<Message<JsonObject>> {
+public abstract class AbstractOrderStatusHandler extends AbstractHelper implements Handler<Message<JsonObject>> {
 
-  @Autowired
-  public OrderStatus(Vertx vertx) {
-    super(vertx.getOrCreateContext());
+  protected AbstractOrderStatusHandler(Context ctx) {
+    super(ctx);
   }
 
   @Override
   public void handle(Message<JsonObject> message) {
     JsonObject body = message.body();
-
     logger.debug("Received message body: {}", body);
+    String lang = body.getString(HelperUtils.LANG);
 
     Map<String, String> okapiHeaders = getOkapiHeaders(message);
     HttpClientInterface httpClient = getHttpClient(okapiHeaders, true);
 
-    JsonArray orderIds = body.getJsonArray("orderIds");
-    String lang = body.getString(HelperUtils.LANG);
-
     List<CompletableFuture<Void>> futures = new ArrayList<>();
-    for (Object id : orderIds) {
-      String orderId = (String) id;
-
+    JsonArray orderItemStatusArray = messageAsJsonArray(EVENT_PAYLOAD, message);
+    for (Object orderItemStatus : orderItemStatusArray.getList()) {
+      JsonObject ordersPayload = JsonObject.class.cast(orderItemStatus);
+      String orderId = ordersPayload.getString(ORDER_ID);
       // Add future which would hold result of operation
       CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
       futures.add(future);
@@ -60,7 +54,7 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
         .thenAccept(orderJson -> {
           PurchaseOrder purchaseOrder = orderJson.mapTo(PurchaseOrder.class);
 
-          if (purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.PENDING) {
+          if (isOrdersStatusChangeSkip(purchaseOrder, ordersPayload)) {
             future.complete(null);
           } else {
             // Get purchase order lines to check if order status needs to be changed.
@@ -86,7 +80,8 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
     completeAllFutures(ctx, httpClient, futures, message);
   }
 
-  CompletableFuture<Void> updateOrderStatus(Map<String, String> okapiHeaders, HttpClientInterface httpClient, PurchaseOrder purchaseOrder, List<PoLine> poLines) {
+  protected CompletableFuture<Void> updateOrderStatus(Map<String, String> okapiHeaders, HttpClientInterface httpClient,
+    PurchaseOrder purchaseOrder, List<PoLine> poLines) {
     PurchaseOrder.WorkflowStatus initialStatus = purchaseOrder.getWorkflowStatus();
     PurchaseOrderHelper helper = new PurchaseOrderHelper(httpClient, okapiHeaders, ctx, lang);
     return VertxCompletableFuture.supplyBlockingAsync(ctx, () -> changeOrderStatus(purchaseOrder, poLines))
@@ -99,4 +94,11 @@ public class OrderStatus extends AbstractHelper implements Handler<Message<JsonO
       });
   }
 
+  protected JsonArray messageAsJsonArray(String rootElement, Message<JsonObject> message) {
+    JsonObject body = message.body();
+    logger.debug("Received message body: {}", body);
+    return body.getJsonArray(rootElement);
+  }
+
+  protected abstract boolean isOrdersStatusChangeSkip(PurchaseOrder purchaseOrder, JsonObject ordersPayload);
 }

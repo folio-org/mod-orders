@@ -89,12 +89,11 @@ class InventoryInteractionTestHelper {
       if (itemsQuantity > 0) {
         boolean instanceLinked = false;
         for (JsonObject jsonObj : polUpdates) {
-          jsonObj.remove("instanceId");
           PoLine line = jsonObj.mapTo(PoLine.class);
-          if (StringUtils.equals(line.getId(), compLine.getId()) && StringUtils.isNotEmpty(getInstanceId(line))) {
+          if (StringUtils.equals(line.getId(), compLine.getId()) && StringUtils.isNotEmpty(line.getInstanceId())) {
             instanceLinked = true;
             // Populate instance id in the req data for further validation
-            compLine.setInstanceId(getInstanceId(line));
+            compLine.setInstanceId(line.getInstanceId());
             break;
           }
         }
@@ -334,7 +333,7 @@ class InventoryInteractionTestHelper {
   }
 
   private static void verifyItemsCreated(Header tenant, List<JsonObject> inventoryItems, CompositePoLine pol) {
-    Map<Piece.Format, Integer> expectedItemsPerResourceType = HelperUtils.calculatePiecesWithItemIdQuantity(pol,
+    Map<Piece.PieceFormat, Integer> expectedItemsPerResourceType = HelperUtils.calculatePiecesWithItemIdQuantity(pol,
       pol.getLocations());
 
     Map<String, List<JsonObject>> itemsByMaterial = inventoryItems.stream()
@@ -345,7 +344,7 @@ class InventoryInteractionTestHelper {
       if (quantity < 1) {
         return;
       }
-      if (resourceType.equals(Piece.Format.ELECTRONIC)) {
+      if (resourceType.equals(Piece.PieceFormat.ELECTRONIC)) {
         assertThat(quantity, is(itemsByMaterial.get(pol.getEresource().getMaterialType()).size()));
         itemsByMaterial.get(pol.getEresource().getMaterialType())
           .forEach(item -> verifyItemRecordRequest(tenant, item, pol.getEresource().getMaterialType()));

@@ -9,7 +9,6 @@ import static java.util.stream.Collectors.toList;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.orders.utils.HelperUtils.INSTANCE_ID;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
@@ -112,13 +111,11 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   private final InventoryHelper inventoryHelper;
   private final ProtectionHelper protectionHelper;
-  private final TitlesHelper titleHelper;
 
   PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
-    titleHelper = new TitlesHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   PurchaseOrderLineHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -230,7 +227,6 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
     subObjFuts.add(createAlerts(compPoLine, line));
     subObjFuts.add(createReportingCodes(compPoLine, line));
-    line.remove("instanceId");
 
     return allOf(subObjFuts.toArray(new CompletableFuture[0]))
       .thenCompose(v -> generateLineNumber(compOrder))
@@ -373,26 +369,11 @@ class PurchaseOrderLineHelper extends AbstractHelper {
         // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
         // update
         compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
-        return updateTitleForNonPackageWithInstanceId(compOrderLine)
-          .thenCompose(ok -> updateOrderLine(compOrderLine, lineFromStorage))
+        return updateOrderLine(compOrderLine, lineFromStorage)
           .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage));
       });
   }
 
-  private CompletableFuture<Void> updateTitleForNonPackageWithInstanceId(CompositePoLine compPol) {
-    if (Boolean.FALSE.equals(compPol.getIsPackage()) && compPol.getInstanceId() != null) {
-      return titleHelper.getTitlesByPoLineIds(Collections.singletonList(compPol.getId()))
-        .thenCompose(titles -> {
-          if (!titles.isEmpty()) {
-            return titleHelper.updateTitle(titles.get(compPol.getId())
-              .get(0)
-              .withInstanceId(compPol.getInstanceId()));
-          }
-          return completedFuture(null);
-        });
-    }
-    return completedFuture(null);
-  }
 
   private void validatePOLineProtectedFieldsChanged(CompositePoLine compOrderLine, JsonObject lineFromStorage, CompositePurchaseOrder purchaseOrder) {
     if (purchaseOrder.getWorkflowStatus() != PENDING) {
@@ -406,13 +387,13 @@ class PurchaseOrderLineHelper extends AbstractHelper {
         // See MODORDERS-218
         if (!StringUtils.equals(poLine.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value())
           || !StringUtils.equals(poLine.getPaymentStatus().value(), compOrderLine.getPaymentStatus().value())) {
-          sendEvent(MessageAddress.ORDER_STATUS, createUpdateOrderMessage(compOrderLine));
+          sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, createUpdateOrderMessage(compOrderLine));
         }
       });
   }
 
   private JsonObject createUpdateOrderMessage(CompositePoLine compOrderLine) {
-    return new JsonObject().put(ORDER_IDS, new JsonArray().add(compOrderLine.getPurchaseOrderId()));
+    return new JsonObject().put(EVENT_PAYLOAD, new JsonArray().add(new JsonObject().put(ORDER_ID, compOrderLine.getPurchaseOrderId())));
   }
 
   /**
@@ -630,8 +611,8 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   private List<Piece> createPiecesWithoutLocationId(CompositePoLine compPOL, List<Piece> existingPieces) {
     List<Piece> piecesToCreate = new ArrayList<>();
-    Map<Piece.Format, Integer> expectedQuantitiesWithoutLocation = calculatePiecesQuantityWithoutLocation(compPOL);
-    Map<Piece.Format, Integer> existingPiecesQuantities = calculateQuantityOfExistingPiecesWithoutLocation(existingPieces);
+    Map<Piece.PieceFormat, Integer> expectedQuantitiesWithoutLocation = calculatePiecesQuantityWithoutLocation(compPOL);
+    Map<Piece.PieceFormat, Integer> existingPiecesQuantities = calculateQuantityOfExistingPiecesWithoutLocation(existingPieces);
     expectedQuantitiesWithoutLocation.forEach((format, expectedQty) -> {
       int remainingPiecesQuantity = expectedQty - existingPiecesQuantities.getOrDefault(format, 0);
       if (remainingPiecesQuantity > 0) {
@@ -652,8 +633,8 @@ class PurchaseOrderLineHelper extends AbstractHelper {
         List<Piece> filteredExpectedPiecesWithItem = filterByLocationId(expectedPiecesWithItem, locationId);
         piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
 
-        Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = HelperUtils.calculatePiecesWithoutItemIdQuantity(compPOL, locations);
-        Map<Piece.Format, Integer> quantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(filteredExistingPieces);
+        Map<Piece.PieceFormat, Integer> expectedQuantitiesWithoutItem = HelperUtils.calculatePiecesWithoutItemIdQuantity(compPOL, locations);
+        Map<Piece.PieceFormat, Integer> quantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(filteredExistingPieces);
         expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
           int remainingPiecesQuantity = expectedQty - quantityWithoutItem.getOrDefault(format, 0);
           if (remainingPiecesQuantity > 0) {
@@ -702,13 +683,13 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       .collect(Collectors.toList());
   }
 
-  private Map<Piece.Format, Integer> calculateQuantityOfExistingPiecesWithoutItem(List<Piece> pieces) {
+  private Map<Piece.PieceFormat, Integer> calculateQuantityOfExistingPiecesWithoutItem(List<Piece> pieces) {
     return StreamEx.of(pieces)
       .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
       .groupingBy(Piece::getFormat, collectingAndThen(toList(), List::size));
   }
 
-  private Map<Piece.Format, Integer> calculateQuantityOfExistingPiecesWithoutLocation(List<Piece> pieces) {
+  private Map<Piece.PieceFormat, Integer> calculateQuantityOfExistingPiecesWithoutLocation(List<Piece> pieces) {
     return StreamEx.of(pieces)
       .filter(piece -> StringUtils.isEmpty(piece.getLocationId()))
       .groupingBy(Piece::getFormat, collectingAndThen(toList(), List::size));
@@ -752,7 +733,6 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
     futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage));
     futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage));
-    updatedLineJson.remove(INSTANCE_ID);
 
     // Once all operations completed, return updated PO Line with new sub-object id's as json object
     return allOf(futures.toArray(new CompletableFuture[0]))
