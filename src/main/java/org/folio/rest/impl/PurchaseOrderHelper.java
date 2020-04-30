@@ -189,9 +189,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
             if (isTransitionToOpen) {
               String query = buildQuery(convertIdsToCqlQuery(compPO.getCompositePoLines().stream().map(CompositePoLine::getId).collect(toList()), "poLineId"), logger);
               return piecesHelper.getPieces(Integer.MAX_VALUE, 0, query)
-                .thenAccept(pieces -> {
-                  verifyLocationsAndPiecesConsistency(compPO, pieces);
-                });
+                .thenAccept(pieces -> verifyLocationsAndPiecesConsistency(compPO, pieces));
             } else {
               return CompletableFuture.completedFuture(null);
             }
