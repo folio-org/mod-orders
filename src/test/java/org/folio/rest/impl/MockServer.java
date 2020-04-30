@@ -211,7 +211,6 @@ public class MockServer {
   static final String ORDER_ID_WITH_PO_LINES = "ab18897b-0e40-4f31-896b-9c9adc979a87";
   private static final String PIECE_POLINE_CONSISTENT_RECEIPT_STATUS_ID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
   private static final String PIECE_POLINE_CONSISTENCY_404_POLINE_NOT_FOUND_ID = "5b454292-6aaa-474f-9510-b59a564e0c8d";
-  public static final String PIECE_NOT_FOUND_ID = "5bf8c236-8aec-4545-baa1-29004849276d";
   static final String PO_NUMBER_VALUE = "228D126";
 
   private static final String PO_NUMBER_ERROR_TENANT = "po_number_error_tenant";
@@ -899,7 +898,7 @@ public class MockServer {
       addServerRqRsData(HttpMethod.GET, REQUESTS, entries);
     } catch (IOException e) {
       ctx.response()
-        .setStatusCode(404)
+        .setStatusCode(500)
         .end();
     }
   }
