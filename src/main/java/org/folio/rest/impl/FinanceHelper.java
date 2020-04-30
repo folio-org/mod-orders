@@ -318,7 +318,7 @@ public class FinanceHelper extends AbstractHelper {
     Transaction transaction = new Transaction();
     transaction.setTransactionType(Transaction.TransactionType.ENCUMBRANCE);
     transaction.setFromFundId(distribution.getFundId());
-    transaction.setSource(Transaction.Source.USER);
+    transaction.setSource(Transaction.Source.PO_LINE);
     transaction.setAmount(calculateAmountEncumbered(distribution, estimatedPrice));
     transaction.setCurrency(systemCurrency);
 
