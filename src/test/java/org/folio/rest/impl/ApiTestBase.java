@@ -88,6 +88,9 @@ import io.vertx.core.logging.LoggerFactory;
 
 public class ApiTestBase {
 
+  public static final String PIECE_ID = "0f1bb087-72e9-44ce-a145-bfc2e7b005cf";
+  public static final String ITEM_ID = "522a501a-56b5-48d9-b28a-3a8f02482d97";
+
   static {
     System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, "io.vertx.core.logging.Log4j2LogDelegateFactory");
   }
@@ -446,9 +449,10 @@ public class ApiTestBase {
 
   public static Piece getMinimalContentPiece(String poLineId) {
     return new Piece()
-      .withId(UUID.randomUUID().toString())
+      .withId(PIECE_ID)
       .withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
       .withFormat(Piece.Format.PHYSICAL)
+      .withItemId(ITEM_ID)
       .withReceiptDate(new Date())
       .withPoLineId(poLineId);
   }

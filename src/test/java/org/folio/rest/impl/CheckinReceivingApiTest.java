@@ -393,9 +393,13 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
     Piece physicalPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.PHYSICAL)
-      .withLocationId(locationForPhysical);
+      .withLocationId(locationForPhysical)
+      .withId(UUID.randomUUID().toString())
+      .withItemId(UUID.randomUUID().toString());
     Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
-      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC)
+      .withId(UUID.randomUUID().toString())
+      .withItemId(UUID.randomUUID().toString());
 
     addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
     addMockEntry(PO_LINES, poLine);

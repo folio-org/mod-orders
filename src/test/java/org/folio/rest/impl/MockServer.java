@@ -65,9 +65,7 @@ import static org.folio.rest.impl.ApiTestBase.getMinimalContentCompositePoLine;
 import static org.folio.rest.impl.ApiTestBase.getMinimalContentCompositePurchaseOrder;
 import static org.folio.rest.impl.ApiTestBase.getMockAsJson;
 import static org.folio.rest.impl.ApiTestBase.getMockData;
-import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
-import static org.folio.rest.impl.InventoryHelper.ITEMS;
-import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
+import static org.folio.rest.impl.InventoryHelper.*;
 import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
 import static org.folio.rest.impl.PoNumberApiTest.NONEXISTING_PO_NUMBER;
 import static org.folio.rest.impl.ProtectionHelper.ACQUISITIONS_UNIT_ID;
@@ -199,6 +197,7 @@ public class MockServer {
   private static final String ORGANIZATIONS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "organizations/";
   public static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "po_line_collection.json";
   private static final String IDENTIFIER_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
+  private static final String ITEM_REQUESTS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemRequests/";
   static final String ACQUISITIONS_UNITS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/units.json";
   static final String ACQUISITIONS_MEMBERSHIPS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/memberships.json";
   static final String ORDER_TEMPLATES_COLLECTION = ORDER_TEMPLATES_MOCK_DATA_PATH + "/orderTemplates.json";
@@ -212,6 +211,7 @@ public class MockServer {
   static final String ORDER_ID_WITH_PO_LINES = "ab18897b-0e40-4f31-896b-9c9adc979a87";
   private static final String PIECE_POLINE_CONSISTENT_RECEIPT_STATUS_ID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
   private static final String PIECE_POLINE_CONSISTENCY_404_POLINE_NOT_FOUND_ID = "5b454292-6aaa-474f-9510-b59a564e0c8d";
+  public static final String PIECE_NOT_FOUND_ID = "5bf8c236-8aec-4545-baa1-29004849276d";
   static final String PO_NUMBER_VALUE = "228D126";
 
   private static final String PO_NUMBER_ERROR_TENANT = "po_number_error_tenant";
@@ -474,6 +474,7 @@ public class MockServer {
     router.get("/organizations-storage/organizations/:id").handler(this::getOrganizationById);
     router.get("/organizations-storage/organizations").handler(this::handleGetAccessProviders);
     router.get("/identifier-types").handler(this::handleGetIdentifierType);
+    router.get("/circulation/requests").handler(this::handleGetItemRequests);
     router.get(resourcesPath(PO_LINES)).handler(ctx -> handleGetPoLines(ctx, PO_LINES));
     router.get(resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
     router.get(resourcePath(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
@@ -885,6 +886,23 @@ public class MockServer {
         serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
       }
     }
+  }
+
+  private void handleGetItemRequests(RoutingContext ctx) {
+    logger.info("handleGetItemRequests got: " + ctx.request().path());
+    try {
+      String itemId = ctx.request().getParam("query").split("==")[1];
+      JsonObject entries = new JsonObject(ApiTestBase.getMockData(ITEM_REQUESTS_MOCK_DATA_PATH + "itemRequests.json"));
+      filterByKeyValue("itemId", itemId, entries.getJsonArray(REQUESTS));
+      serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+      entries.put("totalRecords", entries.getJsonArray(REQUESTS).size());
+      addServerRqRsData(HttpMethod.GET, REQUESTS, entries);
+    } catch (IOException e) {
+      ctx.response()
+        .setStatusCode(404)
+        .end();
+    }
+
   }
 
   private void handleGetLoanType(RoutingContext ctx) {
@@ -1426,6 +1444,9 @@ public class MockServer {
       .getParam(ID);
 
     try {
+      if (ID_DOES_NOT_EXIST.equals(pieceId)) {
+        serverResponse(ctx, 404, APPLICATION_JSON, pieceId);
+      }
       // Attempt to find POLine in mock server memory
       JsonObject body = getMockEntry(PIECES, pieceId).orElse(null);
       if (body == null) {

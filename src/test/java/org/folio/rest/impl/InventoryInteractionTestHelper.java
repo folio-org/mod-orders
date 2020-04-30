@@ -11,8 +11,7 @@ import static org.folio.orders.utils.HelperUtils.getElectronicCostQuantity;
 import static org.folio.orders.utils.HelperUtils.getPhysicalCostQuantity;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.isHoldingCreationRequiredForLocation;
-import static org.folio.rest.impl.ApiTestBase.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
-import static org.folio.rest.impl.ApiTestBase.getInstanceId;
+import static org.folio.rest.impl.ApiTestBase.*;
 import static org.folio.rest.impl.InventoryHelper.CONFIG_NAME_INSTANCE_STATUS_CODE;
 import static org.folio.rest.impl.InventoryHelper.CONFIG_NAME_INSTANCE_TYPE_CODE;
 import static org.folio.rest.impl.InventoryHelper.CONFIG_NAME_LOAN_TYPE_NAME;
@@ -43,19 +42,8 @@ import static org.folio.rest.impl.InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENT
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS;
 import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_NAME;
 import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
-import static org.folio.rest.impl.MockServer.CONFIG_MOCK_PATH;
-import static org.folio.rest.impl.MockServer.INSTANCE_STATUSES_MOCK_DATA_PATH;
-import static org.folio.rest.impl.MockServer.INSTANCE_TYPES_MOCK_DATA_PATH;
-import static org.folio.rest.impl.MockServer.LOAN_TYPES_MOCK_DATA_PATH;
-import static org.folio.rest.impl.MockServer.getCreatedHoldings;
-import static org.folio.rest.impl.MockServer.getCreatedInstances;
-import static org.folio.rest.impl.MockServer.getCreatedItems;
-import static org.folio.rest.impl.MockServer.getCreatedPieces;
-import static org.folio.rest.impl.MockServer.getHoldingsSearches;
-import static org.folio.rest.impl.MockServer.getInstancesSearches;
-import static org.folio.rest.impl.MockServer.getItemsSearches;
-import static org.folio.rest.impl.MockServer.getPieceSearches;
-import static org.folio.rest.impl.MockServer.getPoLineUpdates;
+import static org.folio.rest.impl.MockServer.*;
+import static org.folio.rest.impl.MockServer.getPurchaseOrderRetrievals;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -65,17 +53,11 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
+import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -236,7 +218,7 @@ class InventoryInteractionTestHelper {
     int totalForAllPoLines = 0;
     for (CompositePoLine poLine : compositePoLines) {
       List<Location> locations = poLine.getLocations().stream()
-        .filter(location -> isHoldingCreationRequiredForLocation(poLine, location))
+        .filter(location -> isHoldingCreationRequiredForLocation(poLine, location) && !Objects.equals(location.getLocationId(), ID_FOR_INTERNAL_SERVER_ERROR))
         .collect(Collectors.toList());
 
       // Prepare data first
@@ -295,6 +277,36 @@ class InventoryInteractionTestHelper {
 
     // Make sure that none of pieces missed
     assertThat(pieceJsons, hasSize(totalForAllPoLines));
+  }
+
+  public static void verifyInventoryNonInteraction() {
+    // Searches
+    List<JsonObject> instancesSearches = getInstancesSearches();
+    List<JsonObject> holdingsSearches = getHoldingsSearches();
+    List<JsonObject> itemsSearches = getItemsSearches();
+    List<JsonObject> piecesSearches = getPieceSearches();
+    List<JsonObject> poLineSearches = getPoLineSearches();
+    List<JsonObject> ordersSearches = getPurchaseOrderRetrievals();
+    assertNull(instancesSearches);
+    assertNull(holdingsSearches);
+    assertNull(itemsSearches);
+    assertThat(piecesSearches, hasSize(1));
+    assertThat(poLineSearches, hasSize(1));
+    assertThat(ordersSearches, hasSize(1));
+
+    // Creation/updating
+    List<JsonObject> createdInstances = getCreatedInstances();
+    List<JsonObject> createdHoldings = getCreatedHoldings();
+    List<JsonObject> createdItems = getCreatedItems();
+    List<JsonObject> createdPieces = getCreatedPieces();
+    List<JsonObject> updatedPoLines = getPoLineUpdates();
+    List<JsonObject> updatedOrders = getPurchaseOrderUpdates();
+    assertNull(createdInstances);
+    assertNull(createdHoldings);
+    assertNull(createdItems);
+    assertNull(createdPieces);
+    assertNull(updatedPoLines);
+    assertNull(updatedOrders);
   }
 
   private static void verifyHoldingsCreated(List<JsonObject> holdings, CompositePoLine pol) {

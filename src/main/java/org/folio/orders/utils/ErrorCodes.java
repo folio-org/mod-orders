@@ -64,7 +64,9 @@ public enum ErrorCodes {
   MISSING_ONGOING("missingOngoing", "Ongoing field must be present for Ongoing order"),
   ONGOING_NOT_ALLOWED("ongoingNotAllowed", "Ongoing field must be absent for One-time order"),
   INCORRECT_FUND_DISTRIBUTION_TOTAL("incorrectFundDistributionTotal","Fund distribution total must add to 100% or totalPrice"),
-  INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE("InstanceIdNotAllowedForPackagePoLine", "Instance id not allowed for package poline");
+  INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE("InstanceIdNotAllowedForPackagePoLine", "Instance id not allowed for package poline"),
+  PIECES_NEED_TO_BE_DELETED("piecesNeedToBeDeleted", "Pieces need to be deleted"),
+  THERE_ARE_NO_REQUESTS("thereAreNoRequests", "There are no requests on item");
 
   private final String code;
   private final String description;
