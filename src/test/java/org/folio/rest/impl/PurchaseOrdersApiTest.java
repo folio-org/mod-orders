@@ -2715,9 +2715,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     allProtectedFieldsModification.put(POProtectedFields.PO_NUMBER.getFieldName(), "testPO");
     allProtectedFieldsModification.put(POProtectedFields.MANUAL_PO.getFieldName(), true);
     allProtectedFieldsModification.put(POProtectedFields.RE_ENCUMBER.getFieldName(), true);
-    allProtectedFieldsModification.put(POProtectedFields.BILL_TO.getFieldName(), UUID.randomUUID()
-      .toString());
-    allProtectedFieldsModification.put(POProtectedFields.VENDOR.getFieldName(), "d1b79c8d-4950-482f-8e42-04f9aae3cb40");
     allProtectedFieldsModification.put(POProtectedFields.ORDER_TYPE.getFieldName(),
         CompositePurchaseOrder.OrderType.ONGOING.value());
     Ongoing ongoing = new Ongoing();
@@ -2777,9 +2774,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     allProtectedFieldsModification.put(POProtectedFields.PO_NUMBER.getFieldName(), "testPO");
     allProtectedFieldsModification.put(POProtectedFields.MANUAL_PO.getFieldName(), true);
     allProtectedFieldsModification.put(POProtectedFields.RE_ENCUMBER.getFieldName(), true);
-    allProtectedFieldsModification.put(POProtectedFields.BILL_TO.getFieldName(), UUID.randomUUID()
-      .toString());
-    allProtectedFieldsModification.put(POProtectedFields.VENDOR.getFieldName(), "d1b79c8d-4950-482f-8e42-04f9aae3cb40");
     allProtectedFieldsModification.put(POProtectedFields.ORDER_TYPE.getFieldName(),
         CompositePurchaseOrder.OrderType.ONE_TIME.value());
     allProtectedFieldsModification.put(POProtectedFields.ONGOING.getFieldName(), null);
