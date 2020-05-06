@@ -362,17 +362,25 @@ class PurchaseOrderLineHelper extends AbstractHelper {
           validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage, compOrder);
           return protectionHelper.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE)
             .thenCompose(v -> validateAndNormalizeISBN(compOrderLine))
-            .thenCompose(v -> new VendorHelper(httpClient, okapiHeaders, ctx, lang)
-              .validateAccessProviders(Collections.singletonList(compOrderLine)))
-            .thenApply(aVoid -> lineFromStorage);
-        })
-      )
+            .thenCompose(v -> validateAccessProviders(compOrderLine))
+            .thenApply(v -> lineFromStorage);
+        }))
       .thenCompose(lineFromStorage -> {
         // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
         // update
         compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
         return updateOrderLine(compOrderLine, lineFromStorage)
           .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage));
+      });
+  }
+
+  private CompletableFuture<Void> validateAccessProviders(CompositePoLine compOrderLine) {
+    return new VendorHelper(httpClient, okapiHeaders, ctx, lang)
+      .validateAccessProviders(Collections.singletonList(compOrderLine))
+      .thenAccept(errors -> {
+        if (!errors.getErrors().isEmpty()) {
+          throw new HttpException(422, errors.getErrors().get(0));
+        }
       });
   }
 
