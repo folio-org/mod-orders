@@ -1,0 +1,14 @@
+{
+  "organizations": [
+    {
+      "id": "f6cd1850-2587-4f6c-b680-9b27ff26d619",
+      "name": "United States Geological Survey",
+      "code": "USGS",
+      "description": "Maps and materials from the USGS",
+      "status": "Inactive",
+      "language": "en-us",
+      "isVendor": true
+    }
+  ],
+  "totalRecords": 1
+}
