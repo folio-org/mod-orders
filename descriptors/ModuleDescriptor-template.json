@@ -344,7 +344,6 @@
             "orders-storage.purchase-orders.item.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
-            "acquisitions-units-storage.memberships.collection.get",
             "circulation.requests.collection.get"
           ]
         }

@@ -1,13 +1,41 @@
 package org.folio.rest.impl;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.summingInt;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.AcqDesiredPermissions.ASSIGN;
 import static org.folio.orders.utils.AcqDesiredPermissions.MANAGE;
-import static org.folio.orders.utils.ErrorCodes.*;
-import static org.folio.orders.utils.HelperUtils.*;
+import static org.folio.orders.utils.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
+import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
+import static org.folio.orders.utils.ErrorCodes.MISSING_ONGOING;
+import static org.folio.orders.utils.ErrorCodes.ONGOING_NOT_ALLOWED;
+import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_DELETED;
+import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
+import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS;
+import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
+import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
+import static org.folio.orders.utils.HelperUtils.buildQuery;
+import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
+import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
+import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.HelperUtils.convertToCompositePurchaseOrder;
+import static org.folio.orders.utils.HelperUtils.deletePoLine;
+import static org.folio.orders.utils.HelperUtils.deletePoLines;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.getCompositePoLines;
+import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
+import static org.folio.orders.utils.HelperUtils.getPoLines;
+import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
+import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.POProtectedFields.getFieldNames;
 import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder;
 import static org.folio.orders.utils.ProtectedOperationType.CREATE;
@@ -23,6 +51,41 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.C
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import one.util.streamex.StreamEx;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.ListUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.HttpStatus;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.AcqDesiredPermissions;
+import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
+import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.PurchaseOrders;
+import org.folio.rest.jaxrs.model.Title;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.javamoney.moneta.Money;
+import org.javamoney.moneta.function.MonetaryOperators;
+
+import javax.money.MonetaryAmount;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -37,34 +100,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import javax.money.MonetaryAmount;
-
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.ListUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.HttpStatus;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.AcqDesiredPermissions;
-import org.folio.orders.utils.ErrorCodes;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.orders.utils.POLineProtectedFields;
-import org.folio.orders.utils.ProtectedOperationType;
-import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
-import org.folio.rest.acq.model.PieceCollection;
-import org.folio.rest.jaxrs.model.*;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.javamoney.moneta.Money;
-import org.javamoney.moneta.function.MonetaryOperators;
-
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import one.util.streamex.StreamEx;
 
 public class PurchaseOrderHelper extends AbstractHelper {
 
@@ -187,9 +222,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           })
           .thenCompose(v -> {
             if (isTransitionToOpen) {
-              String query = buildQuery(convertIdsToCqlQuery(compPO.getCompositePoLines().stream().map(CompositePoLine::getId).collect(toList()), "poLineId"), logger);
-              return piecesHelper.getPieces(Integer.MAX_VALUE, 0, query)
-                .thenAccept(pieces -> verifyLocationsAndPiecesConsistency(compPO, pieces));
+              return checkLocationsAndPiecesConsistency(compPO);
             } else {
               return CompletableFuture.completedFuture(null);
             }
@@ -205,6 +238,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
           .thenCompose(ok -> handleFinalOrderStatus(compPO, poFromStorage.getWorkflowStatus().value()));
 
       });
+  }
+
+  private CompletionStage<Void> checkLocationsAndPiecesConsistency(CompositePurchaseOrder compPO) {
+    String query = buildQuery(convertIdsToCqlQuery(compPO.getCompositePoLines().stream().map(CompositePoLine::getId).collect(toList()), "poLineId"), logger);
+    return piecesHelper.getPieces(Integer.MAX_VALUE, 0, query)
+      .thenAccept(pieces -> verifyLocationsAndPiecesConsistency(compPO, pieces));
   }
 
   public CompletableFuture<Void> handleFinalOrderStatus(CompositePurchaseOrder compPO, String initialOrdersStatus) {
