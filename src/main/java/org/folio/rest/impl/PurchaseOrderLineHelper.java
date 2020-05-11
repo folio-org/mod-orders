@@ -447,7 +447,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * @param compPOL Composite PO line to update Inventory for
    * @return CompletableFuture with void.
    */
-  CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
+  CompletableFuture<Void> updateInventory(CompositePoLine compPOL, String titleId) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return completedFuture(null);
     }
@@ -456,7 +456,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       if (isReceiptNotRequired(compPOL.getReceiptStatus())) {
         return completedFuture(null);
       }
-      return createPieces(compPOL, Collections.emptyList()).thenRun(
+      return createPieces(compPOL, titleId, Collections.emptyList()).thenRun(
           () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId()));
     }
 
@@ -467,7 +467,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
           return completedFuture(null);
         }
         //create pieces only if receiving is required
-        return createPieces(compPOL, piecesWithItemId);
+        return createPieces(compPOL, titleId, piecesWithItemId);
       });
   }
 
@@ -591,7 +591,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * @param expectedPiecesWithItem expected Pieces to create with created associated Items records
    * @return void future
    */
-  private CompletableFuture<Void> createPieces(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem) {
+  private CompletableFuture<Void> createPieces(CompositePoLine compPOL, String titleId, List<Piece> expectedPiecesWithItem) {
     int createdItemsQuantity = expectedPiecesWithItem.size();
     // do not create pieces in case of check-in flow
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
@@ -603,6 +603,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
         piecesToCreate.addAll(createPiecesByLocationId(compPOL, expectedPiecesWithItem, existingPieces));
         piecesToCreate.addAll(createPiecesWithoutLocationId(compPOL, existingPieces));
+        piecesToCreate.forEach(piece -> piece.setTitleId(titleId));
 
         return allOf(piecesToCreate.stream().map(this::createPiece).toArray(CompletableFuture[]::new));
       })

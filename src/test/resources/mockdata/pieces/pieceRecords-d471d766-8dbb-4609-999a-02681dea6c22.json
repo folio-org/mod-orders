@@ -6,6 +6,7 @@
       "comment": "Standard Edition",
       "format": "Physical",
       "itemId": "522a501a-56b5-48d9-b28a-3a8f02482d97",
+      "titleId": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",
       "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
       "poLineId": "d471d766-8dbb-4609-999a-02681dea6c22",
       "receivingStatus": "Expected",
@@ -19,6 +20,7 @@
       "comment": "Standard Edition II",
       "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
       "poLineId": "d471d766-8dbb-4609-999a-02681dea6c22",
+      "titleId": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",
       "receivingStatus": "Expected",
       "receiptDate": "2018-10-09T00:00:00.000Z",
       "receivedDate": "2019-03-05T08:06:58.473+0000"

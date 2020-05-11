@@ -477,6 +477,7 @@ public class ApiTestBase {
       .withId(UUID.randomUUID().toString())
       .withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
       .withFormat(Piece.Format.PHYSICAL)
+      .withTitleId(UUID.randomUUID().toString())
       .withReceiptDate(new Date())
       .withPoLineId(poLineId);
   }
