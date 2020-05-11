@@ -177,7 +177,8 @@
             "inventory.items.collection.get",
             "isbn-utils.convert-to-13.get",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "organizations-storage.organizations.collection.get"
           ]
         },
         {
