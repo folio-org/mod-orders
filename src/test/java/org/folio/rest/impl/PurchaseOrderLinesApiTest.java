@@ -14,6 +14,7 @@ import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
 import static org.folio.orders.utils.ErrorCodes.ORDER_OPEN;
 import static org.folio.orders.utils.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
+import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
@@ -36,7 +37,6 @@ import static org.folio.rest.impl.MockServer.getOrderLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getQueryParams;
 import static org.folio.rest.impl.MockServer.getTitlesSearches;
-import static org.folio.rest.impl.MockServer.getUpdatedTitles;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -47,7 +47,6 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -917,6 +916,23 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertThat(err.getCode(), equalTo(ISBN_NOT_VALID.getCode()));
     assertThat(err.getParameters().get(0).getValue(), equalTo(isbn));
   }
+
+  @Test
+  public void testUpdatePolineForOpenedOrderWithInactiveAccessProvider() {
+    logger.info("=== Test update poline with inactive access provider for opened order  ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
+    reqData.getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
+
+    addMockEntry(PO_LINES, reqData);
+
+    Errors errors = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422).as(Errors.class);
+    assertEquals(1, errors.getErrors().size());
+    assertEquals(POL_ACCESS_PROVIDER_IS_INACTIVE.getCode(), errors.getErrors().get(0).getCode());
+  }
+
 
   private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {
     CompositePoLine poLine = new JsonObject(getMockData(PO_LINE_MIN_CONTENT_PATH)).mapTo(CompositePoLine.class);

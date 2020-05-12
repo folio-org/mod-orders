@@ -945,6 +945,8 @@ public class MockServer {
       } else if (getQuery(INACTIVE_ACCESS_PROVIDER_A, INACTIVE_ACCESS_PROVIDER_B).equals(query)
         || getQuery(INACTIVE_ACCESS_PROVIDER_B, INACTIVE_ACCESS_PROVIDER_A).equals(query)) {
         body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "all_inactive_access_providers.json"));
+      } else if (getQuery(INACTIVE_ACCESS_PROVIDER_A).equals(query)) {
+        body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "inactive_vendors.json"));
       } else if (getQuery(ACTIVE_ACCESS_PROVIDER_A).equals(query)) {
         body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_provider_not_found.json"));
       } else if (getQuery(ACTIVE_ACCESS_PROVIDER_B).equals(query)) {
@@ -976,9 +978,7 @@ public class MockServer {
     if (body != null) {
       serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
     } else {
-      ctx.response()
-        .setStatusCode(HttpStatus.HTTP_NOT_FOUND.toInt())
-        .end();
+      serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, buildEmptyCollection(VendorHelper.ORGANIZATIONS));
     }
   }
 

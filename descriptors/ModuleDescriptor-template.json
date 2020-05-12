@@ -94,7 +94,7 @@
     },
     {
       "id": "order-lines",
-      "version": "1.2",
+      "version": "1.3",
       "handlers": [
         {
           "methods": [
@@ -177,7 +177,8 @@
             "inventory.items.collection.get",
             "isbn-utils.convert-to-13.get",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "organizations-storage.organizations.collection.get"
           ]
         },
         {
@@ -465,7 +466,7 @@
     },
     {
       "id": "titles",
-      "version": "1.0",
+      "version": "1.1",
       "handlers": [
         {
           "methods": ["GET"],
@@ -722,7 +723,7 @@
     },
     {
       "id": "orders-storage.titles",
-      "version": "1.0"
+      "version": "1.1"
     },
     {
       "id": "orders-storage.configuration.reasons-for-closure",

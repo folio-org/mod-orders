@@ -11,10 +11,8 @@ public enum POProtectedFields {
   APPROVED("approved"),
   ORDER_TYPE("orderType"),
   RE_ENCUMBER("reEncumber"),
-  BILL_TO("billTo"),
   ONGOING("ongoing"),
-  TEMPLATE("template"),
-  VENDOR("vendor");
+  TEMPLATE("template");
 
   POProtectedFields(String field) {
     this.field = field;
