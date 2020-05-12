@@ -3,30 +3,35 @@
     {
       "id": "cc3cb47d-a39a-42f6-8317-06178c62ffa1",
       "poLineId": "daa9cfd1-b330-4b65-8c2a-3663aaae5130",
+      "titleId": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",
       "receiptDate": "2018-10-09T00:00:00.000Z",
       "receivingStatus": "Expected"
     },
     {
       "id": "7fb84824-4f37-421e-bca4-ab966e517021",
       "poLineId": "daa9cfd1-b330-4b65-8c2a-3663aaae5130",
+      "titleId": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",
       "receiptDate": "2018-10-09T00:00:00.000Z",
       "receivingStatus": "Expected"
     },
     {
       "id": "4c74a8ae-2f36-4201-826d-2ae94ef36b37",
       "poLineId": "daa9cfd1-b330-4b65-8c2a-3663aaae5130",
+      "titleId": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",
       "receiptDate": "2018-10-09T00:00:00.000Z",
       "receivingStatus": "Expected"
     },
     {
       "id": "e3c8c400-e0a8-4499-b33b-509a65fe99ea",
       "poLineId": "daa9cfd1-b330-4b65-8c2a-3663aaae5130",
+      "titleId": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",
       "receiptDate": "2018-10-09T00:00:00.000Z",
       "receivingStatus": "Expected"
     },
     {
       "id": "81f65edb-d73c-4a41-ab4a-5bc36a455cf1",
       "poLineId": "daa9cfd1-b330-4b65-8c2a-3663aaae5130",
+      "titleId": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",
       "receiptDate": "2018-10-09T00:00:00.000Z",
       "receivingStatus": "Expected"
     }
