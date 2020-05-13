@@ -426,6 +426,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
       .thenAccept(compPO -> protectionHelper.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.READ)
         .thenAccept(ok -> getOrderWithLines(compPO)
+          .thenCompose(this::fetchNonPackageTitles)
+          .thenAccept(linesIdTitles -> populateInstanceId(linesIdTitles, compPO.getCompositePoLines()))
           .thenApply(v -> populateOrderSummary(compPO))
           .thenAccept(future::complete)
           .exceptionally(t -> {
@@ -468,9 +470,14 @@ public class PurchaseOrderHelper extends AbstractHelper {
   public CompletableFuture<Void> openOrder(CompositePurchaseOrder compPO) {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
-    return getOrderWithLines(compPO).thenApply(this::validateFundDistributionTotal)
+    return getOrderWithLines(compPO)
+      .thenApply(this::validateFundDistributionTotal)
       .thenApply(this::validateMaterialTypes)
-      .thenCompose(this::updateInventory)
+      .thenCompose(this::fetchNonPackageTitles)
+      .thenCompose(linesIdTitles -> {
+          populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
+          return updateInventory(linesIdTitles, compPO);
+        })
       .thenCompose(ok -> createEncumbrances(compPO))
       .thenAccept(ok -> changePoLineStatuses(compPO))
       .thenCompose(ok -> updatePoLinesSummary(compPO));
@@ -757,8 +764,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
           orderLineHelper.sortPoLinesByPoLineNumber(poLines);
           return compPO.withCompositePoLines(poLines);
         })
-        .thenCompose(this::fetchNonPackageTitles)
-        .thenAccept(linesIdTitles -> populateInstanceId(linesIdTitles, compPO.getCompositePoLines()))
         .thenApply(v -> compPO);
     } else {
       return completedFuture(compPO);
@@ -892,13 +897,20 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return compPO.getCompositePoLines().stream().mapToLong(compositePoLine -> compositePoLine.getFundDistribution().size()).sum() >= 1;
   }
 
-  private CompletableFuture<Void> updateInventory(CompositePurchaseOrder compPO) {
+  private CompletableFuture<Void> updateInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO) {
     return CompletableFuture.allOf(
       compPO.getCompositePoLines()
-            .stream()
-            .map(orderLineHelper::updateInventory)
-            .toArray(CompletableFuture[]::new)
+        .stream()
+        .map(poLine -> orderLineHelper.updateInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine)))
+        .toArray(CompletableFuture[]::new)
     );
+  }
+
+  private String getFirstTitleIdIfExist(Map<String, List<Title>> lineIdsTitles, CompositePoLine poLine) {
+    return Optional.ofNullable(lineIdsTitles.get(poLine.getId()))
+      .map(titles -> titles.get(0))
+      .map(Title::getId)
+      .orElse(null);
   }
 
   private CompletableFuture<Void> handlePoLines(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage) {

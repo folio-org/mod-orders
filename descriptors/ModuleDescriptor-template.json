@@ -177,7 +177,8 @@
             "inventory.items.collection.get",
             "isbn-utils.convert-to-13.get",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "organizations-storage.organizations.collection.get"
           ]
         },
         {
@@ -302,7 +303,7 @@
     },
     {
       "id": "pieces",
-      "version": "1.2",
+      "version": "2.0",
       "handlers": [
         {
           "methods": ["POST"],
@@ -650,7 +651,7 @@
     },
     {
       "id": "orders-storage.pieces",
-      "version": "3.2"
+      "version": "4.0"
     },
     {
       "id": "orders-storage.receiving-history",
