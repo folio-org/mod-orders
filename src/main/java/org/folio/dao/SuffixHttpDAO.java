@@ -4,12 +4,8 @@ import static org.folio.orders.utils.ResourcePathResolver.SUFFIXES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
-import java.util.Map;
-
 import org.folio.rest.jaxrs.model.Suffix;
 import org.folio.rest.jaxrs.model.SuffixCollection;
-
-import io.vertx.core.Context;
 
 public class SuffixHttpDAO extends AbstractHttpDAO<Suffix, SuffixCollection> implements SuffixDAO {
 

@@ -32,55 +32,23 @@ public abstract class AbstractHttpDAO<T extends Entity, E> implements GenericDAO
 
   @Override
   public CompletableFuture<E> get(String query, int limit, int offset, Context context, Map<String, String> okapiHeaders) {
-    CompletableFuture<E> future = new VertxCompletableFuture<>(context);
-    HttpClientInterface client = getHttpClient(okapiHeaders);
-
-    try {
-      String endpoint = String.format(SEARCH_ENDPOINT, getEndpoint(), limit, offset, buildQuery(query, logger));
-      if (logger.isDebugEnabled()) {
-        logger.debug("Calling GET {}", endpoint);
-      }
-
-      client
-        .request(HttpMethod.GET, endpoint, okapiHeaders)
-        .thenApply(response -> {
-          if (logger.isDebugEnabled()) {
-            logger.debug("Validating response for GET {}", endpoint);
-          }
-          return verifyAndExtractBody(response);
-        })
-        .handle((body, t) -> {
-          client.closeClient();
-          if (t != null) {
-            logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, HttpMethod.GET, endpoint);
-            future.completeExceptionally(t.getCause());
-          } else {
-            if (logger.isDebugEnabled()) {
-              logger.debug("The response body for GET {}: {}", endpoint, nonNull(body) ? body.encodePrettily() : null);
-            }
-            E entitiesCollection = body.mapTo(getCollectionClazz());
-            future.complete(entitiesCollection);
-          }
-          return null;
-        });
-    } catch (Exception e) {
-      logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, e, HttpMethod.GET, getEndpoint());
-      client.closeClient();
-      future.completeExceptionally(e);
-    }
-    return future;
+    String endpoint = String.format(SEARCH_ENDPOINT, getEndpoint(), limit, offset, buildQuery(query, logger));
+    return get(context, okapiHeaders, endpoint, getCollectionClazz());
   }
 
   @Override
   public CompletableFuture<T> getById(String id, Context context, Map<String, String> okapiHeaders) {
-    CompletableFuture<T> future = new VertxCompletableFuture<>(context);
     String endpoint = getByIdEndpoint(id);
+    return get(context, okapiHeaders, endpoint, getClazz());
+  }
 
+  private <S> CompletableFuture<S> get(Context context, Map<String, String> okapiHeaders, String endpoint, Class<S> sClass) {
+    CompletableFuture<S> future = new VertxCompletableFuture<>(context);
+    HttpClientInterface client = getHttpClient(okapiHeaders);
     if (logger.isDebugEnabled()) {
       logger.debug("Calling GET {}", endpoint);
     }
 
-    HttpClientInterface client = getHttpClient(okapiHeaders);
     try {
       client
         .request(HttpMethod.GET, endpoint, okapiHeaders)
@@ -99,7 +67,7 @@ public abstract class AbstractHttpDAO<T extends Entity, E> implements GenericDAO
             if (logger.isDebugEnabled()) {
               logger.debug("The response body for GET {}: {}", endpoint, nonNull(body) ? body.encodePrettily() : null);
             }
-            T responseEntity = body.mapTo(getClazz());
+            S responseEntity = body.mapTo(sClass);
             future.complete(responseEntity);
           }
           return null;

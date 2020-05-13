@@ -3,7 +3,6 @@ package org.folio.service;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.orders.utils.ErrorCodes.SUFFIX_IS_USED;
-import static org.folio.orders.utils.HelperUtils.buildQuery;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -25,6 +24,7 @@ public class SuffixService {
 
   @Autowired
   private SuffixDAO suffixDAO;
+
   @Autowired
   private PurchaseOrderDAO purchaseOrderDAO;
 
@@ -62,6 +62,7 @@ public class SuffixService {
     return purchaseOrderDAO.get(query, 0, 0, context, okapiHeaders)
       .thenAccept(purchaseOrders -> {
         if (purchaseOrders.getTotalRecords() > 0) {
+          logger.error("Suffix is used by {} orders", purchaseOrders.getTotalRecords());
           throw new HttpException(400, SUFFIX_IS_USED);
         }
       });

@@ -62,6 +62,7 @@ public class PrefixService {
     return purchaseOrderDAO.get(query, 0, 0, context, okapiHeaders)
       .thenAccept(purchaseOrders -> {
         if (purchaseOrders.getTotalRecords() > 0) {
+          logger.error("Prefix is used by {} orders", purchaseOrders.getTotalRecords());
           throw new HttpException(400, PREFIX_IS_USED);
         }
       });

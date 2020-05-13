@@ -2,25 +2,17 @@ package org.folio.service;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
-import static org.folio.orders.utils.ErrorCodes.SUFFIX_IS_USED;
-import static org.folio.orders.utils.HelperUtils.buildQuery;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import org.folio.dao.PurchaseOrderDAO;
 import org.folio.dao.ReasonForClosureDAO;
-import org.folio.dao.SuffixDAO;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.ReasonForClosure;
 import org.folio.rest.jaxrs.model.ReasonForClosureCollection;
-import org.folio.rest.jaxrs.model.Suffix;
-import org.folio.rest.jaxrs.model.SuffixCollection;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 public class ReasonForClosureService {
 
