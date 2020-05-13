@@ -93,7 +93,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
 
-public final class HelperUtils {
+public class HelperUtils {
 
   public static final String ID = "id";
   public static final String FUND_ID = "fundId";

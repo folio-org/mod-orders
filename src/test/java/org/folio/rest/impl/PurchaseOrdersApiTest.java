@@ -2224,6 +2224,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testGetOrdersNoParameters() {
     logger.info("=== Test Get Orders - With empty query ===");
 
+    addMockEntry(PURCHASE_ORDER, getMinimalContentCompositePurchaseOrder().withId(UUID.randomUUID().toString()));
+    addMockEntry(PURCHASE_ORDER, getMinimalContentCompositePurchaseOrder().withId(UUID.randomUUID().toString()));
+    addMockEntry(PURCHASE_ORDER, getMinimalContentCompositePurchaseOrder().withId(UUID.randomUUID().toString()));
+
     final PurchaseOrders purchaseOrders = verifySuccessGet(COMPOSITE_ORDERS_PATH, PurchaseOrders.class, PROTECTED_READ_ONLY_TENANT);
 
     assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET), hasSize(1));

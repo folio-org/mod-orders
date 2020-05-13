@@ -64,7 +64,9 @@ public enum ErrorCodes {
   MISSING_ONGOING("missingOngoing", "Ongoing field must be present for Ongoing order"),
   ONGOING_NOT_ALLOWED("ongoingNotAllowed", "Ongoing field must be absent for One-time order"),
   INCORRECT_FUND_DISTRIBUTION_TOTAL("incorrectFundDistributionTotal","Fund distribution total must add to 100% or totalPrice"),
-  INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE("InstanceIdNotAllowedForPackagePoLine", "Instance id not allowed for package poline");
+  INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE("InstanceIdNotAllowedForPackagePoLine", "Instance id not allowed for package poline"),
+  PREFIX_IS_USED("prefixIsUsed", "The prefix cannot be deleted as it is used by one or more orders"),
+  SUFFIX_IS_USED("suffixIsUsed", "The suffix cannot be deleted as it is used by one or more orders");
 
   private final String code;
   private final String description;
