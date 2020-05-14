@@ -38,8 +38,8 @@ import javax.money.MonetaryAmount;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.MutablePair;
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.MutableTriple;
+import org.apache.commons.lang3.tuple.Triple;
 import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
@@ -86,14 +86,14 @@ public class FinanceHelper extends AbstractHelper {
    * @return CompletableFuture with void on success.
    */
   CompletableFuture<Void> handleEncumbrances(CompositePurchaseOrder compPo) {
-    List<Pair<Transaction, FundDistribution>> encumbranceDistributionPairs = buildEncumbrances(compPo);
-    List<Transaction> encumbrances = encumbranceDistributionPairs.stream()
-      .map(Pair::getLeft)
+    List<Triple<Transaction, CompositePoLine, FundDistribution>> encumbranceDistributionTriplets = buildEncumbrances(compPo);
+    List<Transaction> encumbrances = encumbranceDistributionTriplets.stream()
+      .map(Triple::getLeft)
       .collect(toList());
     return retrieveSystemCurrency()
       .thenCompose(v -> prepareEncumbrances(encumbrances))
       .thenCompose(v -> createSummary(compPo.getId(), encumbrances.size()))
-      .thenCompose(summaryId -> createEncumbrances(encumbranceDistributionPairs));
+      .thenCompose(summaryId -> createEncumbrances(encumbranceDistributionTriplets));
   }
 
   private CompletableFuture<Void> retrieveSystemCurrency() {
@@ -114,10 +114,13 @@ public class FinanceHelper extends AbstractHelper {
     return createRecordInStorage(JsonObject.mapFrom(summary), resourcesPath(ORDER_TRANSACTION_SUMMARIES));
   }
 
-  private CompletableFuture<Void> createEncumbrances(List<Pair<Transaction, FundDistribution>> encumbranceDistributionPairs) {
-    return VertxCompletableFuture.allOf(ctx, encumbranceDistributionPairs.stream()
-      .map(pair -> createRecordInStorage(JsonObject.mapFrom(pair.getLeft()), String.format(ENCUMBRANCE_POST_ENDPOINT, lang))
-        .thenAccept(id -> pair.getValue().setEncumbrance(id))
+  private CompletableFuture<Void> createEncumbrances(List<Triple<Transaction, CompositePoLine, FundDistribution>> encumbranceDistributionTriples) {
+    return VertxCompletableFuture.allOf(ctx, encumbranceDistributionTriples.stream()
+      .map(triple -> createRecordInStorage(JsonObject.mapFrom(triple.getLeft()), String.format(ENCUMBRANCE_POST_ENDPOINT, lang))
+        .thenCompose(id -> {
+          triple.getRight().setEncumbrance(id);
+          return new PurchaseOrderHelper(okapiHeaders, ctx, lang).updatePoLinesSummary(Collections.singletonList(triple.getMiddle()));
+        })
         .exceptionally(fail -> {
           checkForCustomTransactionError(fail);
           throw new CompletionException(fail);
@@ -285,13 +288,12 @@ public class FinanceHelper extends AbstractHelper {
       });
   }
 
-  private List<Pair<Transaction, FundDistribution>>  buildEncumbrances(CompositePurchaseOrder compPo) {
-
+  private List<Triple<Transaction, CompositePoLine, FundDistribution>> buildEncumbrances(CompositePurchaseOrder compPo) {
     return compPo.getCompositePoLines()
       .stream()
       .flatMap(poLine -> poLine.getFundDistribution()
         .stream()
-        .map(fundDistribution -> new MutablePair<>(buildEncumbrance(fundDistribution, poLine, compPo), fundDistribution)))
+        .map(fundDistribution -> new MutableTriple<>(buildEncumbrance(fundDistribution, poLine, compPo), poLine, fundDistribution)))
       .collect(toList());
   }
 
