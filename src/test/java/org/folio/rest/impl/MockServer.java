@@ -153,7 +153,7 @@ import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.Prefix;
 import org.folio.rest.jaxrs.model.PrefixCollection;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
+import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.ReasonForClosure;
 import org.folio.rest.jaxrs.model.ReasonForClosureCollection;
 import org.folio.rest.jaxrs.model.Suffix;
@@ -1639,7 +1639,7 @@ public class MockServer {
     addServerRqQuery(orderType, query);
 
     JsonObject po = new JsonObject();
-    PurchaseOrders orderCollection = new PurchaseOrders();
+    PurchaseOrderCollection orderCollection = new PurchaseOrderCollection();
 
     // Attempt to find POLine in mock server memory
     List<JsonObject> postedOrders = serverRqRs.column(HttpMethod.OTHER).get(orderType);

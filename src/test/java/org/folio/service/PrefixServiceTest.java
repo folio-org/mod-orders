@@ -23,11 +23,11 @@ import java.util.concurrent.CompletableFuture;
 import org.folio.dao.PrefixDAO;
 import org.folio.dao.PurchaseOrderDAO;
 import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.utils.HttpExceptionCodeMatcher;
-import org.folio.utils.HttpExceptionErrorMatcher;
 import org.folio.rest.jaxrs.model.Prefix;
 import org.folio.rest.jaxrs.model.PrefixCollection;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
+import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
+import org.folio.utils.HttpExceptionCodeMatcher;
+import org.folio.utils.HttpExceptionErrorMatcher;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -69,7 +69,7 @@ public class PrefixServiceTest {
     //given
     when(prefixDAO.getById(Mockito.anyString(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(new Prefix().withName("test")));
     when(prefixDAO.delete(anyString(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(null));
-    when(purchaseOrderDAO.get(anyString(), anyInt(), anyInt(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(new PurchaseOrders().withTotalRecords(1)));
+    when(purchaseOrderDAO.get(anyString(), anyInt(), anyInt(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(new PurchaseOrderCollection().withTotalRecords(1)));
 
     expectedException.expectCause(isA(HttpException.class));
     expectedException.expectCause(HttpExceptionCodeMatcher.hasCode(400));
@@ -90,7 +90,7 @@ public class PrefixServiceTest {
     //given
     when(prefixDAO.getById(anyString(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(new Prefix().withName("test")));
     when(prefixDAO.delete(anyString(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(null));
-    when(purchaseOrderDAO.get(anyString(), anyInt(), anyInt(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(new PurchaseOrders().withTotalRecords(0)));
+    when(purchaseOrderDAO.get(anyString(), anyInt(), anyInt(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(new PurchaseOrderCollection().withTotalRecords(0)));
 
     String id = UUID.randomUUID().toString();
     CompletableFuture<Void> result = prefixService.deletePrefix(id, ctxMock, okapiHeadersMock);

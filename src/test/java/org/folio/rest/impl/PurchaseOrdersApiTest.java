@@ -158,7 +158,7 @@ import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Physical.CreateInventory;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
+import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Title;
 import org.hamcrest.beans.HasPropertyWithValue;
 import org.hamcrest.core.Every;
@@ -2222,7 +2222,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     addMockEntry(PURCHASE_ORDER, getMinimalContentCompositePurchaseOrder().withId(UUID.randomUUID().toString()));
     addMockEntry(PURCHASE_ORDER, getMinimalContentCompositePurchaseOrder().withId(UUID.randomUUID().toString()));
 
-    final PurchaseOrders purchaseOrders = verifySuccessGet(COMPOSITE_ORDERS_PATH, PurchaseOrders.class, PROTECTED_READ_ONLY_TENANT);
+    final PurchaseOrderCollection purchaseOrders = verifySuccessGet(COMPOSITE_ORDERS_PATH, PurchaseOrderCollection.class, PROTECTED_READ_ONLY_TENANT);
 
     assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET), hasSize(1));
     assertThat(MockServer.serverRqRs.get(SEARCH_ORDERS, HttpMethod.GET), nullValue());
@@ -2241,7 +2241,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     String sortBy = " sortBy poNumber";
     String queryValue = "poNumber==" + EXISTING_PO_NUMBER;
     String endpointQuery = String.format("%s?query=%s%s", COMPOSITE_ORDERS_PATH, queryValue, sortBy);
-    final PurchaseOrders purchaseOrders = verifySuccessGet(endpointQuery, PurchaseOrders.class, PROTECTED_READ_ONLY_TENANT);
+    final PurchaseOrderCollection purchaseOrders = verifySuccessGet(endpointQuery, PurchaseOrderCollection.class, PROTECTED_READ_ONLY_TENANT);
 
     assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET), nullValue());
     assertThat(MockServer.serverRqRs.get(SEARCH_ORDERS, HttpMethod.GET), hasSize(1));

@@ -1,13 +1,13 @@
 package org.folio.dao;
 
-import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
-
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
-public class PurchaseOrderHttpDAO extends AbstractHttpDAO<PurchaseOrder, PurchaseOrders> implements PurchaseOrderDAO {
+import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
+
+public class PurchaseOrderHttpDAO extends AbstractHttpDAO<PurchaseOrder, PurchaseOrderCollection> implements PurchaseOrderDAO {
   @Override
   protected String getByIdEndpoint(String id) {
     return resourceByIdPath(PURCHASE_ORDER, id);
@@ -24,7 +24,7 @@ public class PurchaseOrderHttpDAO extends AbstractHttpDAO<PurchaseOrder, Purchas
   }
 
   @Override
-  protected Class<PurchaseOrders> getCollectionClazz() {
-    return PurchaseOrders.class;
+  protected Class<PurchaseOrderCollection> getCollectionClazz() {
+    return PurchaseOrderCollection.class;
   }
 }

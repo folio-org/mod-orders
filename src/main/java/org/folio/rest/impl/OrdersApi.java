@@ -90,7 +90,7 @@ public class OrdersApi implements Orders {
     helper
       .validateOrder(compPO)
       .thenCompose(isValid -> {
-        if (isValid) {
+        if (Boolean.TRUE.equals(isValid)) {
           logger.info("Creating PO and POLines...");
           return helper.createPurchaseOrder(compPO)
             .thenAccept(withIds -> {
@@ -118,7 +118,7 @@ public class OrdersApi implements Orders {
       .validateExistingOrder(orderId, compPO)
       .thenAccept(isValid -> {
         logger.info("Order is valid: {}", isValid);
-        if (isValid) {
+        if (Boolean.TRUE.equals(isValid)) {
           helper
             .updateOrder(compPO)
             .thenAccept(v -> {

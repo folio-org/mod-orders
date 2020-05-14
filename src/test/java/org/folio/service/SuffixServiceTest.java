@@ -23,7 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import org.folio.dao.PurchaseOrderDAO;
 import org.folio.dao.SuffixDAO;
 import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
+import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Suffix;
 import org.folio.rest.jaxrs.model.SuffixCollection;
 import org.folio.utils.HttpExceptionCodeMatcher;
@@ -68,9 +68,11 @@ public class SuffixServiceTest {
   @Test
   public void testDeleteSuffixFailedIfSuffixUsedByOrder() {
     //given
-    when(suffixDAO.getById(Mockito.anyString(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(new Suffix().withName("test")));
+    when(suffixDAO.getById(Mockito.anyString(), any(), anyMap()))
+      .thenReturn(CompletableFuture.completedFuture(new Suffix().withName("test")));
     when(suffixDAO.delete(anyString(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(null));
-    when(purchaseOrderDAO.get(anyString(), anyInt(), anyInt(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(new PurchaseOrders().withTotalRecords(1)));
+    when(purchaseOrderDAO.get(anyString(), anyInt(), anyInt(), any(), anyMap()))
+      .thenReturn(CompletableFuture.completedFuture(new PurchaseOrderCollection().withTotalRecords(1)));
 
     expectedException.expectCause(isA(HttpException.class));
     expectedException.expectCause(HttpExceptionCodeMatcher.hasCode(400));
@@ -91,7 +93,8 @@ public class SuffixServiceTest {
     //given
     when(suffixDAO.getById(anyString(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(new Suffix().withName("test")));
     when(suffixDAO.delete(anyString(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(null));
-    when(purchaseOrderDAO.get(anyString(), anyInt(), anyInt(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(new PurchaseOrders().withTotalRecords(0)));
+    when(purchaseOrderDAO.get(anyString(), anyInt(), anyInt(), any(), anyMap()))
+      .thenReturn(CompletableFuture.completedFuture(new PurchaseOrderCollection().withTotalRecords(0)));
 
     String id = UUID.randomUUID().toString();
     CompletableFuture<Void> result = suffixService.deleteSuffix(id, ctxMock, okapiHeadersMock);
