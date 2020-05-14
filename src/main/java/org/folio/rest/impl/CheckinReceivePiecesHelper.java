@@ -58,7 +58,7 @@ import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
+import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.ReceivingItemResult;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.Title;
@@ -797,7 +797,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       String url = String.format(GET_PURCHASE_ORDERS, poLinesGroupedByOrderId.size(), 0, query, lang);
       return handleGetRequest(url, httpClient, ctx, okapiHeaders, logger)
         .thenCompose(json -> {
-          List<PurchaseOrder> orders = json.mapTo(PurchaseOrders.class).getPurchaseOrders();
+          List<PurchaseOrder> orders = json.mapTo(PurchaseOrderCollection.class).getPurchaseOrders();
           return allOf(getListOfRestrictionCheckingFutures(orders, poLinesGroupedByOrderId, pieces));
         });
     } else {

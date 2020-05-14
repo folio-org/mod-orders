@@ -1,6 +1,5 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.Promise;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.resource.interfaces.PostDeployVerticle;
 import org.folio.spring.SpringContextUtil;
@@ -12,6 +11,7 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;

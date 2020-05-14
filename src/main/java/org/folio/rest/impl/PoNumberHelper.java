@@ -1,6 +1,14 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.Context;
+import static org.folio.orders.utils.HelperUtils.getPurchaseOrderByPONumber;
+import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import javax.ws.rs.core.Response;
+
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
@@ -8,13 +16,7 @@ import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
-import javax.ws.rs.core.Response;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-import static org.folio.orders.utils.HelperUtils.getPurchaseOrderByPONumber;
-import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import io.vertx.core.Context;
 
 public class PoNumberHelper extends AbstractHelper {
 

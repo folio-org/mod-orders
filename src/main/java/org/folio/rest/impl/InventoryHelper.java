@@ -22,7 +22,6 @@ import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
 import static org.folio.rest.acq.model.Piece.PieceFormat.ELECTRONIC;
 
-import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -50,6 +49,8 @@ import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
+
+import com.google.common.collect.ImmutableList;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
