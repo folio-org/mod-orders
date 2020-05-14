@@ -59,7 +59,6 @@ public class PrefixServiceTest {
   @Mock
   private EventLoopContext ctxMock;
 
-
   @Before
   public void initMocks(){
       MockitoAnnotations.initMocks(this);

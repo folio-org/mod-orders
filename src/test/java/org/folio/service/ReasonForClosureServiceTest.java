@@ -95,7 +95,8 @@ public class ReasonForClosureServiceTest {
       .withId(UUID.randomUUID().toString())
       .withSource(ReasonForClosure.Source.SYSTEM);
     ReasonForClosureCollection suffixCollection = new ReasonForClosureCollection().withTotalRecords(1).withReasonsForClosure(Collections.singletonList(reasonForClosure));
-    when(reasonForClosureDAO.get(eq(query), eq(1), eq(0), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(suffixCollection));
+    when(reasonForClosureDAO.get(eq(query), eq(1), eq(0), any(), anyMap()))
+      .thenReturn(CompletableFuture.completedFuture(suffixCollection));
 
     CompletableFuture<ReasonForClosureCollection> result = reasonForClosureService.getReasonsForClosure(query, 1, 0, ctxMock, okapiHeadersMock);
     assertFalse(result.isCompletedExceptionally());

@@ -35,9 +35,9 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-public class OrdersImpl implements Orders {
+public class OrdersApi implements Orders {
 
-  private static final Logger logger = LoggerFactory.getLogger(OrdersImpl.class);
+  private static final Logger logger = LoggerFactory.getLogger(OrdersApi.class);
 
   private static final String ORDERS_LOCATION_PREFIX = "/orders/composite-orders/%s";
   private static final String ORDER_LINE_LOCATION_PREFIX = "/orders/order-lines/%s";
