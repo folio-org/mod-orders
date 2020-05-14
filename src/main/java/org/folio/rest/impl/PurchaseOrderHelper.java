@@ -79,7 +79,7 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
+import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.javamoney.moneta.Money;
@@ -137,15 +137,15 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @param limit limit the number of elements returned in the response
    * @param offset skip over a number of elements by specifying an offset value for the query
    * @param query A query expressed as a CQL string using valid searchable fields.
-   * @return completable future with {@link PurchaseOrders} object on success or an exception if processing fails
+   * @return completable future with {@link PurchaseOrderCollection} object on success or an exception if processing fails
    */
-  public CompletableFuture<PurchaseOrders> getPurchaseOrders(int limit, int offset, String query) {
-    CompletableFuture<PurchaseOrders> future = new VertxCompletableFuture<>(ctx);
+  public CompletableFuture<PurchaseOrderCollection> getPurchaseOrders(int limit, int offset, String query) {
+    CompletableFuture<PurchaseOrderCollection> future = new VertxCompletableFuture<>(ctx);
 
     try {
       buildGetOrdersPath(limit, offset, query)
         .thenCompose(endpoint -> handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger))
-        .thenAccept(jsonOrders -> future.complete(jsonOrders.mapTo(PurchaseOrders.class)))
+        .thenAccept(jsonOrders -> future.complete(jsonOrders.mapTo(PurchaseOrderCollection.class)))
         .exceptionally(t -> {
           logger.error("Error getting orders", t);
           future.completeExceptionally(t);

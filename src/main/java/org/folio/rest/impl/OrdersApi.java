@@ -35,9 +35,9 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-public class OrdersImpl implements Orders {
+public class OrdersApi implements Orders {
 
-  private static final Logger logger = LoggerFactory.getLogger(OrdersImpl.class);
+  private static final Logger logger = LoggerFactory.getLogger(OrdersApi.class);
 
   private static final String ORDERS_LOCATION_PREFIX = "/orders/composite-orders/%s";
   private static final String ORDER_LINE_LOCATION_PREFIX = "/orders/order-lines/%s";
@@ -90,7 +90,7 @@ public class OrdersImpl implements Orders {
     helper
       .validateOrder(compPO)
       .thenCompose(isValid -> {
-        if (isValid) {
+        if (Boolean.TRUE.equals(isValid)) {
           logger.info("Creating PO and POLines...");
           return helper.createPurchaseOrder(compPO)
             .thenAccept(withIds -> {
@@ -118,7 +118,7 @@ public class OrdersImpl implements Orders {
       .validateExistingOrder(orderId, compPO)
       .thenAccept(isValid -> {
         logger.info("Order is valid: {}", isValid);
-        if (isValid) {
+        if (Boolean.TRUE.equals(isValid)) {
           helper
             .updateOrder(compPO)
             .thenAccept(v -> {
