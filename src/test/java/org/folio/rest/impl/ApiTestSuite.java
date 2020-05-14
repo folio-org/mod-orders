@@ -14,6 +14,9 @@ import org.folio.rest.impl.protection.OrdersProtectionTest;
 import org.folio.rest.impl.protection.PiecesProtectionTest;
 import org.folio.rest.impl.protection.ReceivingCheckinProtectionTest;
 import org.folio.rest.tools.utils.NetworkUtils;
+import org.folio.service.PrefixServiceTest;
+import org.folio.service.ReasonForClosureServiceTest;
+import org.folio.service.SuffixServiceTest;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
@@ -27,6 +30,7 @@ import java.util.concurrent.TimeoutException;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
@@ -47,7 +51,10 @@ import static org.hamcrest.Matchers.is;
   OrderTemplateTest.class,
   TitlesApiTest.class,
   ConfigurationCrudTest.class,
-  CheckInOrderStatusChangeChangeHandlerTest.class
+  CheckInOrderStatusChangeChangeHandlerTest.class,
+  SuffixServiceTest.class,
+  PrefixServiceTest.class,
+  ReasonForClosureServiceTest.class
 })
 public class ApiTestSuite {
 

@@ -19,9 +19,9 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-public class AcquisitionsUnitsImpl implements AcquisitionsUnits {
+public class AcquisitionsUnitsApi implements AcquisitionsUnits {
 
-  private static final Logger logger = LoggerFactory.getLogger(AcquisitionsUnitsImpl.class);
+  private static final Logger logger = LoggerFactory.getLogger(AcquisitionsUnitsApi.class);
 
   private static final String ACQUISITIONS_UNITS_LOCATION_PREFIX = "/acquisitions-units/units/%s";
   private static final String ACQUISITIONS_MEMBERSHIPS_LOCATION_PREFIX = "/acquisitions-units/memberships/%s";

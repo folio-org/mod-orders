@@ -153,7 +153,7 @@ import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.Prefix;
 import org.folio.rest.jaxrs.model.PrefixCollection;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrders;
+import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.ReasonForClosure;
 import org.folio.rest.jaxrs.model.ReasonForClosureCollection;
 import org.folio.rest.jaxrs.model.Suffix;
@@ -1639,21 +1639,21 @@ public class MockServer {
     addServerRqQuery(orderType, query);
 
     JsonObject po = new JsonObject();
-    PurchaseOrders orderCollection = new PurchaseOrders();
+    PurchaseOrderCollection orderCollection = new PurchaseOrderCollection();
 
     // Attempt to find POLine in mock server memory
-    List<JsonObject> postedOrders = serverRqRs.column(HttpMethod.OTHER).get("purchaseOrder");
+    List<JsonObject> postedOrders = serverRqRs.column(HttpMethod.OTHER).get(orderType);
 
     if (postedOrders != null) {
       orderCollection
         .withPurchaseOrders(
           postedOrders.stream()
-            .filter(order -> query.contains(order.getString(ID)))
             .peek(order -> order.remove(COMPOSITE_PO_LINES))
             .map(order -> order.mapTo(PurchaseOrder.class))
             .collect(Collectors.toList()))
         .withTotalRecords(orderCollection.getPurchaseOrders().size());
       po = JsonObject.mapFrom(orderCollection);
+      addServerRqRsData(HttpMethod.GET, orderType, po);
     } else {
       if (query.contains(BAD_QUERY)) {
         serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
@@ -1671,7 +1671,7 @@ public class MockServer {
             po.put(TOTAL_RECORDS, 0);
             break;
           case EMPTY:
-            po.put(TOTAL_RECORDS, 3);
+            po.put(TOTAL_RECORDS, 0);
             break;
           default:
             //modify later as needed

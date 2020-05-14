@@ -10,7 +10,7 @@ documentation:
 
 types:
   composite-purchase-order: !include acq-models/mod-orders/schemas/composite_purchase_order.json
-  purchase-orders: !include acq-models/mod-orders-storage/schemas/purchase_order_collection.json
+  purchase-order-collection: !include acq-models/mod-orders-storage/schemas/purchase_order_collection.json
   purchase_order: !include acq-models/mod-orders-storage/schemas/purchase_order.json
   composite-po-line: !include acq-models/mod-orders/schemas/composite_po_line.json
   po-line-collection: !include acq-models/mod-orders-storage/schemas/po_line_collection.json
@@ -50,7 +50,7 @@ resourceTypes:
       collection:
         exampleCollection: !include acq-models/mod-orders-storage/examples/purchase_order_collection.sample
         exampleItem: !include acq-models/mod-orders/examples/composite_purchase_order.sample
-        schemaCollection: purchase-orders
+        schemaCollection: purchase-order-collection
         schemaItem: composite-purchase-order
     is: [validate]
     get:
