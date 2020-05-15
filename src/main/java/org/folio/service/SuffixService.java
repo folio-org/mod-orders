@@ -28,8 +28,8 @@ public class SuffixService {
   @Autowired
   private PurchaseOrderDAO purchaseOrderDAO;
 
-  public CompletableFuture<SuffixCollection> getSuffixes(String query, int limit, int offset, Context context, Map<String, String> okapiHeaders) {
-    return suffixDAO.get(query, limit, offset, context, okapiHeaders);
+  public CompletableFuture<SuffixCollection> getSuffixes(String query, int offset, int limit, Context context, Map<String, String> okapiHeaders) {
+    return suffixDAO.get(query, offset, limit, context, okapiHeaders);
   }
 
   public CompletableFuture<Suffix> getSuffixById(String id, Context context, Map<String, String> okapiHeaders) {
