@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
@@ -18,6 +19,7 @@ import java.util.concurrent.CompletionException;
 
 import javax.ws.rs.core.Response;
 
+import org.folio.HttpStatus;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
@@ -57,11 +59,7 @@ public class PiecesHelper extends AbstractHelper {
         )
         .thenCompose(order -> updateInventory(order.getCompositePoLines().get(0), piece))
         .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(piece), resourcesPath(PIECES))
-        .thenApply(piece::withId))
-        .exceptionally(throwable -> {
-          logger.error(INVENTORY_UPDATE_FAILED_FOR_PIECE + " {}", piece.getId(), throwable);
-          throw new InventoryException(INVENTORY_UPDATE_FAILED_FOR_PIECE + piece.getId());
-        });
+        .thenApply(piece::withId));
   }
 
   /**
