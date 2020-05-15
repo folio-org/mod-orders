@@ -259,7 +259,7 @@ public class InventoryHelper extends AbstractHelper {
     return CheckInPiece.ItemStatus.ON_ORDER == checkinPiece.getItemStatus();
   }
 
-  CompletableFuture<String> getOrCreateHoldingsRecord(String instanceId, String locationId) {
+  public CompletableFuture<String> getOrCreateHoldingsRecord(String instanceId, String locationId) {
 
     String query = encodeQuery(String.format(HOLDINGS_LOOKUP_QUERY, instanceId, locationId), logger);
     String endpoint = buildLookupEndpoint(HOLDINGS_RECORDS, query, lang);
@@ -294,7 +294,7 @@ public class InventoryHelper extends AbstractHelper {
    * @param locations list of locations holdingId is associated with
    * @return future with list of piece objects
    */
-  private CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, String holdingId, List<Location> locations) {
+  public CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, String holdingId, List<Location> locations) {
     Map<Piece.PieceFormat, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, locations);
     int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
     String polId = compPOL.getId();

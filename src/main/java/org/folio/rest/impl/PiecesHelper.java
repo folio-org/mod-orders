@@ -1,18 +1,25 @@
 package org.folio.rest.impl;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
+import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -28,6 +35,7 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
 
@@ -61,24 +69,6 @@ public class PiecesHelper extends AbstractHelper {
         .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(piece), resourcesPath(PIECES))
         .thenApply(piece::withId));
   }
-
-  /**
-   * Creates Inventory records associated with given PO line and updates PO line with corresponding links.
-   *
-   * @param compPOL Composite PO line to update Inventory for
-   * @return CompletableFuture with void.
-   */
-  CompletableFuture<Piece> updateInventory(CompositePoLine compPOL, Piece piece) {
-    if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
-      return inventoryHelper.handleInstanceRecord(compPOL)
-                            .thenCompose(line -> orderLineHelper.updateOrderLineSummary(line.getId(), JsonObject.mapFrom(line))
-                                                                .thenApply(json -> line))
-                            .thenCompose(inventoryHelper::handleHoldingsAndItemsRecords)
-                            .thenApply(pieces -> piece.withItemId(pieces.get(0).getItemId()));
-    }
-    return CompletableFuture.completedFuture(piece);
-  }
-
 
   // Flow to update piece
   // 1. Before update, get piece by id from storage and store receiving status
@@ -171,5 +161,48 @@ public class PiecesHelper extends AbstractHelper {
         }
         throw t instanceof CompletionException ? (CompletionException) t : new CompletionException(cause);
       });
+  }
+
+  /**
+   * Creates Inventory records associated with given PO line and updates PO line with corresponding links.
+   *
+   * @param compPOL Composite PO line to update Inventory for
+   * @return CompletableFuture with void.
+   */
+  private CompletableFuture<Piece> updateInventory(CompositePoLine compPOL, Piece piece) {
+    if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
+      return inventoryHelper.handleInstanceRecord(compPOL)
+        .thenCompose(line -> orderLineHelper.updateOrderLineSummary(line.getId(), JsonObject.mapFrom(line))
+          .thenApply(json -> line))
+        .thenCompose(line -> handleHoldingsAndItemsRecords(line, piece))
+        .thenApply(pieces -> piece.withItemId(pieces.get(0).getItemId()));
+    }
+    return CompletableFuture.completedFuture(piece);
+  }
+
+  private CompletableFuture<List<org.folio.rest.acq.model.Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL, Piece piece) {
+    List<CompletableFuture<List<org.folio.rest.acq.model.Piece>>> itemsPerHolding = new ArrayList<>();
+    boolean isItemsUpdateRequired = isItemsUpdateRequired(compPOL);
+
+    // Group all locations by location id because the holding should be unique for different locations
+    if (HelperUtils.isHoldingsUpdateRequired(compPOL.getEresource(), compPOL.getPhysical())) {
+          // Search for or create a new holdings record and then create items for it if required
+          inventoryHelper.getOrCreateHoldingsRecord(compPOL.getInstanceId(), piece.getLocationId())
+            .thenCompose(holdingId -> {
+                // Items are not going to be created when create inventory is "Instance, Holding"
+                if (isItemsUpdateRequired) {
+                  Location location = new Location().withLocationId(piece.getLocationId());
+                  return inventoryHelper.handleItemRecords(compPOL, holdingId, Collections.singletonList(location));
+                } else {
+                  return completedFuture(Collections.emptyList());
+                }
+              }
+            );
+    }
+    return collectResultsOnSuccess(itemsPerHolding)
+      .thenApply(results -> results.stream()
+        .flatMap(List::stream)
+        .collect(toList())
+      );
   }
 }
