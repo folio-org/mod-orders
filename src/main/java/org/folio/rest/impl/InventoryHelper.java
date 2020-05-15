@@ -128,7 +128,10 @@ public class InventoryHelper extends AbstractHelper {
     INVENTORY_LOOKUP_ENDPOINTS = Collections.unmodifiableMap(apis);
   }
 
-  InventoryHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+  public InventoryHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
+    super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
+  }
+  public InventoryHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
   }
 

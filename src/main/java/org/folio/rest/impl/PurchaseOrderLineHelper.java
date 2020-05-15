@@ -112,13 +112,13 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private final InventoryHelper inventoryHelper;
   private final ProtectionHelper protectionHelper;
 
-  PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+  public PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
-  PurchaseOrderLineHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
+  public PurchaseOrderLineHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     this(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
   }
 

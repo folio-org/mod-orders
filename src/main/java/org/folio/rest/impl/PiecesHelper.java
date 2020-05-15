@@ -11,15 +11,23 @@ import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+
+import javax.ws.rs.core.Response;
 
 import org.folio.orders.events.handlers.MessageAddress;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.rest.exceptions.InventoryException;
+import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
-import org.folio.rest.jaxrs.model.PoLine;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
@@ -27,24 +35,51 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PiecesHelper extends AbstractHelper {
 
+  public static final String INVENTORY_UPDATE_FAILED_FOR_PIECE = "Holding, Instance, Item failed for piece : ";
   private ProtectionHelper protectionHelper;
   private InventoryHelper inventoryHelper;
 
   private static final String DELETE_PIECE_BY_ID = resourceByIdPath(PIECES, "%s") + "?lang=%s";
+  private PurchaseOrderLineHelper orderLineHelper;
 
   public PiecesHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
-    inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
+    inventoryHelper = new InventoryHelper(okapiHeaders, ctx, lang);
+    orderLineHelper = new PurchaseOrderLineHelper(okapiHeaders, ctx, lang);
   }
 
-  CompletableFuture<Piece> createPiece(Piece piece) {
-      return getOrderByPoLineId(piece.getPoLineId())
-        .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE))
-        .thenCompose(v -> inventoryHelper.updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId()))
+  public CompletableFuture<Piece> createPiece(Piece piece) {
+      return getCompositeOrderByPoLineId(piece.getPoLineId())
+        .thenCompose(order ->
+          protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE)
+                          .thenApply(v -> order)
+        )
+        .thenCompose(order -> updateInventory(order.getCompositePoLines().get(0)))
         .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(piece), resourcesPath(PIECES))
-        .thenApply(piece::withId));
+        .thenApply(piece::withId))
+        .exceptionally(throwable -> {
+          logger.error(INVENTORY_UPDATE_FAILED_FOR_PIECE + " {}", piece.getId(), throwable);
+          throw new InventoryException(INVENTORY_UPDATE_FAILED_FOR_PIECE + piece.getId());
+        });
   }
+
+  /**
+   * Creates Inventory records associated with given PO line and updates PO line with corresponding links.
+   *
+   * @param compPOL Composite PO line to update Inventory for
+   * @return CompletableFuture with void.
+   */
+  CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
+    if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
+      return inventoryHelper.handleInstanceRecord(compPOL)
+                            .thenCompose(line -> orderLineHelper.updateOrderLineSummary(line.getId(), JsonObject.mapFrom(line))
+                                                                .thenApply(json -> line))
+                            .thenAccept(inventoryHelper::handleHoldingsAndItemsRecords);
+    }
+    return CompletableFuture.completedFuture(null);
+  }
+
 
   // Flow to update piece
   // 1. Before update, get piece by id from storage and store receiving status
@@ -52,7 +87,7 @@ public class PiecesHelper extends AbstractHelper {
   // 3. Create a message and check if receivingStatus is not consistent with storage; if yes - send a message to event bus
   public CompletableFuture<Void> updatePieceRecord(Piece piece) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-    getOrderByPoLineId(piece.getPoLineId())
+    getCompositeOrderByPoLineId(piece.getPoLineId())
       .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE))
       .thenCompose(v -> inventoryHelper.updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId()))
       .thenAccept(vVoid ->
@@ -110,16 +145,32 @@ public class PiecesHelper extends AbstractHelper {
 
   public CompletableFuture<Void> deletePiece(String id) {
     return getPieceById(id)
-      .thenCompose(piece -> getOrderByPoLineId(piece.getPoLineId()))
+      .thenCompose(piece -> getCompositeOrderByPoLineId(piece.getPoLineId()))
       .thenCompose(purchaseOrder -> protectionHelper.isOperationRestricted(purchaseOrder.getAcqUnitIds(), DELETE))
       .thenCompose(aVoid -> handleDeleteRequest(String.format(DELETE_PIECE_BY_ID, id, lang), httpClient, ctx, okapiHeaders, logger));
   }
 
 
-  public CompletableFuture<CompositePurchaseOrder> getOrderByPoLineId(String poLineId) {
+  public CompletableFuture<CompositePurchaseOrder> getCompositeOrderByPoLineId(String poLineId) {
     return getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(json -> json.mapTo(PoLine.class))
-      .thenCompose(poLine -> getPurchaseOrderById(poLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger))
-      .thenApply(jsonObject -> jsonObject.mapTo(CompositePurchaseOrder.class));
+      .thenApply(json -> json.mapTo(CompositePoLine.class))
+      .thenCompose(poLine ->
+        getCompositePurchaseOrder(poLine.getPurchaseOrderId())
+        .thenApply(purchaseOrder -> purchaseOrder.withCompositePoLines(Collections.singletonList(poLine)))
+      );
+  }
+
+
+  public CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId) {
+    return getPurchaseOrderById(purchaseOrderId, lang, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(HelperUtils::convertToCompositePurchaseOrder)
+      .exceptionally(t -> {
+        Throwable cause = t.getCause();
+        // The case when specified order does not exist
+        if (cause instanceof HttpException && ((HttpException) cause).getCode() == Response.Status.NOT_FOUND.getStatusCode()) {
+          throw new HttpException(422, ErrorCodes.ORDER_NOT_FOUND);
+        }
+        throw t instanceof CompletionException ? (CompletionException) t : new CompletionException(cause);
+      });
   }
 }
