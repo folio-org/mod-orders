@@ -479,6 +479,7 @@
           "pathPattern": "/orders/titles",
           "permissionsRequired": ["orders.titles.item.post"],
           "modulePermissions": [
+            "orders-storage.titles.collection.get",
             "orders-storage.titles.item.post",
             "orders-storage.po-lines.item.get"
           ]
