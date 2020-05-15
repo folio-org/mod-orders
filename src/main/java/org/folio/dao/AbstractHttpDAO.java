@@ -1,10 +1,13 @@
 package org.folio.dao;
 
 import static java.util.Objects.nonNull;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -31,7 +34,7 @@ public abstract class AbstractHttpDAO<T extends Entity, E> implements GenericDAO
   static final String SEARCH_ENDPOINT = "%s?limit=%s&offset=%s%s";
 
   @Override
-  public CompletableFuture<E> get(String query, int limit, int offset, Context context, Map<String, String> okapiHeaders) {
+  public CompletableFuture<E> get(String query, int offset, int limit, Context context, Map<String, String> okapiHeaders) {
     String endpoint = String.format(SEARCH_ENDPOINT, getEndpoint(), limit, offset, buildQuery(query, logger));
     return get(context, okapiHeaders, endpoint, getCollectionClazz());
   }
@@ -160,6 +163,8 @@ public abstract class AbstractHttpDAO<T extends Entity, E> implements GenericDAO
       logger.debug(CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpoint);
     }
     HttpClientInterface client = getHttpClient(okapiHeaders);
+    setDefaultHeaders(client);
+
     try {
       client.request(HttpMethod.DELETE, getByIdEndpoint(id), okapiHeaders)
         .thenAccept(HelperUtils::verifyResponse)
@@ -196,6 +201,11 @@ public abstract class AbstractHttpDAO<T extends Entity, E> implements GenericDAO
 
     return HttpClientFactory.getHttpClient(okapiURL, tenantId);
 
+  }
+
+  private static void setDefaultHeaders(HttpClientInterface httpClient) {
+    // The RMB's HttpModuleClient2.ACCEPT is in sentence case. Using the same format to avoid duplicates
+    httpClient.setDefaultHeaders(Collections.singletonMap("Accept", APPLICATION_JSON + ", " + TEXT_PLAIN));
   }
 
 }
