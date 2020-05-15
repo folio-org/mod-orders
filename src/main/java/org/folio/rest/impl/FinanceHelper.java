@@ -115,11 +115,12 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> createEncumbrances(List<Triple<Transaction, CompositePoLine, FundDistribution>> encumbranceDistributionTriples) {
+    PurchaseOrderHelper purchaseOrderHelper = new PurchaseOrderHelper(okapiHeaders, ctx, lang);
     return VertxCompletableFuture.allOf(ctx, encumbranceDistributionTriples.stream()
       .map(triple -> createRecordInStorage(JsonObject.mapFrom(triple.getLeft()), String.format(ENCUMBRANCE_POST_ENDPOINT, lang))
         .thenCompose(id -> {
           triple.getRight().setEncumbrance(id);
-          return new PurchaseOrderHelper(okapiHeaders, ctx, lang).updatePoLinesSummary(Collections.singletonList(triple.getMiddle()));
+          return purchaseOrderHelper.updatePoLinesSummary(Collections.singletonList(triple.getMiddle()));
         })
         .exceptionally(fail -> {
           checkForCustomTransactionError(fail);
