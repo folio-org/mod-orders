@@ -55,7 +55,7 @@ public class PiecesHelper extends AbstractHelper {
           protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE)
                           .thenApply(v -> order)
         )
-        .thenCompose(order -> updateInventory(order.getCompositePoLines().get(0)))
+        .thenCompose(order -> updateInventory(order.getCompositePoLines().get(0), piece))
         .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(piece), resourcesPath(PIECES))
         .thenApply(piece::withId))
         .exceptionally(throwable -> {
@@ -70,14 +70,15 @@ public class PiecesHelper extends AbstractHelper {
    * @param compPOL Composite PO line to update Inventory for
    * @return CompletableFuture with void.
    */
-  CompletableFuture<Void> updateInventory(CompositePoLine compPOL) {
+  CompletableFuture<Piece> updateInventory(CompositePoLine compPOL, Piece piece) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return inventoryHelper.handleInstanceRecord(compPOL)
                             .thenCompose(line -> orderLineHelper.updateOrderLineSummary(line.getId(), JsonObject.mapFrom(line))
                                                                 .thenApply(json -> line))
-                            .thenAccept(inventoryHelper::handleHoldingsAndItemsRecords);
+                            .thenCompose(inventoryHelper::handleHoldingsAndItemsRecords)
+                            .thenApply(pieces -> piece.withItemId(pieces.get(0).getItemId()));
     }
-    return CompletableFuture.completedFuture(null);
+    return CompletableFuture.completedFuture(piece);
   }
 
 
