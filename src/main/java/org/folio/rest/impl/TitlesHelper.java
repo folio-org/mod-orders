@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.groupingBy;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
@@ -13,6 +14,8 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Title;
@@ -37,31 +40,41 @@ public class TitlesHelper extends AbstractHelper {
   }
 
   public CompletableFuture<Title> createTitle(Title title) {
-    return populateTitle(title, title.getPoLineId())
-      .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(title), resourcesPath(TITLES)).thenApply(title::withId));
+    CompletableFuture<Title> future = new VertxCompletableFuture<>(ctx);
+    populateTitle(title, title.getPoLineId())
+      .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(title), resourcesPath(TITLES)).thenApply(title::withId))
+      .thenAccept(future::complete)
+      .exceptionally(t -> {
+        future.completeExceptionally(t);
+        return null;
+      });
+    return future;
   }
 
   @NotNull
   private CompletableFuture<Void> populateTitle(Title title, String poLineId) {
-    CompletableFuture<Void> completableFuture = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
     PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, ctx, lang);
 
     helper.getCompositePoLine(poLineId)
       .thenAccept(poLine -> {
         if(Boolean.TRUE.equals(poLine.getIsPackage())) {
           populateTitleByPoLine(title, poLine);
-          completableFuture.complete(null);
-        } else if (poLine.getPackagePoLineId() != null) {
-          helper.getCompositePoLine(poLine.getPackagePoLineId())
-            .thenAccept(packagePoLIne -> {
-              populateTitleByPoLine(title, packagePoLIne);
-              completableFuture.complete(null);
+          future.complete(null);
+        }
+        else {
+          getTitlesByPoLineIds(singletonList(poLineId))
+            .thenAccept(titles -> {
+              if (titles.isEmpty()) {
+                populateTitleByPoLine(title, poLine);
+                future.complete(null);
+              } else {
+                future.completeExceptionally(new HttpException(422, ErrorCodes.TITLE_EXIST));
+              }
             });
-        } else {
-          completableFuture.complete(null);
         }
       });
-    return completableFuture;
+    return future;
   }
 
   private void populateTitleByPoLine(Title title, CompositePoLine poLine) {
