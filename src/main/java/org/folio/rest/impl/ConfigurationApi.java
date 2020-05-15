@@ -89,7 +89,7 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
   @Override
   @Validate
   public void getOrdersConfigurationSuffixes(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    suffixService.getSuffixes(query, limit, offset, vertxContext, okapiHeaders)
+    suffixService.getSuffixes(query, offset, limit, vertxContext, okapiHeaders)
     .thenAccept(suffixCollection -> asyncResultHandler.handle(succeededFuture(buildOkResponse(suffixCollection))))
       .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
