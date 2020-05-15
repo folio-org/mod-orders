@@ -9,10 +9,12 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -21,6 +23,7 @@ import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
+import org.jetbrains.annotations.NotNull;
 
 public class TitlesHelper extends AbstractHelper {
   private static final String GET_TITLES_BY_QUERY = resourcesPath(TITLES) + SEARCH_PARAMS;
@@ -34,7 +37,40 @@ public class TitlesHelper extends AbstractHelper {
   }
 
   public CompletableFuture<Title> createTitle(Title title) {
-    return createRecordInStorage(JsonObject.mapFrom(title), resourcesPath(TITLES)).thenApply(title::withId);
+    return populateTitle(title, title.getPoLineId())
+      .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(title), resourcesPath(TITLES)).thenApply(title::withId));
+  }
+
+  @NotNull
+  private CompletableFuture<Void> populateTitle(Title title, String poLineId) {
+    CompletableFuture<Void> completableFuture = new VertxCompletableFuture<>(ctx);
+    PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, ctx, lang);
+
+    helper.getCompositePoLine(poLineId)
+      .thenAccept(poLine -> {
+        if(Boolean.TRUE.equals(poLine.getIsPackage())) {
+          populateTitleByPoLine(title, poLine);
+          completableFuture.complete(null);
+        } else if (poLine.getPackagePoLineId() != null) {
+          helper.getCompositePoLine(poLine.getPackagePoLineId())
+            .thenAccept(packagePoLIne -> {
+              populateTitleByPoLine(title, packagePoLIne);
+              completableFuture.complete(null);
+            });
+        } else {
+          completableFuture.complete(null);
+        }
+      });
+    return completableFuture;
+  }
+
+  private void populateTitleByPoLine(Title title, CompositePoLine poLine) {
+    title.setPackageName(poLine.getTitleOrPackage());
+    title.setExpectedReceiptDate(Objects.nonNull(poLine.getPhysical()) ? poLine.getPhysical().getExpectedReceiptDate() : null);
+    title.setPoLineNumber(poLine.getPoLineNumber());
+    if(poLine.getDetails() != null) {
+      title.setReceivingNote(poLine.getDetails().getReceivingNote());
+    }
   }
 
   public CompletableFuture<TitleCollection> getTitles(int limit, int offset, String query) {

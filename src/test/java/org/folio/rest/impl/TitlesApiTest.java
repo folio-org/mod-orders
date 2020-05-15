@@ -2,13 +2,20 @@ package org.folio.rest.impl;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.rest.impl.MockServer.TITLES_MOCK_DATA_PATH;
+import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 
+import java.util.Date;
+import java.util.UUID;
 import org.folio.HttpStatus;
 import org.folio.rest.acq.model.Title;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Details;
+import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.hamcrest.Matchers;
 import org.junit.Test;
@@ -54,6 +61,76 @@ public class TitlesApiTest extends ApiTestBase {
     int status500 = HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt();
     verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID,
       new Header(X_ECHO_STATUS, String.valueOf(status500))), APPLICATION_JSON, status500);
+  }
+
+  @Test
+  public void titleShouldBePopulatedFromPackagePoLine() {
+
+    String packagePoLineId = UUID.randomUUID().toString();
+    String packageTitleName = "test title name";
+    String packageTestNumber = "test number";
+    Date packageExpectedDate = new Date();
+    String packageNote = "test note";
+
+    CompositePoLine packagePoLine = getMinimalContentCompositePoLine()
+      .withId(packagePoLineId)
+      .withTitleOrPackage(packageTitleName)
+      .withPoLineNumber(packageTestNumber)
+      .withPhysical(new Physical().withExpectedReceiptDate(packageExpectedDate))
+      .withDetails(new Details().withReceivingNote(packageNote))
+      .withIsPackage(true);
+
+    Title titleWithPackagePoLineRQ = titleJsonReqData.mapTo(Title.class)
+      .withPoLineId(packagePoLineId);
+
+    addMockEntry(PO_LINES, JsonObject.mapFrom(packagePoLine));
+
+    Title titleWithPackagePoLineRS = verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(titleWithPackagePoLineRQ).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Title.class);
+
+    assertEquals(titleWithPackagePoLineRS.getPackageName(), packageTitleName);
+    assertEquals(titleWithPackagePoLineRS.getExpectedReceiptDate(), packageExpectedDate);
+    assertEquals(titleWithPackagePoLineRS.getPoLineNumber(), packageTestNumber);
+    assertEquals(titleWithPackagePoLineRS.getReceivingNote(), packageNote);
+  }
+
+  @Test
+  public void titleShouldBePopulatedFromPackagePoLineIfPackagePoLineIdExist() {
+
+    String packagePoLineId = UUID.randomUUID().toString();
+    String packageTitleName = "test title name";
+    String packageTestNumber = "test number";
+    Date packageExpectedDate = new Date();
+    String packageNote = "test note";
+
+
+    String secondPoLineId = UUID.randomUUID().toString();
+
+    CompositePoLine packagePoLine = getMinimalContentCompositePoLine()
+      .withId(packagePoLineId)
+      .withTitleOrPackage(packageTitleName)
+      .withPoLineNumber(packageTestNumber)
+      .withPhysical(new Physical().withExpectedReceiptDate(packageExpectedDate))
+      .withDetails(new Details().withReceivingNote(packageNote))
+      .withIsPackage(true);
+
+    CompositePoLine poLineWithPackagePoLineId = getMinimalContentCompositePoLine()
+      .withId(secondPoLineId)
+      .withPackagePoLineId(packagePoLineId);
+
+    Title titleWithPackagePoLineRQ = titleJsonReqData.mapTo(Title.class)
+      .withPoLineId(secondPoLineId);
+
+    addMockEntry(PO_LINES, JsonObject.mapFrom(packagePoLine));
+    addMockEntry(PO_LINES, JsonObject.mapFrom(poLineWithPackagePoLineId));
+
+    Title titleWithPackagePoLineRS = verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(titleWithPackagePoLineRQ).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Title.class);
+
+    assertEquals(titleWithPackagePoLineRS.getPackageName(), packageTitleName);
+    assertEquals(titleWithPackagePoLineRS.getExpectedReceiptDate(), packageExpectedDate);
+    assertEquals(titleWithPackagePoLineRS.getPoLineNumber(), packageTestNumber);
+    assertEquals(titleWithPackagePoLineRS.getReceivingNote(), packageNote);
   }
 
   @Test
