@@ -19,8 +19,8 @@ public class ReasonForClosureService {
   @Autowired
   private ReasonForClosureDAO reasonForClosureDAO;
 
-  public CompletableFuture<ReasonForClosureCollection> getReasonsForClosure(String query, int limit, int offset, Context context, Map<String, String> okapiHeaders) {
-    return reasonForClosureDAO.get(query, limit, offset, context, okapiHeaders);
+  public CompletableFuture<ReasonForClosureCollection> getReasonsForClosure(String query, int offset, int limit, Context context, Map<String, String> okapiHeaders) {
+    return reasonForClosureDAO.get(query, offset, limit, context, okapiHeaders);
   }
 
   public CompletableFuture<ReasonForClosure> getReasonForClosureById(String id, Context context, Map<String, String> okapiHeaders) {

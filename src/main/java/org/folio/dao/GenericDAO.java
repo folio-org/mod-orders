@@ -21,7 +21,7 @@ public interface GenericDAO<T extends Entity, E> {
    * @param offset  starting index in a list of results
    * @return CompletableFuture with E, a collection of T entities
    */
-  CompletableFuture<E> get(String query, int limit, int offset, Context context, Map<String, String> headers);
+  CompletableFuture<E> get(String query, int offset, int limit, Context context, Map<String, String> headers);
 
   /**
    * Searches for T entity by id

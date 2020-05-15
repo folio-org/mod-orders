@@ -28,8 +28,8 @@ public class PrefixService {
   @Autowired
   private PurchaseOrderDAO purchaseOrderDAO;
 
-  public CompletableFuture<PrefixCollection> getPrefixes(String query, int limit, int offset, Context context, Map<String, String> okapiHeaders) {
-    return prefixDAO.get(query, limit, offset, context, okapiHeaders);
+  public CompletableFuture<PrefixCollection> getPrefixes(String query, int offset, int limit, Context context, Map<String, String> okapiHeaders) {
+    return prefixDAO.get(query, offset, limit, context, okapiHeaders);
   }
 
   public CompletableFuture<Prefix> getPrefixById(String id, Context context, Map<String, String> okapiHeaders) {
