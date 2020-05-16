@@ -2,7 +2,7 @@ package org.folio.rest.impl;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
-import static org.folio.orders.utils.ErrorCodes.REQUEST_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.REQUEST_FOUND;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -136,12 +136,12 @@ public class PieceApiTest extends ApiTestBase {
   }
 
   @Test
-  public void deletePieceByIdWitoutRequestsTest() {
+  public void deletePieceByIdWithRequestsTest() {
     logger.info("=== Test delete piece by id without requests ===");
 
     PurchaseOrder order = new PurchaseOrder().withId(UUID.randomUUID().toString());
     CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId());
-    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withItemId(UUID.randomUUID().toString()).withPoLineId(poLine.getId());
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withItemId("522a501a-56b5-48d9-b28a-3a8f02482d98").withPoLineId(poLine.getId());
 
     MockServer.addMockEntry(PIECES, JsonObject.mapFrom(piece));
     MockServer.addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
@@ -151,7 +151,7 @@ public class PieceApiTest extends ApiTestBase {
     List<Error> errors = response.getErrors();
     assertThat(errors, hasSize(1));
     Error error = errors.get(0);
-    assertThat(error.getCode(), is(REQUEST_NOT_FOUND.getCode()));
+    assertThat(error.getCode(), is(REQUEST_FOUND.getCode()));
   }
 
   @Test

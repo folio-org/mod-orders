@@ -344,8 +344,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     // the sum might be wrong if using regular double e.g. 44.41d + 32.98d results to 77.38999999999999
     double expectedTotal = BigDecimal.valueOf(expectedTotalPoLine1)
-      .add(BigDecimal.valueOf(expectedTotalPoLine2))
-      .doubleValue();
+                                     .add(BigDecimal.valueOf(expectedTotalPoLine2))
+                                     .doubleValue();
     assertThat(resp.getTotalEstimatedPrice(), equalTo(expectedTotal));
 
     List<JsonObject> poLines = MockServer.serverRqRs.get(PO_LINES, HttpMethod.POST);
@@ -398,17 +398,17 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
     assertThat(response.getErrors(), hasSize(11));
     Set<String> errorCodes = response.getErrors()
-      .stream()
-      .map(Error::getCode)
-      .collect(Collectors.toSet());
+                                     .stream()
+                                     .map(Error::getCode)
+                                     .collect(Collectors.toSet());
 
     assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode(),
-      ZERO_COST_ELECTRONIC_QTY.getCode(),
-      NON_ZERO_COST_ELECTRONIC_QTY.getCode(),
-      PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
-      ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
-      COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
-      COST_UNIT_PRICE_INVALID.getCode()));
+                                              ZERO_COST_ELECTRONIC_QTY.getCode(),
+                                              NON_ZERO_COST_ELECTRONIC_QTY.getCode(),
+                                              PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
+                                              ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
+                                              COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
+                                              COST_UNIT_PRICE_INVALID.getCode()));
 
     // Check that no other calls are made by the business logic to other services, except for ISBN validation
     assertEquals(2, MockServer.serverRqRs.size());
@@ -518,24 +518,24 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     });
 
     firstPoLine.getLocations().add(new Location()
-      .withQuantityElectronic(0)
-      .withQuantityPhysical(0)
-      .withLocationId(firstPoLine.getLocations().get(0).getLocationId()));
+                                    .withQuantityElectronic(0)
+                                    .withQuantityPhysical(0)
+                                    .withLocationId(firstPoLine.getLocations().get(0).getLocationId()));
     final Errors response = verifyPut(COMPOSITE_ORDERS_PATH + "/" + reqData.getId(), JsonObject.mapFrom(reqData),
 
       APPLICATION_JSON, 422).as(Errors.class);
 
     assertThat(response.getErrors(), hasSize(5));
     Set<String> errorCodes = response.getErrors()
-      .stream()
-      .map(Error::getCode)
-      .collect(Collectors.toSet());
+                                     .stream()
+                                     .map(Error::getCode)
+                                     .collect(Collectors.toSet());
 
     assertThat(errorCodes, containsInAnyOrder(ZERO_COST_ELECTRONIC_QTY.getCode(),
-      ZERO_COST_PHYSICAL_QTY.getCode(),
-      ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
-      PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
-      ZERO_LOCATION_QTY.getCode()));
+                                              ZERO_COST_PHYSICAL_QTY.getCode(),
+                                              ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
+                                              PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
+                                              ZERO_LOCATION_QTY.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertEquals(2, MockServer.serverRqRs.size());
@@ -1519,6 +1519,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     logger.info("=== Test Put Order By Id to open order - P/E Mix PO Line, location specified but create inventory is None for electronic resource ===");
 
     CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
+    reqData.setId(PO_LINES_EMPTY_COLLECTION_ID);
     CompositePoLine line = getMinimalContentCompositePoLine();
 
     reqData.withVendor(ACTIVE_VENDOR_ID);
@@ -1529,6 +1530,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     line.setLocations(Collections.singletonList(new Location().withLocationId(UUID.randomUUID()
       .toString())
+      .withQuantity(4)
       .withQuantityElectronic(2)
       .withQuantityPhysical(2)));
 
@@ -1872,10 +1874,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     // Get Open Order
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     MockServer.addMockTitles(reqData.getCompositePoLines());
+    preparePiecesForCompositePo(reqData);
     reqData.getCompositePoLines().clear();
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    preparePiecesForCompositePo(reqData);
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
@@ -3342,14 +3344,20 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testPutShouldFailedIfOrderTransitFromPendingToOpenStatusAndMaterialTypeIsAbsentInOrderLine() {
     logger.info("===Test Success Post Failed test completion if material type is absent and Order in PENDING status");
     CompositePurchaseOrder reqData = getMockAsJson(ORDER_WITHOUT_MATERIAL_TYPE_JSON).mapTo(CompositePurchaseOrder.class);
-    reqData.getCompositePoLines().forEach(this::removeMaterialType);
+    reqData.getCompositePoLines().forEach(poLine -> {
+      removeMaterialType(poLine);
+      poLine.setId(UUID.randomUUID().toString());
+    });
 
     CompositePurchaseOrder po = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
       .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201)
       .as(CompositePurchaseOrder.class);
 
     CompositePurchaseOrder putReq = prepareCompositeOrderOpenRequest(po);
+    putReq.setCompositePoLines(reqData.getCompositePoLines());
+    preparePiecesForCompositePo(putReq);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
 
     List<Error> errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_WITHOUT_MATERIAL_TYPES_ID), JsonObject.mapFrom(putReq)
       .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422)
@@ -3371,6 +3379,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     compositeOrderPutRequest.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     compositeOrderPutRequest.setVendor(po.getVendor());
     compositeOrderPutRequest.setMetadata(po.getMetadata());
+    compositeOrderPutRequest.setCompositePoLines(po.getCompositePoLines());
 
     return compositeOrderPutRequest;
   }

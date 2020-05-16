@@ -211,6 +211,7 @@ public class MockServer {
   static final String ORDER_ID_WITH_PO_LINES = "ab18897b-0e40-4f31-896b-9c9adc979a87";
   private static final String PIECE_POLINE_CONSISTENT_RECEIPT_STATUS_ID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
   private static final String PIECE_POLINE_CONSISTENCY_404_POLINE_NOT_FOUND_ID = "5b454292-6aaa-474f-9510-b59a564e0c8d";
+  public static final String PO_LINES_EMPTY_COLLECTION_ID = "0d729209-6a09-4b78-b9cb-7c225bf0c06c";
   static final String PO_NUMBER_VALUE = "228D126";
 
   private static final String PO_NUMBER_ERROR_TENANT = "po_number_error_tenant";
@@ -219,6 +220,7 @@ public class MockServer {
   static final String LEDGER_NOT_FOUND_FOR_TRANSACTION_TENANT = "Ledger not found for transaction";
   static final String BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT = "Budget not found for transaction";
   static final Header PO_NUMBER_ERROR_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, PO_NUMBER_ERROR_TENANT);
+  public static final Header X_OKAPI_ORDER_WITHOUT_LINES = new Header("ORDER_QITHOUT_LINES", "true");
 
   private static final String TOTAL_RECORDS = "totalRecords";
   private static final String QUERY = "query";
@@ -1503,14 +1505,14 @@ public class MockServer {
               pieces.getPieces()
                 .removeIf(piece -> receivingStatus != piece.getReceivingStatus());
             }
-          } else {
+          } else if (query.contains("id==")) {
             pieces = new JsonObject(ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecordsCollection.json")).mapTo(PieceCollection.class);
-
-            if (query.contains("id==")) {
+//            if (query.contains("id==")) {
               List<String> pieceIds = extractIdsFromQuery(query);
               pieces.getPieces()
                 .removeIf(piece -> !pieceIds.contains(piece.getId()));
-            }
+          } else {
+            pieces = new PieceCollection();
           }
 
           pieces.setTotalRecords(pieces.getPieces().size());

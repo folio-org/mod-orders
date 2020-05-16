@@ -71,6 +71,7 @@ import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.FundDistribution;
@@ -222,7 +223,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
           })
           .thenCompose(v -> {
             if (isTransitionToOpen) {
-              return checkLocationsAndPiecesConsistency(compPO);
+              return updateAndGetOrderWithLines(compPO)
+                .thenCompose(this::checkLocationsAndPiecesConsistency);
             } else {
               return CompletableFuture.completedFuture(null);
             }
@@ -447,7 +449,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     getPurchaseOrderById(id, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
       .thenAccept(compPO -> protectionHelper.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.READ)
-        .thenAccept(ok -> getOrderWithLines(compPO)
+        .thenAccept(ok -> updateAndGetOrderWithLines(compPO)
           .thenCompose(this::fetchNonPackageTitles)
           .thenAccept(linesIdTitles -> populateInstanceId(linesIdTitles, compPO.getCompositePoLines()))
           .thenApply(v -> populateOrderSummary(compPO))
@@ -492,7 +494,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   public CompletableFuture<Void> openOrder(CompositePurchaseOrder compPO) {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
-    return getOrderWithLines(compPO)
+    return CompletableFuture.completedFuture(compPO)
       .thenApply(this::validateFundDistributionTotal)
       .thenApply(this::validateMaterialTypes)
       .thenCompose(this::fetchNonPackageTitles)
@@ -674,7 +676,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenCompose(v -> {
         if (finalStatus == OPEN) {
           return checkOrderApprovalRequired(compPO)
-            .thenCompose(ok -> openOrder(compPO))
+            .thenCompose(ok ->
+                updateAndGetOrderWithLines(compPO)
+              .thenCompose(this::openOrder))
             .thenCompose(ok -> handleFinalOrderStatus(compPO, finalStatus.value()));
         }
         return completedFuture(null);
@@ -779,7 +783,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     }
   }
 
-  private CompletableFuture<CompositePurchaseOrder> getOrderWithLines(CompositePurchaseOrder compPO) {
+  private CompletableFuture<CompositePurchaseOrder> updateAndGetOrderWithLines(CompositePurchaseOrder compPO) {
     if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
       return getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
         .thenApply(poLines -> {
@@ -1074,13 +1078,19 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private void verifyLocationsAndPiecesConsistency(CompositePurchaseOrder compPO, PieceCollection pieces) {
 
-    if (!compPO.getCompositePoLines().isEmpty()) {
-      Map<String, Map<String, Integer>> numOfPiecesByPoLineIdAndLocationId = pieces.getPieces().stream()
-        .filter(p -> Objects.nonNull(p.getPoLineId()) && Objects.nonNull(p.getLocationId()))
-        .collect(groupingBy(piece -> piece.getPoLineId(), groupingBy(location -> location.getLocationId(), summingInt(q -> 1))));
+    if (CollectionUtils.isNotEmpty(compPO.getCompositePoLines())) {
 
       Map<String, Map<String, Integer>> numOfLocationsByPoLineIdAndLocationId = compPO.getCompositePoLines().stream()
+        .filter(line -> Objects.nonNull(line.getEresource())
+          && line.getEresource().getCreateInventory() != Eresource.CreateInventory.NONE)
         .collect(toMap(CompositePoLine::getId, poLine -> poLine.getLocations().stream().collect(toMap(Location::getLocationId, Location::getQuantity))));
+
+      Map<String, Map<String, Integer>> numOfPiecesByPoLineIdAndLocationId = pieces.getPieces().stream()
+        .filter(piece -> Objects.nonNull(piece.getPoLineId())
+          && Objects.nonNull(piece.getLocationId())
+          && Objects.nonNull(numOfLocationsByPoLineIdAndLocationId.get(piece.getPoLineId()))
+          && Objects.nonNull(numOfLocationsByPoLineIdAndLocationId.get(piece.getPoLineId()).get(piece.getLocationId())) )
+        .collect(groupingBy(piece -> piece.getPoLineId(), groupingBy(location -> location.getLocationId(), summingInt(q -> 1))));
 
       if (!Objects.deepEquals(numOfPiecesByPoLineIdAndLocationId, numOfLocationsByPoLineIdAndLocationId)) {
         throw new HttpException(422, PIECES_TO_BE_DELETED.toError());

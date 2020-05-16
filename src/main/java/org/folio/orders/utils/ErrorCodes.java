@@ -68,9 +68,8 @@ public enum ErrorCodes {
   INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE("InstanceIdNotAllowedForPackagePoLine", "Instance id not allowed for package poline"),
   PREFIX_IS_USED("prefixIsUsed", "The prefix cannot be deleted as it is used by one or more orders"),
   SUFFIX_IS_USED("suffixIsUsed", "The suffix cannot be deleted as it is used by one or more orders"),
-  INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE("InstanceIdNotAllowedForPackagePoLine", "Instance id not allowed for package poline"),
   PIECES_TO_BE_DELETED("piecesNeedToBeDeleted", "Pieces need to be deleted"),
-  REQUEST_NOT_FOUND("thereAreNoRequests", "There are no requests on item");
+  REQUEST_FOUND("thereAreRequestsOnItem", "There are requests on item");
 
   private final String code;
   private final String description;

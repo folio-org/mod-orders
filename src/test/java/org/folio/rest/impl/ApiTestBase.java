@@ -17,6 +17,7 @@ import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
 import static org.folio.rest.impl.MockServer.serverRqRs;
+import static org.folio.rest.impl.TitlesApiTest.SAMPLE_TITLE_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.Matchers.equalTo;
@@ -486,6 +487,7 @@ public class ApiTestBase {
       .withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
       .withFormat(Piece.Format.PHYSICAL)
       .withItemId(ITEM_ID)
+      .withTitleId(SAMPLE_TITLE_ID)
       .withReceiptDate(new Date())
       .withPoLineId(poLineId);
   }

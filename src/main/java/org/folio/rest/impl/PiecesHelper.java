@@ -9,6 +9,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
@@ -122,8 +123,8 @@ public class PiecesHelper extends AbstractHelper {
         .thenCompose(purchaseOrder -> protectionHelper.isOperationRestricted(purchaseOrder.getAcqUnitIds(), DELETE))
         .thenCompose(vVoid -> inventoryHelper.getRequestsByItemId(piece.getItemId()))
         .thenAccept(items -> {
-          if (items.isEmpty()) {
-            throw new HttpException(422, ErrorCodes.REQUEST_NOT_FOUND.toError());
+          if (CollectionUtils.isNotEmpty(items)) {
+            throw new HttpException(422, ErrorCodes.REQUEST_FOUND.toError());
           }
         })
         .thenCompose(aVoid -> handleDeleteRequest(String.format(DELETE_PIECE_BY_ID, id, lang), httpClient, ctx, okapiHeaders, logger))
