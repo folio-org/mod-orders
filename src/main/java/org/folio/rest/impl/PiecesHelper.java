@@ -8,10 +8,8 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_TYPE;
-import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
-import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
@@ -71,6 +69,8 @@ public class PiecesHelper extends AbstractHelper {
   private static final String DELETE_PIECE_BY_ID = resourceByIdPath(PIECES, "%s") + "?lang=%s";
   private static final String CREATE_INSTANCE_ENDPOINT = "/inventory/instances?lang=%s";
   private static final String INSTANCES = "instances";
+  private static final String QUERY_LANG = "lang";
+  private static final String URL_WITH_LANG_PARAM = "%s?" + QUERY_LANG + "=%s";
 
   private ProtectionHelper protectionHelper;
   private InventoryHelper inventoryHelper;
@@ -184,12 +184,12 @@ public class PiecesHelper extends AbstractHelper {
   public CompletableFuture<CompositePurchaseOrder> getOrderByPoLineId(String poLineId) {
     return getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(json -> json.mapTo(PoLine.class))
-      .thenCompose(poLine -> getPurchaseOrderById(poLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger))
+      .thenCompose(poLine -> HelperUtils.getPurchaseOrderById(poLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger))
       .thenApply(jsonObject -> jsonObject.mapTo(CompositePurchaseOrder.class));
   }
 
   public CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId) {
-    return getPurchaseOrderById(purchaseOrderId, lang, httpClient, ctx, okapiHeaders, logger)
+    return HelperUtils.getPurchaseOrderById(purchaseOrderId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
       .exceptionally(t -> {
         Throwable cause = t.getCause();
@@ -335,7 +335,7 @@ public class PiecesHelper extends AbstractHelper {
    */
   public CompletableFuture<String> createItemRecord(CompositePoLine compPOL, String holdingId) {
     final int ITEM_QUANTITY = 1;
-    logger.debug("Handling {} items for PO Line with id={} and holdings with id={}", ITEM_QUANTITY, compPOL.getId(), holdingId);
+    logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, holdingId);
     CompletableFuture<String> itemFuture = new CompletableFuture<>();
     try {
       if (isItemsUpdateRequired(compPOL)) {
