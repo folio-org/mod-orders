@@ -114,7 +114,7 @@ public class PiecesHelperTest {
   }
 
   @Test
-  public void testShouldSkippCreationNewInstanceIfInstanceIdIsProvided() throws ExecutionException, InterruptedException {
+  public void testShouldSkipCreationNewInstanceIfInstanceIdIsProvided() throws ExecutionException, InterruptedException {
     //given
     Title title = ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     //When
@@ -160,6 +160,18 @@ public class PiecesHelperTest {
     //Then
     verify(inventoryHelper).createMissingElectronicItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1));
     assertEquals(expItemId, actItemId);
+  }
+
+  @Test
+  public void testShouldSkipCreationItemRecord() throws ExecutionException, InterruptedException {
+    //given
+    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    line.setCheckinItems(true);
+    //When
+    CompletableFuture<String> result = piecesHelper.createItemRecord(line, HOLDING_ID);
+    String actItemId = result.get();
+    //Then
+    assertNull(actItemId);
   }
 
   @Test
