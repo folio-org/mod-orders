@@ -60,6 +60,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
 import org.jetbrains.annotations.NotNull;
 
@@ -101,7 +102,7 @@ public class PiecesHelper extends AbstractHelper {
   // 3. Create a message and check if receivingStatus is not consistent with storage; if yes - send a message to event bus
   public CompletableFuture<Void> updatePieceRecord(Piece piece) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-    getCompositeOrderByPoLineId(piece.getPoLineId())
+    getOrderByPoLineId(piece.getPoLineId())
       .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE))
       .thenCompose(v -> inventoryHelper.updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId()))
       .thenAccept(vVoid ->
@@ -174,6 +175,12 @@ public class PiecesHelper extends AbstractHelper {
       );
   }
 
+  public CompletableFuture<CompositePurchaseOrder> getOrderByPoLineId(String poLineId) {
+    return getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(json -> json.mapTo(PoLine.class))
+      .thenCompose(poLine -> getPurchaseOrderById(poLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger))
+      .thenApply(jsonObject -> jsonObject.mapTo(CompositePurchaseOrder.class));
+  }
 
   public CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId) {
     return getPurchaseOrderById(purchaseOrderId, lang, httpClient, ctx, okapiHeaders, logger)
