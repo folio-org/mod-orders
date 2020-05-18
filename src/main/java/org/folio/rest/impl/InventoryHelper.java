@@ -374,7 +374,7 @@ public class InventoryHelper extends AbstractHelper {
    * @param compPOL PO line to retrieve Instance Record Id for
    * @return future with Instance Id
    */
-  private CompletableFuture<String> getInstanceRecord(CompositePoLine compPOL) {
+  public CompletableFuture<String> getInstanceRecord(CompositePoLine compPOL) {
     // proceed with new Instance Record creation if no productId is provided
     if (!isProductIdsExist(compPOL)) {
       return createInstanceRecord(compPOL);

@@ -165,7 +165,7 @@ public class PiecesHelper extends AbstractHelper {
 
   public CompletableFuture<Void> deletePiece(String id) {
     return getPieceById(id)
-      .thenCompose(piece -> getCompositeOrderByPoLineId(piece.getPoLineId()))
+      .thenCompose(piece -> getOrderByPoLineId(piece.getPoLineId()))
       .thenCompose(purchaseOrder -> protectionHelper.isOperationRestricted(purchaseOrder.getAcqUnitIds(), DELETE))
       .thenCompose(aVoid -> handleDeleteRequest(String.format(DELETE_PIECE_BY_ID, id, lang), httpClient, ctx, okapiHeaders, logger));
   }
@@ -213,7 +213,12 @@ public class PiecesHelper extends AbstractHelper {
         .thenCompose(title -> titlesHelper.updateTitle(title)
                                           .thenApply(json -> title))
         .thenCompose(title -> handleHoldingsAndItemsRecords(compPOL, title.getInstanceId(), piece.getLocationId()))
-        .thenApply(pieces -> piece.withItemId(pieces.get(0).getItemId()));
+        .thenApply(pieces -> {
+          if (!pieces.isEmpty()) {
+            piece.withItemId(pieces.get(0).getItemId());
+          }
+          return piece;
+        });
     }
     return CompletableFuture.completedFuture(piece);
   }
@@ -312,27 +317,29 @@ public class PiecesHelper extends AbstractHelper {
   public CompletableFuture<List<org.folio.rest.acq.model.Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL
     , String instanceId, String locationId) {
 
-    CompletableFuture<List<org.folio.rest.acq.model.Piece>> pieceFutures = new CompletableFuture<>();
+    CompletableFuture<List<org.folio.rest.acq.model.Piece>> pieceFuture = new CompletableFuture<>();
     // Group all locations by location id because the holding should be unique for different locations
     if (HelperUtils.isHoldingsUpdateRequired(compPOL.getEresource(), compPOL.getPhysical())) {
           // Search for or create a new holdings record and then create items for it if required
           inventoryHelper.getOrCreateHoldingsRecord(instanceId, locationId)
-            .thenCompose(holdingId -> {
-                // Items are not going to be created when create inventory is "Instance, Holding"
-                boolean isItemsUpdateRequired = isItemsUpdateRequired(compPOL);
-                if (isItemsUpdateRequired) {
-                  List<Location> locations = cloneLocations(compPOL, locationId);
-                  inventoryHelper.handleItemRecords(compPOL, holdingId, locations)
-                                 .thenAccept(pieceFutures::complete);
-                } else {
-                  pieceFutures.complete(Collections.emptyList());
-                }
-                return null;
-              }
-            )
-            .exceptionally(pieceFutures::completeExceptionally);
+                        .thenCompose(holdingId -> {
+                            // Items are not going to be created when create inventory is "Instance, Holding"
+                            boolean isItemsUpdateRequired = isItemsUpdateRequired(compPOL);
+                            if (isItemsUpdateRequired) {
+                              List<Location> locations = cloneLocations(compPOL, locationId);
+                              inventoryHelper.handleItemRecords(compPOL, holdingId, locations)
+                                             .thenAccept(pieceFuture::complete);
+                            } else {
+                              pieceFuture.complete(Collections.emptyList());
+                            }
+                            return null;
+                          }
+                        )
+                        .exceptionally(pieceFuture::completeExceptionally);
+    } else {
+      pieceFuture.complete(Collections.emptyList());
     }
-    return pieceFutures;
+    return pieceFuture;
   }
 
   private List<Location> cloneLocations(CompositePoLine compPOL, String locationId) {

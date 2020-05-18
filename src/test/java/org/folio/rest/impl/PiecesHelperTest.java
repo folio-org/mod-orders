@@ -5,12 +5,17 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -68,8 +73,57 @@ public class PiecesHelperTest {
       piecesHelper.handleHoldingsAndItemsRecords(line, title.getInstanceId(), piece.getLocationId());
 
     //Then
-    List<Piece> pieces = result.get();
     verify(inventoryHelper).getOrCreateHoldingsRecord(title.getInstanceId(), piece.getLocationId());
     verify(inventoryHelper).handleItemRecords(any(CompositePoLine.class), eq(HOLDING_ID), any(List.class));
+  }
+
+  @Test
+  public void testHoldingsItemCreationShouldBeSkippedIfEresourceOrPhysicsIsAbsent() throws ExecutionException, InterruptedException {
+    //given
+    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    line.setEresource(null);
+    line.setPhysical(null);
+
+    org.folio.rest.acq.model.Piece piece = ApiTestBase.getMockAsJson(PIECE_PATH,"pieceRecord")
+      .mapTo(org.folio.rest.acq.model.Piece.class);
+    Title title = ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+
+    doReturn(CompletableFuture.completedFuture(HOLDING_ID))
+      .when(inventoryHelper).getOrCreateHoldingsRecord(anyString(), anyString());
+    doReturn(CompletableFuture.completedFuture(Collections.singletonList(piece)))
+      .when(inventoryHelper).handleItemRecords(any(CompositePoLine.class), eq(HOLDING_ID), any(List.class));
+    //When
+    CompletableFuture<List<org.folio.rest.acq.model.Piece>> result =
+      piecesHelper.handleHoldingsAndItemsRecords(line, title.getInstanceId(), piece.getLocationId());
+
+    //Then
+    List<Piece> pieces = result.get();
+    verify(inventoryHelper,never()).getOrCreateHoldingsRecord(title.getInstanceId(), piece.getLocationId());
+    verify(inventoryHelper,never()).handleItemRecords(any(CompositePoLine.class), eq(HOLDING_ID), any(List.class));
+    assertEquals(Collections.emptyList(), pieces);
+  }
+
+  @Test
+  public void testShouldCreateInstanceIfInstanceIdIsNotProvided() throws ExecutionException, InterruptedException {
+    //given
+    Title title = ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    title.setInstanceId(null);
+    PiecesHelper piecesHelper = mock(PiecesHelper.class, CALLS_REAL_METHODS);
+    doReturn(CompletableFuture.completedFuture(UUID.randomUUID().toString())).when(piecesHelper).getInstanceRecord(any(Title.class));
+    //When
+    piecesHelper.handleInstanceRecord(title).get();
+    //Then
+    verify(piecesHelper, times(1)).getInstanceRecord(title);
+  }
+
+  @Test
+  public void testShouldSkippCreationNewInstanceIfInstanceIdIsProvided() throws ExecutionException, InterruptedException {
+    //given
+    Title title = ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    //When
+    CompletableFuture<Title> result = piecesHelper.handleInstanceRecord(title);
+    //Then
+    Title actTitle = result.get();
+    assertEquals(title, actTitle);
   }
 }
