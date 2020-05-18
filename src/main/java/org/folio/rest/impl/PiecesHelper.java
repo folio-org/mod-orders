@@ -20,7 +20,6 @@ import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.acq.model.Piece.PieceFormat.ELECTRONIC;
 import static org.folio.rest.impl.InventoryHelper.CONTRIBUTOR_NAME;
 import static org.folio.rest.impl.InventoryHelper.CONTRIBUTOR_NAME_TYPE_ID;
 import static org.folio.rest.impl.InventoryHelper.INSTANCE_CONTRIBUTORS;
