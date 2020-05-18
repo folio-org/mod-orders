@@ -204,7 +204,7 @@ public class PiecesHelper extends AbstractHelper {
       return titlesHelper.getTitle(piece.getTitleId())
         .thenCompose(this::handleInstanceRecord)
         .thenCompose(title -> titlesHelper.updateTitle(title)
-          .thenApply(json -> title))
+                                          .thenApply(json -> title))
         .thenCompose(title -> handleHoldingsAndItemsRecords(compPOL, title.getInstanceId(), piece.getLocationId()))
         .thenApply(pieces -> piece.withItemId(pieces.get(0).getItemId()));
     }
@@ -326,7 +326,8 @@ public class PiecesHelper extends AbstractHelper {
                 }
                 return null;
               }
-            );
+            )
+            .exceptionally(pieceFutures::completeExceptionally);
     }
     return pieceFutures;
   }
