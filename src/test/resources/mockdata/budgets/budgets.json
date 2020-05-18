@@ -483,7 +483,30 @@
         "createdDate": "2020-01-30T01:28:17.839+0000",
         "updatedDate": "2020-01-30T01:28:17.839+0000"
       }
+    },
+    {
+      "id": "7d56dcea-4f35-470a-82b9-87df63fa747f",
+      "name": "ENCUMBRANCE_ERROR-FY2019",
+      "budgetStatus": "Active",
+      "allowableEncumbrance": 110.0,
+      "allowableExpenditure": 100.0,
+      "allocated": 11000.0,
+      "awaitingPayment": 0.0,
+      "available": 13500.0,
+      "encumbered": 0.0,
+      "expenditures": 0.0,
+      "unavailable": 0.0,
+      "overEncumbrance": 0.0,
+      "overExpended": 0.0,
+      "fundId": "f1654bbe-dd76-4bfe-a96a-e764141e6aac",
+      "fiscalYearId": "684b5dc5-92f6-4db7-b996-b549d88f5e4e",
+      "acqUnitIds": [],
+      "metadata": {
+        "createdDate": "2020-01-30T01:28:17.839+0000",
+        "updatedDate": "2020-01-30T01:28:17.839+0000"
+      }
     }
+
   ],
   "totalRecords": 22
 }

@@ -27,7 +27,6 @@ import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
-import org.jetbrains.annotations.NotNull;
 
 public class TitlesHelper extends AbstractHelper {
   private static final String GET_TITLES_BY_QUERY = resourcesPath(TITLES) + SEARCH_PARAMS;
@@ -52,7 +51,6 @@ public class TitlesHelper extends AbstractHelper {
     return future;
   }
 
-  @NotNull
   private CompletableFuture<Void> populateTitle(Title title, String poLineId) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
