@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -19,7 +20,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import org.folio.rest.acq.model.Piece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Title;
 import org.junit.Before;
@@ -66,15 +66,12 @@ public class PiecesHelperTest {
 
     doReturn(CompletableFuture.completedFuture(HOLDING_ID))
       .when(inventoryHelper).getOrCreateHoldingsRecord(anyString(), anyString());
-    doReturn(CompletableFuture.completedFuture(Collections.singletonList(piece)))
-      .when(inventoryHelper).handleItemRecords(any(CompositePoLine.class), eq(HOLDING_ID), any(List.class));
     //When
-    CompletableFuture<List<org.folio.rest.acq.model.Piece>> result =
-      piecesHelper.handleHoldingsAndItemsRecords(line, title.getInstanceId(), piece.getLocationId());
-
+    CompletableFuture<String> result = piecesHelper.handleHoldingsRecord(line, piece.getLocationId(), title.getInstanceId());
+    String actHoldingId = result.get();
     //Then
     verify(inventoryHelper).getOrCreateHoldingsRecord(title.getInstanceId(), piece.getLocationId());
-    verify(inventoryHelper).handleItemRecords(any(CompositePoLine.class), eq(HOLDING_ID), any(List.class));
+    assertEquals(HOLDING_ID, actHoldingId);
   }
 
   @Test
@@ -90,17 +87,14 @@ public class PiecesHelperTest {
 
     doReturn(CompletableFuture.completedFuture(HOLDING_ID))
       .when(inventoryHelper).getOrCreateHoldingsRecord(anyString(), anyString());
-    doReturn(CompletableFuture.completedFuture(Collections.singletonList(piece)))
-      .when(inventoryHelper).handleItemRecords(any(CompositePoLine.class), eq(HOLDING_ID), any(List.class));
     //When
-    CompletableFuture<List<org.folio.rest.acq.model.Piece>> result =
-      piecesHelper.handleHoldingsAndItemsRecords(line, title.getInstanceId(), piece.getLocationId());
+    CompletableFuture<String> result =
+      piecesHelper.handleHoldingsRecord(line, piece.getLocationId(), title.getInstanceId());
 
     //Then
-    List<Piece> pieces = result.get();
+    String holdingId = result.get();
     verify(inventoryHelper,never()).getOrCreateHoldingsRecord(title.getInstanceId(), piece.getLocationId());
-    verify(inventoryHelper,never()).handleItemRecords(any(CompositePoLine.class), eq(HOLDING_ID), any(List.class));
-    assertEquals(Collections.emptyList(), pieces);
+    assertNull(holdingId);
   }
 
   @Test

@@ -569,7 +569,7 @@ public class InventoryHelper extends AbstractHelper {
    * @param quantity expected number of items to create
    * @return id of newly created Instance Record
    */
-  private CompletableFuture<List<String>> createMissingElectronicItems(CompositePoLine compPOL, String holdingId, int quantity) {
+  public CompletableFuture<List<String>> createMissingElectronicItems(CompositePoLine compPOL, String holdingId, int quantity) {
     if (quantity > 0) {
       return buildElectronicItemRecordJsonObject(compPOL, holdingId)
         .thenCompose(itemData -> {
@@ -589,7 +589,7 @@ public class InventoryHelper extends AbstractHelper {
    * @param quantity expected number of items to create
    * @return id of newly created Instance Record
    */
-  private CompletableFuture<List<String>> createMissingPhysicalItems(CompositePoLine compPOL, String holdingId, int quantity) {
+  public CompletableFuture<List<String>> createMissingPhysicalItems(CompositePoLine compPOL, String holdingId, int quantity) {
     if (quantity > 0) {
       return buildPhysicalItemRecordJsonObject(compPOL, holdingId)
         .thenCompose(itemData -> {

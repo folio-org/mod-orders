@@ -20,6 +20,7 @@ import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.acq.model.Piece.PieceFormat.ELECTRONIC;
 import static org.folio.rest.impl.InventoryHelper.CONTRIBUTOR_NAME;
 import static org.folio.rest.impl.InventoryHelper.CONTRIBUTOR_NAME_TYPE_ID;
 import static org.folio.rest.impl.InventoryHelper.INSTANCE_CONTRIBUTORS;
@@ -37,8 +38,8 @@ import static org.folio.rest.impl.InventoryHelper.INSTANCE_TITLE;
 import static org.folio.rest.impl.InventoryHelper.INSTANCE_TYPES;
 import static org.folio.rest.impl.InventoryHelper.INSTANCE_TYPE_ID;
 import static org.folio.rest.impl.InventoryHelper.SOURCE_FOLIO;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +56,6 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -210,15 +210,10 @@ public class PiecesHelper extends AbstractHelper {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return titlesHelper.getTitle(piece.getTitleId())
         .thenCompose(this::handleInstanceRecord)
-        .thenCompose(title -> titlesHelper.updateTitle(title)
-                                          .thenApply(json -> title))
-        .thenCompose(title -> handleHoldingsAndItemsRecords(compPOL, title.getInstanceId(), piece.getLocationId()))
-        .thenApply(pieces -> {
-          if (!pieces.isEmpty()) {
-            piece.withItemId(pieces.get(0).getItemId());
-          }
-          return piece;
-        });
+        .thenCompose(title -> titlesHelper.updateTitle(title).thenApply(json -> title))
+        .thenCompose(title -> handleHoldingsRecord(compPOL, piece.getLocationId(), title.getInstanceId()))
+        .thenCompose(holdingId -> createItemRecord(compPOL, holdingId))
+        .thenApply(piece::withItemId);
     }
     return CompletableFuture.completedFuture(piece);
   }
@@ -314,43 +309,47 @@ public class PiecesHelper extends AbstractHelper {
     return instance;
   }
 
-  public CompletableFuture<List<org.folio.rest.acq.model.Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL
-    , String instanceId, String locationId) {
-
-    CompletableFuture<List<org.folio.rest.acq.model.Piece>> pieceFuture = new CompletableFuture<>();
-    // Group all locations by location id because the holding should be unique for different locations
-    if (HelperUtils.isHoldingsUpdateRequired(compPOL.getEresource(), compPOL.getPhysical())) {
-          // Search for or create a new holdings record and then create items for it if required
-          inventoryHelper.getOrCreateHoldingsRecord(instanceId, locationId)
-                        .thenCompose(holdingId -> {
-                            // Items are not going to be created when create inventory is "Instance, Holding"
-                            boolean isItemsUpdateRequired = isItemsUpdateRequired(compPOL);
-                            if (isItemsUpdateRequired) {
-                              List<Location> locations = cloneLocations(compPOL, locationId);
-                              inventoryHelper.handleItemRecords(compPOL, holdingId, locations)
-                                             .thenAccept(pieceFuture::complete);
-                            } else {
-                              pieceFuture.complete(Collections.emptyList());
-                            }
-                            return null;
-                          }
-                        )
-                        .exceptionally(pieceFuture::completeExceptionally);
-    } else {
-      pieceFuture.complete(Collections.emptyList());
+  /**
+   * Return id of created  Holding
+   */
+  public CompletableFuture<String> handleHoldingsRecord(final CompositePoLine compPOL, String locationId, String instanceId) {
+    CompletableFuture<String> holdingFuture = new CompletableFuture<>();
+    try {
+      if (HelperUtils.isHoldingsUpdateRequired(compPOL.getEresource(), compPOL.getPhysical())) {
+        inventoryHelper.getOrCreateHoldingsRecord(instanceId, locationId)
+          .thenApply(holdingFuture::complete)
+          .exceptionally(holdingFuture::completeExceptionally);
+      } else {
+        holdingFuture.complete(null);
+      }
     }
-    return pieceFuture;
+    catch (Exception e) {
+      holdingFuture.completeExceptionally(e);
+    }
+    return holdingFuture;
   }
 
-  private List<Location> cloneLocations(CompositePoLine compPOL, String locationId) {
-    List<Location> locations = new ArrayList<>();
-    compPOL.getLocations().stream()
-                          .map(location ->  JsonObject.mapFrom(location).mapTo(Location.class))
-                          .forEach(location -> {
-                            location.setLocationId(locationId);
-                            locations.add(location);
-                          });
-    return locations;
+  /**
+   * Return id of created  Item
+   */
+  public CompletableFuture<String> createItemRecord(CompositePoLine compPOL, String holdingId) {
+    final int ITEM_QUANTITY = 1;
+    logger.debug("Handling {} items for PO Line with id={} and holdings with id={}", ITEM_QUANTITY, compPOL.getId(), holdingId);
+    CompletableFuture<String> itemFuture = new CompletableFuture<>();
+    try {
+      if (isItemsUpdateRequired(compPOL)) {
+        if (compPOL.getOrderFormat() == ELECTRONIC_RESOURCE) {
+           inventoryHelper.createMissingElectronicItems(compPOL, holdingId, ITEM_QUANTITY)
+                          .thenApply(idS -> itemFuture.complete(idS.get(0)));
+        } else {
+          inventoryHelper.createMissingPhysicalItems(compPOL, holdingId, ITEM_QUANTITY)
+                         .thenApply(idS -> itemFuture.complete(idS.get(0)));
+        }
+      }
+    } catch (Exception e) {
+       itemFuture.completeExceptionally(e);
+    }
+    return itemFuture;
   }
 
   private String extractId(JsonObject json) {
