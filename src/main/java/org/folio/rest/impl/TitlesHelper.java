@@ -73,6 +73,10 @@ public class TitlesHelper extends AbstractHelper {
               }
             });
         }
+      })
+      .exceptionally(t -> {
+        future.completeExceptionally(t);
+        return null;
       });
     return future;
   }
