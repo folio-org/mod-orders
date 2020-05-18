@@ -466,7 +466,7 @@
     },
     {
       "id": "titles",
-      "version": "1.1",
+      "version": "1.2",
       "handlers": [
         {
           "methods": ["GET"],
@@ -478,7 +478,11 @@
           "methods": ["POST"],
           "pathPattern": "/orders/titles",
           "permissionsRequired": ["orders.titles.item.post"],
-          "modulePermissions": ["orders-storage.titles.item.post"]
+          "modulePermissions": [
+            "orders-storage.titles.collection.get",
+            "orders-storage.titles.item.post",
+            "orders-storage.po-lines.item.get"
+          ]
         },
         {
           "methods": ["GET"],
