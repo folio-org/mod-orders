@@ -9,7 +9,6 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_TYPE;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
-import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
@@ -45,7 +44,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
 
 import javax.ws.rs.core.Response;
 
@@ -335,9 +333,13 @@ public class PiecesHelper extends AbstractHelper {
 
   @NotNull
   private List<Location> cloneLocations(CompositePoLine compPOL, String locationId) {
-    return compPOL.getLocations().stream()
-                  .map(location ->  JsonObject.mapFrom(location).mapTo(Location.class))
-                  .peek(location -> location.setLocationId(locationId))
-                  .collect(toList());
+    List<Location> locations = new ArrayList<>();
+    compPOL.getLocations().stream()
+                          .map(location ->  JsonObject.mapFrom(location).mapTo(Location.class))
+                          .forEach(location -> {
+                            location.setLocationId(locationId);
+                            locations.add(location);
+                          });
+    return locations;
   }
 }
