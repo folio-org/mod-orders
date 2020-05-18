@@ -25,9 +25,8 @@ import org.mockito.MockitoAnnotations;
 
 import io.vertx.core.impl.EventLoopContext;
 
-;
 
-public class PieceHelperTest {
+public class PiecesHelperTest {
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   private static final String COMPOSITE_LINES_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private static final String PIECE_PATH = BASE_MOCK_DATA_PATH + "pieces/";
@@ -53,7 +52,7 @@ public class PieceHelperTest {
   }
 
   @Test
-  public void testDeletePrefixFailedIfSuffixUsedByOrder() throws ExecutionException, InterruptedException {
+  public void testHoldingsItemShouldBeCreated() throws ExecutionException, InterruptedException {
     //given
     CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     org.folio.rest.acq.model.Piece piece = ApiTestBase.getMockAsJson(PIECE_PATH,"pieceRecord")
@@ -72,8 +71,5 @@ public class PieceHelperTest {
     List<Piece> pieces = result.get();
     verify(inventoryHelper).getOrCreateHoldingsRecord(title.getInstanceId(), piece.getLocationId());
     verify(inventoryHelper).handleItemRecords(any(CompositePoLine.class), eq(HOLDING_ID), any(List.class));
-
-    assertEquals(pieces.get(0).getLocationId(), piece.getLocationId());
-    assertEquals(pieces.get(0).getPoLineId(), line.getId());
   }
 }
