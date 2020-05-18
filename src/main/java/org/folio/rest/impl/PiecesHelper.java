@@ -56,9 +56,11 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.Title;
 
 import io.vertx.core.Context;
@@ -262,7 +264,7 @@ public class PiecesHelper extends AbstractHelper {
       .thenCompose(instanceRecJson -> createRecordInStorage(instanceRecJson, String.format(CREATE_INSTANCE_ENDPOINT, lang)));
   }
 
-  private JsonObject buildInstanceRecordJsonObject(Title title, JsonObject lookupObj) {
+  public JsonObject buildInstanceRecordJsonObject(Title title, JsonObject lookupObj) {
     JsonObject instance = new JsonObject();
 
     // MODORDERS-145 The Source and source code are required by schema
@@ -282,8 +284,9 @@ public class PiecesHelper extends AbstractHelper {
       instance.put(INSTANCE_PUBLICATION, new JsonArray(singletonList(publication)));
     }
 
-    if(isNotEmpty(title.getContributors())) {
-      List<JsonObject> contributors = title.getContributors().stream().map(compPolContributor -> {
+    List<Contributor> titleContributors = title.getContributors();
+    if(isNotEmpty(titleContributors)) {
+      List<JsonObject> contributors = titleContributors.stream().map(compPolContributor -> {
         JsonObject invContributor = new JsonObject();
         invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, compPolContributor.getContributorNameTypeId());
         invContributor.put(CONTRIBUTOR_NAME, compPolContributor.getContributor());
@@ -292,11 +295,10 @@ public class PiecesHelper extends AbstractHelper {
       instance.put(INSTANCE_CONTRIBUTORS, contributors);
     }
 
-    if (CollectionUtils.isNotEmpty(title.getProductIds())) {
+    List<ProductId> productIds = title.getProductIds();
+    if (CollectionUtils.isNotEmpty(productIds)) {
       List<JsonObject> identifiers =
-        title
-          .getProductIds()
-          .stream()
+        productIds.stream()
           .map(pId -> {
             JsonObject identifier = new JsonObject();
             identifier.put(INSTANCE_IDENTIFIER_TYPE_ID, pId.getProductIdType());

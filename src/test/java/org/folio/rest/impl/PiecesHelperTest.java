@@ -1,5 +1,7 @@
 package org.folio.rest.impl;
 
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_STATUSES;
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_TYPES;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -10,6 +12,7 @@ import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -29,6 +32,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import io.vertx.core.impl.EventLoopContext;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 
 
 public class PiecesHelperTest {
@@ -157,5 +162,25 @@ public class PiecesHelperTest {
     //Then
     verify(inventoryHelper).createMissingElectronicItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1));
     assertEquals(expItemId, actItemId);
+  }
+
+  @Test
+  public void testShouldBuildTitles() throws ExecutionException, InterruptedException {
+    //given
+    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    Title title = spy(ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class));
+    title.setContributors(line.getContributors());
+    title.setPublishedDate(line.getPublicationDate());
+    title.setPublisher(line.getPublisher());
+    title.setProductIds(line.getDetails().getProductIds());
+    JsonObject statuseJSON = new JsonObject("{\"instanceTypes\":\"30fffe0e-e985-4144-b2e2-1e8179bdb41f\"" +
+      ",\"instanceStatuses\":\"daf2681c-25af-4202-a3fa-e58fdf806183\"}");
+    //When
+    JsonObject result = piecesHelper.buildInstanceRecordJsonObject(title, statuseJSON);
+    //Then
+    verify(title).getContributors();
+    verify(title, times(1)).getPublishedDate();
+    verify(title, times(2)).getPublisher();
+    verify(title).getProductIds();
   }
 }
