@@ -60,7 +60,6 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
-import org.jetbrains.annotations.NotNull;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
@@ -81,6 +80,14 @@ public class PiecesHelper extends AbstractHelper {
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
     inventoryHelper = new InventoryHelper(okapiHeaders, ctx, lang);
     titlesHelper = new TitlesHelper(okapiHeaders, ctx, lang);
+  }
+
+  public PiecesHelper(Map<String, String> okapiHeaders, Context ctx, String lang
+          , ProtectionHelper protectionHelper, InventoryHelper inventoryHelper, TitlesHelper titlesHelper) {
+    super(okapiHeaders, ctx, lang);
+    this.protectionHelper = protectionHelper;
+    this.inventoryHelper = inventoryHelper;
+    this.titlesHelper = titlesHelper;
   }
 
   public CompletableFuture<Piece> createPiece(Piece piece) {
@@ -199,7 +206,7 @@ public class PiecesHelper extends AbstractHelper {
    * @param compPOL Composite PO line to update Inventory for
    * @return CompletableFuture with void.
    */
-  private CompletableFuture<Piece> updateInventory(CompositePoLine compPOL, Piece piece) {
+  public CompletableFuture<Piece> updateInventory(CompositePoLine compPOL, Piece piece) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return titlesHelper.getTitle(piece.getTitleId())
         .thenCompose(this::handleInstanceRecord)
@@ -219,7 +226,7 @@ public class PiecesHelper extends AbstractHelper {
     }
   }
 
-  private CompletableFuture<String> getInstanceRecord(Title title) {
+  public CompletableFuture<String> getInstanceRecord(Title title) {
     // proceed with new Instance Record creation if no productId is provided
     if (!CollectionUtils.isNotEmpty(title.getProductIds())) {
       return createInstanceRecord(title);
@@ -240,11 +247,7 @@ public class PiecesHelper extends AbstractHelper {
       });
   }
 
-  private String extractId(JsonObject json) {
-    return json.getString(ID);
-  }
-
-  private CompletableFuture<String> createInstanceRecord( Title title) {
+  public CompletableFuture<String> createInstanceRecord(Title title) {
     JsonObject lookupObj = new JsonObject();
     CompletableFuture<Void> instanceTypeFuture = inventoryHelper.getEntryId(INSTANCE_TYPES, MISSING_INSTANCE_TYPE)
       .thenAccept(lookupObj::mergeIn);
@@ -306,7 +309,7 @@ public class PiecesHelper extends AbstractHelper {
     return instance;
   }
 
-  private CompletableFuture<List<org.folio.rest.acq.model.Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL
+  public CompletableFuture<List<org.folio.rest.acq.model.Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL
     , String instanceId, String locationId) {
 
     CompletableFuture<List<org.folio.rest.acq.model.Piece>> pieceFutures = new CompletableFuture<>();
@@ -332,7 +335,6 @@ public class PiecesHelper extends AbstractHelper {
     return pieceFutures;
   }
 
-  @NotNull
   private List<Location> cloneLocations(CompositePoLine compPOL, String locationId) {
     List<Location> locations = new ArrayList<>();
     compPOL.getLocations().stream()
@@ -342,5 +344,9 @@ public class PiecesHelper extends AbstractHelper {
                             locations.add(location);
                           });
     return locations;
+  }
+
+  private String extractId(JsonObject json) {
+    return json.getString(ID);
   }
 }
