@@ -1,13 +1,18 @@
 package org.folio.rest.impl;
 
+import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
+import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
+import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
+import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_TYPE;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
-import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
@@ -16,6 +21,23 @@ import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.impl.InventoryHelper.CONTRIBUTOR_NAME;
+import static org.folio.rest.impl.InventoryHelper.CONTRIBUTOR_NAME_TYPE_ID;
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_CONTRIBUTORS;
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_DATE_OF_PUBLICATION;
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_EDITIONS;
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_IDENTIFIERS;
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_IDENTIFIER_TYPE_ID;
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_IDENTIFIER_TYPE_VALUE;
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_PUBLICATION;
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_PUBLISHER;
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_SOURCE;
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_STATUSES;
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_STATUS_ID;
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_TITLE;
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_TYPES;
+import static org.folio.rest.impl.InventoryHelper.INSTANCE_TYPE_ID;
+import static org.folio.rest.impl.InventoryHelper.SOURCE_FOLIO;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,13 +45,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 
 import javax.ws.rs.core.Response;
 
-import org.folio.HttpStatus;
+import org.apache.commons.collections4.CollectionUtils;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
@@ -38,25 +60,28 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
+import org.folio.rest.jaxrs.model.Title;
+import org.jetbrains.annotations.NotNull;
 
 import io.vertx.core.Context;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PiecesHelper extends AbstractHelper {
+  private static final String DELETE_PIECE_BY_ID = resourceByIdPath(PIECES, "%s") + "?lang=%s";
+  private static final String CREATE_INSTANCE_ENDPOINT = "/inventory/instances?lang=%s";
+  private static final String INSTANCES = "instances";
 
-  public static final String INVENTORY_UPDATE_FAILED_FOR_PIECE = "Holding, Instance, Item failed for piece : ";
   private ProtectionHelper protectionHelper;
   private InventoryHelper inventoryHelper;
-
-  private static final String DELETE_PIECE_BY_ID = resourceByIdPath(PIECES, "%s") + "?lang=%s";
-  private PurchaseOrderLineHelper orderLineHelper;
+  private TitlesHelper titlesHelper;
 
   public PiecesHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
     inventoryHelper = new InventoryHelper(okapiHeaders, ctx, lang);
-    orderLineHelper = new PurchaseOrderLineHelper(okapiHeaders, ctx, lang);
+    titlesHelper = new TitlesHelper(okapiHeaders, ctx, lang);
   }
 
   public CompletableFuture<Piece> createPiece(Piece piece) {
@@ -171,38 +196,141 @@ public class PiecesHelper extends AbstractHelper {
    */
   private CompletableFuture<Piece> updateInventory(CompositePoLine compPOL, Piece piece) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
-      return inventoryHelper.handleInstanceRecord(compPOL)
-        .thenCompose(line -> orderLineHelper.updateOrderLineSummary(line.getId(), JsonObject.mapFrom(line))
-          .thenApply(json -> line))
-        .thenCompose(line -> handleHoldingsAndItemsRecords(line, piece))
+      return titlesHelper.getTitle(piece.getTitleId())
+        .thenCompose(this::handleInstanceRecord)
+        .thenCompose(title -> titlesHelper.updateTitle(title)
+          .thenApply(json -> title))
+        .thenCompose(title -> handleHoldingsAndItemsRecords(compPOL, title.getInstanceId(), piece.getLocationId()))
         .thenApply(pieces -> piece.withItemId(pieces.get(0).getItemId()));
     }
     return CompletableFuture.completedFuture(piece);
   }
 
-  private CompletableFuture<List<org.folio.rest.acq.model.Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL, Piece piece) {
-    List<CompletableFuture<List<org.folio.rest.acq.model.Piece>>> itemsPerHolding = new ArrayList<>();
-    boolean isItemsUpdateRequired = isItemsUpdateRequired(compPOL);
+  public CompletableFuture<Title> handleInstanceRecord(Title title) {
+    if (title.getInstanceId() != null) {
+      return CompletableFuture.completedFuture(title);
+    } else {
+      return getInstanceRecord(title).thenApply(title::withInstanceId);
+    }
+  }
 
+  private CompletableFuture<String> getInstanceRecord(Title title) {
+    // proceed with new Instance Record creation if no productId is provided
+    if (!CollectionUtils.isNotEmpty(title.getProductIds())) {
+      return createInstanceRecord(title);
+    }
+
+    String query = title.getProductIds().stream()
+      .map(productId -> inventoryHelper.buildProductIdQuery(productId))
+      .collect(joining(" or "));
+
+    // query contains special characters so must be encoded before submitting
+    String endpoint = inventoryHelper.buildLookupEndpoint(INSTANCES, encodeQuery(query, logger), lang);
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(instances -> {
+        if (!instances.getJsonArray(INSTANCES).isEmpty()) {
+          return completedFuture(extractId(inventoryHelper.getFirstObjectFromResponse(instances, INSTANCES)));
+        }
+        return createInstanceRecord(title);
+      });
+  }
+
+  private String extractId(JsonObject json) {
+    return json.getString(ID);
+  }
+
+  private CompletableFuture<String> createInstanceRecord( Title title) {
+    JsonObject lookupObj = new JsonObject();
+    CompletableFuture<Void> instanceTypeFuture = inventoryHelper.getEntryId(INSTANCE_TYPES, MISSING_INSTANCE_TYPE)
+      .thenAccept(lookupObj::mergeIn);
+
+    CompletableFuture<Void> statusFuture = inventoryHelper.getEntryId(INSTANCE_STATUSES, MISSING_INSTANCE_STATUS)
+      .thenAccept(lookupObj::mergeIn);
+
+    CompletableFuture<Void> contributorNameTypeIdFuture = inventoryHelper.verifyContributorNameTypesExist(title.getContributors());
+
+    return allOf(ctx, instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
+      .thenApply(v -> buildInstanceRecordJsonObject(title, lookupObj))
+      .thenCompose(instanceRecJson -> createRecordInStorage(instanceRecJson, String.format(CREATE_INSTANCE_ENDPOINT, lang)));
+  }
+
+  public JsonObject buildInstanceRecordJsonObject(Title title, JsonObject lookupObj) {
+    JsonObject instance = new JsonObject();
+
+    // MODORDERS-145 The Source and source code are required by schema
+    instance.put(INSTANCE_SOURCE, SOURCE_FOLIO);
+    instance.put(INSTANCE_TITLE, title.getTitle());
+
+    if (title.getEdition() != null) {
+      instance.put(INSTANCE_EDITIONS, new JsonArray(singletonList(title.getEdition())));
+    }
+    instance.put(INSTANCE_STATUS_ID, lookupObj.getString(INSTANCE_STATUSES));
+    instance.put(INSTANCE_TYPE_ID, lookupObj.getString(INSTANCE_TYPES));
+
+    if (title.getPublisher() != null || title.getPublishedDate() != null) {
+      JsonObject publication = new JsonObject();
+      publication.put(INSTANCE_PUBLISHER, title.getPublisher());
+      publication.put(INSTANCE_DATE_OF_PUBLICATION, title.getPublishedDate());
+      instance.put(INSTANCE_PUBLICATION, new JsonArray(singletonList(publication)));
+    }
+
+    if(isNotEmpty(title.getContributors())) {
+      List<JsonObject> contributors = title.getContributors().stream().map(compPolContributor -> {
+        JsonObject invContributor = new JsonObject();
+        invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, compPolContributor.getContributorNameTypeId());
+        invContributor.put(CONTRIBUTOR_NAME, compPolContributor.getContributor());
+        return invContributor;
+      }).collect(toList());
+      instance.put(INSTANCE_CONTRIBUTORS, contributors);
+    }
+
+    if (CollectionUtils.isNotEmpty(title.getProductIds())) {
+      List<JsonObject> identifiers =
+        title
+          .getProductIds()
+          .stream()
+          .map(pId -> {
+            JsonObject identifier = new JsonObject();
+            identifier.put(INSTANCE_IDENTIFIER_TYPE_ID, pId.getProductIdType());
+            identifier.put(INSTANCE_IDENTIFIER_TYPE_VALUE, pId.getProductId());
+            return identifier;
+          })
+          .collect(toList());
+      instance.put(INSTANCE_IDENTIFIERS, new JsonArray(identifiers));
+    }
+    return instance;
+  }
+
+  private CompletableFuture<List<org.folio.rest.acq.model.Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL
+    , String instanceId, String locationId) {
+
+    CompletableFuture<List<org.folio.rest.acq.model.Piece>> pieceFutures = new CompletableFuture<>();
     // Group all locations by location id because the holding should be unique for different locations
     if (HelperUtils.isHoldingsUpdateRequired(compPOL.getEresource(), compPOL.getPhysical())) {
           // Search for or create a new holdings record and then create items for it if required
-          inventoryHelper.getOrCreateHoldingsRecord(compPOL.getInstanceId(), piece.getLocationId())
+          inventoryHelper.getOrCreateHoldingsRecord(instanceId, locationId)
             .thenCompose(holdingId -> {
                 // Items are not going to be created when create inventory is "Instance, Holding"
+                boolean isItemsUpdateRequired = isItemsUpdateRequired(compPOL);
                 if (isItemsUpdateRequired) {
-                  Location location = new Location().withLocationId(piece.getLocationId());
-                  return inventoryHelper.handleItemRecords(compPOL, holdingId, Collections.singletonList(location));
+                  List<Location> locations = cloneLocations(compPOL, locationId);
+                  inventoryHelper.handleItemRecords(compPOL, holdingId, locations)
+                                 .thenAccept(pieceFutures::complete);
                 } else {
-                  return completedFuture(Collections.emptyList());
+                  pieceFutures.complete(Collections.emptyList());
                 }
+                return null;
               }
             );
     }
-    return collectResultsOnSuccess(itemsPerHolding)
-      .thenApply(results -> results.stream()
-        .flatMap(List::stream)
-        .collect(toList())
-      );
+    return pieceFutures;
+  }
+
+  @NotNull
+  private List<Location> cloneLocations(CompositePoLine compPOL, String locationId) {
+    return compPOL.getLocations().stream()
+                  .map(location ->  JsonObject.mapFrom(location).mapTo(Location.class))
+                  .peek(location -> location.setLocationId(locationId))
+                  .collect(toList());
   }
 }

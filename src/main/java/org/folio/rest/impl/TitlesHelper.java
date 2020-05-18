@@ -25,11 +25,11 @@ import one.util.streamex.StreamEx;
 public class TitlesHelper extends AbstractHelper {
   private static final String GET_TITLES_BY_QUERY = resourcesPath(TITLES) + SEARCH_PARAMS;
 
-  TitlesHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
+  public TitlesHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
   }
 
-  TitlesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+  public TitlesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
   }
 
