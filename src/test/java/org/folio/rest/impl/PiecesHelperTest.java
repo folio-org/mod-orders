@@ -13,14 +13,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Title;
 import org.junit.Before;
 import org.junit.Test;
@@ -119,5 +119,43 @@ public class PiecesHelperTest {
     //Then
     Title actTitle = result.get();
     assertEquals(title, actTitle);
+  }
+
+  @Test
+  public void testShouldCreateItemRecordForPhysical() throws ExecutionException, InterruptedException {
+    //given
+    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+
+    String expItemId = UUID.randomUUID().toString();
+    doReturn(CompletableFuture.completedFuture(Arrays.asList(expItemId)))
+      .when(inventoryHelper).createMissingPhysicalItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1));
+
+    //When
+    CompletableFuture<String> result = piecesHelper.createItemRecord(line, HOLDING_ID);
+    String actItemId = result.get();
+    //Then
+    verify(inventoryHelper).createMissingPhysicalItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1));
+    assertEquals(expItemId, actItemId);
+  }
+
+  @Test
+  public void testShouldCreateItemRecordForEresources() throws ExecutionException, InterruptedException {
+    //given
+    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    Eresource eresource = new Eresource().withMaterialType(line.getPhysical().getMaterialType())
+            .withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
+    line.setPhysical(null);
+    line.setEresource(eresource);
+    line.setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
+    String expItemId = UUID.randomUUID().toString();
+    doReturn(CompletableFuture.completedFuture(Arrays.asList(expItemId)))
+      .when(inventoryHelper).createMissingElectronicItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1));
+
+    //When
+    CompletableFuture<String> result = piecesHelper.createItemRecord(line, HOLDING_ID);
+    String actItemId = result.get();
+    //Then
+    verify(inventoryHelper).createMissingElectronicItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1));
+    assertEquals(expItemId, actItemId);
   }
 }

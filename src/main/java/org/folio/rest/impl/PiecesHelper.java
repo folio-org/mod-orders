@@ -262,7 +262,7 @@ public class PiecesHelper extends AbstractHelper {
       .thenCompose(instanceRecJson -> createRecordInStorage(instanceRecJson, String.format(CREATE_INSTANCE_ENDPOINT, lang)));
   }
 
-  public JsonObject buildInstanceRecordJsonObject(Title title, JsonObject lookupObj) {
+  private JsonObject buildInstanceRecordJsonObject(Title title, JsonObject lookupObj) {
     JsonObject instance = new JsonObject();
 
     // MODORDERS-145 The Source and source code are required by schema
@@ -345,6 +345,9 @@ public class PiecesHelper extends AbstractHelper {
           inventoryHelper.createMissingPhysicalItems(compPOL, holdingId, ITEM_QUANTITY)
                          .thenApply(idS -> itemFuture.complete(idS.get(0)));
         }
+      }
+      else {
+        itemFuture.complete(null);
       }
     } catch (Exception e) {
        itemFuture.completeExceptionally(e);
