@@ -17,6 +17,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -299,7 +300,22 @@ public class PiecesHelperTest {
     title.setProductIds(null);
     doReturn(completedFuture(UUID.randomUUID().toString())).when(piecesHelper).createInstanceRecord(any(Title.class));
     //When
-    piecesHelper.getInstanceRecord(title);
+    piecesHelper.getInstanceRecord(title).get();
+    //Thenа
+    verify(piecesHelper, times(1)).createInstanceRecord(any(Title.class));
+  }
+
+  @Test
+  public void testShouldCreateInstanceRecordIfProductPresentAndInstancesNotFoundInDB() throws ExecutionException, InterruptedException {
+    //given
+    PiecesHelper piecesHelper = spy(new PiecesHelper(okapiHeadersMock, ctxMock, "en"
+      ,protectionHelper, inventoryHelper, titlesHelper));
+
+    Title title = ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    doReturn(completedFuture(new JsonObject("{\"instances\" : []}"))).when(piecesHelper).searchInstancesByProducts(any(List.class));
+    doReturn(completedFuture(UUID.randomUUID().toString())).when(piecesHelper).createInstanceRecord(any(Title.class));
+    //When
+    piecesHelper.getInstanceRecord(title).get();
     //Thenа
     verify(piecesHelper, times(1)).createInstanceRecord(any(Title.class));
   }

@@ -233,20 +233,24 @@ public class PiecesHelper extends AbstractHelper {
       return createInstanceRecord(title);
     }
 
-    String query = title.getProductIds().stream()
+    return searchInstancesByProducts(title.getProductIds())
+      .thenCompose(instances -> {
+        if (!instances.getJsonArray(INSTANCES).isEmpty()) {
+          String instanceId = inventoryHelper.getFirstObjectFromResponse(instances, INSTANCES).getString(ID);
+          return completedFuture(instanceId);
+        }
+        return createInstanceRecord(title);
+      });
+  }
+
+  public CompletableFuture<JsonObject> searchInstancesByProducts(List<ProductId> productIds) {
+    String query = productIds.stream()
       .map(productId -> inventoryHelper.buildProductIdQuery(productId))
       .collect(joining(" or "));
 
     // query contains special characters so must be encoded before submitting
     String endpoint = inventoryHelper.buildLookupEndpoint(INSTANCES, encodeQuery(query, logger), lang);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenCompose(instances -> {
-        if (!instances.getJsonArray(INSTANCES).isEmpty()) {
-         String instanceId = inventoryHelper.getFirstObjectFromResponse(instances, INSTANCES).getString(ID);
-          return completedFuture(instanceId);
-        }
-        return createInstanceRecord(title);
-      });
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
   }
 
   public CompletableFuture<String> createInstanceRecord(Title title) {
