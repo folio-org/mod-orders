@@ -76,6 +76,7 @@ import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_B
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_VENDOR_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.EMPTY_CONFIG_TENANT;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.FUND_ENCUMBRANCE_ERROR;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ID_FOR_PRINT_MONOGRAPH_ORDER;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_ACCESS_PROVIDER_A;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_ACCESS_PROVIDER_B;
@@ -1793,7 +1794,7 @@ public class MockServer {
 
       serverResponse(ctx, 422, APPLICATION_JSON, JsonObject.mapFrom(errors).encodePrettily());
 
-    } else if (BUDGET_IS_INACTIVE_TENANT.equals(tenant)){
+    } else if (BUDGET_IS_INACTIVE_TENANT.equals(tenant) || ctx.getBodyAsJson().getString("fromFundId").equals(FUND_ENCUMBRANCE_ERROR)){
       Errors errors = new Errors();
       List<Error> errorList = new ArrayList<>();
       errorList.add(new Error().withCode(BUDGET_IS_INACTIVE.getCode()).withMessage(BUDGET_IS_INACTIVE.getDescription()));
