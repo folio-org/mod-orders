@@ -193,7 +193,7 @@ public class PiecesHelperTest {
   }
 
   @Test
-  public void testShouldBuildInstance() {
+  public void testShouldBuildInstanceWithFieldFromTitles() {
     //given
     CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     Title title = spy(ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class));
@@ -216,7 +216,6 @@ public class PiecesHelperTest {
   @Test
   public void testShouldBuildInstanceWithoutTitleFields() {
     //given
-    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     Title title = spy(ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class));
     title.setContributors(null);
     title.setPublishedDate(null);
@@ -230,6 +229,48 @@ public class PiecesHelperTest {
     verify(title).getContributors();
     verify(title, times(1)).getPublishedDate();
     verify(title, times(1)).getPublisher();
+    verify(title).getProductIds();
+  }
+
+  @Test
+  public void testShouldBuildInstanceWithPublishedDateFromTitle() {
+    //given
+    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    Title title = spy(ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class));
+    title.setContributors(line.getContributors());
+    title.setPublishedDate(line.getPublicationDate());
+    title.setPublisher(null);
+    title.setProductIds(line.getDetails().getProductIds());
+    title.setEdition("Edition");
+    JsonObject statuseJSON = new JsonObject("{\"instanceTypes\":\"30fffe0e-e985-4144-b2e2-1e8179bdb41f\"" +
+      ",\"instanceStatuses\":\"daf2681c-25af-4202-a3fa-e58fdf806183\"}");
+    //When
+    piecesHelper.buildInstanceRecordJsonObject(title, statuseJSON);
+    //Then
+    verify(title).getContributors();
+    verify(title, times(2)).getPublishedDate();
+    verify(title, times(2)).getPublisher();
+    verify(title).getProductIds();
+  }
+
+  @Test
+  public void testShouldBuildInstanceWithPublisherFromTitle() {
+    //given
+    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    Title title = spy(ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class));
+    title.setContributors(line.getContributors());
+    title.setPublishedDate(null);
+    title.setPublisher(line.getPublisher());
+    title.setProductIds(line.getDetails().getProductIds());
+    title.setEdition("Edition");
+    JsonObject statuseJSON = new JsonObject("{\"instanceTypes\":\"30fffe0e-e985-4144-b2e2-1e8179bdb41f\"" +
+      ",\"instanceStatuses\":\"daf2681c-25af-4202-a3fa-e58fdf806183\"}");
+    //When
+    piecesHelper.buildInstanceRecordJsonObject(title, statuseJSON);
+    //Then
+    verify(title).getContributors();
+    verify(title, times(1)).getPublishedDate();
+    verify(title, times(2)).getPublisher();
     verify(title).getProductIds();
   }
 

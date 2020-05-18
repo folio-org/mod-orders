@@ -242,7 +242,8 @@ public class PiecesHelper extends AbstractHelper {
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(instances -> {
         if (!instances.getJsonArray(INSTANCES).isEmpty()) {
-          return completedFuture(extractId(inventoryHelper.getFirstObjectFromResponse(instances, INSTANCES)));
+         String instanceId = inventoryHelper.getFirstObjectFromResponse(instances, INSTANCES).getString(ID);
+          return completedFuture(instanceId);
         }
         return createInstanceRecord(title);
       });
@@ -354,9 +355,5 @@ public class PiecesHelper extends AbstractHelper {
        itemFuture.completeExceptionally(e);
     }
     return itemFuture;
-  }
-
-  private String extractId(JsonObject json) {
-    return json.getString(ID);
   }
 }
