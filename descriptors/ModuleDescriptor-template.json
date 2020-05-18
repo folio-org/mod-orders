@@ -466,7 +466,7 @@
     },
     {
       "id": "titles",
-      "version": "1.1",
+      "version": "1.2",
       "handlers": [
         {
           "methods": ["GET"],
@@ -478,7 +478,11 @@
           "methods": ["POST"],
           "pathPattern": "/orders/titles",
           "permissionsRequired": ["orders.titles.item.post"],
-          "modulePermissions": ["orders-storage.titles.item.post"]
+          "modulePermissions": [
+            "orders-storage.titles.collection.get",
+            "orders-storage.titles.item.post",
+            "orders-storage.po-lines.item.get"
+          ]
         },
         {
           "methods": ["GET"],
@@ -538,7 +542,7 @@
     },
     {
       "id": "configuration.prefixes",
-      "version": "1.0",
+      "version": "1.1",
       "handlers": [
         {
           "methods": ["GET"],
@@ -568,13 +572,17 @@
           "methods": ["DELETE"],
           "pathPattern": "/orders/configuration/prefixes/{id}",
           "permissionsRequired": ["orders.configuration.prefixes.item.delete"],
-          "modulePermissions": ["orders-storage.configuration.prefixes.item.delete"]
+          "modulePermissions": [
+            "orders-storage.configuration.prefixes.item.delete",
+            "orders-storage.configuration.prefixes.item.get",
+            "orders-storage.purchase-orders.collection.get"
+          ]
         }
       ]
     },
     {
       "id": "configuration.suffixes",
-      "version": "1.0",
+      "version": "1.1",
       "handlers": [
         {
           "methods": ["GET"],
@@ -604,7 +612,11 @@
           "methods": ["DELETE"],
           "pathPattern": "/orders/configuration/suffixes/{id}",
           "permissionsRequired": ["orders.configuration.suffixes.item.delete"],
-          "modulePermissions": ["orders-storage.configuration.suffixes.item.delete"]
+          "modulePermissions": [
+            "orders-storage.configuration.suffixes.item.delete",
+            "orders-storage.configuration.suffixes.item.get",
+            "orders-storage.purchase-orders.collection.get"
+          ]
         }
       ]
     },

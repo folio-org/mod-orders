@@ -56,6 +56,7 @@ public enum ErrorCodes {
   FUNDS_NOT_FOUND("fundsNotFound", "The fund records are not found"),
   CURRENT_FISCAL_YEAR_NOT_FOUND("currentFYearNotFound", "Current fiscal year not found for ledger"),
   TITLE_NOT_FOUND("titleNotFound", "Associated title not found for non package PO Line"),
+  TITLE_EXIST("titleExist", "The title for poLine already exist"),
   MULTIPLE_NONPACKAGE_TITLES("multipleNonPackageTitles", "Non package PO Line must contain only one title."),
   BUDGET_NOT_FOUND_FOR_TRANSACTION("budgetNotFoundForTransaction", "Budget not found for transaction"),
   LEDGER_NOT_FOUND_FOR_TRANSACTION("ledgerNotFoundForTransaction", "Ledger not found for transaction"),
@@ -64,7 +65,9 @@ public enum ErrorCodes {
   MISSING_ONGOING("missingOngoing", "Ongoing field must be present for Ongoing order"),
   ONGOING_NOT_ALLOWED("ongoingNotAllowed", "Ongoing field must be absent for One-time order"),
   INCORRECT_FUND_DISTRIBUTION_TOTAL("incorrectFundDistributionTotal","Fund distribution total must add to 100% or totalPrice"),
-  INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE("InstanceIdNotAllowedForPackagePoLine", "Instance id not allowed for package poline");
+  INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE("InstanceIdNotAllowedForPackagePoLine", "Instance id not allowed for package poline"),
+  PREFIX_IS_USED("prefixIsUsed", "The prefix cannot be deleted as it is used by one or more orders"),
+  SUFFIX_IS_USED("suffixIsUsed", "The suffix cannot be deleted as it is used by one or more orders");
 
   private final String code;
   private final String description;

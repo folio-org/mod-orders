@@ -18,7 +18,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 
-public class TitlesImpl implements OrdersTitles {
+public class TitlesApi implements OrdersTitles {
 
   private static final String TITLES_LOCATION_PREFIX = getEndpoint(OrdersTitles.class) + "/%s";
 

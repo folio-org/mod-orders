@@ -11,6 +11,7 @@ import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ALL_DESIRED_PERMISSIONS_HEADER;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.COMPOSITE_ORDERS_PATH;
+import static org.folio.rest.impl.protection.ProtectedOperations.CREATE;
 import static org.folio.rest.impl.protection.ProtectedOperations.UPDATE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -20,6 +21,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.hamcrest.core.IsEqual.equalTo;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -80,7 +82,8 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     logger.info("=== Test corresponding order has units allowed operation - expecting of call only to Units API ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_ID);
-    operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(prepareOrder(NOT_PROTECTED_UNITS)), headers, operation.getContentType(), operation.getCode());
+    CompositePurchaseOrder order = operation == CREATE ? getMinimalContentCompositePurchaseOrder().withAcqUnitIds(new ArrayList<>(NOT_PROTECTED_UNITS)) : prepareOrder(NOT_PROTECTED_UNITS);
+    operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(order), headers, operation.getContentType(), operation.getCode());
 
     validateNumberOfRequests(1, 0);
   }
@@ -96,7 +99,8 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     logger.info("=== Test corresponding order has units, units protect operation, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
 
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER);
-    operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(prepareOrder(PROTECTED_UNITS)), headers, operation.getContentType(), operation.getCode());
+    CompositePurchaseOrder order = operation == CREATE ? getMinimalContentCompositePurchaseOrder().withAcqUnitIds(new ArrayList<>(PROTECTED_UNITS)) : prepareOrder(PROTECTED_UNITS);
+    operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(order), headers, operation.getContentType(), operation.getCode());
 
     validateNumberOfRequests(1, 1);
   }
