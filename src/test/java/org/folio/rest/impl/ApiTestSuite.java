@@ -54,7 +54,8 @@ import static org.hamcrest.Matchers.is;
   CheckInOrderStatusChangeChangeHandlerTest.class,
   SuffixServiceTest.class,
   PrefixServiceTest.class,
-  ReasonForClosureServiceTest.class
+  ReasonForClosureServiceTest.class,
+  PiecesHelperTest.class
 })
 public class ApiTestSuite {
 

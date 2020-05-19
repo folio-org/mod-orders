@@ -62,7 +62,7 @@ import one.util.streamex.StreamEx;
 public class InventoryHelper extends AbstractHelper {
 
   private static final String IDENTIFIER_TYPES = "identifierTypes";
-  private static final String SOURCE_FOLIO = "FOLIO";
+  public static final String SOURCE_FOLIO = "FOLIO";
   static final String INSTANCE_SOURCE = "source";
   static final String INSTANCE_TITLE = "title";
   static final String INSTANCE_EDITIONS = "editions";
@@ -129,7 +129,10 @@ public class InventoryHelper extends AbstractHelper {
     INVENTORY_LOOKUP_ENDPOINTS = Collections.unmodifiableMap(apis);
   }
 
-  InventoryHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+  public InventoryHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
+    super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
+  }
+  public InventoryHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
   }
 
@@ -257,7 +260,7 @@ public class InventoryHelper extends AbstractHelper {
     return CheckInPiece.ItemStatus.ON_ORDER == checkinPiece.getItemStatus();
   }
 
-  CompletableFuture<String> getOrCreateHoldingsRecord(String instanceId, String locationId) {
+  public CompletableFuture<String> getOrCreateHoldingsRecord(String instanceId, String locationId) {
 
     String query = encodeQuery(String.format(HOLDINGS_LOOKUP_QUERY, instanceId, locationId), logger);
     String endpoint = buildLookupEndpoint(HOLDINGS_RECORDS, query, lang);
@@ -270,7 +273,7 @@ public class InventoryHelper extends AbstractHelper {
           });
   }
 
-  private String buildLookupEndpoint(String type, Object... params) {
+  public String buildLookupEndpoint(String type, Object... params) {
     return String.format(INVENTORY_LOOKUP_ENDPOINTS.get(type), params);
   }
 
@@ -292,7 +295,7 @@ public class InventoryHelper extends AbstractHelper {
    * @param locations list of locations holdingId is associated with
    * @return future with list of piece objects
    */
-  private CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, String holdingId, List<Location> locations) {
+  public CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, String holdingId, List<Location> locations) {
     Map<Piece.PieceFormat, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, locations);
     int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
     String polId = compPOL.getId();
@@ -371,7 +374,7 @@ public class InventoryHelper extends AbstractHelper {
    * @param compPOL PO line to retrieve Instance Record Id for
    * @return future with Instance Id
    */
-  private CompletableFuture<String> getInstanceRecord(CompositePoLine compPOL) {
+  public CompletableFuture<String> getInstanceRecord(CompositePoLine compPOL) {
     // proceed with new Instance Record creation if no productId is provided
     if (!isProductIdsExist(compPOL)) {
       return createInstanceRecord(compPOL);
@@ -413,7 +416,7 @@ public class InventoryHelper extends AbstractHelper {
       .thenCompose(instanceRecJson -> createRecordInStorage(instanceRecJson, String.format(CREATE_INSTANCE_ENDPOINT, lang)));
   }
 
-  private CompletableFuture<Void> verifyContributorNameTypesExist(List<Contributor> contributors) {
+  public CompletableFuture<Void> verifyContributorNameTypesExist(List<Contributor> contributors) {
     List<String> ids = contributors.stream()
       .map(contributor -> contributor.getContributorNameTypeId().toLowerCase())
       .distinct()
@@ -455,7 +458,7 @@ public class InventoryHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<JsonObject> getEntryId(String entryType, ErrorCodes errorCode) {
+  public CompletableFuture<JsonObject> getEntryId(String entryType, ErrorCodes errorCode) {
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>();
     getAndCache(entryType)
       .thenAccept(future::complete)
@@ -474,13 +477,13 @@ public class InventoryHelper extends AbstractHelper {
       .withParameters(parameters);
   }
 
-  private String buildProductIdQuery(ProductId productId) {
+  public String buildProductIdQuery(ProductId productId) {
     return String.format(
         "(identifiers adj \"\\\"identifierTypeId\\\": \\\"%s\\\"\" " + "and identifiers adj \"\\\"value\\\": \\\"%s\\\"\")",
         productId.getProductIdType(), productId.getProductId());
   }
 
-  private JsonObject buildInstanceRecordJsonObject(CompositePoLine compPOL, JsonObject lookupObj) {
+  public JsonObject buildInstanceRecordJsonObject(CompositePoLine compPOL, JsonObject lookupObj) {
     JsonObject instance = new JsonObject();
 
     // MODORDERS-145 The Source and source code are required by schema
@@ -566,7 +569,7 @@ public class InventoryHelper extends AbstractHelper {
    * @param quantity expected number of items to create
    * @return id of newly created Instance Record
    */
-  private CompletableFuture<List<String>> createMissingElectronicItems(CompositePoLine compPOL, String holdingId, int quantity) {
+  public CompletableFuture<List<String>> createMissingElectronicItems(CompositePoLine compPOL, String holdingId, int quantity) {
     if (quantity > 0) {
       return buildElectronicItemRecordJsonObject(compPOL, holdingId)
         .thenCompose(itemData -> {
@@ -586,7 +589,7 @@ public class InventoryHelper extends AbstractHelper {
    * @param quantity expected number of items to create
    * @return id of newly created Instance Record
    */
-  private CompletableFuture<List<String>> createMissingPhysicalItems(CompositePoLine compPOL, String holdingId, int quantity) {
+  public CompletableFuture<List<String>> createMissingPhysicalItems(CompositePoLine compPOL, String holdingId, int quantity) {
     if (quantity > 0) {
       return buildPhysicalItemRecordJsonObject(compPOL, holdingId)
         .thenCompose(itemData -> {
@@ -688,7 +691,7 @@ public class InventoryHelper extends AbstractHelper {
    * @param propertyName name of the property which holds array of objects
    * @return the first element of the array
    */
-  private JsonObject getFirstObjectFromResponse(JsonObject response, String propertyName) {
+  public JsonObject getFirstObjectFromResponse(JsonObject response, String propertyName) {
     return Optional.ofNullable(response.getJsonArray(propertyName))
                    .flatMap(items -> items.stream().findFirst())
                    .map(item -> (JsonObject) item)
@@ -702,7 +705,7 @@ public class InventoryHelper extends AbstractHelper {
    *
    * @return value from cache
    */
-  private CompletableFuture<JsonObject> getAndCache(String entryType) {
+  public CompletableFuture<JsonObject> getAndCache(String entryType) {
     return getEntryTypeValue(entryType)
       .thenCompose(key -> {
         String tenantSpecificKey = buildTenantSpecificKey(key, entryType);
