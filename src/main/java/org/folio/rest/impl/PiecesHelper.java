@@ -61,6 +61,7 @@ import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.Title;
 
 import io.vertx.core.Context;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
@@ -174,7 +175,7 @@ public class PiecesHelper extends AbstractHelper {
 
   public CompletableFuture<CompositePurchaseOrder> getCompositeOrderByPoLineId(String poLineId) {
     return getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(json -> json.mapTo(CompositePoLine.class))
+      .thenCompose(poLineJson -> HelperUtils.operateOnPoLine(HttpMethod.GET, poLineJson, httpClient, ctx, okapiHeaders, logger))
       .thenCompose(poLine ->
         getCompositePurchaseOrder(poLine.getPurchaseOrderId())
         .thenApply(purchaseOrder -> purchaseOrder.withCompositePoLines(Collections.singletonList(poLine)))
@@ -346,10 +347,12 @@ public class PiecesHelper extends AbstractHelper {
       if (isItemsUpdateRequired(compPOL)) {
         if (compPOL.getOrderFormat() == ELECTRONIC_RESOURCE) {
            inventoryHelper.createMissingElectronicItems(compPOL, holdingId, ITEM_QUANTITY)
-                          .thenApply(idS -> itemFuture.complete(idS.get(0)));
+                          .thenApply(idS -> itemFuture.complete(idS.get(0)))
+                          .exceptionally(itemFuture::completeExceptionally);
         } else {
           inventoryHelper.createMissingPhysicalItems(compPOL, holdingId, ITEM_QUANTITY)
-                         .thenApply(idS -> itemFuture.complete(idS.get(0)));
+                         .thenApply(idS -> itemFuture.complete(idS.get(0)))
+                         .exceptionally(itemFuture::completeExceptionally);
         }
       }
       else {

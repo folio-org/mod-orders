@@ -315,8 +315,17 @@
             "orders-storage.purchase-orders.item.get",
             "inventory.items.item.put",
             "inventory.items.collection.get",
+            "inventory.instances.item.post",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings.item.post",
+            "inventory-storage.loan-types.collection.get",
+            "inventory-storage.items.item.post",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "orders-storage.titles.item.get",
+            "orders-storage.titles.item.put",
+            "orders-storage.alerts.item.get",
+            "orders-storage.reporting-codes.item.get"
           ]
         },
         {
