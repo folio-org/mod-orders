@@ -283,6 +283,8 @@ public class PiecesHelperTest {
     CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     Title title = ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     Piece piece = createPiece(line, title);
+    doReturn(completedFuture(null))
+      .when(inventoryHelper).updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId());
     //When
     Piece result = piecesHelper.updateInventory(line, piece).get();
     //Then
