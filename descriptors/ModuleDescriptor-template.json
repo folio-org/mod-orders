@@ -320,12 +320,15 @@
             "inventory-storage.holdings.item.post",
             "inventory-storage.loan-types.collection.get",
             "inventory-storage.items.item.post",
+            "inventory-storage.instance-types.collection.get",
+            "inventory-storage.instance-statuses.collection.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.titles.item.get",
             "orders-storage.titles.item.put",
             "orders-storage.alerts.item.get",
-            "orders-storage.reporting-codes.item.get"
+            "orders-storage.reporting-codes.item.get",
+            "configuration.entries.collection.get"
           ]
         },
         {

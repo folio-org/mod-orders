@@ -217,7 +217,11 @@ public class PiecesHelper extends AbstractHelper {
         .thenCompose(holdingId -> createItemRecord(compPOL, holdingId))
         .thenApply(piece::withItemId);
     }
-    return CompletableFuture.completedFuture(piece);
+    else
+    {
+      return inventoryHelper.updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId())
+                            .thenApply(v -> piece);
+    }
   }
 
   public CompletableFuture<Title> handleInstanceRecord(Title title) {
