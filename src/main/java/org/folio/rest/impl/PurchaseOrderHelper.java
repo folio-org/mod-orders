@@ -503,8 +503,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
           return updateInventory(linesIdTitles, compPO);
         })
       .thenCompose(ok -> createEncumbrances(compPO))
-      .thenAccept(ok -> changePoLineStatuses(compPO))
-      .thenCompose(ok -> updatePoLinesSummary(compPO));
+      .thenAccept(ok -> changePoLineStatuses(compPO.getCompositePoLines()))
+      .thenCompose(ok -> updatePoLinesSummary(compPO.getCompositePoLines()));
   }
 
   private CompletableFuture<Void> updateItemsInInventory(List<JsonObject> items) {
@@ -725,7 +725,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * Checks the value of "isApprovalRequired" in configurations, if the value is set to true, and order is being approved, verifies
    * if the user has required permissions to approve order
    *
-   * @param compPO
+   * @param compPO composite purchase order for checking permissions
    */
   private CompletableFuture<Void> checkOrderApprovalPermissions(CompositePurchaseOrder compPO) {
     return getTenantConfiguration().thenAccept(config -> {
@@ -804,8 +804,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
     });
   }
 
-  private void changePoLineStatuses(CompositePurchaseOrder compPO) {
-    compPO.getCompositePoLines().forEach(poLine -> {
+  private void changePoLineStatuses(List<CompositePoLine> compositePoLines) {
+    compositePoLines.forEach(poLine -> {
       changeReceiptStatus(poLine);
       changePaymentStatus(poLine);
     });
@@ -871,8 +871,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return isNotEmpty(compPO.getCompositePoLines()) || isPoNumberChanged(poFromStorage, compPO);
   }
 
-  private CompletableFuture<Void> updatePoLinesSummary(CompositePurchaseOrder compPO) {
-    return VertxCompletableFuture.allOf(ctx, compPO.getCompositePoLines().stream()
+  CompletableFuture<Void> updatePoLinesSummary(List<CompositePoLine> compositePoLines) {
+    return VertxCompletableFuture.allOf(ctx, compositePoLines.stream()
       .map(HelperUtils::convertToPoLine)
       .map(line -> orderLineHelper.updateOrderLineSummary(line.getId(), JsonObject.mapFrom(line))).toArray(CompletableFuture[]::new));
   }
@@ -912,15 +912,15 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> createEncumbrances(CompositePurchaseOrder compPO) {
-    if (isFundDistributionsPresent(compPO)) {
+    if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
       FinanceHelper helper = new FinanceHelper(httpClient, okapiHeaders, ctx, lang);
       return helper.handleEncumbrances(compPO);
     }
     return CompletableFuture.completedFuture(null);
   }
 
-  private boolean isFundDistributionsPresent(CompositePurchaseOrder compPO) {
-    return compPO.getCompositePoLines().stream().mapToLong(compositePoLine -> compositePoLine.getFundDistribution().size()).sum() >= 1;
+  private boolean isFundDistributionsPresent(List<CompositePoLine> compositePoLines) {
+    return compositePoLines.stream().mapToLong(compositePoLine -> compositePoLine.getFundDistribution().size()).sum() >= 1;
   }
 
   private CompletableFuture<Void> updateInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO) {

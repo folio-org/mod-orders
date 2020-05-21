@@ -4,6 +4,7 @@ import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.groupingBy;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -17,7 +18,7 @@ import java.util.function.Function;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -26,16 +27,15 @@ import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
-import org.jetbrains.annotations.NotNull;
 
 public class TitlesHelper extends AbstractHelper {
   private static final String GET_TITLES_BY_QUERY = resourcesPath(TITLES) + SEARCH_PARAMS;
 
-  TitlesHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
+  public TitlesHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
   }
 
-  TitlesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+  public TitlesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
   }
 
@@ -51,12 +51,11 @@ public class TitlesHelper extends AbstractHelper {
     return future;
   }
 
-  @NotNull
   private CompletableFuture<Void> populateTitle(Title title, String poLineId) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-    PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, ctx, lang);
 
-    helper.getCompositePoLine(poLineId)
+    getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(json -> json.mapTo(PoLine.class))
       .thenAccept(poLine -> {
         if(Boolean.TRUE.equals(poLine.getIsPackage())) {
           populateTitleByPoLine(title, poLine);
@@ -73,11 +72,15 @@ public class TitlesHelper extends AbstractHelper {
               }
             });
         }
+      })
+      .exceptionally(t -> {
+        future.completeExceptionally(t);
+        return null;
       });
     return future;
   }
 
-  private void populateTitleByPoLine(Title title, CompositePoLine poLine) {
+  private void populateTitleByPoLine(Title title, PoLine poLine) {
     title.setPackageName(poLine.getTitleOrPackage());
     title.setExpectedReceiptDate(Objects.nonNull(poLine.getPhysical()) ? poLine.getPhysical().getExpectedReceiptDate() : null);
     title.setPoLineNumber(poLine.getPoLineNumber());

@@ -5,7 +5,35 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.containsAny;
-import static org.folio.orders.utils.ErrorCodes.*;
+import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
+import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
+import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
+import static org.folio.orders.utils.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
+import static org.folio.orders.utils.ErrorCodes.FUNDS_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
+import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
+import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
+import static org.folio.orders.utils.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
+import static org.folio.orders.utils.ErrorCodes.ISBN_NOT_VALID;
+import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
+import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
+import static org.folio.orders.utils.ErrorCodes.MISSING_ONGOING;
+import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
+import static org.folio.orders.utils.ErrorCodes.ONGOING_NOT_ALLOWED;
+import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
+import static org.folio.orders.utils.ErrorCodes.ORDER_OPEN;
+import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
+import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.ORGANIZATION_NOT_A_VENDOR;
+import static org.folio.orders.utils.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
+import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
+import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
+import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
+import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
+import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
+import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
@@ -126,6 +154,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   static final String ORDER_WIT_PO_LINES_FOR_SORTING =  "9a952cd0-842b-4e71-bddd-014eb128dc8e";
   static final String VALID_FUND_ID =  "fb7b70f1-b898-4924-a991-0e4b6312bb5f";
   static final String FUND_ID_RESTRICTED =  "72330c92-087e-4cdc-a82e-acadd9332659";
+  static final String FUND_ENCUMBRANCE_ERROR =  "f1654bbe-dd76-4bfe-a96a-e764141e6aac";
   static final String VALID_LEDGER_ID =  "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
   public static final String ORDER_WITHOUT_MATERIAL_TYPES_ID =  "0cb6741d-4a00-47e5-a902-5678eb24478d";
 
@@ -3241,6 +3270,32 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(errorHeader, X_OKAPI_USER_ID), APPLICATION_JSON, 422);
 
+  }
+
+  @Test
+  public void testPostOpenOrderWithOnlyOneLinkedEncumbrance() throws Exception {
+    logger.info("=== Test Placement of minimal order ===");
+    MockServer.serverRqRs.clear();
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.getCompositePoLines()
+      .stream()
+      .flatMap(poline -> poline.getFundDistribution().stream()).forEach(fd -> fd.setEncumbrance(null));
+
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setFundId(FUND_ENCUMBRANCE_ERROR);
+    Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422).as(Errors.class);
+
+    assertEquals(BUDGET_IS_INACTIVE.getCode(), errors.getErrors().get(0).getCode());
+
+    List<PoLine> updatedPolines = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).stream().map(poline -> poline.mapTo(PoLine.class)).collect(Collectors.toList());;
+    // check size of update request (expected 2 of 3)
+    assertEquals(2, updatedPolines.size());
+    // check encumbrance id was populated
+    updatedPolines.stream()
+      .flatMap(poline -> poline.getFundDistribution().stream())
+      .filter(fd-> !fd.getFundId().equals(FUND_ENCUMBRANCE_ERROR))
+      .forEach(fd -> assertNotNull(fd.getEncumbrance()));
   }
 
   private void prepareOrderForPostRequest(CompositePurchaseOrder reqData) {
