@@ -243,7 +243,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletionStage<Void> checkLocationsAndPiecesConsistency(CompositePurchaseOrder compPO) {
-    String query = buildQuery(convertIdsToCqlQuery(compPO.getCompositePoLines().stream().map(CompositePoLine::getId).collect(toList()), "poLineId"), logger);
+    String query = convertIdsToCqlQuery(compPO.getCompositePoLines().stream().map(CompositePoLine::getId).collect(toList()), "poLineId");
     return piecesHelper.getPieces(Integer.MAX_VALUE, 0, query)
       .thenAccept(pieces -> verifyLocationsAndPiecesConsistency(compPO, pieces));
   }
