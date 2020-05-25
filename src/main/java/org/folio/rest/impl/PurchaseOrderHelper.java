@@ -67,11 +67,11 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
+import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
-import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.FundDistribution;
@@ -1089,7 +1089,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           && Objects.nonNull(piece.getLocationId())
           && Objects.nonNull(numOfLocationsByPoLineIdAndLocationId.get(piece.getPoLineId()))
           && Objects.nonNull(numOfLocationsByPoLineIdAndLocationId.get(piece.getPoLineId()).get(piece.getLocationId())) )
-        .collect(groupingBy(piece -> piece.getPoLineId(), groupingBy(location -> location.getLocationId(), summingInt(q -> 1))));
+        .collect(groupingBy(Piece::getPoLineId, groupingBy(Piece::getLocationId, summingInt(q -> 1))));
 
 
       numOfLocationsByPoLineIdAndLocationId.forEach((poLineId, numOfLocationsByLocationId) -> numOfLocationsByLocationId
