@@ -1533,6 +1533,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertEquals(2, reqData.getCompositePoLines().size());
 
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    // Create extra-pieces
+    preparePiecesForCompositePo(reqData);
+    preparePiecesForCompositePo(reqData);
 
     Errors response = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 422).as(Errors.class);
 

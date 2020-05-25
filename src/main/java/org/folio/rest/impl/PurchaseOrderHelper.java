@@ -1092,9 +1092,15 @@ public class PurchaseOrderHelper extends AbstractHelper {
           && Objects.nonNull(numOfLocationsByPoLineIdAndLocationId.get(piece.getPoLineId()).get(piece.getLocationId())) )
         .collect(groupingBy(piece -> piece.getPoLineId(), groupingBy(location -> location.getLocationId(), summingInt(q -> 1))));
 
-      if (!Objects.deepEquals(numOfPiecesByPoLineIdAndLocationId, numOfLocationsByPoLineIdAndLocationId)) {
-        throw new HttpException(422, PIECES_TO_BE_DELETED.toError());
-      }
+
+      numOfLocationsByPoLineIdAndLocationId.forEach((poLineId, numOfLocationsByLocationId) -> numOfLocationsByLocationId
+        .forEach((locationId, quantity) -> {
+          Integer numOfPieces = numOfPiecesByPoLineIdAndLocationId.get(poLineId) == null ? 0 :
+          numOfPiecesByPoLineIdAndLocationId.get(poLineId).get(locationId) == null ? 0 : numOfPiecesByPoLineIdAndLocationId.get(poLineId).get(locationId);
+        if (quantity < numOfPieces) {
+          throw new HttpException(422, PIECES_TO_BE_DELETED.toError());
+        }
+      }));
     }
   }
 }
