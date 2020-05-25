@@ -1081,8 +1081,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     if (CollectionUtils.isNotEmpty(compPO.getCompositePoLines())) {
 
       Map<String, Map<String, Integer>> numOfLocationsByPoLineIdAndLocationId = compPO.getCompositePoLines().stream()
-        .filter(line -> Objects.nonNull(line.getEresource())
-          && line.getEresource().getCreateInventory() != Eresource.CreateInventory.NONE)
+        .filter(line -> !line.getIsPackage() && line.getReceiptStatus() != CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED && !line.getCheckinItems())
         .collect(toMap(CompositePoLine::getId, poLine -> poLine.getLocations().stream().collect(toMap(Location::getLocationId, Location::getQuantity))));
 
       Map<String, Map<String, Integer>> numOfPiecesByPoLineIdAndLocationId = pieces.getPieces().stream()
