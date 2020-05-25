@@ -1086,19 +1086,17 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
       Map<String, Map<String, Integer>> numOfPiecesByPoLineIdAndLocationId = pieces.getPieces().stream()
         .filter(piece -> Objects.nonNull(piece.getPoLineId())
-          && Objects.nonNull(piece.getLocationId())
-          && Objects.nonNull(numOfLocationsByPoLineIdAndLocationId.get(piece.getPoLineId()))
-          && Objects.nonNull(numOfLocationsByPoLineIdAndLocationId.get(piece.getPoLineId()).get(piece.getLocationId())) )
+          && Objects.nonNull(piece.getLocationId()))
         .collect(groupingBy(Piece::getPoLineId, groupingBy(Piece::getLocationId, summingInt(q -> 1))));
 
 
-      numOfLocationsByPoLineIdAndLocationId.forEach((poLineId, numOfLocationsByLocationId) -> numOfLocationsByLocationId
+      numOfPiecesByPoLineIdAndLocationId.forEach((poLineId, numOfLocationsByLocationId) -> numOfLocationsByLocationId
         .forEach((locationId, quantity) -> {
           Integer numOfPieces = 0;
-          if (numOfPiecesByPoLineIdAndLocationId.get(poLineId) != null && numOfPiecesByPoLineIdAndLocationId.get(poLineId).get(locationId) != null) {
-            numOfPieces = numOfPiecesByPoLineIdAndLocationId.get(poLineId).get(locationId);
+          if (numOfLocationsByPoLineIdAndLocationId.get(poLineId) != null && numOfLocationsByPoLineIdAndLocationId.get(poLineId).get(locationId) != null) {
+            numOfPieces = numOfLocationsByPoLineIdAndLocationId.get(poLineId).get(locationId);
           }
-          if (quantity < numOfPieces) {
+          if (quantity > numOfPieces) {
             throw new HttpException(422, PIECES_TO_BE_DELETED.toError());
           }
       }));

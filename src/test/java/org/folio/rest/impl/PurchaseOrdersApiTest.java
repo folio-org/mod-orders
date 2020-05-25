@@ -1889,8 +1889,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().get(1).setCheckinItems(true);
     reqData.getCompositePoLines().forEach(s -> s.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING));
 
-    preparePiecesForCompositePo(reqData);
-
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
     int polCount = reqData.getCompositePoLines().size();
