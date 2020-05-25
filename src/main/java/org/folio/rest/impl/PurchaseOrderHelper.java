@@ -1094,11 +1094,13 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
       numOfLocationsByPoLineIdAndLocationId.forEach((poLineId, numOfLocationsByLocationId) -> numOfLocationsByLocationId
         .forEach((locationId, quantity) -> {
-          Integer numOfPieces = numOfPiecesByPoLineIdAndLocationId.get(poLineId) == null ? 0 :
-          numOfPiecesByPoLineIdAndLocationId.get(poLineId).get(locationId) == null ? 0 : numOfPiecesByPoLineIdAndLocationId.get(poLineId).get(locationId);
-        if (quantity < numOfPieces) {
-          throw new HttpException(422, PIECES_TO_BE_DELETED.toError());
-        }
+          Integer numOfPieces = 0;
+          if (numOfPiecesByPoLineIdAndLocationId.get(poLineId) != null && numOfPiecesByPoLineIdAndLocationId.get(poLineId).get(locationId) != null) {
+            numOfPieces = numOfPiecesByPoLineIdAndLocationId.get(poLineId).get(locationId);
+          }
+          if (quantity < numOfPieces) {
+            throw new HttpException(422, PIECES_TO_BE_DELETED.toError());
+          }
       }));
     }
   }
