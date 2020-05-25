@@ -27,6 +27,7 @@ import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.ORGANIZATION_NOT_A_VENDOR;
 import static org.folio.orders.utils.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
+import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_DELETED;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
@@ -38,18 +39,7 @@ import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
-import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
-import static org.folio.orders.utils.ResourcePathResolver.PAYMENT_STATUS;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
-import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
-import static org.folio.orders.utils.ResourcePathResolver.RECEIPT_STATUS;
-import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
-import static org.folio.orders.utils.ResourcePathResolver.TITLES;
-import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
+import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.impl.AbstractHelper.MAX_IDS_FOR_GET_RQ;
@@ -64,34 +54,8 @@ import static org.folio.rest.impl.InventoryHelper.INSTANCE_STATUS_ID;
 import static org.folio.rest.impl.InventoryHelper.INSTANCE_TYPE_ID;
 import static org.folio.rest.impl.InventoryHelper.ITEMS;
 import static org.folio.rest.impl.InventoryHelper.ITEM_MATERIAL_TYPE_ID;
-import static org.folio.rest.impl.InventoryInteractionTestHelper.joinExistingAndNewItems;
-import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInstanceLinksForUpdatedOrder;
-import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyInventoryInteraction;
-import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesCreated;
-import static org.folio.rest.impl.InventoryInteractionTestHelper.verifyPiecesQuantityForSuccessCase;
-import static org.folio.rest.impl.MockServer.BUDGET_IS_INACTIVE_TENANT;
-import static org.folio.rest.impl.MockServer.BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT;
-import static org.folio.rest.impl.MockServer.FUND_CANNOT_BE_PAID_TENANT;
-import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
-import static org.folio.rest.impl.MockServer.LEDGER_NOT_FOUND_FOR_TRANSACTION_TENANT;
-import static org.folio.rest.impl.MockServer.addMockEntry;
-import static org.folio.rest.impl.MockServer.getContributorNameTypesSearches;
-import static org.folio.rest.impl.MockServer.getCreatedEncumbrances;
-import static org.folio.rest.impl.MockServer.getCreatedHoldings;
-import static org.folio.rest.impl.MockServer.getCreatedInstances;
-import static org.folio.rest.impl.MockServer.getCreatedItems;
-import static org.folio.rest.impl.MockServer.getCreatedOrderSummaries;
-import static org.folio.rest.impl.MockServer.getCreatedPieces;
-import static org.folio.rest.impl.MockServer.getHoldingsSearches;
-import static org.folio.rest.impl.MockServer.getInstanceStatusesSearches;
-import static org.folio.rest.impl.MockServer.getInstanceTypesSearches;
-import static org.folio.rest.impl.MockServer.getInstancesSearches;
-import static org.folio.rest.impl.MockServer.getItemUpdates;
-import static org.folio.rest.impl.MockServer.getItemsSearches;
-import static org.folio.rest.impl.MockServer.getLoanTypesSearches;
-import static org.folio.rest.impl.MockServer.getPieceSearches;
-import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
-import static org.folio.rest.impl.MockServer.getQueryParams;
+import static org.folio.rest.impl.InventoryInteractionTestHelper.*;
+import static org.folio.rest.impl.MockServer.*;
 import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -139,22 +103,12 @@ import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.POProtectedFields;
 import org.folio.rest.acq.model.Ongoing;
 import org.folio.rest.acq.model.finance.Fund;
-import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
-import org.folio.rest.jaxrs.model.CloseReason;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
-import org.folio.rest.jaxrs.model.Contributor;
-import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Physical.CreateInventory;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
@@ -251,7 +205,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(50d);
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-        prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertThat(resp.getCompositePoLines().get(0).getCost().getPoLineEstimatedPrice(), equalTo(47.98));
   }
@@ -280,7 +234,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     // Amount < 0 is not allowed
     Errors errorResponse = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-        prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
+      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
 
     assertThat(errorResponse.getErrors(), hasSize(1));
 
@@ -311,7 +265,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(85d);
 
     Errors errorResponse = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-        prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
+      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
 
     assertThat(errorResponse.getErrors(), hasSize(1));
 
@@ -343,7 +297,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     // Amount < 0 is not allowed
     Errors errorResponse = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-        prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
+      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
 
     assertThat(errorResponse.getErrors(), hasSize(1));
 
@@ -883,6 +837,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     removeAllEncumbranceLinks(reqData);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     MockServer.addMockTitles(reqData.getCompositePoLines());
+    preparePiecesForCompositePo(reqData);
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
     List<JsonObject> createdPieces = getCreatedPieces();
@@ -913,8 +868,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     removeAllEncumbranceLinks(reqData);
     compositePoLine.getFundDistribution().get(0).setFundId(ID_DOES_NOT_EXIST);
+    compositePoLine.setId(UUID.randomUUID().toString());
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
+    preparePiecesForCompositePo(reqData);
     Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), APPLICATION_JSON, 400).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(1));
@@ -938,7 +895,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     addMockEntry(FUNDS, fund);
     removeAllEncumbranceLinks(reqData);
     compositePoLine.getFundDistribution().forEach(fundDistribution -> fundDistribution.setFundId(fund.getId()));
+    compositePoLine.setId(UUID.randomUUID().toString());
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    preparePiecesForCompositePo(reqData);
 
     Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), APPLICATION_JSON, 400).as(Errors.class);
 
@@ -963,6 +922,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     addMockEntry(FUNDS, fund);
     removeAllEncumbranceLinks(reqData);
     compositePoLine.getFundDistribution().forEach(fundDistribution -> fundDistribution.setFundId(fund.getId()));
+    compositePoLine.setId(UUID.randomUUID().toString());
+    preparePiecesForCompositePo(reqData);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
     Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), APPLICATION_JSON, 500).as(Errors.class);
@@ -983,9 +944,11 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     CompositePoLine compositePoLine = reqData.getCompositePoLines().get(0);
 
+    compositePoLine.setId(UUID.randomUUID().toString());
     compositePoLine.getFundDistribution().clear();
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
+    preparePiecesForCompositePo(reqData);
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
     assertThat(getCreatedOrderSummaries(), hasSize(0));
@@ -1004,6 +967,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    preparePiecesForCompositePo(reqData);
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
     List<JsonObject> items = joinExistingAndNewItems();
     List<JsonObject> createdPieces = getCreatedPieces();
@@ -1051,8 +1015,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     request.put("poNumber", "1234");
     String body= request.toString();
 
-     verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
-       prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422);
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
+      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422);
 
   }
 
@@ -1066,8 +1030,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     request.put("vendor", EXISTING_REQUIRED_VENDOR_UUID);
     String body = request.toString();
 
-     verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
-       prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID), APPLICATION_JSON, 400);
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
+      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID), APPLICATION_JSON, 400);
 
   }
 
@@ -1537,6 +1501,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     // Make sure that mock PO has 2 po lines
     assertEquals(2, reqData.getCompositePoLines().size());
 
+    preparePiecesForCompositePo(reqData);
+
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     // MODORDERS-178 guarantee electronic resource for the second PO Line but set "create items" to NONE
     reqData.getCompositePoLines().get(1).setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
@@ -1550,6 +1516,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     int polCount = reqData.getCompositePoLines().size();
 
+    System.out.println(MockServer.serverRqRs);
+
     verifyInstanceLinksForUpdatedOrder(reqData);
     verifyInventoryInteraction(reqData, polCount - 1);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), reqData.getCompositePoLines().size());
@@ -1557,10 +1525,34 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
+  public void testPutOrdersByIdToChangeStatusToOpenRestricted() throws Exception {
+    logger.info("=== Test Put Order By Id to change status of Order to Open ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    assertEquals(2, reqData.getCompositePoLines().size());
+
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    // Create extra-pieces
+    preparePiecesForCompositePo(reqData);
+    preparePiecesForCompositePo(reqData);
+
+    Errors response = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 422).as(Errors.class);
+
+    verifyInventoryNonInteraction();
+
+    List<Error> errors = response.getErrors();
+    assertThat(errors, hasSize(1));
+    Error error = errors.get(0);
+    assertThat(error.getCode(), is(PIECES_TO_BE_DELETED.getCode()));
+  }
+
+  @Test
   public void testPutOrdersByIdToOpenOrderWithLocationButCreateInventoryNoneForOneOfResources() {
     logger.info("=== Test Put Order By Id to open order - P/E Mix PO Line, location specified but create inventory is None for electronic resource ===");
 
     CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
+    reqData.setId(PO_LINES_EMPTY_COLLECTION_ID);
     CompositePoLine line = getMinimalContentCompositePoLine();
 
     reqData.withVendor(ACTIVE_VENDOR_ID);
@@ -1570,21 +1562,23 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     line.setPoLineNumber(reqData.getPoNumber() + "-1");
 
     line.setLocations(Collections.singletonList(new Location().withLocationId(UUID.randomUUID()
-        .toString())
-        .withQuantityElectronic(2)
-        .withQuantityPhysical(2)));
+      .toString())
+      .withQuantity(4)
+      .withQuantityElectronic(2)
+      .withQuantityPhysical(2)));
 
     line.setCost(new Cost().withCurrency("USD")
-        .withListUnitPrice(1.0)
-        .withListUnitPriceElectronic(1.0)
-        .withQuantityElectronic(2)
-        .withQuantityPhysical(2));
+      .withListUnitPrice(1.0)
+      .withListUnitPriceElectronic(1.0)
+      .withQuantityElectronic(2)
+      .withQuantityPhysical(2));
 
     addMockEntry(PURCHASE_ORDER, reqData);
     addMockEntry(PO_LINES, line);
     createMockTitle(line);
 
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    preparePiecesForCompositePo(reqData);
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
     List<JsonObject> createdPieces = getCreatedPieces();
@@ -1604,6 +1598,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     Map<String, String> uuids = new HashMap<>();
     // Populate instanceIds
     reqData.getCompositePoLines().forEach(p -> p.setInstanceId(uuids.compute(p.getId(), (k, v) -> UUID.randomUUID().toString())));
+    MockServer.addMockTitles(reqData.getCompositePoLines());
+    preparePiecesForCompositePo(reqData);
     // Update order
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
     verifyInstanceLinksForUpdatedOrder(reqData);
@@ -1700,7 +1696,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
       .toString(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_TOKEN, X_OKAPI_USER_ID), APPLICATION_JSON, 422)
-        .as(Errors.class);
+      .as(Errors.class);
 
     assertEquals(FUND_CANNOT_BE_PAID.getCode(), errors.getErrors().get(0).getCode());
 
@@ -1909,6 +1905,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     // Get Open Order
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     MockServer.addMockTitles(reqData.getCompositePoLines());
+    preparePiecesForCompositePo(reqData);
     reqData.getCompositePoLines().clear();
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
@@ -1958,6 +1955,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     // Assert that only one PO line presents
     assertEquals(1, polCount);
 
+    preparePiecesForCompositePo(reqData);
+
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), APPLICATION_JSON, 500);
 
     // Verify inventory GET and POST requests for instance, holding and item records
@@ -1979,10 +1978,12 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     MockServer.addMockTitles(reqData.getCompositePoLines());
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
+    preparePiecesForCompositePo(reqData);
+
     final Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData),
       APPLICATION_JSON, 500)
-        .body()
-          .as(Errors.class);
+      .body()
+      .as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     assertEquals(2, errors.getErrors().size());
@@ -2011,7 +2012,11 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     }
 
     // Set location ids to one which emulates item creation failure
-    reqData.getCompositePoLines().get(1).getLocations().forEach(location -> location.setLocationId(ID_FOR_INTERNAL_SERVER_ERROR));
+    reqData.getCompositePoLines().get(1).getLocations().forEach(location -> location.withLocationId(ID_FOR_INTERNAL_SERVER_ERROR));
+
+    reqData.getCompositePoLines().get(1).getLocations().get(0).setLocationId(UUID.randomUUID().toString());
+
+    preparePiecesForCompositePo(reqData);
 
     String path = String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId());
 
@@ -2041,9 +2046,28 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     verifyInstanceLinksNotCreatedForPoLine();
 
     // Verify pieces were created
-    assertEquals(calculateTotalQuantity(reqData.getCompositePoLines().get(0)), createdPieces.size());
+    assertEquals(calculateTotalQuantity(reqData.getCompositePoLines().get(0))
+      + calculateTotalQuantity(reqData.getCompositePoLines().get(1)) - 1, createdPieces.size());
 
-    verifyPiecesCreated(items, reqData.getCompositePoLines().subList(0, 1), createdPieces);
+    // Effectively remove non-processed locations with ID_FOR_INTERNAL_SERVER_ERROR to exclude them from
+    // created pieces verification
+    reqData.getCompositePoLines().forEach(poLine -> {
+      poLine.getLocations().removeIf(l -> {
+        if (l.getLocationId().equals(ID_FOR_INTERNAL_SERVER_ERROR)) {
+          if (poLine.getCost().getQuantityElectronic() != null) {
+            poLine.getCost().setQuantityElectronic(poLine.getCost().getQuantityElectronic() - l.getQuantityElectronic());
+          }
+          if (poLine.getCost().getQuantityPhysical() != null) {
+            poLine.getCost().setQuantityPhysical(poLine.getCost().getQuantityPhysical() - l.getQuantityPhysical());
+          }
+          return true;
+        } else {
+          return false;
+        }
+      });
+    });
+
+    verifyPiecesCreated(items, reqData.getCompositePoLines(), createdPieces);
   }
 
   private void verifyInstanceLinksNotCreatedForPoLine() {
@@ -2379,6 +2403,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     reqData.setVendor(INACTIVE_VENDOR_ID);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
+    preparePiecesForCompositePo(reqData);
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), EMPTY, 204);
 
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
@@ -2468,7 +2493,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
     Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()),
-        JsonObject.mapFrom(reqData), EMPTY, 422).as(Errors.class);
+      JsonObject.mapFrom(reqData), EMPTY, 422).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(1));
 
@@ -2715,7 +2740,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     allProtectedFieldsModification.put(POProtectedFields.MANUAL_PO.getFieldName(), true);
     allProtectedFieldsModification.put(POProtectedFields.RE_ENCUMBER.getFieldName(), true);
     allProtectedFieldsModification.put(POProtectedFields.ORDER_TYPE.getFieldName(),
-        CompositePurchaseOrder.OrderType.ONGOING.value());
+      CompositePurchaseOrder.OrderType.ONGOING.value());
     Ongoing ongoing = new Ongoing();
     ongoing.setManualRenewal(true);
     allProtectedFieldsModification.put(POProtectedFields.ONGOING.getFieldName(), JsonObject.mapFrom(ongoing));
@@ -2751,11 +2776,11 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineProtectedFields.CHECKIN_ITEMS.getFieldName()), true);
     allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineProtectedFields.ACQUISITION_METHOD.getFieldName()),
-        "Depository");
+      "Depository");
     allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineProtectedFields.COST_ADDITIONAL_COST.getFieldName()),
-        10.32);
+      10.32);
     allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineProtectedFields.ERESOURCE_USER_LIMIT.getFieldName()),
-        100);
+      100);
 
     checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, reqData, allProtectedFieldsModification);
   }
@@ -2774,7 +2799,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     allProtectedFieldsModification.put(POProtectedFields.MANUAL_PO.getFieldName(), true);
     allProtectedFieldsModification.put(POProtectedFields.RE_ENCUMBER.getFieldName(), true);
     allProtectedFieldsModification.put(POProtectedFields.ORDER_TYPE.getFieldName(),
-        CompositePurchaseOrder.OrderType.ONE_TIME.value());
+      CompositePurchaseOrder.OrderType.ONE_TIME.value());
     allProtectedFieldsModification.put(POProtectedFields.ONGOING.getFieldName(), null);
     CloseReason closeReason = new CloseReason();
     closeReason.setNote("testing reason on Closed Order");
@@ -2982,9 +3007,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 400);
 
     Error err = resp.getBody()
-        .as(Errors.class)
-        .getErrors()
-        .get(0);
+      .as(Errors.class)
+      .getErrors()
+      .get(0);
 
     assertThat(err.getMessage(), equalTo(ISBN_NOT_VALID.getDescription()));
     assertThat(err.getCode(), equalTo(ISBN_NOT_VALID.getCode()));
@@ -3019,9 +3044,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     Response resp = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), APPLICATION_JSON, 400);
 
     Error err = resp.getBody()
-        .as(Errors.class)
-        .getErrors()
-        .get(0);
+      .as(Errors.class)
+      .getErrors()
+      .get(0);
 
 
     assertThat(err.getMessage(), equalTo(ISBN_NOT_VALID.getDescription()));
@@ -3058,9 +3083,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1, X_OKAPI_USER_ID), APPLICATION_JSON, 403);
 
     Error err = resp.getBody()
-        .as(Errors.class)
-        .getErrors()
-        .get(0);
+      .as(Errors.class)
+      .getErrors()
+      .get(0);
 
     assertThat(err.getCode(), equalTo(ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS.getCode()));
   }
@@ -3078,9 +3103,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1, X_OKAPI_USER_ID, APPROVAL_PERMISSIONS_HEADER), APPLICATION_JSON, 400);
 
     Error err = resp.getBody()
-        .as(Errors.class)
-        .getErrors()
-        .get(0);
+      .as(Errors.class)
+      .getErrors()
+      .get(0);
 
     assertThat(err.getCode(), equalTo(ErrorCodes.APPROVAL_REQUIRED_TO_OPEN.getCode()));
   }
@@ -3098,8 +3123,8 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(pendingData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.PENDING));
 
     CompositePurchaseOrder responseData = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(pendingData)
-      .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1, X_OKAPI_USER_ID, APPROVAL_PERMISSIONS_HEADER),
-        APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+        .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1, X_OKAPI_USER_ID, APPROVAL_PERMISSIONS_HEADER),
+      APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertThat(responseData.getApprovalDate(), notNullValue());
     assertThat(responseData.getApprovedById(), notNullValue());
@@ -3109,18 +3134,18 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     // -- test config set to "isApprovalRequired":false, approval details are not set when order is approved in PENDING state
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_PENDING_STATUS_WITHOUT_PO_LINES)
-        .mapTo(CompositePurchaseOrder.class);
+      .mapTo(CompositePurchaseOrder.class);
     reqData.setVendor(ACTIVE_VENDOR_ID);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
-      assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.PENDING));
+    assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.PENDING));
 
-      CompositePurchaseOrder respData = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
+    CompositePurchaseOrder respData = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
         .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, APPROVAL_PERMISSIONS_HEADER),
-          APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
-      assertThat(respData.getApprovalDate(), nullValue());
-      assertThat(respData.getApprovedById(), nullValue());
-      assertThat(respData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.PENDING));
+    assertThat(respData.getApprovalDate(), nullValue());
+    assertThat(respData.getApprovedById(), nullValue());
+    assertThat(respData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.PENDING));
   }
 
 
@@ -3135,10 +3160,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
 
     CompositePurchaseOrder respData = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
-        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
-      assertThat(respData.getApprovalDate(), notNullValue());
-      assertThat(respData.getApprovedById(), notNullValue());
+    assertThat(respData.getApprovalDate(), notNullValue());
+    assertThat(respData.getApprovedById(), notNullValue());
   }
 
   @Test
@@ -3376,14 +3401,20 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public void testPutShouldFailedIfOrderTransitFromPendingToOpenStatusAndMaterialTypeIsAbsentInOrderLine() {
     logger.info("===Test Success Post Failed test completion if material type is absent and Order in PENDING status");
     CompositePurchaseOrder reqData = getMockAsJson(ORDER_WITHOUT_MATERIAL_TYPE_JSON).mapTo(CompositePurchaseOrder.class);
-    reqData.getCompositePoLines().forEach(this::removeMaterialType);
+    reqData.getCompositePoLines().forEach(poLine -> {
+      removeMaterialType(poLine);
+      poLine.setId(UUID.randomUUID().toString());
+    });
 
     CompositePurchaseOrder po = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
       .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201)
       .as(CompositePurchaseOrder.class);
 
     CompositePurchaseOrder putReq = prepareCompositeOrderOpenRequest(po);
+    putReq.setCompositePoLines(reqData.getCompositePoLines());
+    preparePiecesForCompositePo(putReq);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+
 
     List<Error> errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_WITHOUT_MATERIAL_TYPES_ID), JsonObject.mapFrom(putReq)
       .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422)
@@ -3405,6 +3436,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     compositeOrderPutRequest.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     compositeOrderPutRequest.setVendor(po.getVendor());
     compositeOrderPutRequest.setMetadata(po.getMetadata());
+    compositeOrderPutRequest.setCompositePoLines(po.getCompositePoLines());
 
     return compositeOrderPutRequest;
   }
@@ -3421,5 +3453,15 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     order.put("workflowStatus", "Pending");
 
     return order;
+  }
+
+  private void preparePiecesForCompositePo(CompositePurchaseOrder reqData) {
+    reqData.getCompositePoLines().forEach(poLine -> {
+      poLine.getLocations().forEach(location -> {
+        for (int i = 0; i < location.getQuantity(); i++) {
+          addMockEntry(PIECES, new Piece().withPoLineId(poLine.getId()).withLocationId(location.getLocationId()).withFormat(Piece.Format.OTHER).withReceivingStatus(Piece.ReceivingStatus.EXPECTED));
+        }
+      });
+    });
   }
 }

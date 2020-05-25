@@ -8,6 +8,7 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_TYPE;
+import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
@@ -51,6 +52,7 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
@@ -65,6 +67,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 public class PiecesHelper extends AbstractHelper {
   private static final String DELETE_PIECE_BY_ID = resourceByIdPath(PIECES, "%s") + "?lang=%s";
@@ -76,6 +79,14 @@ public class PiecesHelper extends AbstractHelper {
   private ProtectionHelper protectionHelper;
   private InventoryHelper inventoryHelper;
   private TitlesHelper titlesHelper;
+
+  private static final String GET_PIECES_BY_QUERY = resourcesPath(PIECES) + SEARCH_PARAMS;
+
+  public PiecesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+    super(httpClient, okapiHeaders, ctx, lang);
+    protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
+    inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
+  }
 
   public PiecesHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
@@ -167,9 +178,16 @@ public class PiecesHelper extends AbstractHelper {
 
   public CompletableFuture<Void> deletePiece(String id) {
     return getPieceById(id)
-      .thenCompose(piece -> getOrderByPoLineId(piece.getPoLineId()))
-      .thenCompose(purchaseOrder -> protectionHelper.isOperationRestricted(purchaseOrder.getAcqUnitIds(), DELETE))
-      .thenCompose(aVoid -> handleDeleteRequest(String.format(DELETE_PIECE_BY_ID, id, lang), httpClient, ctx, okapiHeaders, logger));
+      .thenCompose(piece -> getOrderByPoLineId(piece.getPoLineId())
+        .thenCompose(purchaseOrder -> protectionHelper.isOperationRestricted(purchaseOrder.getAcqUnitIds(), DELETE))
+        .thenCompose(vVoid -> inventoryHelper.getRequestsByItemId(piece.getItemId()))
+        .thenAccept(items -> {
+          if (CollectionUtils.isNotEmpty(items)) {
+            throw new HttpException(422, ErrorCodes.REQUEST_FOUND.toError());
+          }
+        })
+        .thenCompose(aVoid -> handleDeleteRequest(String.format(DELETE_PIECE_BY_ID, id, lang), httpClient, ctx, okapiHeaders, logger))
+      );
   }
 
 
@@ -366,5 +384,11 @@ public class PiecesHelper extends AbstractHelper {
        itemFuture.completeExceptionally(e);
     }
     return itemFuture;
+  }
+
+  public CompletableFuture<PieceCollection> getPieces(int limit, int offset, String query) {
+    String endpoint = String.format(GET_PIECES_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
+    return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(json -> VertxCompletableFuture.supplyBlockingAsync(ctx, () -> json.mapTo(PieceCollection.class)));
   }
 }

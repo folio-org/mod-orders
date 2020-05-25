@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "10.3",
+      "version": "10.4",
       "handlers": [
         {
           "methods": [
@@ -356,7 +356,8 @@
             "orders-storage.po-lines.item.get",
             "orders-storage.purchase-orders.item.get",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "circulation.requests.collection.get"
           ]
         }
       ]
@@ -760,6 +761,10 @@
     {
       "id": "orders-storage.configuration.suffixes",
       "version": "1.0"
+    },
+    {
+      "id": "circulation",
+      "version": "9.3"
     }
   ],
   "permissionSets": [

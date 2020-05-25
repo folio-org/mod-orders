@@ -2,20 +2,28 @@ package org.folio.rest.impl;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
+import static org.folio.orders.utils.ErrorCodes.REQUEST_FOUND;
+import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertNull;
 
 import org.folio.HttpStatus;
 import org.folio.rest.acq.model.Piece;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.junit.Test;
 
 import io.restassured.http.Header;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+
+import java.util.List;
+import java.util.UUID;
 
 public class PieceApiTest extends ApiTestBase {
 
@@ -125,6 +133,25 @@ public class PieceApiTest extends ApiTestBase {
     logger.info("=== Test delete piece by id ===");
 
     verifyDeleteResponse(String.format(PIECES_ID_PATH, VALID_UUID), "", 204);
+  }
+
+  @Test
+  public void deletePieceByIdWithRequestsTest() {
+    logger.info("=== Test delete piece by id without requests ===");
+
+    PurchaseOrder order = new PurchaseOrder().withId(UUID.randomUUID().toString());
+    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId());
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withItemId("522a501a-56b5-48d9-b28a-3a8f02482d98").withPoLineId(poLine.getId());
+
+    MockServer.addMockEntry(PIECES, JsonObject.mapFrom(piece));
+    MockServer.addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
+    MockServer.addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
+
+    Errors response = verifyDeleteResponse(String.format(PIECES_ID_PATH, piece.getId()), "", 422).as(Errors.class);
+    List<Error> errors = response.getErrors();
+    assertThat(errors, hasSize(1));
+    Error error = errors.get(0);
+    assertThat(error.getCode(), is(REQUEST_FOUND.getCode()));
   }
 
   @Test

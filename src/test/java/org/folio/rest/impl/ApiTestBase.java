@@ -17,6 +17,7 @@ import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
 import static org.folio.rest.impl.MockServer.serverRqRs;
+import static org.folio.rest.impl.TitlesApiTest.SAMPLE_TITLE_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.Matchers.equalTo;
@@ -153,6 +154,9 @@ public class ApiTestBase {
   private static final String LOCATION_ID = "f34d27c6-a8eb-461b-acd6-5dea81771e70";
 
   private static boolean runningOnOwn;
+
+  public static final String PIECE_ID = "0f1bb087-72e9-44ce-a145-bfc2e7b005cf";
+  public static final String ITEM_ID = "522a501a-56b5-48d9-b28a-3a8f02482d97";
 
   // The variable is defined in main thread but the value is going to be inserted in vert.x event loop thread
   private static volatile List<Message<JsonObject>> eventMessages = new ArrayList<>();
@@ -479,10 +483,11 @@ public class ApiTestBase {
 
   public static Piece getMinimalContentPiece(String poLineId) {
     return new Piece()
-      .withId(UUID.randomUUID().toString())
+      .withId(PIECE_ID)
       .withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
       .withFormat(Piece.Format.PHYSICAL)
-      .withTitleId(UUID.randomUUID().toString())
+      .withItemId(ITEM_ID)
+      .withTitleId(SAMPLE_TITLE_ID)
       .withReceiptDate(new Date())
       .withPoLineId(poLineId);
   }

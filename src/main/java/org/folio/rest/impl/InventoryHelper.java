@@ -92,6 +92,7 @@ public class InventoryHelper extends AbstractHelper {
   static final String INSTANCE_TYPES = "instanceTypes";
   public static final String ITEMS = "items";
   static final String LOAN_TYPES = "loantypes";
+  public static final String REQUESTS = "requests";
 
   // mod-configuration: config names and default values
   static final String CONFIG_NAME_INSTANCE_TYPE_CODE = "inventory-instanceTypeCode";
@@ -125,6 +126,7 @@ public class InventoryHelper extends AbstractHelper {
     apis.put(INSTANCE_TYPES, "/instance-types?query=code==%s&lang=%s");
     apis.put(INSTANCES, "/inventory/instances?query=%s&lang=%s");
     apis.put(ITEMS, "/inventory/items?query=%s&limit=%d&lang=%s");
+    apis.put(REQUESTS, "/circulation/requests?query=%s&limit=%d");
 
     INVENTORY_LOOKUP_ENDPOINTS = Collections.unmodifiableMap(apis);
   }
@@ -189,7 +191,19 @@ public class InventoryHelper extends AbstractHelper {
     String query = encodeQuery(HelperUtils.convertIdsToCqlQuery(ids), logger);
     String endpoint = buildLookupEndpoint(ITEMS, query, ids.size(), lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(this::extractItems);
+      .thenApply(response -> extractEntities(response, ITEMS));
+  }
+
+  /**
+   * Returns list of requests for specified item.
+   *
+   * @param itemId id of Item
+   * @return future with list of requests
+   */
+  public CompletableFuture<List<JsonObject>> getRequestsByItemId(String itemId) {
+    String endpoint = buildLookupEndpoint(REQUESTS, "itemId==" + itemId, Integer.MAX_VALUE, lang);
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(response -> extractEntities(response, REQUESTS));
   }
 
   /**
@@ -201,7 +215,7 @@ public class InventoryHelper extends AbstractHelper {
   public CompletableFuture<List<JsonObject>> getItemRecordsByQuery(String query) {
     String endpoint = buildLookupEndpoint(ITEMS, query, Integer.MAX_VALUE, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(this::extractItems);
+      .thenApply(response -> extractEntities(response, ITEMS));
   }
 
   public CompletableFuture<Void> updateItem(JsonObject item) {
@@ -542,23 +556,23 @@ public class InventoryHelper extends AbstractHelper {
     String endpoint = String.format(LOOKUP_ITEM_STOR_ENDPOINT, query, expectedQuantity, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(itemsCollection -> {
-        List<JsonObject> items = extractItems(itemsCollection);
+        List<JsonObject> items = extractEntities(itemsCollection, ITEMS);
         logger.debug("{} existing items found out of {} for PO Line with '{}' id", items.size(), expectedQuantity, compPOL.getId());
         return items;
       });
   }
 
   /**
-   * Validates if the json object contains items and returns items as list of JsonObject elements
-   * @param itemEntries {@link JsonObject} representing item storage response
-   * @return list of the item records as JsonObject elements
+   * Validates if the json object contains entries and returns entries as list of JsonObject elements
+   * @param entries {@link JsonObject} representing item storage response
+   * @return list of the entry records as JsonObject elements
    */
-  private List<JsonObject> extractItems(JsonObject itemEntries) {
-    return Optional.ofNullable(itemEntries.getJsonArray(ITEMS))
-                   .map(items -> items.stream()
-                                      .map(item -> (JsonObject) item)
-                                      .collect(toList()))
-                   .orElseGet(Collections::emptyList);
+  private List<JsonObject> extractEntities(JsonObject entries, String key) {
+    return Optional.ofNullable(entries.getJsonArray(key))
+      .map(objects -> objects.stream()
+        .map(entry -> (JsonObject) entry)
+        .collect(toList()))
+      .orElseGet(Collections::emptyList);
   }
 
 /**
