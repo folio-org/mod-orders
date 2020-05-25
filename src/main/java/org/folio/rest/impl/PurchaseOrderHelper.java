@@ -1082,7 +1082,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
       Map<String, Map<String, Integer>> numOfLocationsByPoLineIdAndLocationId = compPO.getCompositePoLines().stream()
         .filter(line -> !line.getIsPackage() && line.getReceiptStatus() != CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED && !line.getCheckinItems())
-        .collect(toMap(CompositePoLine::getId, poLine -> poLine.getLocations().stream().collect(toMap(Location::getLocationId, Location::getQuantity))));
+        .collect(toMap(CompositePoLine::getId, poLine -> Optional.of(poLine.getLocations()).orElse(new ArrayList<>()).stream().collect(toMap(Location::getLocationId, Location::getQuantity))));
 
       Map<String, Map<String, Integer>> numOfPiecesByPoLineIdAndLocationId = pieces.getPieces().stream()
         .filter(piece -> Objects.nonNull(piece.getPoLineId())
@@ -1090,7 +1090,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
         .collect(groupingBy(Piece::getPoLineId, groupingBy(Piece::getLocationId, summingInt(q -> 1))));
 
 
-      numOfPiecesByPoLineIdAndLocationId.forEach((poLineId, numOfLocationsByLocationId) -> numOfLocationsByLocationId
+      numOfPiecesByPoLineIdAndLocationId.forEach((poLineId, numOfPiecesByLocationId) -> numOfPiecesByLocationId
         .forEach((locationId, quantity) -> {
           Integer numOfPieces = 0;
           if (numOfLocationsByPoLineIdAndLocationId.get(poLineId) != null && numOfLocationsByPoLineIdAndLocationId.get(poLineId).get(locationId) != null) {
