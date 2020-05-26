@@ -16,6 +16,7 @@ import static org.folio.orders.utils.ErrorCodes.ONGOING_NOT_ALLOWED;
 import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_DELETED;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS;
+import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_UNOPEN_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
@@ -105,6 +106,7 @@ import java.util.stream.Stream;
 public class PurchaseOrderHelper extends AbstractHelper {
 
   private static final String PERMISSION_ORDER_APPROVE = "orders.item.approve";
+  private static final String PERMISSION_ORDER_UNOPEN = "orders.item.unopen";
   private static final String SEARCH_ORDERS_BY_LINES_DATA = resourcesPath(SEARCH_ORDERS) + SEARCH_PARAMS;
   public static final String GET_PURCHASE_ORDERS = resourcesPath(PURCHASE_ORDER) + SEARCH_PARAMS;
   public static final String EMPTY_ARRAY = "[]";
@@ -220,6 +222,11 @@ public class PurchaseOrderHelper extends AbstractHelper {
               return checkOrderApprovalPermissions(compPO);
             }
             return completedFuture(null);
+          })
+          .thenAccept(ok -> {
+            if (isTransitionToUnopen(poFromStorage, compPO)) {
+              checkOrderUnopenPermissions();
+            }
           })
           .thenCompose(v -> {
             if (isTransitionToOpen) {
@@ -740,6 +747,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
     });
   }
 
+  private void checkOrderUnopenPermissions() {
+    if (isUserNotHaveUnopenPermission()) {
+      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_UNOPEN_PERMISSIONS);
+    }
+  }
+
   private boolean isApprovalRequiredConfiguration(JsonObject config) {
     return Optional.ofNullable(config.getString("approvals"))
       .map(approval -> new JsonObject(approval).getBoolean("isApprovalRequired"))
@@ -833,6 +846,11 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private boolean isTransitionToOpen(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO) {
     return poFromStorage.getWorkflowStatus() == PENDING && compPO.getWorkflowStatus() == OPEN;
   }
+
+  private boolean isTransitionToUnopen(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO) {
+    return poFromStorage.getWorkflowStatus() == OPEN && compPO.getWorkflowStatus() == PENDING;
+  }
+
 
   private boolean isPoNumberChanged(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
     return !StringUtils.equalsIgnoreCase(poFromStorage.getPoNumber(), updatedPo.getPoNumber());
@@ -1064,6 +1082,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private boolean isUserNotHaveApprovePermission() {
     return !getProvidedPermissions().contains(PERMISSION_ORDER_APPROVE);
+  }
+
+  private boolean isUserNotHaveUnopenPermission() {
+    return !getProvidedPermissions().contains(PERMISSION_ORDER_UNOPEN);
   }
 
   private CompositePurchaseOrder validateMaterialTypes(CompositePurchaseOrder purchaseOrder){
