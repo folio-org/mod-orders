@@ -108,6 +108,7 @@ public class ApiTestBase {
   public static final String ID_BAD_FORMAT = "123-45-678-90-abc";
   protected static final String ID_DOES_NOT_EXIST = "d25498e7-3ae6-45fe-9612-ec99e2700d2f";
   protected static final String ID_FOR_INTERNAL_SERVER_ERROR = "168f8a86-d26c-406e-813f-c7527f241ac3";
+  protected static final String ID_FOR_PIECES_INTERNAL_SERVER_ERROR = "93c5bb58-9429-4fa7-b06d-a829bdf16813";
   protected static final String PO_ID_GET_LINES_INTERNAL_SERVER_ERROR = "bad500bb-bbbb-500b-bbbb-bbbbbbbbbbbb";
   protected static final String PO_ID_PENDING_STATUS_WITH_PO_LINES = "e5ae4afd-3fa9-494e-a972-f541df9b877e";
   protected static final String PO_ID_PENDING_STATUS_WITHOUT_PO_LINES = "50fb922c-3fa9-494e-a972-f2801f1b9fd1";
@@ -512,7 +513,7 @@ public class ApiTestBase {
       .withAcquisitionMethod(CompositePoLine.AcquisitionMethod.PURCHASE)
       .withPhysical(new Physical().withMaterialType("2d1398ae-e1aa-4c7c-b9c9-15adf8cf6425"))
       .withCost(new Cost().withCurrency("EUR").withQuantityPhysical(1).withListUnitPrice(10.0))
-      .withLocations(Collections.singletonList(new Location().withLocationId("2a00b0be-1447-42a1-a112-124450991899").withQuantityPhysical(1)))
+      .withLocations(Collections.singletonList(new Location().withLocationId("2a00b0be-1447-42a1-a112-124450991899").withQuantityPhysical(1).withQuantity(1)))
       .withTitleOrPackage("Title")
       .withPurchaseOrderId(orderId);
   }

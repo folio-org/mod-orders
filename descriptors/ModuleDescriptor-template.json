@@ -94,7 +94,7 @@
     },
     {
       "id": "order-lines",
-      "version": "1.3",
+      "version": "1.4",
       "handlers": [
         {
           "methods": [
@@ -163,6 +163,7 @@
             "orders-storage.alerts.item.post",
             "orders-storage.alerts.item.put",
             "orders-storage.alerts.item.delete",
+            "orders-storage.pieces.collection.get",
             "orders-storage.po-lines.item.get",
             "orders-storage.po-lines.item.put",
             "orders-storage.purchase-orders.item.get",
