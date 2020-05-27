@@ -65,7 +65,8 @@
           ],
           "permissionsDesired": [
             "orders.acquisitions-units-assignments.manage",
-            "orders.item.approve"
+            "orders.item.approve",
+            "orders.item.unopen"
           ],
           "modulePermissions": [
             "modperms.orders.item.put"

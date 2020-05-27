@@ -180,6 +180,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
   public static final Header ALL_DESIRED_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(AcqDesiredPermissions.getValues()).encode());
   public static final Header APPROVAL_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(Collections.singletonList("orders.item.approve")).encode());
+  public static final Header UNOPEN_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(Collections.singletonList("orders.item.unopen")).encode());
   static final String ITEMS_NOT_FOUND = UUID.randomUUID().toString();
 
   @Test
@@ -3088,6 +3089,26 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
       .get(0);
 
     assertThat(err.getCode(), equalTo(ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS.getCode()));
+  }
+
+  @Test
+  public void testPostOrderWithHonorUserUnopenPermissions() {
+    logger.info("===  Test case when unopen permission is required and user does not have required permission===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, "c1465131-ed35-4308-872c-d7cdf0afc5f7")
+      .mapTo(CompositePurchaseOrder.class);
+    reqData.setVendor(ACTIVE_VENDOR_ID);
+    assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    reqData.setWorkflowStatus(WorkflowStatus.PENDING);
+
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 403).as(Errors.class);
+
+    assertEquals(ErrorCodes.USER_HAS_NO_UNOPEN_PERMISSIONS.getCode(), errors.getErrors().get(0).getCode());
+
+    // set unopen permission header
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, UNOPEN_PERMISSIONS_HEADER), "", 204);
   }
 
   @Test
