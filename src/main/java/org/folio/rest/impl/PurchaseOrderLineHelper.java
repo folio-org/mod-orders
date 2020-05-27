@@ -360,25 +360,22 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    */
   CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine) {
     return checkLocationsAndPiecesConsistency(compOrderLine)
-      .thenCompose( vVoid -> {
-        return getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
-          .thenCompose(lineFromStorage -> getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId())
-            .thenCompose(compOrder -> {
-              validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage, compOrder);
-              return protectionHelper.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE)
-                .thenCompose(v -> validateAndNormalizeISBN(compOrderLine))
-                .thenCompose(v -> validateAccessProviders(compOrderLine))
-                .thenApply(v -> lineFromStorage);
-            }))
-          .thenCompose(lineFromStorage -> {
-            // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
-            // update
-            compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
-            return updateOrderLine(compOrderLine, lineFromStorage)
-              .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage));
-          });
-
-      });
+      .thenCompose( vVoid -> getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
+        .thenCompose(lineFromStorage -> getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId())
+          .thenCompose(compOrder -> {
+            validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage, compOrder);
+            return protectionHelper.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE)
+              .thenCompose(v -> validateAndNormalizeISBN(compOrderLine))
+              .thenCompose(v -> validateAccessProviders(compOrderLine))
+              .thenApply(v -> lineFromStorage);
+          }))
+        .thenCompose(lineFromStorage -> {
+          // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
+          // update
+          compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
+          return updateOrderLine(compOrderLine, lineFromStorage)
+            .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage));
+        }));
 
   }
 
