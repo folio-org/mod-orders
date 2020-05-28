@@ -156,7 +156,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * @param query A query expressed as a CQL string (see dev.folio.org/reference/glossary#cql) using valid searchable fields.
    * @return Completable future which holds {@link PoLineCollection}
    */
-  CompletableFuture<PoLineCollection> getPoLines(int limit, int offset, String query) {
+  public CompletableFuture<PoLineCollection> getPoLines(int limit, int offset, String query) {
     return getPoLines(limit, offset, query, GET_PO_LINES_BY_QUERY);
   }
 
@@ -170,7 +170,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * @param query A query expressed as a CQL string (see dev.folio.org/reference/glossary#cql) using valid searchable fields.
    * @return Completable future which holds {@link PoLineCollection} on success or an exception on any error
    */
-  CompletableFuture<PoLineCollection> getOrderLines(int limit, int offset, String query) {
+  public CompletableFuture<PoLineCollection> getOrderLines(int limit, int offset, String query) {
     AcquisitionsUnitsHelper acqUnitsHelper = new AcquisitionsUnitsHelper(httpClient, okapiHeaders, ctx, lang);
     return acqUnitsHelper.buildAcqUnitsCqlExprToSearchRecords().thenCompose(acqUnitsCqlExpr -> {
       if (isEmpty(query)) {
@@ -185,7 +185,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * @param compPOL {@link CompositePoLine} to be created
    * @return completable future which might hold {@link CompositePoLine} on success, {@code null} if validation fails or an exception if any issue happens
    */
-  CompletableFuture<CompositePoLine> createPoLine(CompositePoLine compPOL) {
+  public CompletableFuture<CompositePoLine> createPoLine(CompositePoLine compPOL) {
     // Validate PO Line content and retrieve order only if this operation is allowed
     return setTenantDefaultCreateInventoryValues(compPOL)
       .thenCompose(v -> validateNewPoLine(compPOL))
@@ -200,6 +200,17 @@ class PurchaseOrderLineHelper extends AbstractHelper {
           return completedFuture(null);
         }
       });
+  }
+
+  public void makePoLinesPending(List<CompositePoLine> compositePoLines) {
+    compositePoLines.forEach(poLine -> {
+      if (poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.AWAITING_PAYMENT) {
+        poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
+      }
+      if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.AWAITING_RECEIPT) {
+        poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING);
+      }
+    });
   }
 
   private CompositePurchaseOrder validateOrderState(CompositePurchaseOrder po) {
@@ -450,10 +461,17 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   /**
    * Handle update of the order line without sub-objects
    */
-  CompletableFuture<JsonObject> updateOrderLineSummary(String poLineId, JsonObject poLine) {
+  public CompletableFuture<JsonObject> updateOrderLineSummary(String poLineId, JsonObject poLine) {
     logger.debug("Updating PO line...");
     String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES, poLineId), lang);
     return operateOnObject(HttpMethod.PUT, endpoint, poLine, httpClient, ctx, okapiHeaders, logger);
+  }
+
+  public CompletableFuture<Void> updatePoLinesSummary(List<CompositePoLine> compositePoLines) {
+    return VertxCompletableFuture.allOf(ctx, compositePoLines.stream()
+      .map(HelperUtils::convertToPoLine)
+      .map(line -> updateOrderLineSummary(line.getId(), JsonObject.mapFrom(line)))
+      .toArray(CompletableFuture[]::new));
   }
 
   /**

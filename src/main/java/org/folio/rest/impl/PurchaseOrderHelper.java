@@ -34,6 +34,11 @@ import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.HelperUtils.verifyLocationsAndPiecesConsistency;
 import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
+import static org.folio.orders.utils.OrderStatusTransitionUtil.isOrderClosing;
+import static org.folio.orders.utils.OrderStatusTransitionUtil.isOrderReopening;
+import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToApproved;
+import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToOpen;
+import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToPending;
 import static org.folio.orders.utils.POProtectedFields.getFieldNames;
 import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder;
 import static org.folio.orders.utils.ProtectedOperationType.CREATE;
@@ -45,15 +50,26 @@ import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
-import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.CLOSED;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import one.util.streamex.StreamEx;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import javax.money.MonetaryAmount;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -81,21 +97,11 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
-import javax.money.MonetaryAmount;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import one.util.streamex.StreamEx;
 
 public class PurchaseOrderHelper extends AbstractHelper {
 
@@ -112,11 +118,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private final PurchaseOrderLineHelper orderLineHelper;
   private final ProtectionHelper protectionHelper;
   private TitlesHelper titlesHelper;
+  private final FinanceHelper financeHelper;
   private final PiecesHelper piecesHelper;
 
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
-
+    financeHelper = new FinanceHelper(httpClient, okapiHeaders, ctx, lang);
     poNumberHelper = new PoNumberHelper(httpClient, okapiHeaders, ctx, lang);
     orderLineHelper = new PurchaseOrderLineHelper(httpClient, okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
@@ -218,8 +225,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
             return completedFuture(null);
           })
           .thenAccept(ok -> {
-            if (isTransitionToUnopen(poFromStorage, compPO)) {
+            if (isTransitionToPending(poFromStorage, compPO)) {
               checkOrderUnopenPermissions();
+              unOpenOrder(compPO);
             }
           })
           .thenCompose(v -> {
@@ -280,10 +288,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return CompletableFuture.completedFuture(null);
   }
 
-  private boolean isOrderClosing(PurchaseOrder.WorkflowStatus newStatus, String initialStatus) {
-    return newStatus == PurchaseOrder.WorkflowStatus.CLOSED && !Objects.equals(newStatus.value(), initialStatus);
-  }
-
   /**
    * Handles transition of related order to CLOSED status.
    *
@@ -316,10 +320,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenApply(lists -> StreamEx.of(lists).toFlatList(jsonObjects -> jsonObjects));
   }
 
-  private boolean isOrderReopening(PurchaseOrder.WorkflowStatus newStatus, String initialOrderStatus) {
-    return newStatus == PurchaseOrder.WorkflowStatus.OPEN && CLOSED.value().equals(initialOrderStatus);
-  }
-
   /**
    * Handles transition of related order from CLOSED to OPEN status.
    *
@@ -334,10 +334,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return getItemsByStatus(poLines, currentStatus)
       .thenApply(items -> updateStatusName(items, newStatus))
       .thenCompose(this::updateItemsInInventory);
-  }
-
-  private boolean isTransitionToApproved(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO) {
-    return !poFromStorage.getApproved() && compPO.getApproved();
   }
 
   private CompletableFuture<Set<ProtectedOperationType>> getInvolvedOperations(CompositePurchaseOrder compPO) {
@@ -503,9 +499,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
           populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
           return updateInventory(linesIdTitles, compPO);
         })
-      .thenCompose(ok -> createEncumbrances(compPO))
+      .thenCompose(ok -> createUnreleasedEncumbrances(compPO))
       .thenAccept(ok -> changePoLineStatuses(compPO.getCompositePoLines()))
-      .thenCompose(ok -> updatePoLinesSummary(compPO.getCompositePoLines()));
+      .thenCompose(ok -> orderLineHelper.updatePoLinesSummary(compPO.getCompositePoLines()));
   }
 
   private CompletableFuture<Void> updateItemsInInventory(List<JsonObject> items) {
@@ -837,15 +833,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return completedFuture(null);
   }
 
-  private boolean isTransitionToOpen(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO) {
-    return poFromStorage.getWorkflowStatus() == PENDING && compPO.getWorkflowStatus() == OPEN;
-  }
-
-  private boolean isTransitionToUnopen(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO) {
-    return poFromStorage.getWorkflowStatus() == OPEN && compPO.getWorkflowStatus() == PENDING;
-  }
-
-
   private boolean isPoNumberChanged(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
     return !StringUtils.equalsIgnoreCase(poFromStorage.getPoNumber(), updatedPo.getPoNumber());
   }
@@ -883,12 +870,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return isNotEmpty(compPO.getCompositePoLines()) || isPoNumberChanged(poFromStorage, compPO);
   }
 
-  CompletableFuture<Void> updatePoLinesSummary(List<CompositePoLine> compositePoLines) {
-    return VertxCompletableFuture.allOf(ctx, compositePoLines.stream()
-      .map(HelperUtils::convertToPoLine)
-      .map(line -> orderLineHelper.updateOrderLineSummary(line.getId(), JsonObject.mapFrom(line))).toArray(CompletableFuture[]::new));
-  }
-
   public CompletableFuture<Void> updateOrderSummary(PurchaseOrder purchaseOrder) {
     logger.debug("Updating order...");
     return handlePutRequest(resourceByIdPath(PURCHASE_ORDER, purchaseOrder.getId()), JsonObject.mapFrom(purchaseOrder), httpClient, ctx, okapiHeaders, logger);
@@ -923,10 +904,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return VertxCompletableFuture.allOf(ctx, futures);
   }
 
-  private CompletableFuture<Void> createEncumbrances(CompositePurchaseOrder compPO) {
+  private CompletableFuture<Void> createUnreleasedEncumbrances(CompositePurchaseOrder compPO) {
     if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
       FinanceHelper helper = new FinanceHelper(httpClient, okapiHeaders, ctx, lang);
-      return helper.handleEncumbrances(compPO);
+      return helper.handleUnreleasedEncumbrances(compPO);
     }
     return CompletableFuture.completedFuture(null);
   }
@@ -1090,5 +1071,15 @@ public class PurchaseOrderHelper extends AbstractHelper {
         }
     }
     return purchaseOrder;
+  }
+
+  private CompletionStage<Void> unOpenOrder(CompositePurchaseOrder compPO) {
+    compPO.setWorkflowStatus(PENDING);
+    return updateAndGetOrderWithLines(compPO)
+                    .thenCompose(compositePO -> financeHelper.getPoLinesEncumbrances(compositePO.getCompositePoLines()))
+                    .thenApply(financeHelper::makeEncumbrancesPending)
+                    .thenAccept(financeHelper::updateTransactions)
+                    .thenAccept(ok -> orderLineHelper.makePoLinesPending(compPO.getCompositePoLines()))
+                    .thenCompose(ok -> orderLineHelper.updatePoLinesSummary(compPO.getCompositePoLines()));
   }
 }
