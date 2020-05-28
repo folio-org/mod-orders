@@ -9,6 +9,7 @@ import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.HelperUtils.LANG;
+import static org.folio.orders.utils.HelperUtils.convertToJson;
 import static org.folio.orders.utils.HelperUtils.loadConfiguration;
 import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
@@ -54,6 +55,8 @@ public abstract class AbstractHelper {
   public static final String CURRENCY_USD = "USD";
   static final int MAX_IDS_FOR_GET_RQ = 15;
   static final String SEARCH_PARAMS = "?limit=%s&offset=%s%s&lang=%s";
+  static final String EXCEPTION_CALLING_ENDPOINT_WITH_BODY_MSG = "{} {} request failed. Request body: {}";
+  static final String CALLING_ENDPOINT_WITH_BODY_MSG = "Sending {} {} with body: {}";
 
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -173,6 +176,40 @@ public abstract class AbstractHelper {
           return null;
         });
     } catch (Exception e) {
+      future.completeExceptionally(e);
+    }
+
+    return future;
+  }
+
+  /**
+   * A common method to update an entry in the storage
+   *
+   * @param endpoint   endpoint
+   * @param recordData json to use for update operation
+   */
+  public CompletableFuture<Void> handleUpdateRequest(String endpoint, Object recordData) {
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+    try {
+      JsonObject json = convertToJson(recordData);
+
+      if (logger.isDebugEnabled()) {
+        logger.debug(CALLING_ENDPOINT_WITH_BODY_MSG, HttpMethod.PUT, endpoint, json.encodePrettily());
+      }
+
+      httpClient.request(HttpMethod.PUT, json.toBuffer(), endpoint, okapiHeaders)
+        .thenApply(HelperUtils::verifyAndExtractBody)
+        .thenAccept(response -> {
+          logger.debug("'PUT {}' request successfully processed", endpoint);
+          future.complete(null);
+        })
+        .exceptionally(e -> {
+          future.completeExceptionally(e);
+          logger.error(EXCEPTION_CALLING_ENDPOINT_WITH_BODY_MSG, e, HttpMethod.PUT, endpoint, json.encodePrettily());
+          return null;
+        });
+    } catch (Exception e) {
+      logger.error(EXCEPTION_CALLING_ENDPOINT_WITH_BODY_MSG, e, HttpMethod.PUT, endpoint, recordData);
       future.completeExceptionally(e);
     }
 

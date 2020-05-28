@@ -9,16 +9,22 @@ import static org.folio.orders.utils.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.HelperUtils.FUND_ID;
+import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
+import static org.folio.orders.utils.HelperUtils.buildIdsChunks;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.getEndpointWithQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
 import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
+import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_ENDPOINT;
+import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_STORAGE_ENDPOINT;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 import java.math.BigDecimal;
@@ -53,6 +59,7 @@ import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.LedgerCollection;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
@@ -74,10 +81,17 @@ public class FinanceHelper extends AbstractHelper {
   private static final String GET_BUDGETS_WITH_SEARCH_PARAMS = resourcesPath(BUDGETS) + SEARCH_PARAMS;
   private static final String GET_LEDGERS_WITH_SEARCH_PARAMS = resourcesPath(LEDGERS) + SEARCH_PARAMS;
   private static final String QUERY_EQUALS = "&query=";
+  private static final String ENCUMBRANCE_CRITERIA = "transactionType==Encumbrance";
+  private static final String AND = " and ";
+  private static final String TRANSACTION_ENDPOINT_BY_QUERY = resourcesPath(TRANSACTIONS_ENDPOINT) + SEARCH_PARAMS;
+  private static final String TRANSACTION_STORAGE_ENDPOINT_BYID = resourceByIdPath(TRANSACTIONS_STORAGE_ENDPOINT) + URL_WITH_LANG_PARAM;
+
+  private final PurchaseOrderLineHelper purchaseOrderLineHelper;
   private String systemCurrency;
 
-  FinanceHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+  public FinanceHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
+    purchaseOrderLineHelper = new PurchaseOrderLineHelper(okapiHeaders, ctx, lang);
   }
 
   /**
@@ -85,7 +99,7 @@ public class FinanceHelper extends AbstractHelper {
    *
    * @return CompletableFuture with void on success.
    */
-  CompletableFuture<Void> handleEncumbrances(CompositePurchaseOrder compPo) {
+  public CompletableFuture<Void> handleUnreleasedEncumbrances(CompositePurchaseOrder compPo) {
     List<Triple<Transaction, CompositePoLine, FundDistribution>> encumbranceDistributionTriplets = buildEncumbrances(compPo);
     List<Transaction> encumbrances = encumbranceDistributionTriplets.stream()
       .map(Triple::getLeft)
@@ -94,6 +108,58 @@ public class FinanceHelper extends AbstractHelper {
       .thenCompose(v -> prepareEncumbrances(encumbrances))
       .thenCompose(v -> createSummary(compPo.getId(), encumbrances.size()))
       .thenCompose(summaryId -> createEncumbrances(encumbranceDistributionTriplets));
+  }
+
+  public CompletableFuture<List<Transaction>> getPoLinesEncumbrances(List<CompositePoLine> compositePoLines) {
+    List<CompletableFuture<TransactionCollection>> invoiceFutureList = buildIdsChunks(compositePoLines, MAX_IDS_FOR_GET_RQ).values()
+      .stream()
+      .map(this::buildTransactionListQuery)
+      .map(query -> getTransactions(MAX_IDS_FOR_GET_RQ, 0, query))
+      .collect(Collectors.toList());
+
+    return collectResultsOnSuccess(invoiceFutureList)
+              .thenApply(collections -> collections.stream().flatMap(col -> col.getTransactions().stream()).collect(toList()));
+  }
+
+  public CompletableFuture<TransactionCollection> getTransactions(int limit, int offset, String query) {
+    CompletableFuture<TransactionCollection> future = new VertxCompletableFuture<>(ctx);
+    try {
+      String queryParam = getEndpointWithQuery(query, logger);
+      String endpoint = String.format(TRANSACTION_ENDPOINT_BY_QUERY, limit, offset, queryParam, lang);
+      handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+        .thenAccept(jsonTransactionss -> {
+          logger.info("Successfully retrieved voucher lines: " + jsonTransactionss.encodePrettily());
+          future.complete(jsonTransactionss.mapTo(TransactionCollection.class));
+        })
+        .exceptionally(t -> {
+          logger.error("Error getting voucher lines", t);
+          future.completeExceptionally(t);
+          return null;
+        });
+    } catch (Exception e) {
+      future.completeExceptionally(e);
+    }
+    return future;
+  }
+
+  public CompletableFuture<Void> updateTransaction(Transaction transaction) {
+    String endpoint = String.format(TRANSACTION_STORAGE_ENDPOINT_BYID, transaction.getId(), lang);
+    return handleUpdateRequest(endpoint, transaction);
+  }
+
+  public CompletableFuture<Void> updateTransactions(List<Transaction> transactions) {
+    return VertxCompletableFuture.allOf(ctx, transactions.stream()
+              .map(this::updateTransaction)
+              .toArray(CompletableFuture[]::new));
+  }
+
+  public List<Transaction> makeEncumbrancesPending(List<Transaction> encumbrances) {
+    encumbrances.forEach(encumbrance -> {
+      encumbrance.setAmount(0d);
+      encumbrance.getEncumbrance().setInitialAmountEncumbered(0d);
+      encumbrance.getEncumbrance().setStatus(Encumbrance.Status.PENDING);
+    });
+    return encumbrances;
   }
 
   private CompletableFuture<Void> retrieveSystemCurrency() {
@@ -115,12 +181,11 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> createEncumbrances(List<Triple<Transaction, CompositePoLine, FundDistribution>> encumbranceDistributionTriples) {
-    PurchaseOrderHelper purchaseOrderHelper = new PurchaseOrderHelper(okapiHeaders, ctx, lang);
     return VertxCompletableFuture.allOf(ctx, encumbranceDistributionTriples.stream()
       .map(triple -> createRecordInStorage(JsonObject.mapFrom(triple.getLeft()), String.format(ENCUMBRANCE_POST_ENDPOINT, lang))
         .thenCompose(id -> {
           triple.getRight().setEncumbrance(id);
-          return purchaseOrderHelper.updatePoLinesSummary(Collections.singletonList(triple.getMiddle()));
+          return purchaseOrderLineHelper.updatePoLinesSummary(Collections.singletonList(triple.getMiddle()));
         })
         .exceptionally(fail -> {
           checkForCustomTransactionError(fail);
@@ -225,8 +290,6 @@ public class FinanceHelper extends AbstractHelper {
       .toList());
   }
 
-
-
   private CompletableFuture<List<Budget>> getBudgets(Map<String, List<Transaction>> groupedByFund) {
     return getBudgetsByChunks(groupedByFund).thenApply(lists -> lists.stream()
       .flatMap(Collection::stream)
@@ -325,23 +388,15 @@ public class FinanceHelper extends AbstractHelper {
     transaction.setAmount(calculateAmountEncumbered(distribution, estimatedPrice));
     transaction.setCurrency(systemCurrency);
 
-    transaction.setEncumbrance(new Encumbrance());
-    transaction.getEncumbrance()
-      .setSourcePoLineId(poLine.getId());
-    transaction.getEncumbrance()
-      .setSourcePurchaseOrderId(compPo.getId());
-    transaction.getEncumbrance()
-      .setReEncumber(compPo.getReEncumber());
-    transaction.getEncumbrance()
-      .setSubscription(compPo.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING);
-    transaction.getEncumbrance()
-      .setStatus(Encumbrance.Status.UNRELEASED);
-    transaction.getEncumbrance()
-      .setOrderType(Encumbrance.OrderType.fromValue(compPo.getOrderType()
-        .value()));
-    transaction.getEncumbrance()
-      .setInitialAmountEncumbered(transaction.getAmount());
-
+    Encumbrance encumbrance = new Encumbrance();
+    encumbrance.setSourcePoLineId(poLine.getId());
+    encumbrance.setSourcePurchaseOrderId(compPo.getId());
+    encumbrance.setReEncumber(compPo.getReEncumber());
+    encumbrance.setSubscription(compPo.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING);
+    encumbrance.setStatus(Encumbrance.Status.UNRELEASED);
+    encumbrance.setOrderType(Encumbrance.OrderType.fromValue(compPo.getOrderType().value()));
+    encumbrance.setInitialAmountEncumbered(transaction.getAmount());
+    transaction.setEncumbrance(encumbrance);
     return transaction;
   }
 
@@ -387,5 +442,13 @@ public class FinanceHelper extends AbstractHelper {
 
     return allocated.multiply(allowableEncumbered)
       .subtract(encumbered.add(awaitingPayment.add(expenditures)));
+  }
+
+  private String buildTransactionListQuery(List<CompositePoLine> lines) {
+    List<String> lineIds = lines.stream()
+      .map(CompositePoLine::getId)
+      .collect(Collectors.toList());
+    return ENCUMBRANCE_CRITERIA + AND
+                  + convertIdsToCqlQuery(lineIds, "encumbrance.sourcePoLineId", true);
   }
 }
