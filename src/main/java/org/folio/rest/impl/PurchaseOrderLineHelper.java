@@ -26,6 +26,7 @@ import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.inventoryUpdateNotRequired;
 import static org.folio.orders.utils.HelperUtils.operateOnObject;
+import static org.folio.orders.utils.HelperUtils.verifyLocationsAndPiecesConsistency;
 import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
@@ -111,11 +112,13 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   private final InventoryHelper inventoryHelper;
   private final ProtectionHelper protectionHelper;
+  private final PiecesHelper piecesHelper;
 
   public PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
     inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
+    piecesHelper = new PiecesHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   public PurchaseOrderLineHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -356,22 +359,24 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
   CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine) {
-    return getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
-      .thenCompose(lineFromStorage -> getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId())
-        .thenCompose(compOrder -> {
-          validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage, compOrder);
-          return protectionHelper.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE)
-            .thenCompose(v -> validateAndNormalizeISBN(compOrderLine))
-            .thenCompose(v -> validateAccessProviders(compOrderLine))
-            .thenApply(v -> lineFromStorage);
-        }))
-      .thenCompose(lineFromStorage -> {
-        // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
-        // update
-        compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
-        return updateOrderLine(compOrderLine, lineFromStorage)
-          .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage));
-      });
+    return checkLocationsAndPiecesConsistency(compOrderLine)
+      .thenCompose( vVoid -> getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
+        .thenCompose(lineFromStorage -> getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId())
+          .thenCompose(compOrder -> {
+            validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage, compOrder);
+            return protectionHelper.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE)
+              .thenCompose(v -> validateAndNormalizeISBN(compOrderLine))
+              .thenCompose(v -> validateAccessProviders(compOrderLine))
+              .thenApply(v -> lineFromStorage);
+          }))
+        .thenCompose(lineFromStorage -> {
+          // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
+          // update
+          compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
+          return updateOrderLine(compOrderLine, lineFromStorage)
+            .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage));
+        }));
+
   }
 
   private CompletableFuture<Void> validateAccessProviders(CompositePoLine compOrderLine) {
@@ -983,6 +988,12 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   private boolean isISBN(String isbnTypeId, ProductId productId) {
     return Objects.equals(productId.getProductIdType(), isbnTypeId);
+  }
+
+  private CompletableFuture<Void> checkLocationsAndPiecesConsistency(CompositePoLine poLine) {
+    String query = "poLineId==" + poLine.getId();
+    return piecesHelper.getPieces(Integer.MAX_VALUE, 0, query)
+      .thenAccept(pieces -> verifyLocationsAndPiecesConsistency(Collections.singletonList(poLine), pieces));
   }
 
 }

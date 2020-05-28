@@ -49,6 +49,7 @@ import static org.folio.rest.impl.ApiTestBase.ID;
 import static org.folio.rest.impl.ApiTestBase.ID_BAD_FORMAT;
 import static org.folio.rest.impl.ApiTestBase.ID_DOES_NOT_EXIST;
 import static org.folio.rest.impl.ApiTestBase.ID_FOR_INTERNAL_SERVER_ERROR;
+import static org.folio.rest.impl.ApiTestBase.ID_FOR_PIECES_INTERNAL_SERVER_ERROR;
 import static org.folio.rest.impl.ApiTestBase.INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT;
 import static org.folio.rest.impl.ApiTestBase.MIN_PO_ID;
 import static org.folio.rest.impl.ApiTestBase.MIN_PO_LINE_ID;
@@ -1469,7 +1470,7 @@ public class MockServer {
   private void handleGetPieces(RoutingContext ctx) {
     logger.info("handleGetPieces got: " + ctx.request().path());
     String query = ctx.request().getParam("query");
-    if (query.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
+    if (query.contains(ID_FOR_PIECES_INTERNAL_SERVER_ERROR)) {
       addServerRqRsData(HttpMethod.GET, PIECES, new JsonObject());
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {

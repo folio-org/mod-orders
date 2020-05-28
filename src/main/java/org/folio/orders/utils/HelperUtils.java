@@ -3,11 +3,15 @@ package org.folio.orders.utils;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Objects.nonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.summingInt;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
+import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_DELETED;
 import static org.folio.orders.utils.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.orders.utils.ErrorCodes.TITLE_NOT_FOUND;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
@@ -59,6 +63,7 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
+import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.impl.AbstractHelper;
 import org.folio.rest.jaxrs.model.Alert;
@@ -1061,6 +1066,32 @@ public class HelperUtils {
   public static void verifyAllNonPackageTitlesExist(Map<String, List<Title>> lineIdTitles, List<String> poLineIds) {
     if (lineIdTitles.size() < poLineIds.size()) {
       throw new HttpException(400, TITLE_NOT_FOUND);
+    }
+  }
+
+  public static void verifyLocationsAndPiecesConsistency(List<CompositePoLine> poLines, PieceCollection pieces) {
+
+    if (CollectionUtils.isNotEmpty(poLines)) {
+
+      Map<String, Map<String, Integer>> numOfLocationsByPoLineIdAndLocationId = poLines.stream()
+        .filter(line -> !line.getIsPackage() && line.getReceiptStatus() != CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED && !line.getCheckinItems())
+        .collect(toMap(CompositePoLine::getId, poLine -> Optional.of(poLine.getLocations()).orElse(new ArrayList<>()).stream().collect(toMap(Location::getLocationId, Location::getQuantity))));
+
+      Map<String, Map<String, Integer>> numOfPiecesByPoLineIdAndLocationId = pieces.getPieces().stream()
+        .filter(piece -> Objects.nonNull(piece.getPoLineId())
+          && Objects.nonNull(piece.getLocationId()))
+        .collect(groupingBy(Piece::getPoLineId, groupingBy(Piece::getLocationId, summingInt(q -> 1))));
+
+      numOfPiecesByPoLineIdAndLocationId.forEach((poLineId, numOfPiecesByLocationId) -> numOfPiecesByLocationId
+        .forEach((locationId, quantity) -> {
+          Integer numOfPieces = 0;
+          if (numOfLocationsByPoLineIdAndLocationId.get(poLineId) != null && numOfLocationsByPoLineIdAndLocationId.get(poLineId).get(locationId) != null) {
+            numOfPieces = numOfLocationsByPoLineIdAndLocationId.get(poLineId).get(locationId);
+          }
+          if (quantity > numOfPieces) {
+            throw new HttpException(422, PIECES_TO_BE_DELETED.toError());
+          }
+        }));
     }
   }
 }

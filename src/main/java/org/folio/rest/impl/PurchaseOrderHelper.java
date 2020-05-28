@@ -1,10 +1,7 @@
 package org.folio.rest.impl;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.summingInt;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.AcqDesiredPermissions.ASSIGN;
@@ -13,7 +10,6 @@ import static org.folio.orders.utils.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
 import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
 import static org.folio.orders.utils.ErrorCodes.MISSING_ONGOING;
 import static org.folio.orders.utils.ErrorCodes.ONGOING_NOT_ALLOWED;
-import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_DELETED;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_UNOPEN_PERMISSIONS;
@@ -36,6 +32,7 @@ import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.HelperUtils.verifyLocationsAndPiecesConsistency;
 import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.POProtectedFields.getFieldNames;
 import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder;
@@ -68,8 +65,6 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
-import org.folio.rest.acq.model.Piece;
-import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
@@ -77,7 +72,6 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
@@ -231,7 +225,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           .thenCompose(v -> {
             if (isTransitionToOpen) {
               return updateAndGetOrderWithLines(compPO)
-                .thenCompose(this::checkLocationsAndPiecesConsistency);
+                .thenCompose(order -> checkLocationsAndPiecesConsistency(compPO.getCompositePoLines()));
             } else {
               return CompletableFuture.completedFuture(null);
             }
@@ -249,10 +243,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
       });
   }
 
-  private CompletionStage<Void> checkLocationsAndPiecesConsistency(CompositePurchaseOrder compPO) {
-    String query = convertIdsToCqlQuery(compPO.getCompositePoLines().stream().map(CompositePoLine::getId).collect(toList()), "poLineId");
+  private CompletableFuture<Void> checkLocationsAndPiecesConsistency(List<CompositePoLine> poLines) {
+    String query = convertIdsToCqlQuery(poLines.stream().map(CompositePoLine::getId).collect(toList()), "poLineId");
     return piecesHelper.getPieces(Integer.MAX_VALUE, 0, query)
-      .thenAccept(pieces -> verifyLocationsAndPiecesConsistency(compPO, pieces));
+      .thenAccept(pieces -> verifyLocationsAndPiecesConsistency(poLines, pieces));
   }
 
   public CompletableFuture<Void> handleFinalOrderStatus(CompositePurchaseOrder compPO, String initialOrdersStatus) {
@@ -1096,32 +1090,5 @@ public class PurchaseOrderHelper extends AbstractHelper {
         }
     }
     return purchaseOrder;
-  }
-
-  private void verifyLocationsAndPiecesConsistency(CompositePurchaseOrder compPO, PieceCollection pieces) {
-
-    if (CollectionUtils.isNotEmpty(compPO.getCompositePoLines())) {
-
-      Map<String, Map<String, Integer>> numOfLocationsByPoLineIdAndLocationId = compPO.getCompositePoLines().stream()
-        .filter(line -> !line.getIsPackage() && line.getReceiptStatus() != CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED && !line.getCheckinItems())
-        .collect(toMap(CompositePoLine::getId, poLine -> Optional.of(poLine.getLocations()).orElse(new ArrayList<>()).stream().collect(toMap(Location::getLocationId, Location::getQuantity))));
-
-      Map<String, Map<String, Integer>> numOfPiecesByPoLineIdAndLocationId = pieces.getPieces().stream()
-        .filter(piece -> Objects.nonNull(piece.getPoLineId())
-          && Objects.nonNull(piece.getLocationId()))
-        .collect(groupingBy(Piece::getPoLineId, groupingBy(Piece::getLocationId, summingInt(q -> 1))));
-
-
-      numOfPiecesByPoLineIdAndLocationId.forEach((poLineId, numOfPiecesByLocationId) -> numOfPiecesByLocationId
-        .forEach((locationId, quantity) -> {
-          Integer numOfPieces = 0;
-          if (numOfLocationsByPoLineIdAndLocationId.get(poLineId) != null && numOfLocationsByPoLineIdAndLocationId.get(poLineId).get(locationId) != null) {
-            numOfPieces = numOfLocationsByPoLineIdAndLocationId.get(poLineId).get(locationId);
-          }
-          if (quantity > numOfPieces) {
-            throw new HttpException(422, PIECES_TO_BE_DELETED.toError());
-          }
-      }));
-    }
   }
 }

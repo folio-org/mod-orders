@@ -14,6 +14,7 @@ import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
 import static org.folio.orders.utils.ErrorCodes.ORDER_OPEN;
 import static org.folio.orders.utils.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
+import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_DELETED;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
@@ -23,6 +24,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHI
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
@@ -74,6 +76,7 @@ import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
@@ -399,10 +402,11 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     assertTrue(StringUtils.isEmpty(resp.getBody().asString()));
 
-    //3 calls to get Order Line,Purchase Order for checking workflow status and ISBN validation
+    //4 calls to get Order Line,Purchase Order for checking workflow status, Pieces and ISBN validation
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, column.size());
+    assertEquals(4, column.size());
     assertThat(column, hasKey(PO_LINES));
+    assertThat(column, hasKey(PIECES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertEquals(1, column.size());
@@ -424,6 +428,33 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
+  public void testPutOrderLineByIdPiecesNeedToBeDeleted() {
+    logger.info("=== Test PUT Order Line By Id - Pieces need to be deleted ===");
+
+    String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
+    CompositePoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
+
+    String url = String.format(LINE_BY_ID_PATH, lineId);
+
+    // Adding number of pieces more then poLine.location.quantity
+    for (int i = 0; i < 2; i++) {
+      MockServer.addMockEntry(PIECES, new Piece()
+        .withPoLineId(body.getId())
+        .withLocationId(body.getLocations().get(0).getLocationId()));
+    }
+
+    final Errors errors = verifyPut(url, JsonObject.mapFrom(body), "", 422).as(Errors.class);
+    assertThat(errors.getErrors().get(0).getCode(), equalTo(PIECES_TO_BE_DELETED.getCode()));
+
+    Map<String, List<JsonObject>> retrieves = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(1, retrieves.size());
+    assertThat(retrieves, hasKey(PIECES));
+
+    Map<String, List<JsonObject>> updates = MockServer.serverRqRs.column(HttpMethod.PUT);
+    assertEquals(0, updates.size());
+  }
+
+  @Test
   public void testPutOrderLineByIdWithoutOrderUpdate() {
     logger.info("=== Test PUT Order Line By Id - No Order update event sent on success ===");
 
@@ -433,11 +464,12 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
 
-    // 2 calls each to fetch Order Line and Purchase Order
+    // 2 calls each to fetch Order Line and Purchase Order, 1 call to fetch Pieces
     // inaddition 2 calls for ISBN validation
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(4, column.size());
+    assertEquals(5, column.size());
     assertThat(column, hasKey(PO_LINES));
+    assertThat(column, hasKey(PIECES));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
     assertEquals(3, column.size());
@@ -497,8 +529,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     // 2 calls each to fetch Order Line , Purchase Order
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(2, column.size());
+    assertEquals(3, column.size());
     assertThat(column, hasKey(PO_LINES));
+    assertThat(column, hasKey(PIECES));
 
     // Verify no message sent via event bus
     verifyOrderStatusUpdateEvent(0);
@@ -517,8 +550,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertEquals(lineId, actual.as(Errors.class).getErrors().get(0).getMessage());
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(1, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES));
+    assertThat(column, hasKey(PIECES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertTrue(column.isEmpty());
@@ -578,8 +612,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertNotNull(actual.asString());
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(1, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES));
+    assertThat(column, hasKey(PIECES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertTrue(column.isEmpty());
@@ -903,6 +938,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
       .mapTo(CompositePoLine.class);
     reqData.setId(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
+    reqData.getLocations().get(0).setQuantity(2);
     String isbn = INVALID_ISBN;
 
     reqData.getDetails().getProductIds().get(0).setProductId(isbn);
