@@ -991,12 +991,12 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> checkLocationsAndPiecesConsistency(CompositePoLine poLine, CompositePurchaseOrder order) {
-    if (order.getWorkflowStatus() == OPEN && !poLine.getCheckinItems()) {
+    if (order.getWorkflowStatus() == OPEN && Boolean.FALSE.equals(poLine.getCheckinItems())) {
       String query = "poLineId==" + poLine.getId();
       return piecesHelper.getPieces(Integer.MAX_VALUE, 0, query)
         .thenAccept(pieces -> verifyLocationsAndPiecesConsistency(Collections.singletonList(poLine), pieces));
     } else {
-      return VertxCompletableFuture.completedFuture(null);
+      return CompletableFuture.completedFuture(null);
     }
   }
 
