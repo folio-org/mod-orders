@@ -7,6 +7,7 @@ import io.vertx.core.json.JsonObject;
 import org.folio.orders.events.handlers.CheckInOrderStatusChangeChangeHandlerTest;
 import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
 import org.folio.orders.events.handlers.ReceiptStatusConsistencyTest;
+import org.folio.orders.utils.HelperUtilsTest;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.impl.crud.ConfigurationCrudTest;
 import org.folio.rest.impl.protection.LinesProtectionTest;
@@ -58,7 +59,8 @@ import static org.hamcrest.Matchers.is;
   PiecesHelperTest.class,
   PurchaseOrderHelperTest.class,
   FinanceHelperTest.class,
-  PurchaseOrderLineHelperTest.class
+  PurchaseOrderLineHelperTest.class,
+  HelperUtilsTest.class
 })
 public class ApiTestSuite {
 
