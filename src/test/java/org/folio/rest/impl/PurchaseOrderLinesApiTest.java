@@ -27,6 +27,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
@@ -39,6 +40,7 @@ import static org.folio.rest.impl.MockServer.getOrderLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getQueryParams;
 import static org.folio.rest.impl.MockServer.getTitlesSearches;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ID_FOR_PRINT_MONOGRAPH_ORDER;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -402,11 +404,11 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     assertTrue(StringUtils.isEmpty(resp.getBody().asString()));
 
-    //4 calls to get Order Line,Purchase Order for checking workflow status, Pieces and ISBN validation
+    //4 calls to get Order Line,Purchase Order for checking workflow status and ISBN validation
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(4, column.size());
+    assertEquals(3, column.size());
     assertThat(column, hasKey(PO_LINES));
-    assertThat(column, hasKey(PIECES));
+    assertThat(column, not(hasKey(PIECES)));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertEquals(1, column.size());
@@ -434,6 +436,11 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
     CompositePoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
 
+    body.setCheckinItems(false);
+    MockServer.addMockEntry(PO_LINES, body);
+    MockServer.addMockEntry(PURCHASE_ORDER, new CompositePurchaseOrder()
+      .withId(ID_FOR_PRINT_MONOGRAPH_ORDER)
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
     String url = String.format(LINE_BY_ID_PATH, lineId);
 
     // Adding number of pieces more then poLine.location.quantity
@@ -447,8 +454,10 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertThat(errors.getErrors().get(0).getCode(), equalTo(PIECES_TO_BE_DELETED.getCode()));
 
     Map<String, List<JsonObject>> retrieves = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(1, retrieves.size());
+    assertEquals(3, retrieves.size());
     assertThat(retrieves, hasKey(PIECES));
+    assertThat(retrieves, hasKey(PO_LINES));
+    assertThat(retrieves, hasKey(PURCHASE_ORDER));
 
     Map<String, List<JsonObject>> updates = MockServer.serverRqRs.column(HttpMethod.PUT);
     assertEquals(0, updates.size());
@@ -464,12 +473,11 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
 
-    // 2 calls each to fetch Order Line and Purchase Order, 1 call to fetch Pieces
+    // 2 calls each to fetch Order Line and Purchase Order
     // inaddition 2 calls for ISBN validation
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(5, column.size());
+    assertEquals(4, column.size());
     assertThat(column, hasKey(PO_LINES));
-    assertThat(column, hasKey(PIECES));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
     assertEquals(3, column.size());
@@ -529,9 +537,8 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     // 2 calls each to fetch Order Line , Purchase Order
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES));
-    assertThat(column, hasKey(PIECES));
 
     // Verify no message sent via event bus
     verifyOrderStatusUpdateEvent(0);
@@ -550,9 +557,8 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertEquals(lineId, actual.as(Errors.class).getErrors().get(0).getMessage());
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(2, column.size());
+    assertEquals(1, column.size());
     assertThat(column, hasKey(PO_LINES));
-    assertThat(column, hasKey(PIECES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertTrue(column.isEmpty());
@@ -612,9 +618,8 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertNotNull(actual.asString());
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(2, column.size());
+    assertEquals(1, column.size());
     assertThat(column, hasKey(PO_LINES));
-    assertThat(column, hasKey(PIECES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertTrue(column.isEmpty());
