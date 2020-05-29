@@ -499,9 +499,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
           populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
           return updateInventory(linesIdTitles, compPO);
         })
-      .thenCompose(ok -> createUnreleasedEncumbrances(compPO))
+      .thenCompose(ok -> createEncumbrances(compPO))
       .thenAccept(ok -> changePoLineStatuses(compPO.getCompositePoLines()))
-      .thenCompose(ok -> orderLineHelper.updatePoLinesSummary(compPO.getCompositePoLines()));
+      .thenCompose(ok -> updatePoLinesSummary(compPO.getCompositePoLines()));
   }
 
   private CompletableFuture<Void> updateItemsInInventory(List<JsonObject> items) {
