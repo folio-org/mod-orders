@@ -406,7 +406,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     //4 calls to get Order Line,Purchase Order for checking workflow status and ISBN validation
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, column.size());
+    assertEquals(4, column.size());
     assertThat(column, hasKey(PO_LINES));
     assertThat(column, not(hasKey(PIECES)));
 
@@ -473,11 +473,12 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
 
-    // 2 calls each to fetch Order Line and Purchase Order
+    // 2 calls each to fetch Order Line and Purchase Order, 1 call to fetch Pieces
     // inaddition 2 calls for ISBN validation
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(4, column.size());
+    assertEquals(5, column.size());
     assertThat(column, hasKey(PO_LINES));
+    assertThat(column, hasKey(PIECES));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
     assertEquals(3, column.size());
@@ -537,8 +538,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     // 2 calls each to fetch Order Line , Purchase Order
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(2, column.size());
+    assertEquals(3, column.size());
     assertThat(column, hasKey(PO_LINES));
+    assertThat(column, hasKey(PIECES));
 
     // Verify no message sent via event bus
     verifyOrderStatusUpdateEvent(0);
@@ -557,8 +559,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertEquals(lineId, actual.as(Errors.class).getErrors().get(0).getMessage());
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(1, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES));
+    assertThat(column, hasKey(PIECES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertTrue(column.isEmpty());
@@ -618,8 +621,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertNotNull(actual.asString());
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(1, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES));
+    assertThat(column, hasKey(PIECES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertTrue(column.isEmpty());
