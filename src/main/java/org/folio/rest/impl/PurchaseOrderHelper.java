@@ -117,7 +117,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private final PoNumberHelper poNumberHelper;
   private final PurchaseOrderLineHelper orderLineHelper;
   private final ProtectionHelper protectionHelper;
-  private TitlesHelper titlesHelper;
+  private final TitlesHelper titlesHelper;
   private final FinanceHelper financeHelper;
   private final PiecesHelper piecesHelper;
 
@@ -129,6 +129,18 @@ public class PurchaseOrderHelper extends AbstractHelper {
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
     titlesHelper = new TitlesHelper(httpClient, okapiHeaders, ctx, lang);
     piecesHelper = new PiecesHelper(httpClient, okapiHeaders, ctx, lang);
+  }
+
+  public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang
+    , PoNumberHelper poNumberHelper, PurchaseOrderLineHelper orderLineHelper, ProtectionHelper protectionHelper,
+           TitlesHelper titlesHelper, FinanceHelper financeHelper, PiecesHelper piecesHelper) {
+    super(httpClient, okapiHeaders, ctx, lang);
+    this.financeHelper = financeHelper;
+    this.poNumberHelper = poNumberHelper;
+    this.orderLineHelper = orderLineHelper;
+    this.protectionHelper = protectionHelper;
+    this.titlesHelper = titlesHelper;
+    this.piecesHelper = piecesHelper;
   }
 
   public PurchaseOrderHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -786,7 +798,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     }
   }
 
-  private CompletableFuture<CompositePurchaseOrder> updateAndGetOrderWithLines(CompositePurchaseOrder compPO) {
+  public CompletableFuture<CompositePurchaseOrder> updateAndGetOrderWithLines(CompositePurchaseOrder compPO) {
     if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
       return getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
         .thenApply(poLines -> {
@@ -906,8 +918,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private CompletableFuture<Void> createUnreleasedEncumbrances(CompositePurchaseOrder compPO) {
     if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
-      FinanceHelper helper = new FinanceHelper(httpClient, okapiHeaders, ctx, lang);
-      return helper.handleUnreleasedEncumbrances(compPO);
+      return financeHelper.handleUnreleasedEncumbrances(compPO);
     }
     return CompletableFuture.completedFuture(null);
   }
@@ -1073,13 +1084,24 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return purchaseOrder;
   }
 
-  private CompletionStage<Void> unOpenOrder(CompositePurchaseOrder compPO) {
-    compPO.setWorkflowStatus(PENDING);
-    return updateAndGetOrderWithLines(compPO)
+  public CompletableFuture<Void> unOpenOrder(CompositePurchaseOrder compPO) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    updateAndGetOrderWithLines(compPO)
                     .thenCompose(compositePO -> financeHelper.getPoLinesEncumbrances(compositePO.getCompositePoLines()))
                     .thenApply(financeHelper::makeEncumbrancesPending)
-                    .thenAccept(financeHelper::updateTransactions)
+                    .thenCompose(financeHelper::updateTransactions)
                     .thenAccept(ok -> orderLineHelper.makePoLinesPending(compPO.getCompositePoLines()))
-                    .thenCompose(ok -> orderLineHelper.updatePoLinesSummary(compPO.getCompositePoLines()));
+                    .thenCompose(ok -> orderLineHelper.updatePoLinesSummary(compPO.getCompositePoLines()))
+                    .handle((v, throwable) -> {
+                      financeHelper.closeHttpClient();
+                      if (throwable == null) {
+                        future.complete(null);
+                      }
+                      else {
+                        future.completeExceptionally(throwable);
+                      }
+                      return null;
+                    });
+    return future;
   }
 }
