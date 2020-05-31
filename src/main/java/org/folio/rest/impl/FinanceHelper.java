@@ -10,7 +10,6 @@ import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.HelperUtils.FUND_ID;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
-import static org.folio.orders.utils.HelperUtils.buildIdsChunks;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
@@ -115,17 +114,6 @@ public class FinanceHelper extends AbstractHelper {
       .thenCompose(v -> prepareEncumbrances(encumbrances))
       .thenCompose(v -> createOrderTransactionSummary(compPO.getId(), encumbrances.size()))
       .thenCompose(summaryId -> createEncumbrances(encumbranceDistributionTriplets));
-  }
-
-  public CompletableFuture<List<Transaction>> getPoLinesEncumbrances(List<CompositePoLine> compositePoLines) {
-    List<CompletableFuture<TransactionCollection>> invoiceFutureList = buildIdsChunks(compositePoLines, MAX_IDS_FOR_GET_RQ).values()
-      .stream()
-      .map(this::buildEncumbrancePOLinesQuery)
-      .map(query -> getTransactions(MAX_IDS_FOR_GET_RQ, 0, query))
-      .collect(Collectors.toList());
-
-    return collectResultsOnSuccess(invoiceFutureList)
-              .thenApply(collections -> collections.stream().flatMap(col -> col.getTransactions().stream()).collect(toList()));
   }
 
   public CompletableFuture<List<Transaction>> getOrderEncumbrances(String orderId) {
@@ -465,14 +453,6 @@ public class FinanceHelper extends AbstractHelper {
 
     return allocated.multiply(allowableEncumbered)
       .subtract(encumbered.add(awaitingPayment.add(expenditures)));
-  }
-
-  private String buildEncumbrancePOLinesQuery(List<CompositePoLine> lines) {
-    List<String> lineIds = lines.stream()
-      .map(CompositePoLine::getId)
-      .collect(Collectors.toList());
-    return ENCUMBRANCE_CRITERIA + AND
-                  + convertIdsToCqlQuery(lineIds, "encumbrance.sourcePoLineId", true);
   }
 
   private String buildEncumbranceOrderQuery(String orderId) {

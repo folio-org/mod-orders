@@ -132,13 +132,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang
-          , PoNumberHelper poNumberHelper, PurchaseOrderLineHelper orderLineHelper
-                , ProtectionHelper protectionHelper, FinanceHelper financeHelper) {
+          , PoNumberHelper poNumberHelper, PurchaseOrderLineHelper orderLineHelper, FinanceHelper financeHelper) {
     super(httpClient, okapiHeaders, ctx, lang);
     this.financeHelper = financeHelper;
     this.poNumberHelper = poNumberHelper;
     this.orderLineHelper = orderLineHelper;
-    this.protectionHelper = protectionHelper;
+    this.protectionHelper =  new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
     this.titlesHelper = new TitlesHelper(httpClient, okapiHeaders, ctx, lang);
     this.piecesHelper = new PiecesHelper(httpClient, okapiHeaders, ctx, lang);
   }
