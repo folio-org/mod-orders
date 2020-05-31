@@ -1202,6 +1202,7 @@
         "finance.transactions.item.get",
         "finance.ledgers.current-fiscal-year.item.get",
         "finance.order-transaction-summaries.item.post",
+        "finance.order-transaction-summaries.item.put",
         "finance-storage.transactions.item.put",
         "inventory.instances.collection.get",
         "inventory.instances.item.post",

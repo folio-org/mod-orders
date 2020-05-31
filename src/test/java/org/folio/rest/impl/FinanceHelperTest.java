@@ -40,7 +40,7 @@ public class FinanceHelperTest extends ApiTestBase{
   public void testShouldMakeEncumbrancesPending() {
     //given
     FinanceHelper financeHelper = mock(FinanceHelper.class, CALLS_REAL_METHODS);
-    Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("encumbrances").getJsonObject(3).mapTo(Transaction.class);
+    Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
     //When
     financeHelper.makeEncumbrancesPending(Collections.singletonList(encumbrance));
     //Then
@@ -54,7 +54,7 @@ public class FinanceHelperTest extends ApiTestBase{
   public void testShouldInvokeUpdateTransactionTimesEqualToTransactionQuantity() {
     //given
     FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en"));
-    Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("encumbrances").getJsonObject(3).mapTo(Transaction.class);
+    Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
     doReturn(completedFuture(null)).when(financeHelper).updateTransaction(any());
     //When
     financeHelper.updateTransactions(Arrays.asList(encumbrance, encumbrance));

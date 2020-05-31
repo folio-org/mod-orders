@@ -6,6 +6,8 @@ import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -43,10 +45,6 @@ public class PurchaseOrderHelperTest  extends ApiTestBase{
   @Mock
   private  ProtectionHelper protectionHelper;
   @Mock
-  private  TitlesHelper titlesHelper;
-  @Mock
-  private  PiecesHelper piecesHelper;
-  @Mock
   private Map<String, String> okapiHeadersMock;
   @Mock
   private EventLoopContext ctxMock;
@@ -59,20 +57,22 @@ public class PurchaseOrderHelperTest  extends ApiTestBase{
   }
 
   @Test
-  public void testShouldSetEncumbrancesToPending() throws IOException, ExecutionException, InterruptedException {
+  public void testShouldSetEncumbrancesToPending() {
     //given
     PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
     FinanceHelper financeHelper = mock(FinanceHelper.class, CALLS_REAL_METHODS);
     PurchaseOrderHelper serviceSpy = spy(new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en"
-      , poNumberHelper, orderLineHelper, protectionHelper, titlesHelper, financeHelper, piecesHelper));
+      , poNumberHelper, orderLineHelper, protectionHelper, financeHelper));
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
-    Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("encumbrances").getJsonObject(3).mapTo(Transaction.class);
+    Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
 
     doReturn(completedFuture(order)).when(serviceSpy).updateAndGetOrderWithLines(any(CompositePurchaseOrder.class));
-    doReturn(completedFuture(Collections.singletonList(encumbrance))).when(financeHelper).getPoLinesEncumbrances(any());
+    doReturn(completedFuture(Collections.singletonList(encumbrance))).when(financeHelper).getOrderEncumbrances(any());
     doReturn(completedFuture(null)).when(financeHelper).updateTransactions(any());
+    doReturn(completedFuture(null)).when(financeHelper).updateOrderTransactionSummary(anyString(), anyInt());
     doNothing().when(financeHelper).closeHttpClient();
+    doNothing().when(orderLineHelper).closeHttpClient();
     doReturn(completedFuture(null)).when(orderLineHelper).updatePoLinesSummary(any());
     //When
     serviceSpy.unOpenOrder(order).join();
@@ -82,7 +82,7 @@ public class PurchaseOrderHelperTest  extends ApiTestBase{
     assertEquals(Encumbrance.Status.PENDING, encumbrance.getEncumbrance().getStatus());
 
     verify(financeHelper).makeEncumbrancesPending(any());
-    verify(financeHelper).getPoLinesEncumbrances(any());
+    verify(financeHelper).getOrderEncumbrances(any());
     verify(financeHelper).updateTransactions(any());
     verify(financeHelper).closeHttpClient();
     verify(orderLineHelper).updatePoLinesSummary(any());
@@ -94,12 +94,13 @@ public class PurchaseOrderHelperTest  extends ApiTestBase{
     PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
     FinanceHelper financeHelper = mock(FinanceHelper.class, CALLS_REAL_METHODS);
     PurchaseOrderHelper serviceSpy = spy(new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en"
-      , poNumberHelper, orderLineHelper, protectionHelper, titlesHelper, financeHelper, piecesHelper));
+      , poNumberHelper, orderLineHelper, protectionHelper, financeHelper));
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
     doReturn(completedFuture(order)).when(serviceSpy).updateAndGetOrderWithLines(any(CompositePurchaseOrder.class));
-    doReturn(completedFuture(null)).when(financeHelper).getPoLinesEncumbrances(any());
+    doReturn(completedFuture(null)).when(financeHelper).getOrderEncumbrances(any());
     doNothing().when(financeHelper).closeHttpClient();
+    doNothing().when(orderLineHelper).closeHttpClient();
     //When
     CompletableFuture<Void> act = serviceSpy.unOpenOrder(order);
     //Then

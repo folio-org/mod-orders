@@ -188,7 +188,7 @@ public abstract class AbstractHelper {
    * @param endpoint   endpoint
    * @param recordData json to use for update operation
    */
-  public CompletableFuture<Void> handleUpdateRequest(String endpoint, Object recordData) {
+  protected CompletableFuture<Void> handleUpdateRequest(String endpoint, Object recordData) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
     try {
       JsonObject json = convertToJson(recordData);

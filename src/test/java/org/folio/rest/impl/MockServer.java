@@ -185,7 +185,7 @@ public class MockServer {
   private static final String TITLES_PATH = BASE_MOCK_DATA_PATH + "titles/titles.json";
   public static final String BUDGETS_PATH = BASE_MOCK_DATA_PATH + "budgets/budgets.json";
   public static final String LEDGERS_PATH = BASE_MOCK_DATA_PATH + "ledgers/ledgers.json";
-  public static final String ENCUMBRANCE_PATH = BASE_MOCK_DATA_PATH + "encumbrances/encumbrances.json";
+  public static final String ENCUMBRANCE_PATH = BASE_MOCK_DATA_PATH + "encumbrances/valid_encumbrance.json";
 
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";
@@ -1829,12 +1829,16 @@ public class MockServer {
     }
   }
 
-  private JsonObject handleTransactionGetEntry(RoutingContext ctx) {
+  private void handleTransactionGetEntry(RoutingContext ctx) {
     Transaction transaction = null;
     try {
-      return new JsonObject(getMockData(ENCUMBRANCE_PATH)).getJsonArray("encumbrances").getJsonObject(3);
+      if (ctx.request().params().get("query").contains("transactionType==Encumbrance")) {
+        String body = getMockData(ENCUMBRANCE_PATH);
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
+        addServerRqRsData(HttpMethod.GET, TRANSACTIONS_ENDPOINT, new JsonObject(body));
+      }
     } catch (IOException e) {
-      return null;
+      return ;
     }
   }
 

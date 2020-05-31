@@ -132,15 +132,15 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang
-    , PoNumberHelper poNumberHelper, PurchaseOrderLineHelper orderLineHelper, ProtectionHelper protectionHelper,
-           TitlesHelper titlesHelper, FinanceHelper financeHelper, PiecesHelper piecesHelper) {
+          , PoNumberHelper poNumberHelper, PurchaseOrderLineHelper orderLineHelper
+                , ProtectionHelper protectionHelper, FinanceHelper financeHelper) {
     super(httpClient, okapiHeaders, ctx, lang);
     this.financeHelper = financeHelper;
     this.poNumberHelper = poNumberHelper;
     this.orderLineHelper = orderLineHelper;
     this.protectionHelper = protectionHelper;
-    this.titlesHelper = titlesHelper;
-    this.piecesHelper = piecesHelper;
+    this.titlesHelper = new TitlesHelper(httpClient, okapiHeaders, ctx, lang);
+    this.piecesHelper = new PiecesHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   public PurchaseOrderHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -238,7 +238,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           })
           .thenAccept(ok -> {
             if (isTransitionToPending(poFromStorage, compPO)) {
-         //     checkOrderUnopenPermissions();
+              checkOrderUnopenPermissions();
               unOpenOrder(compPO);
             }
           })

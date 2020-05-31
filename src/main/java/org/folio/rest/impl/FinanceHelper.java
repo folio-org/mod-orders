@@ -139,9 +139,9 @@ public class FinanceHelper extends AbstractHelper {
       String queryParam = getEndpointWithQuery(query, logger);
       String endpoint = String.format(TRANSACTION_ENDPOINT_BY_QUERY, limit, offset, queryParam, lang);
       handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-        .thenAccept(jsonTransactionss -> {
-          logger.info("Successfully retrieved voucher lines: " + jsonTransactionss.encodePrettily());
-          future.complete(jsonTransactionss.mapTo(TransactionCollection.class));
+        .thenAccept(jsonTransactions -> {
+          logger.info("Successfully retrieved voucher lines: " + jsonTransactions.encodePrettily());
+          future.complete(jsonTransactions.mapTo(TransactionCollection.class));
         })
         .exceptionally(t -> {
           logger.error("Error getting voucher lines", t);
@@ -192,11 +192,11 @@ public class FinanceHelper extends AbstractHelper {
     return createRecordInStorage(JsonObject.mapFrom(summary), resourcesPath(ORDER_TRANSACTION_SUMMARIES));
   }
 
-  public CompletableFuture<Void> updateOrderTransactionSummary(String id, int number) {
+  public CompletableFuture<Void> updateOrderTransactionSummary(String orderId, int number) {
     OrderTransactionSummary summary = new OrderTransactionSummary()
-      .withId(id)
+      .withId(orderId)
       .withNumTransactions(number);
-    return handleUpdateRequest(resourcesPath(ORDER_TRANSACTION_SUMMARIES), summary);
+    return handleUpdateRequest(resourceByIdPath(ORDER_TRANSACTION_SUMMARIES, orderId), summary);
   }
 
   private CompletableFuture<Void> createEncumbrances(List<Triple<Transaction, CompositePoLine, FundDistribution>> encumbranceDistributionTriples) {
@@ -508,16 +508,20 @@ public class FinanceHelper extends AbstractHelper {
     CompletableFuture<Void> compliteFuture = new CompletableFuture<>();
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     List<Transaction> newOrderLines = findNeedReleaseEncumbrances(compPO.getCompositePoLines(), storeEncumbrances);
-    newOrderLines.forEach(encumbrance -> {
-      CompletableFuture<Void> future = handlePostWithEmptyBody(resourceByIdPath(FINANCE_RELEASE_ENCUMBRANCE, encumbrance.getId())
-                      , httpClient, ctx, okapiHeaders, logger);
-      futures.add(future);
-    });
-    return collectResultsOnSuccess(futures)
-      .thenAccept(list -> compliteFuture.complete(null))
-      .exceptionally(t -> {
-        compliteFuture.completeExceptionally(t.getCause());
-        return null;
+    if (!newOrderLines.isEmpty()) {
+      newOrderLines.forEach(encumbrance -> {
+        CompletableFuture<Void> future = handlePostWithEmptyBody(resourceByIdPath(FINANCE_RELEASE_ENCUMBRANCE, encumbrance.getId())
+          , httpClient, ctx, okapiHeaders, logger);
+        futures.add(future);
       });
+      return collectResultsOnSuccess(futures)
+        .thenAccept(list -> compliteFuture.complete(null))
+        .exceptionally(t -> {
+          compliteFuture.completeExceptionally(t.getCause());
+          return null;
+        });
+    }
+    return CompletableFuture.completedFuture(null);
   }
+
 }
