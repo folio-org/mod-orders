@@ -66,6 +66,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.impl.AbstractHelper;
 import org.folio.rest.jaxrs.model.Alert;
@@ -75,6 +76,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -827,6 +829,34 @@ public class HelperUtils {
   }
 
   /**
+   * A common method to create a new entry in the storage based on the Json Object.
+   *
+   * @return completable future holding id of newly created entity Record or an exception if process failed
+   */
+  public static CompletableFuture<Void> handlePostWithEmptyBody(String endpoint, HttpClientInterface httpClient,
+                                                              Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+
+    logger.debug(CALLING_ENDPOINT_MSG, HttpMethod.POST, endpoint);
+
+    try {
+      httpClient.request(HttpMethod.POST, endpoint, okapiHeaders)
+        .thenAccept(HelperUtils::verifyResponse)
+        .thenApply(future::complete)
+        .exceptionally(t -> {
+          logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, HttpMethod.POST, endpoint);
+          future.completeExceptionally(t);
+          return null;
+        });
+    } catch (Exception e) {
+      logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, e, HttpMethod.POST, endpoint);
+      future.completeExceptionally(e);
+    }
+
+    return future;
+  }
+
+  /**
    * Retrieve configuration for mod-orders from mod-configuration.
    * @param okapiHeaders the headers provided by okapi
    * @param ctx the context
@@ -1117,5 +1147,19 @@ public class HelperUtils {
           }
         }));
     }
+  }
+
+  public static List<String> getPoLinesFundIds(List<CompositePoLine> compositePoLines) {
+    return compositePoLines.stream()
+      .filter(line -> Objects.nonNull(line.getFundDistribution()))
+      .flatMap(line -> line.getFundDistribution().stream())
+      .map(FundDistribution::getFundId)
+      .collect(toList());
+  }
+
+  public static List<String> getTransactionsFundIds(List<Transaction> transactions) {
+    return transactions.stream()
+      .map(Transaction::getFromFundId)
+      .collect(toList());
   }
 }
