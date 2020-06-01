@@ -436,7 +436,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
     CompositePoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
 
-    body.setCheckinItems(false);
+    body.setCheckinItems(true);
+    body.setIsPackage(false);
+    body.setReceiptStatus(CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED);
     MockServer.addMockEntry(PO_LINES, body);
     MockServer.addMockEntry(PURCHASE_ORDER, new CompositePurchaseOrder()
       .withId(ID_FOR_PRINT_MONOGRAPH_ORDER)
@@ -450,7 +452,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
         .withLocationId(body.getLocations().get(0).getLocationId()));
     }
 
-    final Errors errors = verifyPut(url, JsonObject.mapFrom(body), "", 422).as(Errors.class);
+    Errors errors = verifyPut(url, JsonObject.mapFrom(body), "", 422).as(Errors.class);
     assertThat(errors.getErrors().get(0).getCode(), equalTo(PIECES_TO_BE_DELETED.getCode()));
 
     Map<String, List<JsonObject>> retrieves = MockServer.serverRqRs.column(HttpMethod.GET);
