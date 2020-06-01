@@ -53,10 +53,10 @@ public abstract class AbstractHelper {
   public static final String OKAPI_URL = "x-okapi-url";
   public static final String LOCALE_SETTINGS = "localeSettings";
   public static final String CURRENCY_USD = "USD";
-  static final int MAX_IDS_FOR_GET_RQ = 15;
-  static final String SEARCH_PARAMS = "?limit=%s&offset=%s%s&lang=%s";
-  static final String EXCEPTION_CALLING_ENDPOINT_WITH_BODY_MSG = "{} {} request failed. Request body: {}";
-  static final String CALLING_ENDPOINT_WITH_BODY_MSG = "Sending {} {} with body: {}";
+  public static final int MAX_IDS_FOR_GET_RQ = 15;
+  public static final String SEARCH_PARAMS = "?limit=%s&offset=%s%s&lang=%s";
+  public static final String EXCEPTION_CALLING_ENDPOINT_WITH_BODY_MSG = "{} {} request failed. Request body: {}";
+  public static final String CALLING_ENDPOINT_WITH_BODY_MSG = "Sending {} {} with body: {}";
 
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -68,7 +68,7 @@ public abstract class AbstractHelper {
   protected final String lang;
   private JsonObject tenantConfiguration;
 
-  AbstractHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+  public AbstractHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     setDefaultHeaders(httpClient);
     this.httpClient = httpClient;
     this.okapiHeaders = okapiHeaders;
@@ -76,7 +76,7 @@ public abstract class AbstractHelper {
     this.lang = lang;
   }
 
-  AbstractHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
+  public AbstractHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     this.httpClient = getHttpClient(okapiHeaders, true);
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;

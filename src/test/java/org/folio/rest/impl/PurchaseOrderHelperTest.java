@@ -62,7 +62,7 @@ public class PurchaseOrderHelperTest  extends ApiTestBase{
     PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
     FinanceHelper financeHelper = mock(FinanceHelper.class, CALLS_REAL_METHODS);
     PurchaseOrderHelper serviceSpy = spy(new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en"
-      , poNumberHelper, orderLineHelper, protectionHelper, financeHelper));
+      , poNumberHelper, orderLineHelper, financeHelper));
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
     Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
@@ -94,7 +94,7 @@ public class PurchaseOrderHelperTest  extends ApiTestBase{
     PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
     FinanceHelper financeHelper = mock(FinanceHelper.class, CALLS_REAL_METHODS);
     PurchaseOrderHelper serviceSpy = spy(new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en"
-      , poNumberHelper, orderLineHelper, protectionHelper, financeHelper));
+      , poNumberHelper, orderLineHelper, financeHelper));
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
     doReturn(completedFuture(order)).when(serviceSpy).updateAndGetOrderWithLines(any(CompositePurchaseOrder.class));

@@ -918,10 +918,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO) {
     if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
       return financeHelper.getOrderEncumbrances(compPO.getId())
-                   .thenCompose(storeEncumbrances -> financeHelper.handleNewEncumbrances(compPO, storeEncumbrances)
+                   .thenCompose(storeEncumbrances -> financeHelper.createNewEncumbrances(compPO, storeEncumbrances)
                                                                   .thenApply(v -> storeEncumbrances))
+                  .thenCompose(storeEncumbrances -> financeHelper.updateEncumbrances(compPO, storeEncumbrances)
+                                                                 .thenApply(v -> storeEncumbrances))
                    .thenAccept(storeEncumbrances -> financeHelper.releaseUnusedEncumbrances(compPO, storeEncumbrances)
-                                                                  .thenApply(v -> storeEncumbrances));
+                                                                 .thenApply(v -> storeEncumbrances));
 
     }
     return CompletableFuture.completedFuture(null);

@@ -14,6 +14,7 @@ import static org.mockito.Mockito.verify;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.TransactionService;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -30,6 +31,10 @@ public class FinanceHelperTest extends ApiTestBase{
   private EventLoopContext ctxMock;
   @Mock
   private HttpClientInterface httpClient;
+  @Mock
+  private TransactionService transactionService;
+  @Mock
+  private PurchaseOrderLineHelper purchaseOrderLineHelper;
 
   @Before
   public void initMocks(){
@@ -53,12 +58,13 @@ public class FinanceHelperTest extends ApiTestBase{
   @Test
   public void testShouldInvokeUpdateTransactionTimesEqualToTransactionQuantity() {
     //given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en"));
+    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en"
+                        , purchaseOrderLineHelper, transactionService));
     Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
-    doReturn(completedFuture(null)).when(financeHelper).updateTransaction(any());
+    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any());
     //When
     financeHelper.updateTransactions(Arrays.asList(encumbrance, encumbrance));
     //Then
-    verify(financeHelper, times(2)).updateTransaction(any());
+    verify(transactionService, times(1)).updateTransactions(any());
   }
 }
