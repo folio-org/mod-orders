@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.BiConsumer;
@@ -454,10 +455,11 @@ public class FinanceHelper extends AbstractHelper {
       + "encumbrance.sourcePurchaseOrderId==" + orderId;
   }
 
-  private List<CompositePoLine> findNeedEncumbrancePoLines(List<CompositePoLine> compositePoLines
+  public List<CompositePoLine> findNeedEncumbrancePoLines(List<CompositePoLine> compositePoLines
                       ,List<Transaction> orderEncumbrancesInStorage) {
     List<String> poLinesFundIds = getPoLinesFundIds(compositePoLines);
     return compositePoLines.stream()
+      .filter(line -> !CollectionUtils.isEmpty(line.getFundDistribution()))
       .filter(compositePoLine ->
         orderEncumbrancesInStorage.stream()
           .filter(encumbrance -> encumbrance.getEncumbrance().getSourcePoLineId().equals(compositePoLine.getId()))
@@ -466,7 +468,7 @@ public class FinanceHelper extends AbstractHelper {
       .collect(Collectors.toList());
   }
 
-  private List<Transaction> findNeedReleaseEncumbrances(List<CompositePoLine> compositePoLines
+  public List<Transaction> findNeedReleaseEncumbrances(List<CompositePoLine> compositePoLines
                        ,List<Transaction> orderEncumbrancesInStorage) {
     List<String> poLinesFundIds = getPoLinesFundIds(compositePoLines);
     List<String> lineIds = compositePoLines.stream().map(CompositePoLine::getId).collect(toList());
@@ -511,25 +513,24 @@ public class FinanceHelper extends AbstractHelper {
     return CompletableFuture.completedFuture(null);
   }
 
-  private List<TransactionPoLineFundRelationshipHolder> buildNeedUpdateEncumbranceHolder(List<CompositePoLine> poLines
-    , List<Transaction> orderEncumbrancesInStorage) {
+  public List<TransactionPoLineFundRelationshipHolder> buildNeedUpdateEncumbranceHolder(List<CompositePoLine> poLines
+                          , List<Transaction> orderEncumbrancesInStorage) {
     List<TransactionPoLineFundRelationshipHolder> holders = new ArrayList<>();
     poLines.stream()
       .filter(line -> !CollectionUtils.isEmpty(line.getFundDistribution()))
-      .forEach(line -> {
-        line.getFundDistribution().forEach(fund -> {
+      .forEach(line ->
+        line.getFundDistribution().forEach(fund ->
           orderEncumbrancesInStorage.stream()
             .filter(encumbrance -> encumbrance.getEncumbrance().getSourcePoLineId().equals(line.getId())
-              && encumbrance.getFromFundId().equals(fund.getFundId()))
+                                                 && encumbrance.getFromFundId().equals(fund.getFundId()))
             .findAny()
             .ifPresent(encumbrance -> {
               TransactionPoLineFundRelationshipHolder holder = new TransactionPoLineFundRelationshipHolder();
               holder.withTransaction(encumbrance).withPoLine(line).withFundDistribution(fund);
               holders.add(holder);
-            });
-
-        });
-      });
+            })
+        )
+      );
     return holders;
   }
 

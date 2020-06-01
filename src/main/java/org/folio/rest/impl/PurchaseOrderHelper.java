@@ -920,11 +920,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
       return financeHelper.getOrderEncumbrances(compPO.getId())
                    .thenCompose(storeEncumbrances -> financeHelper.createNewEncumbrances(compPO, storeEncumbrances)
                                                                   .thenApply(v -> storeEncumbrances))
-                  .thenCompose(storeEncumbrances -> financeHelper.updateEncumbrances(compPO, storeEncumbrances)
-                                                                 .thenApply(v -> storeEncumbrances))
+                   .thenCompose(storeEncumbrances -> financeHelper.updateEncumbrances(compPO, storeEncumbrances)
+                                                                  .thenApply(v -> storeEncumbrances))
                    .thenAccept(storeEncumbrances -> financeHelper.releaseUnusedEncumbrances(compPO, storeEncumbrances)
                                                                  .thenApply(v -> storeEncumbrances));
-
     }
     return CompletableFuture.completedFuture(null);
   }
