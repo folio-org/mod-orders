@@ -4,6 +4,7 @@ import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.impl.AbstractHelper;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -21,11 +22,16 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 public class TransactionService extends AbstractHelper {
   private static final String TRANSACTION_ENDPOINT_BY_QUERY = resourcesPath(TRANSACTIONS_ENDPOINT) + SEARCH_PARAMS;
-  private static final String TRANSACTION_STORAGE_ENDPOINT_BYID = resourceByIdPath(TRANSACTIONS_STORAGE_ENDPOINT) + URL_WITH_LANG_PARAM;
+  public static final String TRANSACTION_STORAGE_ENDPOINT_BYID = resourceByIdPath(TRANSACTIONS_STORAGE_ENDPOINT) + URL_WITH_LANG_PARAM;
 
   public TransactionService(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
   }
+
+  public TransactionService(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+    super(httpClient, okapiHeaders, ctx, lang);
+  }
+
   public CompletableFuture<TransactionCollection> getTransactions(int limit, int offset, String query) {
     CompletableFuture<TransactionCollection> future = new VertxCompletableFuture<>(ctx);
     try {

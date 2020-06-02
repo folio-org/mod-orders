@@ -32,7 +32,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.BiConsumer;
@@ -118,7 +117,7 @@ public class FinanceHelper extends AbstractHelper {
         .collect(toList());
       return retrieveSystemCurrency()
         .thenCompose(v -> prepareEncumbrances(encumbrances))
-        .thenCompose(v -> createOrderTransactionSummary(compPO.getId(), encumbrances.size()))
+        .thenCompose(v -> transactionService.createOrderTransactionSummary(compPO.getId(), encumbrances.size()))
         .thenCompose(summaryId -> createEncumbrances(relationshipHolders));
     }
     return CompletableFuture.completedFuture(null);
@@ -146,14 +145,6 @@ public class FinanceHelper extends AbstractHelper {
   private Collector<Transaction, ?, MonetaryAmount> sumTransactionAmounts() {
     return Collectors.mapping(tx -> Money.of(tx.getAmount(), systemCurrency),
       Collectors.reducing(Money.of(0, systemCurrency), MonetaryFunctions::sum));
-  }
-
-
-  public CompletableFuture<String> createOrderTransactionSummary(String id, int number) {
-    OrderTransactionSummary summary = new OrderTransactionSummary()
-      .withId(id)
-      .withNumTransactions(number);
-    return createRecordInStorage(JsonObject.mapFrom(summary), resourcesPath(ORDER_TRANSACTION_SUMMARIES));
   }
 
   public CompletableFuture<Void> updateOrderTransactionSummary(String orderId, int number) {
@@ -344,7 +335,7 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   private void updateEncumbrancesWithPolFields(List<TransactionPoLineFundRelationshipHolder> holders) {
-    holders.forEach(holder -> updateEncumbrance(holder.getFundDistribution(), holder.getPoLine(), holder.getTransaction()));
+    holders.forEach(holder -> updateEncumbranceAmounts(holder.getFundDistribution(), holder.getPoLine(), holder.getTransaction()));
   }
 
 
@@ -382,16 +373,11 @@ public class FinanceHelper extends AbstractHelper {
     return transaction;
   }
 
-  private Transaction updateEncumbrance(FundDistribution distribution, CompositePoLine poLine, Transaction trEncumbrance) {
+  private Transaction updateEncumbranceAmounts(FundDistribution distribution, CompositePoLine poLine, Transaction trEncumbrance) {
     MonetaryAmount estimatedPrice = calculateEstimatedPrice(poLine.getCost());
-    trEncumbrance.setTransactionType(Transaction.TransactionType.ENCUMBRANCE);
-    trEncumbrance.setFromFundId(distribution.getFundId());
-    trEncumbrance.setSource(Transaction.Source.PO_LINE);
     trEncumbrance.setAmount(calculateAmountEncumbered(distribution, estimatedPrice));
     trEncumbrance.setCurrency(systemCurrency);
     Encumbrance encumbrance = trEncumbrance.getEncumbrance();
-    encumbrance.setSourcePoLineId(poLine.getId());
-    encumbrance.setSourcePoLineId(poLine.getId());
     encumbrance.setStatus(Encumbrance.Status.UNRELEASED);
     encumbrance.setInitialAmountEncumbered(trEncumbrance.getAmount());
     return trEncumbrance;

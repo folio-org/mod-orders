@@ -18,6 +18,7 @@ import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.service.PrefixServiceTest;
 import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
+import org.folio.service.TransactionServiceTest;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
@@ -60,7 +61,8 @@ import static org.hamcrest.Matchers.is;
   PurchaseOrderHelperTest.class,
   FinanceHelperTest.class,
   PurchaseOrderLineHelperTest.class,
-  HelperUtilsTest.class
+  HelperUtilsTest.class,
+  TransactionServiceTest.class
 })
 public class ApiTestSuite {
 

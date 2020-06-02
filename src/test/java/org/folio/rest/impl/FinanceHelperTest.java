@@ -12,6 +12,12 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
 import org.folio.model.TransactionPoLineFundRelationshipHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -24,11 +30,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+
 import io.vertx.core.impl.EventLoopContext;
 import io.vertx.core.json.JsonObject;
 
@@ -160,6 +162,8 @@ public class FinanceHelperTest extends ApiTestBase{
       financeHelper.findNeedReleaseEncumbrances(order.getCompositePoLines(), Arrays.asList(notMatchesEncumbrance, matchedEncumbrance));
     //Then
     assertEquals(1, actEncumbranceForRelease.size());
+    assertEquals(notMatchesEncumbrance.getEncumbrance().getSourcePoLineId(), actEncumbranceForRelease.get(0).getEncumbrance().getSourcePoLineId());
+    assertEquals(notMatchesEncumbrance.getFromFundId(), actEncumbranceForRelease.get(0).getFromFundId());
   }
 
   @Test
@@ -181,7 +185,7 @@ public class FinanceHelperTest extends ApiTestBase{
   }
 
   @Test
-  public void testShouldBuidHolderOnlyForEncumbrancesMatchesWithAnyPoLinesOrFundsInPoLInes() {
+  public void testShouldBuildHolderOnlyForEncumbrancesMatchesWithAnyPoLinesByIdOrFundsInPoLInes() {
     //given
     FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en"
       , purchaseOrderLineHelper, transactionService));
@@ -198,5 +202,9 @@ public class FinanceHelperTest extends ApiTestBase{
       financeHelper.buildNeedUpdateEncumbranceHolder(order.getCompositePoLines(), Arrays.asList(notMatchesEncumbrance, matchedEncumbrance));
     //Then
     assertEquals(1, holders.size());
+    assertEquals(matchedEncumbrance.getEncumbrance().getSourcePoLineId(), holders.get(0).getTransaction().getEncumbrance().getSourcePoLineId());
+    assertEquals(matchedEncumbrance.getFromFundId(), holders.get(0).getTransaction().getFromFundId());
+    assertEquals(order.getCompositePoLines().get(0).getId(), holders.get(0).getPoLine().getId());
+    assertEquals(order.getCompositePoLines().get(0).getFundDistribution().get(0).getFundId(), holders.get(0).getFundDistribution().getFundId());
   }
 }
