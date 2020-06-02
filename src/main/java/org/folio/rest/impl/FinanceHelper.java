@@ -137,6 +137,25 @@ public class FinanceHelper extends AbstractHelper {
     return encumbrances;
   }
 
+  public Transaction updateEncumbrance(FundDistribution fundDistribution, CompositePoLine poLine, Transaction trEncumbrance) {
+    MonetaryAmount estimatedPrice = calculateEstimatedPrice(poLine.getCost());
+    trEncumbrance.setAmount(calculateAmountEncumbered(fundDistribution, estimatedPrice));
+    trEncumbrance.setCurrency(systemCurrency);
+    Encumbrance encumbrance = trEncumbrance.getEncumbrance();
+    encumbrance.setStatus(Encumbrance.Status.UNRELEASED);
+    encumbrance.setInitialAmountEncumbered(trEncumbrance.getAmount());
+    return trEncumbrance;
+  }
+
+  public Encumbrance buildEncumbranceWitOrderFields(CompositePurchaseOrder compPo) {
+    Encumbrance encumbrance = new Encumbrance();
+    encumbrance.setSourcePurchaseOrderId(compPo.getId());
+    encumbrance.setReEncumber(compPo.getReEncumber());
+    encumbrance.setSubscription(compPo.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING);
+    encumbrance.setOrderType(Encumbrance.OrderType.fromValue(compPo.getOrderType().value()));
+    return encumbrance;
+  }
+
   private CompletableFuture<Void> retrieveSystemCurrency() {
     return getSystemCurrency().thenAccept(currency -> systemCurrency = currency);
   }
@@ -335,7 +354,7 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   private void updateEncumbrancesWithPolFields(List<TransactionPoLineFundRelationshipHolder> holders) {
-    holders.forEach(holder -> updateEncumbranceAmounts(holder.getFundDistribution(), holder.getPoLine(), holder.getTransaction()));
+    holders.forEach(holder -> updateEncumbrance(holder.getFundDistribution(), holder.getPoLine(), holder.getTransaction()));
   }
 
 
@@ -371,25 +390,6 @@ public class FinanceHelper extends AbstractHelper {
     encumbrance.setInitialAmountEncumbered(transaction.getAmount());
     transaction.setEncumbrance(encumbrance);
     return transaction;
-  }
-
-  private Transaction updateEncumbranceAmounts(FundDistribution distribution, CompositePoLine poLine, Transaction trEncumbrance) {
-    MonetaryAmount estimatedPrice = calculateEstimatedPrice(poLine.getCost());
-    trEncumbrance.setAmount(calculateAmountEncumbered(distribution, estimatedPrice));
-    trEncumbrance.setCurrency(systemCurrency);
-    Encumbrance encumbrance = trEncumbrance.getEncumbrance();
-    encumbrance.setStatus(Encumbrance.Status.UNRELEASED);
-    encumbrance.setInitialAmountEncumbered(trEncumbrance.getAmount());
-    return trEncumbrance;
-  }
-
-  public Encumbrance buildEncumbranceWitOrderFields(CompositePurchaseOrder compPo) {
-    Encumbrance encumbrance = new Encumbrance();
-    encumbrance.setSourcePurchaseOrderId(compPo.getId());
-    encumbrance.setReEncumber(compPo.getReEncumber());
-    encumbrance.setSubscription(compPo.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING);
-    encumbrance.setOrderType(Encumbrance.OrderType.fromValue(compPo.getOrderType().value()));
-    return encumbrance;
   }
 
   private double calculateAmountEncumbered(FundDistribution distribution, MonetaryAmount estimatedPrice) {

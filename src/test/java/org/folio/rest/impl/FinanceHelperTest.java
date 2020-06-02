@@ -12,6 +12,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -206,5 +207,21 @@ public class FinanceHelperTest extends ApiTestBase{
     assertEquals(matchedEncumbrance.getFromFundId(), holders.get(0).getTransaction().getFromFundId());
     assertEquals(order.getCompositePoLines().get(0).getId(), holders.get(0).getPoLine().getId());
     assertEquals(order.getCompositePoLines().get(0).getFundDistribution().get(0).getFundId(), holders.get(0).getFundDistribution().getFundId());
+  }
+
+  @Test
+  public void testShouldUpdateEncumbranceWithNewAmountFromLineAndFundFromLine() {
+    //Given
+    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en"
+      , purchaseOrderLineHelper, transactionService));
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    CompositePoLine line = order.getCompositePoLines().get(0);
+    FundDistribution fundDistribution = order.getCompositePoLines().get(0).getFundDistribution().get(0);
+    Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
+    //When
+    financeHelper.updateEncumbrance(fundDistribution, line, encumbrance);
+    //Then
+    assertEquals(BigDecimal.valueOf(line.getCost().getListUnitPrice()), BigDecimal.valueOf(encumbrance.getAmount()));
+    assertEquals(BigDecimal.valueOf(encumbrance.getAmount()), BigDecimal.valueOf(encumbrance.getEncumbrance().getInitialAmountEncumbered()));
   }
 }

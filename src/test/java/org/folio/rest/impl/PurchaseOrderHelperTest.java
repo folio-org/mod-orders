@@ -15,11 +15,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -42,8 +40,6 @@ public class PurchaseOrderHelperTest  extends ApiTestBase{
   public ExpectedException expectedException = ExpectedException.none();
   @Mock
   private PoNumberHelper poNumberHelper;
-  @Mock
-  private  ProtectionHelper protectionHelper;
   @Mock
   private Map<String, String> okapiHeadersMock;
   @Mock
