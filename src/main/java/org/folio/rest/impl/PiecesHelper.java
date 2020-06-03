@@ -190,7 +190,6 @@ public class PiecesHelper extends AbstractHelper {
           })
           .thenCompose(aVoid -> handleDeleteRequest(String.format(DELETE_PIECE_BY_ID, id, lang), httpClient, ctx, okapiHeaders, logger))
           .thenCompose(aVoid -> {
-            System.out.println(purchaseOrder);
             if (purchaseOrder.getCompositePoLines().stream().allMatch(line -> isUpdateOrDeleteNotRequiredForPhysical(line) && isUpdateOrDeleteNotRequiredForEresource(line))) {
               return CompletableFuture.completedFuture(null);
             } else {
