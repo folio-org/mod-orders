@@ -15,6 +15,8 @@ import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
+import static org.folio.orders.utils.HelperUtils.isUpdateOrDeleteNotRequiredForEresource;
+import static org.folio.orders.utils.HelperUtils.isUpdateOrDeleteNotRequiredForPhysical;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
@@ -178,15 +180,24 @@ public class PiecesHelper extends AbstractHelper {
 
   public CompletableFuture<Void> deletePiece(String id) {
     return getPieceById(id)
-      .thenCompose(piece -> getOrderByPoLineId(piece.getPoLineId())
-        .thenCompose(purchaseOrder -> protectionHelper.isOperationRestricted(purchaseOrder.getAcqUnitIds(), DELETE))
-        .thenCompose(vVoid -> inventoryHelper.getRequestsByItemId(piece.getItemId()))
-        .thenAccept(items -> {
-          if (CollectionUtils.isNotEmpty(items)) {
-            throw new HttpException(422, ErrorCodes.REQUEST_FOUND.toError());
-          }
-        })
-        .thenCompose(aVoid -> handleDeleteRequest(String.format(DELETE_PIECE_BY_ID, id, lang), httpClient, ctx, okapiHeaders, logger))
+      .thenCompose(piece -> getCompositeOrderByPoLineId(piece.getPoLineId())
+        .thenCompose(purchaseOrder -> protectionHelper.isOperationRestricted(purchaseOrder.getAcqUnitIds(), DELETE)
+          .thenCompose(vVoid -> inventoryHelper.getRequestsByItemId(piece.getItemId()))
+          .thenAccept(items -> {
+            if (CollectionUtils.isNotEmpty(items)) {
+              throw new HttpException(422, ErrorCodes.REQUEST_FOUND.toError());
+            }
+          })
+          .thenCompose(aVoid -> handleDeleteRequest(String.format(DELETE_PIECE_BY_ID, id, lang), httpClient, ctx, okapiHeaders, logger))
+          .thenCompose(aVoid -> {
+            System.out.println(purchaseOrder);
+            if (purchaseOrder.getCompositePoLines().stream().allMatch(line -> isUpdateOrDeleteNotRequiredForPhysical(line) && isUpdateOrDeleteNotRequiredForEresource(line))) {
+              return CompletableFuture.completedFuture(null);
+            } else {
+              return inventoryHelper.deleteItem(piece.getItemId());
+            }
+          })
+        )
       );
   }
 

@@ -12,8 +12,11 @@ import static org.junit.Assert.assertNull;
 import org.folio.HttpStatus;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.junit.Test;
 
@@ -22,6 +25,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -129,10 +133,39 @@ public class PieceApiTest extends ApiTestBase {
   }
 
   @Test
-  public void deletePieceByIdTest() {
-    logger.info("=== Test delete piece by id ===");
+  public void deletePieceByIdWithoutItemDeletionTest() {
+    logger.info("=== Test delete piece by id - item not deleted ===");
 
-    verifyDeleteResponse(String.format(PIECES_ID_PATH, VALID_UUID), "", 204);
+    CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
+    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId())
+      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.NONE));
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withItemId(UUID.randomUUID().toString()).withPoLineId(poLine.getId());
+    order.setCompositePoLines(Collections.singletonList(poLine));
+    MockServer.addMockEntry(PIECES, JsonObject.mapFrom(piece));
+    MockServer.addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
+    MockServer.addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
+
+    verifyDeleteResponse(String.format(PIECES_ID_PATH, piece.getId()), "", 204);
+    assertThat(MockServer.getItemDeletions(), nullValue());
+    assertThat(MockServer.getPieceDeletions(), hasSize(1));
+  }
+
+  @Test
+  public void deletePieceByIdWithItemDeletionTest() {
+    logger.info("=== Test delete piece by id - item deleted ===");
+
+    CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
+    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId())
+      .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM));
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withItemId(UUID.randomUUID().toString()).withPoLineId(poLine.getId());
+    order.setCompositePoLines(Collections.singletonList(poLine));
+    MockServer.addMockEntry(PIECES, JsonObject.mapFrom(piece));
+    MockServer.addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
+    MockServer.addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
+
+    verifyDeleteResponse(String.format(PIECES_ID_PATH, piece.getId()), "", 204);
+    assertThat(MockServer.getItemDeletions(), hasSize(1));
+    assertThat(MockServer.getPieceDeletions(), hasSize(1));
   }
 
   @Test
@@ -152,6 +185,9 @@ public class PieceApiTest extends ApiTestBase {
     assertThat(errors, hasSize(1));
     Error error = errors.get(0);
     assertThat(error.getCode(), is(REQUEST_FOUND.getCode()));
+
+    assertThat(MockServer.getItemDeletions(), nullValue());
+    assertThat(MockServer.getPieceDeletions(), nullValue());
   }
 
   @Test
