@@ -303,6 +303,10 @@ public class MockServer {
     return serverRqRs.get(PIECES, HttpMethod.PUT);
   }
 
+  public static List<JsonObject> getPieceDeletions() {
+    return serverRqRs.get(PIECES, HttpMethod.DELETE);
+  }
+
   static List<JsonObject> getHoldingsSearches() {
     return serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
   }
@@ -325,6 +329,10 @@ public class MockServer {
 
   public static List<JsonObject> getItemUpdates() {
     return serverRqRs.get(ITEM_RECORDS, HttpMethod.PUT);
+  }
+
+  public static List<JsonObject> getItemDeletions() {
+    return serverRqRs.get(ITEM_RECORDS, HttpMethod.DELETE);
   }
 
   static List<JsonObject> getCreatedItems() {
@@ -536,6 +544,7 @@ public class MockServer {
     router.delete(resourcePath(REASONS_FOR_CLOSURE)).handler(ctx -> handleDeleteGenericSubObj(ctx, REASONS_FOR_CLOSURE));
     router.delete(resourcePath(PREFIXES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PREFIXES));
     router.delete(resourcePath(SUFFIXES)).handler(ctx -> handleDeleteGenericSubObj(ctx, SUFFIXES));
+    router.delete("/inventory/items/:id").handler(ctx -> handleDeleteGenericSubObj(ctx, ITEM_RECORDS));
 
     router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
     return router;

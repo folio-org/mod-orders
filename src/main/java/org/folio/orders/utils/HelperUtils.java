@@ -906,11 +906,11 @@ public class HelperUtils {
     }
   }
 
-  private static boolean isUpdateNotRequiredForEresource(CompositePoLine compPOL) {
+  public static boolean isUpdateNotRequiredForEresource(CompositePoLine compPOL) {
     return compPOL.getEresource() == null || compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.NONE;
   }
 
-  private static boolean isUpdateNotRequiredForPhysical(CompositePoLine compPOL) {
+  public static boolean isUpdateNotRequiredForPhysical(CompositePoLine compPOL) {
     return compPOL.getPhysical() == null || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE;
   }
 

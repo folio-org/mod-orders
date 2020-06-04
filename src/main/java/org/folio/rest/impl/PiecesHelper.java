@@ -47,6 +47,7 @@ import java.util.concurrent.CompletionException;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
@@ -178,15 +179,32 @@ public class PiecesHelper extends AbstractHelper {
 
   public CompletableFuture<Void> deletePiece(String id) {
     return getPieceById(id)
-      .thenCompose(piece -> getOrderByPoLineId(piece.getPoLineId())
-        .thenCompose(purchaseOrder -> protectionHelper.isOperationRestricted(purchaseOrder.getAcqUnitIds(), DELETE))
-        .thenCompose(vVoid -> inventoryHelper.getRequestsByItemId(piece.getItemId()))
-        .thenAccept(items -> {
-          if (CollectionUtils.isNotEmpty(items)) {
-            throw new HttpException(422, ErrorCodes.REQUEST_FOUND.toError());
-          }
-        })
-        .thenCompose(aVoid -> handleDeleteRequest(String.format(DELETE_PIECE_BY_ID, id, lang), httpClient, ctx, okapiHeaders, logger))
+      .thenCompose(piece -> getCompositeOrderByPoLineId(piece.getPoLineId())
+        .thenCompose(purchaseOrder -> protectionHelper.isOperationRestricted(purchaseOrder.getAcqUnitIds(), DELETE)
+          .thenCompose(vVoid -> inventoryHelper.getRequestsByItemId(piece.getItemId()))
+          .thenAccept(items -> {
+            if (CollectionUtils.isNotEmpty(items)) {
+              throw new HttpException(422, ErrorCodes.REQUEST_FOUND.toError());
+            }
+          })
+          .thenCompose(aVoid -> handleDeleteRequest(String.format(DELETE_PIECE_BY_ID, id, lang), httpClient, ctx, okapiHeaders, logger))
+          .thenCompose(aVoid -> {
+            if (StringUtils.isNotEmpty(piece.getItemId())) {
+              // Attempt to delete item
+              return inventoryHelper.deleteItem(piece.getItemId())
+                .exceptionally(t -> {
+                  // Skip error processing if item has already deleted
+                  if (t.getCause() instanceof HttpException && ((HttpException) t.getCause()).getCode() == 404) {
+                    return null;
+                  } else {
+                    throw new CompletionException(t);
+                  }
+                });
+            } else {
+              return CompletableFuture.completedFuture(null);
+            }
+          })
+        )
       );
   }
 

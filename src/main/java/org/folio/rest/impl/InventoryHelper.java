@@ -16,6 +16,7 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
+import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
@@ -221,6 +222,11 @@ public class InventoryHelper extends AbstractHelper {
   public CompletableFuture<Void> updateItem(JsonObject item) {
     String endpoint = String.format(UPDATE_ITEM_ENDPOINT, item.getString(ID), lang);
     return handlePutRequest(endpoint, item, httpClient, ctx, okapiHeaders, logger);
+  }
+
+  public CompletableFuture<Void> deleteItem(String id) {
+    String endpoint = String.format(UPDATE_ITEM_ENDPOINT, id, lang);
+    return handleDeleteRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
   }
 
   /**

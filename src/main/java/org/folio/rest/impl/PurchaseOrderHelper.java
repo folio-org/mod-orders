@@ -244,9 +244,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> checkLocationsAndPiecesConsistency(List<CompositePoLine> poLines) {
-    String query = convertIdsToCqlQuery(poLines.stream().map(CompositePoLine::getId).collect(toList()), "poLineId");
+    List<CompositePoLine> linesWithId = poLines.stream().filter(compositePoLine -> StringUtils.isNotEmpty(compositePoLine.getId())).collect(Collectors.toList());
+    String query = convertIdsToCqlQuery(linesWithId.stream().map(CompositePoLine::getId).collect(toList()), "poLineId");
     return piecesHelper.getPieces(Integer.MAX_VALUE, 0, query)
-      .thenAccept(pieces -> verifyLocationsAndPiecesConsistency(poLines, pieces));
+      .thenAccept(pieces -> verifyLocationsAndPiecesConsistency(linesWithId, pieces));
   }
 
   public CompletableFuture<Void> handleFinalOrderStatus(CompositePurchaseOrder compPO, String initialOrdersStatus) {
