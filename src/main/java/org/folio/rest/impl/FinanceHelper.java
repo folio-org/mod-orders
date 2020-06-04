@@ -78,21 +78,18 @@ public class FinanceHelper extends AbstractHelper {
   private static final String ENCUMBRANCE_CRITERIA = "transactionType==Encumbrance";
   private static final String AND = " and ";
 
-  private final PurchaseOrderLineHelper purchaseOrderLineHelper;
   private final TransactionService transactionService;
 
   private String systemCurrency;
 
   public FinanceHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
-    purchaseOrderLineHelper = new PurchaseOrderLineHelper(okapiHeaders, ctx, lang);
     transactionService = new TransactionService(okapiHeaders, ctx, lang);
   }
 
   public FinanceHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang
-          , PurchaseOrderLineHelper purchaseOrderLineHelper, TransactionService transactionService) {
+          , TransactionService transactionService) {
     super(httpClient, okapiHeaders, ctx, lang);
-    this.purchaseOrderLineHelper = purchaseOrderLineHelper;
     this.transactionService = transactionService;
   }
 
