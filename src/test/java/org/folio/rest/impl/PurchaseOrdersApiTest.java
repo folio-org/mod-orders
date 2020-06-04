@@ -103,6 +103,7 @@ import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.POProtectedFields;
 import org.folio.rest.acq.model.Ongoing;
 import org.folio.rest.acq.model.finance.Fund;
+import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
@@ -812,7 +813,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdPEMixFormat() {
+  public void testPutOrdersByIdPEMixFormat() throws IOException {
     logger.info("=== Test Put Order By Id create Pieces with P/E Mix format ===");
     CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
 
@@ -830,6 +831,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     compositePoLine.getCost().setQuantityPhysical(3);
     compositePoLine.getCost().setQuantityElectronic(2);
     compositePoLine.setOrderFormat(OrderFormat.P_E_MIX);
+    Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
+    compositePoLine.getFundDistribution().get(0).setEncumbrance(encumbrance.getId());
+    compositePoLine.getFundDistribution().get(0).setFundId(encumbrance.getFromFundId());
     compositePoLine.getLocations().stream()
       .filter(location -> ObjectUtils.defaultIfNull(location.getQuantityPhysical(), 0) > 0)
       .forEach(location -> location.setQuantityElectronic(null));

@@ -49,9 +49,9 @@ public final class FinanceInteractionsTestHelper {
         .allMatch(distr -> distr.getEncumbrance() != null))
       .collect(Collectors.groupingBy(PoLine::getId));
 
-    assertThat(expectedCreated, equalTo(createdEncumbrances.size()));
+    assertThat(createdEncumbrances.size(), equalTo(expectedCreated));
     // Make sure that each fund distribution has now links to encumbrances
-    assertThat(rqPo.getCompositePoLines().size(), equalTo(polUpdates.size()));
+    assertThat(polUpdates.size(), equalTo(rqPo.getCompositePoLines().size()));
 
     // Verify created encumbrances
     if (!createdEncumbrances.isEmpty()) {

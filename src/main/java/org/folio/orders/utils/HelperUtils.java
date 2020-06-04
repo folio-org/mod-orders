@@ -1148,18 +1148,4 @@ public class HelperUtils {
         }));
     }
   }
-
-  public static List<String> getPoLinesFundIds(List<CompositePoLine> compositePoLines) {
-    return compositePoLines.stream()
-      .filter(line -> !CollectionUtils.isEmpty(line.getFundDistribution()))
-      .flatMap(line -> line.getFundDistribution().stream())
-      .map(FundDistribution::getFundId)
-      .collect(toList());
-  }
-
-  public static List<String> getTransactionsFundIds(List<Transaction> transactions) {
-    return transactions.stream()
-      .map(Transaction::getFromFundId)
-      .collect(toList());
-  }
 }

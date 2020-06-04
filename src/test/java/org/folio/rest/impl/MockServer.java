@@ -433,7 +433,6 @@ public class MockServer {
     router.post(resourcesPath(ORDER_TRANSACTION_SUMMARIES))
       .handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TRANSACTION_SUMMARIES));
     router.post(resourcesPath(ENCUMBRANCES)).handler(this::handleTransactionPostEntry);
-    router.get(resourcesPath(TRANSACTIONS_ENDPOINT)).handler(this::handleTransactionGetEntry);
     router.post(resourcesPath(TITLES))
       .handler(ctx -> handlePostGenericSubObj(ctx, TITLES));
 
@@ -488,6 +487,7 @@ public class MockServer {
     router.get(resourcePath(REASONS_FOR_CLOSURE)).handler(ctx -> handleGetGenericSubObj(ctx, REASONS_FOR_CLOSURE));
     router.get(resourcePath(PREFIXES)).handler(ctx -> handleGetGenericSubObj(ctx, PREFIXES));
     router.get(resourcePath(SUFFIXES)).handler(ctx -> handleGetGenericSubObj(ctx, SUFFIXES));
+    router.get(resourcesPath(TRANSACTIONS_ENDPOINT)).handler(this::handleTransactionGetEntry);
 
     router.put(resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
     router.put(resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -1832,11 +1832,17 @@ public class MockServer {
   private void handleTransactionGetEntry(RoutingContext ctx) {
     Transaction transaction = null;
     try {
-      if (ctx.request().params().get("query").contains("transactionType==Encumbrance")) {
-        String body = getMockData(ENCUMBRANCE_PATH);
-        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
-        addServerRqRsData(HttpMethod.GET, TRANSACTIONS_ENDPOINT, new JsonObject(body));
-      }
+      String query = ctx.request().params().get("query");
+      if (query.contains("transactionType==Encumbrance")) {
+//        if (query.contains("encumbrance.sourcePurchaseOrderId==00000000-1111-2222-8888-999999999999")) {
+//          String body = JsonObject.mapFrom(getCreatedEncumbrances().get(0)).encode();
+//          serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
+//          addServerRqRsData(HttpMethod.GET, TRANSACTIONS_ENDPOINT, new JsonObject(body));
+//        } else {
+          String body = getMockData(ENCUMBRANCE_PATH);
+          serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
+          addServerRqRsData(HttpMethod.GET, TRANSACTIONS_ENDPOINT, new JsonObject(body));
+        }
     } catch (IOException e) {
       return ;
     }

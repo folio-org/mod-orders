@@ -1,18 +1,24 @@
 package org.folio.service;
 
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.getEndpointWithQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.handlePostWithEmptyBody;
+import static org.folio.orders.utils.ResourcePathResolver.FINANCE_RELEASE_ENCUMBRANCE;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_ENDPOINT;
 import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_STORAGE_ENDPOINT;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
@@ -63,6 +69,26 @@ public class TransactionService extends AbstractHelper {
     return createRecordInStorage(JsonObject.mapFrom(summary), resourcesPath(ORDER_TRANSACTION_SUMMARIES));
   }
 
+  public CompletableFuture<OrderTransactionSummary> getOrderTransactionSummary(String orderId) {
+    CompletableFuture<OrderTransactionSummary> future = new VertxCompletableFuture<>(ctx);
+    try {
+      String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(ORDER_TRANSACTION_SUMMARIES, orderId), lang);
+      handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonObject -> {
+        if (logger.isInfoEnabled()) {
+          logger.info("Successfully retrieved all pieces: {}", jsonObject.encodePrettily());
+        }
+        future.complete(jsonObject.mapTo(OrderTransactionSummary.class));
+      })
+        .exceptionally(t -> {
+          future.completeExceptionally(t);
+          return null;
+        });
+    } catch (Exception e) {
+      future.completeExceptionally(e);
+    }
+    return future;
+  }
+
   public CompletableFuture<Void> updateTransaction(Transaction transaction) {
     String endpoint = String.format(TRANSACTION_STORAGE_ENDPOINT_BYID, transaction.getId(), lang);
     return handleUpdateRequest(endpoint, transaction);
@@ -73,4 +99,24 @@ public class TransactionService extends AbstractHelper {
       .map(this::updateTransaction)
       .toArray(CompletableFuture[]::new));
   }
+
+  public CompletableFuture<Void> releaseEncumbrances(List<Transaction> encumbrances) {
+    CompletableFuture<Void> resultFuture = new CompletableFuture<>();
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    if (!encumbrances.isEmpty()) {
+      encumbrances.forEach(encumbrance -> {
+        CompletableFuture<Void> future = handlePostWithEmptyBody(resourceByIdPath(FINANCE_RELEASE_ENCUMBRANCE, encumbrance.getId())
+          , httpClient, ctx, okapiHeaders, logger);
+        futures.add(future);
+      });
+      return collectResultsOnSuccess(futures)
+        .thenAccept(list -> resultFuture.complete(null))
+        .exceptionally(t -> {
+          resultFuture.completeExceptionally(t.getCause());
+          return null;
+        });
+    }
+    return CompletableFuture.completedFuture(null);
+  }
+
 }

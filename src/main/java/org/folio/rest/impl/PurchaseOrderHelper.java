@@ -7,7 +7,11 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.AcqDesiredPermissions.ASSIGN;
 import static org.folio.orders.utils.AcqDesiredPermissions.MANAGE;
 import static org.folio.orders.utils.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
+import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
+import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
+import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
+import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.ErrorCodes.MISSING_ONGOING;
 import static org.folio.orders.utils.ErrorCodes.ONGOING_NOT_ALLOWED;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
@@ -44,6 +48,7 @@ import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder
 import static org.folio.orders.utils.ProtectedOperationType.CREATE;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
+import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
@@ -64,6 +69,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -74,6 +80,9 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
+import org.folio.models.EncumbranceRelationsHolder;
+import org.folio.models.EncumbrancesProcessingHolder;
+import org.folio.models.PoLineFundHolder;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.ErrorCodes;
@@ -81,6 +90,7 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
+import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
@@ -104,7 +114,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
 
 public class PurchaseOrderHelper extends AbstractHelper {
-
+  private static final String ENCUMBRANCE_POST_ENDPOINT = resourcesPath(ENCUMBRANCES) + "?lang=%s";
   private static final String PERMISSION_ORDER_APPROVE = "orders.item.approve";
   private static final String PERMISSION_ORDER_UNOPEN = "orders.item.unopen";
   private static final String SEARCH_ORDERS_BY_LINES_DATA = resourcesPath(SEARCH_ORDERS) + SEARCH_PARAMS;
@@ -619,6 +629,31 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return validateOrder(compPO);
   }
 
+  public CompletableFuture<Void> unOpenOrder(CompositePurchaseOrder compPO) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    updateAndGetOrderWithLines(compPO)
+      .thenCompose(compositePO -> financeHelper.getOrderEncumbrances(compPO.getId()))
+      .thenApply(financeHelper::makeEncumbrancesPending)
+      .thenCompose(encumbrances -> financeHelper.updateOrderTransactionSummary(compPO.getId(), encumbrances.size())
+                                                .thenApply(v -> encumbrances))
+      .thenCompose(financeHelper::updateTransactions)
+      .thenAccept(ok -> orderLineHelper.makePoLinesPending(compPO.getCompositePoLines()))
+      .thenCompose(ok -> orderLineHelper.updatePoLinesSummary(compPO.getCompositePoLines()))
+      .handle((v, throwable) -> {
+        financeHelper.closeHttpClient();
+        orderLineHelper.closeHttpClient();
+        if (throwable == null) {
+          future.complete(null);
+        }
+        else {
+          future.completeExceptionally(throwable);
+        }
+        return null;
+      });
+    return future;
+  }
+
+
   @Override
   protected Errors getProcessingErrors() {
     addProcessingErrors(orderLineHelper.getErrors());
@@ -916,16 +951,42 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO) {
+    EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
     if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
       return financeHelper.getOrderEncumbrances(compPO.getId())
-                   .thenCompose(storeEncumbrances -> financeHelper.createNewEncumbrances(compPO, storeEncumbrances)
-                                                                  .thenApply(v -> storeEncumbrances))
-                   .thenCompose(storeEncumbrances -> financeHelper.updateEncumbrances(compPO, storeEncumbrances)
-                                                                  .thenApply(v -> storeEncumbrances))
-                   .thenAccept(storeEncumbrances -> financeHelper.releaseUnusedEncumbrances(compPO, storeEncumbrances)
-                                                                 .thenApply(v -> storeEncumbrances));
+                .thenAccept(holder::withEncumbrancesFromStorage)
+                .thenCompose(v -> financeHelper.buildNewEncumbrances(compPO, holder.getEncumbrancesFromStorage()))
+                .thenAccept(holder::withEncumbrancesForCreate)
+                .thenCompose(v -> financeHelper.buildEncumbrancesForUpdate(compPO, holder.getEncumbrancesFromStorage()))
+                .thenAccept(holder::withEncumbrancesForUpdate)
+                .thenApply(v -> financeHelper.findNeedReleaseEncumbrances(compPO, holder.getEncumbrancesFromStorage()))
+                .thenAccept(holder::withEncumbrancesForRelease)
+                .thenCompose(v -> createOrUpdateOrderTransactionSummary(compPO.getId(), holder.getAllEncumbrancesQuantity()))
+                .thenCompose(v -> createOrUpdateEncumbrances(holder));
     }
     return CompletableFuture.completedFuture(null);
+  }
+
+  private CompletableFuture<Void> createOrUpdateOrderTransactionSummary(String orderId, int allEncumbrancesQuantity) {
+    return financeHelper.getOrderTransactionSummary(orderId)
+                 .thenAccept(summary -> financeHelper.updateOrderTransactionSummary(orderId, allEncumbrancesQuantity))
+                 .exceptionally(t -> {
+                   financeHelper.createOrderTransactionSummary(orderId, allEncumbrancesQuantity);
+                   return null;
+                 });
+  }
+
+  private CompletableFuture<Void> createOrUpdateEncumbrances(EncumbrancesProcessingHolder holder) {
+    return createEncumbrancesAndUpdatePoLines(holder.getEncumbrancesForCreate())
+                .thenCompose(v -> financeHelper.releaseEncumbrances(holder.getEncumbrancesForRelease()))
+                .thenCompose(v -> updateEncumbrances(holder));
+  }
+
+  private CompletionStage<Void> updateEncumbrances(EncumbrancesProcessingHolder holder) {
+    List<Transaction> encumbrances = holder.getEncumbrancesForUpdate().stream()
+      .map(EncumbranceRelationsHolder::getTransaction)
+      .collect(toList());
+    return financeHelper.releaseEncumbrances(encumbrances);
   }
 
   private boolean isFundDistributionsPresent(List<CompositePoLine> compositePoLines) {
@@ -1089,27 +1150,35 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return purchaseOrder;
   }
 
-  public CompletableFuture<Void> unOpenOrder(CompositePurchaseOrder compPO) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
-    updateAndGetOrderWithLines(compPO)
-                    .thenCompose(compositePO -> financeHelper.getOrderEncumbrances(compPO.getId()))
-                    .thenApply(financeHelper::makeEncumbrancesPending)
-                    .thenCompose(encumbrances -> financeHelper.updateOrderTransactionSummary(compPO.getId(), encumbrances.size())
-                                                               .thenApply(v -> encumbrances))
-                    .thenCompose(financeHelper::updateTransactions)
-                    .thenAccept(ok -> orderLineHelper.makePoLinesPending(compPO.getCompositePoLines()))
-                    .thenCompose(ok -> orderLineHelper.updatePoLinesSummary(compPO.getCompositePoLines()))
-                    .handle((v, throwable) -> {
-                      financeHelper.closeHttpClient();
-                      orderLineHelper.closeHttpClient();
-                      if (throwable == null) {
-                        future.complete(null);
-                      }
-                      else {
-                        future.completeExceptionally(throwable);
-                      }
-                      return null;
-                    });
-    return future;
+  private CompletableFuture<Void> createEncumbrancesAndUpdatePoLines(List<EncumbranceRelationsHolder> relationsHolders) {
+    return VertxCompletableFuture.allOf(ctx, relationsHolders.stream()
+        .map(holder -> createRecordInStorage(JsonObject.mapFrom(holder.getTransaction()), String.format(ENCUMBRANCE_POST_ENDPOINT, lang))
+                              .thenCompose(id -> {
+                                PoLineFundHolder poLineFundHolder = holder.getPoLineFundHolder();
+                                poLineFundHolder.getFundDistribution().setEncumbrance(id);
+                                return orderLineHelper.updatePoLinesSummary(Collections.singletonList(poLineFundHolder.getPoLine()));
+                              })
+                              .exceptionally(fail -> {
+                                checkCustomTransactionError(fail);
+                                throw new CompletionException(fail);
+                              })
+        )
+      .toArray(CompletableFuture[]::new)
+    );
   }
+
+  private void checkCustomTransactionError(Throwable fail) {
+    if (fail.getCause().getMessage().contains(BUDGET_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
+      throw new CompletionException(new HttpException(422, BUDGET_NOT_FOUND_FOR_TRANSACTION));
+    } else if (fail.getCause().getMessage().contains(LEDGER_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
+      throw new CompletionException(new HttpException(422, LEDGER_NOT_FOUND_FOR_TRANSACTION));
+    } else if (fail.getCause().getMessage().contains(BUDGET_IS_INACTIVE.getDescription())) {
+      throw new CompletionException(new HttpException(422, BUDGET_IS_INACTIVE));
+    } else if (fail.getCause().getMessage().contains(FUND_CANNOT_BE_PAID.getDescription())) {
+      throw new CompletionException(new HttpException(422, FUND_CANNOT_BE_PAID));
+    } else {
+      throw new CompletionException(fail.getCause());
+    }
+  }
+
 }

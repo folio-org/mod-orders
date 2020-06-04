@@ -13,12 +13,8 @@ import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
-import static org.folio.orders.utils.HelperUtils.getPoLinesFundIds;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.handlePostWithEmptyBody;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
-import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
-import static org.folio.orders.utils.ResourcePathResolver.FINANCE_RELEASE_ENCUMBRANCE;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
@@ -43,7 +39,9 @@ import javax.money.MonetaryAmount;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
-import org.folio.model.TransactionPoLineFundRelationshipHolder;
+import org.folio.models.EncumbranceRelationsHolder;
+import org.folio.models.LineFundId;
+import org.folio.models.PoLineFundHolder;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Budget;
@@ -68,12 +66,10 @@ import org.javamoney.moneta.function.MonetaryFunctions;
 import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.Context;
-import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
 
 public class FinanceHelper extends AbstractHelper {
-  private static final String ENCUMBRANCE_POST_ENDPOINT = resourcesPath(ENCUMBRANCES) + "?lang=%s";
   private static final String GET_CURRENT_FISCAL_YEAR_BY_ID = "/finance/ledgers/%s/current-fiscal-year?lang=%s";
   private static final String GET_FUNDS_WITH_SEARCH_PARAMS = resourcesPath(FUNDS) + SEARCH_PARAMS;
   private static final String GET_BUDGETS_WITH_SEARCH_PARAMS = resourcesPath(BUDGETS) + SEARCH_PARAMS;
@@ -105,22 +101,16 @@ public class FinanceHelper extends AbstractHelper {
    *
    * @return CompletableFuture with void on success.
    */
-  public CompletableFuture<Void> createNewEncumbrances(CompositePurchaseOrder compPO, List<Transaction> storeEncumbrances) {
-    List<CompositePoLine> needEncumbranceOrderLines = findNeedEncumbrancePoLines(compPO.getCompositePoLines(), storeEncumbrances);
-    if (!needEncumbranceOrderLines.isEmpty()) {
-      Encumbrance encumbranceSkeleton = buildEncumbranceWitOrderFields(compPO);
+  public CompletableFuture<List<EncumbranceRelationsHolder>> buildNewEncumbrances(CompositePurchaseOrder compPO
+                              , List<Transaction> storeEncumbrances) {
 
-      List<TransactionPoLineFundRelationshipHolder> relationshipHolders =
-        buildEncumbrancesWithPolFields(needEncumbranceOrderLines, encumbranceSkeleton);
-      List<Transaction> encumbrances = relationshipHolders.stream()
-        .map(TransactionPoLineFundRelationshipHolder::getTransaction)
-        .collect(toList());
-      return retrieveSystemCurrency()
-        .thenCompose(v -> prepareEncumbrances(encumbrances))
-        .thenCompose(v -> transactionService.createOrderTransactionSummary(compPO.getId(), encumbrances.size()))
-        .thenCompose(summaryId -> createEncumbrances(relationshipHolders));
+    List<PoLineFundHolder> poLineFundHolders = buildNewEncumbrancesHolders(compPO.getCompositePoLines(), storeEncumbrances);
+    if (!poLineFundHolders.isEmpty()) {
+      Encumbrance encumbranceSkeleton = buildEncumbranceWitOrderFields(compPO);
+      List<EncumbranceRelationsHolder> encumbranceHolders = buildEncumbrancesWithPolFields(poLineFundHolders, encumbranceSkeleton);
+      return prepareEncumbrances(encumbranceHolders);
     }
-    return CompletableFuture.completedFuture(null);
+    return CompletableFuture.completedFuture(Collections.emptyList());
   }
 
   public CompletableFuture<List<Transaction>> getOrderEncumbrances(String orderId) {
@@ -173,32 +163,21 @@ public class FinanceHelper extends AbstractHelper {
     return handleUpdateRequest(resourceByIdPath(ORDER_TRANSACTION_SUMMARIES, orderId), summary);
   }
 
-  private CompletableFuture<Void> createEncumbrances(List<TransactionPoLineFundRelationshipHolder> relationshipHolders) {
-    return VertxCompletableFuture.allOf(ctx, relationshipHolders.stream()
-      .map(holder -> createRecordInStorage(JsonObject.mapFrom(holder.getTransaction()), String.format(ENCUMBRANCE_POST_ENDPOINT, lang))
-        .thenCompose(id -> {
-          holder.getFundDistribution().setEncumbrance(id);
-          return purchaseOrderLineHelper.updatePoLinesSummary(Collections.singletonList(holder.getPoLine()));
-        })
-        .exceptionally(fail -> {
-          checkForCustomTransactionError(fail);
-          throw new CompletionException(fail);
-        }))
-      .toArray(CompletableFuture[]::new));
-  }
-
-  private CompletableFuture<Void> prepareEncumbrances(List<Transaction> encumbrances) {
-    Map<String, List<Transaction>> groupedByFund = encumbrances.stream()
+  private CompletableFuture<List<EncumbranceRelationsHolder>> prepareEncumbrances(List<EncumbranceRelationsHolder> encumbranceHolders) {
+    Map<String, List<Transaction>> groupedByFund = encumbranceHolders.stream()
+      .map(EncumbranceRelationsHolder::getTransaction)
       .collect(groupingBy(Transaction::getFromFundId));
-    return groupByLedgerIds(groupedByFund)
+    return retrieveSystemCurrency()
+      .thenCompose(v -> groupByLedgerIds(groupedByFund))
       .thenCompose(trsGroupedByLedgerId -> checkEncumbranceRestrictions(trsGroupedByLedgerId, groupedByFund)
         .thenApply(v -> trsGroupedByLedgerId))
       .thenCompose(trsGroupedByLedgerId -> VertxCompletableFuture.allOf(ctx,
         trsGroupedByLedgerId.entrySet()
           .stream()
-          .map(entry -> getCurrentFiscalYear(entry.getKey()).thenAccept(fiscalYear -> updateEncumbrances(entry, fiscalYear)))
+          .map(entry -> getCurrentFiscalYear(entry.getKey()).thenAccept(fiscalYear -> buildEncumbrancesForUpdate(entry, fiscalYear)))
           .collect(toList())
-          .toArray(new CompletableFuture[0])));
+          .toArray(new CompletableFuture[0])))
+      .thenApply(v -> encumbranceHolders);
   }
 
   private CompletableFuture<Void> checkEncumbranceRestrictions(Map<String, List<Transaction>> trsGroupedByLedgerId,
@@ -251,7 +230,7 @@ public class FinanceHelper extends AbstractHelper {
     }
   }
 
-  private void updateEncumbrances(Map.Entry<String, List<Transaction>> entry, FiscalYear fiscalYear) {
+  private void buildEncumbrancesForUpdate(Map.Entry<String, List<Transaction>> entry, FiscalYear fiscalYear) {
     entry.getValue()
       .forEach(transaction -> transaction.withFiscalYearId(fiscalYear.getId())
         .withCurrency(StringUtils.isNotEmpty(fiscalYear.getCurrency()) ? fiscalYear.getCurrency() : systemCurrency));
@@ -345,16 +324,20 @@ public class FinanceHelper extends AbstractHelper {
       });
   }
 
-  private List<TransactionPoLineFundRelationshipHolder> buildEncumbrancesWithPolFields(List<CompositePoLine> lines, Encumbrance encumbrance) {
-    return lines.stream()
-      .flatMap(poLine -> poLine.getFundDistribution()
-        .stream()
-        .map(fundDistribution -> new TransactionPoLineFundRelationshipHolder(buildEncumbrance(fundDistribution, poLine, encumbrance), poLine, fundDistribution)))
-      .collect(toList());
+  private List<EncumbranceRelationsHolder> buildEncumbrancesWithPolFields(List<PoLineFundHolder> holders, Encumbrance encumbrance) {
+    return holders.stream()
+                  .map(holder -> {
+                    Transaction encumbr = buildEncumbrance(holder.getFundDistribution(), holder.getPoLine(), encumbrance);
+                    return new EncumbranceRelationsHolder(encumbr, holder);
+                  })
+                  .collect(toList());
   }
 
-  private void updateEncumbrancesWithPolFields(List<TransactionPoLineFundRelationshipHolder> holders) {
-    holders.forEach(holder -> updateEncumbrance(holder.getFundDistribution(), holder.getPoLine(), holder.getTransaction()));
+  private void updateEncumbrancesWithPolFields(List<EncumbranceRelationsHolder> holders) {
+    holders.forEach(holder -> {
+      PoLineFundHolder poLineFundHolder = holder.getPoLineFundHolder();
+      updateEncumbrance(poLineFundHolder.getFundDistribution(), poLineFundHolder.getPoLine(), holder.getTransaction());
+    });
   }
 
 
@@ -402,20 +385,6 @@ public class FinanceHelper extends AbstractHelper {
     return distribution.getValue();
   }
 
-  public void checkForCustomTransactionError(Throwable fail) {
-    if (fail.getCause().getMessage().contains(BUDGET_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
-      throw new CompletionException(new HttpException(422, BUDGET_NOT_FOUND_FOR_TRANSACTION));
-    } else if (fail.getCause().getMessage().contains(LEDGER_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
-      throw new CompletionException(new HttpException(422, LEDGER_NOT_FOUND_FOR_TRANSACTION));
-    } else if (fail.getCause().getMessage().contains(BUDGET_IS_INACTIVE.getDescription())) {
-      throw new CompletionException(new HttpException(422, BUDGET_IS_INACTIVE));
-    } else if (fail.getCause().getMessage().contains(FUND_CANNOT_BE_PAID.getDescription())) {
-      throw new CompletionException(new HttpException(422, FUND_CANNOT_BE_PAID));
-    } else {
-      throw new CompletionException(fail.getCause());
-    }
-  }
-
   /**
    * Calculates remaining amount for encumbrance
    * [remaining amount] = (allocated * allowableEncumbered) - (encumbered + awaitingPayment + expended)
@@ -437,90 +406,119 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   private String buildEncumbranceOrderQuery(String orderId) {
-    return ENCUMBRANCE_CRITERIA + AND
-      + "encumbrance.sourcePurchaseOrderId==" + orderId;
+    return ENCUMBRANCE_CRITERIA
+                + AND + "encumbrance.sourcePurchaseOrderId==" + orderId
+                    + AND + "encumbrance.status <> " + Encumbrance.Status.RELEASED;
   }
 
-  public List<CompositePoLine> findNeedEncumbrancePoLines(List<CompositePoLine> compositePoLines
-                      ,List<Transaction> orderEncumbrancesInStorage) {
-    List<String> poLinesFundIds = getPoLinesFundIds(compositePoLines);
-    return compositePoLines.stream()
-      .filter(line -> !CollectionUtils.isEmpty(line.getFundDistribution()))
-      .filter(compositePoLine ->
-        orderEncumbrancesInStorage.stream()
-          .filter(encumbrance -> encumbrance.getEncumbrance().getSourcePoLineId().equals(compositePoLine.getId()))
-          .noneMatch(encumbrance -> poLinesFundIds.contains(encumbrance.getFromFundId()))
-      )
-      .collect(Collectors.toList());
+  private Map<LineFundId, PoLineFundHolder> convertToLineFundMap(List<CompositePoLine> lines) {
+    Map<LineFundId, PoLineFundHolder> resultMap = new HashMap<>();
+    lines.stream()
+         .flatMap(line -> line.getFundDistribution().stream().map(fund -> new PoLineFundHolder(line, fund)))
+         .collect(toList())
+         .forEach(poLineFundHolder -> resultMap.put(poLineFundHolder.getId(), poLineFundHolder));
+    return resultMap;
   }
 
-  public List<Transaction> findNeedReleaseEncumbrances(List<CompositePoLine> compositePoLines
-                       ,List<Transaction> orderEncumbrancesInStorage) {
-    List<String> poLinesFundIds = getPoLinesFundIds(compositePoLines);
-    List<String> lineIds = compositePoLines.stream().map(CompositePoLine::getId).collect(toList());
-    return orderEncumbrancesInStorage.stream()
-      .filter(encumbrance -> !lineIds.contains(encumbrance.getEncumbrance().getSourcePoLineId()))
-      .filter(encumbrance -> !poLinesFundIds.contains(encumbrance.getFromFundId()))
-      .collect(Collectors.toList());
-  }
-
-  public CompletableFuture<Void> releaseUnusedEncumbrances(CompositePurchaseOrder compPO, List<Transaction> storeEncumbrances) {
-    CompletableFuture<Void> resultFuture = new CompletableFuture<>();
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
-    List<Transaction> newOrderLines = findNeedReleaseEncumbrances(compPO.getCompositePoLines(), storeEncumbrances);
-    if (!newOrderLines.isEmpty()) {
-      newOrderLines.forEach(encumbrance -> {
-        CompletableFuture<Void> future = handlePostWithEmptyBody(resourceByIdPath(FINANCE_RELEASE_ENCUMBRANCE, encumbrance.getId())
-          , httpClient, ctx, okapiHeaders, logger);
-        futures.add(future);
-      });
-      return collectResultsOnSuccess(futures)
-        .thenAccept(list -> resultFuture.complete(null))
-        .exceptionally(t -> {
-          resultFuture.completeExceptionally(t.getCause());
-          return null;
-        });
-    }
-    return CompletableFuture.completedFuture(null);
-  }
-
-  public CompletableFuture<Void> updateEncumbrances(CompositePurchaseOrder compPO, List<Transaction> storeEncumbrances) {
-    List<TransactionPoLineFundRelationshipHolder> holders = buildNeedUpdateEncumbranceHolder(compPO.getCompositePoLines(), storeEncumbrances);
+  public CompletableFuture<List<EncumbranceRelationsHolder>> buildEncumbrancesForUpdate(CompositePurchaseOrder compPO
+                              , List<Transaction> storeEncumbrances) {
+    List<EncumbranceRelationsHolder> holders = buildUpdateEncumbranceHolders(compPO.getCompositePoLines(), storeEncumbrances);
     if (!holders.isEmpty()) {
       updateEncumbrancesWithPolFields(holders);
-      List<Transaction> encumbrances = holders.stream()
-        .map(TransactionPoLineFundRelationshipHolder::getTransaction)
-        .collect(toList());
-      return retrieveSystemCurrency()
-        .thenCompose(v -> prepareEncumbrances(encumbrances))
-        .thenCompose(v -> updateOrderTransactionSummary(compPO.getId(), encumbrances.size()))
-        .thenCompose(v->  transactionService.updateTransactions(encumbrances));
+      return prepareEncumbrances(holders);
     }
-    return CompletableFuture.completedFuture(null);
+    return CompletableFuture.completedFuture(Collections.emptyList());
   }
 
-  public List<TransactionPoLineFundRelationshipHolder> buildNeedUpdateEncumbranceHolder(List<CompositePoLine> poLines
+  public List<EncumbranceRelationsHolder> buildUpdateEncumbranceHolders(List<CompositePoLine> poLines
                           , List<Transaction> orderEncumbrancesInStorage) {
-    List<TransactionPoLineFundRelationshipHolder> holders = new ArrayList<>();
-    poLines.stream()
-      .filter(line -> !CollectionUtils.isEmpty(line.getFundDistribution()))
-      .forEach(line ->
-        line.getFundDistribution().forEach(fund ->
-          orderEncumbrancesInStorage.stream()
-            .filter(encumbrance -> encumbrance.getEncumbrance().getSourcePoLineId().equals(line.getId())
-                                                 && encumbrance.getFromFundId().equals(fund.getFundId()))
-            .findAny()
-            .ifPresent(encumbrance -> {
-              TransactionPoLineFundRelationshipHolder holder = new TransactionPoLineFundRelationshipHolder();
-              holder.withTransaction(encumbrance).withPoLine(line).withFundDistribution(fund);
-              holders.add(holder);
-            })
-        )
-      );
+    List<EncumbranceRelationsHolder> holders = new ArrayList<>();
+    if (!CollectionUtils.isEmpty(orderEncumbrancesInStorage)) {
+      poLines.stream()
+        .filter(line -> !CollectionUtils.isEmpty(line.getFundDistribution()))
+        .forEach(line ->
+          line.getFundDistribution().forEach(fund ->
+            orderEncumbrancesInStorage.stream()
+              .filter(encumbrance -> encumbrance.getEncumbrance().getSourcePoLineId().equals(line.getId())
+                && encumbrance.getFromFundId().equals(fund.getFundId())
+                && encumbrance.getId().equals(fund.getEncumbrance()))
+              .findAny()
+              .ifPresent(encumbrance -> {
+                EncumbranceRelationsHolder holder = new EncumbranceRelationsHolder()
+                                                              .withPoLineFund(new PoLineFundHolder(line, fund))
+                                                              .withTransaction(encumbrance);
+                holders.add(holder);
+              })
+          )
+        );
+    }
     return holders;
   }
 
+  public List<PoLineFundHolder> buildNewEncumbrancesHolders(List<CompositePoLine> poLines
+    , List<Transaction> encumbrancesInStorage) {
+    List<PoLineFundHolder> holders = new ArrayList<>();
+    if (!CollectionUtils.isEmpty(encumbrancesInStorage)) {
+      poLines.stream()
+        .filter(line -> !CollectionUtils.isEmpty(line.getFundDistribution()))
+        .forEach(line ->
+          line.getFundDistribution().forEach(fund ->
+            encumbrancesInStorage.stream()
+              .filter(encumbrance -> (!encumbrance.getEncumbrance().getSourcePoLineId().equals(line.getId()))
+                                        || (encumbrance.getEncumbrance().getSourcePoLineId().equals(line.getId())
+                                                 && !encumbrance.getId().equals(fund.getEncumbrance())
+                                                      && !encumbrance.getFromFundId().equals(fund.getFundId())))
+              .findAny()
+              .ifPresent(encumbrance -> {
+                PoLineFundHolder holder = new PoLineFundHolder(line, fund);
+                holders.add(holder);
+              })
+          )
+        );
+    }
+    else {
+      poLines.stream()
+        .filter(line -> !CollectionUtils.isEmpty(line.getFundDistribution()))
+        .forEach(line ->
+          line.getFundDistribution().forEach(fund -> {
+            PoLineFundHolder holder = new PoLineFundHolder(line, fund);
+            holders.add(holder);
+          })
+        );
+    }
+    return holders;
+  }
+
+  public List<Transaction> findNeedReleaseEncumbrances(CompositePurchaseOrder compPO
+    , List<Transaction> orderEncumbrancesInStorage) {
+    List<Transaction> encumbrancesForRelease = new ArrayList<>();
+    Map<LineFundId, PoLineFundHolder> poLineFundHolderMap = convertToLineFundMap(compPO.getCompositePoLines());
+    if (!CollectionUtils.isEmpty(orderEncumbrancesInStorage)) {
+      orderEncumbrancesInStorage.forEach(encumbrance -> {
+        LineFundId lineFundId = new LineFundId(encumbrance.getEncumbrance().getSourcePoLineId(), encumbrance.getFromFundId());
+        PoLineFundHolder poLineFundHolder = poLineFundHolderMap.get(lineFundId);
+        if (poLineFundHolder == null) {
+          encumbrancesForRelease.add(encumbrance);
+        }
+      });
+    }
+    return encumbrancesForRelease;
+  }
+
+
   public CompletableFuture<Void> updateTransactions(List<Transaction> transactions) {
     return transactionService.updateTransactions(transactions);
+  }
+
+  public CompletableFuture<Void> releaseEncumbrances(List<Transaction> encumbrances) {
+    return transactionService.releaseEncumbrances(encumbrances);
+  }
+
+  public CompletableFuture<OrderTransactionSummary> getOrderTransactionSummary(String orderId) {
+    return transactionService.getOrderTransactionSummary(orderId);
+  }
+
+  public CompletableFuture<String> createOrderTransactionSummary(String orderId, int number) {
+    return transactionService.createOrderTransactionSummary(orderId, number);
   }
 }
