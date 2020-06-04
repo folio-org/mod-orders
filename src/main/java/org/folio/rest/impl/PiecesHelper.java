@@ -68,7 +68,6 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 public class PiecesHelper extends AbstractHelper {
