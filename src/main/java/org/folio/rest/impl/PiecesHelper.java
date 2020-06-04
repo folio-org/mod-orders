@@ -15,8 +15,6 @@ import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
-import static org.folio.orders.utils.HelperUtils.isUpdateOrDeleteNotRequiredForEresource;
-import static org.folio.orders.utils.HelperUtils.isUpdateOrDeleteNotRequiredForPhysical;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
@@ -49,6 +47,7 @@ import java.util.concurrent.CompletionException;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
@@ -69,6 +68,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import org.folio.rest.jaxrs.resource.Orders;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 public class PiecesHelper extends AbstractHelper {
@@ -190,10 +190,19 @@ public class PiecesHelper extends AbstractHelper {
           })
           .thenCompose(aVoid -> handleDeleteRequest(String.format(DELETE_PIECE_BY_ID, id, lang), httpClient, ctx, okapiHeaders, logger))
           .thenCompose(aVoid -> {
-            if (purchaseOrder.getCompositePoLines().stream().allMatch(line -> isUpdateOrDeleteNotRequiredForPhysical(line) && isUpdateOrDeleteNotRequiredForEresource(line))) {
-              return CompletableFuture.completedFuture(null);
+            if (StringUtils.isNotEmpty(piece.getItemId())) {
+              // Attempt to delete item
+              return inventoryHelper.deleteItem(piece.getItemId())
+                .exceptionally(t -> {
+                  // Skip error processing if item has already deleted
+                  if (t.getCause() instanceof HttpException && ((HttpException) t.getCause()).getCode() == 404) {
+                    return null;
+                  } else {
+                    throw new CompletionException(t);
+                  }
+                });
             } else {
-              return inventoryHelper.deleteItem(piece.getItemId());
+              return CompletableFuture.completedFuture(null);
             }
           })
         )
