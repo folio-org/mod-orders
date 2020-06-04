@@ -898,19 +898,19 @@ public class HelperUtils {
   public static boolean inventoryUpdateNotRequired(CompositePoLine compPOL) {
     // in case of "Other" order format check Physical createInventory value only
     if (compPOL.getOrderFormat() == OTHER || compPOL.getOrderFormat() == PHYSICAL_RESOURCE) {
-      return isUpdateOrDeleteNotRequiredForPhysical(compPOL);
+      return isUpdateNotRequiredForPhysical(compPOL);
     } else if (compPOL.getOrderFormat() == ELECTRONIC_RESOURCE) {
-      return isUpdateOrDeleteNotRequiredForEresource(compPOL);
+      return isUpdateNotRequiredForEresource(compPOL);
     } else {
-      return isUpdateOrDeleteNotRequiredForPhysical(compPOL) && isUpdateOrDeleteNotRequiredForEresource(compPOL);
+      return isUpdateNotRequiredForPhysical(compPOL) && isUpdateNotRequiredForEresource(compPOL);
     }
   }
 
-  public static boolean isUpdateOrDeleteNotRequiredForEresource(CompositePoLine compPOL) {
+  public static boolean isUpdateNotRequiredForEresource(CompositePoLine compPOL) {
     return compPOL.getEresource() == null || compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.NONE;
   }
 
-  public static boolean isUpdateOrDeleteNotRequiredForPhysical(CompositePoLine compPOL) {
+  public static boolean isUpdateNotRequiredForPhysical(CompositePoLine compPOL) {
     return compPOL.getPhysical() == null || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE;
   }
 
