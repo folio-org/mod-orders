@@ -73,7 +73,7 @@ public class TransactionService extends AbstractHelper {
       String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(ORDER_TRANSACTION_SUMMARIES, orderId), lang);
       handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonObject -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved all pieces: {}", jsonObject.encodePrettily());
+          logger.info("Successfully retrieved transaction summary: {}", jsonObject.encodePrettily());
         }
         future.complete(jsonObject.mapTo(OrderTransactionSummary.class));
       })

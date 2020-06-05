@@ -108,6 +108,7 @@ import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
@@ -970,9 +971,21 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private CompletableFuture<Void> createOrUpdateOrderTransactionSummary(String orderId, int allEncumbrancesQuantity) {
     return financeHelper.getOrderTransactionSummary(orderId)
-                 .thenAccept(summary -> financeHelper.updateOrderTransactionSummary(orderId, allEncumbrancesQuantity))
-                 .exceptionally(t -> {
-                   financeHelper.createOrderTransactionSummary(orderId, allEncumbrancesQuantity);
+                 .handle((rez, throwable) -> {
+                   if (rez == null && (throwable != null) && (throwable.getCause() instanceof HttpException)) {
+                     HttpException httpException = (HttpException) throwable.getCause();
+                     if (httpException.getCode() == 404) {
+                       financeHelper.createOrderTransactionSummary(orderId, allEncumbrancesQuantity);
+                       financeHelper.updateOrderTransactionSummary(orderId, allEncumbrancesQuantity);
+                     }
+                     else {
+                       Future.failedFuture(throwable.getCause());
+                     }
+                   }
+                   else
+                   {
+                      financeHelper.updateOrderTransactionSummary(orderId, allEncumbrancesQuantity);
+                   }
                    return null;
                  });
   }

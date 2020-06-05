@@ -606,7 +606,11 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     firstPoLine.getCost().setQuantityElectronic(0);
     firstPoLine.getCost().setListUnitPrice(10d);
     firstPoLine.getCost().setListUnitPriceElectronic(0d);
-
+    Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
+    firstPoLine.getFundDistribution().get(0).setEncumbrance(encumbrance.getId());
+    firstPoLine.getFundDistribution().get(0).setFundId(encumbrance.getFromFundId());
+    encumbrance.getEncumbrance().setSourcePoLineId(firstPoLine.getId());
+    encumbrance.getEncumbrance().setSourcePurchaseOrderId(reqData.getId());
     // Set status to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
@@ -834,6 +838,9 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
     compositePoLine.getFundDistribution().get(0).setEncumbrance(encumbrance.getId());
     compositePoLine.getFundDistribution().get(0).setFundId(encumbrance.getFromFundId());
+    encumbrance.getEncumbrance().setSourcePoLineId(compositePoLine.getId());
+    encumbrance.getEncumbrance().setSourcePurchaseOrderId(compositePoLine.getPurchaseOrderId());
+
     compositePoLine.getLocations().stream()
       .filter(location -> ObjectUtils.defaultIfNull(location.getQuantityPhysical(), 0) > 0)
       .forEach(location -> location.setQuantityElectronic(null));

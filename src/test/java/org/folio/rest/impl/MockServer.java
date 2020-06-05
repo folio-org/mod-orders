@@ -20,30 +20,11 @@ import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.impl.AcquisitionsUnitsHelper.ALL_UNITS_CQL;
 import static org.folio.rest.impl.AcquisitionsUnitsHelper.IS_DELETED_PROP;
-import static org.folio.rest.impl.ApiTestBase.BAD_QUERY;
-import static org.folio.rest.impl.ApiTestBase.COMP_ORDER_MOCK_DATA_PATH;
-import static org.folio.rest.impl.ApiTestBase.ID;
-import static org.folio.rest.impl.ApiTestBase.ID_BAD_FORMAT;
-import static org.folio.rest.impl.ApiTestBase.ID_DOES_NOT_EXIST;
-import static org.folio.rest.impl.ApiTestBase.ID_FOR_INTERNAL_SERVER_ERROR;
-import static org.folio.rest.impl.ApiTestBase.ID_FOR_PIECES_INTERNAL_SERVER_ERROR;
-import static org.folio.rest.impl.ApiTestBase.INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT;
-import static org.folio.rest.impl.ApiTestBase.MIN_PO_ID;
-import static org.folio.rest.impl.ApiTestBase.MIN_PO_LINE_ID;
-import static org.folio.rest.impl.ApiTestBase.NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT;
-import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_STATUS_TENANT;
-import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_TYPE_TENANT;
-import static org.folio.rest.impl.ApiTestBase.NON_EXIST_LOAN_TYPE_TENANT;
-import static org.folio.rest.impl.ApiTestBase.PO_ID_GET_LINES_INTERNAL_SERVER_ERROR;
-import static org.folio.rest.impl.ApiTestBase.PO_LINE_NUMBER_VALUE;
-import static org.folio.rest.impl.ApiTestBase.PROTECTED_READ_ONLY_TENANT;
-import static org.folio.rest.impl.ApiTestBase.X_ECHO_STATUS;
-import static org.folio.rest.impl.ApiTestBase.encodePrettily;
-import static org.folio.rest.impl.ApiTestBase.getMinimalContentCompositePoLine;
-import static org.folio.rest.impl.ApiTestBase.getMinimalContentCompositePurchaseOrder;
-import static org.folio.rest.impl.ApiTestBase.getMockAsJson;
-import static org.folio.rest.impl.ApiTestBase.getMockData;
-import static org.folio.rest.impl.InventoryHelper.*;
+import static org.folio.rest.impl.ApiTestBase.*;
+import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
+import static org.folio.rest.impl.InventoryHelper.ITEMS;
+import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
+import static org.folio.rest.impl.InventoryHelper.REQUESTS;
 import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
 import static org.folio.rest.impl.PoNumberApiTest.NONEXISTING_PO_NUMBER;
 import static org.folio.rest.impl.ProtectionHelper.ACQUISITIONS_UNIT_ID;
@@ -115,7 +96,6 @@ import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.LedgerCollection;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
@@ -438,11 +418,10 @@ public class MockServer {
     router.post(resourcesPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
     router.post(resourcesPath(PIECES)).handler(ctx -> handlePostGenericSubObj(ctx, PIECES));
     router.post(resourcesPath(ORDER_TEMPLATES)).handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TEMPLATES));
-    router.post(resourcesPath(ORDER_TRANSACTION_SUMMARIES))
-      .handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TRANSACTION_SUMMARIES));
     router.post(resourcesPath(ENCUMBRANCES)).handler(this::handleTransactionPostEntry);
-    router.post(resourcesPath(TITLES))
-      .handler(ctx -> handlePostGenericSubObj(ctx, TITLES));
+    router.post(resourcesPath(TITLES)).handler(ctx -> handlePostGenericSubObj(ctx, TITLES));
+    router.post(resourcesPath(ORDER_TRANSACTION_SUMMARIES)).handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TRANSACTION_SUMMARIES));
+    router.post("/finance/release-encumbrance/:id").handler(ctx -> handlePostGenericSubObj(ctx, FINANCE_RELEASE_ENCUMBRANCE));
 
     router.post(resourcesPath(ACQUISITIONS_UNITS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_UNITS));
     router.post(resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
@@ -496,6 +475,7 @@ public class MockServer {
     router.get(resourcePath(PREFIXES)).handler(ctx -> handleGetGenericSubObj(ctx, PREFIXES));
     router.get(resourcePath(SUFFIXES)).handler(ctx -> handleGetGenericSubObj(ctx, SUFFIXES));
     router.get(resourcesPath(TRANSACTIONS_ENDPOINT)).handler(this::handleTransactionGetEntry);
+    router.get("/finance/order-transaction-summaries/:id").handler(this::handleGetOrderTransactionSummary);
 
     router.put(resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
     router.put(resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -511,6 +491,8 @@ public class MockServer {
     router.put(resourcePath(REASONS_FOR_CLOSURE)).handler(ctx -> handlePutGenericSubObj(ctx, REASONS_FOR_CLOSURE));
     router.put(resourcePath(PREFIXES)).handler(ctx -> handlePutGenericSubObj(ctx, PREFIXES));
     router.put(resourcePath(SUFFIXES)).handler(ctx -> handlePutGenericSubObj(ctx, SUFFIXES));
+    router.put("/finance/order-transaction-summaries/:id")
+      .handler(ctx -> handlePutGenericSubObj(ctx, ORDER_TRANSACTION_SUMMARIES));
 
     router.delete(resourcePath(PURCHASE_ORDER)).handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER));
     router.delete(resourcePath(PO_LINES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES));
@@ -529,6 +511,7 @@ public class MockServer {
     router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
     return router;
   }
+
 
   private JsonObject getTitlesByPoLineIds(List<String> poLineIds) {
     Supplier<List<Title>> getFromFile = () -> {
@@ -1742,8 +1725,16 @@ public class MockServer {
     switch (status) {
       case 201:
         contentType = APPLICATION_JSON;
-        body = JsonObject.mapFrom(ctx.getBodyAsJson().mapTo(getSubObjClass(subObj))).put(ID, UUID.randomUUID().toString());
-        respBody = body.encodePrettily();
+        if (ctx.getBodyAsJson() != null) {
+          body = JsonObject.mapFrom(ctx.getBodyAsJson().mapTo(getSubObjClass(subObj)));
+          if (StringUtils.isEmpty(body.getString(ID))) {
+            body.put(ID, UUID.randomUUID().toString());
+          }
+          respBody = body.encodePrettily();
+        }
+        else {
+          respBody = EMPTY;
+        }
         break;
       case 400:
         respBody = "Unable to add -- malformed JSON at 13:3";
@@ -1843,17 +1834,12 @@ public class MockServer {
     try {
       String query = ctx.request().params().get("query");
       if (query.contains("transactionType==Encumbrance")) {
-//        if (query.contains("encumbrance.sourcePurchaseOrderId==00000000-1111-2222-8888-999999999999")) {
-//          String body = JsonObject.mapFrom(getCreatedEncumbrances().get(0)).encode();
-//          serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
-//          addServerRqRsData(HttpMethod.GET, TRANSACTIONS_ENDPOINT, new JsonObject(body));
-//        } else {
           String body = getMockData(ENCUMBRANCE_PATH);
           serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
           addServerRqRsData(HttpMethod.GET, TRANSACTIONS_ENDPOINT, new JsonObject(body));
-        }
-    } catch (IOException e) {
-      return ;
+      }
+    } catch(IOException e) {
+      return;
     }
   }
 
@@ -2182,4 +2168,25 @@ public class MockServer {
     }
   }
 
+  private void handleGetOrderTransactionSummary(RoutingContext ctx) {
+    logger.info("got: " + ctx.request().path());
+    String id = ctx.request().getParam(ID);
+    logger.info("id: " + id);
+
+    JsonObject data = new JsonObject().put(ID, id);
+    addServerRqRsData(HttpMethod.GET, ORDER_TRANSACTION_SUMMARIES, data);
+
+    if (!ID_ORDER_TR_SUMMARY_EXIST.equals(id)) {
+      serverResponse(ctx, 404, APPLICATION_JSON, id);
+    } if (ID_BAD_FORMAT.equals(id)) {
+      serverResponse(ctx, 400, APPLICATION_JSON, id);
+    } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
+    } else {
+      ctx.response()
+        .setStatusCode(200)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .end(data.encodePrettily());
+    }
+  }
 }
