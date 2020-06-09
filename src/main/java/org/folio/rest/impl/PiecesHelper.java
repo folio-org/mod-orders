@@ -181,9 +181,9 @@ public class PiecesHelper extends AbstractHelper {
     return getPieceById(id)
       .thenCompose(piece -> getCompositeOrderByPoLineId(piece.getPoLineId())
         .thenCompose(purchaseOrder -> protectionHelper.isOperationRestricted(purchaseOrder.getAcqUnitIds(), DELETE)
-          .thenCompose(vVoid -> inventoryHelper.getRequestsByItemId(piece.getItemId()))
-          .thenAccept(items -> {
-            if (CollectionUtils.isNotEmpty(items)) {
+          .thenCompose(vVoid -> inventoryHelper.getNumberOfRequestsByItemId(piece.getItemId()))
+          .thenAccept(numOfRequests -> {
+            if (numOfRequests > 0) {
               throw new HttpException(422, ErrorCodes.REQUEST_FOUND.toError());
             }
           })

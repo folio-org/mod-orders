@@ -903,11 +903,15 @@ public class MockServer {
   private void handleGetItemRequests(RoutingContext ctx) {
     logger.info("handleGetItemRequests got: " + ctx.request().path());
     try {
-      String itemId = ctx.request().getParam("query").split("==")[1];
+      String itemId = ctx.request().getParam("query").split("and")[0].split("==")[1].trim();
+      int limit = Integer.parseInt(ctx.request().getParam("limit"));
       JsonObject entries = new JsonObject(ApiTestBase.getMockData(ITEM_REQUESTS_MOCK_DATA_PATH + "itemRequests.json"));
       filterByKeyValue("itemId", itemId, entries.getJsonArray(REQUESTS));
-      serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
       entries.put("totalRecords", entries.getJsonArray(REQUESTS).size());
+      if (limit == 0) {
+        entries.put("records", new JsonArray());
+      }
+      serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
       addServerRqRsData(HttpMethod.GET, REQUESTS, entries);
     } catch (IOException e) {
       ctx.response()
