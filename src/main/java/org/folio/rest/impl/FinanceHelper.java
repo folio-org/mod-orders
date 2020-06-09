@@ -331,10 +331,12 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   private void updateEncumbrancesWithPolFields(List<EncumbranceRelationsHolder> holders) {
-    holders.forEach(holder -> {
+    holders.forEach(this::updateEncumbranceWithPolFields);
+  }
+
+  private void updateEncumbranceWithPolFields(EncumbranceRelationsHolder holder) {
       PoLineFundHolder poLineFundHolder = holder.getPoLineFundHolder();
       updateEncumbrance(poLineFundHolder.getFundDistribution(), poLineFundHolder.getPoLine(), holder.getTransaction());
-    });
   }
 
 
@@ -437,14 +439,21 @@ public class FinanceHelper extends AbstractHelper {
           line.getFundDistribution().forEach(fund ->
             orderEncumbrancesInStorage.stream()
               .filter(encumbrance -> encumbrance.getEncumbrance().getSourcePoLineId().equals(line.getId())
-                && encumbrance.getFromFundId().equals(fund.getFundId())
-                && encumbrance.getId().equals(fund.getEncumbrance()))
+                                        && encumbrance.getFromFundId().equals(fund.getFundId()))
               .findAny()
-              .ifPresent(encumbrance -> {
+              .ifPresent(encumbranceTr -> {
+                double amountBeforeUpdate = encumbranceTr.getAmount();
+                double initialAmountBeforeUpdate = encumbranceTr.getEncumbrance().getInitialAmountEncumbered();
                 EncumbranceRelationsHolder holder = new EncumbranceRelationsHolder()
                                                               .withPoLineFund(new PoLineFundHolder(line, fund))
-                                                              .withTransaction(encumbrance);
-                holders.add(holder);
+                                                              .withTransaction(encumbranceTr);
+                updateEncumbranceWithPolFields(holder);
+                double updatedAmount = encumbranceTr.getAmount();
+                double updatedInitialAmount = encumbranceTr.getEncumbrance().getInitialAmountEncumbered();
+                if (Double.compare(amountBeforeUpdate, updatedAmount) != 0
+                        || (Double.compare(initialAmountBeforeUpdate, updatedInitialAmount) != 0)) {
+                  holders.add(holder);
+                }
               })
           )
         );
