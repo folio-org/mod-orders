@@ -115,6 +115,7 @@ public class InventoryHelper extends AbstractHelper {
   private static final String HOLDINGS_LOOKUP_QUERY = "instanceId==%s and permanentLocationId==%s";
   private static final String HOLDINGS_CREATE_ENDPOINT = "/holdings-storage/holdings?lang=%s";
   public static final String ID = "id";
+  public static final String TOTAL_RECORDS = "totalRecords";
 
   private static final Map<String, String> INVENTORY_LOOKUP_ENDPOINTS;
 
@@ -127,7 +128,7 @@ public class InventoryHelper extends AbstractHelper {
     apis.put(INSTANCE_TYPES, "/instance-types?query=code==%s&lang=%s");
     apis.put(INSTANCES, "/inventory/instances?query=%s&lang=%s");
     apis.put(ITEMS, "/inventory/items?query=%s&limit=%d&lang=%s");
-    apis.put(REQUESTS, "/circulation/requests?query=%s&limit=%d");
+    apis.put(REQUESTS, "/circulation/requests?query=%s&limit=%d&lang=%s");
 
     INVENTORY_LOOKUP_ENDPOINTS = Collections.unmodifiableMap(apis);
   }
@@ -201,10 +202,10 @@ public class InventoryHelper extends AbstractHelper {
    * @param itemId id of Item
    * @return future with list of requests
    */
-  public CompletableFuture<List<JsonObject>> getRequestsByItemId(String itemId) {
-    String endpoint = buildLookupEndpoint(REQUESTS, "itemId==" + itemId, Integer.MAX_VALUE, lang);
+  public CompletableFuture<Integer> getNumberOfRequestsByItemId(String itemId) {
+    String endpoint = buildLookupEndpoint(REQUESTS, encodeQuery("(itemId==" + itemId + " and status=\"*\")", logger), 0, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(response -> extractEntities(response, REQUESTS));
+      .thenApply(this::extractTotalRecords);
   }
 
   /**
@@ -697,6 +698,10 @@ public class InventoryHelper extends AbstractHelper {
 
   String extractId(JsonObject json) {
     return json.getString(ID);
+  }
+
+  Integer extractTotalRecords(JsonObject json) {
+    return json.getInteger(TOTAL_RECORDS);
   }
 
   private CompletableFuture<String> getLoanTypeId() {
