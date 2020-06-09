@@ -357,6 +357,9 @@ public class MockServer {
     return Optional.ofNullable(serverRqRs.get(ORDER_TRANSACTION_SUMMARIES, HttpMethod.POST)).orElse(Collections.emptyList());
   }
 
+  static List<JsonObject> getExistingOrderSummaries() {
+    return Optional.ofNullable(serverRqRs.get(ORDER_TRANSACTION_SUMMARIES, HttpMethod.PUT)).orElse(Collections.emptyList());
+  }
 
   private static List<JsonObject> getCollectionRecords(List<JsonObject> entries) {
     return entries.stream()
@@ -475,7 +478,6 @@ public class MockServer {
     router.get(resourcePath(PREFIXES)).handler(ctx -> handleGetGenericSubObj(ctx, PREFIXES));
     router.get(resourcePath(SUFFIXES)).handler(ctx -> handleGetGenericSubObj(ctx, SUFFIXES));
     router.get(resourcesPath(TRANSACTIONS_ENDPOINT)).handler(this::handleTransactionGetEntry);
-    router.get("/finance/order-transaction-summaries/:id").handler(this::handleGetOrderTransactionSummary);
 
     router.put(resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
     router.put(resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -2165,28 +2167,6 @@ public class MockServer {
       } catch (IOException e) {
         serverResponse(ctx, 404, APPLICATION_JSON, id);
       }
-    }
-  }
-
-  private void handleGetOrderTransactionSummary(RoutingContext ctx) {
-    logger.info("got: " + ctx.request().path());
-    String id = ctx.request().getParam(ID);
-    logger.info("id: " + id);
-
-    JsonObject data = new JsonObject().put(ID, id);
-    addServerRqRsData(HttpMethod.GET, ORDER_TRANSACTION_SUMMARIES, data);
-
-    if (!ID_ORDER_TR_SUMMARY_EXIST.equals(id)) {
-      serverResponse(ctx, 404, APPLICATION_JSON, id);
-    } if (ID_BAD_FORMAT.equals(id)) {
-      serverResponse(ctx, 400, APPLICATION_JSON, id);
-    } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
-    } else {
-      ctx.response()
-        .setStatusCode(200)
-        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .end(data.encodePrettily());
     }
   }
 }

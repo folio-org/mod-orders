@@ -463,7 +463,6 @@ public class FinanceHelper extends AbstractHelper {
             encumbrancesInStorage.stream()
               .filter(encumbrance -> (!encumbrance.getEncumbrance().getSourcePoLineId().equals(line.getId()))
                                         || (encumbrance.getEncumbrance().getSourcePoLineId().equals(line.getId())
-                                                 && !encumbrance.getId().equals(fund.getEncumbrance())
                                                       && !encumbrance.getFromFundId().equals(fund.getFundId())))
               .findAny()
               .ifPresent(encumbrance -> {

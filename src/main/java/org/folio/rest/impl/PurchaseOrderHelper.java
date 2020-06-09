@@ -963,31 +963,20 @@ public class PurchaseOrderHelper extends AbstractHelper {
                 .thenAccept(holder::withEncumbrancesForUpdate)
                 .thenApply(v -> financeHelper.findNeedReleaseEncumbrances(compPO, holder.getEncumbrancesFromStorage()))
                 .thenAccept(holder::withEncumbrancesForRelease)
-                .thenCompose(v -> createOrUpdateOrderTransactionSummary(compPO.getId(), holder.getAllEncumbrancesQuantity()))
+                .thenCompose(v -> createOrUpdateOrderTransactionSummary(compPO.getId(), holder))
                 .thenCompose(v -> createOrUpdateEncumbrances(holder));
     }
     return CompletableFuture.completedFuture(null);
   }
 
-  private CompletableFuture<Void> createOrUpdateOrderTransactionSummary(String orderId, int allEncumbrancesQuantity) {
-    return financeHelper.getOrderTransactionSummary(orderId)
-                 .handle((rez, throwable) -> {
-                   if (rez == null && (throwable != null) && (throwable.getCause() instanceof HttpException)) {
-                     HttpException httpException = (HttpException) throwable.getCause();
-                     if (httpException.getCode() == 404) {
-                       financeHelper.createOrderTransactionSummary(orderId, allEncumbrancesQuantity);
-                       financeHelper.updateOrderTransactionSummary(orderId, allEncumbrancesQuantity);
-                     }
-                     else {
-                       Future.failedFuture(throwable.getCause());
-                     }
-                   }
-                   else
-                   {
-                      financeHelper.updateOrderTransactionSummary(orderId, allEncumbrancesQuantity);
-                   }
-                   return null;
-                 });
+  private CompletableFuture<Void> createOrUpdateOrderTransactionSummary(String orderId, EncumbrancesProcessingHolder holder) {
+    if (CollectionUtils.isEmpty(holder.getEncumbrancesFromStorage())) {
+      return financeHelper.createOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity())
+                          .thenAccept(id -> Future.succeededFuture());
+    }
+    else {
+      return financeHelper.updateOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity());
+    }
   }
 
   private CompletableFuture<Void> createOrUpdateEncumbrances(EncumbrancesProcessingHolder holder) {
@@ -1000,7 +989,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     List<Transaction> encumbrances = holder.getEncumbrancesForUpdate().stream()
       .map(EncumbranceRelationsHolder::getTransaction)
       .collect(toList());
-    return financeHelper.releaseEncumbrances(encumbrances);
+    return financeHelper.updateTransactions(encumbrances);
   }
 
   private boolean isFundDistributionsPresent(List<CompositePoLine> compositePoLines) {

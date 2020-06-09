@@ -654,7 +654,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     verifyInventoryInteraction(resp, polCount);
     verifyEncumbrancesOnPoCreation(reqData, resp);
-    assertThat(getCreatedOrderSummaries(), hasSize(1));
+    assertThat(getExistingOrderSummaries(), hasSize(1));
     verifyCalculatedData(resp);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
@@ -864,7 +864,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     verifyPiecesCreated(createdItems, reqData.getCompositePoLines(), createdPieces);
     verifyEncumbrancesOnPoUpdate(reqData);
-    assertThat(getCreatedOrderSummaries(), hasSize(1));
+    assertThat(getExistingOrderSummaries(), hasSize(1));
   }
 
   @Test

@@ -1204,6 +1204,7 @@
         "finance.ledgers.current-fiscal-year.item.get",
         "finance.order-transaction-summaries.item.post",
         "finance.order-transaction-summaries.item.put",
+        "finance.release-encumbrance.item.post",
         "finance-storage.transactions.item.put",
         "inventory.instances.collection.get",
         "inventory.instances.item.post",
