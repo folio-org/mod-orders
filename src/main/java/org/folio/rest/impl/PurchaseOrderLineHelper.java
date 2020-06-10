@@ -374,6 +374,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
         .thenCompose(lineFromStorage -> getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId())
           .thenCompose(compOrder -> {
             validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage, compOrder);
+            updateLocationsQuantity(compOrderLine.getLocations());
             return checkLocationsAndPiecesConsistency(compOrderLine, compOrder)
               .thenCompose(vVoid -> protectionHelper.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE)
                 .thenCompose(v -> validateAndNormalizeISBN(compOrderLine))
