@@ -103,6 +103,7 @@ import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.POProtectedFields;
 import org.folio.rest.acq.model.Ongoing;
 import org.folio.rest.acq.model.finance.Fund;
+import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
@@ -605,7 +606,11 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     firstPoLine.getCost().setQuantityElectronic(0);
     firstPoLine.getCost().setListUnitPrice(10d);
     firstPoLine.getCost().setListUnitPriceElectronic(0d);
-
+    Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
+    firstPoLine.getFundDistribution().get(0).setEncumbrance(encumbrance.getId());
+    firstPoLine.getFundDistribution().get(0).setFundId(encumbrance.getFromFundId());
+    encumbrance.getEncumbrance().setSourcePoLineId(firstPoLine.getId());
+    encumbrance.getEncumbrance().setSourcePurchaseOrderId(reqData.getId());
     // Set status to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
@@ -649,7 +654,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     verifyInventoryInteraction(resp, polCount);
     verifyEncumbrancesOnPoCreation(reqData, resp);
-    assertThat(getCreatedOrderSummaries(), hasSize(1));
+    assertThat(getExistingOrderSummaries(), hasSize(1));
     verifyCalculatedData(resp);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
@@ -812,7 +817,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdPEMixFormat() {
+  public void testPutOrdersByIdPEMixFormat() throws IOException {
     logger.info("=== Test Put Order By Id create Pieces with P/E Mix format ===");
     CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
 
@@ -830,6 +835,12 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     compositePoLine.getCost().setQuantityPhysical(3);
     compositePoLine.getCost().setQuantityElectronic(2);
     compositePoLine.setOrderFormat(OrderFormat.P_E_MIX);
+    Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
+    compositePoLine.getFundDistribution().get(0).setEncumbrance(encumbrance.getId());
+    compositePoLine.getFundDistribution().get(0).setFundId(encumbrance.getFromFundId());
+    encumbrance.getEncumbrance().setSourcePoLineId(compositePoLine.getId());
+    encumbrance.getEncumbrance().setSourcePurchaseOrderId(compositePoLine.getPurchaseOrderId());
+
     compositePoLine.getLocations().stream()
       .filter(location -> ObjectUtils.defaultIfNull(location.getQuantityPhysical(), 0) > 0)
       .forEach(location -> location.setQuantityElectronic(null));
@@ -853,7 +864,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     verifyPiecesCreated(createdItems, reqData.getCompositePoLines(), createdPieces);
     verifyEncumbrancesOnPoUpdate(reqData);
-    assertThat(getCreatedOrderSummaries(), hasSize(1));
+    assertThat(getExistingOrderSummaries(), hasSize(1));
   }
 
   @Test

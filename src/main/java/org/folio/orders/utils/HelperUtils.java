@@ -39,6 +39,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +51,7 @@ import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javax.money.CurrencyUnit;
 import javax.money.Monetary;
@@ -825,6 +827,34 @@ public class HelperUtils {
   }
 
   /**
+   * A common method to create a new entry in the storage based on the Json Object.
+   *
+   * @return completable future holding id of newly created entity Record or an exception if process failed
+   */
+  public static CompletableFuture<Void> handlePostWithEmptyBody(String endpoint, HttpClientInterface httpClient,
+                                                              Context ctx, Map<String, String> okapiHeaders, Logger logger) {
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+
+    logger.debug(CALLING_ENDPOINT_MSG, HttpMethod.POST, endpoint);
+
+    try {
+      httpClient.request(HttpMethod.POST, endpoint, okapiHeaders)
+        .thenAccept(HelperUtils::verifyResponse)
+        .thenApply(future::complete)
+        .exceptionally(t -> {
+          logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, HttpMethod.POST, endpoint);
+          future.completeExceptionally(t);
+          return null;
+        });
+    } catch (Exception e) {
+      logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, e, HttpMethod.POST, endpoint);
+      future.completeExceptionally(e);
+    }
+
+    return future;
+  }
+
+  /**
    * Retrieve configuration for mod-orders from mod-configuration.
    * @param okapiHeaders the headers provided by okapi
    * @param ctx the context
@@ -1055,6 +1085,28 @@ public class HelperUtils {
     verifyAllNonPackageTitlesExist(lineIdTitles, poLineIds);
     verifyNonPackageLinesHaveSingleTitle(lineIdTitles);
     return lineIdTitles;
+  }
+
+  public static JsonObject convertToJson(Object data) {
+    return data instanceof JsonObject ? (JsonObject) data : JsonObject.mapFrom(data);
+  }
+
+  public static <T> Map<Integer, List<T>> buildIdsChunks(List<T> source, int maxListRecords) {
+    int size = source.size();
+    if (size <= 0)
+      return Collections.emptyMap();
+    int fullChunks = (size - 1) / maxListRecords;
+    HashMap<Integer, List<T>> idChunkMap = new HashMap<>();
+    IntStream.range(0, fullChunks + 1)
+      .forEach(n -> {
+        List<T> subList = source.subList(n * maxListRecords, n == fullChunks ? size : (n + 1) * maxListRecords);
+        idChunkMap.put(n, subList);
+      });
+    return idChunkMap;
+  }
+
+  public static String getEndpointWithQuery(String query, Logger logger) {
+    return isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
   }
 
   private static void verifyNonPackageLinesHaveSingleTitle(Map<String, List<Title>> lineIdTitles) {
