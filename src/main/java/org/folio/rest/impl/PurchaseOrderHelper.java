@@ -255,7 +255,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
           .thenCompose(v -> {
             if (isTransitionToOpen) {
               return updateAndGetOrderWithLines(compPO)
-                .thenCompose(order -> checkLocationsAndPiecesConsistency(compPO.getCompositePoLines()));
+                .thenCompose(order -> {
+                  compPO.getCompositePoLines().forEach(poLine -> orderLineHelper.updateLocationsQuantity(poLine.getLocations()));
+                  return checkLocationsAndPiecesConsistency(compPO.getCompositePoLines());
+                });
             } else {
               return CompletableFuture.completedFuture(null);
             }

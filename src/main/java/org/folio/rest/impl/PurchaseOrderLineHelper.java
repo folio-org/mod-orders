@@ -1019,7 +1019,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private boolean isLocationsAndPiecesConsistencyNeedToBeVerified(CompositePoLine poLine, CompositePurchaseOrder order) {
-    return order.getWorkflowStatus() == OPEN && (Boolean.FALSE.equals(poLine.getCheckinItems())
-      || poLine.getReceiptStatus() != ReceiptStatus.RECEIPT_NOT_REQUIRED || Boolean.FALSE.equals(poLine.getIsPackage()));
+    return order.getWorkflowStatus() == OPEN && Boolean.FALSE.equals(poLine.getCheckinItems())
+      && poLine.getReceiptStatus() != ReceiptStatus.RECEIPT_NOT_REQUIRED && Boolean.FALSE.equals(poLine.getIsPackage());
   }
 }
