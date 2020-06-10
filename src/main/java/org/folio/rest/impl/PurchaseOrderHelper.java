@@ -1030,6 +1030,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       for (CompositePoLine line : compOrder.getCompositePoLines()) {
         if (StringUtils.equals(lineFromStorage.getId(), line.getId())) {
           line.setPoLineNumber(orderLineHelper.buildNewPoLineNumber(lineFromStorage, compOrder.getPoNumber()));
+          orderLineHelper.updateLocationsQuantity(line.getLocations());
           futures.add(orderLineHelper.updateOrderLine(line, JsonObject.mapFrom(lineFromStorage)));
           iterator.remove();
           break;

@@ -438,7 +438,6 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
     // The estimated price should be always recalculated
     updateEstimatedPrice(compOrderLine);
-    updateLocationsQuantity(compOrderLine.getLocations());
 
     updatePoLineSubObjects(compOrderLine, lineFromStorage)
       .thenCompose(poLine -> updateOrderLineSummary(compOrderLine.getId(), poLine))
@@ -614,7 +613,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     cost.setPoLineEstimatedPrice(calculateEstimatedPrice(cost).getNumber().doubleValue());
   }
 
-  private void updateLocationsQuantity(List<Location> locations) {
+  public void updateLocationsQuantity(List<Location> locations) {
     locations.forEach(location -> location.setQuantity(calculateTotalLocationQuantity(location)));
   }
 
