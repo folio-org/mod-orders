@@ -71,6 +71,7 @@ import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.rest.acq.model.Title;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Cost;
@@ -436,9 +437,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
     CompositePoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
 
-    body.setCheckinItems(true);
+    body.setCheckinItems(false);
     body.setIsPackage(false);
-    body.setReceiptStatus(CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED);
+    body.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
     MockServer.addMockEntry(PO_LINES, body);
     MockServer.addMockEntry(PURCHASE_ORDER, new CompositePurchaseOrder()
       .withId(ID_FOR_PRINT_MONOGRAPH_ORDER)
