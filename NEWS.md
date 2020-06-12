@@ -14,6 +14,7 @@ Now "title" and "package" order lines are supported.
  * [MODORDERS-359](https://issues.folio.org/browse/MODORDERS-359) Support "title" and "package" order lines
  * [MODORDERS-356](https://issues.folio.org/browse/MODORDERS-356) Find/Create instance/holding/item upon piece creation and update assoc. title record
  * [MODORDERS-337](https://issues.folio.org/browse/MODORDERS-337) Check for "Orders: Unopen purchase orders" permission if order is un-opened
+ * [MODORDERS-338](https://issues.folio.org/browse/MODORDERS-338) Adjust encumbrances when Order is re-opened
  * [MODORDERS-336](https://issues.folio.org/browse/MODORDERS-336) Allow to edit Vendor and Bill to on OPEN order
  * [MODORDERS-335](https://issues.folio.org/browse/MODORDERS-335) Edit quantity when Order is re-opened
  * [MODORDERS-281](https://issues.folio.org/browse/MODORDERS-281) Need the ability to change poNumber prefix/suffix on Pending orders
