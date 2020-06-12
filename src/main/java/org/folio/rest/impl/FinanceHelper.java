@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.BiConsumer;
@@ -159,7 +160,7 @@ public class FinanceHelper extends AbstractHelper {
     return handleUpdateRequest(resourceByIdPath(ORDER_TRANSACTION_SUMMARIES, orderId), summary);
   }
 
-  private CompletableFuture<List<EncumbranceRelationsHolder>> prepareEncumbrances(List<EncumbranceRelationsHolder> encumbranceHolders) {
+  public CompletableFuture<List<EncumbranceRelationsHolder>> prepareEncumbrances(List<EncumbranceRelationsHolder> encumbranceHolders) {
     Map<String, List<Transaction>> groupedByFund = encumbranceHolders.stream()
       .map(EncumbranceRelationsHolder::getTransaction)
       .collect(groupingBy(Transaction::getFromFundId));
@@ -465,19 +466,28 @@ public class FinanceHelper extends AbstractHelper {
     , List<Transaction> encumbrancesInStorage) {
     List<PoLineFundHolder> holders = new ArrayList<>();
     if (!CollectionUtils.isEmpty(encumbrancesInStorage)) {
+
+      Map<String, List<Transaction>> groupedByFund = encumbrancesInStorage.stream()
+        .collect(groupingBy(Transaction::getFromFundId));
       poLines.stream()
         .filter(line -> !CollectionUtils.isEmpty(line.getFundDistribution()))
         .forEach(line ->
-          line.getFundDistribution().forEach(fund ->
-            encumbrancesInStorage.stream()
-              .filter(encumbrance -> (!encumbrance.getEncumbrance().getSourcePoLineId().equals(line.getId()))
-                                        || (encumbrance.getEncumbrance().getSourcePoLineId().equals(line.getId())
-                                                      && !encumbrance.getFromFundId().equals(fund.getFundId())))
-              .findAny()
-              .ifPresent(encumbrance -> {
-                PoLineFundHolder holder = new PoLineFundHolder(line, fund);
-                holders.add(holder);
-              })
+          line.getFundDistribution().forEach(fund -> {
+              boolean isFundForUpdate = Optional.ofNullable(groupedByFund.get(fund.getFundId()))
+                                                .map(encumbrances -> encumbrances.stream().anyMatch(encumbr -> line.getId().equals(encumbr.getEncumbrance().getSourcePoLineId())))
+                                                .orElse(false);
+              if (!isFundForUpdate) {
+                encumbrancesInStorage.stream()
+                  .filter(encumbrance -> (!line.getId().equals(encumbrance.getEncumbrance().getSourcePoLineId()))
+                          || (encumbrance.getEncumbrance().getSourcePoLineId().equals(line.getId())
+                                        && !encumbrance.getFromFundId().equals(fund.getFundId())))
+                  .findAny()
+                  .ifPresent(encumbrance -> {
+                    PoLineFundHolder holder = new PoLineFundHolder(line, fund);
+                    holders.add(holder);
+                  });
+              }
+            }
           )
         );
     }

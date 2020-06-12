@@ -154,7 +154,7 @@ public class FinanceHelperTest extends ApiTestBase{
     //When
     List<PoLineFundHolder> actLines = financeHelper.buildNewEncumbrancesHolders(order.getCompositePoLines(), Arrays.asList(notMatchesEncumbrance, matchedEncumbrance));
     //Then
-    assertEquals(4, actLines.size());
+    assertEquals(3, actLines.size());
   }
 
   @Test
