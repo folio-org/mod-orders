@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.BiConsumer;
@@ -104,8 +105,7 @@ public class FinanceHelper extends AbstractHelper {
     List<PoLineFundHolder> poLineFundHolders = buildNewEncumbrancesHolders(compPO.getCompositePoLines(), storeEncumbrances);
     if (!poLineFundHolders.isEmpty()) {
       List<EncumbranceRelationsHolder> encumbranceHolders = buildEncumbrances(poLineFundHolders, compPO);
-      //return prepareEncumbrances(encumbranceHolders).thenApply(holder -> encumbranceHolders);
-      return CompletableFuture.completedFuture(encumbranceHolders);
+      return prepareEncumbrances(encumbranceHolders);
     }
     return CompletableFuture.completedFuture(Collections.emptyList());
   }
@@ -425,8 +425,7 @@ public class FinanceHelper extends AbstractHelper {
     List<EncumbranceRelationsHolder> holders = buildUpdateEncumbranceHolders(compPO.getCompositePoLines(), storeEncumbrances);
     if (!holders.isEmpty()) {
       updateEncumbrancesWithPolFields(holders);
-     // return prepareEncumbrances(holders);
-      return CompletableFuture.completedFuture(holders);
+      return prepareEncumbrances(holders);
     }
     return CompletableFuture.completedFuture(Collections.emptyList());
   }
@@ -474,10 +473,12 @@ public class FinanceHelper extends AbstractHelper {
         .filter(line -> !CollectionUtils.isEmpty(line.getFundDistribution()))
         .forEach(line ->
           line.getFundDistribution().forEach(fund -> {
-              List<Transaction> encumbrancesWithFund = groupedByFund.get(fund.getFundId());
-              if (CollectionUtils.isEmpty(encumbrancesWithFund)) {
+              boolean isFundForUpdate = Optional.ofNullable(groupedByFund.get(fund.getFundId()))
+                                                .map(encumbrances -> encumbrances.stream().anyMatch(encumbr -> line.getId().equals(encumbr.getEncumbrance().getSourcePoLineId())))
+                                                .orElse(false);
+              if (!isFundForUpdate) {
                 encumbrancesInStorage.stream()
-                  .filter(encumbrance -> (!encumbrance.getEncumbrance().getSourcePoLineId().equals(line.getId()))
+                  .filter(encumbrance -> (!line.getId().equals(encumbrance.getEncumbrance().getSourcePoLineId()))
                           || (encumbrance.getEncumbrance().getSourcePoLineId().equals(line.getId())
                                         && !encumbrance.getFromFundId().equals(fund.getFundId())))
                   .findAny()
