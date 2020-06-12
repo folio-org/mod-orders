@@ -1,4 +1,24 @@
-## 10.1.0 - Unreleased
+## 11.1.0 - Unreleased
+## 11.0.0 - Released
+The main focus of this release was to implement new unOpen and reOpen order flow. Also RMB was updated to 30.0.0.
+Now "title" and "package" order lines are supported.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v10.0.4...v11.0.0)
+
+### Stories
+ * [MODORDERS-397](https://issues.folio.org/browse/MODORDERS-397) Edit lowering quantity of items or changing location of quantities when edit POL for opened order
+ * [MODORDERS-394](https://issues.folio.org/browse/MODORDERS-394) Update to RMB v30	
+ * [MODORDERS-390](https://issues.folio.org/browse/MODORDERS-390) Populate titleId during piece creation
+ * [MODORDERS-389](https://issues.folio.org/browse/MODORDERS-389) Unable to remove prefixes/suffixes that are currently used by an existing orders
+ * [MODORDERS-388](https://issues.folio.org/browse/MODORDERS-388) Securing APIs by default
+ * [MODORDERS-359](https://issues.folio.org/browse/MODORDERS-359) Support "title" and "package" order lines
+ * [MODORDERS-356](https://issues.folio.org/browse/MODORDERS-356) Find/Create instance/holding/item upon piece creation and update assoc. title record
+ * [MODORDERS-337](https://issues.folio.org/browse/MODORDERS-337) Check for "Orders: Unopen purchase orders" permission if order is un-opened
+ * [MODORDERS-338](https://issues.folio.org/browse/MODORDERS-338) Adjust encumbrances when Order is re-opened
+ * [MODORDERS-336](https://issues.folio.org/browse/MODORDERS-336) Allow to edit Vendor and Bill to on OPEN order
+ * [MODORDERS-335](https://issues.folio.org/browse/MODORDERS-335) Edit quantity when Order is re-opened
+ * [MODORDERS-281](https://issues.folio.org/browse/MODORDERS-281) Need the ability to change poNumber prefix/suffix on Pending orders
+ * [MODORDERS-269](https://issues.folio.org/browse/MODORDERS-269) Create link to encumbrance in fundDistro, if the encumbrance is successfully created	
 
 ## 10.0.4 - Released
 
