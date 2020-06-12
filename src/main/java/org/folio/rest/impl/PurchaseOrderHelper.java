@@ -955,7 +955,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return VertxCompletableFuture.allOf(ctx, futures);
   }
 
-  private CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO) {
+  public CompletableFuture<EncumbrancesProcessingHolder> processEncumbrances(CompositePurchaseOrder compPO) {
     EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
     if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
       return financeHelper.getOrderEncumbrances(compPO.getId())
@@ -967,9 +967,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
                 .thenApply(v -> financeHelper.findNeedReleaseEncumbrances(compPO, holder.getEncumbrancesFromStorage()))
                 .thenAccept(holder::withEncumbrancesForRelease)
                 .thenCompose(v -> createOrUpdateOrderTransactionSummary(compPO.getId(), holder))
-                .thenCompose(v -> createOrUpdateEncumbrances(holder));
+                .thenCompose(v -> createOrUpdateEncumbrances(holder))
+                .thenApply(v -> holder);
     }
-    return CompletableFuture.completedFuture(null);
+    return CompletableFuture.completedFuture(holder);
   }
 
   private CompletableFuture<Void> createOrUpdateOrderTransactionSummary(String orderId, EncumbrancesProcessingHolder holder) {
@@ -1157,7 +1158,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return purchaseOrder;
   }
 
-  private CompletableFuture<Void> createEncumbrancesAndUpdatePoLines(List<EncumbranceRelationsHolder> relationsHolders) {
+  public CompletableFuture<Void> createEncumbrancesAndUpdatePoLines(List<EncumbranceRelationsHolder> relationsHolders) {
     return VertxCompletableFuture.allOf(ctx, relationsHolders.stream()
         .map(holder -> createRecordInStorage(JsonObject.mapFrom(holder.getTransaction()), String.format(ENCUMBRANCE_POST_ENDPOINT, lang))
                               .thenCompose(id -> {

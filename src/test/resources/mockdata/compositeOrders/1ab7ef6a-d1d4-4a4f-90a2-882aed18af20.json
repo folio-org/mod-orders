@@ -1,0 +1,107 @@
+{
+  "id": "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
+  "approved": true,
+  "assignedTo": "",
+  "manualPo": false,
+  "notes": [],
+  "poNumber": "268758",
+  "orderType": "One-Time",
+  "reEncumber": false,
+  "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "workflowStatus": "Pending",
+  "metadata": {
+    "createdDate": "2018-06-29T00:00:00.000",
+    "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
+  },
+  "compositePoLines": [
+    {
+      "id": "d5c468b0-89cc-4fa2-b75e-38a9a7f18df7",
+      "checkinItems": false,
+      "acquisitionMethod": "Approval Plan",
+      "alerts": [],
+      "claims": [],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "Moutinho, Luiz",
+          "contributorNameTypeId": "2b94c631-fca9-4892-a730-03ee529ffe2a"
+        }
+      ],
+      "cost": {
+        "listUnitPrice": 4,
+        "currency": "USD",
+        "discount": 10,
+        "discountType": "percentage",
+        "quantityPhysical": 2,
+        "poLineEstimatedPrice": 3.6
+      },
+      "details": {
+        "productIds": [
+          {
+            "productId": "9783319643991",
+            "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422",
+            "qualifier": ""
+          }
+        ],
+        "subscriptionInterval": 0
+      },
+      "eresource": {
+        "activated": false,
+        "createInventory": "Instance, Holding",
+        "trial": false,
+        "accessProvider": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "fundDistribution": [
+        {
+          "code": "AFRICAHIST",
+          "encumbrance": "d66a23f3-7222-48c0-af25-0a0aa200d4c7",
+          "fundId": "7fbd5d84-62d1-44c6-9c45-6cb173998bbd",
+          "distributionType": "percentage",
+          "value": 50
+        },
+        {
+          "code": "CANHIST",
+          "encumbrance": "b6169c02-6879-49c2-8d05-53c773fe5cdc",
+          "fundId": "68872d8a-bf16-420b-829f-206da38f6c10",
+          "distributionType": "amount",
+          "value": 1.8
+        },
+        {
+          "distributionType": "amount",
+          "code": "ASIAHIST",
+          "fundId": "55f48dc6-efa7-4cfe-bc7c-4786efe493e3",
+          "value": 1.8
+        }
+      ],
+      "isPackage": false,
+      "locations": [
+        {
+          "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
+          "quantity": 2,
+          "quantityPhysical": 2
+        }
+      ],
+      "orderFormat": "Physical Resource",
+      "paymentStatus": "Pending",
+      "physical": {
+        "createInventory": "Instance, Holding, Item",
+        "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "materialSupplier": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "volumes": []
+      },
+      "poLineNumber": "10001-1",
+      "publisher": "Palgrave Macmillan",
+      "purchaseOrderId": "d0dbafca-d05d-4d3f-8d83-e9722eb179d3",
+      "receiptStatus": "Pending",
+      "reportingCodes": [],
+      "rush": false,
+      "source": "User",
+      "titleOrPackage": "Futures, biometrics and neuroscience research Luiz Moutinho, Mladen Sokele, editors",
+      "vendorDetail": {
+        "instructions": "",
+        "vendorAccount": "BRXXXXX-01"
+      },
+      "instanceId": "1640f178-f243-4e4a-bf1c-9e1e62b3171d"
+    }
+  ]
+}
