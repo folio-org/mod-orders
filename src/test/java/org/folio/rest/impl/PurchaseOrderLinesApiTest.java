@@ -83,7 +83,6 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import io.restassured.response.Response;
@@ -963,17 +962,12 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  @Ignore
   public void testUpdatePolineForOpenedOrderWithInactiveAccessProvider() {
     logger.info("=== Test update poline with inactive access provider for opened order  ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
-
-    addMockEntry(PIECES, new Piece()
-      .withPoLineId(reqData.getId())
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
     addMockEntry(PO_LINES, reqData);
 
