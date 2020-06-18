@@ -969,6 +969,10 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
 
+    addMockEntry(PIECES, new Piece()
+      .withPoLineId(reqData.getId())
+      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+
     addMockEntry(PO_LINES, reqData);
 
     Errors errors = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
