@@ -165,6 +165,7 @@
             "orders-storage.alerts.item.put",
             "orders-storage.alerts.item.delete",
             "orders-storage.pieces.collection.get",
+            "orders-storage.pieces.item.post",
             "orders-storage.po-lines.item.get",
             "orders-storage.po-lines.item.put",
             "orders-storage.purchase-orders.item.get",
