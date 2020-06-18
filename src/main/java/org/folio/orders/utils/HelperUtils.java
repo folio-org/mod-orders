@@ -122,15 +122,12 @@ public class HelperUtils {
   private static final String GET_PURCHASE_ORDER_BYID = resourceByIdPath(PURCHASE_ORDER) + URL_WITH_LANG_PARAM;
   private static final String GET_PURCHASE_ORDER_BYPONUMBER_QUERY = resourcesPath(PURCHASE_ORDER) + "?query=poNumber==%s&" + LANG + "=%s";
 
-  private static final int DEFAULT_PORT = 9130;
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
   private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
   private static final String PROTECTED_AND_MODIFIED_FIELDS = "protectedAndModifiedFields";
   public static final String WORKFLOW_STATUS = "workflowStatus";
 
-  private static final Pattern HOST_PORT_PATTERN = Pattern.compile("https?://([^:/]+)(?::?(\\d+)?)");
   private static final Pattern CQL_SORT_BY_PATTERN = Pattern.compile("(.*)(\\ssortBy\\s.*)", Pattern.CASE_INSENSITIVE);
-  public static final String INSTANCE_ID = "instanceId";
 
   private HelperUtils() {
 
@@ -859,28 +856,21 @@ public class HelperUtils {
    * @param okapiHeaders the headers provided by okapi
    * @param ctx the context
    * @param logger logger instance
+   * @param lang
    * @return CompletableFuture with JsonObject
    */
-  public static CompletableFuture<JsonObject> loadConfiguration(Map<String, String> okapiHeaders, Context ctx, Logger logger) {
+  public static CompletableFuture<JsonObject> loadConfiguration(Map<String, String> okapiHeaders, Context ctx, Logger logger, String lang) {
 
     String okapiURL = StringUtils.trimToEmpty(okapiHeaders.get(OKAPI_URL));
     String tenant = okapiHeaders.get(OKAPI_HEADER_TENANT);
     String token = okapiHeaders.get(OKAPI_HEADER_TOKEN);
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
     JsonObject config = new JsonObject();
-    Matcher matcher = HOST_PORT_PATTERN.matcher(okapiURL);
-    if (!matcher.find()) {
-      future.complete(config);
-      return future;
-    }
 
-    String host = matcher.group(1);
-    String port = matcher.group(2);
-    ConfigurationsClient configurationsClient = new ConfigurationsClient(host,
-      StringUtils.isNotBlank(port) ? Integer.valueOf(port) : DEFAULT_PORT, tenant, token);
+    ConfigurationsClient configurationsClient = new ConfigurationsClient(okapiURL, tenant, token, false);
 
-    try {
-      configurationsClient.getEntries(CONFIG_QUERY, 0, 100, null, null, response -> response.bodyHandler(body -> {
+      try {
+      configurationsClient.getConfigurationsEntries(CONFIG_QUERY, 0, 100, null, lang, response -> response.bodyHandler(body -> {
         if (response.statusCode() != 200) {
           logger.error(String.format("Expected status code 200, got '%s' :%s", response.statusCode(), body.toString()));
           future.complete(config);

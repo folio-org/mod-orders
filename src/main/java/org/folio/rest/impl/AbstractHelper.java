@@ -311,7 +311,7 @@ public abstract class AbstractHelper {
     if (this.tenantConfiguration != null) {
       return CompletableFuture.completedFuture(this.tenantConfiguration);
     } else {
-      return loadConfiguration(okapiHeaders, ctx, logger)
+      return loadConfiguration(okapiHeaders, ctx, logger, lang)
         .thenApply(config -> {
           this.tenantConfiguration = config;
           return config;
