@@ -6,9 +6,12 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_CREATED;
+import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_DELETED;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
@@ -25,8 +28,9 @@ import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.inventoryUpdateNotRequired;
+import static org.folio.orders.utils.HelperUtils.numOfLocationsByPoLineIdAndLocationId;
+import static org.folio.orders.utils.HelperUtils.numOfPiecesByPoLineAndLocationId;
 import static org.folio.orders.utils.HelperUtils.operateOnObject;
-import static org.folio.orders.utils.HelperUtils.verifyLocationsAndPiecesConsistency;
 import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
@@ -44,10 +48,12 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.P
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -59,6 +65,7 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -109,6 +116,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private static final String PHYSICAL = "physical";
   private static final String OTHER = "other";
   private static final String DASH_SEPARATOR = "-";
+  public static final String QUERY_BY_PO_LINE_ID = "poLineId==";
 
   private final InventoryHelper inventoryHelper;
   private final ProtectionHelper protectionHelper;
@@ -584,6 +592,18 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       .thenCompose(this::getLineWithInstanceId);
   }
 
+  private CompletableFuture<Title> getTitleForPoLine(CompositePoLine line) {
+    return new TitlesHelper(httpClient, okapiHeaders, ctx, lang)
+      .getTitles(1, 0, QUERY_BY_PO_LINE_ID + line.getId())
+      .thenCompose(titleCollection -> {
+        List<Title> titles = titleCollection.getTitles();
+        if (!titles.isEmpty()) {
+          return CompletableFuture.completedFuture(titles.get(0));
+        }
+        throw new HttpException(422, ErrorCodes.TITLE_NOT_FOUND);
+      });
+  }
+
   private CompletableFuture<CompositePoLine> getLineWithInstanceId(CompositePoLine line) {
      if (!Boolean.TRUE.equals(line.getIsPackage())) {
        return new TitlesHelper(httpClient, okapiHeaders, ctx, lang)
@@ -1012,10 +1032,62 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     if (isLocationsAndPiecesConsistencyNeedToBeVerified(poLine, order)) {
       String query = "poLineId==" + poLine.getId();
       return piecesHelper.getPieces(Integer.MAX_VALUE, 0, query)
-        .thenAccept(pieces -> verifyLocationsAndPiecesConsistency(Collections.singletonList(poLine), pieces));
-    } else {
+        .thenCompose(pieces -> verifyLocationAndPieceConsistency(Collections.singletonList(poLine), pieces))
+        .thenCompose(errorCode -> {
+          if (PIECES_TO_BE_DELETED.equals(errorCode)) {
+            throw new HttpException(422, PIECES_TO_BE_DELETED);
+          } else if (PIECES_TO_BE_CREATED.equals(errorCode)){
+            return getTitleForPoLine(poLine)
+              .thenCompose(title -> updateInventory(poLine, title.getId()));
+          }
+          return CompletableFuture.completedFuture(null);
+        });
+    }
+    return CompletableFuture.completedFuture(null);
+  }
+
+  private CompletableFuture<ErrorCodes> verifyLocationAndPieceConsistency(List<CompositePoLine> poLines, PieceCollection pieces) {
+    if (CollectionUtils.isEmpty(poLines)) {
       return CompletableFuture.completedFuture(null);
     }
+
+    VertxCompletableFuture<ErrorCodes> future = new VertxCompletableFuture<>(ctx);
+
+    Map<String, Map<String, Integer>> numOfLocationsByPoLineIdAndLocationId = numOfLocationsByPoLineIdAndLocationId(poLines);
+    Map<String, Map<String, Integer>> numOfPiecesByPoLineIdAndLocationId = numOfPiecesByPoLineAndLocationId(pieces);
+
+    Set<String> pieceLocations = pieces.getPieces().stream().map(Piece::getLocationId).collect(toSet());
+    Set<String> poLineLocations = poLines.stream().flatMap(poLine -> poLine.getLocations().stream()).map(Location::getLocationId)
+      .collect(toSet());
+
+    if (!pieceLocations.containsAll(poLineLocations)) {
+      future.complete(PIECES_TO_BE_CREATED);
+    } else {
+      Set<ErrorCodes> resultErrorCodes = new HashSet<>();
+      numOfPiecesByPoLineIdAndLocationId.forEach((poLineId, numOfPiecesByLocationId) -> numOfPiecesByLocationId
+        .forEach((locationId, quantity) -> {
+
+          Integer numOfPieces = Optional.ofNullable(numOfLocationsByPoLineIdAndLocationId)
+            .map(map -> map.get(poLineId))
+            .map(map -> map.get(locationId))
+            .orElse(0);
+
+          if (quantity > numOfPieces) {
+            resultErrorCodes.add(PIECES_TO_BE_DELETED);
+          } else if (quantity < numOfPieces) {
+            resultErrorCodes.add(PIECES_TO_BE_CREATED);
+          }
+        }));
+
+      if (resultErrorCodes.contains(PIECES_TO_BE_DELETED)) {
+        future.complete(PIECES_TO_BE_DELETED);
+      } else if (resultErrorCodes.contains(PIECES_TO_BE_CREATED)) {
+        future.complete(PIECES_TO_BE_CREATED);
+      } else {
+        future.complete(null);
+      }
+    }
+    return future;
   }
 
   private boolean isLocationsAndPiecesConsistencyNeedToBeVerified(CompositePoLine poLine, CompositePurchaseOrder order) {

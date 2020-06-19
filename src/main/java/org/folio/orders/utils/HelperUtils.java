@@ -1114,15 +1114,8 @@ public class HelperUtils {
   public static void verifyLocationsAndPiecesConsistency(List<CompositePoLine> poLines, PieceCollection pieces) {
 
     if (CollectionUtils.isNotEmpty(poLines)) {
-
-      Map<String, Map<String, Integer>> numOfLocationsByPoLineIdAndLocationId = poLines.stream()
-        .filter(line -> !line.getIsPackage() && line.getReceiptStatus() != CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED && !line.getCheckinItems())
-        .collect(toMap(CompositePoLine::getId, poLine -> Optional.of(poLine.getLocations()).orElse(new ArrayList<>()).stream().collect(toMap(Location::getLocationId, Location::getQuantity))));
-
-      Map<String, Map<String, Integer>> numOfPiecesByPoLineIdAndLocationId = pieces.getPieces().stream()
-        .filter(piece -> Objects.nonNull(piece.getPoLineId())
-          && Objects.nonNull(piece.getLocationId()))
-        .collect(groupingBy(Piece::getPoLineId, groupingBy(Piece::getLocationId, summingInt(q -> 1))));
+      Map<String, Map<String, Integer>> numOfLocationsByPoLineIdAndLocationId = numOfLocationsByPoLineIdAndLocationId(poLines);
+      Map<String, Map<String, Integer>> numOfPiecesByPoLineIdAndLocationId = numOfPiecesByPoLineAndLocationId(pieces);
 
       numOfPiecesByPoLineIdAndLocationId.forEach((poLineId, numOfPiecesByLocationId) -> numOfPiecesByLocationId
         .forEach((locationId, quantity) -> {
@@ -1135,5 +1128,19 @@ public class HelperUtils {
           }
         }));
     }
+  }
+
+  public static Map<String, Map<String, Integer>> numOfPiecesByPoLineAndLocationId(PieceCollection pieces) {
+    return pieces.getPieces().stream()
+      .filter(piece -> Objects.nonNull(piece.getPoLineId())
+        && Objects.nonNull(piece.getLocationId()))
+      .collect(groupingBy(Piece::getPoLineId, groupingBy(Piece::getLocationId, summingInt(q -> 1))));
+  }
+
+  public static Map<String, Map<String, Integer>> numOfLocationsByPoLineIdAndLocationId(List<CompositePoLine> poLines) {
+    return poLines.stream()
+      .filter(line -> !line.getIsPackage() && line.getReceiptStatus() != CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED && !line.getCheckinItems())
+      .collect(toMap(CompositePoLine::getId, poLine -> Optional
+        .of(poLine.getLocations()).orElse(new ArrayList<>()).stream().collect(toMap(Location::getLocationId, Location::getQuantity))));
   }
 }
