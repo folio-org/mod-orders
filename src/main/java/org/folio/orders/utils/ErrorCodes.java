@@ -70,6 +70,7 @@ public enum ErrorCodes {
   PREFIX_IS_USED("prefixIsUsed", "The prefix cannot be deleted as it is used by one or more orders"),
   SUFFIX_IS_USED("suffixIsUsed", "The suffix cannot be deleted as it is used by one or more orders"),
   PIECES_TO_BE_DELETED("piecesNeedToBeDeleted", "Pieces need to be deleted"),
+  PIECES_TO_BE_CREATED("piecesNeedToBeCreated", "Pieces need to be created"),
   REQUEST_FOUND("thereAreRequestsOnItem", "There are requests on item");
 
   private final String code;
