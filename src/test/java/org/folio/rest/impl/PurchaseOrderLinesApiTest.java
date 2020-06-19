@@ -431,6 +431,36 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
+  public void testPutOrderLineByIdPiecesWillBeCreated() {
+    logger.info("=== Test PUT Order Line By Id - Pieces will be created ===");
+
+    String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
+    CompositePoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
+
+    body.setCheckinItems(false);
+    body.setIsPackage(false);
+    body.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
+    body.setReportingCodes(new ArrayList<>());
+    MockServer.addMockEntry(PO_LINES, body);
+    MockServer.addMockEntry(PURCHASE_ORDER, new CompositePurchaseOrder()
+      .withId(ID_FOR_PRINT_MONOGRAPH_ORDER)
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    String url = String.format(LINE_BY_ID_PATH, lineId);
+
+    addMockEntry(TITLES, new Title().withId(UUID.randomUUID().toString())
+      .withPoLineId(body.getId())
+      .withTitle("Title"));
+
+    verifyPut(url, JsonObject.mapFrom(body), "", 204);
+
+    Map<String, List<JsonObject>> mockServerData = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertThat(mockServerData.get(PIECES), hasSize(2));
+
+    mockServerData = MockServer.serverRqRs.column(HttpMethod.POST);
+    assertThat(mockServerData.get(PIECES), hasSize(1));
+  }
+
+  @Test
   public void testPutOrderLineByIdPiecesNeedToBeDeleted() {
     logger.info("=== Test PUT Order Line By Id - Pieces need to be deleted ===");
 
