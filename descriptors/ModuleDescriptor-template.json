@@ -166,6 +166,7 @@
             "orders-storage.alerts.item.delete",
             "orders-storage.pieces.collection.get",
             "orders-storage.pieces.item.post",
+            "orders-storage.po-lines.collection.get",
             "inventory.instances.collection.get",
             "inventory.instances.item.post",
             "inventory-storage.holdings.item.post",
