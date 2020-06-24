@@ -115,7 +115,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
 
 public class PurchaseOrderHelper extends AbstractHelper {
-  private static final String ENCUMBRANCE_POST_ENDPOINT = resourcesPath(ENCUMBRANCES) + "?lang=%s";
+  static final String ENCUMBRANCE_POST_ENDPOINT = resourcesPath(ENCUMBRANCES) + "?lang=%s";
   private static final String PERMISSION_ORDER_APPROVE = "orders.item.approve";
   private static final String PERMISSION_ORDER_UNOPEN = "orders.item.unopen";
   private static final String SEARCH_ORDERS_BY_LINES_DATA = resourcesPath(SEARCH_ORDERS) + SEARCH_PARAMS;
@@ -142,8 +142,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
     piecesHelper = new PiecesHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
-  public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang
-          , PoNumberHelper poNumberHelper, PurchaseOrderLineHelper orderLineHelper, FinanceHelper financeHelper) {
+  public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang,
+      PoNumberHelper poNumberHelper, PurchaseOrderLineHelper orderLineHelper, FinanceHelper financeHelper) {
     super(httpClient, okapiHeaders, ctx, lang);
     this.financeHelper = financeHelper;
     this.poNumberHelper = poNumberHelper;
@@ -425,6 +425,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
         CompositePurchaseOrder compPo = convertToCompositePurchaseOrder(purchaseOrder);
         protectionHelper.isOperationRestricted(compPo.getAcqUnitIds(), DELETE)
           .thenAccept(aVoid -> deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
+            .thenCompose(v -> financeHelper.releaseOrderEncumbrances(id))
             .thenRun(() -> {
               logger.info("Successfully deleted poLines, proceeding with purchase order");
               handleDeleteRequest(resourceByIdPath(PURCHASE_ORDER, id), httpClient, ctx, okapiHeaders, logger)
@@ -959,21 +960,22 @@ public class PurchaseOrderHelper extends AbstractHelper {
     EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
     if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
       return financeHelper.getOrderEncumbrances(compPO.getId())
-                .thenAccept(holder::withEncumbrancesFromStorage)
-                .thenCompose(v -> financeHelper.buildNewEncumbrances(compPO, holder.getEncumbrancesFromStorage()))
-                .thenAccept(holder::withEncumbrancesForCreate)
-                .thenCompose(v -> financeHelper.buildEncumbrancesForUpdate(compPO, holder.getEncumbrancesFromStorage()))
-                .thenAccept(holder::withEncumbrancesForUpdate)
-                .thenApply(v -> financeHelper.findNeedReleaseEncumbrances(compPO, holder.getEncumbrancesFromStorage()))
-                .thenAccept(holder::withEncumbrancesForRelease)
-                .thenCompose(v -> createOrUpdateOrderTransactionSummary(compPO.getId(), holder))
-                .thenCompose(v -> createOrUpdateEncumbrances(holder))
-                .thenApply(v -> holder);
+        .thenAccept(holder::withEncumbrancesFromStorage)
+        .thenCompose(v -> financeHelper.buildNewEncumbrances(compPO, compPO.getCompositePoLines(), holder.getEncumbrancesFromStorage()))
+        .thenAccept(holder::withEncumbrancesForCreate)
+        .thenCompose(v -> financeHelper.buildEncumbrancesForUpdate(compPO.getCompositePoLines(), holder.getEncumbrancesFromStorage()))
+        .thenAccept(holder::withEncumbrancesForUpdate)
+        .thenApply(v -> financeHelper.findNeedReleaseEncumbrances(compPO, holder.getEncumbrancesFromStorage()))
+        .thenAccept(holder::withEncumbrancesForRelease)
+        .thenCompose(v -> createOrUpdateOrderTransactionSummary(compPO.getId(), holder))
+        .thenCompose(v -> createOrUpdateEncumbrances(holder))
+        .thenApply(v -> holder);
+
     }
-    return CompletableFuture.completedFuture(holder);
+    return CompletableFuture.completedFuture(null);
   }
 
-  private CompletableFuture<Void> createOrUpdateOrderTransactionSummary(String orderId, EncumbrancesProcessingHolder holder) {
+  CompletableFuture<Void> createOrUpdateOrderTransactionSummary(String orderId, EncumbrancesProcessingHolder holder) {
     if (CollectionUtils.isEmpty(holder.getEncumbrancesFromStorage())) {
       return financeHelper.createOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity())
                           .thenAccept(id -> Future.succeededFuture());
@@ -983,7 +985,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     }
   }
 
-  private CompletableFuture<Void> createOrUpdateEncumbrances(EncumbrancesProcessingHolder holder) {
+  CompletableFuture<Void> createOrUpdateEncumbrances(EncumbrancesProcessingHolder holder) {
     return createEncumbrancesAndUpdatePoLines(holder.getEncumbrancesForCreate())
                 .thenCompose(v -> financeHelper.releaseEncumbrances(holder.getEncumbrancesForRelease()))
                 .thenCompose(v -> updateEncumbrances(holder));
@@ -1021,7 +1023,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
     if (!poLinesFromStorage.isEmpty()) {
       futures.addAll(processPoLinesUpdate(compOrder, poLinesFromStorage));
       // The remaining unprocessed PoLines should be removed
-      poLinesFromStorage.forEach(poLine -> futures.add(deletePoLine(JsonObject.mapFrom(poLine), httpClient, ctx, okapiHeaders, logger)));
+      poLinesFromStorage
+        .forEach(poLine -> futures.add(deletePoLine(JsonObject.mapFrom(poLine), httpClient, ctx, okapiHeaders, logger)
+          .thenCompose(v -> financeHelper.releasePoLineEncumbrances(poLine.getId()))));
     }
     return VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]));
   }
@@ -1173,20 +1177,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
         )
       .toArray(CompletableFuture[]::new)
     );
-  }
-
-  private void checkCustomTransactionError(Throwable fail) {
-    if (fail.getCause().getMessage().contains(BUDGET_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
-      throw new CompletionException(new HttpException(422, BUDGET_NOT_FOUND_FOR_TRANSACTION));
-    } else if (fail.getCause().getMessage().contains(LEDGER_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
-      throw new CompletionException(new HttpException(422, LEDGER_NOT_FOUND_FOR_TRANSACTION));
-    } else if (fail.getCause().getMessage().contains(BUDGET_IS_INACTIVE.getDescription())) {
-      throw new CompletionException(new HttpException(422, BUDGET_IS_INACTIVE));
-    } else if (fail.getCause().getMessage().contains(FUND_CANNOT_BE_PAID.getDescription())) {
-      throw new CompletionException(new HttpException(422, FUND_CANNOT_BE_PAID));
-    } else {
-      throw new CompletionException(fail.getCause());
-    }
   }
 
 }

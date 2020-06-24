@@ -94,7 +94,7 @@ public class PurchaseOrderHelperTest  extends ApiTestBase{
 
   @Test
   @Ignore
-  public void testShouldCreateOnenewEncumbranceAndUpdateTwoExistedZeroForRelease() {
+  public void testShouldCreateOneNewEncumbranceAndUpdateTwoExistedZeroForRelease() {
     //given
     PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
     FinanceHelper financeHelper = mock(FinanceHelper.class, CALLS_REAL_METHODS);
