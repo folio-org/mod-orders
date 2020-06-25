@@ -10,6 +10,7 @@ import static java.util.stream.Collectors.toSet;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
 import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_CREATED;
 import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_DELETED;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
@@ -64,6 +65,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import javax.money.MonetaryAmount;
 import javax.ws.rs.core.Response;
 
 import io.vertx.core.Future;
@@ -91,6 +93,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
@@ -107,6 +110,8 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
+import org.javamoney.moneta.Money;
+import org.javamoney.moneta.function.MonetaryOperators;
 
 class PurchaseOrderLineHelper extends AbstractHelper {
 
@@ -128,7 +133,6 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   private final ProtectionHelper protectionHelper;
   private final PiecesHelper piecesHelper;
   private final FinanceHelper financeHelper;
-  // private final PurchaseOrderHelper purchaseOrderHelper;
 
   public PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -136,7 +140,6 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
     piecesHelper = new PiecesHelper(httpClient, okapiHeaders, ctx, lang);
     financeHelper = new FinanceHelper(httpClient, okapiHeaders, ctx, lang);
-    // purchaseOrderHelper = new PurchaseOrderHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   public PurchaseOrderLineHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -428,7 +431,8 @@ class PurchaseOrderLineHelper extends AbstractHelper {
     List<CompositePoLine> compositePoLines = Collections.singletonList(compositePoLine);
 
     if (!compositePoLine.getFundDistribution().isEmpty()) {
-      return financeHelper.getPoLineEncumbrances(compositePoLine.getId())
+      return CompletableFuture.runAsync(() -> validateFundDistributionTotal(compositePoLines))
+        .thenCompose(v -> financeHelper.getPoLineEncumbrances(compositePoLine.getId()))
         .thenAccept(holder::withEncumbrancesFromStorage)
         .thenCompose(v -> financeHelper.buildNewEncumbrances(compPO, compositePoLines, holder.getEncumbrancesFromStorage()))
         .thenAccept(holder::withEncumbrancesForCreate)
@@ -482,6 +486,40 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       )
       .toArray(CompletableFuture[]::new)
     );
+  }
+
+
+  void validateFundDistributionTotal(List<CompositePoLine> compositePoLines) {
+    for (CompositePoLine cPoLine : compositePoLines) {
+
+      if (cPoLine.getCost().getPoLineEstimatedPrice() != null && !cPoLine.getFundDistribution().isEmpty()) {
+        Double poLineEstimatedPrice = cPoLine.getCost().getPoLineEstimatedPrice();
+        String currency = cPoLine.getCost().getCurrency();
+        MonetaryAmount remainingAmount = Money.of(poLineEstimatedPrice, currency);
+
+        for (FundDistribution fundDistribution : cPoLine.getFundDistribution()) {
+          FundDistribution.DistributionType dType = fundDistribution.getDistributionType();
+          Double value = fundDistribution.getValue();
+          MonetaryAmount amountValueMoney = Money.of(value, currency);
+
+          if (dType == FundDistribution.DistributionType.PERCENTAGE) {
+            /**
+             * calculate remaining amount to carry forward, required if there are more fund distributions with percentage and
+             * percentToAmount = poLineEstimatedPrice * value/100;
+             */
+            MonetaryAmount poLineEstimatedPriceMoney = Money.of(poLineEstimatedPrice, currency);
+            // convert percent to amount
+            MonetaryAmount percentToAmount = poLineEstimatedPriceMoney.with(MonetaryOperators.percent(value));
+            amountValueMoney = percentToAmount;
+          }
+
+          remainingAmount = remainingAmount.subtract(amountValueMoney);
+        }
+        if (!remainingAmount.isZero()) {
+          throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL);
+        }
+      }
+    }
   }
 
   private CompletableFuture<Void> validateAccessProviders(CompositePoLine compOrderLine) {

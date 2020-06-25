@@ -7,11 +7,6 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.AcqDesiredPermissions.ASSIGN;
 import static org.folio.orders.utils.AcqDesiredPermissions.MANAGE;
 import static org.folio.orders.utils.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
-import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
-import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
-import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
-import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
-import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.ErrorCodes.MISSING_ONGOING;
 import static org.folio.orders.utils.ErrorCodes.ONGOING_NOT_ALLOWED;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
@@ -74,8 +69,6 @@ import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.money.MonetaryAmount;
-
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -90,25 +83,19 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
-import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.FundDistribution;
-import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.javamoney.moneta.Money;
-import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.Context;
-import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
@@ -518,9 +505,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
   public CompletableFuture<Void> openOrder(CompositePurchaseOrder compPO) {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
-    return CompletableFuture.completedFuture(compPO)
-      .thenApply(this::validateFundDistributionTotal)
-      .thenApply(this::validateMaterialTypes)
+    return CompletableFuture.completedFuture(compPO.getCompositePoLines())
+      .thenAccept(orderLineHelper::validateFundDistributionTotal)
+      .thenApply(v -> this.validateMaterialTypes(compPO))
       .thenCompose(this::fetchNonPackageTitles)
       .thenCompose(linesIdTitles -> {
           populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
@@ -735,40 +722,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenApply(v -> compPO);
   }
 
-  private CompositePurchaseOrder validateFundDistributionTotal(CompositePurchaseOrder compPO) {
-    for (CompositePoLine cPoLine : compPO.getCompositePoLines()) {
-
-      if (cPoLine.getCost().getPoLineEstimatedPrice() != null && !cPoLine.getFundDistribution().isEmpty()) {
-        Double poLineEstimatedPrice = cPoLine.getCost().getPoLineEstimatedPrice();
-        String currency = cPoLine.getCost().getCurrency();
-        MonetaryAmount remainingAmount = Money.of(poLineEstimatedPrice, currency);
-
-        for (FundDistribution fundDistribution : cPoLine.getFundDistribution()) {
-          DistributionType dType = fundDistribution.getDistributionType();
-          Double value = fundDistribution.getValue();
-          MonetaryAmount amountValueMoney = Money.of(value, currency);
-          MonetaryAmount percentToAmount = null;
-
-          if (dType == DistributionType.PERCENTAGE) {
-            /**
-             * calculate remaining amount to carry forward, required if there are more fund distributions with percentage and
-             * percentToAmount = poLineEstimatedPrice * value/100;
-             */
-            MonetaryAmount poLineEstimatedPriceMoney = Money.of(poLineEstimatedPrice, currency);
-            // convert percent to amount
-            percentToAmount = poLineEstimatedPriceMoney.with(MonetaryOperators.percent(value));
-            amountValueMoney = percentToAmount;
-          }
-
-          remainingAmount = remainingAmount.subtract(amountValueMoney);
-        }
-        if (!remainingAmount.isZero()) {
-          throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL);
-        }
-      }
-    }
-    return compPO;
-  }
 
   /**
    * Checks the value of "isApprovalRequired" in configurations, if the value is set to true, and order is being approved, verifies
@@ -967,36 +920,14 @@ public class PurchaseOrderHelper extends AbstractHelper {
         .thenAccept(holder::withEncumbrancesForUpdate)
         .thenApply(v -> financeHelper.findNeedReleaseEncumbrances(compPO, holder.getEncumbrancesFromStorage()))
         .thenAccept(holder::withEncumbrancesForRelease)
-        .thenCompose(v -> createOrUpdateOrderTransactionSummary(compPO.getId(), holder))
-        .thenCompose(v -> createOrUpdateEncumbrances(holder))
+        .thenCompose(v -> orderLineHelper.createOrUpdateOrderTransactionSummary(compPO.getId(), holder))
+        .thenCompose(v -> orderLineHelper.createOrUpdateEncumbrances(holder))
         .thenApply(v -> holder);
 
     }
     return CompletableFuture.completedFuture(null);
   }
 
-  CompletableFuture<Void> createOrUpdateOrderTransactionSummary(String orderId, EncumbrancesProcessingHolder holder) {
-    if (CollectionUtils.isEmpty(holder.getEncumbrancesFromStorage())) {
-      return financeHelper.createOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity())
-                          .thenAccept(id -> Future.succeededFuture());
-    }
-    else {
-      return financeHelper.updateOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity());
-    }
-  }
-
-  CompletableFuture<Void> createOrUpdateEncumbrances(EncumbrancesProcessingHolder holder) {
-    return createEncumbrancesAndUpdatePoLines(holder.getEncumbrancesForCreate())
-                .thenCompose(v -> financeHelper.releaseEncumbrances(holder.getEncumbrancesForRelease()))
-                .thenCompose(v -> updateEncumbrances(holder));
-  }
-
-  private CompletionStage<Void> updateEncumbrances(EncumbrancesProcessingHolder holder) {
-    List<Transaction> encumbrances = holder.getEncumbrancesForUpdate().stream()
-      .map(EncumbranceRelationsHolder::getTransaction)
-      .collect(toList());
-    return financeHelper.updateTransactions(encumbrances);
-  }
 
   private boolean isFundDistributionsPresent(List<CompositePoLine> compositePoLines) {
     return compositePoLines.stream().mapToLong(compositePoLine -> compositePoLine.getFundDistribution().size()).sum() >= 1;
