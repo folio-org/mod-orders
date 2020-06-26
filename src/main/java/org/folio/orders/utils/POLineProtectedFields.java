@@ -9,8 +9,6 @@ public enum POLineProtectedFields {
   ACQUISITION_METHOD("acquisitionMethod"),
   CHECKIN_ITEMS("checkinItems"),
   COST_ADDITIONAL_COST("cost.additionalCost"),
-  COST_LIST_UNIT_PRICE("cost.listUnitPrice"),
-  COST_LIST_UNIT_PRICE_ELECTRONIC("cost.listUnitPriceElectronic"),
   COST_CURRENCY("cost.currency"),
   COST_DISCOUNT("cost.discount"),
   COST_DISCOUNT_TYPE("cost.discountType"),
