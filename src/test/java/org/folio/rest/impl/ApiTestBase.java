@@ -379,7 +379,6 @@ public class ApiTestBase {
     assertEquals(1, errors.getErrors().size());
     assertEquals(errorCode, errors.getErrors().get(0).getCode());
     // Assert that only PO Lines limit (count of existing Lines) , GET PO and ISBN validation requests made
-    assertEquals(externalAPICalls, MockServer.serverRqRs.size());
     assertEquals(externalAPICalls, MockServer.serverRqRs.rowKeySet().size());
     assertEquals(1, MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET).size());
     assertEquals(1, getPoLineSearches().size());
