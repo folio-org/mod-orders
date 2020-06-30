@@ -444,7 +444,8 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     MockServer.addMockEntry(PO_LINES, body);
     MockServer.addMockEntry(PURCHASE_ORDER, new CompositePurchaseOrder()
       .withId(ID_FOR_PRINT_MONOGRAPH_ORDER)
-      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN)
+    .withOrderType(CompositePurchaseOrder.OrderType.ONE_TIME));
     String url = String.format(LINE_BY_ID_PATH, lineId);
 
     addMockEntry(TITLES, new Title().withId(UUID.randomUUID().toString())
@@ -993,6 +994,26 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
   @Test
   public void testUpdatePolineForOpenedOrderWithInactiveAccessProvider() {
+    logger.info("=== Test update poline with inactive access provider for opened order  ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
+    reqData.getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
+
+    addMockEntry(PIECES, new Piece()
+      .withPoLineId(reqData.getId())
+      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+
+    addMockEntry(PO_LINES, reqData);
+
+    Errors errors = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422).as(Errors.class);
+    assertEquals(1, errors.getErrors().size());
+    assertEquals(POL_ACCESS_PROVIDER_IS_INACTIVE.getCode(), errors.getErrors().get(0).getCode());
+  }
+
+  @Test
+  public void testUpdatePolineForOpenedOrderWithUpdatingEncumbrances() {
     logger.info("=== Test update poline with inactive access provider for opened order  ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
