@@ -203,7 +203,7 @@ public class FinanceHelperTest extends ApiTestBase{
     doReturn(completedFuture(null)).when(transactionService).updateTransaction(any());
     //When
     List<Transaction> actEncumbranceForRelease =
-      financeHelper.findNeedReleaseEncumbrances(order, Arrays.asList(notMatchesEncumbrance, matchedEncumbrance));
+      financeHelper.findNeedReleaseEncumbrances(order.getCompositePoLines(), Arrays.asList(notMatchesEncumbrance, matchedEncumbrance));
     //Then
     assertEquals(1, actEncumbranceForRelease.size());
     Transaction encumbrance = actEncumbranceForRelease.get(0);
@@ -224,7 +224,7 @@ public class FinanceHelperTest extends ApiTestBase{
     doReturn(completedFuture(null)).when(transactionService).updateTransaction(any());
     //When
     List<Transaction> actEncumbranceForRelease =
-      financeHelper.findNeedReleaseEncumbrances(order, Arrays.asList(encumbrance, encumbrance));
+      financeHelper.findNeedReleaseEncumbrances(order.getCompositePoLines(), Arrays.asList(encumbrance, encumbrance));
     //Then
     assertEquals(0, actEncumbranceForRelease.size());
   }
@@ -242,7 +242,7 @@ public class FinanceHelperTest extends ApiTestBase{
     doReturn(completedFuture(null)).when(transactionService).updateTransaction(any());
     //When
     List<Transaction> actEncumbranceForRelease =
-      financeHelper.findNeedReleaseEncumbrances(order, Arrays.asList(notMatchesEncumbrance, matchedEncumbrance));
+      financeHelper.findNeedReleaseEncumbrances(order.getCompositePoLines(), Arrays.asList(notMatchesEncumbrance, matchedEncumbrance));
     //Then
     assertEquals(1, actEncumbranceForRelease.size());
   }

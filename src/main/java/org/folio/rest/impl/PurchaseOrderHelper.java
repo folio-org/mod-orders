@@ -918,7 +918,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
         .thenAccept(holder::withEncumbrancesForCreate)
         .thenCompose(v -> financeHelper.buildEncumbrancesForUpdate(compPO.getCompositePoLines(), holder.getEncumbrancesFromStorage()))
         .thenAccept(holder::withEncumbrancesForUpdate)
-        .thenApply(v -> financeHelper.findNeedReleaseEncumbrances(compPO, holder.getEncumbrancesFromStorage()))
+        .thenApply(v -> financeHelper.findNeedReleaseEncumbrances(compPO.getCompositePoLines(), holder.getEncumbrancesFromStorage()))
         .thenAccept(holder::withEncumbrancesForRelease)
         .thenCompose(v -> orderLineHelper.createOrUpdateOrderTransactionSummary(compPO.getId(), holder))
         .thenCompose(v -> orderLineHelper.createOrUpdateEncumbrances(holder))
