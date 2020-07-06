@@ -54,7 +54,7 @@
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <mojo.java.target>1.8</mojo.java.target>
-    <mod-configuration-client.version>5.1.0</mod-configuration-client.version>
+    <mod-configuration-client.version>5.4.0</mod-configuration-client.version>
     <sonar.exclusions>**/models/**.java</sonar.exclusions>
     <sonar.test.exclusions>**/*Test.java</sonar.test.exclusions>
   </properties>
