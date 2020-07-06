@@ -516,10 +516,10 @@ public class FinanceHelper extends AbstractHelper {
     return holders;
   }
 
-  public List<Transaction> findNeedReleaseEncumbrances(CompositePurchaseOrder compPO
-    , List<Transaction> orderEncumbrancesInStorage) {
+  public List<Transaction> findNeedReleaseEncumbrances(List<CompositePoLine> compositePoLines,
+      List<Transaction> orderEncumbrancesInStorage) {
     List<Transaction> encumbrancesForRelease = new ArrayList<>();
-    Map<LineFundId, PoLineFundHolder> poLineFundHolderMap = convertToLineFundMap(compPO.getCompositePoLines());
+    Map<LineFundId, PoLineFundHolder> poLineFundHolderMap = convertToLineFundMap(compositePoLines);
     if (!CollectionUtils.isEmpty(orderEncumbrancesInStorage)) {
       orderEncumbrancesInStorage.forEach(encumbrance -> {
         LineFundId lineFundId = new LineFundId(encumbrance.getEncumbrance().getSourcePoLineId(), encumbrance.getFromFundId());

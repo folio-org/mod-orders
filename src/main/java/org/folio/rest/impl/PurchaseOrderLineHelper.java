@@ -438,7 +438,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
         .thenAccept(holder::withEncumbrancesForCreate)
         .thenCompose(v -> financeHelper.buildEncumbrancesForUpdate(compositePoLines, holder.getEncumbrancesFromStorage()))
         .thenAccept(holder::withEncumbrancesForUpdate)
-        .thenApply(v -> financeHelper.findNeedReleaseEncumbrances(compPO, holder.getEncumbrancesFromStorage()))
+        .thenApply(v -> financeHelper.findNeedReleaseEncumbrances(compositePoLines, holder.getEncumbrancesFromStorage()))
         .thenAccept(holder::withEncumbrancesForRelease)
         .thenCompose(v -> createOrUpdateOrderTransactionSummary(compPO.getId(), holder))
         .thenCompose(v -> createOrUpdateEncumbrances(holder))
@@ -451,7 +451,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   CompletableFuture<Void> createOrUpdateOrderTransactionSummary(String orderId, EncumbrancesProcessingHolder holder) {
     if (CollectionUtils.isEmpty(holder.getEncumbrancesFromStorage())) {
       return financeHelper.createOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity())
-        .thenAccept(id -> Future.succeededFuture());
+        .thenApply(id -> null);
     }
     else {
       return financeHelper.updateOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity());
