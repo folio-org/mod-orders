@@ -1,6 +1,6 @@
 ## 11.1.0 - Unreleased
 
-## 11.0.1 - Released 07-06-2020
+## 11.0.1 - Released 07-07-2020
 
 The focus of this release was to fix editing opened orders and associated order lines
 
