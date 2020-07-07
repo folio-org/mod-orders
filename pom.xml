@@ -192,19 +192,6 @@
           <source>1.8</source>
           <target>1.8</target>
         </configuration>
-        <executions>
-          <execution>
-            <id>default-compile</id>
-            <phase>process-sources</phase>
-          </execution>
-          <execution>
-            <id>build-generated-code</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
