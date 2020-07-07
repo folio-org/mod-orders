@@ -88,13 +88,12 @@ public class PurchaseOrderHelperTest  extends ApiTestBase{
     verify(financeHelper).makeEncumbrancesPending(any());
     verify(financeHelper).getOrderEncumbrances(any());
     verify(financeHelper).updateTransactions(any());
-    verify(financeHelper).closeHttpClient();
     verify(orderLineHelper).updatePoLinesSummary(any());
   }
 
   @Test
   @Ignore
-  public void testShouldCreateOnenewEncumbranceAndUpdateTwoExistedZeroForRelease() {
+  public void testShouldCreateOneNewEncumbranceAndUpdateTwoExistedZeroForRelease() {
     //given
     PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
     FinanceHelper financeHelper = mock(FinanceHelper.class, CALLS_REAL_METHODS);
@@ -154,6 +153,5 @@ public class PurchaseOrderHelperTest  extends ApiTestBase{
     CompletableFuture<Void> act = serviceSpy.unOpenOrder(order);
     //Then
     assertTrue(act.isCompletedExceptionally());
-    verify(financeHelper).closeHttpClient();
   }
 }
