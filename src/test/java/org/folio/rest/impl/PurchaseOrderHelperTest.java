@@ -88,7 +88,6 @@ public class PurchaseOrderHelperTest  extends ApiTestBase{
     verify(financeHelper).makeEncumbrancesPending(any());
     verify(financeHelper).getOrderEncumbrances(any());
     verify(financeHelper).updateTransactions(any());
-    verify(financeHelper).closeHttpClient();
     verify(orderLineHelper).updatePoLinesSummary(any());
   }
 
@@ -154,6 +153,5 @@ public class PurchaseOrderHelperTest  extends ApiTestBase{
     CompletableFuture<Void> act = serviceSpy.unOpenOrder(order);
     //Then
     assertTrue(act.isCompletedExceptionally());
-    verify(financeHelper).closeHttpClient();
   }
 }

@@ -233,11 +233,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
             }
             return completedFuture(null);
           })
-          .thenAccept(ok -> {
+          .thenCompose(ok -> {
             if (isTransitionToPending(poFromStorage, compPO)) {
               checkOrderUnopenPermissions();
-              unOpenOrder(compPO);
+              return unOpenOrder(compPO);
             }
+            return CompletableFuture.completedFuture(null);
           })
           .thenCompose(v -> {
             if (isTransitionToOpen) {
@@ -632,15 +633,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenCompose(financeHelper::updateTransactions)
       .thenAccept(ok -> orderLineHelper.makePoLinesPending(compPO.getCompositePoLines()))
       .thenCompose(ok -> orderLineHelper.updatePoLinesSummary(compPO.getCompositePoLines()))
-      .handle((v, throwable) -> {
-        financeHelper.closeHttpClient();
-        orderLineHelper.closeHttpClient();
-        if (throwable == null) {
-          future.complete(null);
-        }
-        else {
-          future.completeExceptionally(throwable);
-        }
+      .thenAccept(v-> future.complete(null))
+      .exceptionally(t -> {
+        future.completeExceptionally(t);
         return null;
       });
     return future;
