@@ -1,4 +1,19 @@
 ## 11.1.0 - Unreleased
+
+## 11.0.1- Released 07-06-2020
+
+The focus of this release was to fix editing opened orders and associated order lines
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v11.0.0...v11.0.1)
+
+### Stories
+ * [MODORDERS-402](https://issues.folio.org/browse/MODORDERS-402) Update encumbrances upon POL editing for Opened order	
+
+### Bug Fixes
+ * [MODORDERS-407](https://issues.folio.org/browse/MODORDERS-407) Cannot create POL due to POL limit bug	
+ * [MODORDERS-400](https://issues.folio.org/browse/MODORDERS-400) Adding pieces, when the quantity increased for an order line
+ * [MODORDERS-378](https://issues.folio.org/browse/MODORDERS-378) Automatically close order when fully paid and fully received	
+
 ## 11.0.0 - Released
 The main focus of this release was to implement new unOpen and reOpen order flow. Also RMB was updated to 30.0.0.
 Now "title" and "package" order lines are supported.
