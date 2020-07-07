@@ -864,7 +864,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     verifyPiecesCreated(createdItems, reqData.getCompositePoLines(), createdPieces);
     verifyEncumbrancesOnPoUpdate(reqData);
-    assertThat(getExistingOrderSummaries(), hasSize(1));
+    assertThat(getExistingOrderSummaries(), hasSize(2));
   }
 
   @Test

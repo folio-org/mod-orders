@@ -546,10 +546,22 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   CompletionStage<Void> releasePoLineEncumbrances(String lineId) {
-    return getPoLineEncumbrances(lineId).thenCompose(transactionService::releaseEncumbrances);
+    return getPoLineEncumbrances(lineId).thenCompose(trs -> {
+      if (!trs.isEmpty()) {
+        return updateOrderTransactionSummary(trs.get(0).getEncumbrance().getSourcePurchaseOrderId(), trs.size())
+          .thenCompose(v -> transactionService.releaseEncumbrances(trs));
+      }
+      return CompletableFuture.completedFuture(null);
+    });
   }
 
   CompletionStage<Void> releaseOrderEncumbrances(String orderId) {
-    return getOrderEncumbrances(orderId).thenCompose(transactionService::releaseEncumbrances);
+    return getOrderEncumbrances(orderId).thenCompose(trs -> {
+      if (!trs.isEmpty()) {
+        return updateOrderTransactionSummary(orderId, trs.size())
+          .thenCompose(v -> transactionService.releaseEncumbrances(trs));
+      }
+      return CompletableFuture.completedFuture(null);
+    });
   }
 }

@@ -83,6 +83,8 @@
           "modulePermissions": [
             "finance.transactions.collection.get",
             "finance.encumbrances.item.post",
+            "finance.release-encumbrance.item.post",
+            "finance.order-transaction-summaries.item.put",
             "orders-storage.purchase-orders.item.get",
             "orders-storage.purchase-orders.item.delete",
             "orders-storage.po-lines.collection.get",
@@ -214,6 +216,8 @@
           "modulePermissions": [
             "finance.transactions.collection.get",
             "finance.encumbrances.item.post",
+            "finance.release-encumbrance.item.post",
+            "finance.order-transaction-summaries.item.put",
             "orders-storage.purchase-orders.item.get",
             "orders-storage.po-lines.item.get",
             "orders-storage.po-lines.item.delete",
