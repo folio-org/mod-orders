@@ -23,7 +23,6 @@ public enum POLineProtectedFields {
   ERESOURCE_LICENSE("eresource.license"),
   ERESOURCE_MATERIAL_TYPE("eresource.materialType"),
   ERESOURCE_USER_LIMIT("eresource.userLimit"),
-  FUND_DISTRIBUTION("fundDistribution"),
   ORDER_FORMAT("orderFormat"),
   PHYSICAL_CREATE_INVENTORY("physical.createInventory"),
   PHYSICAL_VOLUMES("physical.volumes"),
