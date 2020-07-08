@@ -397,6 +397,8 @@ class PurchaseOrderLineHelper extends AbstractHelper {
           .thenCompose(compOrder -> {
             validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage, compOrder);
             updateLocationsQuantity(compOrderLine.getLocations());
+            updateEstimatedPrice(compOrderLine);
+
             return checkLocationsAndPiecesConsistency(compOrderLine, compOrder)
               .thenCompose(vVoid -> protectionHelper.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE)
                 .thenCompose(v -> validateAndNormalizeISBN(compOrderLine))
@@ -567,8 +569,6 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    */
   CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-    // The estimated price should be always recalculated
-    updateEstimatedPrice(compOrderLine);
 
     updatePoLineSubObjects(compOrderLine, lineFromStorage)
       .thenCompose(poLine -> updateOrderLineSummary(compOrderLine.getId(), poLine))
@@ -751,7 +751,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
    * See MODORDERS-180 for more details.
    * @param compPoLine composite PO Line
    */
-  private void updateEstimatedPrice(CompositePoLine compPoLine) {
+  public void updateEstimatedPrice(CompositePoLine compPoLine) {
     Cost cost = compPoLine.getCost();
     cost.setPoLineEstimatedPrice(calculateEstimatedPrice(cost).getNumber().doubleValue());
   }
