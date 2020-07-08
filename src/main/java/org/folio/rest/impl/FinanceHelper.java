@@ -260,7 +260,7 @@ public class FinanceHelper extends AbstractHelper {
         .map(Map.Entry::getKey)
         .distinct()
         .collect(toList()))
-      .map(this::getBudgetsByFundIds)
+      .map(this::getActiveBudgetsByFundIds)
       .toList());
   }
 
@@ -294,8 +294,8 @@ public class FinanceHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<List<Budget>> getBudgetsByFundIds(List<String> ids) {
-    String query = convertIdsToCqlQuery(ids, FUND_ID);
+  private CompletableFuture<List<Budget>> getActiveBudgetsByFundIds(List<String> ids) {
+    String query = convertIdsToCqlQuery(ids, FUND_ID) + " and budgetStatus==Active";
     String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
     String endpoint = String.format(GET_BUDGETS_WITH_SEARCH_PARAMS, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
 
