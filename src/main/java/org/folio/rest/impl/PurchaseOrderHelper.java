@@ -965,6 +965,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
         if (StringUtils.equals(lineFromStorage.getId(), line.getId())) {
           line.setPoLineNumber(orderLineHelper.buildNewPoLineNumber(lineFromStorage, compOrder.getPoNumber()));
           orderLineHelper.updateLocationsQuantity(line.getLocations());
+          orderLineHelper.updateEstimatedPrice(line);
+
           futures.add(orderLineHelper.updateOrderLine(line, JsonObject.mapFrom(lineFromStorage)));
           iterator.remove();
           break;

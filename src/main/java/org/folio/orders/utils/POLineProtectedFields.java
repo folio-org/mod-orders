@@ -8,10 +8,6 @@ public enum POLineProtectedFields {
 
   ACQUISITION_METHOD("acquisitionMethod"),
   CHECKIN_ITEMS("checkinItems"),
-  COST_ADDITIONAL_COST("cost.additionalCost"),
-  COST_CURRENCY("cost.currency"),
-  COST_DISCOUNT("cost.discount"),
-  COST_DISCOUNT_TYPE("cost.discountType"),
   COLLECTION("collection"),
   CONTRIBUTORS("contributors"),
   DONOR("donor"),
@@ -23,7 +19,6 @@ public enum POLineProtectedFields {
   ERESOURCE_LICENSE("eresource.license"),
   ERESOURCE_MATERIAL_TYPE("eresource.materialType"),
   ERESOURCE_USER_LIMIT("eresource.userLimit"),
-  FUND_DISTRIBUTION("fundDistribution"),
   ORDER_FORMAT("orderFormat"),
   PHYSICAL_CREATE_INVENTORY("physical.createInventory"),
   PHYSICAL_VOLUMES("physical.volumes"),

@@ -554,7 +554,6 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
         CompositePoLine.AcquisitionMethod.APPROVAL_PLAN.value());
     allProtectedFieldsModification.put(POLineProtectedFields.TITLE_OR_PACKAGE.getFieldName(), "Testing ProtectedFields");
     allProtectedFieldsModification.put(POLineProtectedFields.DONOR.getFieldName(), "Donor");
-    allProtectedFieldsModification.put(POLineProtectedFields.COST_CURRENCY.getFieldName(), "EUR");
     allProtectedFieldsModification.put(POLineProtectedFields.ERESOURCE_USER_LIMIT.getFieldName(), 100);
     // adding trial because a default value is added while sending the request
     allProtectedFieldsModification.put(POLineProtectedFields.ERESOURCE_TRIAL.getFieldName(), true);
