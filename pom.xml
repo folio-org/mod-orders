@@ -57,6 +57,7 @@
     <mod-configuration-client.version>5.4.0</mod-configuration-client.version>
     <sonar.exclusions>**/models/**.java</sonar.exclusions>
     <sonar.test.exclusions>**/*Test.java</sonar.test.exclusions>
+    <spring.version>5.1.1.RELEASE</spring.version>
   </properties>
 
   <repositories>
@@ -94,6 +95,16 @@
       <groupId>org.folio</groupId>
       <artifactId>domain-models-runtime</artifactId>
       <version>${raml-module-builder.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
+      <version>${spring.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-test</artifactId>
+      <version>${spring.version}</version>
     </dependency>
     <dependency>
       <groupId>org.folio</groupId>
