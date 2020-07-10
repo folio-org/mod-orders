@@ -1,6 +1,6 @@
 ## 11.1.0 - Unreleased
 
-## 11.0.2 - Released
+## 11.0.3 - Released
 The focus of this release was to fix editing opened orders and associated order lines
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v11.0.1...v11.0.3)
