@@ -1,5 +1,15 @@
 ## 11.1.0 - Unreleased
 
+## 11.0.2 - Released
+The focus of this release was to fix editing opened orders and associated order lines
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v11.0.1...v11.0.3)
+
+### Bug Fixes
+ * [MODORDERS-410](https://issues.folio.org/browse/MODORDERS-410) Cannot open order because systems thinks there is no current budget
+ * [MODORDERS-408](https://issues.folio.org/browse/MODORDERS-408) Cannot edit opened poline with fundDistribution type=Amount
+
+
 ## 11.0.1 - Released 07-07-2020
 
 The focus of this release was to fix editing opened orders and associated order lines
