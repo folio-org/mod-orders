@@ -764,7 +764,7 @@
     },
     {
       "id": "finance.transactions",
-      "version": "3.0"
+      "version": "4.0"
     },
     {
       "id": "finance.order-transaction-summaries",
