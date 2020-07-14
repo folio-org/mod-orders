@@ -57,6 +57,7 @@
     <mod-configuration-client.version>5.4.0</mod-configuration-client.version>
     <sonar.exclusions>**/models/**.java</sonar.exclusions>
     <sonar.test.exclusions>**/*Test.java</sonar.test.exclusions>
+    <spring.version>5.2.7.RELEASE</spring.version>
   </properties>
 
   <repositories>
@@ -96,10 +97,19 @@
       <version>${raml-module-builder.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
+      <version>${spring.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-test</artifactId>
+      <version>${spring.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.folio</groupId>
       <artifactId>folio-di-support</artifactId>
       <version>1.1.0</version>
-      <type>jar</type>
     </dependency>
     <dependency>
       <groupId>me.escoffier.vertx</groupId>
@@ -109,7 +119,7 @@
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-unit</artifactId>
-      <version>3.9.0</version>
+      <version>3.9.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -338,7 +348,6 @@
         <version>1.11</version>
         <configuration>
           <verbose>true</verbose>
-          <showWeaveInfo>false</showWeaveInfo>
           <complianceLevel>${maven.compiler.target}</complianceLevel>
           <includes>
             <include>**/impl/*.java</include>
@@ -347,8 +356,6 @@
           <aspectDirectory>src/main/java/org/folio/rest/annotations</aspectDirectory>
           <XaddSerialVersionUID>true</XaddSerialVersionUID>
           <showWeaveInfo>true</showWeaveInfo>
-          <!-- Forces re-compilation, regardless of whether the compiler arguments or the sources have changed. Useful for local re-builds. -->
-          <forceAjcCompile>true</forceAjcCompile>
           <aspectLibraries>
             <aspectLibrary>
               <groupId>org.folio</groupId>
