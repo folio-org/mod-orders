@@ -1,8 +1,8 @@
 ## 11.1.0 - Unreleased
-## 11.0.4 - Released
+## 11.0.5 - Released
 The focus of this release was to fix issue related with updating of order lines for open order
 
-[Full Changelog](https://github.com/folio-org/mod-orders/compare/v11.0.3...v11.0.4)
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v11.0.3...v11.0.5)
 
 ### Bug Fixes
  * [MODORDERS-411](https://issues.folio.org/browse/MODORDERS-411) Number of order transactions have to be greater than 0 upon poLine update
