@@ -455,6 +455,9 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       return financeHelper.createOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity())
         .thenApply(id -> null);
     }
+    else if (holder.getAllEncumbrancesQuantity() == 0) {
+      return CompletableFuture.completedFuture(null);
+    }
     else {
       return financeHelper.updateOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity());
     }
