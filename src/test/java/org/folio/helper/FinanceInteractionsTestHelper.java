@@ -1,4 +1,4 @@
-package org.folio.rest.impl;
+package org.folio.helper;
 
 import static org.folio.rest.impl.MockServer.getCreatedEncumbrances;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
@@ -18,7 +18,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 
 public final class FinanceInteractionsTestHelper {
 
-  static void verifyEncumbrancesOnPoCreation(CompositePurchaseOrder rqPo, CompositePurchaseOrder rsPo) {
+  public static void verifyEncumbrancesOnPoCreation(CompositePurchaseOrder rqPo, CompositePurchaseOrder rsPo) {
     // Check that number of linked encumbrances corresponds to FundDistribution count
     int fundDistributionCount = getFundDistributionCount(rqPo);
     assertThat(fundDistributionCount, equalTo(getEncumbrancesCount(rsPo)));
@@ -34,7 +34,7 @@ public final class FinanceInteractionsTestHelper {
     }
   }
 
-  static void verifyEncumbrancesOnPoUpdate(CompositePurchaseOrder rqPo) {
+  public static void verifyEncumbrancesOnPoUpdate(CompositePurchaseOrder rqPo) {
     verifyEncumbrancesOnPoUpdate(rqPo, getFundDistributionCount(rqPo));
   }
 

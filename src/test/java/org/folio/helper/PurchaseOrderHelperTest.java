@@ -1,4 +1,4 @@
-package org.folio.rest.impl;
+package org.folio.helper;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
@@ -26,6 +26,7 @@ import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.junit.Before;
@@ -39,7 +40,7 @@ import org.mockito.MockitoAnnotations;
 import io.vertx.core.impl.EventLoopContext;
 import io.vertx.core.json.JsonArray;
 
-public class PurchaseOrderHelperTest  extends ApiTestBase{
+public class PurchaseOrderHelperTest  extends ApiTestBase {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";
   private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
   public static final String TWO_ENCUMBRANCE_PATH = BASE_MOCK_DATA_PATH + "encumbrances/two_pending_encumbrances.json";

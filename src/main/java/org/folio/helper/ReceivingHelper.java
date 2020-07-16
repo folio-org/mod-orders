@@ -1,4 +1,4 @@
-package org.folio.rest.impl;
+package org.folio.helper;
 
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.mapping;
@@ -44,7 +44,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   private final Map<String, Map<String, ReceivedItem>> receivingItems;
 
 
-  ReceivingHelper(ReceivingCollection receivingCollection, Map<String, String> okapiHeaders, Context ctx, String lang) {
+  public ReceivingHelper(ReceivingCollection receivingCollection, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
 
     // Convert request to map representation
@@ -60,12 +60,12 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     }
   }
 
-  ReceivingHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
+  public ReceivingHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
     receivingItems = null;
   }
 
-  CompletableFuture<ReceivingResults> receiveItems(ReceivingCollection receivingCollection) {
+  public CompletableFuture<ReceivingResults> receiveItems(ReceivingCollection receivingCollection) {
     return getPoLines(new ArrayList<>(receivingItems.keySet()))
       .thenCompose(poLines -> removeForbiddenEntities(poLines, receivingItems))
       .thenCompose(vVoid -> processReceiveItems(receivingCollection));
@@ -101,7 +101,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
               .toMap(ReceivedItem::getPieceId, ReceivedItem::getLocationId))));
   }
 
-  CompletableFuture<ReceivingHistoryCollection> getReceivingHistory(int limit, int offset, String query) {
+  public CompletableFuture<ReceivingHistoryCollection> getReceivingHistory(int limit, int offset, String query) {
     CompletableFuture<ReceivingHistoryCollection> future = new VertxCompletableFuture<>(ctx);
 
     try {

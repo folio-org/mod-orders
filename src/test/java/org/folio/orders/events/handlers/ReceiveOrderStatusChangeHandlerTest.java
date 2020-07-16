@@ -1,9 +1,8 @@
 package org.folio.orders.events.handlers;
 
-import static org.folio.orders.events.handlers.MessageAddress.RECEIVE_ORDER_STATUS_UPDATE;
-import static org.folio.rest.impl.AbstractHelper.ORDER_ID;
-import static org.folio.rest.impl.CheckinHelper.IS_ITEM_ORDER_CLOSED_PRESENT;
-import static org.folio.rest.impl.InventoryHelper.ITEMS;
+import static org.folio.helper.AbstractHelper.ORDER_ID;
+import static org.folio.helper.CheckinHelper.IS_ITEM_ORDER_CLOSED_PRESENT;
+import static org.folio.helper.InventoryHelper.ITEMS;
 import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
 import static org.folio.rest.impl.MockServer.getItemUpdates;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
@@ -29,7 +28,7 @@ import java.util.stream.Stream;
 import javax.ws.rs.core.Response;
 
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.impl.AbstractHelper;
+import org.folio.helper.AbstractHelper;
 import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus;
@@ -63,7 +62,7 @@ public class ReceiveOrderStatusChangeHandlerTest extends ApiTestBase {
     ApiTestBase.before();
 
     vertx = Vertx.vertx();
-    vertx.eventBus().consumer(RECEIVE_ORDER_STATUS_UPDATE.address, new ReceiveOrderStatusChangeHandler(vertx));
+    vertx.eventBus().consumer(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address, new ReceiveOrderStatusChangeHandler(vertx));
   }
 
   @Test
@@ -220,6 +219,6 @@ public class ReceiveOrderStatusChangeHandlerTest extends ApiTestBase {
     // Add okapi url header
     DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader(X_OKAPI_URL.getName(), X_OKAPI_URL.getValue());
 
-    vertx.eventBus().request(RECEIVE_ORDER_STATUS_UPDATE.address, data, deliveryOptions, replyHandler);
+    vertx.eventBus().request(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address, data, deliveryOptions, replyHandler);
   }
 }

@@ -1,4 +1,4 @@
-package org.folio.rest.impl;
+package org.folio.helper;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.groupingBy;
@@ -25,8 +25,8 @@ import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.impl.InventoryHelper.ITEM_HOLDINGS_RECORD_ID;
-import static org.folio.rest.impl.PurchaseOrderHelper.GET_PURCHASE_ORDERS;
+import static org.folio.helper.InventoryHelper.ITEM_HOLDINGS_RECORD_ID;
+import static org.folio.helper.PurchaseOrderHelper.GET_PURCHASE_ORDERS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;

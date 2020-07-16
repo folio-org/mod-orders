@@ -44,8 +44,6 @@ import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_STORAGE_E
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.rest.impl.AcquisitionsUnitsHelper.ALL_UNITS_CQL;
-import static org.folio.rest.impl.AcquisitionsUnitsHelper.IS_DELETED_PROP;
 import static org.folio.rest.impl.ApiTestBase.BAD_QUERY;
 import static org.folio.rest.impl.ApiTestBase.COMP_ORDER_MOCK_DATA_PATH;
 import static org.folio.rest.impl.ApiTestBase.ID;
@@ -69,13 +67,11 @@ import static org.folio.rest.impl.ApiTestBase.getMinimalContentCompositePoLine;
 import static org.folio.rest.impl.ApiTestBase.getMinimalContentCompositePurchaseOrder;
 import static org.folio.rest.impl.ApiTestBase.getMockAsJson;
 import static org.folio.rest.impl.ApiTestBase.getMockData;
-import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
-import static org.folio.rest.impl.InventoryHelper.ITEMS;
-import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
-import static org.folio.rest.impl.InventoryHelper.REQUESTS;
+import static org.folio.helper.InventoryHelper.ITEMS;
+import static org.folio.helper.InventoryHelper.REQUESTS;
 import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
 import static org.folio.rest.impl.PoNumberApiTest.NONEXISTING_PO_NUMBER;
-import static org.folio.rest.impl.ProtectionHelper.ACQUISITIONS_UNIT_ID;
+import static org.folio.helper.ProtectionHelper.ACQUISITIONS_UNIT_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_A;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_B;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_VENDOR_ID;
@@ -128,6 +124,7 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
+import org.folio.helper.AbstractHelper;
 import org.folio.isbn.IsbnUtil;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
@@ -190,11 +187,11 @@ public class MockServer {
   // Mock data paths
   public static final String BASE_MOCK_DATA_PATH = "mockdata/";
   private static final String CONTRIBUTOR_NAME_TYPES_PATH = BASE_MOCK_DATA_PATH + "contributorNameTypes/contributorPersonalNameType.json";
-  static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
-  static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
+  public static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
+  public static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
   private static final String ITEMS_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/";
-  static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
-  static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
+  public static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
+  public static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
   public static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
   public static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
@@ -242,6 +239,11 @@ public class MockServer {
   private static final String IDENTIFIER_TYPES = "identifierTypes";
   private static final String ISBN_CONVERT13 = "ISBN13";
   private static final String CURRENT_FISCAL_YEAR = "currentFiscalYear";
+  private static final String HOLDING_PERMANENT_LOCATION_ID = "permanentLocationId";
+  private static final String ORGANIZATIONS = "organizations";
+  static final String LOAN_TYPES = "loantypes";
+  static final String IS_DELETED_PROP = "isDeleted";
+  static final String ALL_UNITS_CQL = IS_DELETED_PROP + "=*";
 
   static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
@@ -314,19 +316,19 @@ public class MockServer {
     return serverRqRs.get(PIECES, HttpMethod.DELETE);
   }
 
-  static List<JsonObject> getHoldingsSearches() {
+  public static List<JsonObject> getHoldingsSearches() {
     return serverRqRs.get(HOLDINGS_RECORD, HttpMethod.GET);
   }
 
-  static List<JsonObject> getCreatedHoldings() {
+  public static List<JsonObject> getCreatedHoldings() {
     return serverRqRs.get(HOLDINGS_RECORD, HttpMethod.POST);
   }
 
-  static List<JsonObject> getInstancesSearches() {
+  public static List<JsonObject> getInstancesSearches() {
     return serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
   }
 
-  static List<JsonObject> getCreatedInstances() {
+  public static List<JsonObject> getCreatedInstances() {
     return serverRqRs.get(INSTANCE_RECORD, HttpMethod.POST);
   }
 
@@ -342,11 +344,11 @@ public class MockServer {
     return serverRqRs.get(ITEM_RECORDS, HttpMethod.DELETE);
   }
 
-  static List<JsonObject> getCreatedItems() {
+  public static List<JsonObject> getCreatedItems() {
     return serverRqRs.get(ITEM_RECORDS, HttpMethod.POST);
   }
 
-  static List<JsonObject> getCreatedPieces() {
+  public static List<JsonObject> getCreatedPieces() {
     return serverRqRs.get(PIECES, HttpMethod.POST);
   }
 
@@ -393,7 +395,7 @@ public class MockServer {
     return getCollectionRecords(getRqRsEntries(HttpMethod.GET, ACQUISITIONS_MEMBERSHIPS));
   }
 
-  static List<Transaction> getCreatedEncumbrances() {
+  public static List<Transaction> getCreatedEncumbrances() {
     List<JsonObject> jsonObjects = serverRqRs.get(ENCUMBRANCES, HttpMethod.POST);
     return jsonObjects == null ? Collections.emptyList()
       : jsonObjects.stream()
@@ -1012,7 +1014,7 @@ public class MockServer {
           .forEach(organizations::add);
 
         if (!organizations.isEmpty()) {
-          body = new JsonObject().put(VendorHelper.ORGANIZATIONS, organizations);
+          body = new JsonObject().put(ORGANIZATIONS, organizations);
         }
       }
     } catch(IOException e) {
@@ -1024,7 +1026,7 @@ public class MockServer {
     if (body != null) {
       serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
     } else {
-      serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, buildEmptyCollection(VendorHelper.ORGANIZATIONS));
+      serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, buildEmptyCollection(ORGANIZATIONS));
     }
   }
 
@@ -1062,7 +1064,7 @@ public class MockServer {
           break;
         case ACTIVE_ACCESS_PROVIDER_B:
           body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_providers_active.json"))
-            .getJsonArray(VendorHelper.ORGANIZATIONS).getJsonObject(0);
+            .getJsonArray(ORGANIZATIONS).getJsonObject(0);
           break;
         case ORGANIZATION_NOT_VENDOR:
           body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "not_vendor.json"));

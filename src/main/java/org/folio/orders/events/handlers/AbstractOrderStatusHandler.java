@@ -12,8 +12,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.impl.AbstractHelper;
-import org.folio.rest.impl.PurchaseOrderHelper;
+import org.folio.helper.AbstractHelper;
+import org.folio.helper.PurchaseOrderHelper;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;

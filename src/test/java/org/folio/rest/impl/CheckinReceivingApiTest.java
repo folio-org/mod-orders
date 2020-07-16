@@ -14,11 +14,6 @@ import static org.folio.orders.utils.HelperUtils.isHoldingUpdateRequiredForPhysi
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
-import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
-import static org.folio.rest.impl.InventoryHelper.ITEM_BARCODE;
-import static org.folio.rest.impl.InventoryHelper.ITEM_LEVEL_CALL_NUMBER;
-import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS;
-import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_NAME;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
@@ -58,6 +53,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.folio.HttpStatus;
+import org.folio.helper.AbstractHelper;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
@@ -89,6 +85,11 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
   private static final String RECEIVING_RQ_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receiving/";
   private static final String CHECKIN_RQ_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "checkIn/";
+  private static final String ITEM_BARCODE = "barcode";
+  private static final String ITEM_LEVEL_CALL_NUMBER = "itemLevelCallNumber";
+  private static final String HOLDING_PERMANENT_LOCATION_ID = "permanentLocationId";
+  private static final String ITEM_STATUS_NAME = "name";
+  private static final String ITEM_STATUS = "status";
 
   @Test
   public void testPostCheckInElectronicWithNoItems() {

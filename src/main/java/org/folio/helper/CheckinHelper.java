@@ -1,4 +1,4 @@
-package org.folio.rest.impl;
+package org.folio.helper;
 
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
@@ -43,7 +43,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
    */
   private final Map<String, Map<String, CheckInPiece>> checkinPieces;
 
-  CheckinHelper(CheckinCollection checkinCollection, Map<String, String> okapiHeaders,
+  public CheckinHelper(CheckinCollection checkinCollection, Map<String, String> okapiHeaders,
                 Context ctx, String lang) {
     super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
     // Convert request to map representation
@@ -60,7 +60,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     }
   }
 
-  CompletableFuture<ReceivingResults> checkinPieces(CheckinCollection checkinCollection) {
+  public CompletableFuture<ReceivingResults> checkinPieces(CheckinCollection checkinCollection) {
     return getPoLines(new ArrayList<>(checkinPieces.keySet()))
       .thenCompose(poLines -> removeForbiddenEntities(poLines, checkinPieces))
       .thenCompose(vVoid -> processCheckInPieces(checkinCollection));

@@ -1,4 +1,4 @@
-package org.folio.rest.impl;
+package org.folio.helper;
 
 import static io.vertx.core.json.JsonObject.mapFrom;
 import static java.util.concurrent.CompletableFuture.allOf;
@@ -44,7 +44,7 @@ import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.orders.utils.validators.CompositePoLineValidationUtil.validatePoLine;
-import static org.folio.rest.impl.PurchaseOrderHelper.ENCUMBRANCE_POST_ENDPOINT;
+import static org.folio.helper.PurchaseOrderHelper.ENCUMBRANCE_POST_ENDPOINT;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
@@ -68,7 +68,6 @@ import java.util.stream.Collectors;
 import javax.money.MonetaryAmount;
 import javax.ws.rs.core.Response;
 
-import io.vertx.core.Future;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.models.EncumbranceRelationsHolder;
@@ -113,7 +112,7 @@ import one.util.streamex.StreamEx;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
-class PurchaseOrderLineHelper extends AbstractHelper {
+public class PurchaseOrderLineHelper extends AbstractHelper {
 
   private static final String ISBN = "ISBN";
   private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
@@ -269,7 +268,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       .thenCompose(v -> createPoLineSummary(compPoLine, line));
   }
 
-  CompletableFuture<Void> setTenantDefaultCreateInventoryValues(CompositePoLine compPOL) {
+  public CompletableFuture<Void> setTenantDefaultCreateInventoryValues(CompositePoLine compPOL) {
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
 
     if (isCreateInventoryNull(compPOL)) {
@@ -364,14 +363,14 @@ class PurchaseOrderLineHelper extends AbstractHelper {
       : Eresource.CreateInventory.fromValue(tenantDefault);
   }
 
-  CompletableFuture<CompositePoLine> getCompositePoLine(String polineId) {
+  public CompletableFuture<CompositePoLine> getCompositePoLine(String polineId) {
     return getPoLineById(polineId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(line -> getCompositePurchaseOrder(line.getString(PURCHASE_ORDER_ID))
         .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.READ))
         .thenCompose(ok -> populateCompositeLine(line)));
   }
 
-  CompletableFuture<Void> deleteLine(String lineId) {
+  public CompletableFuture<Void> deleteLine(String lineId) {
     return getPoLineById(lineId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(this::verifyDeleteAllowed)
       .thenCompose(line -> {
@@ -391,7 +390,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
   /**
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
-  CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine) {
+  public CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine) {
     return getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
         .thenCompose(lineFromStorage -> getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId())
           .thenCompose(compOrder -> {

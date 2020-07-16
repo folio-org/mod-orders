@@ -1,4 +1,4 @@
-package org.folio.rest.impl;
+package org.folio.helper;
 
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderByPONumber;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
@@ -28,7 +28,7 @@ public class PoNumberHelper extends AbstractHelper {
     super(okapiHeaders, ctx, lang);
   }
 
-  CompletableFuture<Response> checkPONumberUnique(PoNumber poNumber) {
+  public CompletableFuture<Response> checkPONumberUnique(PoNumber poNumber) {
     return checkPONumberUnique(poNumber.getPoNumber())
       .thenApply(v -> {
         logger.info("The PO Number '{}' is not in use yet", poNumber.getPoNumber());
@@ -37,7 +37,7 @@ public class PoNumberHelper extends AbstractHelper {
       .exceptionally(this::buildErrorResponse);
   }
 
-  CompletableFuture<Response> getPoNumber() {
+  public CompletableFuture<Response> getPoNumber() {
     return generatePoNumber()
       .thenApply(number -> {
         logger.info("The PO Number '{}' is not in use yet", number);

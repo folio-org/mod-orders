@@ -1,11 +1,11 @@
-package org.folio.rest.impl;
+package org.folio.helper;
 
 import static org.folio.orders.utils.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
-import static org.folio.rest.impl.AcquisitionsUnitsHelper.ALL_UNITS_CQL;
+import static org.folio.helper.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
+import static org.folio.helper.AcquisitionsUnitsHelper.ALL_UNITS_CQL;
 
 import java.util.ArrayList;
 import java.util.Collections;

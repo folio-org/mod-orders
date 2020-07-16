@@ -1,4 +1,4 @@
-package org.folio.rest.impl;
+package org.folio.helper;
 
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
@@ -41,11 +41,11 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
     super(httpClient, okapiHeaders, ctx, lang);
   }
 
-  AcquisitionsUnitsHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
+  public AcquisitionsUnitsHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(okapiHeaders, ctx, lang);
   }
 
-  CompletableFuture<AcquisitionsUnitCollection> getAcquisitionsUnits(String query, int offset, int limit) {
+  public CompletableFuture<AcquisitionsUnitCollection> getAcquisitionsUnits(String query, int offset, int limit) {
     CompletableFuture<AcquisitionsUnitCollection> future = new VertxCompletableFuture<>(ctx);
 
     try {
@@ -71,26 +71,26 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
     return future;
   }
 
-  CompletableFuture<AcquisitionsUnit> createAcquisitionsUnit(AcquisitionsUnit unit) {
+  public CompletableFuture<AcquisitionsUnit> createAcquisitionsUnit(AcquisitionsUnit unit) {
     return createRecordInStorage(JsonObject.mapFrom(unit), resourcesPath(ACQUISITIONS_UNITS)).thenApply(unit::withId);
   }
 
-  CompletableFuture<Void> updateAcquisitionsUnit(AcquisitionsUnit unit) {
+  public CompletableFuture<Void> updateAcquisitionsUnit(AcquisitionsUnit unit) {
     String endpoint = resourceByIdPath(ACQUISITIONS_UNITS, unit.getId());
     return handlePutRequest(endpoint, JsonObject.mapFrom(unit), httpClient, ctx, okapiHeaders, logger);
   }
 
-  CompletableFuture<AcquisitionsUnit> getAcquisitionsUnit(String id) {
+  public CompletableFuture<AcquisitionsUnit> getAcquisitionsUnit(String id) {
     return handleGetRequest(resourceByIdPath(ACQUISITIONS_UNITS, id), httpClient, ctx, okapiHeaders, logger)
       .thenApply(json -> json.mapTo(AcquisitionsUnit.class));
   }
 
-  CompletableFuture<Void> deleteAcquisitionsUnit(String id) {
+  public CompletableFuture<Void> deleteAcquisitionsUnit(String id) {
     return getAcquisitionsUnit(id).thenApply(unit -> unit.withIsDeleted(true))
       .thenCompose(this::updateAcquisitionsUnit);
   }
 
-  CompletableFuture<String> buildAcqUnitsCqlExprToSearchRecords() {
+  public CompletableFuture<String> buildAcqUnitsCqlExprToSearchRecords() {
     return getAcqUnitIdsForSearch().thenApply(ids -> {
       if (ids.isEmpty()) {
         return NO_ACQ_UNIT_ASSIGNED_CQL;
@@ -108,7 +108,7 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
         .toList());
   }
 
-  CompletableFuture<AcquisitionsUnitMembershipCollection> getAcquisitionsUnitsMemberships(String query, int offset, int limit) {
+  public CompletableFuture<AcquisitionsUnitMembershipCollection> getAcquisitionsUnitsMemberships(String query, int offset, int limit) {
     CompletableFuture<AcquisitionsUnitMembershipCollection> future = new VertxCompletableFuture<>(ctx);
     try {
       String endpoint = String.format(GET_UNITS_MEMBERSHIPS_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
@@ -141,21 +141,21 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
       });
   }
 
-  CompletableFuture<AcquisitionsUnitMembership> createAcquisitionsUnitsMembership(AcquisitionsUnitMembership membership) {
+  public CompletableFuture<AcquisitionsUnitMembership> createAcquisitionsUnitsMembership(AcquisitionsUnitMembership membership) {
     return createRecordInStorage(JsonObject.mapFrom(membership), resourcesPath(ACQUISITIONS_MEMBERSHIPS)).thenApply(membership::withId);
   }
 
-  CompletableFuture<Void> updateAcquisitionsUnitsMembership(AcquisitionsUnitMembership membership) {
+  public CompletableFuture<Void> updateAcquisitionsUnitsMembership(AcquisitionsUnitMembership membership) {
     String endpoint = resourceByIdPath(ACQUISITIONS_MEMBERSHIPS, membership.getId());
     return handlePutRequest(endpoint, JsonObject.mapFrom(membership), httpClient, ctx, okapiHeaders, logger);
   }
 
-  CompletableFuture<AcquisitionsUnitMembership> getAcquisitionsUnitsMembership(String id) {
+  public CompletableFuture<AcquisitionsUnitMembership> getAcquisitionsUnitsMembership(String id) {
     return handleGetRequest(resourceByIdPath(ACQUISITIONS_MEMBERSHIPS, id), httpClient, ctx, okapiHeaders, logger)
       .thenApply(json -> json.mapTo(AcquisitionsUnitMembership.class));
   }
 
-  CompletableFuture<Void> deleteAcquisitionsUnitsMembership(String id) {
+  public CompletableFuture<Void> deleteAcquisitionsUnitsMembership(String id) {
     return handleDeleteRequest(resourceByIdPath(ACQUISITIONS_MEMBERSHIPS, id), httpClient, ctx, okapiHeaders, logger);
   }
 
