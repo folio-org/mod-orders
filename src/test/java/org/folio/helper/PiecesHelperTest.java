@@ -1,4 +1,4 @@
-package org.folio.rest.impl;
+package org.folio.helper;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
@@ -23,6 +23,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Piece;

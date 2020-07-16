@@ -19,7 +19,7 @@ import java.util.concurrent.CompletableFuture;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.acq.model.PieceCollection;
-import org.folio.rest.impl.AbstractHelper;
+import org.folio.helper.AbstractHelper;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;

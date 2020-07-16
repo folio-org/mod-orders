@@ -1,4 +1,4 @@
-package org.folio.rest.impl;
+package org.folio.helper;
 
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.HttpHeaders.LOCATION;
@@ -148,7 +148,7 @@ public abstract class AbstractHelper {
     return processingErrors;
   }
 
-  protected void addProcessingError(Error error) {
+  public void addProcessingError(Error error) {
     processingErrors.getErrors().add(error);
   }
 

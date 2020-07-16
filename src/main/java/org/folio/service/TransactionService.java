@@ -20,7 +20,7 @@ import java.util.concurrent.CompletableFuture;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
-import org.folio.rest.impl.AbstractHelper;
+import org.folio.helper.AbstractHelper;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.Context;

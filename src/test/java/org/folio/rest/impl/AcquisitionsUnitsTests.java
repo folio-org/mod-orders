@@ -4,8 +4,6 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
-import static org.folio.rest.impl.AcquisitionsUnitsHelper.ACTIVE_UNITS_CQL;
-import static org.folio.rest.impl.AcquisitionsUnitsHelper.ALL_UNITS_CQL;
 import static org.folio.rest.impl.MockServer.ACQUISITIONS_UNITS_COLLECTION;
 import static org.folio.rest.impl.MockServer.getAcqUnitsRetrievals;
 import static org.folio.rest.impl.MockServer.getQueryParams;
@@ -44,6 +42,9 @@ public class AcquisitionsUnitsTests extends ApiTestBase {
   private static final Logger logger = LoggerFactory.getLogger(AcquisitionsUnitsTests.class);
 
   private static final String ACQ_UNITS_UNITS_ENDPOINT = "/acquisitions-units/units";
+  static final String IS_DELETED_PROP = "isDeleted";
+  static final String ACTIVE_UNITS_CQL = IS_DELETED_PROP + "==false";
+  static final String ALL_UNITS_CQL = IS_DELETED_PROP + "=*";
 
   @Test
   public void testGetAcqUnitsNoQuery() throws IOException {

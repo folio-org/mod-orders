@@ -1,6 +1,6 @@
 package org.folio.orders.events.handlers;
 
-import static org.folio.rest.impl.CheckinHelper.IS_ITEM_ORDER_CLOSED_PRESENT;
+import static org.folio.helper.CheckinHelper.IS_ITEM_ORDER_CLOSED_PRESENT;
 
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,4 +1,4 @@
-package org.folio.rest.impl;
+package org.folio.helper;
 
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;

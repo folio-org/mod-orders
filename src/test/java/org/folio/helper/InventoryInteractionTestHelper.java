@@ -1,4 +1,4 @@
-package org.folio.rest.impl;
+package org.folio.helper;
 
 import static org.folio.orders.utils.HelperUtils.CONFIGS;
 import static org.folio.orders.utils.HelperUtils.CONFIG_NAME;
@@ -12,36 +12,36 @@ import static org.folio.orders.utils.HelperUtils.getPhysicalCostQuantity;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.isHoldingCreationRequiredForLocation;
 import static org.folio.rest.impl.ApiTestBase.*;
-import static org.folio.rest.impl.InventoryHelper.CONFIG_NAME_INSTANCE_STATUS_CODE;
-import static org.folio.rest.impl.InventoryHelper.CONFIG_NAME_INSTANCE_TYPE_CODE;
-import static org.folio.rest.impl.InventoryHelper.CONFIG_NAME_LOAN_TYPE_NAME;
-import static org.folio.rest.impl.InventoryHelper.CONTRIBUTOR_NAME;
-import static org.folio.rest.impl.InventoryHelper.CONTRIBUTOR_NAME_TYPE_ID;
-import static org.folio.rest.impl.InventoryHelper.DEFAULT_INSTANCE_STATUS_CODE;
-import static org.folio.rest.impl.InventoryHelper.DEFAULT_INSTANCE_TYPE_CODE;
-import static org.folio.rest.impl.InventoryHelper.DEFAULT_LOAN_TYPE_NAME;
-import static org.folio.rest.impl.InventoryHelper.HOLDING_INSTANCE_ID;
-import static org.folio.rest.impl.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
-import static org.folio.rest.impl.InventoryHelper.INSTANCE_CONTRIBUTORS;
-import static org.folio.rest.impl.InventoryHelper.INSTANCE_DATE_OF_PUBLICATION;
-import static org.folio.rest.impl.InventoryHelper.INSTANCE_IDENTIFIERS;
-import static org.folio.rest.impl.InventoryHelper.INSTANCE_IDENTIFIER_TYPE_ID;
-import static org.folio.rest.impl.InventoryHelper.INSTANCE_IDENTIFIER_TYPE_VALUE;
-import static org.folio.rest.impl.InventoryHelper.INSTANCE_PUBLICATION;
-import static org.folio.rest.impl.InventoryHelper.INSTANCE_PUBLISHER;
-import static org.folio.rest.impl.InventoryHelper.INSTANCE_SOURCE;
-import static org.folio.rest.impl.InventoryHelper.INSTANCE_STATUSES;
-import static org.folio.rest.impl.InventoryHelper.INSTANCE_STATUS_ID;
-import static org.folio.rest.impl.InventoryHelper.INSTANCE_TITLE;
-import static org.folio.rest.impl.InventoryHelper.INSTANCE_TYPES;
-import static org.folio.rest.impl.InventoryHelper.INSTANCE_TYPE_ID;
-import static org.folio.rest.impl.InventoryHelper.ITEM_HOLDINGS_RECORD_ID;
-import static org.folio.rest.impl.InventoryHelper.ITEM_MATERIAL_TYPE_ID;
-import static org.folio.rest.impl.InventoryHelper.ITEM_PERMANENT_LOAN_TYPE_ID;
-import static org.folio.rest.impl.InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
-import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS;
-import static org.folio.rest.impl.InventoryHelper.ITEM_STATUS_NAME;
-import static org.folio.rest.impl.InventoryHelper.LOAN_TYPES;
+import static org.folio.helper.InventoryHelper.CONFIG_NAME_INSTANCE_STATUS_CODE;
+import static org.folio.helper.InventoryHelper.CONFIG_NAME_INSTANCE_TYPE_CODE;
+import static org.folio.helper.InventoryHelper.CONFIG_NAME_LOAN_TYPE_NAME;
+import static org.folio.helper.InventoryHelper.CONTRIBUTOR_NAME;
+import static org.folio.helper.InventoryHelper.CONTRIBUTOR_NAME_TYPE_ID;
+import static org.folio.helper.InventoryHelper.DEFAULT_INSTANCE_STATUS_CODE;
+import static org.folio.helper.InventoryHelper.DEFAULT_INSTANCE_TYPE_CODE;
+import static org.folio.helper.InventoryHelper.DEFAULT_LOAN_TYPE_NAME;
+import static org.folio.helper.InventoryHelper.HOLDING_INSTANCE_ID;
+import static org.folio.helper.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
+import static org.folio.helper.InventoryHelper.INSTANCE_CONTRIBUTORS;
+import static org.folio.helper.InventoryHelper.INSTANCE_DATE_OF_PUBLICATION;
+import static org.folio.helper.InventoryHelper.INSTANCE_IDENTIFIERS;
+import static org.folio.helper.InventoryHelper.INSTANCE_IDENTIFIER_TYPE_ID;
+import static org.folio.helper.InventoryHelper.INSTANCE_IDENTIFIER_TYPE_VALUE;
+import static org.folio.helper.InventoryHelper.INSTANCE_PUBLICATION;
+import static org.folio.helper.InventoryHelper.INSTANCE_PUBLISHER;
+import static org.folio.helper.InventoryHelper.INSTANCE_SOURCE;
+import static org.folio.helper.InventoryHelper.INSTANCE_STATUSES;
+import static org.folio.helper.InventoryHelper.INSTANCE_STATUS_ID;
+import static org.folio.helper.InventoryHelper.INSTANCE_TITLE;
+import static org.folio.helper.InventoryHelper.INSTANCE_TYPES;
+import static org.folio.helper.InventoryHelper.INSTANCE_TYPE_ID;
+import static org.folio.helper.InventoryHelper.ITEM_HOLDINGS_RECORD_ID;
+import static org.folio.helper.InventoryHelper.ITEM_MATERIAL_TYPE_ID;
+import static org.folio.helper.InventoryHelper.ITEM_PERMANENT_LOAN_TYPE_ID;
+import static org.folio.helper.InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
+import static org.folio.helper.InventoryHelper.ITEM_STATUS;
+import static org.folio.helper.InventoryHelper.ITEM_STATUS_NAME;
+import static org.folio.helper.InventoryHelper.LOAN_TYPES;
 import static org.folio.rest.impl.MockServer.*;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ID;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -62,6 +62,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
+import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
@@ -75,11 +76,11 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-class InventoryInteractionTestHelper {
+public class InventoryInteractionTestHelper {
 
   private static final Logger logger = LoggerFactory.getLogger(InventoryInteractionTestHelper.class);
 
-  static void verifyInstanceLinksForUpdatedOrder(CompositePurchaseOrder reqData) {
+  public static void verifyInstanceLinksForUpdatedOrder(CompositePurchaseOrder reqData) {
     List<JsonObject> polUpdates = getPoLineUpdates();
     assertNotNull(polUpdates);
     for (CompositePoLine compLine : reqData.getCompositePoLines()) {
@@ -101,11 +102,11 @@ class InventoryInteractionTestHelper {
     }
   }
 
-  static void verifyInventoryInteraction(CompositePurchaseOrder reqData, int createdInstancesCount) {
+  public static void verifyInventoryInteraction(CompositePurchaseOrder reqData, int createdInstancesCount) {
     verifyInventoryInteraction(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, reqData, createdInstancesCount);
   }
 
-  static void verifyInventoryInteraction(Header tenant, CompositePurchaseOrder reqData, int createdInstancesCount) {
+  public static void verifyInventoryInteraction(Header tenant, CompositePurchaseOrder reqData, int createdInstancesCount) {
     // Verify inventory GET and POST requests for instance, holding and item records
     verifyInventoryInteraction(true);
 
@@ -128,7 +129,7 @@ class InventoryInteractionTestHelper {
     }
   }
 
-  static void verifyInventoryInteraction(boolean checkItemsCreated) {
+  public static void verifyInventoryInteraction(boolean checkItemsCreated) {
     // Check that search of the existing instances and items was done for each PO line
     List<JsonObject> instancesSearches = getInstancesSearches();
     List<JsonObject> holdingsSearches = getHoldingsSearches();
@@ -160,7 +161,7 @@ class InventoryInteractionTestHelper {
     logger.debug("--------------------------- Pieces created -------------------------------\n" + new JsonArray(createdPieces).encodePrettily());
   }
 
-  static void verifyPiecesQuantityForSuccessCase(List<CompositePoLine> poLines, List<JsonObject> createdPieces) {
+  public static void verifyPiecesQuantityForSuccessCase(List<CompositePoLine> poLines, List<JsonObject> createdPieces) {
     int totalQuantity = 0;
     for (CompositePoLine poLine : poLines) {
       if (poLine.getCheckinItems() != null && poLine.getCheckinItems()) continue;
@@ -169,7 +170,7 @@ class InventoryInteractionTestHelper {
     assertEquals(totalQuantity, createdPieces.size());
   }
 
-  static List<JsonObject> joinExistingAndNewItems() {
+  public static List<JsonObject> joinExistingAndNewItems() {
     List<JsonObject> items = new ArrayList<>(CollectionUtils.emptyIfNull(getCreatedItems()));
     getItemsSearches().forEach(json -> {
       JsonArray existingItems = json.getJsonArray("items");
@@ -201,7 +202,7 @@ class InventoryInteractionTestHelper {
     }
   }
 
-  static void verifyPiecesCreated(List<JsonObject> inventoryItems, List<CompositePoLine> compositePoLines, List<JsonObject> pieceJsons) {
+  public static void verifyPiecesCreated(List<JsonObject> inventoryItems, List<CompositePoLine> compositePoLines, List<JsonObject> pieceJsons) {
     // Collect all item id's
     List<String> itemIds = inventoryItems.stream()
       .map(item -> item.getString(ID))
