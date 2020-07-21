@@ -471,6 +471,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     body.setCheckinItems(false);
     body.setIsPackage(false);
     body.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
+    body.setReportingCodes(null);
     MockServer.addMockEntry(PO_LINES, body);
     MockServer.addMockEntry(PURCHASE_ORDER, new CompositePurchaseOrder()
       .withId(ID_FOR_PRINT_MONOGRAPH_ORDER)
