@@ -506,8 +506,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
   public CompletableFuture<Void> openOrder(CompositePurchaseOrder compPO) {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
-    return CompletableFuture.completedFuture(compPO.getCompositePoLines())
-      .thenAccept(orderLineHelper::validateFundDistributionTotal)
+    return financeHelper.validateExpenseClasses(compPO.getCompositePoLines())
+      .thenAccept(v -> orderLineHelper.validateFundDistributionTotal(compPO.getCompositePoLines()))
       .thenApply(v -> this.validateMaterialTypes(compPO))
       .thenCompose(this::fetchNonPackageTitles)
       .thenCompose(linesIdTitles -> {
@@ -561,13 +561,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenApply(v -> getErrors().isEmpty());
   }
 
-  public CompletableFuture<Void> validateOrderPoLines(CompositePurchaseOrder compositeOrder) {
+  public void validateOrderPoLines(CompositePurchaseOrder compositeOrder) {
     List<Error> errors = new ArrayList<>();
     for (CompositePoLine compositePoLine : compositeOrder.getCompositePoLines()) {
       errors.addAll(CompositePoLineValidationUtil.validatePoLine(compositePoLine));
     }
     addProcessingErrors(errors);
-    return completedFuture(null);
   }
 
   private CompletableFuture<Void> validateIsbnValues(CompositePurchaseOrder compPO) {

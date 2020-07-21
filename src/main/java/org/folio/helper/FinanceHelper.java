@@ -2,11 +2,13 @@ package org.folio.helper;
 
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
+import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
+import static org.folio.orders.utils.ErrorCodes.INACTIVE_EXPENSE_CLASS;
 import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.HelperUtils.FUND_ID;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
@@ -15,6 +17,7 @@ import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
+import static org.folio.orders.utils.ResourcePathResolver.BUDGET_EXPENSE_CLASSES;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
@@ -23,11 +26,13 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -48,6 +53,7 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.BudgetCollection;
+import org.folio.rest.acq.model.finance.BudgetExpenseClassCollection;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
@@ -74,6 +80,7 @@ import one.util.streamex.StreamEx;
 public class FinanceHelper extends AbstractHelper {
   private static final String GET_CURRENT_FISCAL_YEAR_BY_ID = "/finance/ledgers/%s/current-fiscal-year?lang=%s";
   private static final String GET_FUNDS_WITH_SEARCH_PARAMS = resourcesPath(FUNDS) + SEARCH_PARAMS;
+  private static final String GET_BUDGET_EXPENSE_CLASSES_QUERY = resourcesPath(BUDGET_EXPENSE_CLASSES) + SEARCH_PARAMS;
   private static final String GET_BUDGETS_WITH_SEARCH_PARAMS = resourcesPath(BUDGETS) + SEARCH_PARAMS;
   private static final String GET_LEDGERS_WITH_SEARCH_PARAMS = resourcesPath(LEDGERS) + SEARCH_PARAMS;
   private static final String QUERY_EQUALS = "&query=";
@@ -134,6 +141,7 @@ public class FinanceHelper extends AbstractHelper {
     MonetaryAmount estimatedPrice = calculateEstimatedPrice(poLine.getCost());
     trEncumbrance.setAmount(calculateAmountEncumbered(fundDistribution, estimatedPrice));
     trEncumbrance.setCurrency(systemCurrency);
+    trEncumbrance.setExpenseClassId(fundDistribution.getExpenseClassId());
     Encumbrance encumbrance = trEncumbrance.getEncumbrance();
     encumbrance.setStatus(Encumbrance.Status.UNRELEASED);
     encumbrance.setInitialAmountEncumbered(trEncumbrance.getAmount());
@@ -173,7 +181,7 @@ public class FinanceHelper extends AbstractHelper {
       .thenCompose(v -> groupByLedgerIds(groupedByFund))
       .thenCompose(trsGroupedByLedgerId -> checkEncumbranceRestrictions(trsGroupedByLedgerId, groupedByFund)
         .thenApply(v -> trsGroupedByLedgerId))
-      .thenCompose(trsGroupedByLedgerId -> VertxCompletableFuture.allOf(ctx,
+      .thenCompose(trsGroupedByLedgerId -> allOf(ctx,
         trsGroupedByLedgerId.entrySet()
           .stream()
           .map(entry -> getCurrentFiscalYear(entry.getKey()).thenAccept(fiscalYear -> buildEncumbrancesForUpdate(entry, fiscalYear)))
@@ -372,6 +380,7 @@ public class FinanceHelper extends AbstractHelper {
     transaction.setSource(Transaction.Source.PO_LINE);
     transaction.setAmount(calculateAmountEncumbered(distribution, estimatedPrice));
     transaction.setCurrency(systemCurrency);
+    transaction.setExpenseClassId(distribution.getExpenseClassId());
 
     encumbrance.setSourcePoLineId(poLine.getId());
     encumbrance.setStatus(Encumbrance.Status.UNRELEASED);
@@ -563,5 +572,37 @@ public class FinanceHelper extends AbstractHelper {
       }
       return CompletableFuture.completedFuture(null);
     });
+  }
+
+  public CompletableFuture<Void> validateExpenseClasses(List<CompositePoLine> poLines) {
+    List<FundDistribution> fundDistributionsWithExpenseClasses = poLines.stream()
+      .flatMap(poLine -> poLine.getFundDistribution().stream())
+      .filter(fundDistribution -> Objects.nonNull(fundDistribution.getExpenseClassId()))
+      .collect(toList());
+
+    return allOf(ctx, fundDistributionsWithExpenseClasses.stream()
+      .map(this::checkExpenseClassIsActiveByFundDistribution)
+      .toArray(CompletableFuture[]::new));
+  }
+
+  private CompletableFuture<Void> checkExpenseClassIsActiveByFundDistribution(FundDistribution fundDistribution) {
+    String query = String.format("budget.fundId==%s and budget.budgetStatus==Active and status==Inactive and expenseClassId==%s",
+      fundDistribution.getFundId(), fundDistribution.getExpenseClassId());
+    String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
+    String endpoint = String.format(GET_BUDGET_EXPENSE_CLASSES_QUERY, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
+
+    return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(entries -> entries.mapTo(BudgetExpenseClassCollection.class))
+      .thenAccept(budgetExpenseClasses -> {
+        if (budgetExpenseClasses.getTotalRecords() > 0) {
+          throw new HttpException(400, INACTIVE_EXPENSE_CLASS.toError()
+            .withParameters(Arrays.asList(
+              new Parameter()
+                .withKey("fundId").withValue(fundDistribution.getFundId()),
+              new Parameter()
+                .withKey("expenseClassId").withValue(fundDistribution.getExpenseClassId())
+            )));
+        }
+      });
   }
 }

@@ -432,7 +432,8 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     List<CompositePoLine> compositePoLines = Collections.singletonList(compositePoLine);
 
     if (!compositePoLine.getFundDistribution().isEmpty()) {
-      return CompletableFuture.runAsync(() -> validateFundDistributionTotal(compositePoLines))
+      return financeHelper.validateExpenseClasses(compositePoLines)
+        .thenAccept(v -> validateFundDistributionTotal(compositePoLines))
         .thenCompose(v -> financeHelper.getPoLineEncumbrances(compositePoLine.getId()))
         .thenAccept(holder::withEncumbrancesFromStorage)
         .thenCompose(v -> financeHelper.buildNewEncumbrances(compPO, compositePoLines, holder.getEncumbrancesFromStorage()))
@@ -539,7 +540,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
 
   private void validatePOLineProtectedFieldsChanged(CompositePoLine compOrderLine, JsonObject lineFromStorage, CompositePurchaseOrder purchaseOrder) {
     if (purchaseOrder.getWorkflowStatus() != PENDING) {
-      verifyProtectedFieldsChanged(POLineProtectedFields.getFieldNames(), lineFromStorage, JsonObject.mapFrom(compOrderLine));
+      verifyProtectedFieldsChanged(POLineProtectedFields.getFieldNames(), JsonObject.mapFrom(lineFromStorage.mapTo(PoLine.class)), JsonObject.mapFrom(compOrderLine));
     }
   }
 
