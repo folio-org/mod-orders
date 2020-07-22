@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "10.4",
+      "version": "10.5",
       "handlers": [
         {
           "methods": [
@@ -99,7 +99,7 @@
     },
     {
       "id": "order-lines",
-      "version": "1.4",
+      "version": "1.5",
       "handlers": [
         {
           "methods": [
@@ -181,6 +181,7 @@
             "finance.order-transaction-summaries.item.put",
             "finance.release-encumbrance.item.post",
             "finance-storage.transactions.item.put",
+            "finance-storage.expense-classes.collection.get",
             "inventory.instances.collection.get",
             "inventory.instances.item.post",
             "inventory-storage.holdings.item.post",
@@ -1234,6 +1235,7 @@
         "finance.order-transaction-summaries.item.post",
         "finance.order-transaction-summaries.item.put",
         "finance.release-encumbrance.item.post",
+        "finance-storage.expense-classes.collection.get",
         "finance-storage.transactions.item.put",
         "inventory.instances.collection.get",
         "inventory.instances.item.post",

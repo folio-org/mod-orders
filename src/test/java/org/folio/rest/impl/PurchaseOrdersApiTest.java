@@ -14,6 +14,7 @@ import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH
 import static org.folio.orders.utils.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
+import static org.folio.orders.utils.ErrorCodes.INACTIVE_EXPENSE_CLASS;
 import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
 import static org.folio.orders.utils.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
 import static org.folio.orders.utils.ErrorCodes.ISBN_NOT_VALID;
@@ -93,6 +94,7 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.POProtectedFields;
 import org.folio.rest.acq.model.Ongoing;
+import org.folio.rest.acq.model.finance.BudgetExpenseClass;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.*;
@@ -1504,6 +1506,25 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     assertEquals(POL_LINES_LIMIT_EXCEEDED.getDescription(), errors.getErrors().get(0).getMessage());
     assertEquals(POL_LINES_LIMIT_EXCEEDED.getCode(), errors.getErrors().get(0).getCode());
   }
+
+  @Test
+  public void testOpenOrderForInactiveExpenseClass() throws Exception {
+    logger.info("=== Test to try open order with inactive expense class ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setExpenseClassId(UUID.randomUUID().toString());
+    preparePiecesForCompositePo(reqData);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    MockServer.addMockEntry(BUDGET_EXPENSE_CLASSES, JsonObject.mapFrom(new BudgetExpenseClass().withId(UUID.randomUUID().toString())));
+    reqData.getCompositePoLines().forEach(this::createMockTitle);
+
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 400)
+      .as(Errors.class);
+
+    assertThat(errors.getErrors().get(0).getCode(),is(INACTIVE_EXPENSE_CLASS.toError().getCode()));
+  }
+
 
   @Test
   public void testPutOrdersByIdToChangeStatusToOpen() throws Exception {

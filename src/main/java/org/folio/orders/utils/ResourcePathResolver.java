@@ -39,6 +39,7 @@ public class ResourcePathResolver {
   public static final String TRANSACTIONS_ENDPOINT = "finance.transactions";
   public static final String TRANSACTIONS_STORAGE_ENDPOINT = "finance-storage.transactions";
   public static final String FINANCE_RELEASE_ENCUMBRANCE = "finance.release-encumbrance";
+  public static final String BUDGET_EXPENSE_CLASSES = "finance-storage.budget-expense-classes";
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
   private static final Map<String, String> SUB_OBJECT_COLLECTION_APIS;
 
@@ -69,6 +70,7 @@ public class ResourcePathResolver {
     apis.put(TRANSACTIONS_STORAGE_ENDPOINT, "/finance-storage/transactions");
     apis.put(TRANSACTIONS_ENDPOINT, "/finance/transactions");
     apis.put(FINANCE_RELEASE_ENCUMBRANCE, "/finance/release-encumbrance");
+    apis.put(BUDGET_EXPENSE_CLASSES, "/finance-storage/budget-expense-classes");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);
     SUB_OBJECT_ITEM_APIS = Collections.unmodifiableMap(

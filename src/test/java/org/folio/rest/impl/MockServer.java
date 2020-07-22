@@ -20,6 +20,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHI
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
+import static org.folio.orders.utils.ResourcePathResolver.BUDGET_EXPENSE_CLASSES;
 import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
 import static org.folio.orders.utils.ResourcePathResolver.FINANCE_RELEASE_ENCUMBRANCE;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
@@ -134,6 +135,8 @@ import org.folio.rest.acq.model.Title;
 import org.folio.rest.acq.model.TitleCollection;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.BudgetCollection;
+import org.folio.rest.acq.model.finance.BudgetExpenseClass;
+import org.folio.rest.acq.model.finance.BudgetExpenseClassCollection;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.FundCollection;
@@ -516,6 +519,7 @@ public class MockServer {
     router.get(resourcePath(ORDER_TEMPLATES)).handler(ctx -> handleGetGenericSubObj(ctx, ORDER_TEMPLATES));
     router.get(resourcesPath(ORDER_TEMPLATES)).handler(this::handleGetOrderTemplates);
     router.get("/finance/ledgers/:id/current-fiscal-year").handler(this::handleGetCurrentFiscalYearByLedgerId);
+    router.get("/finance-storage/budget-expense-classes").handler(this::handleGetBudgetExpenseClass);
     router.get(resourcesPath(FUNDS)).handler(this::handleGetFunds);
     router.get(resourcesPath(BUDGETS)).handler(this::handleGetBudgets);
     router.get(resourcesPath(LEDGERS)).handler(this::handleGetLedgers);
@@ -728,7 +732,18 @@ public class MockServer {
     return JsonObject.mapFrom(record);
   }
 
+  private void handleGetBudgetExpenseClass(RoutingContext ctx) {
+    logger.info("got: " + ctx.request().path());
 
+    List<BudgetExpenseClass> expenseClasses = getMockEntries(BUDGET_EXPENSE_CLASSES, BudgetExpenseClass.class)
+      .orElseGet(null);
+
+    BudgetExpenseClassCollection expenseClassCollection = new BudgetExpenseClassCollection()
+      .withTotalRecords(expenseClasses != null ? expenseClasses.size() : 0);
+
+    JsonObject entries = JsonObject.mapFrom(expenseClassCollection);
+    serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+  }
 
   private void handleGetCurrentFiscalYearByLedgerId(RoutingContext ctx) {
     logger.info("got: " + ctx.request().path());
