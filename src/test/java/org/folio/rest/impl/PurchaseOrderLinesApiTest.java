@@ -441,9 +441,8 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   @Test
   public void testPutOrderLineWithTagInheritance() {
     logger.info("=== Test PUT Order Line With Tag Inheritance ===");
-    String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
+    String lineId = "bb66b269-76ed-4616-8da9-730d9b817247";
     CompositePoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
-
     body.setCheckinItems(false);
     body.setIsPackage(false);
     body.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
@@ -454,13 +453,19 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
       .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN)
       .withOrderType(CompositePurchaseOrder.OrderType.ONE_TIME));
     String url = String.format(LINE_BY_ID_PATH, lineId);
-
     addMockEntry(TITLES, new Title().withId(UUID.randomUUID().toString())
       .withPoLineId(body.getId())
       .withTitle("Title"));
-    // change POLine tag value
+
+    // edit POLine
     body.setTags(new Tags().withTagList(Collections.singletonList("new value")));
+    body.setFundDistribution(Collections.singletonList(new FundDistribution()
+      .withCode("EUROHIST")
+      .withFundId("e9285a1c-1dfc-4380-868c-e74073003f43")
+      .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+      .withValue(100D)));
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
+
     Transaction createdEncumbrance = MockServer.getCreatedEncumbrances().get(0);
     assertEquals(Collections.singletonList("new value"), createdEncumbrance.getTags().getTagList());
   }
