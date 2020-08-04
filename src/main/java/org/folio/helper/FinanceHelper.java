@@ -338,7 +338,7 @@ public class FinanceHelper extends AbstractHelper {
   private List<EncumbranceRelationsHolder> buildEncumbrances(List<PoLineFundHolder> holders, CompositePurchaseOrder compPO) {
     return holders.stream()
                   .map(holder -> {
-                    Encumbrance encumbranceSkeleton = buildEncumbranceWitOrderFields(compPO);
+                    Encumbrance encumbranceSkeleton = buildEncumbranceWithOrderFields(compPO);
                     Transaction encumbrance = buildEncumbrance(holder.getFundDistribution(), holder.getPoLine(), encumbranceSkeleton)
                         .withTags(new Tags().withTagList(holder.getPoLine().getTags().getTagList()));
                     return new EncumbranceRelationsHolder(encumbrance, holder);
