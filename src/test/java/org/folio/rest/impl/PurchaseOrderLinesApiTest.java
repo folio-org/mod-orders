@@ -23,6 +23,7 @@ import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.FINANCE_RELEASE_ENCUMBRANCE;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
@@ -30,6 +31,8 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
+import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_ENDPOINT;
+import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_STORAGE_ENDPOINT;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ORDER_ID_WITH_PO_LINES;
 import static org.folio.rest.impl.MockServer.PO_NUMBER_ERROR_X_OKAPI_TENANT;
@@ -40,6 +43,7 @@ import static org.folio.rest.impl.MockServer.getQueryParams;
 import static org.folio.rest.impl.MockServer.getTitlesSearches;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ID_FOR_PRINT_MONOGRAPH_ORDER;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
+import static org.folio.service.TransactionService.TRANSACTION_STORAGE_ENDPOINT_BYID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
@@ -78,6 +82,7 @@ import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -1043,12 +1048,12 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdatePolineForOpenedOrderWithUpdatingEncumbrances() {
-    logger.info("=== Test update poline with inactive access provider for opened order  ===");
+  public void testUpdatePolineForOpenedOrderWithChangingCost() {
+    logger.info("=== Test update poline for opened order with changed cost ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
-    reqData.getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
+    reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
 
     addMockEntry(PIECES, new Piece()
       .withPoLineId(reqData.getId())
@@ -1056,10 +1061,37 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     addMockEntry(PO_LINES, reqData);
 
-    Errors errors = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422).as(Errors.class);
-    assertEquals(1, errors.getErrors().size());
-    assertEquals(POL_ACCESS_PROVIDER_IS_INACTIVE.getCode(), errors.getErrors().get(0).getCode());
+    double newCost = 12.09d;
+    reqData.getCost().setListUnitPriceElectronic(newCost);
+    reqData.getFundDistribution().get(0).setDistributionType(FundDistribution.DistributionType.AMOUNT);
+    reqData.getFundDistribution().get(0).setValue(newCost);
+
+    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+
+   assertThat("One or more transactions have been updated", MockServer.getRqRsEntries(HttpMethod.PUT, TRANSACTIONS_STORAGE_ENDPOINT).size() > 0);
+  }
+
+  @Test
+  public void testUpdatePolineForOpenedOrderWithoutUpdatingEncumbrances() {
+    logger.info("=== Test update poline. Fund distributions not changed ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
+    reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
+
+    addMockEntry(PIECES, new Piece()
+      .withPoLineId(reqData.getId())
+      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+
+    addMockEntry(PO_LINES, reqData);
+
+    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+    assertThat("No transactions have been released", MockServer.getRqRsEntries(HttpMethod.POST, TRANSACTIONS_STORAGE_ENDPOINT).size() == 0);
+    assertThat("No transactions have been updated", MockServer.getRqRsEntries(HttpMethod.PUT, TRANSACTIONS_STORAGE_ENDPOINT).size() == 0);
+    assertThat("No transactions have been created", MockServer.getRqRsEntries(HttpMethod.POST, TRANSACTIONS_STORAGE_ENDPOINT).size() == 0);
+
   }
 
 

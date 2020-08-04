@@ -148,7 +148,7 @@ public class FinanceHelper extends AbstractHelper {
     encumbrance.setInitialAmountEncumbered(trEncumbrance.getAmount());
   }
 
-  public Encumbrance buildEncumbranceWitOrderFields(CompositePurchaseOrder compPo) {
+  public Encumbrance buildEncumbranceWithOrderFields(CompositePurchaseOrder compPo) {
     Encumbrance encumbrance = new Encumbrance();
     encumbrance.setSourcePurchaseOrderId(compPo.getId());
     encumbrance.setReEncumber(compPo.getReEncumber());
@@ -485,8 +485,8 @@ public class FinanceHelper extends AbstractHelper {
     return holders;
   }
 
-  public List<PoLineFundHolder> buildNewEncumbrancesHolders(List<CompositePoLine> poLines
-    , List<Transaction> encumbrancesInStorage) {
+  public List<PoLineFundHolder> buildNewEncumbrancesHolders(List<CompositePoLine> poLines,
+      List<Transaction> encumbrancesInStorage) {
     List<PoLineFundHolder> holders = new ArrayList<>();
     if (!CollectionUtils.isEmpty(encumbrancesInStorage)) {
 
