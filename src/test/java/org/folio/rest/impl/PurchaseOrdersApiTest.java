@@ -166,6 +166,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   private static final String MINIMAL_ORDER_PATH = "minimal_order.json";
   private static final String PO_CREATION_FAILURE_PATH = "po_creation_failure.json";
   private static final String ELECTRONIC_FOR_CREATE_INVENTORY_TEST = "po_listed_electronic_monograph.json";
+  private static final String PO_FOR_TAGS_INHERITANCE_TEST = "po_tags_inheritance.json";
 
   private static final String NULL = "null";
   static final String PURCHASE_ORDER_ID = "purchaseOrderId";
@@ -1931,6 +1932,20 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     verifyInventoryInteraction(reqData, polCount);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
+  }
+
+  @Test
+  public void testEncumbranceTagInheritance() throws Exception {
+    logger.info("=== Test encumbrance tag inheritance upon order opening ===");
+
+    JsonObject order = new JsonObject(getMockData(PO_FOR_TAGS_INHERITANCE_TEST));
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    assertThat(reqData.getCompositePoLines(), hasSize(1));
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
+    Transaction createdEncumbrance = MockServer.getCreatedEncumbrances().get(0);
+    assertEquals(Collections.singletonList("important"), createdEncumbrance.getTags().getTagList());
   }
 
   @Test

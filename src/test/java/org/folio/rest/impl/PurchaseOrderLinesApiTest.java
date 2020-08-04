@@ -58,6 +58,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +69,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.rest.acq.model.Title;
+import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -81,6 +83,7 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.rest.jaxrs.model.Tags;
 import org.junit.Test;
 
 import io.restassured.response.Response;
@@ -428,6 +431,33 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     // Verify messages sent via event bus
     verifyOrderStatusUpdateEvent(1);
+  }
+
+  @Test
+  public void testPutOrderLineWithTagInheritance() {
+    logger.info("=== Test PUT Order Line With Tag Inheritance ===");
+    String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
+    CompositePoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
+
+    body.setCheckinItems(false);
+    body.setIsPackage(false);
+    body.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
+    body.setReportingCodes(new ArrayList<>());
+    MockServer.addMockEntry(PO_LINES, body);
+    MockServer.addMockEntry(PURCHASE_ORDER, new CompositePurchaseOrder()
+      .withId(ID_FOR_PRINT_MONOGRAPH_ORDER)
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN)
+      .withOrderType(CompositePurchaseOrder.OrderType.ONE_TIME));
+    String url = String.format(LINE_BY_ID_PATH, lineId);
+
+    addMockEntry(TITLES, new Title().withId(UUID.randomUUID().toString())
+      .withPoLineId(body.getId())
+      .withTitle("Title"));
+    // change POLine tag value
+    body.setTags(new Tags().withTagList(Collections.singletonList("new value")));
+    verifyPut(url, JsonObject.mapFrom(body), "", 204);
+    Transaction createdEncumbrance = MockServer.getCreatedEncumbrances().get(0);
+    assertEquals(Collections.singletonList("new value"), createdEncumbrance.getTags().getTagList());
   }
 
   @Test

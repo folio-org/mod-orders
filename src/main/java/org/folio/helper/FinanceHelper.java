@@ -61,6 +61,7 @@ import org.folio.rest.acq.model.finance.FundCollection;
 import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.LedgerCollection;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
+import org.folio.rest.acq.model.finance.Tags;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -338,7 +339,8 @@ public class FinanceHelper extends AbstractHelper {
     return holders.stream()
                   .map(holder -> {
                     Encumbrance encumbranceSkeleton = buildEncumbranceWitOrderFields(compPO);
-                    Transaction encumbrance = buildEncumbrance(holder.getFundDistribution(), holder.getPoLine(), encumbranceSkeleton);
+                    Transaction encumbrance = buildEncumbrance(holder.getFundDistribution(), holder.getPoLine(), encumbranceSkeleton)
+                        .withTags(new Tags().withTagList(holder.getPoLine().getTags().getTagList()));
                     return new EncumbranceRelationsHolder(encumbrance, holder);
                   })
                   .collect(toList());
