@@ -62,6 +62,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +73,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.rest.acq.model.Title;
+import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -86,6 +88,7 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.rest.jaxrs.model.Tags;
 import org.junit.Test;
 
 import io.restassured.response.Response;
@@ -433,6 +436,50 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     // Verify messages sent via event bus
     verifyOrderStatusUpdateEvent(1);
+  }
+
+  @Test
+  public void testPutOrderLineWithTagInheritance() {
+    logger.info("=== Test PUT Order Line With Tag Inheritance ===");
+    String lineId = "bb66b269-76ed-4616-8da9-730d9b817247";
+    CompositePoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
+    body.setCheckinItems(false);
+    body.setIsPackage(false);
+    body.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
+    body.setReportingCodes(new ArrayList<>());
+    MockServer.addMockEntry(PO_LINES, body);
+    MockServer.addMockEntry(PURCHASE_ORDER, new CompositePurchaseOrder()
+      .withId(ID_FOR_PRINT_MONOGRAPH_ORDER)
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN)
+      .withOrderType(CompositePurchaseOrder.OrderType.ONE_TIME));
+    String url = String.format(LINE_BY_ID_PATH, lineId);
+    addMockEntry(TITLES, new Title().withId(UUID.randomUUID().toString())
+      .withPoLineId(body.getId())
+      .withTitle("Title"));
+
+    // edit POLine for new encumbrance
+    body.setTags(new Tags().withTagList(Collections.singletonList("created")));
+    body.setFundDistribution(Collections.singletonList(new FundDistribution()
+      .withCode("EUROHIST")
+      .withFundId("e9285a1c-1dfc-4380-868c-e74073003f43")
+      .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+      .withValue(100D)));
+    verifyPut(url, JsonObject.mapFrom(body), "", 204);
+
+    Transaction createdEncumbrance = MockServer.getCreatedEncumbrances().get(0);
+    assertEquals(Collections.singletonList("created"), createdEncumbrance.getTags().getTagList());
+
+    // edit POLine for encumbrance update
+    body.setTags(new Tags().withTagList(Collections.singletonList("updated")));
+    body.setCost(new Cost().withCurrency("USD").withListUnitPrice(70.0).withQuantityPhysical(1));
+    body.setFundDistribution(Collections.singletonList(new FundDistribution()
+      .withCode("EUROHIST")
+      .withFundId("a89eccf0-57a6-495e-898d-32b9b2210f2f")
+      .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+      .withValue(100D)));
+    verifyPut(url, JsonObject.mapFrom(body), "", 204);
+    Transaction updatedEncumbrance = MockServer.getUpdatedTransactions().get(0);
+    assertEquals(Collections.singletonList("updated"), updatedEncumbrance.getTags().getTagList());
   }
 
   @Test

@@ -214,6 +214,7 @@ public class MockServer {
   public static final String BUDGETS_PATH = BASE_MOCK_DATA_PATH + "budgets/budgets.json";
   public static final String LEDGERS_PATH = BASE_MOCK_DATA_PATH + "ledgers/ledgers.json";
   public static final String ENCUMBRANCE_PATH = BASE_MOCK_DATA_PATH + "encumbrances/valid_encumbrances.json";
+  public static final String ENCUMBRANCE_FOR_TAGS_PATH = BASE_MOCK_DATA_PATH + "encumbrances/encumbrance_for_tags_inheritance.json";
 
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";
@@ -400,6 +401,14 @@ public class MockServer {
 
   public static List<Transaction> getCreatedEncumbrances() {
     List<JsonObject> jsonObjects = serverRqRs.get(ENCUMBRANCES, HttpMethod.POST);
+    return jsonObjects == null ? Collections.emptyList()
+      : jsonObjects.stream()
+      .map(json -> json.mapTo(Transaction.class))
+      .collect(Collectors.toList());
+  }
+
+  public static List<Transaction> getUpdatedTransactions() {
+    List<JsonObject> jsonObjects = serverRqRs.get(TRANSACTIONS_STORAGE_ENDPOINT, HttpMethod.PUT);
     return jsonObjects == null ? Collections.emptyList()
       : jsonObjects.stream()
       .map(json -> json.mapTo(Transaction.class))
@@ -1905,9 +1914,14 @@ public class MockServer {
     try {
       String query = ctx.request().params().get("query");
       if (query.contains("transactionType==Encumbrance")) {
-          String body = getMockData(ENCUMBRANCE_PATH);
-          serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
-          addServerRqRsData(HttpMethod.GET, TRANSACTIONS_ENDPOINT, new JsonObject(body));
+        String body;
+        if (query.contains("encumbrance.sourcePoLineId==bb66b269-76ed-4616-8da9-730d9b817247")) {
+          body = getMockData(ENCUMBRANCE_FOR_TAGS_PATH);
+        } else {
+          body = getMockData(ENCUMBRANCE_PATH);
+        }
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
+        addServerRqRsData(HttpMethod.GET, TRANSACTIONS_ENDPOINT, new JsonObject(body));
       }
     } catch(IOException e) {
       logger.error("handleTransactionGetEntry error", e);
