@@ -457,8 +457,8 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
       .withPoLineId(body.getId())
       .withTitle("Title"));
 
-    // edit POLine
-    body.setTags(new Tags().withTagList(Collections.singletonList("new value")));
+    // edit POLine for new encumbrance
+    body.setTags(new Tags().withTagList(Collections.singletonList("created")));
     body.setFundDistribution(Collections.singletonList(new FundDistribution()
       .withCode("EUROHIST")
       .withFundId("e9285a1c-1dfc-4380-868c-e74073003f43")
@@ -467,7 +467,19 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
 
     Transaction createdEncumbrance = MockServer.getCreatedEncumbrances().get(0);
-    assertEquals(Collections.singletonList("new value"), createdEncumbrance.getTags().getTagList());
+    assertEquals(Collections.singletonList("created"), createdEncumbrance.getTags().getTagList());
+
+    // edit POLine for encumbrance update
+    body.setTags(new Tags().withTagList(Collections.singletonList("updated")));
+    body.setCost(new Cost().withCurrency("USD").withListUnitPrice(70.0).withQuantityPhysical(1));
+    body.setFundDistribution(Collections.singletonList(new FundDistribution()
+      .withCode("EUROHIST")
+      .withFundId("a89eccf0-57a6-495e-898d-32b9b2210f2f")
+      .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+      .withValue(100D)));
+    verifyPut(url, JsonObject.mapFrom(body), "", 204);
+    Transaction updatedEncumbrance = MockServer.getUpdatedTransactions().get(0);
+    assertEquals(Collections.singletonList("updated"), updatedEncumbrance.getTags().getTagList());
   }
 
   @Test

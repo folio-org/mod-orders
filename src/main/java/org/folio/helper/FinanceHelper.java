@@ -143,6 +143,7 @@ public class FinanceHelper extends AbstractHelper {
     trEncumbrance.setAmount(calculateAmountEncumbered(fundDistribution, estimatedPrice));
     trEncumbrance.setCurrency(systemCurrency);
     trEncumbrance.setExpenseClassId(fundDistribution.getExpenseClassId());
+    trEncumbrance.setTags(new Tags().withTagList(poLine.getTags().getTagList()));
     Encumbrance encumbrance = trEncumbrance.getEncumbrance();
     encumbrance.setStatus(Encumbrance.Status.UNRELEASED);
     encumbrance.setInitialAmountEncumbered(trEncumbrance.getAmount());
@@ -339,8 +340,7 @@ public class FinanceHelper extends AbstractHelper {
     return holders.stream()
                   .map(holder -> {
                     Encumbrance encumbranceSkeleton = buildEncumbranceWithOrderFields(compPO);
-                    Transaction encumbrance = buildEncumbrance(holder.getFundDistribution(), holder.getPoLine(), encumbranceSkeleton)
-                        .withTags(new Tags().withTagList(holder.getPoLine().getTags().getTagList()));
+                    Transaction encumbrance = buildEncumbrance(holder.getFundDistribution(), holder.getPoLine(), encumbranceSkeleton);
                     return new EncumbranceRelationsHolder(encumbrance, holder);
                   })
                   .collect(toList());
@@ -383,6 +383,7 @@ public class FinanceHelper extends AbstractHelper {
     transaction.setAmount(calculateAmountEncumbered(distribution, estimatedPrice));
     transaction.setCurrency(systemCurrency);
     transaction.setExpenseClassId(distribution.getExpenseClassId());
+    transaction.setTags(new Tags().withTagList(poLine.getTags().getTagList()));
 
     encumbrance.setSourcePoLineId(poLine.getId());
     encumbrance.setStatus(Encumbrance.Status.UNRELEASED);
