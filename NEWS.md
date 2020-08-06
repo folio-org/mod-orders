@@ -1,4 +1,14 @@
 ## 11.1.0 - Unreleased
+
+## 11.0.6 - Released
+The focus of this release was to fix issue with updating order line for opened order
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v11.0.5...v11.0.6)
+
+### Bug Fixes
+ * [MODORDERS-416](https://issues.folio.org/browse/MODORDERS-416) One or more purchase order line record(s) cannot be updated during Pay of invoice
+ 
+
 ## 11.0.5 - Released
 The focus of this release was to fix issue related with updating of order lines for open order
 
