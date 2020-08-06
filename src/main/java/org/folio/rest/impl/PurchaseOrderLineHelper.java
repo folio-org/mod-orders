@@ -103,6 +103,8 @@ import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.javamoney.moneta.Money;
+import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
@@ -110,8 +112,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
-import org.javamoney.moneta.Money;
-import org.javamoney.moneta.function.MonetaryOperators;
 
 class PurchaseOrderLineHelper extends AbstractHelper {
 
@@ -403,7 +403,7 @@ class PurchaseOrderLineHelper extends AbstractHelper {
               .thenCompose(vVoid -> protectionHelper.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE)
                 .thenCompose(v -> validateAndNormalizeISBN(compOrderLine))
                 .thenCompose(v -> validateAccessProviders(compOrderLine))
-                .thenCompose(v -> processOpenedPoLine(compOrder, compOrderLine))
+                .thenCompose(v -> processOpenedPoLine(compOrder, compOrderLine, lineFromStorage))
                 .thenApply(v -> lineFromStorage));
           }))
         .thenCompose(lineFromStorage -> {
@@ -416,16 +416,35 @@ class PurchaseOrderLineHelper extends AbstractHelper {
 
   }
 
-  private CompletableFuture<Void> processOpenedPoLine(CompositePurchaseOrder compOrder, CompositePoLine compositePoLine) {
-    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+  private CompletableFuture<Void> processOpenedPoLine(CompositePurchaseOrder compOrder, CompositePoLine compositePoLine,
+      JsonObject lineFromStorage) {
+    PoLine storagePoLine = lineFromStorage.mapTo(PoLine.class);
 
-    if (compOrder.getWorkflowStatus() == OPEN) {
-      return processEncumbrance(compOrder, compositePoLine)
-        .thenApply(holder -> null);
-    } else {
-      future.complete(null);
+    if (isEncumbranceUpdateNeeded(compOrder, compositePoLine, storagePoLine)) {
+      return processEncumbrance(compOrder, compositePoLine).thenApply(holder -> null);
     }
-    return future;
+    return completedFuture(null);
+  }
+
+  private boolean isEncumbranceUpdateNeeded(CompositePurchaseOrder compOrder, CompositePoLine compositePoLine, PoLine storagePoLine) {
+    List<FundDistribution> requestFundDistros = compositePoLine.getFundDistribution();
+    List<FundDistribution> storageFundDistros = storagePoLine.getFundDistribution();
+
+    if (compOrder.getWorkflowStatus() != OPEN || (requestFundDistros.size() + storageFundDistros.size()) == 0 ) {
+      return false;
+    }
+
+    if (requestFundDistros.size() != storageFundDistros.size()) {
+      return true;
+    }
+    return requestFundDistros.stream()
+      .map(reqFd -> storageFundDistros.stream().anyMatch(storageFd -> fundDistributionChanged(reqFd, storageFd).test(false)))
+      .anyMatch(isAnyFdChanged -> isAnyFdChanged.equals(Boolean.TRUE));
+  }
+
+   private Predicate<Boolean> fundDistributionChanged (FundDistribution reqFd, FundDistribution storageFd) {
+    return fdChanged -> storageFd.getFundId().equals(reqFd.getFundId())
+      && !(storageFd.getValue().equals(reqFd.getValue()) && storageFd.getDistributionType() == reqFd.getDistributionType());
   }
 
   public CompletableFuture<EncumbrancesProcessingHolder> processEncumbrance(CompositePurchaseOrder compPO, CompositePoLine compositePoLine) {
