@@ -483,6 +483,50 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
+  public void testPutOrderLineWithNoTags() {
+    logger.info("=== Test PUT Order Line With No Tags ===");
+    String lineId = "bb66b269-76ed-4616-8da9-730d9b817247";
+    CompositePoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
+    body.setCheckinItems(false);
+    body.setIsPackage(false);
+    body.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
+    body.setReportingCodes(new ArrayList<>());
+    MockServer.addMockEntry(PO_LINES, body);
+    MockServer.addMockEntry(PURCHASE_ORDER, new CompositePurchaseOrder()
+      .withId(ID_FOR_PRINT_MONOGRAPH_ORDER)
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN)
+      .withOrderType(CompositePurchaseOrder.OrderType.ONE_TIME));
+    String url = String.format(LINE_BY_ID_PATH, lineId);
+    addMockEntry(TITLES, new Title().withId(UUID.randomUUID().toString())
+      .withPoLineId(body.getId())
+      .withTitle("Title"));
+
+    // edit POLine for new encumbrance
+    body.setTags(null);
+    body.setFundDistribution(Collections.singletonList(new FundDistribution()
+      .withCode("EUROHIST")
+      .withFundId("e9285a1c-1dfc-4380-868c-e74073003f43")
+      .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+      .withValue(100D)));
+    verifyPut(url, JsonObject.mapFrom(body), "", 204);
+
+    Transaction createdEncumbrance = MockServer.getCreatedEncumbrances().get(0);
+    assertNull(createdEncumbrance.getTags());
+
+    // edit POLine for encumbrance update
+    body.setTags(null);
+    body.setCost(new Cost().withCurrency("USD").withListUnitPrice(70.0).withQuantityPhysical(1));
+    body.setFundDistribution(Collections.singletonList(new FundDistribution()
+      .withCode("EUROHIST")
+      .withFundId("a89eccf0-57a6-495e-898d-32b9b2210f2f")
+      .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+      .withValue(100D)));
+    verifyPut(url, JsonObject.mapFrom(body), "", 204);
+    Transaction updatedEncumbrance = MockServer.getUpdatedTransactions().get(0);
+    assertNull(updatedEncumbrance.getTags());
+  }
+
+  @Test
   public void testPutOrderLineByIdPiecesWillBeCreated() {
     logger.info("=== Test PUT Order Line By Id - Pieces will be created ===");
 
