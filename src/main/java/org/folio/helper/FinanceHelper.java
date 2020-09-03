@@ -10,7 +10,6 @@ import static org.folio.orders.utils.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ErrorCodes.INACTIVE_EXPENSE_CLASS;
 import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
-import static org.folio.orders.utils.HelperUtils.FUND_ID;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
@@ -18,6 +17,7 @@ import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGET_EXPENSE_CLASSES;
+import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
@@ -52,7 +52,6 @@ import org.folio.models.PoLineFundHolder;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Budget;
-import org.folio.rest.acq.model.finance.BudgetCollection;
 import org.folio.rest.acq.model.finance.BudgetExpenseClassCollection;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.FiscalYear;
@@ -79,10 +78,10 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
 
 public class FinanceHelper extends AbstractHelper {
+  private static final String GET_CURRENT_ACTIVE_BUDGET_BY_FUND_ID = resourcesPath(CURRENT_BUDGET) + "?lang=%s&status=Active";
   private static final String GET_CURRENT_FISCAL_YEAR_BY_ID = "/finance/ledgers/%s/current-fiscal-year?lang=%s";
   private static final String GET_FUNDS_WITH_SEARCH_PARAMS = resourcesPath(FUNDS) + SEARCH_PARAMS;
   private static final String GET_BUDGET_EXPENSE_CLASSES_QUERY = resourcesPath(BUDGET_EXPENSE_CLASSES) + SEARCH_PARAMS;
-  private static final String GET_BUDGETS_WITH_SEARCH_PARAMS = resourcesPath(BUDGETS) + SEARCH_PARAMS;
   private static final String GET_LEDGERS_WITH_SEARCH_PARAMS = resourcesPath(LEDGERS) + SEARCH_PARAMS;
   private static final String QUERY_EQUALS = "&query=";
   private static final String ENCUMBRANCE_CRITERIA = "transactionType==Encumbrance";
@@ -272,7 +271,7 @@ public class FinanceHelper extends AbstractHelper {
         .map(Map.Entry::getKey)
         .distinct()
         .collect(toList()))
-      .map(this::getActiveBudgetsByFundIds)
+      .map(this::fetchBudgetsByFundIds)
       .toList());
   }
 
@@ -302,23 +301,30 @@ public class FinanceHelper extends AbstractHelper {
           return fundCollection.getFunds();
         }
         String missingIds = String.join(", ", CollectionUtils.subtract(ids, fundCollection.getFunds().stream().map(Fund::getId).collect(toList())));
-        throw new HttpException(400, FUNDS_NOT_FOUND.toError().withParameters(Collections.singletonList(new Parameter().withKey("funds").withValue(missingIds))));
+        throw new HttpException(404, FUNDS_NOT_FOUND.toError().withParameters(Collections.singletonList(new Parameter().withKey("funds").withValue(missingIds))));
       });
   }
 
-  private CompletableFuture<List<Budget>> getActiveBudgetsByFundIds(List<String> ids) {
-    String query = convertIdsToCqlQuery(ids, FUND_ID) + " and budgetStatus==Active";
-    String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
-    String endpoint = String.format(GET_BUDGETS_WITH_SEARCH_PARAMS, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
+  public CompletableFuture<List<Budget>> fetchBudgetsByFundIds(List<String> fundIds) {
+    List<CompletableFuture<Budget>> futureList = fundIds.stream()
+      .distinct()
+      .map(this::getActiveBudgetByFundId)
+      .collect(toList());
 
-    return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenCompose(entries -> VertxCompletableFuture.supplyBlockingAsync(ctx, () -> entries.mapTo(BudgetCollection.class)))
-      .thenApply(budgetCollection -> {
-        if (ids.size() == budgetCollection.getBudgets().size()) {
-          return budgetCollection.getBudgets();
+    return VertxCompletableFuture.allOf(ctx, futureList.toArray(new CompletableFuture[0]))
+      .thenApply(v -> futureList.stream().map(CompletableFuture::join).collect(Collectors.toList()));
+  }
+
+  private CompletableFuture<Budget> getActiveBudgetByFundId(String fundId) {
+    String endpoint = String.format(GET_CURRENT_ACTIVE_BUDGET_BY_FUND_ID, fundId, lang);
+
+    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger).thenApply(entries -> entries.mapTo(Budget.class))
+      .exceptionally(t -> {
+        if (t.getCause() instanceof HttpException) {
+          throw new HttpException(404, BUDGET_NOT_FOUND_FOR_TRANSACTION
+            .toError().withParameters(Collections.singletonList(new Parameter().withKey("fund").withValue(fundId))));
         }
-        String missingIds = String.join(", ", CollectionUtils.subtract(ids, budgetCollection.getBudgets().stream().map(Budget::getId).collect(toList())));
-        throw new HttpException(400, BUDGET_NOT_FOUND_FOR_TRANSACTION.toError().withParameters(Collections.singletonList(new Parameter().withKey("budgets").withValue(missingIds))));
+        throw new CompletionException(t.getCause());
       });
   }
 
@@ -334,7 +340,7 @@ public class FinanceHelper extends AbstractHelper {
           return ledgerCollection.getLedgers();
         }
         String missingIds = String.join(", ", CollectionUtils.subtract(ledgerIds, ledgerCollection.getLedgers().stream().map(Ledger::getId).collect(toList())));
-        throw new HttpException(400, LEDGER_NOT_FOUND_FOR_TRANSACTION.toError().withParameters(Collections.singletonList(new Parameter().withKey("ledgers").withValue(missingIds))));
+        throw new HttpException(404, LEDGER_NOT_FOUND_FOR_TRANSACTION.toError().withParameters(Collections.singletonList(new Parameter().withKey("ledgers").withValue(missingIds))));
       });
   }
 
@@ -363,10 +369,8 @@ public class FinanceHelper extends AbstractHelper {
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger).thenApply(entry -> entry.mapTo(FiscalYear.class))
       .exceptionally(t -> {
         if (isFiscalYearNotFound(t)) {
-          List<Parameter> parameters = Collections.singletonList(new Parameter().withValue(ledgerId)
-            .withKey("ledgerId"));
-          throw new HttpException(400, CURRENT_FISCAL_YEAR_NOT_FOUND.toError()
-            .withParameters(parameters));
+          List<Parameter> parameters = Collections.singletonList(new Parameter().withValue(ledgerId).withKey("ledgerId"));
+          throw new HttpException(404, CURRENT_FISCAL_YEAR_NOT_FOUND.toError().withParameters(parameters));
         }
         throw new CompletionException(t.getCause());
       });
