@@ -364,7 +364,7 @@ public class FinanceHelper extends AbstractHelper {
   }
 
 
-  private CompletableFuture<FiscalYear> getCurrentFiscalYear(String ledgerId) {
+  public CompletableFuture<FiscalYear> getCurrentFiscalYear(String ledgerId) {
     String endpoint = String.format(GET_CURRENT_FISCAL_YEAR_BY_ID, ledgerId, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger).thenApply(entry -> entry.mapTo(FiscalYear.class))
       .exceptionally(t -> {
