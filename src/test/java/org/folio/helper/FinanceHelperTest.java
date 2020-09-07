@@ -1,9 +1,13 @@
 package org.folio.helper;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.rest.RestConstants.OKAPI_URL;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.impl.ApiTestSuite.mockPort;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
@@ -15,18 +19,24 @@ import static org.mockito.Mockito.verify;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletionException;
 
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.PoLineFundHolder;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.TransactionService;
 import org.junit.Before;
@@ -34,19 +44,21 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import io.vertx.core.impl.EventLoopContext;
+import io.restassured.http.Header;
+import io.vertx.core.Context;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 public class FinanceHelperTest extends ApiTestBase {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14";
   private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
+  public static final String TENANT_ID = "oredertest";
+  public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, TENANT_ID);
 
-  @Mock
+  private Context ctxMock;
   private Map<String, String> okapiHeadersMock;
-  @Mock
-  private EventLoopContext ctxMock;
-  @Mock
   private HttpClientInterface httpClient;
+  private String okapiURL;
   @Mock
   private TransactionService transactionService;
   @Mock
@@ -54,6 +66,15 @@ public class FinanceHelperTest extends ApiTestBase {
 
   @Before
   public void initMocks(){
+    super.setUp();
+    ctxMock = Vertx.vertx().getOrCreateContext();
+    okapiHeadersMock = new HashMap<>();
+    okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
+    okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
+    okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
+    okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
+    okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
+    httpClient = HttpClientFactory.getHttpClient(okapiURL, TENANT_ID);
     MockitoAnnotations.initMocks(this);
   }
 
@@ -288,5 +309,39 @@ public class FinanceHelperTest extends ApiTestBase {
     //Then
     assertEquals(BigDecimal.valueOf(line.getCost().getListUnitPrice()), BigDecimal.valueOf(encumbrance.getAmount()));
     assertEquals(BigDecimal.valueOf(encumbrance.getAmount()), BigDecimal.valueOf(encumbrance.getEncumbrance().getInitialAmountEncumbered()));
+  }
+
+  @Test
+  public void testShouldReturnCurrentFiscalYearForLedger() {
+    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en");
+    String ledgerId = UUID.randomUUID().toString();
+    FiscalYear fy = financeHelper.getCurrentFiscalYear(ledgerId).join();
+    assertNotNull(fy);
+  }
+
+  @Test(expected = CompletionException.class)
+  public void testShouldThrowHttpException() {
+    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en");
+    financeHelper.getCurrentFiscalYear(ID_DOES_NOT_EXIST).join();
+  }
+
+  @Test
+  public void testBudgetShouldBeActive() {
+    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en");
+    String budgetId = UUID.randomUUID().toString();
+    String fundId = UUID.randomUUID().toString();
+    List<Budget> budgets = Collections.singletonList(new Budget().withId(budgetId).withFundId(fundId).withBudgetStatus(Budget.BudgetStatus.ACTIVE));
+    List<Transaction> transactions = Collections.singletonList(new Transaction().withFromFundId(fundId));
+    financeHelper.verifyBudgetsForEncumbrancesAreActive(budgets, transactions);
+  }
+
+  @Test(expected = HttpException.class)
+  public void testShouldThrowExceptionIfBudgetIsNotActive() {
+    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en");
+    String budgetId = UUID.randomUUID().toString();
+    String fundId = UUID.randomUUID().toString();
+    List<Budget> budgets = Collections.singletonList(new Budget().withId(budgetId).withFundId(fundId).withBudgetStatus(Budget.BudgetStatus.INACTIVE));
+    List<Transaction> transactions = Collections.singletonList(new Transaction().withFromFundId(fundId));
+    financeHelper.verifyBudgetsForEncumbrancesAreActive(budgets, transactions);
   }
 }

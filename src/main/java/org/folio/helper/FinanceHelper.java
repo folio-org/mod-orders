@@ -213,7 +213,7 @@ public class FinanceHelper extends AbstractHelper {
         });
   }
 
-  private void verifyBudgetsForEncumbrancesAreActive(List<Budget> budgets, List<Transaction> transactions) {
+  public void verifyBudgetsForEncumbrancesAreActive(List<Budget> budgets, List<Transaction> transactions) {
     transactions.forEach(tr -> budgets.stream()
       .filter(budget -> budget.getFundId().equals(tr.getFromFundId()))
       .filter(budget -> budget.getBudgetStatus() == Budget.BudgetStatus.ACTIVE)
