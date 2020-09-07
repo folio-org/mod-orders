@@ -315,7 +315,7 @@ public class FinanceHelper extends AbstractHelper {
       .thenApply(v -> futureList.stream().map(CompletableFuture::join).collect(Collectors.toList()));
   }
 
-  private CompletableFuture<Budget> getActiveBudgetByFundId(String fundId) {
+  public CompletableFuture<Budget> getActiveBudgetByFundId(String fundId) {
     String endpoint = String.format(GET_CURRENT_ACTIVE_BUDGET_BY_FUND_ID, fundId, lang);
 
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger).thenApply(entries -> entries.mapTo(Budget.class))

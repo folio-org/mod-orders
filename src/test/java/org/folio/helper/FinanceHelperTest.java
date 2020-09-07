@@ -54,6 +54,8 @@ public class FinanceHelperTest extends ApiTestBase {
   private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
   public static final String TENANT_ID = "oredertest";
   public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, TENANT_ID);
+  public static final String ACTIVE_BUDGET = "68872d8a-bf16-420b-829f-206da38f6c10";
+
 
   private Context ctxMock;
   private Map<String, String> okapiHeadersMock;
@@ -343,5 +345,19 @@ public class FinanceHelperTest extends ApiTestBase {
     List<Budget> budgets = Collections.singletonList(new Budget().withId(budgetId).withFundId(fundId).withBudgetStatus(Budget.BudgetStatus.INACTIVE));
     List<Transaction> transactions = Collections.singletonList(new Transaction().withFromFundId(fundId));
     financeHelper.verifyBudgetsForEncumbrancesAreActive(budgets, transactions);
+  }
+
+  @Test
+  public void testShouldReturnActiveBudgetForFund() {
+    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en");
+    Budget budget = financeHelper.getActiveBudgetByFundId(ACTIVE_BUDGET).join();
+    assertNotNull(budget);
+  }
+
+  @Test(expected = CompletionException.class)
+  public void testShouldThrowExceptionIfActiveBudgetForFund() {
+    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en");
+    Budget budget = financeHelper.getActiveBudgetByFundId(UUID.randomUUID().toString()).join();
+    assertNotNull(budget);
   }
 }
