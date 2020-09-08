@@ -4,15 +4,16 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.awaitility.Awaitility.await;
+import static org.folio.helper.AbstractHelper.EVENT_PAYLOAD;
 import static org.folio.orders.utils.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
-import static org.folio.helper.AbstractHelper.EVENT_PAYLOAD;
 import static org.folio.rest.impl.AcquisitionsMembershipsTests.USER_ID_ASSIGNED_TO_ACQ_UNITS;
 import static org.folio.rest.impl.ApiTestSuite.mockPort;
+import static org.folio.rest.impl.ContextConfiguration.eventMessages;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
@@ -35,7 +36,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -72,15 +72,11 @@ import org.hamcrest.Matchers;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 
 import io.restassured.RestAssured;
 import io.restassured.http.Header;
 import io.restassured.http.Headers;
 import io.restassured.response.Response;
-import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
@@ -159,47 +155,6 @@ public class ApiTestBase {
 
   public static final String PIECE_ID = "0f1bb087-72e9-44ce-a145-bfc2e7b005cf";
   public static final String ITEM_ID = "522a501a-56b5-48d9-b28a-3a8f02482d97";
-
-  // The variable is defined in main thread but the value is going to be inserted in vert.x event loop thread
-  private static volatile List<Message<JsonObject>> eventMessages = new ArrayList<>();
-
-  /**
-   * Define unit test specific beans to override actual ones
-   */
-  @Configuration
-  static class ContextConfiguration {
-
-    @Bean("checkInOrderStatusChangeHandler")
-    @Primary
-    public Handler<Message<JsonObject>> mockedCheckInOrderStatusChangeHandler() {
-      // As an implementation just add received message to list
-      return message -> {
-        logger.info("New message sent to {} address", message.address());
-        eventMessages.add(message);
-      };
-    }
-
-    @Bean("receiveOrderStatusChangeHandler")
-    @Primary
-    public Handler<Message<JsonObject>> mockedOrderStatusHandler() {
-      // As an implementation just add received message to list
-      return message -> {
-        logger.info("New message sent to {} address", message.address());
-        eventMessages.add(message);
-      };
-    }
-
-
-    @Bean("receiptStatusHandler")
-    @Primary
-    public Handler<Message<JsonObject>> mockedReceiptStatusHandler() {
-      // As an implementation just add received message to list
-      return message -> {
-        logger.info("New message sent to {} address", message.address());
-        eventMessages.add(message);
-      };
-    }
-  }
 
   @BeforeClass
   public static void before() throws InterruptedException, ExecutionException, TimeoutException {

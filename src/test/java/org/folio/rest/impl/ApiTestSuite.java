@@ -66,12 +66,12 @@ import static org.hamcrest.Matchers.is;
   FinanceHelperTest.class,
   PurchaseOrderLineHelperTest.class,
   HelperUtilsTest.class,
-  TransactionServiceTest.class
+  TransactionServiceTest.class,
 })
 public class ApiTestSuite {
 
   private static final int okapiPort = NetworkUtils.nextFreePort();
-  static final int mockPort = NetworkUtils.nextFreePort();
+  public static final int mockPort = NetworkUtils.nextFreePort();
   private static Vertx vertx;
   private static MockServer mockServer;
   private static boolean initialised;
