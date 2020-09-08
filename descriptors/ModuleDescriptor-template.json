@@ -69,7 +69,8 @@
             "orders.item.unopen"
           ],
           "modulePermissions": [
-            "modperms.orders.item.put"
+            "modperms.orders.item.put",
+            "finance.funds.budget.item.get"
           ]
         },
         {
