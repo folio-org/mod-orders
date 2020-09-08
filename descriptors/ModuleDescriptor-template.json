@@ -69,8 +69,7 @@
             "orders.item.unopen"
           ],
           "modulePermissions": [
-            "modperms.orders.item.put",
-            "finance.funds.budget.item.get"
+            "modperms.orders.item.put"
           ]
         },
         {
@@ -1226,6 +1225,7 @@
         "orders-storage.reporting-codes.item.delete",
         "orders-storage.titles.collection.get",
         "configuration.entries.collection.get",
+        "finance.funds.budget.item.get",
         "finance.funds.collection.get",
         "finance.budgets.collection.get",
         "finance.ledgers.collection.get",
@@ -1283,6 +1283,7 @@
         "orders-storage.titles.item.put",
         "configuration.entries.collection.get",
         "finance.encumbrances.item.post",
+        "finance.funds.budget.item.get",
         "finance.funds.collection.get",
         "finance.budgets.collection.get",
         "finance.ledgers.collection.get",
