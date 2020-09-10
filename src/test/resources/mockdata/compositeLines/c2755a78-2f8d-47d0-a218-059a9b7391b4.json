@@ -20,7 +20,8 @@
   "cost": {
     "currency": "USD",
     "listUnitPriceElectronic": 75.22,
-    "quantityElectronic": 1
+    "quantityElectronic": 1,
+    "poLineEstimatedPrice": 75.22
   },
   "description": "",
   "details": {
