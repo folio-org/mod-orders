@@ -1134,6 +1134,29 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
+  public void testUpdatePolineForOpenedOrderWithChangingDistributionType() {
+    logger.info("=== Test update poline for opened order with changed DistributionType ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
+    reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
+
+    addMockEntry(PIECES, new Piece()
+      .withPoLineId(reqData.getId())
+      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+
+    addMockEntry(PO_LINES, reqData);
+
+    reqData.getFundDistribution().get(0).setDistributionType(FundDistribution.DistributionType.AMOUNT);
+    reqData.getFundDistribution().get(0).setValue(reqData.getCost().getPoLineEstimatedPrice());
+
+    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+
+    assertThat("One or more transactions have been updated", MockServer.getRqRsEntries(HttpMethod.PUT, TRANSACTIONS_STORAGE_ENDPOINT).size() > 0);
+  }
+
+  @Test
   public void testUpdatePolineForOpenedOrderWithoutUpdatingEncumbrances() {
     logger.info("=== Test update poline. Fund distributions not changed ===");
 
