@@ -402,6 +402,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
               .thenCompose(vVoid -> protectionHelper.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE)
                 .thenCompose(v -> validateAndNormalizeISBN(compOrderLine))
                 .thenCompose(v -> validateAccessProviders(compOrderLine))
+                .thenCompose(v -> financeHelper.validateExpenseClasses(Collections.singletonList(compOrderLine)))
                 .thenCompose(v -> processOpenedPoLine(compOrder, compOrderLine, lineFromStorage))
                 .thenApply(v -> lineFromStorage));
           }))
@@ -456,8 +457,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     List<CompositePoLine> compositePoLines = Collections.singletonList(compositePoLine);
 
     if (!compositePoLine.getFundDistribution().isEmpty()) {
-      return financeHelper.validateExpenseClasses(compositePoLines)
-        .thenAccept(v -> validateFundDistributionTotal(compositePoLines))
+      return CompletableFuture.runAsync(() -> validateFundDistributionTotal(compositePoLines))
         .thenCompose(v -> financeHelper.getPoLineEncumbrances(compositePoLine.getId()))
         .thenAccept(holder::withEncumbrancesFromStorage)
         .thenCompose(v -> financeHelper.buildNewEncumbrances(compPO, compositePoLines, holder.getEncumbrancesFromStorage()))
