@@ -616,4 +616,11 @@ public class FinanceHelper extends AbstractHelper {
         }
       });
   }
+
+  public CompletableFuture<Void> validateExpenseClassesForOpenedOrder(CompositePurchaseOrder compOrder, List<CompositePoLine> compositePoLines) {
+    if (compOrder.getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.OPEN) {
+      return validateExpenseClasses(compositePoLines);
+    }
+    return CompletableFuture.completedFuture(null);
+  }
 }
