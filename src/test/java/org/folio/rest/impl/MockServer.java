@@ -431,7 +431,7 @@ public class MockServer {
     List<T> entryList =  getRqRsEntries(HttpMethod.OTHER, objName).stream()
       .map(entries -> entries.mapTo(tClass))
       .collect(toList());
-    return Optional.ofNullable(entryList.isEmpty()? null: entryList);
+    return Optional.ofNullable(entryList.isEmpty() ? null : entryList);
   }
 
   public static List<JsonObject> getRqRsEntries(HttpMethod method, String objName) {
@@ -722,6 +722,7 @@ public class MockServer {
       .orElseGet(null);
 
     BudgetExpenseClassCollection expenseClassCollection = new BudgetExpenseClassCollection()
+      .withBudgetExpenseClasses(expenseClasses)
       .withTotalRecords(expenseClasses != null ? expenseClasses.size() : 0);
 
     JsonObject entries = JsonObject.mapFrom(expenseClassCollection);
