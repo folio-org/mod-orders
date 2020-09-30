@@ -1,8 +1,8 @@
 package org.folio.rest.impl;
 
 import org.folio.config.ApplicationConfig;
+import org.folio.dbschema.ObjectMapperTool;
 import org.folio.rest.resource.interfaces.InitAPI;
-import org.folio.rest.tools.utils.ObjectMapperTool;
 import org.folio.spring.SpringContextUtil;
 
 import com.fasterxml.jackson.databind.DeserializationConfig;
