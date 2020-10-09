@@ -806,7 +806,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       .thenCompose(existingPieces -> {
         List<Piece> piecesToCreate = new ArrayList<>();
         List<Piece> piecesWithLocationToProcess = createPiecesByLocationId(compPOL, expectedPiecesWithItem, existingPieces);
-        List<Piece> onlyLocationChangedPieces = getPiecesWitheChangedLocation(compPOL, piecesWithLocationToProcess, existingPieces);
+        List<Piece> onlyLocationChangedPieces = getPiecesWithChangedLocation(compPOL, piecesWithLocationToProcess, existingPieces);
         if ((onlyLocationChangedPieces.size() == piecesWithLocationToProcess.size()) && !isOpenOrderFlow) {
           return allOf(onlyLocationChangedPieces.stream().map(piecesHelper::updatePieceRecord).toArray(CompletableFuture[]::new));
         } else {
@@ -820,7 +820,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       .thenAccept(v -> validateItemsCreation(compPOL, createdItemsQuantity));
   }
 
-  private List<Piece> getPiecesWitheChangedLocation(CompositePoLine compPOL, List<Piece> needProcessPieces, List<Piece> existingPieces) {
+  private List<Piece> getPiecesWithChangedLocation(CompositePoLine compPOL, List<Piece> needProcessPieces, List<Piece> existingPieces) {
     Map<String, Map<Piece.PieceFormat, Integer>> existingPieceMap = numOfPiecesByFormatAndLocationId(existingPieces, compPOL.getId());
     Map<String, Map<Piece.PieceFormat, Integer>> needProcessPiecesMap = numOfPiecesByFormatAndLocationId(needProcessPieces, compPOL.getId());
 
