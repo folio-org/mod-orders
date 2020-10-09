@@ -6,19 +6,6 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
-import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_TYPE;
-import static org.folio.orders.utils.HelperUtils.buildQuery;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
-import static org.folio.orders.utils.HelperUtils.getPoLineById;
-import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.handlePutRequest;
-import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
-import static org.folio.orders.utils.ProtectedOperationType.DELETE;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.helper.InventoryHelper.CONTRIBUTOR_NAME;
 import static org.folio.helper.InventoryHelper.CONTRIBUTOR_NAME_TYPE_ID;
 import static org.folio.helper.InventoryHelper.INSTANCE_CONTRIBUTORS;
@@ -36,6 +23,19 @@ import static org.folio.helper.InventoryHelper.INSTANCE_TITLE;
 import static org.folio.helper.InventoryHelper.INSTANCE_TYPES;
 import static org.folio.helper.InventoryHelper.INSTANCE_TYPE_ID;
 import static org.folio.helper.InventoryHelper.SOURCE_FOLIO;
+import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
+import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_TYPE;
+import static org.folio.orders.utils.HelperUtils.buildQuery;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.getPoLineById;
+import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
+import static org.folio.orders.utils.HelperUtils.handleGetRequest;
+import static org.folio.orders.utils.HelperUtils.handlePutRequest;
+import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
+import static org.folio.orders.utils.ProtectedOperationType.DELETE;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 
 import java.util.Collections;
@@ -62,13 +62,13 @@ import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 public class PiecesHelper extends AbstractHelper {
   private static final String DELETE_PIECE_BY_ID = resourceByIdPath(PIECES, "%s") + "?lang=%s";
@@ -168,47 +168,8 @@ public class PiecesHelper extends AbstractHelper {
   // 2. Update piece with new content and complete future
   // 3. Create a message and check if receivingStatus is not consistent with storage; if yes - send a message to event bus
   public CompletableFuture<Void> updatePieceRecord(org.folio.rest.acq.model.Piece piece) {
-    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
-    getOrderByPoLineId(piece.getPoLineId())
-      .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE))
-      .thenCompose(v -> inventoryHelper.updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId()))
-      .thenAccept(vVoid ->
-        getPieceById(piece.getId()).thenAccept(pieceStorage -> {
-          ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
-
-          handlePutRequest(resourceByIdPath(PIECES, piece.getId()), JsonObject.mapFrom(piece), httpClient, ctx, okapiHeaders, logger)
-            .thenAccept(future::complete)
-            .thenAccept(afterUpdate -> {
-
-              JsonObject messageToEventBus = new JsonObject();
-              messageToEventBus.put("poLineIdUpdate", piece.getPoLineId());
-
-              org.folio.rest.acq.model.Piece.ReceivingStatus receivingStatusUpdate = piece.getReceivingStatus();
-              logger.debug("receivingStatusStorage -- " + receivingStatusStorage);
-              logger.debug("receivingStatusUpdate -- " + receivingStatusUpdate);
-
-              if (receivingStatusStorage.value().compareTo(receivingStatusUpdate.value()) != 0) {
-                receiptConsistencyPiecePoLine(messageToEventBus);
-              }
-            })
-            .exceptionally(e -> {
-              logger.error("Error updating piece by id to storage {}", piece.getId(), e);
-              future.completeExceptionally(e);
-              return null;
-            });
-        })
-          .exceptionally(e -> {
-            logger.error("Error getting piece by id from storage {}", piece.getId(), e);
-            future.completeExceptionally(e);
-            return null;
-          })
-      )
-      .exceptionally(t -> {
-        logger.error("User with id={} is forbidden to update piece with id={}", t.getCause(), getCurrentUserId(), piece.getId());
-        future.completeExceptionally(t);
-        return null;
-      });
-    return future;
+    Piece jaxRSPiece = JsonObject.mapFrom(piece).mapTo(Piece.class);
+    return updatePieceRecord(jaxRSPiece);
   }
 
 
