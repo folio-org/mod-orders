@@ -5,6 +5,7 @@ import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.summingInt;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
@@ -31,6 +32,7 @@ import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.inventoryUpdateNotRequired;
 import static org.folio.orders.utils.HelperUtils.numOfLocationsByPoLineIdAndLocationId;
+import static org.folio.orders.utils.HelperUtils.numOfPiecesByFormatAndLocationId;
 import static org.folio.orders.utils.HelperUtils.numOfPiecesByPoLineAndLocationId;
 import static org.folio.orders.utils.HelperUtils.operateOnObject;
 import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
@@ -50,6 +52,8 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.P
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +64,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -70,6 +75,7 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.models.PoLineFundHolder;
@@ -126,6 +132,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   private static final String PHYSICAL = "physical";
   private static final String OTHER = "other";
   private static final String DASH_SEPARATOR = "-";
+  private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
   public static final String QUERY_BY_PO_LINE_ID = "poLineId==";
 
   private final InventoryHelper inventoryHelper;
@@ -638,7 +645,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
    * @param compPOL Composite PO line to update Inventory for
    * @return CompletableFuture with void.
    */
-  CompletableFuture<Void> updateInventory(CompositePoLine compPOL, String titleId) {
+  CompletableFuture<Void> updateInventory(CompositePoLine compPOL, String titleId, boolean isOpenOrderFlow) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return completedFuture(null);
     }
@@ -647,7 +654,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       if (isReceiptNotRequired(compPOL.getReceiptStatus())) {
         return completedFuture(null);
       }
-      return createPieces(compPOL, titleId, Collections.emptyList()).thenRun(
+      return createPieces(compPOL, titleId, Collections.emptyList(), isOpenOrderFlow).thenRun(
           () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId()));
     }
 
@@ -658,7 +665,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
           return completedFuture(null);
         }
         //create pieces only if receiving is required
-        return createPieces(compPOL, titleId, piecesWithItemId);
+        return createPieces(compPOL, titleId, piecesWithItemId, isOpenOrderFlow);
       });
   }
 
@@ -794,7 +801,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
    * @param expectedPiecesWithItem expected Pieces to create with created associated Items records
    * @return void future
    */
-  private CompletableFuture<Void> createPieces(CompositePoLine compPOL, String titleId, List<Piece> expectedPiecesWithItem) {
+  private CompletableFuture<Void> createPieces(CompositePoLine compPOL, String titleId, List<Piece> expectedPiecesWithItem, boolean isOpenOrderFlow) {
     int createdItemsQuantity = expectedPiecesWithItem.size();
     // do not create pieces in case of check-in flow
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
@@ -803,14 +810,48 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     return searchForExistingPieces(compPOL)
       .thenCompose(existingPieces -> {
         List<Piece> piecesToCreate = new ArrayList<>();
-
-        piecesToCreate.addAll(createPiecesByLocationId(compPOL, expectedPiecesWithItem, existingPieces));
+        List<Piece> piecesWithLocationToProcess = createPiecesByLocationId(compPOL, expectedPiecesWithItem, existingPieces);
+        List<Piece> onlyLocationChangedPieces = getPiecesWitheChangedLocation(compPOL, piecesWithLocationToProcess, existingPieces);
+        if ((onlyLocationChangedPieces.size() == piecesWithLocationToProcess.size()) && !isOpenOrderFlow) {
+          return allOf(onlyLocationChangedPieces.stream().map(piecesHelper::updatePieceRecord).toArray(CompletableFuture[]::new));
+        } else {
+          piecesToCreate.addAll(piecesWithLocationToProcess);
+        }
         piecesToCreate.addAll(createPiecesWithoutLocationId(compPOL, existingPieces));
         piecesToCreate.forEach(piece -> piece.setTitleId(titleId));
 
         return allOf(piecesToCreate.stream().map(this::createPiece).toArray(CompletableFuture[]::new));
       })
       .thenAccept(v -> validateItemsCreation(compPOL, createdItemsQuantity));
+  }
+
+  private List<Piece> getPiecesWitheChangedLocation(CompositePoLine compPOL, List<Piece> needProcessPieces, List<Piece> existingPieces) {
+    Map<String, Map<Piece.PieceFormat, Integer>> existingPieceMap = numOfPiecesByFormatAndLocationId(existingPieces, compPOL.getId());
+    Map<String, Map<Piece.PieceFormat, Integer>> needProcessPiecesMap = numOfPiecesByFormatAndLocationId(needProcessPieces, compPOL.getId());
+
+    List<Piece> piecesForLocationUpdate = new ArrayList<>();
+      for (Map.Entry<String, Map<Piece.PieceFormat, Integer>> entry : existingPieceMap.entrySet()) {
+        String existingPieceLocationId = entry.getKey();
+        Map<Piece.PieceFormat, Integer> existingPieceQtyMap = entry.getValue();
+        for (Map.Entry<Piece.PieceFormat, Integer> existPieceFormatQty : existingPieceQtyMap.entrySet()) {
+          Map<Piece.PieceFormat, Integer> pieceLocationMap = needProcessPiecesMap.get(existingPieceLocationId);
+          if (pieceLocationMap == null) {
+            needProcessPiecesMap.entrySet().forEach(e -> {
+                String newLocationId = e.getKey();
+                Integer pieceQty = e.getValue().get(existPieceFormatQty.getKey());
+                if (pieceQty != null && pieceQty.equals(existPieceFormatQty.getValue())) {
+                  List<Piece> piecesWithUpdatedLocation = existingPieces.stream()
+                                      .filter(piece -> existingPieceLocationId.equals(piece.getLocationId())
+                                                           && existPieceFormatQty.getKey() == piece.getFormat())
+                                      .map(piece -> piece.withLocationId(newLocationId))
+                                      .collect(Collectors.toList());
+                  piecesForLocationUpdate.addAll(piecesWithUpdatedLocation);
+                }
+              });
+          }
+        }
+      }
+    return piecesForLocationUpdate;
   }
 
   private List<Piece> createPiecesWithoutLocationId(CompositePoLine compPOL, List<Piece> existingPieces) {
@@ -832,23 +873,34 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     List<Piece> piecesToCreate = new ArrayList<>();
     // For each location collect pieces that need to be created.
     groupLocationsById(compPOL)
-      .forEach((locationId, locations) -> {
-        List<Piece> filteredExistingPieces = filterByLocationId(existingPieces, locationId);
-        List<Piece> filteredExpectedPiecesWithItem = filterByLocationId(expectedPiecesWithItem, locationId);
-        piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
-
-        Map<Piece.PieceFormat, Integer> expectedQuantitiesWithoutItem = HelperUtils.calculatePiecesWithoutItemIdQuantity(compPOL, locations);
-        Map<Piece.PieceFormat, Integer> quantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(filteredExistingPieces);
-        expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
-          int remainingPiecesQuantity = expectedQty - quantityWithoutItem.getOrDefault(format, 0);
-          if (remainingPiecesQuantity > 0) {
-            for (int i = 0; i < remainingPiecesQuantity; i++) {
-              piecesToCreate.add(new Piece().withFormat(format).withLocationId(locationId).withPoLineId(compPOL.getId()));
-            }
-          }
-        });
+      .forEach((existingPieceLocationId, existingPieceLocations) -> {
+        List<Piece> filteredExistingPieces = filterByLocationId(existingPieces, existingPieceLocationId);
+        List<Piece> createdPiecesWithItem = processPiecesWithItem(expectedPiecesWithItem, filteredExistingPieces, existingPieceLocationId);
+        piecesToCreate.addAll(createdPiecesWithItem);
+        List<Piece> piecesWithoutItem = processPiecesWithoutItem(compPOL, filteredExistingPieces, existingPieceLocationId, existingPieceLocations);
+        piecesToCreate.addAll(piecesWithoutItem);
       });
     return piecesToCreate;
+  }
+
+  private List<Piece> processPiecesWithoutItem(CompositePoLine compPOL, List<Piece> existedPieces, String existingPieceLocationId, List<Location> existingPieceLocations) {
+    List<Piece> piecesToCreate = new ArrayList<>();
+    Map<Piece.PieceFormat, Integer> expectedQuantitiesWithoutItem = HelperUtils.calculatePiecesWithoutItemIdQuantity(compPOL, existingPieceLocations);
+    Map<Piece.PieceFormat, Integer> existedQuantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existedPieces);
+    expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
+      int remainingPiecesQuantity = expectedQty - existedQuantityWithoutItem.getOrDefault(format, 0);
+      if (remainingPiecesQuantity > 0) {
+        for (int i = 0; i < remainingPiecesQuantity; i++) {
+          piecesToCreate.add(new Piece().withFormat(format).withLocationId(existingPieceLocationId).withPoLineId(compPOL.getId()));
+        }
+      }
+    });
+    return piecesToCreate;
+  }
+
+  private List<Piece> processPiecesWithItem(List<Piece> piecesWithItem, List<Piece> existedPieces, String existingPieceLocationId) {
+    List<Piece> expectedPiecesWithItem = filterByLocationId(piecesWithItem, existingPieceLocationId);
+    return collectMissingPiecesWithItem(expectedPiecesWithItem, existedPieces);
   }
 
 
@@ -1179,16 +1231,15 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> checkLocationsAndPiecesConsistency(CompositePoLine poLine, CompositePurchaseOrder order) {
-    if (isLocationsAndPiecesConsistencyNeedToBeVerified(poLine, order)) {
-      String query = QUERY_BY_PO_LINE_ID + poLine.getId();
-      return piecesHelper.getPieces(Integer.MAX_VALUE, 0, query)
-        .thenCompose(pieces -> verifyLocationAndPieceConsistency(Collections.singletonList(poLine), pieces))
+      if (isLocationsAndPiecesConsistencyNeedToBeVerified(poLine, order)) {
+      return getExpectedPiecesByLineId(poLine.getId())
+        .thenCompose(existingExpectedPieces -> verifyLocationAndPieceConsistency(Collections.singletonList(poLine), existingExpectedPieces))
         .thenCompose(errorCode -> {
           if (PIECES_TO_BE_DELETED.equals(errorCode)) {
             throw new HttpException(422, PIECES_TO_BE_DELETED);
           } else if (PIECES_TO_BE_CREATED.equals(errorCode)){
             return getTitleForPoLine(poLine)
-              .thenCompose(title -> updateInventory(poLine, title.getId()));
+              .thenCompose(title -> updateInventory(poLine, title.getId(), false));
           }
           return CompletableFuture.completedFuture(null);
         });
@@ -1207,10 +1258,10 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     Map<String, Map<String, Integer>> numOfPiecesByPoLineIdAndLocationId = numOfPiecesByPoLineAndLocationId(pieces);
 
     Set<String> pieceLocations = pieces.getPieces().stream().map(Piece::getLocationId).collect(toSet());
-    Set<String> poLineLocations = poLines.stream().flatMap(poLine -> poLine.getLocations().stream()).map(Location::getLocationId)
+    Set<String> poexistingPieceLocations = poLines.stream().flatMap(poLine -> poLine.getLocations().stream()).map(Location::getLocationId)
       .collect(toSet());
 
-    if (!pieceLocations.containsAll(poLineLocations)) {
+    if (!pieceLocations.containsAll(poexistingPieceLocations)) {
       future.complete(PIECES_TO_BE_CREATED);
     } else {
       Set<ErrorCodes> resultErrorCodes = new HashSet<>();
@@ -1243,5 +1294,10 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   private boolean isLocationsAndPiecesConsistencyNeedToBeVerified(CompositePoLine poLine, CompositePurchaseOrder order) {
     return order.getWorkflowStatus() == OPEN && Boolean.FALSE.equals(poLine.getCheckinItems())
       && poLine.getReceiptStatus() != ReceiptStatus.RECEIPT_NOT_REQUIRED && Boolean.FALSE.equals(poLine.getIsPackage());
+  }
+
+  private CompletableFuture<PieceCollection> getExpectedPiecesByLineId(String poLineId) {
+    String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, Piece.ReceivingStatus.EXPECTED.value());
+    return piecesHelper.getPieces(Integer.MAX_VALUE, 0, query);
   }
 }

@@ -163,6 +163,55 @@ public class PiecesHelper extends AbstractHelper {
     return future;
   }
 
+  // Flow to update piece
+  // 1. Before update, get piece by id from storage and store receiving status
+  // 2. Update piece with new content and complete future
+  // 3. Create a message and check if receivingStatus is not consistent with storage; if yes - send a message to event bus
+  public CompletableFuture<Void> updatePieceRecord(org.folio.rest.acq.model.Piece piece) {
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+    getOrderByPoLineId(piece.getPoLineId())
+      .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE))
+      .thenCompose(v -> inventoryHelper.updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId()))
+      .thenAccept(vVoid ->
+        getPieceById(piece.getId()).thenAccept(pieceStorage -> {
+          ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
+
+          handlePutRequest(resourceByIdPath(PIECES, piece.getId()), JsonObject.mapFrom(piece), httpClient, ctx, okapiHeaders, logger)
+            .thenAccept(future::complete)
+            .thenAccept(afterUpdate -> {
+
+              JsonObject messageToEventBus = new JsonObject();
+              messageToEventBus.put("poLineIdUpdate", piece.getPoLineId());
+
+              org.folio.rest.acq.model.Piece.ReceivingStatus receivingStatusUpdate = piece.getReceivingStatus();
+              logger.debug("receivingStatusStorage -- " + receivingStatusStorage);
+              logger.debug("receivingStatusUpdate -- " + receivingStatusUpdate);
+
+              if (receivingStatusStorage.value().compareTo(receivingStatusUpdate.value()) != 0) {
+                receiptConsistencyPiecePoLine(messageToEventBus);
+              }
+            })
+            .exceptionally(e -> {
+              logger.error("Error updating piece by id to storage {}", piece.getId(), e);
+              future.completeExceptionally(e);
+              return null;
+            });
+        })
+          .exceptionally(e -> {
+            logger.error("Error getting piece by id from storage {}", piece.getId(), e);
+            future.completeExceptionally(e);
+            return null;
+          })
+      )
+      .exceptionally(t -> {
+        logger.error("User with id={} is forbidden to update piece with id={}", t.getCause(), getCurrentUserId(), piece.getId());
+        future.completeExceptionally(t);
+        return null;
+      });
+    return future;
+  }
+
+
   public CompletableFuture<Piece> getPieceById(String pieceId) {
     String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PIECES, pieceId), lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
