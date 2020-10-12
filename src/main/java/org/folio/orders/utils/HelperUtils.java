@@ -1143,4 +1143,12 @@ public class HelperUtils {
       .collect(toMap(CompositePoLine::getId, poLine -> Optional
         .of(poLine.getLocations()).orElse(new ArrayList<>()).stream().collect(toMap(Location::getLocationId, Location::getQuantity))));
   }
+
+  public static Map<String, Map<Piece.PieceFormat, Integer>> numOfPiecesByFormatAndLocationId(List<Piece> pieces, String poLineId) {
+    return pieces.stream()
+      .filter(piece -> Objects.nonNull(piece.getPoLineId())
+                                && Objects.nonNull(piece.getLocationId())
+                                    && piece.getPoLineId().equals(poLineId))
+      .collect(groupingBy(Piece::getLocationId, groupingBy(Piece::getFormat, summingInt(q -> 1))));
+  }
 }

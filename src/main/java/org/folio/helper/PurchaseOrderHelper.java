@@ -512,7 +512,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenCompose(this::fetchNonPackageTitles)
       .thenCompose(linesIdTitles -> {
           populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
-          return updateInventory(linesIdTitles, compPO);
+          return openOrderUpdateInventory(linesIdTitles, compPO);
         })
       .thenCompose(ok -> processEncumbrances(compPO))
       .thenAccept(ok -> changePoLineStatuses(compPO.getCompositePoLines()))
@@ -927,11 +927,11 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return compositePoLines.stream().mapToLong(compositePoLine -> compositePoLine.getFundDistribution().size()).sum() >= 1;
   }
 
-  private CompletableFuture<Void> updateInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO) {
+  private CompletableFuture<Void> openOrderUpdateInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO) {
     return CompletableFuture.allOf(
       compPO.getCompositePoLines()
         .stream()
-        .map(poLine -> orderLineHelper.updateInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine)))
+        .map(poLine -> orderLineHelper.updateInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), true))
         .toArray(CompletableFuture[]::new)
     );
   }

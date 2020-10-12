@@ -363,6 +363,22 @@ public class PiecesHelperTest {
     assertTrue(result.isCompletedExceptionally());
   }
 
+
+  @Test
+  public void testShouldUpdatePieceByInvokingMethodWithJaxRsModelIfAcqModelProvided() throws ExecutionException, InterruptedException {
+    //given
+    org.folio.rest.acq.model.Piece piece = ApiTestBase.getMockAsJson(PIECE_PATH,"pieceRecord")
+      .mapTo(org.folio.rest.acq.model.Piece.class);
+    PiecesHelper piecesHelper = spy(new PiecesHelper(okapiHeadersMock, ctxMock, "en"
+      ,protectionHelper, inventoryHelper, titlesHelper));
+    doReturn(completedFuture(null)).when(piecesHelper).updatePieceRecord(any(Piece.class));
+    //When
+    piecesHelper.updatePieceRecord(piece).join();
+    //Then
+    Piece jaxRSPiece = JsonObject.mapFrom(piece).mapTo(Piece.class);
+    verify(piecesHelper).updatePieceRecord(jaxRSPiece);
+  }
+
   private Piece createPiece(CompositePoLine line, Title title) {
     return new Piece().withId(UUID.randomUUID().toString())
       .withTitleId(title.getId())
