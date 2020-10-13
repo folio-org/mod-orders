@@ -26,6 +26,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGET_EXPENSE_CLASSES;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
@@ -40,6 +41,7 @@ import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.getOrderLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getQueryParams;
+import static org.folio.rest.impl.MockServer.getRqRsEntries;
 import static org.folio.rest.impl.MockServer.getTitlesSearches;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ID_FOR_PRINT_MONOGRAPH_ORDER;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
@@ -1204,6 +1206,16 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     addMockEntry(PO_LINES, reqData);
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+    assertThat("No transactions have been released", MockServer.getRqRsEntries(HttpMethod.POST, TRANSACTIONS_STORAGE_ENDPOINT).size() == 0);
+    assertThat("No transactions have been updated", MockServer.getRqRsEntries(HttpMethod.PUT, TRANSACTIONS_STORAGE_ENDPOINT).size() == 0);
+    assertThat("No transactions have been created", MockServer.getRqRsEntries(HttpMethod.POST, TRANSACTIONS_STORAGE_ENDPOINT).size() == 0);
+
+    // double check with updating status only (When only status updated via request from mod-invoices)
+    CompositePoLine updatedLine = getRqRsEntries(HttpMethod.PUT, PO_LINES).get(0).mapTo(CompositePoLine.class);
+    updatedLine.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
+
+    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(updatedLine).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
     assertThat("No transactions have been released", MockServer.getRqRsEntries(HttpMethod.POST, TRANSACTIONS_STORAGE_ENDPOINT).size() == 0);
     assertThat("No transactions have been updated", MockServer.getRqRsEntries(HttpMethod.PUT, TRANSACTIONS_STORAGE_ENDPOINT).size() == 0);
