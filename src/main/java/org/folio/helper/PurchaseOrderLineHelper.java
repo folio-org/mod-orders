@@ -441,8 +441,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       return true;
     }
 
-    return !CollectionUtils.containsAll(requestFundDistros, storageFundDistros)
-      || !CollectionUtils.containsAll(storageFundDistros, requestFundDistros);
+    return !CollectionUtils.isEqualCollection(requestFundDistros, storageFundDistros);
   }
 
 
