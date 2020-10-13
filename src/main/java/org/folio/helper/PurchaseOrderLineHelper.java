@@ -441,18 +441,9 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       return true;
     }
 
-    return requestFundDistros.stream()
-      .map(reqFd -> storageFundDistros.stream().anyMatch(storageFd -> fundDistributionChanged(reqFd, storageFd).test(false)))
-      .anyMatch(isAnyFdChanged -> isAnyFdChanged.equals(Boolean.TRUE));
+    return !CollectionUtils.isEqualCollection(requestFundDistros, storageFundDistros);
   }
 
-  private Predicate<Boolean> fundDistributionChanged(FundDistribution reqFd, FundDistribution storageFd) {
-    return fdChanged -> storageFd.getFundId().equals(reqFd.getFundId())
-        && (!storageFd.getValue().equals(reqFd.getValue())
-            || storageFd.getDistributionType() != reqFd.getDistributionType()
-            || !StringUtils.equals(storageFd.getExpenseClassId(), reqFd.getExpenseClassId())
-           );
-  }
 
   public CompletableFuture<EncumbrancesProcessingHolder> processEncumbrance(CompositePurchaseOrder compPO, CompositePoLine compositePoLine) {
     EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();

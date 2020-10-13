@@ -719,11 +719,11 @@ public class MockServer {
     logger.info("got: " + ctx.request().path());
 
     List<BudgetExpenseClass> expenseClasses = getMockEntries(BUDGET_EXPENSE_CLASSES, BudgetExpenseClass.class)
-      .orElseGet(null);
+      .orElseGet(ArrayList::new);
 
     BudgetExpenseClassCollection expenseClassCollection = new BudgetExpenseClassCollection()
       .withBudgetExpenseClasses(expenseClasses)
-      .withTotalRecords(expenseClasses != null ? expenseClasses.size() : 0);
+      .withTotalRecords(expenseClasses.size());
 
     JsonObject entries = JsonObject.mapFrom(expenseClassCollection);
     serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
