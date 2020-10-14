@@ -1,4 +1,22 @@
-## 11.1.0 - Unreleased
+## 11.2.0 - Unreleased
+
+## 11.1.0 - Released
+The focus of this release was to migrate to JDK 11 and RMB v31.1.1. Release also contains several bug fixes for open order.  
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v11.0.6...v11.1.0)
+
+### Stories
+ * [MODORDERS-419](https://issues.folio.org/browse/MODORDERS-419) Update RMB v31.1.1
+ * [MODORDERS-414](https://issues.folio.org/browse/MODORDERS-414) Migrate mod-orders to JDK 11
+ * [MODORDERS-406](https://issues.folio.org/browse/MODORDERS-406) Prevent the creation of an encumbrance for an inactive expense class
+ * [MODORDERS-364](https://issues.folio.org/browse/MODORDERS-364) Encumbrances - tag inheritance
+	
+### Bug Fixes
+ * [MODORDERS-432](https://issues.folio.org/browse/MODORDERS-432) Payment must be possible if invoice line contains multiple fund distribution with same fund and different expense classes
+ * [MODORDERS-431](https://issues.folio.org/browse/MODORDERS-431) Piece quantity not changed, when location changed in Open order
+ * [MODORDERS-424](https://issues.folio.org/browse/MODORDERS-424) Encumbrance not updated when cost or quantity of POL edited
+ * [MODORDERS-423](https://issues.folio.org/browse/MODORDERS-423) Unable to open purchase order when POL currency different from system
+ * [MODORDERS-420](https://issues.folio.org/browse/MODORDERS-420) Update opened order line to inactive expense class should return inactiveExpenseClass error
 
 ## 11.0.6 - Released
 The focus of this release was to fix issue with updating order line for opened order

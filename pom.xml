@@ -60,6 +60,7 @@
     <sonar.test.exclusions>**/*Test.java</sonar.test.exclusions>
     <spring.version>5.2.7.RELEASE</spring.version>
     <vertx.version>3.9.3</vertx.version>
+    <argLine/>
   </properties>
 
   <repositories>
