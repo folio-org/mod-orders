@@ -1,9 +1,8 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-orders</artifactId>
-  <version>11.1.0-SNAPSHOT</version>
+  <version>11.2.0-SNAPSHOT</version>
 
   <name>Orders Business Logic</name>
   <description>Business logic to manage orders in FOLIO</description>
@@ -60,6 +59,7 @@
     <sonar.test.exclusions>**/*Test.java</sonar.test.exclusions>
     <spring.version>5.2.7.RELEASE</spring.version>
     <vertx.version>3.9.3</vertx.version>
+    <argLine />
   </properties>
 
   <repositories>
@@ -515,13 +515,11 @@
             <phase>prepare-package</phase>
             <configuration>
               <target>
-                <replace token="baseUri: https://github.com/folio-org/mod-orders"
-                         value="baseUri: http://localhost:${http.port}/apis" dir="${basedir}/target/classes/apidocs/raml">
-                  <include name="**/*.raml"/>
+                <replace token="baseUri: https://github.com/folio-org/mod-orders" value="baseUri: http://localhost:${http.port}/apis" dir="${basedir}/target/classes/apidocs/raml">
+                  <include name="**/*.raml" />
                 </replace>
-                <replace token="protocols: [ HTTP, HTTPS ]" value="protocols: [ HTTP ]"
-                         dir="${basedir}/target/classes/apidocs/raml">
-                  <include name="**/*.raml"/>
+                <replace token="protocols: [ HTTP, HTTPS ]" value="protocols: [ HTTP ]" dir="${basedir}/target/classes/apidocs/raml">
+                  <include name="**/*.raml" />
                 </replace>
               </target>
             </configuration>
@@ -573,7 +571,7 @@
                   </manifestEntries>
                 </transformer>
                 <!-- The following transformers are required to let javamoney API work fully as part of "fat" jar -->
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
                 <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                   <resource>javamoney.properties</resource>
                 </transformer>
@@ -592,7 +590,7 @@
                   </excludes>
                 </filter>
               </filters>
-              <artifactSet/>
+              <artifactSet />
               <outputFile>${project.build.directory}/${project.artifactId}-fat.jar</outputFile>
             </configuration>
           </execution>
