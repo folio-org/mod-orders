@@ -1,14 +1,21 @@
 package org.folio.helper;
 
+import static java.util.Collections.emptyList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
+import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
+import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.impl.ApiTestSuite.mockPort;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -23,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import org.folio.models.EncumbranceRelationsHolder;
@@ -31,14 +39,19 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.FiscalYear;
+import org.folio.rest.acq.model.finance.Fund;
+import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.impl.ApiTestBase;
+import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.TransactionService;
+import org.javamoney.moneta.Money;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -52,7 +65,7 @@ import io.vertx.core.json.JsonObject;
 public class FinanceHelperTest extends ApiTestBase {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14";
   private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
-  public static final String TENANT_ID = "oredertest";
+  public static final String TENANT_ID = "ordertest";
   public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, TENANT_ID);
   public static final String ACTIVE_BUDGET = "68872d8a-bf16-420b-829f-206da38f6c10";
 
@@ -299,6 +312,69 @@ public class FinanceHelperTest extends ApiTestBase {
   }
 
   @Test
+  public void shouldBuildEncumbrancesForFundDistributionsRelatedToDifferentLedgers() {
+    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    String fund1Id = UUID.randomUUID().toString();
+    String fund2Id = UUID.randomUUID().toString();
+
+    Ledger ledger1 = new Ledger().withId(UUID.randomUUID().toString())
+            .withRestrictEncumbrance(false);
+
+    Ledger ledger2 = new Ledger().withId(UUID.randomUUID().toString())
+            .withRestrictEncumbrance(true);
+
+    Fund fund1 = new Fund().withId(fund1Id)
+            .withLedgerId(ledger1.getId());
+
+    Fund fund2 = new Fund().withId(fund2Id)
+            .withLedgerId(ledger2.getId());
+
+
+    Budget budget1 = new Budget()
+            .withFundId(fund1Id)
+            .withAllocated(0d)
+            .withAllowableEncumbrance(100d)
+            .withBudgetStatus(Budget.BudgetStatus.ACTIVE);
+
+    Budget budget2 = new Budget()
+            .withFundId(fund2Id)
+            .withAllocated(1000d)
+            .withAllowableEncumbrance(100d)
+            .withBudgetStatus(Budget.BudgetStatus.ACTIVE);
+
+    MockServer.addMockEntry(BUDGETS, budget1);
+    MockServer.addMockEntry(BUDGETS, budget2);
+    MockServer.addMockEntry(FUNDS, fund1);
+    MockServer.addMockEntry(FUNDS, fund2);
+    MockServer.addMockEntry(LEDGERS, ledger1);
+    MockServer.addMockEntry(LEDGERS, ledger2);
+
+
+    FundDistribution fundDistribution1 = new FundDistribution()
+            .withFundId(fund1Id)
+            .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+            .withValue(50d);
+
+    FundDistribution fundDistribution2 = new FundDistribution()
+            .withFundId(fund2Id)
+            .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+            .withValue(50d);
+
+    CompositePoLine line = new CompositePoLine()
+            .withId(UUID.randomUUID().toString())
+            .withPurchaseOrderId(order.getId())
+            .withCost(new Cost().withCurrency("USD").withListUnitPrice(10d).withQuantityPhysical(1)
+              .withPoLineEstimatedPrice(10d))
+            .withFundDistribution(Arrays.asList(fundDistribution1, fundDistribution2));
+
+    CompletableFuture<List<EncumbranceRelationsHolder>> future = financeHelper.buildNewEncumbrances(order, Collections.singletonList(line), emptyList());
+    List<EncumbranceRelationsHolder> holders = future.join();
+
+    assertThat(holders, hasSize(2));
+  }
+
+  @Test
   public void testShouldUpdateEncumbranceWithNewAmountFromLineAndFundFromLine() {
     //Given
     FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
@@ -333,8 +409,7 @@ public class FinanceHelperTest extends ApiTestBase {
     String budgetId = UUID.randomUUID().toString();
     String fundId = UUID.randomUUID().toString();
     List<Budget> budgets = Collections.singletonList(new Budget().withId(budgetId).withFundId(fundId).withBudgetStatus(Budget.BudgetStatus.ACTIVE));
-    List<Transaction> transactions = Collections.singletonList(new Transaction().withFromFundId(fundId));
-    financeHelper.verifyBudgetsForEncumbrancesAreActive(budgets, transactions);
+    financeHelper.verifyBudgetsForEncumbrancesAreActive(budgets);
   }
 
   @Test(expected = HttpException.class)
@@ -343,8 +418,7 @@ public class FinanceHelperTest extends ApiTestBase {
     String budgetId = UUID.randomUUID().toString();
     String fundId = UUID.randomUUID().toString();
     List<Budget> budgets = Collections.singletonList(new Budget().withId(budgetId).withFundId(fundId).withBudgetStatus(Budget.BudgetStatus.INACTIVE));
-    List<Transaction> transactions = Collections.singletonList(new Transaction().withFromFundId(fundId));
-    financeHelper.verifyBudgetsForEncumbrancesAreActive(budgets, transactions);
+    financeHelper.verifyBudgetsForEncumbrancesAreActive(budgets);
   }
 
   @Test
