@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -195,17 +196,17 @@ public class FinanceHelper extends AbstractHelper {
 
   private CompletableFuture<Void> checkEncumbranceRestrictions(Map<String, List<Transaction>> trsGroupedByLedgerId,
       Map<String, List<Transaction>> groupedByFund) {
-    return getBudgets(groupedByFund).thenCombine(getLedgersByIds(new ArrayList<>(trsGroupedByLedgerId.keySet())),
+    return getBudgets(groupedByFund.keySet()).thenCombine(getLedgersByIds(trsGroupedByLedgerId.keySet()),
         (budgets, ledgers) -> {
+          verifyBudgetsForEncumbrancesAreActive(budgets);
           trsGroupedByLedgerId.forEach((ledgerId, transactions) -> {
             Ledger processedLedger = ledgers.stream()
               .filter(ledger -> ledger.getId().equals(ledgerId))
               .findFirst()
               .orElseThrow(() -> new HttpException(HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt(), LEDGER_NOT_FOUND_FOR_TRANSACTION.toError()));
 
-            verifyBudgetsForEncumbrancesAreActive(budgets, transactions);
 
-            if (processedLedger.getRestrictEncumbrance()) {
+            if (Boolean.TRUE.equals(processedLedger.getRestrictEncumbrance())) {
               checkEnoughMoneyForTransactions(transactions, budgets);
             }
           });
@@ -213,18 +214,20 @@ public class FinanceHelper extends AbstractHelper {
         });
   }
 
-  public void verifyBudgetsForEncumbrancesAreActive(List<Budget> budgets, List<Transaction> transactions) {
-    transactions.forEach(tr -> budgets.stream()
-      .filter(budget -> budget.getFundId().equals(tr.getFromFundId()))
-      .filter(budget -> budget.getBudgetStatus() == Budget.BudgetStatus.ACTIVE)
-      .findFirst()
-      .orElseThrow(() -> new HttpException(HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt(), BUDGET_IS_INACTIVE.toError())));
+  public void verifyBudgetsForEncumbrancesAreActive(List<Budget> budgets) {
+    if (budgets.stream().anyMatch(budget -> budget.getBudgetStatus() != Budget.BudgetStatus.ACTIVE)) {
+      throw  new HttpException(HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt(), BUDGET_IS_INACTIVE.toError());
+    }
   }
 
   private void checkEnoughMoneyForTransactions(List<Transaction> encumbrances, List<Budget> budgets) {
-    Map<String, MonetaryAmount> transactionAmountsByFunds = encumbrances.stream()
-      .collect(groupingBy(Transaction::getFromFundId, sumTransactionAmounts()));
-    checkEnoughMoneyInBudgets(budgets, transactionAmountsByFunds);
+    Map<String, MonetaryAmount> remainingAmountsByFunds = encumbrances.stream()
+            .collect(groupingBy(Transaction::getFromFundId, sumTransactionAmounts()));
+    Set<String> fundIds = encumbrances.stream().map(Transaction::getFromFundId).collect(Collectors.toSet());
+
+    List<Budget> relatedBudgets = budgets.stream().filter(budget -> fundIds.contains(budget.getFundId())).collect(toList());
+
+    checkEnoughMoneyInBudgets(relatedBudgets, remainingAmountsByFunds);
   }
 
   private void checkEnoughMoneyInBudgets(List<Budget> budgets, Map<String, MonetaryAmount> transactionAmountsByFunds) {
@@ -265,22 +268,17 @@ public class FinanceHelper extends AbstractHelper {
       .toList());
   }
 
-  private CompletableFuture<List<List<Budget>>> getBudgetsByChunks(Map<String, List<Transaction>> groupedByFund) {
-    return collectResultsOnSuccess(StreamEx.ofSubLists(new ArrayList<>(groupedByFund.entrySet()), MAX_IDS_FOR_GET_RQ)
-      .map(entries -> entries.stream()
-        .map(Map.Entry::getKey)
-        .distinct()
-        .collect(toList()))
+  private CompletableFuture<List<List<Budget>>> getBudgetsByChunks(Collection<String> fundIds) {
+    return collectResultsOnSuccess(StreamEx.ofSubLists(new ArrayList<>(fundIds), MAX_IDS_FOR_GET_RQ)
       .map(this::fetchBudgetsByFundIds)
       .toList());
   }
 
-  private CompletableFuture<List<Budget>> getBudgets(Map<String, List<Transaction>> groupedByFund) {
-    return getBudgetsByChunks(groupedByFund).thenApply(lists -> lists.stream()
+  private CompletableFuture<List<Budget>> getBudgets(Collection<String> fundIds) {
+    return getBudgetsByChunks(fundIds).thenApply(lists -> lists.stream()
       .flatMap(Collection::stream)
       .collect(Collectors.toList()));
   }
-
 
   private BiConsumer<HashMap<String, List<Transaction>>, Fund> accumulator(Map<String, List<Transaction>> groupedByFund) {
     return (map, fund) -> map.merge(fund.getLedgerId(), groupedByFund.get(fund.getId()), (transactions, transactions2) -> {
@@ -328,7 +326,7 @@ public class FinanceHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<List<Ledger>> getLedgersByIds(List<String> ledgerIds) {
+  private CompletableFuture<List<Ledger>> getLedgersByIds(Collection<String> ledgerIds) {
     String query = convertIdsToCqlQuery(ledgerIds, ID);
     String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
     String endpoint = String.format(GET_LEDGERS_WITH_SEARCH_PARAMS, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
