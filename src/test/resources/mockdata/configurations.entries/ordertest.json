@@ -1,0 +1,17 @@
+{
+  "configs": [
+    {
+      "id" : "582ac200-1793-4015-ad80-4dc4b2a1ea82",
+      "module" : "ORG",
+      "configName" : "localeSettings",
+      "enabled" : true,
+      "value" : "{\"locale\":\"en-US\",\"timezone\":\"UTC\",\"currency\":\"USD\"}"
+    }
+  ],
+  "totalRecords": 1,
+  "resultInfo": {
+    "totalRecords": 1,
+    "facets": [],
+    "diagnostics": []
+  }
+}
