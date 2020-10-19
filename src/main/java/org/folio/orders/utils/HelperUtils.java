@@ -63,11 +63,11 @@ import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.helper.AbstractHelper;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.client.ConfigurationsClient;
-import org.folio.helper.AbstractHelper;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -114,7 +114,7 @@ public class HelperUtils {
   public static final String DEFAULT_POLINE_LIMIT = "1";
   public static final String REASON_COMPLETE = "Complete";
   private static final String MAX_POLINE_LIMIT = "500";
-  public static final String OKAPI_URL = "X-Okapi-Url";
+  public static final String OKAPI_URL = "x-okapi-url";
   private static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
   public static final String LANG = "lang";
   public static final String URL_WITH_LANG_PARAM = "%s?" + LANG + "=%s";
@@ -691,7 +691,7 @@ public class HelperUtils {
    * @return resulting objects
    */
   public static <T> CompletableFuture<List<T>> collectResultsOnSuccess(List<CompletableFuture<T>> futures) {
-    return VertxCompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
        .thenApply(v -> futures
          .stream()
          // The CompletableFuture::join can be safely used because the `allOf` guaranties success at this step
@@ -1002,8 +1002,9 @@ public class HelperUtils {
     // Update receipt date and receipt status
     if (status == FULLY_RECEIVED) {
       poLine.setReceiptDate(new Date());
-    } else if (poLine.getCheckinItems() && poLine.getReceiptStatus()
-      .equals(ReceiptStatus.AWAITING_RECEIPT) && status == ReceiptStatus.PARTIALLY_RECEIVED) {
+    } else if (Boolean.TRUE.equals(poLine.getCheckinItems())
+            && poLine.getReceiptStatus() == ReceiptStatus.AWAITING_RECEIPT
+            && status == ReceiptStatus.PARTIALLY_RECEIVED) {
       // if checking in, set the receipt date only for the first piece
       poLine.setReceiptDate(new Date());
     } else {
