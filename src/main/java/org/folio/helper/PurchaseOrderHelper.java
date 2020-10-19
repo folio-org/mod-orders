@@ -382,13 +382,15 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
 
   public CompletableFuture<JsonObject> validateIfPOProtectedFieldsChanged(CompositePurchaseOrder compPO,
-      JsonObject compPOFromStorage) {
-    WorkflowStatus storagePOWorkflowStatus = WorkflowStatus.fromValue(compPOFromStorage.getString(WORKFLOW_STATUS));
+      JsonObject compPOFromStorageJson) {
+    WorkflowStatus storagePOWorkflowStatus = WorkflowStatus.fromValue(compPOFromStorageJson.getString(WORKFLOW_STATUS));
     if (!PENDING.equals(storagePOWorkflowStatus)) {
       List<String> fieldNames = OPEN.equals(storagePOWorkflowStatus) ? getFieldNamesForOpenOrder() : getFieldNames();
-      verifyProtectedFieldsChanged(fieldNames, compPOFromStorage, JsonObject.mapFrom(compPO));
+      // MODORDERS-429 double conversion required until HttpClient returns e.g. 'ongoing.renewalDate' in different format
+      CompositePurchaseOrder storageCompPO = compPOFromStorageJson.mapTo(CompositePurchaseOrder.class);
+      verifyProtectedFieldsChanged(fieldNames, JsonObject.mapFrom(storageCompPO), JsonObject.mapFrom(compPO));
     }
-    return completedFuture(compPOFromStorage);
+    return completedFuture(compPOFromStorageJson);
   }
 
   private JsonObject findCorrespondingCompositePoLine(CompositePoLine poLine, List<PoLine> poLinesFromStorage) {
