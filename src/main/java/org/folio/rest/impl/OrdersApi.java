@@ -9,6 +9,7 @@ import static org.folio.orders.utils.validators.CompositePoLineValidationUtil.va
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import javax.ws.rs.core.Response;
 
@@ -115,34 +116,31 @@ public class OrdersApi implements Orders {
   @Override
   @Validate
   public void putOrdersCompositeOrdersById(String orderId, String lang, CompositePurchaseOrder compPO,
-      Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     // Set order id from path if not specified in body
     populateOrderId(orderId, compPO);
 
     PurchaseOrderHelper helper = new PurchaseOrderHelper(okapiHeaders, vertxContext, lang);
-    helper
-      .validateExistingOrder(orderId, compPO)
-      .thenAccept(isValid -> {
+    helper.validateExistingOrder(orderId, compPO)
+      .thenCompose(isValid -> {
         logger.info("Order is valid: {}", isValid);
         if (Boolean.TRUE.equals(isValid)) {
-          helper
-            .updateOrder(compPO)
+          return helper.updateOrder(compPO)
             .thenAccept(v -> {
               if (logger.isInfoEnabled()) {
                 logger.info("Successfully Updated Order: " + JsonObject.mapFrom(compPO).encodePrettily());
               }
               asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
-            })
-            .exceptionally(t -> {
-              logger.error("Failed to update purchase order with id={}", t, orderId);
-              return handleErrorResponse(asyncResultHandler, helper, t);
             });
         } else {
-          asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422)));
+          logger.error("Validation error. Failed to update purchase order with id={}", orderId);
+          return CompletableFuture.runAsync(() -> asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422))));
         }
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+      .exceptionally(t -> {
+        logger.error("Failed to update purchase order with id={}", t, orderId);
+        return handleErrorResponse(asyncResultHandler, helper, t);
+      });
   }
 
   private void populateOrderId(String orderId, CompositePurchaseOrder compPO) {
