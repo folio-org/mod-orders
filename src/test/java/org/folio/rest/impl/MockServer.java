@@ -167,6 +167,7 @@ public class MockServer {
   public static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
   private static final String ITEMS_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/";
   public static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
+  public static final String BUDGET_EXPENSE_CLASSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "budgetExpenseClasses/budget_expense_classes.json";
   public static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
   public static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
@@ -716,17 +717,16 @@ public class MockServer {
   }
 
   private void handleGetBudgetExpenseClass(RoutingContext ctx) {
-    logger.info("got: " + ctx.request().path());
+    logger.info("handleGetBudgetExpenseClass: " + ctx.request().path());
+    try {
+      BudgetExpenseClassCollection expenseClassCollection = new JsonObject(getMockData(BUDGET_EXPENSE_CLASSES_MOCK_DATA_PATH))
+        .mapTo(BudgetExpenseClassCollection.class);
 
-    List<BudgetExpenseClass> expenseClasses = getMockEntries(BUDGET_EXPENSE_CLASSES, BudgetExpenseClass.class)
-      .orElseGet(ArrayList::new);
-
-    BudgetExpenseClassCollection expenseClassCollection = new BudgetExpenseClassCollection()
-      .withBudgetExpenseClasses(expenseClasses)
-      .withTotalRecords(expenseClasses.size());
-
-    JsonObject entries = JsonObject.mapFrom(expenseClassCollection);
-    serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+      JsonObject entries = JsonObject.mapFrom(expenseClassCollection);
+      serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+    } catch (IOException exception) {
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
+    }
   }
 
   private void handleGetCurrentFiscalYearByLedgerId(RoutingContext ctx) {

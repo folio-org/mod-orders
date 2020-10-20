@@ -1,0 +1,23 @@
+{
+  "budgetExpenseClasses": [
+    {
+      "id": "12b16b02-ad1d-4336-902a-0e0a3b7ef540",
+      "budgetId": "47ac60b4-159d-4e1c-9acb-8293df67d16d",
+      "expenseClassId": "5b5ebe3a-cf8b-4f16-a880-46873ef21388",
+      "status": "Active"
+    },
+    {
+      "id": "d73401d3-e9a0-4b0e-816a-73ded6d25840",
+      "budgetId": "47ac60b4-159d-4e1c-9acb-8293df67d16d",
+      "expenseClassId": "1bcc3247-99bf-4dca-9b0f-7bc51a2998c2",
+      "status": "Active"
+    },
+    {
+      "id": "a63db313-37e7-44c0-a130-98dc24f8dc13",
+      "budgetId": "47ac60b4-159d-4e1c-9acb-8293df67d16d",
+      "expenseClassId": "2fa1d78f-1f7d-4659-854b-9d03cd06f21c",
+      "status": "Inactive"
+    }
+  ],
+  "totalRecords": 3
+}

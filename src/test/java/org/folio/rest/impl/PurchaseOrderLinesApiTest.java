@@ -44,6 +44,7 @@ import static org.folio.rest.impl.MockServer.getQueryParams;
 import static org.folio.rest.impl.MockServer.getRqRsEntries;
 import static org.folio.rest.impl.MockServer.getTitlesSearches;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ID_FOR_PRINT_MONOGRAPH_ORDER;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_EXPENSE_CLASS_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -1137,7 +1138,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdatePolineForOpenedOrderWithIncativeExpenseClass() {
+  public void testUpdatePolineForOpenedOrderWithInactiveExpenseClass() {
     logger.info("=== Test update poline for opened order with inactive expense class ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
@@ -1150,15 +1151,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
     addMockEntry(PO_LINES, reqData);
 
-    // prepare inactive expense class
-    BudgetExpenseClass inactiveBudgetExClass = new BudgetExpenseClass()
-      .withId(UUID.randomUUID().toString())
-      .withExpenseClassId(UUID.randomUUID().toString())
-      .withStatus(BudgetExpenseClass.Status.INACTIVE);
-
-    addMockEntry(BUDGET_EXPENSE_CLASSES, inactiveBudgetExClass);
-
-    reqData.getFundDistribution().get(0).setExpenseClassId(inactiveBudgetExClass.getId());
+    reqData.getFundDistribution().get(0).setExpenseClassId(INACTIVE_EXPENSE_CLASS_ID);
 
     Errors errors = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData)
       .encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 400)

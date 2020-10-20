@@ -6,6 +6,7 @@ import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.containsAny;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
+import static org.folio.orders.utils.ErrorCodes.BUDGET_EXPENSE_CLASS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
@@ -136,6 +137,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
   static final String ACTIVE_VENDOR_ID = "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1";
   static final String INACTIVE_VENDOR_ID = "b1ef7e96-98f3-4f0d-9820-98c322c989d2";
+  static final String INACTIVE_EXPENSE_CLASS_ID = "2fa1d78f-1f7d-4659-854b-9d03cd06f21c";
   static final String NON_EXIST_VENDOR_ID = "bba87500-6e71-4057-a2a9-a091bac7e0c1";
   static final String MOD_VENDOR_INTERNAL_ERROR_ID = "bba81500-6e41-4057-a2a9-a081bac7e0c1";
   static final String VENDOR_WITH_BAD_CONTENT = "5a34ae0e-5a11-4337-be95-1a20cfdc3161";
@@ -822,7 +824,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdPEMixFormat() throws IOException {
+  public void testPutOrdersByIdPEMixFormat() {
     logger.info("=== Test Put Order By Id create Pieces with P/E Mix format ===");
     CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
 
@@ -1514,16 +1516,32 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setExpenseClassId(UUID.randomUUID().toString());
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setExpenseClassId(INACTIVE_EXPENSE_CLASS_ID);
     preparePiecesForCompositePo(reqData);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    MockServer.addMockEntry(BUDGET_EXPENSE_CLASSES, JsonObject.mapFrom(new BudgetExpenseClass().withId(UUID.randomUUID().toString())));
     reqData.getCompositePoLines().forEach(this::createMockTitle);
 
     Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 400)
       .as(Errors.class);
 
     assertThat(errors.getErrors().get(0).getCode(),is(INACTIVE_EXPENSE_CLASS.toError().getCode()));
+  }
+
+  @Test
+  public void testOpenOrderWithExpenseClassNotFound() throws Exception {
+    logger.info("=== Test to try open order with expense class not found ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setExpenseClassId(UUID.randomUUID().toString());
+    preparePiecesForCompositePo(reqData);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.getCompositePoLines().forEach(this::createMockTitle);
+
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 400)
+      .as(Errors.class);
+
+    assertThat(errors.getErrors().get(0).getCode(),is(BUDGET_EXPENSE_CLASS_NOT_FOUND.toError().getCode()));
   }
 
 
@@ -3358,7 +3376,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     assertEquals(BUDGET_IS_INACTIVE.getCode(), errors.getErrors().get(0).getCode());
 
-    List<PoLine> updatedPolines = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).stream().map(poline -> poline.mapTo(PoLine.class)).collect(Collectors.toList());;
+    List<PoLine> updatedPolines = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT)
+      .stream()
+      .map(poline -> poline.mapTo(PoLine.class))
+      .collect(Collectors.toList());
     // check size of update request (expected 2 of 3)
     assertEquals(2, updatedPolines.size());
     // check encumbrance id was populated
@@ -3375,9 +3396,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
   private void removeAllEncumbranceLinks(CompositePurchaseOrder reqData) {
     reqData.getCompositePoLines().forEach(poLine ->
-      poLine.getFundDistribution().forEach(fundDistribution -> {
-        fundDistribution.setEncumbrance(null);
-      })
+      poLine.getFundDistribution().forEach(fundDistribution -> fundDistribution.setEncumbrance(null))
     );
   }
 

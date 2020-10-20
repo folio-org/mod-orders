@@ -614,8 +614,9 @@ public class FinanceHelper extends AbstractHelper {
           .collect(toList());
 
         List<String> fdExpenseClassesList = new ArrayList<>(expenseClassesByFundId.getValue());
+        // leave only the difference between stored and requested entities
         fdExpenseClassesList.removeAll(budgetExpenseClassIds);
-
+        // empty collection means that all requested entities are present in database
         if (fdExpenseClassesList.isEmpty()) {
           return budgetExpenseClasses;
         } else {
@@ -625,7 +626,9 @@ public class FinanceHelper extends AbstractHelper {
       .thenAccept(budgetExpenseClasses -> {
         boolean hasInactiveExpenseClass = budgetExpenseClasses.getBudgetExpenseClasses()
           .stream()
+          .filter(budgetExpenseClass -> expenseClassesByFundId.getValue().contains(budgetExpenseClass.getExpenseClassId()))
           .anyMatch(expenseClass -> BudgetExpenseClass.Status.INACTIVE.equals(expenseClass.getStatus()));
+
         if (hasInactiveExpenseClass) {
           throw buildBudgetExpenseClassHttpException(expenseClassesByFundId.getKey(), expenseClassesByFundId.getValue(), INACTIVE_EXPENSE_CLASS.toError());
         }
