@@ -77,6 +77,7 @@ import org.folio.models.PoLineUpdateHolder;
 import org.folio.models.PoLineFundHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.LocationUtil;
@@ -814,6 +815,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
    */
   private CompletableFuture<Void> createPieces(CompositePoLine compPOL, String titleId,
                                                List<Piece> expectedPiecesWithItem, boolean isOpenOrderFlow) {
+    int createdItemsQuantity = expectedPiecesWithItem.size();
     // do not create pieces in case of check-in flow
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
       return completedFuture(null);
@@ -832,7 +834,8 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
         piecesToCreate.forEach(piece -> piece.setTitleId(titleId));
 
         return allOf(piecesToCreate.stream().map(this::createPiece).toArray(CompletableFuture[]::new));
-      });
+      })
+      .thenAccept(v -> validateItemsCreation(compPOL, createdItemsQuantity));
   }
 
   /**
@@ -1342,5 +1345,14 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   private CompletableFuture<PieceCollection> getExpectedPiecesByLineId(String poLineId) {
     String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, Piece.ReceivingStatus.EXPECTED.value());
     return piecesHelper.getPieces(Integer.MAX_VALUE, 0, query);
+  }
+
+  private void validateItemsCreation(CompositePoLine compPOL, int itemsSize) {
+    int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
+    if (itemsSize != expectedItemsQuantity) {
+      String message = String.format("Error creating items for PO Line with '%s' id. Expected %d but %d created",
+        compPOL.getId(), expectedItemsQuantity, itemsSize);
+      throw new InventoryException(message);
+    }
   }
 }
