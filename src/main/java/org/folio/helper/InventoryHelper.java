@@ -118,7 +118,7 @@ public class InventoryHelper extends AbstractHelper {
   private static final String LOOKUP_ITEM_STOR_ENDPOINT = "/item-storage/items?query=%s&limit=%d&lang=%s";
   private static final String LOOKUP_ITEM_ENDPOINT = "/inventory/items?query=%s&limit=%d&lang=%s";
   private static final String CREATE_ITEM_STOR_ENDPOINT = "/item-storage/items?lang=%s";
-  private static final String UPDATE_ITEM_BY_ID_ENDPOINT = "/inventory/items/%s?lang=%s";
+  public static final String UPDATE_ITEM_BY_ID_ENDPOINT = "/inventory/items/%s?lang=%s";
   private static final String HOLDINGS_LOOKUP_QUERY = "instanceId==%s and permanentLocationId==%s";
   private static final String HOLDINGS_CREATE_ENDPOINT = "/holdings-storage/holdings?lang=%s";
   private static final String HOLDINGS_UPDATE_ENDPOINT = "/holdings-storage/holdings/%s?lang=%s";
@@ -389,7 +389,7 @@ public class InventoryHelper extends AbstractHelper {
   private JsonObject getHoldingByLocationId(JsonObject holdings, String locationId) {
     JsonObject prevHolding;
     prevHolding = holdings.getJsonArray(HOLDINGS_RECORDS).stream()
-      .filter(item -> ((JsonObject) item).getString("permanentLocationId").equals(locationId))
+      .filter(item -> ((JsonObject) item).getString(HOLDING_PERMANENT_LOCATION_ID).equals(locationId))
       .map(item -> (JsonObject)item)
       .findAny()
       .orElseThrow(() -> new CompletionException(new InventoryException(String.format("No records for location '%s' can be found", locationId))));

@@ -858,7 +858,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
         List<PoLineUpdateHolder> poLineUpdateHolders = LocationUtil.convertToOldNewLocationIdPair(compPOL.getLocations(), storagePoLine.getLocations());
         if (!poLineUpdateHolders.isEmpty() && !isOpenOrderFlow) {
           List<Piece> needUpdatePeices = new ArrayList<>();
-          Map<String, List<Piece>> groupedPieces = piecesWithLocationToProcess.stream().collect(groupingBy(Piece::getLocationId));
           poLineUpdateHolders.forEach(poLineUpdateHolder -> {
             List<Piece> pieces = existingPieces.stream()
                                                .filter(piece -> piece.getLocationId().equals(poLineUpdateHolder.getOldLocationId()))
