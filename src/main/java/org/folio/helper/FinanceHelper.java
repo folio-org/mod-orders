@@ -1,8 +1,10 @@
 package org.folio.helper;
 
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
+import static org.folio.orders.utils.ErrorCodes.BUDGET_EXPENSE_CLASS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
@@ -10,6 +12,8 @@ import static org.folio.orders.utils.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ErrorCodes.INACTIVE_EXPENSE_CLASS;
 import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
+import static org.folio.orders.utils.HelperUtils.EXPENSE_CLASS_ID;
+import static org.folio.orders.utils.HelperUtils.FUND_ID;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
@@ -53,6 +57,7 @@ import org.folio.models.PoLineFundHolder;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Budget;
+import org.folio.rest.acq.model.finance.BudgetExpenseClass;
 import org.folio.rest.acq.model.finance.BudgetExpenseClassCollection;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.FiscalYear;
@@ -66,6 +71,7 @@ import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -166,7 +172,7 @@ public class FinanceHelper extends AbstractHelper {
 
 
   private Collector<Transaction, ?, MonetaryAmount> sumTransactionAmounts() {
-    return Collectors.mapping(tx -> Money.of(tx.getAmount(), systemCurrency),
+    return mapping(tx -> Money.of(tx.getAmount(), systemCurrency),
       Collectors.reducing(Money.of(0, systemCurrency), MonetaryFunctions::sum));
   }
 
@@ -584,35 +590,55 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   public CompletableFuture<Void> validateExpenseClasses(List<CompositePoLine> poLines) {
-    List<FundDistribution> fundDistributionsWithExpenseClasses = poLines.stream()
+    Map<String, List<String>> expenseClassesByFundId = poLines.stream()
       .flatMap(poLine -> poLine.getFundDistribution().stream())
       .filter(fundDistribution -> Objects.nonNull(fundDistribution.getExpenseClassId()))
-      .collect(toList());
+      .collect(groupingBy(FundDistribution::getFundId, mapping(FundDistribution::getExpenseClassId, toList())));
 
-    return allOf(ctx, fundDistributionsWithExpenseClasses.stream()
+    return allOf(ctx, expenseClassesByFundId.entrySet().stream()
       .map(this::checkExpenseClassIsActiveByFundDistribution)
       .toArray(CompletableFuture[]::new));
   }
 
-  private CompletableFuture<Void> checkExpenseClassIsActiveByFundDistribution(FundDistribution fundDistribution) {
-    String query = String.format("budget.fundId==%s and budget.budgetStatus==Active and status==Inactive and expenseClassId==%s",
-      fundDistribution.getFundId(), fundDistribution.getExpenseClassId());
+  private CompletableFuture<Void> checkExpenseClassIsActiveByFundDistribution(Map.Entry<String, List<String>> expenseClassesByFundId) {
+    String query = String.format("budget.fundId==%s and budget.budgetStatus==Active", expenseClassesByFundId.getKey());
     String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
     String endpoint = String.format(GET_BUDGET_EXPENSE_CLASSES_QUERY, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
 
     return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(entries -> entries.mapTo(BudgetExpenseClassCollection.class))
+      .thenApply(budgetExpenseClasses -> {
+        List<String> budgetExpenseClassIds = budgetExpenseClasses.getBudgetExpenseClasses()
+          .stream()
+          .map(BudgetExpenseClass::getExpenseClassId)
+          .collect(toList());
+
+        List<String> fdExpenseClassesList = new ArrayList<>(expenseClassesByFundId.getValue());
+        fdExpenseClassesList.removeAll(budgetExpenseClassIds);
+
+        if (fdExpenseClassesList.isEmpty()) {
+          return budgetExpenseClasses;
+        } else {
+          throw buildBudgetExpenseClassHttpException(expenseClassesByFundId.getKey(), fdExpenseClassesList, BUDGET_EXPENSE_CLASS_NOT_FOUND.toError());
+        }
+      })
       .thenAccept(budgetExpenseClasses -> {
-        if (budgetExpenseClasses.getTotalRecords() > 0) {
-          throw new HttpException(400, INACTIVE_EXPENSE_CLASS.toError()
-            .withParameters(Arrays.asList(
-              new Parameter()
-                .withKey("fundId").withValue(fundDistribution.getFundId()),
-              new Parameter()
-                .withKey("expenseClassId").withValue(fundDistribution.getExpenseClassId())
-            )));
+        boolean hasInactiveExpenseClass = budgetExpenseClasses.getBudgetExpenseClasses()
+          .stream()
+          .anyMatch(expenseClass -> BudgetExpenseClass.Status.INACTIVE.equals(expenseClass.getStatus()));
+        if (hasInactiveExpenseClass) {
+          throw buildBudgetExpenseClassHttpException(expenseClassesByFundId.getKey(), expenseClassesByFundId.getValue(), INACTIVE_EXPENSE_CLASS.toError());
         }
       });
+  }
+
+  private HttpException buildBudgetExpenseClassHttpException(String fundId, List<String> fdExpenseClassesList, Error error){
+    throw new HttpException(400, error
+      .withParameters(Arrays.asList(
+        new Parameter().withKey(FUND_ID)
+          .withValue(fundId),
+        new Parameter().withKey(EXPENSE_CLASS_ID)
+          .withValue(String.join(", ", fdExpenseClassesList)))));
   }
 
   public CompletableFuture<Void> validateExpenseClassesForOpenedOrder(CompositePurchaseOrder compOrder, List<CompositePoLine> compositePoLines) {
