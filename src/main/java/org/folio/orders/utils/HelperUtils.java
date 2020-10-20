@@ -1082,20 +1082,6 @@ public class HelperUtils {
     return data instanceof JsonObject ? (JsonObject) data : JsonObject.mapFrom(data);
   }
 
-  public static <T> Map<Integer, List<T>> buildIdsChunks(List<T> source, int maxListRecords) {
-    int size = source.size();
-    if (size <= 0)
-      return Collections.emptyMap();
-    int fullChunks = (size - 1) / maxListRecords;
-    HashMap<Integer, List<T>> idChunkMap = new HashMap<>();
-    IntStream.range(0, fullChunks + 1)
-      .forEach(n -> {
-        List<T> subList = source.subList(n * maxListRecords, n == fullChunks ? size : (n + 1) * maxListRecords);
-        idChunkMap.put(n, subList);
-      });
-    return idChunkMap;
-  }
-
   public static String getEndpointWithQuery(String query, Logger logger) {
     return isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
   }
