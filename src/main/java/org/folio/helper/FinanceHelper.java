@@ -114,7 +114,6 @@ public class FinanceHelper extends AbstractHelper {
           , TransactionService transactionService) {
     super(httpClient, okapiHeaders, ctx, lang);
     this.transactionService = transactionService;
-    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
   }
 
   /**

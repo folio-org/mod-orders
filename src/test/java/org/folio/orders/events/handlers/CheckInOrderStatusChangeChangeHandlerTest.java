@@ -19,6 +19,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
+import io.vertx.ext.unit.junit.RunTestOnContext;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -27,12 +28,15 @@ import java.util.stream.Stream;
 
 import javax.ws.rs.core.Response;
 
+import org.folio.config.ApplicationConfig;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.impl.ApiTestBase;
 import org.folio.helper.CheckinHelper;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus;
+import org.folio.spring.SpringContextUtil;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -57,11 +61,14 @@ public class CheckInOrderStatusChangeChangeHandlerTest extends ApiTestBase {
 
   private static Vertx vertx;
 
+  @ClassRule
+  public static RunTestOnContext rule = new RunTestOnContext();
+
   @BeforeClass
   public static void before() throws InterruptedException, ExecutionException, TimeoutException {
     ApiTestBase.before();
-
-    vertx = Vertx.vertx();
+    vertx = rule.vertx();
+    SpringContextUtil.init(vertx, vertx.getOrCreateContext(), ApplicationConfig.class);
     vertx.eventBus().consumer(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address, new CheckInOrderStatusChangeChangeHandler(vertx));
   }
 

@@ -15,7 +15,6 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -51,7 +50,6 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.TransactionService;
-import org.javamoney.moneta.Money;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -391,7 +389,7 @@ public class FinanceHelperTest extends ApiTestBase {
 
   @Test
   public void testShouldReturnCurrentFiscalYearForLedger() {
-    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en");
+    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
     String ledgerId = UUID.randomUUID().toString();
     FiscalYear fy = financeHelper.getCurrentFiscalYear(ledgerId).join();
     assertNotNull(fy);
@@ -399,13 +397,13 @@ public class FinanceHelperTest extends ApiTestBase {
 
   @Test(expected = CompletionException.class)
   public void testShouldThrowHttpException() {
-    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en");
+    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
     financeHelper.getCurrentFiscalYear(ID_DOES_NOT_EXIST).join();
   }
 
   @Test
   public void testBudgetShouldBeActive() {
-    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en");
+    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
     String budgetId = UUID.randomUUID().toString();
     String fundId = UUID.randomUUID().toString();
     List<Budget> budgets = Collections.singletonList(new Budget().withId(budgetId).withFundId(fundId).withBudgetStatus(Budget.BudgetStatus.ACTIVE));
@@ -414,7 +412,7 @@ public class FinanceHelperTest extends ApiTestBase {
 
   @Test(expected = HttpException.class)
   public void testShouldThrowExceptionIfBudgetIsNotActive() {
-    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en");
+    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
     String budgetId = UUID.randomUUID().toString();
     String fundId = UUID.randomUUID().toString();
     List<Budget> budgets = Collections.singletonList(new Budget().withId(budgetId).withFundId(fundId).withBudgetStatus(Budget.BudgetStatus.INACTIVE));
@@ -423,14 +421,14 @@ public class FinanceHelperTest extends ApiTestBase {
 
   @Test
   public void testShouldReturnActiveBudgetForFund() {
-    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en");
+    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
     Budget budget = financeHelper.getActiveBudgetByFundId(ACTIVE_BUDGET).join();
     assertNotNull(budget);
   }
 
   @Test(expected = CompletionException.class)
   public void testShouldThrowExceptionIfActiveBudgetForFund() {
-    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en");
+    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
     Budget budget = financeHelper.getActiveBudgetByFundId(UUID.randomUUID().toString()).join();
     assertNotNull(budget);
   }
