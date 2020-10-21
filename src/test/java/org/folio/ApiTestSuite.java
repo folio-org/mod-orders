@@ -1,4 +1,4 @@
-package org.folio.rest.impl;
+package org.folio;
 
 import io.restassured.RestAssured;
 import io.vertx.core.DeploymentOptions;
@@ -13,6 +13,18 @@ import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
 import org.folio.orders.events.handlers.ReceiptStatusConsistencyTest;
 import org.folio.orders.utils.HelperUtilsTest;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.core.RestClientTest;
+import org.folio.rest.impl.AcquisitionsMembershipsTests;
+import org.folio.rest.impl.AcquisitionsUnitsTests;
+import org.folio.rest.impl.CheckinReceivingApiTest;
+import org.folio.rest.impl.MockServer;
+import org.folio.rest.impl.OrderTemplateTest;
+import org.folio.rest.impl.PieceApiTest;
+import org.folio.rest.impl.PoNumberApiTest;
+import org.folio.rest.impl.PurchaseOrderLinesApiTest;
+import org.folio.rest.impl.PurchaseOrdersApiTest;
+import org.folio.rest.impl.ReceivingHistoryApiTest;
+import org.folio.rest.impl.TitlesApiTest;
 import org.folio.rest.impl.crud.ConfigurationCrudTest;
 import org.folio.rest.impl.protection.LinesProtectionTest;
 import org.folio.rest.impl.protection.OrdersProtectionTest;
@@ -67,6 +79,7 @@ import static org.hamcrest.Matchers.is;
   PurchaseOrderLineHelperTest.class,
   HelperUtilsTest.class,
   TransactionServiceTest.class,
+  RestClientTest.class,
 })
 public class ApiTestSuite {
 

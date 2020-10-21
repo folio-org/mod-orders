@@ -7,7 +7,7 @@ import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.rest.impl.ApiTestSuite.mockPort;
+import static org.folio.ApiTestSuite.mockPort;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
 import static org.hamcrest.MatcherAssert.assertThat;
