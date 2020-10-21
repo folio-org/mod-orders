@@ -13,6 +13,7 @@ import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
 import org.folio.orders.events.handlers.ReceiptStatusConsistencyTest;
 import org.folio.orders.utils.HelperUtilsTest;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.core.RestClientTest;
 import org.folio.rest.impl.crud.ConfigurationCrudTest;
 import org.folio.rest.impl.protection.LinesProtectionTest;
 import org.folio.rest.impl.protection.OrdersProtectionTest;
@@ -67,6 +68,7 @@ import static org.hamcrest.Matchers.is;
   PurchaseOrderLineHelperTest.class,
   HelperUtilsTest.class,
   TransactionServiceTest.class,
+  RestClientTest.class,
 })
 public class ApiTestSuite {
 
