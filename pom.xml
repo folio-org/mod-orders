@@ -126,7 +126,7 @@
     <dependency>
       <groupId>io.rest-assured</groupId>
       <artifactId>rest-assured</artifactId>
-      <version>4.3.0</version>
+      <version>4.3.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -566,6 +566,7 @@
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                   <manifestEntries>
+                    <Multi-Release>true</Multi-Release>
                     <Main-Class>org.folio.rest.RestLauncher</Main-Class>
                     <Main-Verticle>org.folio.rest.RestVerticle</Main-Verticle>
                   </manifestEntries>
@@ -587,6 +588,7 @@
                   <artifact>*:*</artifact>
                   <excludes>
                     <exclude>**/log4j.properties</exclude>
+                    <exclude>**/Log4j2Plugins.dat</exclude>
                   </excludes>
                 </filter>
               </filters>
