@@ -229,7 +229,7 @@ public class MockServer {
   private final int port;
   private final Vertx vertx;
 
-  public MockServer(int port) {
+  MockServer(int port) {
     this.port = port;
     this.vertx = Vertx.vertx();
   }
@@ -240,7 +240,7 @@ public class MockServer {
       .forEach(line -> addMockEntry(TITLES, ApiTestBase.getTitle(line)));
   }
 
-  public void start() throws InterruptedException, ExecutionException, TimeoutException {
+  void start() throws InterruptedException, ExecutionException, TimeoutException {
     // Setup Mock Server...
     HttpServer server = vertx.createHttpServer();
     CompletableFuture<HttpServer> deploymentComplete = new CompletableFuture<>();
@@ -255,7 +255,7 @@ public class MockServer {
     deploymentComplete.get(60, TimeUnit.SECONDS);
   }
 
-  public void close() {
+  void close() {
     vertx.close(res -> {
       if (res.failed()) {
         logger.error("Failed to shut down mock server", res.cause());
