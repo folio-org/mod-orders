@@ -116,9 +116,8 @@ public class InventoryHelper extends AbstractHelper {
   private static final String CREATE_INSTANCE_ENDPOINT = "/inventory/instances?lang=%s";
   private static final String LOOKUP_ITEM_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
   private static final String LOOKUP_ITEM_STOR_ENDPOINT = "/item-storage/items?query=%s&limit=%d&lang=%s";
-  private static final String LOOKUP_ITEM_ENDPOINT = "/inventory/items?query=%s&limit=%d&lang=%s";
   private static final String CREATE_ITEM_STOR_ENDPOINT = "/item-storage/items?lang=%s";
-  public static final String UPDATE_ITEM_BY_ID_ENDPOINT = "/inventory/items/%s?lang=%s";
+  public static final String  UPDATE_ITEM_BY_ID_ENDPOINT = "/inventory/items/%s?lang=%s";
   private static final String HOLDINGS_LOOKUP_QUERY = "instanceId==%s and permanentLocationId==%s";
   private static final String HOLDINGS_CREATE_ENDPOINT = "/holdings-storage/holdings?lang=%s";
   private static final String HOLDINGS_UPDATE_ENDPOINT = "/holdings-storage/holdings/%s?lang=%s";
@@ -764,7 +763,7 @@ public class InventoryHelper extends AbstractHelper {
 
   private CompletableFuture<List<JsonObject>> searchExistingItems(String poLineId, String holdingId, int expectedQuantity) {
     String query = encodeQuery(String.format(LOOKUP_ITEM_QUERY, poLineId, holdingId), logger);
-    String endpoint = String.format(LOOKUP_ITEM_ENDPOINT, query, expectedQuantity, lang);
+    String endpoint = String.format(INVENTORY_LOOKUP_ENDPOINTS.get(ITEMS), query, expectedQuantity, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(itemsCollection -> {
         List<JsonObject> items = extractEntities(itemsCollection, ITEMS);
