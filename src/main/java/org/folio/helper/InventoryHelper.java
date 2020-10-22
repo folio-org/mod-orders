@@ -120,7 +120,6 @@ public class InventoryHelper extends AbstractHelper {
   public static final String  UPDATE_ITEM_BY_ID_ENDPOINT = "/inventory/items/%s?lang=%s";
   private static final String HOLDINGS_LOOKUP_QUERY = "instanceId==%s and permanentLocationId==%s";
   private static final String HOLDINGS_CREATE_ENDPOINT = "/holdings-storage/holdings?lang=%s";
-  private static final String HOLDINGS_UPDATE_ENDPOINT = "/holdings-storage/holdings/%s?lang=%s";
   public static final String ID = "id";
   public static final String TOTAL_RECORDS = "totalRecords";
 
