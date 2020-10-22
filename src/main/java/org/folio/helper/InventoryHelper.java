@@ -376,7 +376,8 @@ public class InventoryHelper extends AbstractHelper {
           holder.withOldHoldingId(prevHolding.getString(ID));
         }
         if (holdings.getJsonArray(HOLDINGS_RECORDS).size() == 1) {
-          return updateHoldingsRecordLocation(prevHolding, holder.getNewLocationId());
+          return getOrCreateHoldingsRecord(holder.getInstanceId(), holder.getNewLocationId())
+                                  .thenAccept(holder::withNewHoldingId);
         } else if (holdings.getJsonArray(HOLDINGS_RECORDS).size() == 2) {
           newHolding = getHoldingByLocationId(holdings, holder.getNewLocationId());
           holder.withNewHoldingId(newHolding.getString(ID));
