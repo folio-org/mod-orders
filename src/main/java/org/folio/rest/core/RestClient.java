@@ -65,18 +65,18 @@ public class RestClient {
       client
         .request(HttpMethod.POST, recordData.toBuffer(), endpoint, requestContext.getHeaders())
         .thenApply(HelperUtils::verifyAndExtractBody)
-        .handle((body, t) -> {
+        .thenAccept(body -> {
           client.closeClient();
-          if (t != null) {
-            logger.error("'POST {}' request failed. Request body: {}", t.getCause(), endpoint, recordData.encodePrettily());
-            future.completeExceptionally(t.getCause());
-          } else {
-            T responseEntity = body.mapTo(responseType);
-            if (logger.isDebugEnabled()) {
-              logger.debug("'POST {}' request successfully processed. Record with '{}' id has been created", endpoint, body);
-            }
-            future.complete(responseEntity);
+          T responseEntity = body.mapTo(responseType);
+          if (logger.isDebugEnabled()) {
+            logger.debug("'POST {}' request successfully processed. Record with '{}' id has been created", endpoint, body);
           }
+          future.complete(responseEntity);
+        })
+        .exceptionally(t -> {
+          client.closeClient();
+          logger.error("'POST {}' request failed. Request body: {}", t.getCause(), endpoint, recordData.encodePrettily());
+          future.completeExceptionally(t.getCause());
           return null;
         });
     } catch (Exception e) {
@@ -103,14 +103,14 @@ public class RestClient {
       client
         .request(HttpMethod.PUT, recordData.toBuffer(), endpoint, requestContext.getHeaders())
         .thenAccept(HelperUtils::verifyResponse)
-        .handle((aVoid, t) -> {
+        .thenAccept(avoid -> {
           client.closeClient();
-          if (t != null) {
-            future.completeExceptionally(t.getCause());
-            logger.error("'PUT {}' request failed. Request body: {}", t.getCause(), endpoint, recordData.encodePrettily());
-          } else {
-            future.complete(null);
-          }
+          future.complete(null);
+        })
+        .exceptionally(t -> {
+          client.closeClient();
+          future.completeExceptionally(t.getCause());
+          logger.error("'PUT {}' request failed. Request body: {}", t.getCause(), endpoint, recordData.encodePrettily());
           return null;
         });
     } catch (Exception e) {
@@ -134,14 +134,14 @@ public class RestClient {
     try {
       client.request(HttpMethod.DELETE, endpoint, requestContext.getHeaders())
         .thenAccept(HelperUtils::verifyResponse)
-        .handle((aVoid, t) -> {
+        .thenAccept(aVoid -> {
           client.closeClient();
-          if (t != null) {
-            logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, HttpMethod.DELETE, endpoint);
-            future.completeExceptionally(t.getCause());
-          } else {
-            future.complete(null);
-          }
+          future.complete(null);
+        })
+        .exceptionally(t -> {
+          client.closeClient();
+          logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, HttpMethod.DELETE, endpoint);
+          future.completeExceptionally(t.getCause());
           return null;
         });
     } catch (Exception e) {
@@ -169,22 +169,18 @@ public class RestClient {
           }
           return verifyAndExtractBody(response);
         })
-        .handle((body, t) -> {
-          try {
-            client.closeClient();
-            if (t != null) {
-              logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, HttpMethod.GET, endpoint);
-              future.completeExceptionally(t.getCause());
-            } else {
-              if (logger.isDebugEnabled()) {
-                logger.debug("The response body for GET {}: {}", endpoint, nonNull(body) ? body.encodePrettily() : null);
-              }
-              S responseEntity = body.mapTo(responseType);
-              future.complete(responseEntity);
-            }
-          } catch (Exception e) {
-            future.completeExceptionally(e);
+        .thenAccept(body -> {
+          client.closeClient();
+          if (logger.isDebugEnabled()) {
+            logger.debug("The response body for GET {}: {}", endpoint, nonNull(body) ? body.encodePrettily() : null);
           }
+          S responseEntity = body.mapTo(responseType);
+          future.complete(responseEntity);
+        })
+        .exceptionally(t -> {
+          client.closeClient();
+          logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, HttpMethod.GET, endpoint);
+          future.completeExceptionally(t.getCause());
           return null;
         });
     } catch (Exception e) {
