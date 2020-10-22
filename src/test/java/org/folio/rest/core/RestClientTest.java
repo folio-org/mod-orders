@@ -58,7 +58,6 @@ public class RestClientTest {
   @Test
   public void testGetShouldSearchById() throws Exception {
     RestClient restClient = Mockito.spy(new RestClient(PURCHASE_ORDER));
-
     String uuid = UUID.randomUUID().toString();
     String endpoint = PURCHASE_ORDER + "/" + uuid;
     Transaction expTransaction = new Transaction().withId(uuid);
