@@ -35,6 +35,7 @@ import org.folio.service.PrefixServiceTest;
 import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
 import org.folio.service.TransactionServiceTest;
+import org.folio.service.exchange.ManualExchangeRateProviderTest;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
@@ -79,6 +80,7 @@ import static org.hamcrest.Matchers.is;
   PurchaseOrderLineHelperTest.class,
   HelperUtilsTest.class,
   TransactionServiceTest.class,
+  ManualExchangeRateProviderTest.class,
   RestClientTest.class,
 })
 public class ApiTestSuite {
