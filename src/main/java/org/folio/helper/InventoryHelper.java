@@ -396,13 +396,6 @@ public class InventoryHelper extends AbstractHelper {
     return prevHolding;
   }
 
-  private CompletableFuture<Void> updateHoldingsRecordLocation(JsonObject jsonHolding, String locationId) {
-    jsonHolding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
-    String holdingId = extractId(jsonHolding);
-    return handleUpdateRequest(String.format(HOLDINGS_UPDATE_ENDPOINT, holdingId, lang), jsonHolding);
-  }
-
-
   public CompletableFuture<String> getOrCreateHoldingsRecord(String instanceId, String locationId) {
     String query = encodeQuery(String.format(HOLDINGS_LOOKUP_QUERY, instanceId, locationId), logger);
     String endpoint = buildLookupEndpoint(HOLDINGS_RECORDS, query, lang);
