@@ -155,6 +155,7 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.ext.web.impl.RoutingContextImpl;
 import one.util.streamex.StreamEx;
 
 public class MockServer {
@@ -189,6 +190,7 @@ public class MockServer {
   public static final String LEDGERS_PATH = BASE_MOCK_DATA_PATH + "ledgers/ledgers.json";
   public static final String ENCUMBRANCE_PATH = BASE_MOCK_DATA_PATH + "encumbrances/valid_encumbrances.json";
   public static final String ENCUMBRANCE_FOR_TAGS_PATH = BASE_MOCK_DATA_PATH + "encumbrances/encumbrance_for_tags_inheritance.json";
+  public static final String HOLDINGS_OLD_NEW_PATH = BASE_MOCK_DATA_PATH + "holdingsRecords/holdingRecords-old-new.json";
 
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";
@@ -222,7 +224,9 @@ public class MockServer {
   static final String LOAN_TYPES = "loantypes";
   static final String IS_DELETED_PROP = "isDeleted";
   static final String ALL_UNITS_CQL = IS_DELETED_PROP + "=*";
-
+  public static final String INSTANCE_ID = "45e6d2cc-e4ca-4048-b0f9-ec0be269342a";
+  public static final String OLD_HOLDING_ID = "758258bc-ecc1-41b8-abca-f7b610822ffd";
+  public static final String NEW_HOLDING_ID = "fcd64ce1-6995-48f0-840e-89ffa2288371";
   static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
 
@@ -837,11 +841,19 @@ public class MockServer {
 
   private void handleGetHoldingsRecords(RoutingContext ctx) {
     logger.info("handleGetHoldingRecord got: " + ctx.request().path());
-
-    JsonObject instance = new JsonObject().put("holdingsRecords", new JsonArray());
-
-    addServerRqRsData(HttpMethod.GET, HOLDINGS_RECORD, instance);
-    serverResponse(ctx, 200, APPLICATION_JSON, instance.encodePrettily());
+    String queryParam = ctx.queryParam("query").get(0);
+    JsonObject holdings;
+    try {
+      if (queryParam.contains(OLD_HOLDING_ID) && queryParam.contains(NEW_HOLDING_ID)) {
+          holdings = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+      } else {
+        holdings = new JsonObject().put("holdingsRecords", new JsonArray());
+      }
+    } catch (IOException e) {
+      holdings = new JsonObject().put("holdingsRecords", new JsonArray());
+    }
+    addServerRqRsData(HttpMethod.GET, HOLDINGS_RECORD, holdings);
+    serverResponse(ctx, 200, APPLICATION_JSON, holdings.encodePrettily());
   }
 
   private void handleGetHolding(RoutingContext ctx) {
