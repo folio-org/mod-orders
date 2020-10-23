@@ -8,17 +8,18 @@ import org.folio.dao.ReasonForClosureDAO;
 import org.folio.dao.ReasonForClosureHttpDAO;
 import org.folio.dao.SuffixDAO;
 import org.folio.dao.SuffixHttpDAO;
+import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.PrefixService;
 import org.folio.service.ReasonForClosureService;
 import org.folio.service.SuffixService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 @Configuration
-@ComponentScan({
-  "org.folio.rest.impl",
-  "org.folio.orders"})
+@ComponentScan({ "org.folio" })
+@Import({ RestClientsConfiguration.class, ServicesConfiguration.class})
 public class ApplicationConfig {
 
   @Bean
@@ -54,5 +55,10 @@ public class ApplicationConfig {
   @Bean
   public ReasonForClosureService reasonForClosureService() {
     return new ReasonForClosureService();
+  }
+
+  @Bean
+  ExchangeRateProviderResolver exchangeRateProviderResolver() {
+    return new ExchangeRateProviderResolver();
   }
 }
