@@ -73,12 +73,14 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
+import org.folio.models.PoLineUpdateHolder;
 import org.folio.models.PoLineFundHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.LocationUtil;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.acq.model.Piece;
@@ -400,7 +402,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
             updateLocationsQuantity(compOrderLine.getLocations());
             updateEstimatedPrice(compOrderLine);
 
-            return checkLocationsAndPiecesConsistency(compOrderLine, compOrder)
+            return checkLocationsAndPiecesConsistency(compOrderLine, lineFromStorage.mapTo(PoLine.class), compOrder)
               .thenCompose(vVoid -> protectionHelper.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE)
                 .thenCompose(v -> validateAndNormalizeISBN(compOrderLine))
                 .thenCompose(v -> validateAccessProviders(compOrderLine))
@@ -655,6 +657,30 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       });
   }
 
+  CompletableFuture<Void> updateInventory(CompositePoLine compPOL, PoLine storagePoLine, String titleId, boolean isOpenOrderFlow) {
+    if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
+      return completedFuture(null);
+    }
+    if (inventoryUpdateNotRequired(compPOL)) {
+      // don't create pieces, if no inventory updates and receiving not required
+      if (isReceiptNotRequired(compPOL.getReceiptStatus())) {
+        return completedFuture(null);
+      }
+      return createPieces(compPOL, titleId, Collections.emptyList(), isOpenOrderFlow).thenRun(
+        () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId()));
+    }
+
+    return inventoryHelper.handleInstanceRecord(compPOL)
+      .thenCompose(compPoLineWithInstanceId -> inventoryHelper.handleHoldingsAndItemsRecords(compPoLineWithInstanceId, storagePoLine))
+      .thenCompose(piecesWithItemId -> {
+        if (isReceiptNotRequired(compPOL.getReceiptStatus())) {
+          return completedFuture(null);
+        }
+        //create pieces only if receiving is required
+        return updatePoLinePieces(compPOL, storagePoLine, titleId, piecesWithItemId, isOpenOrderFlow);
+      });
+  }
+
   private boolean isReceiptNotRequired(ReceiptStatus receiptStatus) {
     return receiptStatus == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
   }
@@ -787,7 +813,8 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
    * @param expectedPiecesWithItem expected Pieces to create with created associated Items records
    * @return void future
    */
-  private CompletableFuture<Void> createPieces(CompositePoLine compPOL, String titleId, List<Piece> expectedPiecesWithItem, boolean isOpenOrderFlow) {
+  private CompletableFuture<Void> createPieces(CompositePoLine compPOL, String titleId,
+                                               List<Piece> expectedPiecesWithItem, boolean isOpenOrderFlow) {
     int createdItemsQuantity = expectedPiecesWithItem.size();
     // do not create pieces in case of check-in flow
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
@@ -809,6 +836,47 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
         return allOf(piecesToCreate.stream().map(this::createPiece).toArray(CompletableFuture[]::new));
       })
       .thenAccept(v -> validateItemsCreation(compPOL, createdItemsQuantity));
+  }
+
+  /**
+   * Creates pieces that are not yet in storage
+   *
+   * @param compPOL PO line to create Pieces Records for
+   * @param expectedPiecesWithItem expected Pieces to create with created associated Items records
+   * @return void future
+   */
+  private CompletableFuture<Void> updatePoLinePieces(CompositePoLine compPOL, PoLine storagePoLine,
+                                                      String titleId, List<Piece> expectedPiecesWithItem, boolean isOpenOrderFlow) {
+    // do not create pieces in case of check-in flow
+    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
+      return completedFuture(null);
+    }
+    return searchForExistingPieces(compPOL)
+      .thenCompose(existingPieces -> {
+        List<Piece> piecesToCreate = new ArrayList<>();
+        List<Piece> piecesWithLocationToProcess = createPiecesByLocationId(compPOL, expectedPiecesWithItem, existingPieces);
+        List<PoLineUpdateHolder> poLineUpdateHolders = LocationUtil.convertToOldNewLocationIdPair(compPOL.getLocations(), storagePoLine.getLocations());
+        if (!poLineUpdateHolders.isEmpty() && !isOpenOrderFlow) {
+          List<Piece> needUpdatePeices = new ArrayList<>();
+          poLineUpdateHolders.forEach(poLineUpdateHolder -> {
+            List<Piece> pieces = existingPieces.stream()
+                                               .filter(piece -> piece.getLocationId().equals(poLineUpdateHolder.getOldLocationId()))
+                                               .map(piece -> piece.withLocationId(poLineUpdateHolder.getNewLocationId()))
+                                               .collect(toList());
+            if (!pieces.isEmpty()) {
+              needUpdatePeices.addAll(pieces);
+            }
+          });
+
+          return allOf(needUpdatePeices.stream().map(piecesHelper::updatePieceRecord).toArray(CompletableFuture[]::new));
+        } else {
+          piecesToCreate.addAll(piecesWithLocationToProcess);
+        }
+        piecesToCreate.addAll(createPiecesWithoutLocationId(compPOL, existingPieces));
+        piecesToCreate.forEach(piece -> piece.setTitleId(titleId));
+
+        return allOf(piecesToCreate.stream().map(this::createPiece).toArray(CompletableFuture[]::new));
+      });
   }
 
   private List<Piece> getPiecesWithChangedLocation(CompositePoLine compPOL, List<Piece> needProcessPieces, List<Piece> existingPieces) {
@@ -935,15 +1003,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     return StreamEx.of(pieces)
       .filter(piece -> StringUtils.isEmpty(piece.getLocationId()))
       .groupingBy(Piece::getFormat, collectingAndThen(toList(), List::size));
-  }
-
-  private void validateItemsCreation(CompositePoLine compPOL, int itemsSize) {
-    int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
-    if (itemsSize != expectedItemsQuantity) {
-      String message = String.format("Error creating items for PO Line with '%s' id. Expected %d but %d created",
-        compPOL.getId(), expectedItemsQuantity, itemsSize);
-      throw new InventoryException(message);
-    }
   }
 
   /**
@@ -1216,7 +1275,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     return Objects.equals(productId.getProductIdType(), isbnTypeId);
   }
 
-  private CompletableFuture<Void> checkLocationsAndPiecesConsistency(CompositePoLine poLine, CompositePurchaseOrder order) {
+  private CompletableFuture<Void> checkLocationsAndPiecesConsistency(CompositePoLine poLine, PoLine lineFromStorage, CompositePurchaseOrder order) {
       if (isLocationsAndPiecesConsistencyNeedToBeVerified(poLine, order)) {
       return getExpectedPiecesByLineId(poLine.getId())
         .thenCompose(existingExpectedPieces -> verifyLocationAndPieceConsistency(Collections.singletonList(poLine), existingExpectedPieces))
@@ -1225,7 +1284,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
             throw new HttpException(422, PIECES_TO_BE_DELETED);
           } else if (PIECES_TO_BE_CREATED.equals(errorCode)){
             return getTitleForPoLine(poLine)
-              .thenCompose(title -> updateInventory(poLine, title.getId(), false));
+              .thenCompose(title -> updateInventory(poLine, lineFromStorage, title.getId(), false));
           }
           return CompletableFuture.completedFuture(null);
         });
@@ -1285,5 +1344,14 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   private CompletableFuture<PieceCollection> getExpectedPiecesByLineId(String poLineId) {
     String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, Piece.ReceivingStatus.EXPECTED.value());
     return piecesHelper.getPieces(Integer.MAX_VALUE, 0, query);
+  }
+
+  private void validateItemsCreation(CompositePoLine compPOL, int itemsSize) {
+    int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
+    if (itemsSize != expectedItemsQuantity) {
+      String message = String.format("Error creating items for PO Line with '%s' id. Expected %d but %d created",
+        compPOL.getId(), expectedItemsQuantity, itemsSize);
+      throw new InventoryException(message);
+    }
   }
 }
