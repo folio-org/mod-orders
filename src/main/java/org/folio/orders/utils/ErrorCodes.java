@@ -73,7 +73,8 @@ public enum ErrorCodes {
   PIECES_TO_BE_CREATED("piecesNeedToBeCreated", "Pieces need to be created"),
   REQUEST_FOUND("thereAreRequestsOnItem", "There are requests on item"),
   BUDGET_EXPENSE_CLASS_NOT_FOUND("budgetExpenseClassNotFound", "Budget expense class not found"),
-  INACTIVE_EXPENSE_CLASS("inactiveExpenseClass", "Expense class is Inactive");
+  INACTIVE_EXPENSE_CLASS("inactiveExpenseClass", "Expense class is Inactive"),
+  HOLDINGS_BY_INSTANCE_AND_LOCATION_NOT_FOUND("holdingsByInstanceAndLocationNotFoundError", "Holdings by instance id %s and location id %s not found");
 
   private final String code;
   private final String description;

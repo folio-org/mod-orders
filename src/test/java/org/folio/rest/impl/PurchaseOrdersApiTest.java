@@ -1511,6 +1511,19 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
+  public void testOpenOrderWithDifferentPoLineCurrency() throws Exception {
+    logger.info("=== Test to try open order with different poLine currency ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    reqData.getCompositePoLines().get(0).getCost().setCurrency("EUR");
+    preparePiecesForCompositePo(reqData);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.getCompositePoLines().forEach(this::createMockTitle);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
+  }
+
+  @Test
   public void testOpenOrderForInactiveExpenseClass() throws Exception {
     logger.info("=== Test to try open order with inactive expense class ===");
 

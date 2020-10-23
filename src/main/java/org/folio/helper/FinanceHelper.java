@@ -28,6 +28,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMM
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
+import io.vertx.core.Vertx;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,6 +49,10 @@ import java.util.stream.Collectors;
 
 import javax.money.MonetaryAmount;
 
+import javax.money.convert.ConversionQuery;
+import javax.money.convert.ConversionQueryBuilder;
+import javax.money.convert.CurrencyConversion;
+import javax.money.convert.ExchangeRateProvider;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
@@ -69,13 +74,16 @@ import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Tags;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.TransactionService;
+import org.folio.spring.SpringContextUtil;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryFunctions;
 import org.javamoney.moneta.function.MonetaryOperators;
@@ -83,6 +91,7 @@ import org.javamoney.moneta.function.MonetaryOperators;
 import io.vertx.core.Context;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
+import org.springframework.beans.factory.annotation.Autowired;
 
 public class FinanceHelper extends AbstractHelper {
   private static final String GET_CURRENT_ACTIVE_BUDGET_BY_FUND_ID = resourcesPath(CURRENT_BUDGET) + "?lang=%s&status=Active";
@@ -96,11 +105,15 @@ public class FinanceHelper extends AbstractHelper {
 
   private final TransactionService transactionService;
 
+  @Autowired
+  private ExchangeRateProviderResolver exchangeRateProviderResolver;
+
   private String systemCurrency;
 
   public FinanceHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
     transactionService = new TransactionService(okapiHeaders, ctx, lang);
+    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
   }
 
   public FinanceHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang
@@ -120,9 +133,33 @@ public class FinanceHelper extends AbstractHelper {
     List<PoLineFundHolder> poLineFundHolders = buildNewEncumbrancesHolders(compositePoLines, storeEncumbrances);
     if (!poLineFundHolders.isEmpty()) {
       List<EncumbranceRelationsHolder> encumbranceHolders = buildEncumbrances(poLineFundHolders, compPO);
-      return prepareEncumbrances(encumbranceHolders);
+      return prepareEncumbrances(encumbranceHolders)
+        .thenApply(holders -> {
+          convertTransactionAmountToFYCurrency(holders);
+          return holders;
+        });
     }
     return CompletableFuture.completedFuture(Collections.emptyList());
+  }
+
+  private void convertTransactionAmountToFYCurrency(List<EncumbranceRelationsHolder> holders) {
+    holders.forEach(holder -> {
+      Transaction transaction = holder.getTransaction();
+      String transactionCurrency = transaction.getCurrency();
+      String poLineCurrency = holder.getPoLineFundHolder().getPoLine().getCost().getCurrency();
+
+      if (!poLineCurrency.equals(transactionCurrency)) {
+        Money amount = Money.of(transaction.getAmount(), poLineCurrency);
+        ConversionQuery conversionQuery = ConversionQueryBuilder.of().setBaseCurrency(poLineCurrency)
+          .setTermCurrency(transactionCurrency).build();
+        ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver
+          .resolve(conversionQuery, new RequestContext(ctx, okapiHeaders));
+        CurrencyConversion conversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
+        double convertedAmount = amount.with(conversion).getNumber().doubleValue();
+        holder.getTransaction().setAmount(convertedAmount);
+        holder.getTransaction().getEncumbrance().setInitialAmountEncumbered(convertedAmount);
+      }
+    });
   }
 
   public CompletableFuture<List<Transaction>> getOrderEncumbrances(String orderId) {
