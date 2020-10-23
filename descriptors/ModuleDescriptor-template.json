@@ -1243,6 +1243,7 @@
         "finance.ledgers.current-fiscal-year.item.get",
         "finance.order-transaction-summaries.item.post",
         "finance.order-transaction-summaries.item.put",
+        "finance.exchange-rate.item.get",
         "finance.release-encumbrance.item.post",
         "finance-storage.budget-expense-classes.collection.get",
         "finance-storage.transactions.item.put",
