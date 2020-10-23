@@ -623,7 +623,7 @@
             <exclude>org/folio/rest/impl/**Test.class</exclude>
           </excludes>
           <includes>
-            <include>org/folio/rest/impl/ApiTestSuite.class</include>
+            <include>org/folio/ApiTestSuite.class</include>
           </includes>
           <useSystemClassLoader>false</useSystemClassLoader>
         </configuration>

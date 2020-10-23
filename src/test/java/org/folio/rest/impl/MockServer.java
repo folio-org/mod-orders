@@ -110,6 +110,7 @@ import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.BudgetCollection;
 import org.folio.rest.acq.model.finance.BudgetExpenseClass;
 import org.folio.rest.acq.model.finance.BudgetExpenseClassCollection;
+import org.folio.rest.acq.model.finance.ExchangeRate;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.FundCollection;
@@ -228,7 +229,7 @@ public class MockServer {
   private final int port;
   private final Vertx vertx;
 
-  MockServer(int port) {
+  public MockServer(int port) {
     this.port = port;
     this.vertx = Vertx.vertx();
   }
@@ -239,7 +240,7 @@ public class MockServer {
       .forEach(line -> addMockEntry(TITLES, ApiTestBase.getTitle(line)));
   }
 
-  void start() throws InterruptedException, ExecutionException, TimeoutException {
+  public void start() throws InterruptedException, ExecutionException, TimeoutException {
     // Setup Mock Server...
     HttpServer server = vertx.createHttpServer();
     CompletableFuture<HttpServer> deploymentComplete = new CompletableFuture<>();
@@ -254,7 +255,7 @@ public class MockServer {
     deploymentComplete.get(60, TimeUnit.SECONDS);
   }
 
-  void close() {
+  public void close() {
     vertx.close(res -> {
       if (res.failed()) {
         logger.error("Failed to shut down mock server", res.cause());
@@ -515,6 +516,7 @@ public class MockServer {
     router.get(resourcePath(SUFFIXES)).handler(ctx -> handleGetGenericSubObj(ctx, SUFFIXES));
     router.get(resourcesPath(TRANSACTIONS_ENDPOINT)).handler(this::handleTransactionGetEntry);
     router.get("/finance/funds/:id/budget").handler(this::handleGetBudgetByFinanceId);
+    router.get(resourcesPath(FINANCE_EXCHANGE_RATE)).handler(this::handleGetRateOfExchange);
 
     router.put(resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
     router.put(resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -2248,5 +2250,14 @@ public class MockServer {
         .setStatusCode(404)
         .end();
     }
+  }
+
+  private void handleGetRateOfExchange(RoutingContext ctx) {
+    logger.info("handleGetRateOfExchange: " + ctx.request().path());
+    String fromParam = StringUtils.trimToEmpty(ctx.request().getParam("from"));
+    String toParam = StringUtils.trimToEmpty(ctx.request().getParam("to"));
+    ExchangeRate exchangeRate = new ExchangeRate().withExchangeRate(1.0d).withFrom(fromParam).withTo(toParam);
+    addServerRqRsData(HttpMethod.GET, FINANCE_EXCHANGE_RATE, new JsonObject().mapFrom(exchangeRate));
+    serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(exchangeRate).encodePrettily());
   }
 }
