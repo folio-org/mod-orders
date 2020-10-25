@@ -29,9 +29,9 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-public class AcquisitionsMembershipsTests extends ApiTestBase {
+public class AcquisitionsMembershipsTest extends ApiTestBase {
 
-  private static final Logger logger = LoggerFactory.getLogger(AcquisitionsMembershipsTests.class);
+  private static final Logger logger = LoggerFactory.getLogger(AcquisitionsMembershipsTest.class);
 
   private static final String ACQ_UNITS_MEMBERSHIPS_ENDPOINT = "/acquisitions-units/memberships";
   public static final String USER_ID_ASSIGNED_TO_ACQ_UNITS = "480dba68-ee84-4b9c-a374-7e824fc49227";

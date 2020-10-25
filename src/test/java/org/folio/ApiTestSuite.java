@@ -15,8 +15,8 @@ import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
 import org.folio.orders.utils.HelperUtilsTest;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.core.RestClientTest;
-import org.folio.rest.impl.AcquisitionsMembershipsTests;
-import org.folio.rest.impl.AcquisitionsUnitsTests;
+import org.folio.rest.impl.AcquisitionsMembershipsTest;
+import org.folio.rest.impl.AcquisitionsUnitsTest;
 import org.folio.rest.impl.CheckinReceivingApiTest;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.impl.OrderTemplateTest;
@@ -26,6 +26,7 @@ import org.folio.rest.impl.PurchaseOrderLinesApiTest;
 import org.folio.rest.impl.PurchaseOrdersApiTest;
 import org.folio.rest.impl.ReceivingHistoryApiTest;
 import org.folio.rest.impl.TitlesApiTest;
+import org.folio.rest.impl.crud.ConfigurationCrudTest;
 import org.folio.rest.impl.protection.LinesProtectionTest;
 import org.folio.rest.impl.protection.OrdersProtectionTest;
 import org.folio.rest.impl.protection.PiecesProtectionTest;
@@ -98,11 +99,11 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class AcquisitionsUnitsTestsNested extends AcquisitionsUnitsTests {
+  class AcquisitionsUnitsTestNested extends AcquisitionsUnitsTest {
   }
 
   @Nested
-  class AcquisitionsMembershipsTestsNested extends AcquisitionsMembershipsTests {
+  class AcquisitionsMembershipsTestNested extends AcquisitionsMembershipsTest {
   }
 
   @Nested
@@ -161,9 +162,10 @@ public class ApiTestSuite {
   class TitlesApiTestNested extends TitlesApiTest {
   }
 
-/*  @Nested
+  @Nested
   class ConfigurationCrudTestNested extends ConfigurationCrudTest {
-  }*/
+  }
+
 
   @Nested
   class CheckInOrderStatusChangeChangeHandlerTestNested extends CheckInOrderStatusChangeChangeHandlerTest {
