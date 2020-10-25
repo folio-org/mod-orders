@@ -7,7 +7,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
 import static org.folio.service.TransactionService.TRANSACTION_STORAGE_ENDPOINT_BYID;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -22,8 +22,8 @@ import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -41,9 +41,9 @@ public class TransactionServiceTest extends ApiTestBase {
   private Map<String, String> okapiHeaders;
   public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "invoiceimpltest");
 
-  @Before
+  @BeforeEach
   public void initMocks(){
-    MockitoAnnotations.initMocks(this);
+    MockitoAnnotations.openMocks(this);
     okapiHeaders = new HashMap<>();
     okapiHeaders.put(OKAPI_URL, "http://localhost:" + 8081);
     okapiHeaders.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());

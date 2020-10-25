@@ -1,11 +1,12 @@
 package org.folio.rest.impl.crud;
 
-import io.vertx.core.json.JsonObject;
+import java.util.UUID;
+
 import org.folio.rest.jaxrs.model.Prefix;
 import org.folio.rest.jaxrs.model.ReasonForClosure;
 import org.folio.rest.jaxrs.model.Suffix;
 
-import java.util.UUID;
+import io.vertx.core.json.JsonObject;
 
 public enum CrudTestEntities {
   REASON_FOR_CLOSURE("/orders/configuration/reasons-for-closure") {

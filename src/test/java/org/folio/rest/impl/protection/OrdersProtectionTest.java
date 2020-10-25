@@ -1,13 +1,13 @@
 package org.folio.rest.impl.protection;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.helper.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
 import static org.folio.orders.utils.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
-import static org.folio.helper.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ALL_DESIRED_PERMISSIONS_HEADER;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.COMPOSITE_ORDERS_PATH;
@@ -35,24 +35,24 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import io.restassured.http.Headers;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 
-@RunWith(JUnitParamsRunner.class)
+
+
 public class OrdersProtectionTest extends ProtectedEntityTestBase {
 
   private static final Logger logger = LoggerFactory.getLogger(OrdersProtectionTest.class);
 
 
-  @Test
-  @Parameters({
+  @ParameterizedTest
+  @ValueSource(strings = {
     "CREATE",
     "UPDATE",
     "DELETE",
@@ -71,8 +71,8 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     validateNumberOfRequests(1, 0);
   }
 
-  @Test
-  @Parameters({
+  @ParameterizedTest
+  @ValueSource(strings = {
     "CREATE",
     "UPDATE",
     "DELETE",
@@ -88,8 +88,8 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     validateNumberOfRequests(1, 0);
   }
 
-  @Test
-  @Parameters({
+  @ParameterizedTest
+  @ValueSource(strings = {
     "CREATE",
     "UPDATE",
     "DELETE",
@@ -105,8 +105,8 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     validateNumberOfRequests(1, 1);
   }
 
-  @Test
-  @Parameters({
+  @ParameterizedTest
+  @ValueSource(strings = {
     "CREATE",
     "UPDATE",
     "DELETE",
@@ -125,8 +125,8 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     validateNumberOfRequests(1, 1);
   }
 
-  @Test
-  @Parameters({
+  @ParameterizedTest
+  @ValueSource(strings = {
     "CREATE",
     "UPDATE"
   })
@@ -144,8 +144,8 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     validateNumberOfRequests(0, 0);
   }
 
-  @Test
-  @Parameters({
+  @ParameterizedTest
+  @ValueSource(strings = {
     "CREATE",
     "UPDATE"
   })

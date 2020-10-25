@@ -27,7 +27,7 @@ import org.folio.HttpStatus;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.OrderTemplate;
 import org.folio.rest.jaxrs.model.OrderTemplateCollection;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.restassured.http.Header;
 import io.restassured.http.Headers;

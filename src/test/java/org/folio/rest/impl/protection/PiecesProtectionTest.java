@@ -10,22 +10,21 @@ import static org.hamcrest.core.IsEqual.equalTo;
 
 import org.folio.HttpStatus;
 import org.folio.rest.jaxrs.model.Errors;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import io.restassured.http.Headers;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 
-@RunWith(JUnitParamsRunner.class)
+
+
 public class PiecesProtectionTest extends ProtectedEntityTestBase {
 
   private static final Logger logger = LoggerFactory.getLogger(PiecesProtectionTest.class);
 
-  @Test
-  @Parameters({
+  @ParameterizedTest
+  @ValueSource(strings = {
     "CREATE",
     "UPDATE",
     "DELETE"
@@ -43,8 +42,8 @@ public class PiecesProtectionTest extends ProtectedEntityTestBase {
     validateNumberOfRequests(1, 0);
   }
 
-  @Test
-  @Parameters({
+  @ParameterizedTest
+  @ValueSource(strings = {
     "CREATE",
     "UPDATE",
     "DELETE"
@@ -58,8 +57,8 @@ public class PiecesProtectionTest extends ProtectedEntityTestBase {
     validateNumberOfRequests(1, 0);
   }
 
-  @Test
-  @Parameters({
+  @ParameterizedTest
+  @ValueSource(strings = {
     "CREATE",
     "UPDATE",
     "DELETE"
@@ -73,8 +72,8 @@ public class PiecesProtectionTest extends ProtectedEntityTestBase {
     validateNumberOfRequests(1, 1);
   }
 
-  @Test
-  @Parameters({
+  @ParameterizedTest
+  @ValueSource(strings = {
     "CREATE",
     "UPDATE",
     "DELETE"

@@ -2,18 +2,19 @@ package org.folio.helper;
 
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.ApiTestSuite.mockPort;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.ApiTestSuite.mockPort;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
@@ -50,8 +51,8 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.TransactionService;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -71,13 +72,13 @@ public class FinanceHelperTest extends ApiTestBase {
   private Context ctxMock;
   private Map<String, String> okapiHeadersMock;
   private HttpClientInterface httpClient;
-  private String okapiURL;
+
   @Mock
   private TransactionService transactionService;
   @Mock
   private PurchaseOrderLineHelper purchaseOrderLineHelper;
 
-  @Before
+  @BeforeEach
   public void initMocks(){
     super.setUp();
     ctxMock = Vertx.vertx().getOrCreateContext();
@@ -86,9 +87,9 @@ public class FinanceHelperTest extends ApiTestBase {
     okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
-    okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
+    String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
     httpClient = HttpClientFactory.getHttpClient(okapiURL, TENANT_ID);
-    MockitoAnnotations.initMocks(this);
+    MockitoAnnotations.openMocks(this);
   }
 
   @Test
@@ -395,10 +396,14 @@ public class FinanceHelperTest extends ApiTestBase {
     assertNotNull(fy);
   }
 
-  @Test(expected = CompletionException.class)
+  @Test
   public void testShouldThrowHttpException() {
     FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
-    financeHelper.getCurrentFiscalYear(ID_DOES_NOT_EXIST).join();
+    CompletableFuture<FiscalYear> result =  financeHelper.getCurrentFiscalYear(ID_DOES_NOT_EXIST);
+    CompletionException expectedException = assertThrows(CompletionException.class, result::join);
+
+    HttpException httpException = (HttpException) expectedException.getCause();
+    assertEquals(404, httpException.getCode());
   }
 
   @Test
@@ -410,13 +415,15 @@ public class FinanceHelperTest extends ApiTestBase {
     financeHelper.verifyBudgetsForEncumbrancesAreActive(budgets);
   }
 
-  @Test(expected = HttpException.class)
+  @Test
   public void testShouldThrowExceptionIfBudgetIsNotActive() {
     FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
     String budgetId = UUID.randomUUID().toString();
     String fundId = UUID.randomUUID().toString();
-    List<Budget> budgets = Collections.singletonList(new Budget().withId(budgetId).withFundId(fundId).withBudgetStatus(Budget.BudgetStatus.INACTIVE));
-    financeHelper.verifyBudgetsForEncumbrancesAreActive(budgets);
+    List<Budget> budgets = Collections.singletonList(new Budget().withId(budgetId)
+      .withFundId(fundId)
+      .withBudgetStatus(Budget.BudgetStatus.INACTIVE));
+    assertThrows(HttpException.class, () -> financeHelper.verifyBudgetsForEncumbrancesAreActive(budgets));
   }
 
   @Test
@@ -426,10 +433,15 @@ public class FinanceHelperTest extends ApiTestBase {
     assertNotNull(budget);
   }
 
-  @Test(expected = CompletionException.class)
+  @Test
   public void testShouldThrowExceptionIfActiveBudgetForFund() {
-    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
-    Budget budget = financeHelper.getActiveBudgetByFundId(UUID.randomUUID().toString()).join();
-    assertNotNull(budget);
+    assertThrows(CompletionException.class, () -> {
+      FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
+      Budget budget = financeHelper.getActiveBudgetByFundId(UUID.randomUUID().toString())
+        .join();
+      assertNotNull(budget);
+    });
   }
+
+
 }

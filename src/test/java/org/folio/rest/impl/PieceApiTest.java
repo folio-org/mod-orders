@@ -3,11 +3,20 @@ package org.folio.rest.impl;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.orders.utils.ErrorCodes.REQUEST_FOUND;
-import static org.folio.orders.utils.ResourcePathResolver.*;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.assertNull;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
 
 import org.folio.HttpStatus;
 import org.folio.rest.acq.model.Piece;
@@ -18,16 +27,12 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.restassured.http.Header;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
 
 public class PieceApiTest extends ApiTestBase {
 

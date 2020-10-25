@@ -28,7 +28,6 @@ import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMM
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
-import io.vertx.core.Vertx;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,11 +47,11 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import javax.money.MonetaryAmount;
-
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
 import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRateProvider;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
@@ -81,9 +80,8 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.TransactionService;
-import org.folio.spring.SpringContextUtil;
+import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryFunctions;
 import org.javamoney.moneta.function.MonetaryOperators;
@@ -91,7 +89,6 @@ import org.javamoney.moneta.function.MonetaryOperators;
 import io.vertx.core.Context;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
-import org.springframework.beans.factory.annotation.Autowired;
 
 public class FinanceHelper extends AbstractHelper {
   private static final String GET_CURRENT_ACTIVE_BUDGET_BY_FUND_ID = resourcesPath(CURRENT_BUDGET) + "?lang=%s&status=Active";
@@ -105,15 +102,14 @@ public class FinanceHelper extends AbstractHelper {
 
   private final TransactionService transactionService;
 
-  @Autowired
   private ExchangeRateProviderResolver exchangeRateProviderResolver;
 
   private String systemCurrency;
 
   public FinanceHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
-    transactionService = new TransactionService(okapiHeaders, ctx, lang);
-    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
+    this.exchangeRateProviderResolver = new ExchangeRateProviderResolver();
+    this.transactionService = new TransactionService(okapiHeaders, ctx, lang);
   }
 
   public FinanceHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang

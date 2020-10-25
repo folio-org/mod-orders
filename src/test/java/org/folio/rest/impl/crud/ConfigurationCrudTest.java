@@ -5,40 +5,26 @@ import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 
-import com.google.common.collect.Lists;
+import java.util.UUID;
+
+import org.folio.HttpStatus;
+import org.folio.rest.impl.ApiTestBase;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+
 import io.restassured.http.Header;
 import io.restassured.response.Response;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.unit.junit.VertxUnitRunnerWithParametersFactory;
-import org.folio.HttpStatus;
-import org.folio.rest.impl.ApiTestBase;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-import java.util.UUID;
-
-@RunWith(Parameterized.class)
-@Parameterized.UseParametersRunnerFactory(VertxUnitRunnerWithParametersFactory.class)
 public class ConfigurationCrudTest extends ApiTestBase {
 
   private final Logger logger = LoggerFactory.getLogger(ConfigurationCrudTest.class);
 
-  @Parameterized.Parameters
-  public static Iterable<CrudTestEntities> entities() {
-    return Lists.newArrayList(CrudTestEntities.values());
-  }
-
-  private final CrudTestEntities entity;
-
-  public ConfigurationCrudTest(CrudTestEntities entity) {
-    this.entity = entity;
-  }
-
-  @Test
-  public void testPostCrud() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testPostCrud(CrudTestEntities entity) {
     logger.info(String.format("=== Test POST : %s ===", entity.name()));
     JsonObject json = entity.getTestSample();
     assertThat(json.remove(ID), notNullValue());
@@ -48,8 +34,9 @@ public class ConfigurationCrudTest extends ApiTestBase {
       .print()).getString(ID), notNullValue());
   }
 
-  @Test
-  public void testPostCrudBadRequest() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testPostCrudBadRequest(CrudTestEntities entity) {
     logger.info(String.format("=== Test POST : %s (bad request) ===", entity.name()));
     JsonObject json = entity.getTestSample();
     int status400 = HttpStatus.HTTP_BAD_REQUEST.toInt();
@@ -59,8 +46,9 @@ public class ConfigurationCrudTest extends ApiTestBase {
         APPLICATION_JSON, status400);
   }
 
-  @Test
-  public void testPostCrudInternalServerError() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testPostCrudInternalServerError(CrudTestEntities entity) {
     logger.info(String.format("=== Test POST : %s (internal server error) ===", entity.name()));
     JsonObject json = entity.getTestSample();
     int status500 = HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt();
@@ -70,109 +58,124 @@ public class ConfigurationCrudTest extends ApiTestBase {
         APPLICATION_JSON, status500);
   }
 
-  @Test
-  public void testGetCollectionCrud() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testGetCollectionCrud(CrudTestEntities entity) {
     logger.info(String.format("=== Test GET : %s ===", entity.name()));
     verifyGet(entity.getEndpoint(), APPLICATION_JSON, 200).then()
       .body("totalRecords", notNullValue());
   }
 
-  @Test
-  public void testGetCollectionCrudInternalServerError() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testGetCollectionCrudInternalServerError(CrudTestEntities entity) {
     logger.info(String.format("=== Test GET : %s ===", entity.name()));
     verifyGet(entity.getEndpoint() + "?query=id==" + ID_FOR_INTERNAL_SERVER_ERROR, APPLICATION_JSON, 500).then()
       .body("errors", notNullValue());
   }
 
-  @Test
-  public void testGetByIdCrud() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testGetByIdCrud(CrudTestEntities entity) {
     logger.info(String.format("=== Test GET by id : %s ===", entity.name()));
     verifyGet(entity.getEndpoint() + "/" + EXISTED_ID, APPLICATION_JSON, 200).then()
       .body(ID, notNullValue());
   }
 
-  @Test
-  public void testGetByIdCrudBadRequest() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testGetByIdCrudBadRequest(CrudTestEntities entity) {
     logger.info(String.format("=== Test GET by id : %s (bad request) ===", entity.name()));
     verifyGet(entity.getEndpoint() + "/" + ID_BAD_FORMAT, TEXT_PLAIN, 400);
   }
 
-  @Test
-  public void testGetByIdCrudNotFound() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testGetByIdCrudNotFound(CrudTestEntities entity) {
     logger.info(String.format("=== Test GET by id : %s (not found) ===", entity.name()));
     verifyGet(entity.getEndpoint() + "/" + ID_DOES_NOT_EXIST, APPLICATION_JSON, 404).then()
       .body("errors", notNullValue());
   }
 
-  @Test
-  public void testGetByIdCrudInternalServerError() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testGetByIdCrudInternalServerError(CrudTestEntities entity) {
     logger.info(String.format("=== Test GET by id : %s (internal server error) ===", entity.name()));
     verifyGet(entity.getEndpoint() + "/" + ID_FOR_INTERNAL_SERVER_ERROR, APPLICATION_JSON, 500).then()
       .body("errors", notNullValue());
   }
 
-  @Test
-  public void testPutCrudTest() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testPutCrudTest(CrudTestEntities entity) {
     logger.info(String.format("=== Test PUT : %s ===", entity.name()));
     JsonObject json = entity.getTestSample();
     json.put(ID, EXISTED_ID);
     verifyPut(entity.getEndpoint() + "/" + EXISTED_ID, json.encode(), "", 204);
   }
 
-  @Test
-  public void testPutCrudIdMismatchTest() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testPutCrudIdMismatchTest(CrudTestEntities entity) {
     logger.info(String.format("=== Test PUT (id mismatch) : %s ===", entity.name()));
     JsonObject json = entity.getTestSample();
     json.put(ID, UUID.randomUUID().toString());
     verifyPut(entity.getEndpoint() + "/" + EXISTED_ID, json.encode(), "", 422).then()
-      .body("errors", notNullValue());;
+      .body("errors", notNullValue());
   }
 
-  @Test
-  public void testPutCrudObjectWithoutIdTest() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testPutCrudObjectWithoutIdTest(CrudTestEntities entity) {
     logger.info(String.format("=== Test PUT (object without id) : %s ===", entity.name()));
     JsonObject json = entity.getTestSample();
     json.remove(ID);
     verifyPut(entity.getEndpoint() + "/" + EXISTED_ID, json.encode(), "", 204);
   }
 
-  @Test
-  public void testPutCrudNotFound() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testPutCrudNotFound(CrudTestEntities entity) {
     logger.info(String.format("=== Test PUT : %s (not found) ===", entity.name()));
     JsonObject json = entity.getTestSample();
     json.put(ID, ID_DOES_NOT_EXIST);
     verifyPut(entity.getEndpoint() + "/" + ID_DOES_NOT_EXIST, json.encode(), APPLICATION_JSON, 404);
   }
 
-  @Test
-  public void testPutCrudInternalServerError() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testPutCrudInternalServerError(CrudTestEntities entity) {
     logger.info(String.format("=== Test PUT : %s (internal server error) ===", entity.name()));
     JsonObject json = entity.getTestSample();
     json.put(ID, ID_FOR_INTERNAL_SERVER_ERROR);
     verifyPut(entity.getEndpoint() + "/" + ID_FOR_INTERNAL_SERVER_ERROR, json.encode(), APPLICATION_JSON, 500);
   }
 
-  @Test
-  public void testDeleteCrud() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testDeleteCrud(CrudTestEntities entity) {
     logger.info(String.format("=== Test DELETE : %s ===", entity.name()));
     verifyDeleteResponse(entity.getEndpoint() + "/" + UUID.randomUUID()
       .toString(), "", 204);
   }
 
-  @Test
-  public void testDeleteCrudBadId() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testDeleteCrudBadId(CrudTestEntities entity) {
     logger.info(String.format("=== Test DELETE : %s (bad id) ===", entity.name()));
     verifyDeleteResponse(entity.getEndpoint() + "/" + ID_BAD_FORMAT, TEXT_PLAIN, 400);
   }
 
-  @Test
-  public void testDeleteCrudNotFound() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testDeleteCrudNotFound(CrudTestEntities entity) {
     logger.info(String.format("=== Test DELETE : %s (not found) ===", entity.name()));
     verifyDeleteResponse(entity.getEndpoint() + "/" + ID_DOES_NOT_EXIST, APPLICATION_JSON, 404);
   }
 
-  @Test
-  public void testDeleteCrudInternalServerError() {
+  @ParameterizedTest
+  @EnumSource(value = CrudTestEntities.class)
+  public void testDeleteCrudInternalServerError(CrudTestEntities entity) {
     logger.info(String.format("=== Test DELETE : %s (internal server error) ===", entity.name()));
     verifyDeleteResponse(entity.getEndpoint() + "/" + ID_FOR_INTERNAL_SERVER_ERROR, APPLICATION_JSON, 500);
   }

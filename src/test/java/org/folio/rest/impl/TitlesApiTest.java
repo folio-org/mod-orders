@@ -8,10 +8,11 @@ import static org.folio.rest.impl.MockServer.TITLES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Date;
 import java.util.UUID;
+
 import org.folio.HttpStatus;
 import org.folio.rest.acq.model.Title;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -20,7 +21,7 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.hamcrest.Matchers;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.restassured.http.Header;
 import io.vertx.core.json.JsonObject;
@@ -77,7 +78,7 @@ public class TitlesApiTest extends ApiTestBase {
       HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt()).as(
       Errors.class);
 
-    assertEquals(errors.getErrors().get(0).getCode(), "titleExist");
+    assertEquals("titleExist", errors.getErrors().get(0).getCode());
   }
 
   @Test
@@ -115,7 +116,7 @@ public class TitlesApiTest extends ApiTestBase {
   public void testGetTitles() {
     logger.info("=== Test Get Titles  ===");
 
-    final TitleCollection resp = verifySuccessGet(String.format(TITLES_ENDPOINT), TitleCollection.class);
+    final TitleCollection resp = verifySuccessGet(TITLES_ENDPOINT, TitleCollection.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 

@@ -28,7 +28,7 @@ import javax.ws.rs.core.HttpHeaders;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.Errors;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.restassured.http.Header;
 import io.restassured.http.Headers;

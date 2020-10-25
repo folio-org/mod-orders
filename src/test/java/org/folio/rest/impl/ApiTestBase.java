@@ -4,6 +4,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.awaitility.Awaitility.await;
+import static org.folio.ApiTestSuite.mockPort;
 import static org.folio.helper.AbstractHelper.EVENT_PAYLOAD;
 import static org.folio.orders.utils.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
@@ -12,7 +13,6 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.AcquisitionsMembershipsTests.USER_ID_ASSIGNED_TO_ACQ_UNITS;
-import static org.folio.ApiTestSuite.mockPort;
 import static org.folio.rest.impl.ContextConfiguration.eventMessages;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
@@ -28,8 +28,9 @@ import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.iterableWithSize;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,6 +45,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
@@ -70,9 +72,9 @@ import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.rest.jaxrs.model.ToBeReceived;
 import org.folio.rest.tools.parser.JsonPathParser;
 import org.hamcrest.Matchers;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 
 import io.restassured.RestAssured;
 import io.restassured.http.Header;
@@ -83,6 +85,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.junit5.VertxTestContext;
 
 public class ApiTestBase {
 
@@ -157,7 +160,7 @@ public class ApiTestBase {
   public static final String PIECE_ID = "0f1bb087-72e9-44ce-a145-bfc2e7b005cf";
   public static final String ITEM_ID = "522a501a-56b5-48d9-b28a-3a8f02482d97";
 
-  @BeforeClass
+  @BeforeAll
   public static void before() throws InterruptedException, ExecutionException, TimeoutException {
 
     if(ApiTestSuite.isNotInitialised()) {
@@ -167,7 +170,7 @@ public class ApiTestBase {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     clearServiceInteractions();
   }
@@ -177,7 +180,7 @@ public class ApiTestBase {
     MockServer.release();
   }
 
-  @AfterClass
+  @AfterAll
   public static void after() {
 
     if(runningOnOwn) {
@@ -349,8 +352,6 @@ public class ApiTestBase {
         assertEquals(location.getQuantityElectronic(), location.getQuantity());
         break;
       case PHYSICAL_RESOURCE:
-        assertEquals(location.getQuantityPhysical(), location.getQuantity());
-        break;
       case OTHER:
         assertEquals(location.getQuantityPhysical(), location.getQuantity());
         break;
@@ -533,5 +534,12 @@ public class ApiTestBase {
         logger.info("validate poline {}", poline.getString(ID));
         poline.mapTo(PoLine.class);
       });
+  }
+
+  public static void checkVertxContextCompletion(VertxTestContext context) throws Throwable {
+    assertTrue(context.awaitCompletion(30, TimeUnit.SECONDS));
+    if (context.failed()) {
+      throw context.causeOfFailure();
+    }
   }
 }

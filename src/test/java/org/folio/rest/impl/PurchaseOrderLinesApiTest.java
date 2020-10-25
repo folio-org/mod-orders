@@ -2,7 +2,6 @@ package org.folio.rest.impl;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
-import static org.folio.helper.InventoryHelper.UPDATE_ITEM_BY_ID_ENDPOINT;
 import static org.folio.orders.utils.ErrorCodes.COST_ADDITIONAL_COST_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_DISCOUNT_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
@@ -25,9 +24,7 @@ import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.BUDGET_EXPENSE_CLASSES;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
@@ -49,7 +46,6 @@ import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_EXPENSE_CLASS_I
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING_ITEM;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
@@ -59,11 +55,11 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -78,7 +74,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.rest.acq.model.Title;
-import org.folio.rest.acq.model.finance.BudgetExpenseClass;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
@@ -95,7 +90,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.Tags;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.restassured.response.Response;
 import io.vertx.core.http.HttpMethod;
@@ -1241,7 +1236,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
 
-    assertTrue("Location updated", MockServer.getRqRsEntries(HttpMethod.PUT, PIECES).get(0).getString("locationId").equals(newLocationId));
+    assertEquals(newLocationId, getRqRsEntries(HttpMethod.PUT, PIECES).get(0).getString("locationId"), "Location updated");
   }
 
   private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {

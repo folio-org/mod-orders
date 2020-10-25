@@ -1,10 +1,9 @@
 package org.folio.service;
 
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
-import static org.hamcrest.core.Is.isA;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -16,17 +15,14 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import org.folio.dao.ReasonForClosureDAO;
 import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.utils.HttpExceptionCodeMatcher;
-import org.folio.utils.HttpExceptionErrorMatcher;
 import org.folio.rest.jaxrs.model.ReasonForClosure;
 import org.folio.rest.jaxrs.model.ReasonForClosureCollection;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -35,9 +31,6 @@ import org.mockito.MockitoAnnotations;
 import io.vertx.core.impl.EventLoopContext;
 
 public class ReasonForClosureServiceTest {
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @InjectMocks
   private ReasonForClosureService reasonForClosureService;
@@ -52,9 +45,9 @@ public class ReasonForClosureServiceTest {
   private EventLoopContext ctxMock;
 
 
-  @Before
+  @BeforeEach
   public void initMocks(){
-      MockitoAnnotations.initMocks(this);
+      MockitoAnnotations.openMocks(this);
   }
 
   @Test
@@ -143,13 +136,14 @@ public class ReasonForClosureServiceTest {
   @Test
   public void testUpdateReasonForClosureWithIdMismatchFails() {
     ReasonForClosure suffix = new ReasonForClosure().withId(UUID.randomUUID().toString());
+    CompletableFuture<Void> result = reasonForClosureService.updateReasonForClosure(UUID.randomUUID().toString(),
+      suffix, ctxMock, okapiHeadersMock);
+    CompletionException expectedException = assertThrows(CompletionException.class, result::join);
 
-    expectedException.expectCause(isA(HttpException.class));
-    expectedException.expectCause(HttpExceptionCodeMatcher.hasCode(422));
-    expectedException.expectCause(HttpExceptionErrorMatcher.hasError(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError()));
-    CompletableFuture<Void> result = reasonForClosureService.updateReasonForClosure(UUID.randomUUID().toString(), suffix, ctxMock, okapiHeadersMock);
-    assertTrue(result.isCompletedExceptionally());
-    result.join();
+    HttpException httpException = (HttpException) expectedException.getCause();
+    assertEquals(422, httpException.getCode());
+    assertEquals(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError(), httpException.getError());
+
   }
 
   @Test

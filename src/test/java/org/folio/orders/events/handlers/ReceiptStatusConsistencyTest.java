@@ -9,7 +9,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Collections;
 import java.util.concurrent.ExecutionException;
@@ -24,9 +24,9 @@ import org.folio.rest.acq.model.PoLine.ReceiptStatus;
 import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
@@ -37,10 +37,10 @@ import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class ReceiptStatusConsistencyTest extends ApiTestBase {
   private static final Logger logger = LoggerFactory.getLogger(ReceiptStatusConsistencyTest.class);
 
@@ -53,7 +53,7 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
 
   private static Vertx vertx;
 
-  @BeforeClass
+  @BeforeAll
   public static void before() throws InterruptedException, ExecutionException, TimeoutException {
     ApiTestBase.before();
 
@@ -62,10 +62,10 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
   }
 
   @Test
-  public void testSuccessReceiptStatusWhenReceiptStatusBetweenPiecesAndPoLineNotConsistent(TestContext context) {
+  public void testSuccessReceiptStatusWhenReceiptStatusBetweenPiecesAndPoLineNotConsistent(VertxTestContext context) throws Throwable {
     logger.info("=== Test case when piece receipt status changes from Received to Expected ===");
 
-    sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE), context.asyncAssertSuccess(result -> {
+    sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE), context.succeeding(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());
       logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
       logger.info("getPieceSearches()--->" + getPieceSearches());
@@ -80,17 +80,19 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
       assertEquals(ReceiptStatus.AWAITING_RECEIPT, poLine.getReceiptStatus());
 
       assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
+      context.completeNow();
     }));
+    checkVertxContextCompletion(context);
   }
 
   @Test
-  public void testSuccessPartiallyReceivedStatusWhenAtleastOneSuccessfullyReceivedPiece(TestContext context) {
+  public void testSuccessPartiallyReceivedStatusWhenAtleastOneSuccessfullyReceivedPiece(VertxTestContext context) throws Throwable {
     logger.info("=== Test case to verify partially received status when at least one successfully received piece ===");
 
     CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
     MockServer.addMockTitles(Collections.singletonList(compositePoLine));
 
-    sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE_PARTIALLY_RECEIVED), context.asyncAssertSuccess(result -> {
+    sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE_PARTIALLY_RECEIVED), context.succeeding(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());
       logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
       logger.info("getPieceSearches()--->" + getPieceSearches());
@@ -111,17 +113,19 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
       assertEquals(ReceiptStatus.PARTIALLY_RECEIVED, poLine.getReceiptStatus());
 
       assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
+      context.completeNow();
     }));
+    checkVertxContextCompletion(context);
   }
 
   @Test
-  public void testSuccessFullyReceivedStatusWhenAllPiecesSuccessfullyReceived(TestContext context) {
+  public void testSuccessFullyReceivedStatusWhenAllPiecesSuccessfullyReceived(VertxTestContext context) throws Throwable {
     logger.info("=== Test case to verify fully received status when all pieces successfully received ===");
 
     CompositePoLine compositePoLine = getMockAsJson(PO_LINES_MOCK_DATA_PATH, POLINE_UUID_TIED_TO_PIECE_FULLY_RECEIVED).mapTo(CompositePoLine.class);
     MockServer.addMockTitles(Collections.singletonList(compositePoLine));
 
-    sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE_FULLY_RECEIVED), context.asyncAssertSuccess(result -> {
+    sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE_FULLY_RECEIVED), context.succeeding(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());
       logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
       logger.info("getPieceSearches()--->" + getPieceSearches());
@@ -142,14 +146,16 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
       assertEquals(ReceiptStatus.FULLY_RECEIVED, poLine.getReceiptStatus());
 
       assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
+      context.completeNow();
     }));
+    checkVertxContextCompletion(context);
   }
 
   @Test
-  public void testSuccessReceiptStatusWhenTotalPiecesEmpty(TestContext context) {
+  public void testSuccessReceiptStatusWhenTotalPiecesEmpty(VertxTestContext context) throws Throwable {
     logger.info("=== Test case to verify receipt status when total pieces empty ===");
 
-    sendEvent(createBody(PO_LINE_ID_TIED_TO_PIECE_WHEN_TOTAL_PIECES_EMPTY), context.asyncAssertSuccess(result -> {
+    sendEvent(createBody(PO_LINE_ID_TIED_TO_PIECE_WHEN_TOTAL_PIECES_EMPTY), context.succeeding(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());
       logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
       logger.info("getPieceSearches()--->" + getPieceSearches());
@@ -157,14 +163,16 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
       assertThat(getPoLineUpdates(), nullValue());
 
       assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
+      context.completeNow();
     }));
+    checkVertxContextCompletion(context);
   }
 
   @Test
-  public void testPieceReceiptStatusFailureWhenNoMatchingPoLineForPiece(TestContext context) {
+  public void testPieceReceiptStatusFailureWhenNoMatchingPoLineForPiece(VertxTestContext context) throws Throwable {
     logger.info("=== Test case when no poLines exists referenced by a piece which should throw a 404 Exception ===");
 
-    sendEvent(createBody(BAD_PO_LINE_404), context.asyncAssertFailure(result -> {
+    sendEvent(createBody(BAD_PO_LINE_404), context.failing(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());
       logger.info("getPoLineUpdates()--->" + getPoLineUpdates());
       logger.info("getPieceSearches()--->" + getPieceSearches());
@@ -173,7 +181,9 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
 
       assertThat(result, instanceOf(ReplyException.class));
       assertThat(((ReplyException) result).failureCode(), is(404));
+      context.completeNow();
     }));
+    checkVertxContextCompletion(context);
   }
 
   private JsonObject createBody(String poLineId) {
