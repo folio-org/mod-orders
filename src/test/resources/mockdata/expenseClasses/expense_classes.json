@@ -1,0 +1,23 @@
+{
+  "expenseClasses": [
+    {
+      "id": "5b5ebe3a-cf8b-4f16-a880-46873ef21388",
+      "code": "Elec",
+      "externalAccountNumberExt": "01",
+      "name": "Electronic"
+    },
+    {
+      "id": "1bcc3247-99bf-4dca-9b0f-7bc51a2998c2",
+      "code": "Prn",
+      "externalAccountNumberExt": "02",
+      "name": "Print"
+    },
+    {
+      "id": "2fa1d78f-1f7d-4659-854b-9d03cd06f21c",
+      "code": "Othr",
+      "externalAccountNumberExt": "03",
+      "name": "Other"
+    }
+  ],
+  "totalRecords": 3
+}

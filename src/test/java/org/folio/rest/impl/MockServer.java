@@ -26,6 +26,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
 import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
 import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
+import static org.folio.orders.utils.ResourcePathResolver.EXPENSE_CLASSES_URL;
 import static org.folio.orders.utils.ResourcePathResolver.FINANCE_EXCHANGE_RATE;
 import static org.folio.orders.utils.ResourcePathResolver.FINANCE_RELEASE_ENCUMBRANCE;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
@@ -138,6 +139,7 @@ import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.BudgetCollection;
 import org.folio.rest.acq.model.finance.BudgetExpenseClassCollection;
 import org.folio.rest.acq.model.finance.ExchangeRate;
+import org.folio.rest.acq.model.finance.ExpenseClassCollection;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.FundCollection;
@@ -196,6 +198,7 @@ public class MockServer {
   private static final String ITEMS_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/";
   public static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
   public static final String BUDGET_EXPENSE_CLASSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "budgetExpenseClasses/budget_expense_classes.json";
+  private static final String EXPENSE_CLASSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "expenseClasses/expense_classes.json";;
   public static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
   public static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
@@ -534,6 +537,7 @@ public class MockServer {
     router.get(resourcesPath(ORDER_TEMPLATES)).handler(this::handleGetOrderTemplates);
     router.get("/finance/ledgers/:id/current-fiscal-year").handler(this::handleGetCurrentFiscalYearByLedgerId);
     router.get("/finance-storage/budget-expense-classes").handler(this::handleGetBudgetExpenseClass);
+    router.get(resourcesPath(EXPENSE_CLASSES_URL)).handler(this::handleGetExpenseClasses);
     router.get(resourcesPath(FUNDS)).handler(this::handleGetFunds);
     router.get(resourcesPath(BUDGETS)).handler(this::handleGetBudgets);
     router.get(resourcesPath(LEDGERS)).handler(this::handleGetLedgers);
@@ -753,6 +757,19 @@ public class MockServer {
     try {
       BudgetExpenseClassCollection expenseClassCollection = new JsonObject(getMockData(BUDGET_EXPENSE_CLASSES_MOCK_DATA_PATH))
         .mapTo(BudgetExpenseClassCollection.class);
+
+      JsonObject entries = JsonObject.mapFrom(expenseClassCollection);
+      serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+    } catch (IOException exception) {
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
+    }
+  }
+
+  private void handleGetExpenseClasses(RoutingContext ctx) {
+    logger.info("handleGetExpenseClasses: " + ctx.request().path());
+    try {
+      ExpenseClassCollection expenseClassCollection = new JsonObject(getMockData(EXPENSE_CLASSES_MOCK_DATA_PATH))
+        .mapTo(ExpenseClassCollection.class);
 
       JsonObject entries = JsonObject.mapFrom(expenseClassCollection);
       serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());

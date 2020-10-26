@@ -12,8 +12,6 @@ import static org.folio.orders.utils.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ErrorCodes.INACTIVE_EXPENSE_CLASS;
 import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
-import static org.folio.orders.utils.HelperUtils.EXPENSE_CLASS_ID;
-import static org.folio.orders.utils.HelperUtils.FUND_ID;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
@@ -22,6 +20,7 @@ import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGET_EXPENSE_CLASSES;
 import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
+import static org.folio.orders.utils.ResourcePathResolver.EXPENSE_CLASSES_URL;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
@@ -30,7 +29,6 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,6 +41,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
@@ -64,6 +63,7 @@ import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.BudgetExpenseClass;
 import org.folio.rest.acq.model.finance.BudgetExpenseClassCollection;
 import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.acq.model.finance.ExpenseClassCollection;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.FundCollection;
@@ -76,7 +76,6 @@ import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -95,10 +94,13 @@ public class FinanceHelper extends AbstractHelper {
   private static final String GET_CURRENT_FISCAL_YEAR_BY_ID = "/finance/ledgers/%s/current-fiscal-year?lang=%s";
   private static final String GET_FUNDS_WITH_SEARCH_PARAMS = resourcesPath(FUNDS) + SEARCH_PARAMS;
   private static final String GET_BUDGET_EXPENSE_CLASSES_QUERY = resourcesPath(BUDGET_EXPENSE_CLASSES) + SEARCH_PARAMS;
+  private static final String GET_EXPENSE_CLASSES_QUERY = resourcesPath(EXPENSE_CLASSES_URL) + SEARCH_PARAMS;
   private static final String GET_LEDGERS_WITH_SEARCH_PARAMS = resourcesPath(LEDGERS) + SEARCH_PARAMS;
   private static final String QUERY_EQUALS = "&query=";
   private static final String ENCUMBRANCE_CRITERIA = "transactionType==Encumbrance";
   private static final String AND = " and ";
+  public static final String FUND_CODE = "fundCode";
+  public static final String EXPENSE_CLASS_NAME = "expenseClassName";
 
   private final TransactionService transactionService;
 
@@ -623,64 +625,76 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   public CompletableFuture<Void> validateExpenseClasses(List<CompositePoLine> poLines) {
-    Map<String, List<String>> expenseClassesByFundId = poLines.stream()
+    Map<FundDistribution, List<String>> expenseClassesByFundId = poLines.stream()
       .flatMap(poLine -> poLine.getFundDistribution().stream())
       .filter(fundDistribution -> Objects.nonNull(fundDistribution.getExpenseClassId()))
-      .collect(groupingBy(FundDistribution::getFundId, mapping(FundDistribution::getExpenseClassId, toList())));
+      .collect(groupingBy(Function.identity(), mapping(FundDistribution::getExpenseClassId, toList())));
 
     return allOf(ctx, expenseClassesByFundId.entrySet().stream()
       .map(this::checkExpenseClassIsActiveByFundDistribution)
       .toArray(CompletableFuture[]::new));
   }
 
-  private CompletableFuture<Void> checkExpenseClassIsActiveByFundDistribution(Map.Entry<String, List<String>> expenseClassesByFundId) {
+  private CompletableFuture<Void> checkExpenseClassIsActiveByFundDistribution(Map.Entry<FundDistribution, List<String>> expenseClassesByFundId) {
     String query = String.format("budget.fundId==%s and budget.budgetStatus==Active", expenseClassesByFundId.getKey());
     String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
     String endpoint = String.format(GET_BUDGET_EXPENSE_CLASSES_QUERY, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
 
     return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(entries -> entries.mapTo(BudgetExpenseClassCollection.class))
-      .thenApply(budgetExpenseClasses -> {
-        List<String> budgetExpenseClassIds = budgetExpenseClasses.getBudgetExpenseClasses()
+      .thenCompose(budgetExpenseClasses -> {
+        var budgetExpenseClassIdsList = budgetExpenseClasses.getBudgetExpenseClasses()
           .stream()
           .map(BudgetExpenseClass::getExpenseClassId)
           .collect(toList());
 
         List<String> fdExpenseClassesList = new ArrayList<>(expenseClassesByFundId.getValue());
         // leave only the difference between stored and requested entities
-        fdExpenseClassesList.removeAll(budgetExpenseClassIds);
+        fdExpenseClassesList.removeAll(budgetExpenseClassIdsList);
         // empty collection means that all requested entities are present in database
         if (fdExpenseClassesList.isEmpty()) {
-          return budgetExpenseClasses;
-        } else {
-          throw buildBudgetExpenseClassHttpException(expenseClassesByFundId.getKey(), fdExpenseClassesList, BUDGET_EXPENSE_CLASS_NOT_FOUND.toError());
-        }
-      })
-      .thenAccept(budgetExpenseClasses -> {
-        boolean hasInactiveExpenseClass = budgetExpenseClasses.getBudgetExpenseClasses()
-          .stream()
-          .filter(budgetExpenseClass -> expenseClassesByFundId.getValue().contains(budgetExpenseClass.getExpenseClassId()))
-          .anyMatch(expenseClass -> BudgetExpenseClass.Status.INACTIVE.equals(expenseClass.getStatus()));
+          var hasInactiveExpenseClass = budgetExpenseClasses.getBudgetExpenseClasses()
+            .stream()
+            .filter(budgetExpenseClass -> expenseClassesByFundId.getValue().contains(budgetExpenseClass.getExpenseClassId()))
+            .anyMatch(expenseClass -> BudgetExpenseClass.Status.INACTIVE.equals(expenseClass.getStatus()));
 
-        if (hasInactiveExpenseClass) {
-          throw buildBudgetExpenseClassHttpException(expenseClassesByFundId.getKey(), expenseClassesByFundId.getValue(), INACTIVE_EXPENSE_CLASS.toError());
+          if (hasInactiveExpenseClass) {
+            return getFundIdExpenseClassIdParameters(expenseClassesByFundId.getKey(), fdExpenseClassesList).thenApply(parameters -> {
+              throw new HttpException(400, INACTIVE_EXPENSE_CLASS.toError().withParameters(parameters));
+            });
+          }
+
+        } else {
+          return getFundIdExpenseClassIdParameters(expenseClassesByFundId.getKey(), fdExpenseClassesList).thenApply(parameters -> {
+            throw new HttpException(400, BUDGET_EXPENSE_CLASS_NOT_FOUND.toError()
+              .withParameters(parameters));
+          });
         }
+        return null;
       });
   }
 
-  private HttpException buildBudgetExpenseClassHttpException(String fundId, List<String> fdExpenseClassesList, Error error){
-    throw new HttpException(400, error
-      .withParameters(Arrays.asList(
-        new Parameter().withKey(FUND_ID)
-          .withValue(fundId),
-        new Parameter().withKey(EXPENSE_CLASS_ID)
-          .withValue(String.join(", ", fdExpenseClassesList)))));
-  }
 
   public CompletableFuture<Void> validateExpenseClassesForOpenedOrder(CompositePurchaseOrder compOrder, List<CompositePoLine> compositePoLines) {
     if (compOrder.getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.OPEN) {
       return validateExpenseClasses(compositePoLines);
     }
     return CompletableFuture.completedFuture(null);
+  }
+
+  private CompletableFuture<List<Parameter>> getFundIdExpenseClassIdParameters(FundDistribution fundDistr, List<String> expenseClassesList) {
+    String query = ID + "==" + String.join(AND + ID + "==", expenseClassesList);
+    String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
+    String endpoint = String.format(GET_EXPENSE_CLASSES_QUERY, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
+
+    List<Parameter> parameters = new ArrayList<>();
+    parameters.add(new Parameter().withKey(FUND_CODE).withValue(fundDistr.getCode()));
+
+    return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(expenseClasses -> {
+        expenseClasses.mapTo(ExpenseClassCollection.class).getExpenseClasses()
+          .forEach(exc -> parameters.add(new Parameter().withKey(EXPENSE_CLASS_NAME).withValue(exc.getName())));
+        return parameters;
+      });
   }
 }
