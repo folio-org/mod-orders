@@ -1,6 +1,7 @@
 package org.folio.helper;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.completedStage;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
@@ -629,8 +630,14 @@ public class PurchaseOrderHelper extends AbstractHelper {
     updateAndGetOrderWithLines(compPO)
       .thenCompose(compositePO -> financeHelper.getOrderEncumbrances(compPO.getId()))
       .thenApply(financeHelper::makeEncumbrancesPending)
-      .thenCompose(encumbrances -> financeHelper.updateOrderTransactionSummary(compPO.getId(), encumbrances.size())
-                                                .thenApply(v -> encumbrances))
+      .thenCompose(encumbrances -> {
+        if (encumbrances.size() > 0) {
+          return financeHelper.updateOrderTransactionSummary(compPO.getId(), encumbrances.size())
+              .thenApply(v -> encumbrances);
+        } else {
+          return CompletableFuture.completedFuture(encumbrances);
+        }
+      })
       .thenCompose(financeHelper::updateTransactions)
       .thenAccept(ok -> orderLineHelper.makePoLinesPending(compPO.getCompositePoLines()))
       .thenCompose(ok -> orderLineHelper.updatePoLinesSummary(compPO.getCompositePoLines()))
