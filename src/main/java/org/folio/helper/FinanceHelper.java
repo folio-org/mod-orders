@@ -670,7 +670,7 @@ public class FinanceHelper extends AbstractHelper {
               .withParameters(parameters));
           });
         }
-        return null;
+        return CompletableFuture.completedFuture(null);
       });
   }
 
