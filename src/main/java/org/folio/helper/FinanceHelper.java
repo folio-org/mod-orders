@@ -99,6 +99,7 @@ public class FinanceHelper extends AbstractHelper {
   private static final String QUERY_EQUALS = "&query=";
   private static final String ENCUMBRANCE_CRITERIA = "transactionType==Encumbrance";
   private static final String AND = " and ";
+  private static final String OR = " or ";
   public static final String FUND_CODE = "fundCode";
   public static final String EXPENSE_CLASS_NAME = "expenseClassName";
 
@@ -683,7 +684,7 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   private CompletableFuture<List<Parameter>> getFundIdExpenseClassIdParameters(FundDistribution fundDistr, List<String> expenseClassesList) {
-    String query = ID + "==" + String.join(AND + ID + "==", expenseClassesList);
+    String query = ID + "==" + String.join(OR + ID + "==", expenseClassesList);
     String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
     String endpoint = String.format(GET_EXPENSE_CLASSES_QUERY, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
 
