@@ -3,6 +3,7 @@ package org.folio.helper;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_EXPENSE_CLASS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
@@ -99,7 +100,6 @@ public class FinanceHelper extends AbstractHelper {
   private static final String QUERY_EQUALS = "&query=";
   private static final String ENCUMBRANCE_CRITERIA = "transactionType==Encumbrance";
   private static final String AND = " and ";
-  private static final String OR = " or ";
   public static final String FUND_CODE = "fundCode";
   public static final String EXPENSE_CLASS_NAME = "expenseClassName";
 
@@ -626,18 +626,19 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   public CompletableFuture<Void> validateExpenseClasses(List<CompositePoLine> poLines) {
-    Map<FundDistribution, List<String>> expenseClassesByFundId = poLines.stream()
-      .flatMap(poLine -> poLine.getFundDistribution().stream())
-      .filter(fundDistribution -> Objects.nonNull(fundDistribution.getExpenseClassId()))
-      .collect(groupingBy(Function.identity(), mapping(FundDistribution::getExpenseClassId, toList())));
+
+    Map<FundDistribution, String> expenseClassesByFundId = poLines.stream()
+        .flatMap(poLine -> poLine.getFundDistribution().stream())
+        .filter(fundDistribution -> Objects.nonNull(fundDistribution.getExpenseClassId()))
+        .collect(toMap(Function.identity(), FundDistribution::getExpenseClassId));
 
     return allOf(ctx, expenseClassesByFundId.entrySet().stream()
       .map(this::checkExpenseClassIsActiveByFundDistribution)
       .toArray(CompletableFuture[]::new));
   }
 
-  private CompletableFuture<Void> checkExpenseClassIsActiveByFundDistribution(Map.Entry<FundDistribution, List<String>> expenseClassesByFundId) {
-    String query = String.format("budget.fundId==%s and budget.budgetStatus==Active", expenseClassesByFundId.getKey());
+  private CompletableFuture<Void> checkExpenseClassIsActiveByFundDistribution(Map.Entry<FundDistribution, String> expenseClassByFundId) {
+    String query = String.format("budget.fundId==%s and budget.budgetStatus==Active", expenseClassByFundId.getKey().getFundId());
     String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
     String endpoint = String.format(GET_BUDGET_EXPENSE_CLASSES_QUERY, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
 
@@ -649,24 +650,20 @@ public class FinanceHelper extends AbstractHelper {
           .map(BudgetExpenseClass::getExpenseClassId)
           .collect(toList());
 
-        List<String> fdExpenseClassesList = new ArrayList<>(expenseClassesByFundId.getValue());
-        // leave only the difference between stored and requested entities
-        fdExpenseClassesList.removeAll(budgetExpenseClassIdsList);
-        // empty collection means that all requested entities are present in database
-        if (fdExpenseClassesList.isEmpty()) {
+        if (budgetExpenseClassIdsList.contains(expenseClassByFundId.getValue())) {
           var hasInactiveExpenseClass = budgetExpenseClasses.getBudgetExpenseClasses()
             .stream()
-            .filter(budgetExpenseClass -> expenseClassesByFundId.getValue().contains(budgetExpenseClass.getExpenseClassId()))
+            .filter(budgetExpenseClass -> expenseClassByFundId.getValue().contains(budgetExpenseClass.getExpenseClassId()))
             .anyMatch(expenseClass -> BudgetExpenseClass.Status.INACTIVE.equals(expenseClass.getStatus()));
 
           if (hasInactiveExpenseClass) {
-            return getFundIdExpenseClassIdParameters(expenseClassesByFundId.getKey(), fdExpenseClassesList).thenApply(parameters -> {
+            return getFundIdExpenseClassIdParameters(expenseClassByFundId).thenApply(parameters -> {
               throw new HttpException(400, INACTIVE_EXPENSE_CLASS.toError().withParameters(parameters));
             });
           }
 
         } else {
-          return getFundIdExpenseClassIdParameters(expenseClassesByFundId.getKey(), fdExpenseClassesList).thenApply(parameters -> {
+          return getFundIdExpenseClassIdParameters(expenseClassByFundId).thenApply(parameters -> {
             throw new HttpException(400, BUDGET_EXPENSE_CLASS_NOT_FOUND.toError()
               .withParameters(parameters));
           });
@@ -683,13 +680,13 @@ public class FinanceHelper extends AbstractHelper {
     return CompletableFuture.completedFuture(null);
   }
 
-  private CompletableFuture<List<Parameter>> getFundIdExpenseClassIdParameters(FundDistribution fundDistr, List<String> expenseClassesList) {
-    String query = ID + "==" + String.join(OR + ID + "==", expenseClassesList);
+  private CompletableFuture<List<Parameter>> getFundIdExpenseClassIdParameters(Map.Entry<FundDistribution, String> expenseClassByFundId) {
+    String query = ID + "==" + expenseClassByFundId.getValue();
     String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
     String endpoint = String.format(GET_EXPENSE_CLASSES_QUERY, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
 
     List<Parameter> parameters = new ArrayList<>();
-    parameters.add(new Parameter().withKey(FUND_CODE).withValue(fundDistr.getCode()));
+    parameters.add(new Parameter().withKey(FUND_CODE).withValue(expenseClassByFundId.getKey().getCode()));
 
     return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(expenseClasses -> {
