@@ -34,16 +34,15 @@ import org.folio.rest.jaxrs.model.ReceivingItemResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.rest.jaxrs.model.ToBeReceived;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 
-@RunWith(JUnitParamsRunner.class)
+
 public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
 
   private static final Logger logger = LoggerFactory.getLogger(PiecesProtectionTest.class);
@@ -87,8 +86,8 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
     public abstract String getJsonRequest(List<String> units);
   }
 
-  @Test
-  @Parameters(source = Entities.class)
+  @ParameterizedTest
+  @EnumSource(value = Entities.class)
   public void testFlowWithNonExistedUnits(Entities entity) {
     logger.info("=== Test check-in/receiving flow - non-existing units ===");
 
@@ -99,8 +98,8 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
     validateNumberOfRequests(1, 0);
   }
 
-  @Test
-  @Parameters(source = Entities.class)
+  @ParameterizedTest
+  @EnumSource(value = Entities.class)
   public void testFlowWithAllowedUnits(Entities entity) {
     logger.info("=== Test check-in/receiving flow - not-protecting units ===");
 
@@ -111,8 +110,8 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
     validateNumberOfRequests(1, 0);
   }
 
-  @Test
-  @Parameters(source = Entities.class)
+  @ParameterizedTest
+  @EnumSource(value = Entities.class)
   public void testFlowWithRestrictedUnitsAndAllowedUser(Entities entity) {
     logger.info("=== Test check-in/receiving flow - protecting units and allowed user ===");
 
@@ -123,8 +122,8 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
     validateNumberOfRequests(1, 1);
   }
 
-  @Test
-  @Parameters(source = Entities.class)
+  @ParameterizedTest
+  @EnumSource(value = Entities.class)
   public void testCheckInWithProtectedUnitsAndForbiddenUser(Entities entity) {
     logger.info("=== Test check-in/receiving flow - protecting units and forbidden user ===");
 

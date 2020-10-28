@@ -1,8 +1,11 @@
 package org.folio.helper;
 
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
+import static org.folio.orders.utils.ErrorCodes.BUDGET_EXPENSE_CLASS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
@@ -18,16 +21,15 @@ import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGET_EXPENSE_CLASSES;
 import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
+import static org.folio.orders.utils.ResourcePathResolver.EXPENSE_CLASSES_URL;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
-import io.vertx.core.Vertx;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -40,15 +42,16 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import javax.money.MonetaryAmount;
-
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
 import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRateProvider;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
@@ -58,8 +61,10 @@ import org.folio.models.PoLineFundHolder;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Budget;
+import org.folio.rest.acq.model.finance.BudgetExpenseClass;
 import org.folio.rest.acq.model.finance.BudgetExpenseClassCollection;
 import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.acq.model.finance.ExpenseClassCollection;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.FundCollection;
@@ -75,9 +80,8 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.TransactionService;
-import org.folio.spring.SpringContextUtil;
+import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryFunctions;
 import org.javamoney.moneta.function.MonetaryOperators;
@@ -85,29 +89,30 @@ import org.javamoney.moneta.function.MonetaryOperators;
 import io.vertx.core.Context;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
-import org.springframework.beans.factory.annotation.Autowired;
 
 public class FinanceHelper extends AbstractHelper {
   private static final String GET_CURRENT_ACTIVE_BUDGET_BY_FUND_ID = resourcesPath(CURRENT_BUDGET) + "?lang=%s&status=Active";
   private static final String GET_CURRENT_FISCAL_YEAR_BY_ID = "/finance/ledgers/%s/current-fiscal-year?lang=%s";
   private static final String GET_FUNDS_WITH_SEARCH_PARAMS = resourcesPath(FUNDS) + SEARCH_PARAMS;
   private static final String GET_BUDGET_EXPENSE_CLASSES_QUERY = resourcesPath(BUDGET_EXPENSE_CLASSES) + SEARCH_PARAMS;
+  private static final String GET_EXPENSE_CLASSES_QUERY = resourcesPath(EXPENSE_CLASSES_URL) + SEARCH_PARAMS;
   private static final String GET_LEDGERS_WITH_SEARCH_PARAMS = resourcesPath(LEDGERS) + SEARCH_PARAMS;
   private static final String QUERY_EQUALS = "&query=";
   private static final String ENCUMBRANCE_CRITERIA = "transactionType==Encumbrance";
   private static final String AND = " and ";
+  public static final String FUND_CODE = "fundCode";
+  public static final String EXPENSE_CLASS_NAME = "expenseClassName";
 
   private final TransactionService transactionService;
 
-  @Autowired
   private ExchangeRateProviderResolver exchangeRateProviderResolver;
 
   private String systemCurrency;
 
   public FinanceHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
-    transactionService = new TransactionService(okapiHeaders, ctx, lang);
-    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
+    this.exchangeRateProviderResolver = new ExchangeRateProviderResolver();
+    this.transactionService = new TransactionService(okapiHeaders, ctx, lang);
   }
 
   public FinanceHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang
@@ -203,7 +208,7 @@ public class FinanceHelper extends AbstractHelper {
 
 
   private Collector<Transaction, ?, MonetaryAmount> sumTransactionAmounts() {
-    return Collectors.mapping(tx -> Money.of(tx.getAmount(), systemCurrency),
+    return mapping(tx -> Money.of(tx.getAmount(), systemCurrency),
       Collectors.reducing(Money.of(0, systemCurrency), MonetaryFunctions::sum));
   }
 
@@ -621,41 +626,73 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   public CompletableFuture<Void> validateExpenseClasses(List<CompositePoLine> poLines) {
-    List<FundDistribution> fundDistributionsWithExpenseClasses = poLines.stream()
-      .flatMap(poLine -> poLine.getFundDistribution().stream())
-      .filter(fundDistribution -> Objects.nonNull(fundDistribution.getExpenseClassId()))
-      .collect(toList());
 
-    return allOf(ctx, fundDistributionsWithExpenseClasses.stream()
+    Map<FundDistribution, String> expenseClassesByFundId = poLines.stream()
+        .flatMap(poLine -> poLine.getFundDistribution().stream())
+        .filter(fundDistribution -> Objects.nonNull(fundDistribution.getExpenseClassId()))
+        .collect(toMap(Function.identity(), FundDistribution::getExpenseClassId));
+
+    return allOf(ctx, expenseClassesByFundId.entrySet().stream()
       .map(this::checkExpenseClassIsActiveByFundDistribution)
       .toArray(CompletableFuture[]::new));
   }
 
-  private CompletableFuture<Void> checkExpenseClassIsActiveByFundDistribution(FundDistribution fundDistribution) {
-    String query = String.format("budget.fundId==%s and budget.budgetStatus==Active and status==Inactive and expenseClassId==%s",
-      fundDistribution.getFundId(), fundDistribution.getExpenseClassId());
+  private CompletableFuture<Void> checkExpenseClassIsActiveByFundDistribution(Map.Entry<FundDistribution, String> expenseClassByFundId) {
+    String query = String.format("budget.fundId==%s and budget.budgetStatus==Active", expenseClassByFundId.getKey().getFundId());
     String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
     String endpoint = String.format(GET_BUDGET_EXPENSE_CLASSES_QUERY, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
 
     return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
       .thenApply(entries -> entries.mapTo(BudgetExpenseClassCollection.class))
-      .thenAccept(budgetExpenseClasses -> {
-        if (budgetExpenseClasses.getTotalRecords() > 0) {
-          throw new HttpException(400, INACTIVE_EXPENSE_CLASS.toError()
-            .withParameters(Arrays.asList(
-              new Parameter()
-                .withKey("fundId").withValue(fundDistribution.getFundId()),
-              new Parameter()
-                .withKey("expenseClassId").withValue(fundDistribution.getExpenseClassId())
-            )));
+      .thenCompose(budgetExpenseClasses -> {
+        var budgetExpenseClassIdsList = budgetExpenseClasses.getBudgetExpenseClasses()
+          .stream()
+          .map(BudgetExpenseClass::getExpenseClassId)
+          .collect(toList());
+
+        if (budgetExpenseClassIdsList.contains(expenseClassByFundId.getValue())) {
+          var hasInactiveExpenseClass = budgetExpenseClasses.getBudgetExpenseClasses()
+            .stream()
+            .filter(budgetExpenseClass -> expenseClassByFundId.getValue().contains(budgetExpenseClass.getExpenseClassId()))
+            .anyMatch(expenseClass -> BudgetExpenseClass.Status.INACTIVE.equals(expenseClass.getStatus()));
+
+          if (hasInactiveExpenseClass) {
+            return getFundIdExpenseClassIdParameters(expenseClassByFundId).thenApply(parameters -> {
+              throw new HttpException(400, INACTIVE_EXPENSE_CLASS.toError().withParameters(parameters));
+            });
+          }
+
+        } else {
+          return getFundIdExpenseClassIdParameters(expenseClassByFundId).thenApply(parameters -> {
+            throw new HttpException(400, BUDGET_EXPENSE_CLASS_NOT_FOUND.toError()
+              .withParameters(parameters));
+          });
         }
+        return CompletableFuture.completedFuture(null);
       });
   }
+
 
   public CompletableFuture<Void> validateExpenseClassesForOpenedOrder(CompositePurchaseOrder compOrder, List<CompositePoLine> compositePoLines) {
     if (compOrder.getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.OPEN) {
       return validateExpenseClasses(compositePoLines);
     }
     return CompletableFuture.completedFuture(null);
+  }
+
+  private CompletableFuture<List<Parameter>> getFundIdExpenseClassIdParameters(Map.Entry<FundDistribution, String> expenseClassByFundId) {
+    String query = ID + "==" + expenseClassByFundId.getValue();
+    String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
+    String endpoint = String.format(GET_EXPENSE_CLASSES_QUERY, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
+
+    List<Parameter> parameters = new ArrayList<>();
+    parameters.add(new Parameter().withKey(FUND_CODE).withValue(expenseClassByFundId.getKey().getCode()));
+
+    return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenApply(expenseClasses -> {
+        expenseClasses.mapTo(ExpenseClassCollection.class).getExpenseClasses()
+          .forEach(exc -> parameters.add(new Parameter().withKey(EXPENSE_CLASS_NAME).withValue(exc.getName())));
+        return parameters;
+      });
   }
 }

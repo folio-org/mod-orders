@@ -43,7 +43,7 @@ public abstract class AbstractOrderStatusHandler extends AbstractHelper implemen
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     JsonArray orderItemStatusArray = messageAsJsonArray(EVENT_PAYLOAD, message);
     for (Object orderItemStatus : orderItemStatusArray.getList()) {
-      JsonObject ordersPayload = JsonObject.class.cast(orderItemStatus);
+      JsonObject ordersPayload = (JsonObject) orderItemStatus;
       String orderId = ordersPayload.getString(ORDER_ID);
       // Add future which would hold result of operation
       CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);

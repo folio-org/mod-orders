@@ -7,6 +7,7 @@ import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.assertj.core.api.Assertions.fail;
 import static org.folio.helper.InventoryHelper.ITEMS;
 import static org.folio.helper.InventoryHelper.REQUESTS;
 import static org.folio.helper.ProtectionHelper.ACQUISITIONS_UNIT_ID;
@@ -19,7 +20,36 @@ import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.FUND_ID;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.orders.utils.ResourcePathResolver.*;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
+import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
+import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
+import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
+import static org.folio.orders.utils.ResourcePathResolver.EXPENSE_CLASSES_URL;
+import static org.folio.orders.utils.ResourcePathResolver.FINANCE_EXCHANGE_RATE;
+import static org.folio.orders.utils.ResourcePathResolver.FINANCE_RELEASE_ENCUMBRANCE;
+import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
+import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
+import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
+import static org.folio.orders.utils.ResourcePathResolver.PREFIXES;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.REASONS_FOR_CLOSURE;
+import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
+import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
+import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
+import static org.folio.orders.utils.ResourcePathResolver.SUFFIXES;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
+import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_ENDPOINT;
+import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_STORAGE_ENDPOINT;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.impl.ApiTestBase.BAD_QUERY;
 import static org.folio.rest.impl.ApiTestBase.COMP_ORDER_MOCK_DATA_PATH;
@@ -69,7 +99,6 @@ import static org.folio.rest.impl.ReceivingHistoryApiTest.RECEIVING_HISTORY_PURC
 import static org.folio.rest.impl.crud.CrudTestEntities.PREFIX;
 import static org.folio.rest.impl.crud.CrudTestEntities.REASON_FOR_CLOSURE;
 import static org.folio.rest.impl.crud.CrudTestEntities.SUFFIX;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
@@ -108,9 +137,9 @@ import org.folio.rest.acq.model.Title;
 import org.folio.rest.acq.model.TitleCollection;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.BudgetCollection;
-import org.folio.rest.acq.model.finance.BudgetExpenseClass;
 import org.folio.rest.acq.model.finance.BudgetExpenseClassCollection;
 import org.folio.rest.acq.model.finance.ExchangeRate;
+import org.folio.rest.acq.model.finance.ExpenseClassCollection;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.FundCollection;
@@ -155,7 +184,6 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import io.vertx.ext.web.impl.RoutingContextImpl;
 import one.util.streamex.StreamEx;
 
 public class MockServer {
@@ -169,6 +197,8 @@ public class MockServer {
   public static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
   private static final String ITEMS_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/";
   public static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
+  public static final String BUDGET_EXPENSE_CLASSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "budgetExpenseClasses/budget_expense_classes.json";
+  private static final String EXPENSE_CLASSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "expenseClasses/expense_classes.json";;
   public static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
   public static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
@@ -507,6 +537,7 @@ public class MockServer {
     router.get(resourcesPath(ORDER_TEMPLATES)).handler(this::handleGetOrderTemplates);
     router.get("/finance/ledgers/:id/current-fiscal-year").handler(this::handleGetCurrentFiscalYearByLedgerId);
     router.get("/finance-storage/budget-expense-classes").handler(this::handleGetBudgetExpenseClass);
+    router.get(resourcesPath(EXPENSE_CLASSES_URL)).handler(this::handleGetExpenseClasses);
     router.get(resourcesPath(FUNDS)).handler(this::handleGetFunds);
     router.get(resourcesPath(BUDGETS)).handler(this::handleGetBudgets);
     router.get(resourcesPath(LEDGERS)).handler(this::handleGetLedgers);
@@ -722,17 +753,29 @@ public class MockServer {
   }
 
   private void handleGetBudgetExpenseClass(RoutingContext ctx) {
-    logger.info("got: " + ctx.request().path());
+    logger.info("handleGetBudgetExpenseClass: " + ctx.request().path());
+    try {
+      BudgetExpenseClassCollection expenseClassCollection = new JsonObject(getMockData(BUDGET_EXPENSE_CLASSES_MOCK_DATA_PATH))
+        .mapTo(BudgetExpenseClassCollection.class);
 
-    List<BudgetExpenseClass> expenseClasses = getMockEntries(BUDGET_EXPENSE_CLASSES, BudgetExpenseClass.class)
-      .orElseGet(ArrayList::new);
+      JsonObject entries = JsonObject.mapFrom(expenseClassCollection);
+      serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+    } catch (IOException exception) {
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
+    }
+  }
 
-    BudgetExpenseClassCollection expenseClassCollection = new BudgetExpenseClassCollection()
-      .withBudgetExpenseClasses(expenseClasses)
-      .withTotalRecords(expenseClasses.size());
+  private void handleGetExpenseClasses(RoutingContext ctx) {
+    logger.info("handleGetExpenseClasses: " + ctx.request().path());
+    try {
+      ExpenseClassCollection expenseClassCollection = new JsonObject(getMockData(EXPENSE_CLASSES_MOCK_DATA_PATH))
+        .mapTo(ExpenseClassCollection.class);
 
-    JsonObject entries = JsonObject.mapFrom(expenseClassCollection);
-    serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+      JsonObject entries = JsonObject.mapFrom(expenseClassCollection);
+      serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+    } catch (IOException exception) {
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
+    }
   }
 
   private void handleGetCurrentFiscalYearByLedgerId(RoutingContext ctx) {

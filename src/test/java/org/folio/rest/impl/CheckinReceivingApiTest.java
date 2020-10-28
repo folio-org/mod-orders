@@ -39,6 +39,7 @@ import static org.hamcrest.Matchers.isIn;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -72,8 +73,7 @@ import org.folio.rest.jaxrs.model.ReceivingItemResult;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -396,7 +396,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.PHYSICAL)
       .withLocationId(locationForPhysical)
       .withId(UUID.randomUUID().toString())
-      .withItemId(UUID.randomUUID().toString());;
+      .withItemId(UUID.randomUUID().toString());
     Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC)
       .withId(UUID.randomUUID().toString())
@@ -578,7 +578,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
         }
       }
     }
-    Assert.assertEquals(expectedHoldings.size(), getCreatedHoldings().size());
+    assertEquals(expectedHoldings.size(), getCreatedHoldings().size());
   }
 
   private boolean isHoldingsUpdateRequired(org.folio.rest.acq.model.Piece piece, PoLine poLine) {

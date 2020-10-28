@@ -19,7 +19,6 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
-import io.vertx.ext.unit.junit.RunTestOnContext;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -28,17 +27,14 @@ import java.util.stream.Stream;
 
 import javax.ws.rs.core.Response;
 
-import org.folio.config.ApplicationConfig;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.helper.AbstractHelper;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus;
-import org.folio.spring.SpringContextUtil;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
@@ -50,10 +46,10 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class ReceiveOrderStatusChangeHandlerTest extends ApiTestBase {
   private static final Logger logger = LoggerFactory.getLogger(ReceiveOrderStatusChangeHandlerTest.class);
 
@@ -61,21 +57,17 @@ public class ReceiveOrderStatusChangeHandlerTest extends ApiTestBase {
 
   private static Vertx vertx;
 
-  @ClassRule
-  public static RunTestOnContext rule = new RunTestOnContext();
-
-  @BeforeClass
+  @BeforeAll
   public static void before() throws InterruptedException, ExecutionException, TimeoutException {
     ApiTestBase.before();
-    vertx = rule.vertx();
-    SpringContextUtil.init(vertx, vertx.getOrCreateContext(), ApplicationConfig.class);
+    vertx = Vertx.vertx();
     vertx.eventBus().consumer(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address, new ReceiveOrderStatusChangeHandler(vertx));
   }
 
   @Test
-  public void testUpdateOpenOrderToClosed(TestContext context) {
+  public void testUpdateOpenOrderToClosed(VertxTestContext context) throws Throwable {
     logger.info("=== Test case when order status update is expected from Open to Closed ===");
-    sendEvent(createBody(PO_ID_OPEN_TO_BE_CLOSED), context.asyncAssertSuccess(result -> {
+    sendEvent(createBody(PO_ID_OPEN_TO_BE_CLOSED), context.succeeding(result -> {
       assertThat(getPurchaseOrderRetrievals(), hasSize(1));
       assertThat(getPoLineSearches(), hasSize(1));
       assertThat(getPurchaseOrderUpdates(), hasSize(1));
@@ -93,24 +85,28 @@ public class ReceiveOrderStatusChangeHandlerTest extends ApiTestBase {
 
       assertThat(getQueryParams(ITEM_RECORDS), hasSize(1));
       assertThat(getQueryParams(ITEM_RECORDS).get(0), containsString("status.name==On order"));
+      context.completeNow();
     }));
+    checkVertxContextCompletion(context);
   }
 
   @Test
-  public void testUpdateNotRequiredForOpenOrder(TestContext context) {
+  public void testUpdateNotRequiredForOpenOrder(VertxTestContext context) throws Throwable {
     logger.info("=== Test case when no order update is expected for Open order ===");
-    sendEvent(createBody(PO_ID_OPEN_STATUS), context.asyncAssertSuccess(result -> {
+    sendEvent(createBody(PO_ID_OPEN_STATUS), context.succeeding(result -> {
       assertThat(getPurchaseOrderRetrievals(), hasSize(1));
       assertThat(getPoLineSearches(), hasSize(1));
       assertThat(getPurchaseOrderUpdates(), nullValue());
       assertThat(result.body(), equalTo(Response.Status.OK.getReasonPhrase()));
+      context.completeNow();
     }));
+    checkVertxContextCompletion(context);
   }
 
   @Test
-  public void testUpdateClosedOrderToOpen(TestContext context) {
+  public void testUpdateClosedOrderToOpen(VertxTestContext context) throws Throwable {
     logger.info("=== Test case when order update is expected for Closed order ===");
-    sendEvent(createBody(PO_ID_CLOSED_STATUS), context.asyncAssertSuccess(result -> {
+    sendEvent(createBody(PO_ID_CLOSED_STATUS), context.succeeding(result -> {
       assertThat(getPurchaseOrderRetrievals(), hasSize(1));
       assertThat(getPoLineSearches(), hasSize(1));
       assertThat(getPurchaseOrderUpdates(), hasSize(1));
@@ -124,83 +120,97 @@ public class ReceiveOrderStatusChangeHandlerTest extends ApiTestBase {
 
       assertThat(getQueryParams(ITEM_RECORDS), hasSize(1));
       assertThat(getQueryParams(ITEM_RECORDS).get(0), containsString("status.name==Order closed"));
+      context.completeNow();
     }));
+    checkVertxContextCompletion(context);
   }
 
   @Test
-  public void testNoUpdatesForPendingOrderWithoutLines(TestContext context) {
+  public void testNoUpdatesForPendingOrderWithoutLines(VertxTestContext context) throws Throwable {
     logger.info("=== Test case when no order update is expected for Pending order without lines ===");
-    sendEvent(createBody(PO_ID_PENDING_STATUS_WITHOUT_PO_LINES), context.asyncAssertSuccess(result -> {
+    sendEvent(createBody(PO_ID_PENDING_STATUS_WITHOUT_PO_LINES), context.succeeding(result -> {
       assertThat(getPurchaseOrderRetrievals(), hasSize(1));
       assertThat(getPoLineSearches(), nullValue());
       assertThat(getPurchaseOrderUpdates(), nullValue());
       assertThat(result.body(), equalTo(Response.Status.OK.getReasonPhrase()));
+      context.completeNow();
     }));
+    checkVertxContextCompletion(context);
   }
 
   @Test
-  public void testNoUpdatesForPendingOrderWithLines(TestContext context) {
+  public void testNoUpdatesForPendingOrderWithLines(VertxTestContext context) throws Throwable {
     logger.info("=== Test case when no order update is expected for Pending order with a few PO Lines===");
-    sendEvent(createBody(PO_ID_PENDING_STATUS_WITH_PO_LINES), context.asyncAssertSuccess(result -> {
+    sendEvent(createBody(PO_ID_PENDING_STATUS_WITH_PO_LINES), context.succeeding(result -> {
       assertThat(getPurchaseOrderRetrievals(), hasSize(1));
       assertThat(getPoLineSearches(), nullValue());
       assertThat(getPurchaseOrderUpdates(), nullValue());
       assertThat(result.body(), equalTo(Response.Status.OK.getReasonPhrase()));
+      context.completeNow();
     }));
+    checkVertxContextCompletion(context);
   }
 
   @Test
-  public void testUpdateClosedOrderToOpenAndNoUpdateForOpenOrder(TestContext context) {
+  public void testUpdateClosedOrderToOpenAndNoUpdateForOpenOrder(VertxTestContext context) throws Throwable {
     logger.info("=== Test case when order update is expected for Closed order ===");
-    sendEvent(createBody(PO_ID_CLOSED_STATUS, PO_ID_OPEN_STATUS), context.asyncAssertSuccess(result -> {
+    sendEvent(createBody(PO_ID_CLOSED_STATUS, PO_ID_OPEN_STATUS), context.succeeding(result -> {
       assertThat(getPurchaseOrderRetrievals(), hasSize(2));
       assertThat(getPoLineSearches(), hasSize(2));
       assertThat(getPurchaseOrderUpdates(), hasSize(1));
       assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(), is(WorkflowStatus.OPEN));
       assertThat(result.body(), equalTo(Response.Status.OK.getReasonPhrase()));
+      context.completeNow();
     }));
+    checkVertxContextCompletion(context);
   }
 
   @Test
-  public void testNonexistentOrder(TestContext context) {
+  public void testNonexistentOrder(VertxTestContext context) throws Throwable {
     logger.info("=== Test case when no order update is expected ===");
-    sendEvent(createBody(ID_DOES_NOT_EXIST), context.asyncAssertFailure(result -> {
+    sendEvent(createBody(ID_DOES_NOT_EXIST), context.failing(result -> {
       assertThat(getPurchaseOrderRetrievals(), nullValue());
       assertThat(getPoLineSearches(), nullValue());
       assertThat(getPurchaseOrderUpdates(), nullValue());
       assertThat(result, instanceOf(ReplyException.class));
       assertThat(((ReplyException) result).failureCode(), is(404));
+      context.completeNow();
     }));
+    checkVertxContextCompletion(context);
   }
 
   @Test
-  public void testOrderRetrievalFailure(TestContext context) {
+  public void testOrderRetrievalFailure(VertxTestContext context) throws Throwable {
     logger.info("=== Test case when order retrieval fails ===");
-    sendEvent(createBody(ID_FOR_INTERNAL_SERVER_ERROR), context.asyncAssertFailure(result -> {
+    sendEvent(createBody(ID_FOR_INTERNAL_SERVER_ERROR), context.failing(result -> {
       assertThat(getPurchaseOrderRetrievals(), nullValue());
       assertThat(getPoLineSearches(), nullValue());
       assertThat(getPurchaseOrderUpdates(), nullValue());
       assertThat(result, instanceOf(ReplyException.class));
       assertThat(((ReplyException) result).failureCode(), is(500));
+      context.completeNow();
     }));
+    checkVertxContextCompletion(context);
   }
 
   @Test
-  public void testOrderLinesRetrievalFailure(TestContext context) {
+  public void testOrderLinesRetrievalFailure(VertxTestContext context) throws Throwable {
     logger.info("=== Test case when order lines retrieval fails ===");
-    sendEvent(createBody(PO_ID_GET_LINES_INTERNAL_SERVER_ERROR), context.asyncAssertFailure(result -> {
+    sendEvent(createBody(PO_ID_GET_LINES_INTERNAL_SERVER_ERROR), context.failing(result -> {
       assertThat(getPurchaseOrderRetrievals(), hasSize(1));
       assertThat(getPoLineSearches(), nullValue());
       assertThat(getPurchaseOrderUpdates(), nullValue());
       assertThat(result, instanceOf(ReplyException.class));
       assertThat(((ReplyException) result).failureCode(), is(500));
+      context.completeNow();
     }));
+    checkVertxContextCompletion(context);
   }
 
   @Test
-  public void testOrderUpdateFailure(TestContext context) {
+  public void testOrderUpdateFailure(VertxTestContext context) throws Throwable {
     logger.info("=== Test case when order update fails ===");
-    sendEvent(createBody(PO_ID_OPEN_TO_BE_CLOSED_500_ON_UPDATE), context.asyncAssertFailure(result -> {
+    sendEvent(createBody(PO_ID_OPEN_TO_BE_CLOSED_500_ON_UPDATE), context.failing(result -> {
       assertThat(getPurchaseOrderRetrievals(), hasSize(1));
       assertThat(getPoLineSearches(), hasSize(1));
       assertThat(getPurchaseOrderUpdates(), hasSize(1));
@@ -211,7 +221,9 @@ public class ReceiveOrderStatusChangeHandlerTest extends ApiTestBase {
       assertThat(purchaseOrder.getWorkflowStatus(), is(WorkflowStatus.CLOSED));
       assertThat(purchaseOrder.getCloseReason(), notNullValue());
       assertThat(purchaseOrder.getCloseReason().getReason(), equalTo(HelperUtils.REASON_COMPLETE));
+      context.completeNow();
     }));
+    checkVertxContextCompletion(context);
   }
 
   private JsonObject createBody(String... ids) {

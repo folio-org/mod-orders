@@ -1,17 +1,6 @@
 package org.folio.helper;
 
-import static org.folio.orders.utils.HelperUtils.CONFIGS;
-import static org.folio.orders.utils.HelperUtils.CONFIG_NAME;
-import static org.folio.orders.utils.HelperUtils.CONFIG_VALUE;
-import static org.folio.orders.utils.HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation;
-import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
-import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantityWithoutLocation;
-import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
-import static org.folio.orders.utils.HelperUtils.getElectronicCostQuantity;
-import static org.folio.orders.utils.HelperUtils.getPhysicalCostQuantity;
-import static org.folio.orders.utils.HelperUtils.groupLocationsById;
-import static org.folio.orders.utils.HelperUtils.isHoldingCreationRequiredForLocation;
-import static org.folio.rest.impl.ApiTestBase.*;
+import static org.assertj.core.api.Assertions.fail;
 import static org.folio.helper.InventoryHelper.CONFIG_NAME_INSTANCE_STATUS_CODE;
 import static org.folio.helper.InventoryHelper.CONFIG_NAME_INSTANCE_TYPE_CODE;
 import static org.folio.helper.InventoryHelper.CONFIG_NAME_LOAN_TYPE_NAME;
@@ -42,7 +31,35 @@ import static org.folio.helper.InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFI
 import static org.folio.helper.InventoryHelper.ITEM_STATUS;
 import static org.folio.helper.InventoryHelper.ITEM_STATUS_NAME;
 import static org.folio.helper.InventoryHelper.LOAN_TYPES;
-import static org.folio.rest.impl.MockServer.*;
+import static org.folio.orders.utils.HelperUtils.CONFIGS;
+import static org.folio.orders.utils.HelperUtils.CONFIG_NAME;
+import static org.folio.orders.utils.HelperUtils.CONFIG_VALUE;
+import static org.folio.orders.utils.HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation;
+import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
+import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantityWithoutLocation;
+import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
+import static org.folio.orders.utils.HelperUtils.getElectronicCostQuantity;
+import static org.folio.orders.utils.HelperUtils.getPhysicalCostQuantity;
+import static org.folio.orders.utils.HelperUtils.groupLocationsById;
+import static org.folio.orders.utils.HelperUtils.isHoldingCreationRequiredForLocation;
+import static org.folio.rest.impl.ApiTestBase.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.rest.impl.ApiTestBase.ID_FOR_INTERNAL_SERVER_ERROR;
+import static org.folio.rest.impl.MockServer.CONFIG_MOCK_PATH;
+import static org.folio.rest.impl.MockServer.INSTANCE_STATUSES_MOCK_DATA_PATH;
+import static org.folio.rest.impl.MockServer.INSTANCE_TYPES_MOCK_DATA_PATH;
+import static org.folio.rest.impl.MockServer.LOAN_TYPES_MOCK_DATA_PATH;
+import static org.folio.rest.impl.MockServer.getCreatedHoldings;
+import static org.folio.rest.impl.MockServer.getCreatedInstances;
+import static org.folio.rest.impl.MockServer.getCreatedItems;
+import static org.folio.rest.impl.MockServer.getCreatedPieces;
+import static org.folio.rest.impl.MockServer.getHoldingsSearches;
+import static org.folio.rest.impl.MockServer.getInstancesSearches;
+import static org.folio.rest.impl.MockServer.getItemsSearches;
+import static org.folio.rest.impl.MockServer.getPieceSearches;
+import static org.folio.rest.impl.MockServer.getPoLineSearches;
+import static org.folio.rest.impl.MockServer.getPoLineUpdates;
+import static org.folio.rest.impl.MockServer.getPurchaseOrderRetrievals;
+import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -52,10 +69,18 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -97,7 +122,7 @@ public class InventoryInteractionTestHelper {
           }
         }
 
-        assertTrue("The PO Line must contain instance id", instanceLinked);
+        assertTrue(instanceLinked, "The PO Line must contain instance id");
       }
     }
   }
@@ -312,7 +337,7 @@ public class InventoryInteractionTestHelper {
 
     long actualQty = 0;
     for (JsonObject holding : holdings) {
-      if (groupedLocations.keySet().contains(holding.getString(HOLDING_PERMANENT_LOCATION_ID))
+      if (groupedLocations.containsKey(holding.getString(HOLDING_PERMANENT_LOCATION_ID))
         && StringUtils.equals(pol.getInstanceId(), holding.getString(HOLDING_INSTANCE_ID))) {
         actualQty++;
       }
@@ -320,14 +345,14 @@ public class InventoryInteractionTestHelper {
 
     int itemsQuantity = calculateInventoryItemsQuantity(pol);
     if (itemsQuantity == 0) {
-      assertEquals("No holdings expected", 0, actualQty);
+      assertEquals(0, actualQty, "No holdings expected");
     } else {
       long expectedQty = groupedLocations
         .values()
         .stream()
         .mapToInt(locations -> calculateInventoryItemsQuantity(pol, locations))
         .count();
-      assertEquals("Quantity of holdings does not match to expected", expectedQty, actualQty);
+      assertEquals(expectedQty, actualQty, "Quantity of holdings does not match to expected");
     }
   }
 

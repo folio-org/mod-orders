@@ -1,16 +1,16 @@
 package org.folio.service.exchange;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.*;
 
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
 import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRate;
 import javax.money.convert.ProviderContext;
-import org.junit.Test;
 
+import org.junit.jupiter.api.Test;
 public class ManualExchangeRateProviderTest {
 
   @Test

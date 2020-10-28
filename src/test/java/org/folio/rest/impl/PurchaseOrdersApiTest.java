@@ -5,7 +5,15 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.containsAny;
+import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoCreation;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
+import static org.folio.helper.InventoryInteractionTestHelper.joinExistingAndNewItems;
+import static org.folio.helper.InventoryInteractionTestHelper.verifyInstanceLinksForUpdatedOrder;
+import static org.folio.helper.InventoryInteractionTestHelper.verifyInventoryInteraction;
+import static org.folio.helper.InventoryInteractionTestHelper.verifyInventoryNonInteraction;
+import static org.folio.helper.InventoryInteractionTestHelper.verifyPiecesCreated;
+import static org.folio.helper.InventoryInteractionTestHelper.verifyPiecesQuantityForSuccessCase;
+import static org.folio.orders.utils.ErrorCodes.BUDGET_EXPENSE_CLASS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
@@ -41,12 +49,47 @@ import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
-import static org.folio.orders.utils.ResourcePathResolver.*;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
+import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
+import static org.folio.orders.utils.ResourcePathResolver.PAYMENT_STATUS;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
+import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.RECEIPT_STATUS;
+import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
+import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoCreation;
-import static org.folio.helper.InventoryInteractionTestHelper.*;
-import static org.folio.rest.impl.MockServer.*;
+import static org.folio.rest.impl.MockServer.BUDGET_IS_INACTIVE_TENANT;
+import static org.folio.rest.impl.MockServer.BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT;
+import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
+import static org.folio.rest.impl.MockServer.FUND_CANNOT_BE_PAID_TENANT;
+import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
+import static org.folio.rest.impl.MockServer.LEDGER_NOT_FOUND_FOR_TRANSACTION_TENANT;
+import static org.folio.rest.impl.MockServer.PO_LINES_EMPTY_COLLECTION_ID;
+import static org.folio.rest.impl.MockServer.addMockEntry;
+import static org.folio.rest.impl.MockServer.getContributorNameTypesSearches;
+import static org.folio.rest.impl.MockServer.getCreatedEncumbrances;
+import static org.folio.rest.impl.MockServer.getCreatedHoldings;
+import static org.folio.rest.impl.MockServer.getCreatedInstances;
+import static org.folio.rest.impl.MockServer.getCreatedItems;
+import static org.folio.rest.impl.MockServer.getCreatedOrderSummaries;
+import static org.folio.rest.impl.MockServer.getCreatedPieces;
+import static org.folio.rest.impl.MockServer.getExistingOrderSummaries;
+import static org.folio.rest.impl.MockServer.getHoldingsSearches;
+import static org.folio.rest.impl.MockServer.getInstanceStatusesSearches;
+import static org.folio.rest.impl.MockServer.getInstanceTypesSearches;
+import static org.folio.rest.impl.MockServer.getInstancesSearches;
+import static org.folio.rest.impl.MockServer.getItemUpdates;
+import static org.folio.rest.impl.MockServer.getItemsSearches;
+import static org.folio.rest.impl.MockServer.getLoanTypesSearches;
+import static org.folio.rest.impl.MockServer.getPieceSearches;
+import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
+import static org.folio.rest.impl.MockServer.getQueryParams;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
@@ -61,12 +104,12 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -94,16 +137,26 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.POProtectedFields;
 import org.folio.rest.acq.model.Ongoing;
-import org.folio.rest.acq.model.finance.BudgetExpenseClass;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
+import org.folio.rest.jaxrs.model.CloseReason;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
+import org.folio.rest.jaxrs.model.Contributor;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Physical.CreateInventory;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
@@ -111,7 +164,7 @@ import org.folio.rest.jaxrs.model.Title;
 import org.hamcrest.beans.HasPropertyWithValue;
 import org.hamcrest.core.Every;
 import org.hamcrest.core.Is;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.restassured.http.Header;
 import io.restassured.http.Headers;
@@ -136,6 +189,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
   static final String ACTIVE_VENDOR_ID = "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1";
   static final String INACTIVE_VENDOR_ID = "b1ef7e96-98f3-4f0d-9820-98c322c989d2";
+  static final String INACTIVE_EXPENSE_CLASS_ID = "2fa1d78f-1f7d-4659-854b-9d03cd06f21c";
   static final String NON_EXIST_VENDOR_ID = "bba87500-6e71-4057-a2a9-a091bac7e0c1";
   static final String MOD_VENDOR_INTERNAL_ERROR_ID = "bba81500-6e41-4057-a2a9-a081bac7e0c1";
   static final String VENDOR_WITH_BAD_CONTENT = "5a34ae0e-5a11-4337-be95-1a20cfdc3161";
@@ -822,7 +876,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdPEMixFormat() throws IOException {
+  public void testPutOrdersByIdPEMixFormat() {
     logger.info("=== Test Put Order By Id create Pieces with P/E Mix format ===");
     CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
 
@@ -1527,16 +1581,32 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setExpenseClassId(UUID.randomUUID().toString());
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setExpenseClassId(INACTIVE_EXPENSE_CLASS_ID);
     preparePiecesForCompositePo(reqData);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    MockServer.addMockEntry(BUDGET_EXPENSE_CLASSES, JsonObject.mapFrom(new BudgetExpenseClass().withId(UUID.randomUUID().toString())));
     reqData.getCompositePoLines().forEach(this::createMockTitle);
 
     Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 400)
       .as(Errors.class);
 
     assertThat(errors.getErrors().get(0).getCode(),is(INACTIVE_EXPENSE_CLASS.toError().getCode()));
+  }
+
+  @Test
+  public void testOpenOrderWithExpenseClassNotFound() throws Exception {
+    logger.info("=== Test to try open order with expense class not found ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setExpenseClassId(UUID.randomUUID().toString());
+    preparePiecesForCompositePo(reqData);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    reqData.getCompositePoLines().forEach(this::createMockTitle);
+
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 400)
+      .as(Errors.class);
+
+    assertThat(errors.getErrors().get(0).getCode(),is(BUDGET_EXPENSE_CLASS_NOT_FOUND.toError().getCode()));
   }
 
 
@@ -2145,7 +2215,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
       }
     }
 
-    assertFalse("The PO Line must NOT contain instance id", instanceIdExists);
+    assertFalse(instanceIdExists, "The PO Line must NOT contain instance id");
   }
 
   @Test
@@ -3371,7 +3441,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     assertEquals(BUDGET_IS_INACTIVE.getCode(), errors.getErrors().get(0).getCode());
 
-    List<PoLine> updatedPolines = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT).stream().map(poline -> poline.mapTo(PoLine.class)).collect(Collectors.toList());;
+    List<PoLine> updatedPolines = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT)
+      .stream()
+      .map(poline -> poline.mapTo(PoLine.class))
+      .collect(Collectors.toList());
     // check size of update request (expected 2 of 3)
     assertEquals(2, updatedPolines.size());
     // check encumbrance id was populated
@@ -3388,9 +3461,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
   private void removeAllEncumbranceLinks(CompositePurchaseOrder reqData) {
     reqData.getCompositePoLines().forEach(poLine ->
-      poLine.getFundDistribution().forEach(fundDistribution -> {
-        fundDistribution.setEncumbrance(null);
-      })
+      poLine.getFundDistribution().forEach(fundDistribution -> fundDistribution.setEncumbrance(null))
     );
   }
 

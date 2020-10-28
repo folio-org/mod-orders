@@ -1,12 +1,12 @@
 package org.folio.rest.impl.protection;
 
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+
 import org.folio.rest.impl.ApiTestBase;
 
 import io.restassured.http.Headers;
 import io.restassured.response.Response;
 import io.vertx.core.json.JsonObject;
-
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
 
 enum ProtectedOperations {

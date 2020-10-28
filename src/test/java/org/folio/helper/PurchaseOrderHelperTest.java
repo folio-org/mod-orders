@@ -3,8 +3,8 @@ package org.folio.helper;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -29,11 +29,9 @@ import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -45,8 +43,6 @@ public class PurchaseOrderHelperTest  extends ApiTestBase {
   private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
   public static final String TWO_ENCUMBRANCE_PATH = BASE_MOCK_DATA_PATH + "encumbrances/two_pending_encumbrances.json";
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
   @Mock
   private PoNumberHelper poNumberHelper;
   @Mock
@@ -56,9 +52,9 @@ public class PurchaseOrderHelperTest  extends ApiTestBase {
   @Mock
   private HttpClientInterface httpClient;
 
-  @Before
+  @BeforeEach
   public void initMocks(){
-    MockitoAnnotations.initMocks(this);
+    MockitoAnnotations.openMocks(this);
   }
 
   @Test
@@ -93,7 +89,7 @@ public class PurchaseOrderHelperTest  extends ApiTestBase {
   }
 
   @Test
-  @Ignore
+  @Disabled
   public void testShouldCreateOneNewEncumbranceAndUpdateTwoExistedZeroForRelease() {
     //given
     PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);

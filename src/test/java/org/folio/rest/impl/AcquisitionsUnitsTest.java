@@ -28,7 +28,7 @@ import javax.ws.rs.core.HttpHeaders;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.Errors;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.restassured.http.Header;
 import io.restassured.http.Headers;
@@ -38,8 +38,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-public class AcquisitionsUnitsTests extends ApiTestBase {
-  private static final Logger logger = LoggerFactory.getLogger(AcquisitionsUnitsTests.class);
+public class AcquisitionsUnitsTest extends ApiTestBase {
+  private static final Logger logger = LoggerFactory.getLogger(AcquisitionsUnitsTest.class);
 
   private static final String ACQ_UNITS_UNITS_ENDPOINT = "/acquisitions-units/units";
   static final String IS_DELETED_PROP = "isDeleted";
