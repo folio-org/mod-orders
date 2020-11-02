@@ -9,6 +9,8 @@ import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.assertj.core.api.Assertions.fail;
 import static org.folio.helper.InventoryHelper.ITEMS;
+import static org.folio.helper.InventoryHelper.ITEM_HOLDINGS_RECORD_ID;
+import static org.folio.helper.InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.folio.helper.InventoryHelper.REQUESTS;
 import static org.folio.helper.ProtectionHelper.ACQUISITIONS_UNIT_ID;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
@@ -257,6 +259,7 @@ public class MockServer {
   public static final String INSTANCE_ID = "45e6d2cc-e4ca-4048-b0f9-ec0be269342a";
   public static final String OLD_HOLDING_ID = "758258bc-ecc1-41b8-abca-f7b610822ffd";
   public static final String NEW_HOLDING_ID = "fcd64ce1-6995-48f0-840e-89ffa2288371";
+  public static final String IF_EQUAL_STR = "==";
   static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
 
@@ -953,6 +956,20 @@ public class MockServer {
           while (iterator.hasNext()) {
             JsonObject item = (JsonObject) iterator.next();
             if (!itemIds.contains(item.getString(ID))) {
+              iterator.remove();
+            }
+          }
+        } else if (query.contains(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER + IF_EQUAL_STR) && query.contains(ITEM_HOLDINGS_RECORD_ID + IF_EQUAL_STR)) {
+          int lineIndex = query.indexOf(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER) + ITEM_PURCHASE_ORDER_LINE_IDENTIFIER.length() + 2;
+          String purchaseOrderLineIdentifier = query.substring(lineIndex, lineIndex + 36);
+          int holdingIndex = query.indexOf(ITEM_HOLDINGS_RECORD_ID) + ITEM_HOLDINGS_RECORD_ID.length() + 2;
+          String holdingsRecordId = query.substring(holdingIndex,  holdingIndex + 36);
+          final Iterator iterator = jsonArray.iterator();
+          while (iterator.hasNext()) {
+            JsonObject item = (JsonObject) iterator.next();
+
+            if (!purchaseOrderLineIdentifier.equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER))
+                    || !holdingsRecordId.equals(item.getString(ITEM_HOLDINGS_RECORD_ID))) {
               iterator.remove();
             }
           }

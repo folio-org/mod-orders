@@ -17,7 +17,6 @@ import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
-import static org.folio.orders.utils.HelperUtils.getElectronicCostQuantity;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
@@ -29,7 +28,6 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.acq.model.Piece.PieceFormat.ELECTRONIC;
 import static org.folio.rest.acq.model.Piece.PieceFormat.PHYSICAL;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -37,7 +35,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
@@ -92,7 +89,7 @@ public class InventoryHelper extends AbstractHelper {
   static final String INSTANCE_IDENTIFIER_TYPE_VALUE = "value";
   static final String HOLDING_INSTANCE_ID = "instanceId";
   static final String HOLDING_PERMANENT_LOCATION_ID = "permanentLocationId";
-  static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
+  public static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
   static final String ITEM_BARCODE = "barcode";
   static final String ITEM_LEVEL_CALL_NUMBER = "itemLevelCallNumber";
   static final String ITEM_STATUS = "status";
@@ -100,7 +97,7 @@ public class InventoryHelper extends AbstractHelper {
   static final String ITEM_MATERIAL_TYPE_ID = "materialTypeId";
   static final String ITEM_MATERIAL_TYPE = "materialType";
   static final String ITEM_PERMANENT_LOAN_TYPE_ID = "permanentLoanTypeId";
-  static final String ITEM_PURCHASE_ORDER_LINE_IDENTIFIER = "purchaseOrderLineIdentifier";
+  public static final String ITEM_PURCHASE_ORDER_LINE_IDENTIFIER = "purchaseOrderLineIdentifier";
   static final String CONTRIBUTOR_NAME = "name";
   static final String CONTRIBUTOR_NAME_TYPE_ID = "contributorNameTypeId";
   static final String CONTRIBUTOR_NAME_TYPES = "contributorNameTypes";
@@ -152,15 +149,11 @@ public class InventoryHelper extends AbstractHelper {
     INVENTORY_LOOKUP_ENDPOINTS = Collections.unmodifiableMap(apis);
   }
 
- // private final PiecesHelper piecesHelper;
-
   public InventoryHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
-  //  piecesHelper = new PiecesHelper(httpClient, okapiHeaders, ctx, lang);
   }
   public InventoryHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
-   // piecesHelper = new PiecesHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   public CompletableFuture<CompositePoLine> handleInstanceRecord(CompositePoLine compPOL) {
@@ -527,8 +520,12 @@ public class InventoryHelper extends AbstractHelper {
                             String locationId = polLocations.get(0).getLocationId();
                             List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.PieceFormat.values().length);
                             Map<Piece.PieceFormat, Integer> piecesWithItemsQuantities1 = new HashMap<>();
-                            piecesWithItemsQuantities1.put(PHYSICAL, getPhysicalItemIds(compPOL, existingItems).size());
-                            piecesWithItemsQuantities1.put(ELECTRONIC, getElectronicItemIds(compPOL, existingItems).size());
+                            if (compPOL.getPhysical() != null) {
+                              piecesWithItemsQuantities1.put(PHYSICAL, getPhysicalItemIds(compPOL, existingItems).size());
+                            }
+                            if (compPOL.getEresource() != null) {
+                              piecesWithItemsQuantities1.put(ELECTRONIC, getElectronicItemIds(compPOL, existingItems).size());
+                            }
                          piecesWithItemsQuantities1.forEach((pieceFormat, expectedQuantity) -> {
                               // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
                               if (expectedQuantity > 0) {
