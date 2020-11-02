@@ -1,7 +1,6 @@
 package org.folio.helper;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.concurrent.CompletableFuture.completedStage;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
@@ -319,7 +318,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<List<JsonObject>> getItemsByStatus(List<PoLine> compositePoLines, String itemStatus) {
-    InventoryHelper inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
     List<String> lineIds = compositePoLines.stream().map(PoLine::getId).collect(toList());
     // Split all id's by maximum number of id's for get query
     List<CompletableFuture<List<JsonObject>>> futures = StreamEx
@@ -523,7 +521,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> updateItemsInInventory(List<JsonObject> items) {
-    InventoryHelper inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
     return VertxCompletableFuture.allOf(ctx, items.stream()
       .map(inventoryHelper::updateItem)
       .toArray(CompletableFuture[]::new));
