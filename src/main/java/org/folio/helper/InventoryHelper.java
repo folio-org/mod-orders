@@ -31,9 +31,11 @@ import static org.folio.rest.acq.model.Piece.PieceFormat.PHYSICAL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -514,35 +516,35 @@ public class InventoryHelper extends AbstractHelper {
       return completedFuture(Collections.emptyList());
     }
     return getExpectedPiecesByLineId(compPOL.getId())
-                       .thenCompose(existingExpectedPieces -> searchExistingItems(compPOL.getId(), holder.getOldHoldingId(), piecesWithItemsQty)
+                       .thenCompose(existingExpectedPieces -> searchExistingItems(compPOL.getId(), holder.getOldHoldingId(), Integer.MAX_VALUE)
                                                                     .thenApply(existingItems -> getNeedUpdateItems(existingExpectedPieces, existingItems)))
-                       .thenCompose(existingItems -> {
+                       .thenCompose(needUpdateItems -> {
                             String locationId = polLocations.get(0).getLocationId();
                             List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.PieceFormat.values().length);
-                            Map<Piece.PieceFormat, Integer> piecesWithItemsQuantities1 = new HashMap<>();
+                            EnumMap<Piece.PieceFormat, Integer> piecesWithItem = new EnumMap<>(Piece.PieceFormat.class);
                             if (compPOL.getPhysical() != null) {
-                              piecesWithItemsQuantities1.put(PHYSICAL, getPhysicalItemIds(compPOL, existingItems).size());
+                              piecesWithItem.put(PHYSICAL, getPhysicalItemIds(compPOL, needUpdateItems).size());
                             }
                             if (compPOL.getEresource() != null) {
-                              piecesWithItemsQuantities1.put(ELECTRONIC, getElectronicItemIds(compPOL, existingItems).size());
+                              piecesWithItem.put(ELECTRONIC, getElectronicItemIds(compPOL, needUpdateItems).size());
                             }
-                         piecesWithItemsQuantities1.forEach((pieceFormat, expectedQuantity) -> {
+                         piecesWithItem.forEach((pieceFormat, expectedQuantity) -> {
                               // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
                               if (expectedQuantity > 0) {
                                 List<String> itemIds = new ArrayList<>();
                                 CompletableFuture<List<String>> updatedItemsIds;
                                 // Depending on piece format get already existing items and send requests to create missing items
                                 if (pieceFormat == ELECTRONIC) {
-                                  List<String> elecItemIds = getElectronicItemIds(compPOL, existingItems);
+                                  List<String> elecItemIds = getElectronicItemIds(compPOL, needUpdateItems);
                                   itemIds.addAll(elecItemIds);
-                                  List<JsonObject> updatedItems = existingItems.stream().filter(item -> elecItemIds.contains(item.getString(ID)))
+                                  List<JsonObject> updatedItems = needUpdateItems.stream().filter(item -> elecItemIds.contains(item.getString(ID)))
                                                                                .map(item -> item.put(ITEM_HOLDINGS_RECORD_ID, holder.getNewHoldingId()))
                                                                                .collect(toList());
                                   updatedItemsIds = updateItemRecords(updatedItems);
                                 } else {
-                                  List<String> physItemIds = getPhysicalItemIds(compPOL, existingItems);
+                                  List<String> physItemIds = getPhysicalItemIds(compPOL, needUpdateItems);
                                   itemIds.addAll(physItemIds);
-                                  List<JsonObject> updatedItems = existingItems.stream().filter(item -> physItemIds.contains(item.getString(ID)))
+                                  List<JsonObject> updatedItems = needUpdateItems.stream().filter(item -> physItemIds.contains(item.getString(ID)))
                                                                               .map(item -> item.put(ITEM_HOLDINGS_RECORD_ID, holder.getNewHoldingId()))
                                                                               .collect(toList());
                                   updatedItemsIds = updateItemRecords(updatedItems);
@@ -578,6 +580,7 @@ public class InventoryHelper extends AbstractHelper {
                                             .findFirst()
                                             .map(i -> jsonExistingItems.remove((int)i))
                                             .orElse( null))
+                          .filter(Objects::nonNull)
                           .collect(toList());
   }
 
