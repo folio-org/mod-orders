@@ -129,7 +129,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   private static final String PHYSICAL = "physical";
   private static final String OTHER = "other";
   private static final String DASH_SEPARATOR = "-";
-  private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
   public static final String QUERY_BY_PO_LINE_ID = "poLineId==";
 
   private final InventoryHelper inventoryHelper;
@@ -851,7 +850,8 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
       return completedFuture(null);
     }
-    return searchForExistingPieces(compPOL)
+    return inventoryHelper.getExpectedPiecesByLineId(compPOL.getId())
+      .thenApply(PieceCollection::getPieces)
       .thenCompose(existingPieces -> {
         List<Piece> piecesToCreate = new ArrayList<>();
         List<Piece> piecesWithLocationToProcess = createPiecesByLocationId(compPOL, expectedPiecesWithItem, existingPieces);
@@ -956,7 +956,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     List<Piece> expectedPiecesWithItem = filterByLocationId(piecesWithItem, existingPieceLocationId);
     return collectMissingPiecesWithItem(expectedPiecesWithItem, existedPieces);
   }
-
 
   /**
    * Search for pieces which might be already created for the PO line
@@ -1277,7 +1276,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
 
   private CompletableFuture<Void> checkLocationsAndPiecesConsistency(CompositePoLine poLine, PoLine lineFromStorage, CompositePurchaseOrder order) {
       if (isLocationsAndPiecesConsistencyNeedToBeVerified(poLine, order)) {
-      return getExpectedPiecesByLineId(poLine.getId())
+      return inventoryHelper.getExpectedPiecesByLineId(poLine.getId())
         .thenCompose(existingExpectedPieces -> verifyLocationAndPieceConsistency(Collections.singletonList(poLine), existingExpectedPieces))
         .thenCompose(errorCode -> {
           if (PIECES_TO_BE_DELETED.equals(errorCode)) {
@@ -1339,11 +1338,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   private boolean isLocationsAndPiecesConsistencyNeedToBeVerified(CompositePoLine poLine, CompositePurchaseOrder order) {
     return order.getWorkflowStatus() == OPEN && Boolean.FALSE.equals(poLine.getCheckinItems())
       && poLine.getReceiptStatus() != ReceiptStatus.RECEIPT_NOT_REQUIRED && Boolean.FALSE.equals(poLine.getIsPackage());
-  }
-
-  private CompletableFuture<PieceCollection> getExpectedPiecesByLineId(String poLineId) {
-    String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, Piece.ReceivingStatus.EXPECTED.value());
-    return piecesHelper.getPieces(Integer.MAX_VALUE, 0, query);
   }
 
   private void validateItemsCreation(CompositePoLine compPOL, int itemsSize) {

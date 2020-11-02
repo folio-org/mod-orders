@@ -118,7 +118,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private final ProtectionHelper protectionHelper;
   private final TitlesHelper titlesHelper;
   private final FinanceHelper financeHelper;
-  private final PiecesHelper piecesHelper;
+  private final InventoryHelper inventoryHelper;
 
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -127,7 +127,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     orderLineHelper = new PurchaseOrderLineHelper(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
     titlesHelper = new TitlesHelper(httpClient, okapiHeaders, ctx, lang);
-    piecesHelper = new PiecesHelper(httpClient, okapiHeaders, ctx, lang);
+    inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang,
@@ -138,7 +138,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     this.orderLineHelper = orderLineHelper;
     this.protectionHelper =  new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
     this.titlesHelper = new TitlesHelper(httpClient, okapiHeaders, ctx, lang);
-    this.piecesHelper = new PiecesHelper(httpClient, okapiHeaders, ctx, lang);
+    this.inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   public PurchaseOrderHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -268,7 +268,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private CompletableFuture<Void> checkLocationsAndPiecesConsistency(List<CompositePoLine> poLines) {
     List<CompositePoLine> linesWithId = poLines.stream().filter(compositePoLine -> StringUtils.isNotEmpty(compositePoLine.getId())).collect(Collectors.toList());
     String query = convertIdsToCqlQuery(linesWithId.stream().map(CompositePoLine::getId).collect(toList()), "poLineId");
-    return piecesHelper.getPieces(Integer.MAX_VALUE, 0, query)
+    return inventoryHelper.getPieces(Integer.MAX_VALUE, 0, query)
       .thenAccept(pieces -> verifyLocationsAndPiecesConsistency(linesWithId, pieces));
   }
 

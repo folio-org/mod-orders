@@ -13,17 +13,23 @@ import static org.folio.orders.utils.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_LOAN_TYPE;
+import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.getElectronicCostQuantity;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.acq.model.Piece.PieceFormat.ELECTRONIC;
+import static org.folio.rest.acq.model.Piece.PieceFormat.PHYSICAL;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -31,9 +37,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -44,6 +52,7 @@ import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.LocationUtil;
 import org.folio.rest.acq.model.Piece;
+import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Contributor;
@@ -125,6 +134,9 @@ public class InventoryHelper extends AbstractHelper {
 
   private static final Map<String, String> INVENTORY_LOOKUP_ENDPOINTS;
   public static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
+  private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
+  private static final String GET_PIECES_BY_QUERY = resourcesPath(PIECES) + SEARCH_PARAMS;
+  public static final String ITEM_EFFECTIVE_LOCATION = "effectiveLocation";
 
   static {
     Map<String, String> apis = new HashMap<>();
@@ -140,11 +152,15 @@ public class InventoryHelper extends AbstractHelper {
     INVENTORY_LOOKUP_ENDPOINTS = Collections.unmodifiableMap(apis);
   }
 
+ // private final PiecesHelper piecesHelper;
+
   public InventoryHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
+  //  piecesHelper = new PiecesHelper(httpClient, okapiHeaders, ctx, lang);
   }
   public InventoryHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
+   // piecesHelper = new PiecesHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   public CompletableFuture<CompositePoLine> handleInstanceRecord(CompositePoLine compPOL) {
@@ -504,55 +520,72 @@ public class InventoryHelper extends AbstractHelper {
     if (piecesWithItemsQty == 0) {
       return completedFuture(Collections.emptyList());
     }
-    return searchExistingItems(compPOL.getId(), holder.getOldHoldingId(), piecesWithItemsQty)
-      .thenCompose(existingItems -> {
-          String locationId = polLocations.get(0).getLocationId();
-          List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.PieceFormat.values().length);
-          piecesWithItemsQuantities.forEach((pieceFormat, expectedQuantity) -> {
-            // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
-            if (expectedQuantity > 0) {
-              List<String> itemIds = new ArrayList<>();
-              CompletableFuture<List<String>> updatedItemsIds;
-              // Depending on piece format get already existing items and send requests to create missing items
-              if (pieceFormat == ELECTRONIC) {
-                List<String> elecItemIds = getElectronicItemIds(compPOL, existingItems);
-                itemIds.addAll(elecItemIds);
-                List<JsonObject> updatedItems = existingItems.stream().filter(item -> elecItemIds.contains(item.getString(ID)))
-                                                             .map(item -> item.put(ITEM_HOLDINGS_RECORD_ID, holder.getNewHoldingId()))
-                                                             .collect(toList());
-                updatedItemsIds = updateItemRecords(updatedItems);
-              } else {
-                List<String> physItemIds = getPhysicalItemIds(compPOL, existingItems);
-                itemIds.addAll(physItemIds);
-                List<JsonObject> updatedItems = existingItems.stream().filter(item -> physItemIds.contains(item.getString(ID)))
-                                                            .map(item -> item.put(ITEM_HOLDINGS_RECORD_ID, holder.getNewHoldingId()))
-                                                            .collect(toList());
-                updatedItemsIds = updateItemRecords(updatedItems);
-              }
-              // Build piece records once new items are created
-              pieces.add(updatedItemsIds.thenApply(createdItemIds -> {
-                  logger.debug(BUILDING_PIECE_MESSAGE, itemIds.size(), pieceFormat, polId);
-                  return StreamEx.of(itemIds)
-                    .map(itemId -> new Piece().withFormat(pieceFormat)
-                      .withItemId(itemId)
-                      .withPoLineId(polId)
-                      .withLocationId(locationId))
-                    .toList();
-                  })
-              );
-            }
-        });
-          // Wait for all items to be created and corresponding pieces are built
-         return collectResultsOnSuccess(pieces)
-          .thenApply(results -> {
-            validateItemsCreation(compPOL.getId(), pieces.size(), results.size());
-            return results.stream().flatMap(List::stream).collect(toList());
-          });
-      });
+    return getExpectedPiecesByLineId(compPOL.getId())
+                       .thenCompose(existingExpectedPieces -> searchExistingItems(compPOL.getId(), holder.getOldHoldingId(), piecesWithItemsQty)
+                                                                    .thenApply(existingItems -> getNeedUpdateItems(existingExpectedPieces, existingItems)))
+                       .thenCompose(existingItems -> {
+                            String locationId = polLocations.get(0).getLocationId();
+                            List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.PieceFormat.values().length);
+                            Map<Piece.PieceFormat, Integer> piecesWithItemsQuantities1 = new HashMap<>();
+                            piecesWithItemsQuantities1.put(PHYSICAL, getPhysicalItemIds(compPOL, existingItems).size());
+                            piecesWithItemsQuantities1.put(ELECTRONIC, getElectronicItemIds(compPOL, existingItems).size());
+                         piecesWithItemsQuantities1.forEach((pieceFormat, expectedQuantity) -> {
+                              // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
+                              if (expectedQuantity > 0) {
+                                List<String> itemIds = new ArrayList<>();
+                                CompletableFuture<List<String>> updatedItemsIds;
+                                // Depending on piece format get already existing items and send requests to create missing items
+                                if (pieceFormat == ELECTRONIC) {
+                                  List<String> elecItemIds = getElectronicItemIds(compPOL, existingItems);
+                                  itemIds.addAll(elecItemIds);
+                                  List<JsonObject> updatedItems = existingItems.stream().filter(item -> elecItemIds.contains(item.getString(ID)))
+                                                                               .map(item -> item.put(ITEM_HOLDINGS_RECORD_ID, holder.getNewHoldingId()))
+                                                                               .collect(toList());
+                                  updatedItemsIds = updateItemRecords(updatedItems);
+                                } else {
+                                  List<String> physItemIds = getPhysicalItemIds(compPOL, existingItems);
+                                  itemIds.addAll(physItemIds);
+                                  List<JsonObject> updatedItems = existingItems.stream().filter(item -> physItemIds.contains(item.getString(ID)))
+                                                                              .map(item -> item.put(ITEM_HOLDINGS_RECORD_ID, holder.getNewHoldingId()))
+                                                                              .collect(toList());
+                                  updatedItemsIds = updateItemRecords(updatedItems);
+                                }
+                                // Build piece records once new items are created
+                                pieces.add(updatedItemsIds.thenApply(createdItemIds -> {
+                                    logger.debug(BUILDING_PIECE_MESSAGE, itemIds.size(), pieceFormat, polId);
+                                    return StreamEx.of(itemIds)
+                                      .map(itemId -> new Piece().withFormat(pieceFormat)
+                                        .withItemId(itemId)
+                                        .withPoLineId(polId)
+                                        .withLocationId(locationId))
+                                      .toList();
+                                    })
+                                );
+                              }
+                          });
+                            // Wait for all items to be created and corresponding pieces are built
+                           return collectResultsOnSuccess(pieces)
+                            .thenApply(results -> {
+                              validateItemsCreation(compPOL.getId(), pieces.size(), results.size());
+                              return results.stream().flatMap(List::stream).collect(toList());
+                            });
+                        });
+  }
+
+  private List<JsonObject> getNeedUpdateItems(PieceCollection existingExpectedPieces, List<JsonObject> jsonExistingItems) {
+    return existingExpectedPieces.getPieces().stream()
+                          .map(piece ->  IntStream.range(0, jsonExistingItems.size())
+                                            .filter(i -> jsonExistingItems.get(i).getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER).equals(piece.getPoLineId()))
+                                            .filter(i -> jsonExistingItems.get(i).getJsonObject(ITEM_EFFECTIVE_LOCATION).getString(ID).equals(piece.getLocationId()))
+                                            .boxed()
+                                            .findFirst()
+                                            .map(i -> jsonExistingItems.remove((int)i))
+                                            .orElse( null))
+                          .collect(toList());
   }
 
   private List<String> getPhysicalItemIds(CompositePoLine compPOL, List<JsonObject> existingItems) {
-    return getItemsByMaterialType(existingItems,compPOL.getPhysical().getMaterialType());
+    return getItemsByMaterialType(existingItems, compPOL.getPhysical().getMaterialType());
   }
 
   private List<String> getElectronicItemIds(CompositePoLine compPOL, List<JsonObject> existingItems) {
@@ -1008,4 +1041,16 @@ public class InventoryHelper extends AbstractHelper {
       throw new InventoryException(message);
     }
   }
+
+  public CompletableFuture<PieceCollection> getPieces(int limit, int offset, String query) {
+    String endpoint = String.format(GET_PIECES_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
+    return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(json -> VertxCompletableFuture.supplyBlockingAsync(ctx, () -> json.mapTo(PieceCollection.class)));
+  }
+
+  public CompletableFuture<PieceCollection> getExpectedPiecesByLineId(String poLineId) {
+    String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, Piece.ReceivingStatus.EXPECTED.value());
+    return getPieces(Integer.MAX_VALUE, 0, query);
+  }
+
 }
