@@ -772,17 +772,6 @@ public class InventoryHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<List<JsonObject>> searchExistingItems(String poLineId, String holdingId, int expectedQuantity) {
-    String query = encodeQuery(String.format(LOOKUP_ITEM_QUERY, poLineId, holdingId), logger);
-    String endpoint = String.format(INVENTORY_LOOKUP_ENDPOINTS.get(ITEMS), query, expectedQuantity, lang);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(itemsCollection -> {
-        List<JsonObject> items = extractEntities(itemsCollection, ITEMS);
-        logger.debug("{} existing items found out of {} for PO Line with '{}' id", items.size(), expectedQuantity, poLineId);
-        return items;
-      });
-  }
-
   /**
    * Validates if the json object contains entries and returns entries as list of JsonObject elements
    * @param entries {@link JsonObject} representing item storage response
