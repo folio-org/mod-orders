@@ -4,6 +4,8 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.ApiTestSuite.mockPort;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.impl.PurchaseOrderLinesApiTest.COMP_PO_LINES_MOCK_DATA_PATH;
+import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,7 +27,10 @@ import java.util.concurrent.CompletionException;
 
 import org.folio.models.PoLineUpdateHolder;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.acq.model.Piece;
 import org.folio.rest.impl.ApiTestBase;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.junit.jupiter.api.BeforeEach;
@@ -163,5 +168,26 @@ public class InventoryHelperTest extends ApiTestBase {
 
     HttpException httpException = (HttpException) expectedException.getCause();
     assertEquals(400, httpException.getCode());
+  }
+
+  @Test
+  public void testShouldNotHandleItemRecordsIfCheckinItemsIsTrue() {
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
+    reqData.setId(poLineId);
+    reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
+    reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
+    reqData.getEresource().setCreateInventory(INSTANCE_HOLDING);
+    reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
+    reqData.setCheckinItems(true);
+
+    //given
+    InventoryHelper inventoryHelper = spy(new InventoryHelper(httpClient, okapiHeadersMock, ctxMock, "en"));
+    //When
+
+    Location line = new Location().withLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
+    List<Piece> pieces = inventoryHelper.handleItemRecords(reqData, OLD_HOLDING_ID, Collections.singletonList(line)).join();
+
+    assertEquals(0, pieces.size());
   }
 }

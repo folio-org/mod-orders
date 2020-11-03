@@ -896,11 +896,17 @@ public class MockServer {
     try {
       if ((queryParam.contains(OLD_HOLDING_ID) && queryParam.contains(NEW_HOLDING_ID))) {
         holdings = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
-      } else if (queryParam.contains(OLD_LOCATION_ID)) {
+      } else if (queryParam.contains(OLD_LOCATION_ID) && queryParam.contains(NON_EXISTED_NEW_HOLDING_ID)) {
+        List holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
+          .map(o -> ((JsonObject) o))
+          .filter(holding -> holding.getString("permanentLocationId").equals(OLD_LOCATION_ID))
+          .collect(toList());
+        holdings = new JsonObject().put("holdingsRecords", new JsonArray(holdingsList));
+      }  else if (queryParam.contains(OLD_LOCATION_ID) && !queryParam.contains(NON_EXISTED_NEW_HOLDING_ID)) {
         List holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
           .map(o -> ((JsonObject) o))
           .filter(holding -> holding.getString("permanentLocationId").equals(OLD_LOCATION_ID)
-            && !holding.getString("permanentLocationId").equals(NON_EXISTED_NEW_HOLDING_ID))
+            || !holding.getString("permanentLocationId").equals(NON_EXISTED_NEW_HOLDING_ID))
           .collect(toList());
         holdings = new JsonObject().put("holdingsRecords", new JsonArray(holdingsList));
       } else {

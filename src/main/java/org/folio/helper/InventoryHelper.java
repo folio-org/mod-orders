@@ -420,7 +420,7 @@ public class InventoryHelper extends AbstractHelper {
     return String.format(INVENTORY_LOOKUP_ENDPOINTS.get(type), params);
   }
 
-  private CompletableFuture<String> createHoldingsRecord(String instanceId, String locationId) {
+  public CompletableFuture<String> createHoldingsRecord(String instanceId, String locationId) {
     JsonObject holdingsRecJson = new JsonObject();
     holdingsRecJson.put(HOLDING_INSTANCE_ID, instanceId);
     holdingsRecJson.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
