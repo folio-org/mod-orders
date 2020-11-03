@@ -44,6 +44,7 @@ import static org.folio.rest.impl.MockServer.getTitlesSearches;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ID_FOR_PRINT_MONOGRAPH_ORDER;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_EXPENSE_CLASS_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
+import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING_ITEM;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.NONE;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -106,8 +107,8 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   private static final String PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED = "0009662b-8b80-4001-b704-ca10971f175d";
   static final String ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   public final static String LINES_PATH = "/orders/order-lines";
-  private static final String LINE_BY_ID_PATH = "/orders/order-lines/%s";
-  static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
+  public static final String LINE_BY_ID_PATH = "/orders/order-lines/%s";
+  public static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "minimalContent.json";
   public static final String ISBN_PRODUCT_TYPE_ID = "8261054f-be78-422d-bd51-4ed9f33c3422";
   public static final String INVALID_ISBN = "1234";
@@ -1240,10 +1241,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertEquals(newLocationId, getRqRsEntries(HttpMethod.PUT, PIECES).get(0).getString("locationId"), "Location updated");
   }
 
-  @Test
-  public void testUpdatePolineForOpenedOrderWithoutUpdatingInventory() {
-    logger.info("=== Test update poline for opened order with changed DistributionType ===");
 
+  @Test
+  public void testUpdatePolineForOpenedOrderWithUpdatingInventoryAndCreateNewPieces() {
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
     reqData.setId(poLineId);
@@ -1269,6 +1269,33 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertEquals(reqData.getLocations().get(0).getLocationId(), getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("locationId"), "Location matched");
     assertEquals(poLineId, getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("poLineId"), "Line id matched");
     assertEquals("Expected", getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("receivingStatus"), "Expected status");
+  }
+
+  @Test
+  public void testUpdatePolineForOpenedOrderWithoutUpdatingItems() {
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
+    reqData.setId(poLineId);
+    reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
+    reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
+    reqData.getEresource().setCreateInventory(INSTANCE_HOLDING);
+
+    addMockEntry(PIECES, new Piece()
+      .withFormat(Piece.Format.ELECTRONIC)
+      .withPoLineId(reqData.getId())
+      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+
+    addMockEntry(PO_LINES, reqData);
+
+    int expQtyElectronic = 3;
+    reqData.getLocations().get(0).setQuantityElectronic(expQtyElectronic);
+    reqData.getLocations().get(0).setQuantity(expQtyElectronic);
+    reqData.getCost().setQuantityElectronic(expQtyElectronic);
+    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+
+    assertEquals(0, getRqRsEntries(HttpMethod.POST, TITLES).size(), "Items should not created");
+    assertEquals(0, getRqRsEntries(HttpMethod.PUT, TITLES).size(), "Items should not updated");
   }
 
   private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {
