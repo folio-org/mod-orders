@@ -1225,6 +1225,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
     reqData.getEresource().setCreateInventory(INSTANCE_HOLDING_ITEM);
+    reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
 
     addMockEntry(PIECES, new Piece()
       .withPoLineId(reqData.getId())
@@ -1306,6 +1307,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
     reqData.getEresource().setCreateInventory(INSTANCE_HOLDING);
+    reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
 
     addMockEntry(PIECES, new Piece()
       .withFormat(Piece.Format.ELECTRONIC)

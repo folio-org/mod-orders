@@ -130,8 +130,7 @@ public class InventoryHelperTest extends ApiTestBase {
                                         .withNewLocationId(NEW_LOCATION_ID);
     inventoryHelper.updateHoldingsRecord(holder).join();
     //Then
-    assertThat(OLD_HOLDING_ID, equalTo(holder.getOldHoldingId()));
-    assertThat(NEW_HOLDING_ID, equalTo(holder.getNewHoldingId()));
+    assertThat(holder.getOldHoldingId(), equalTo(OLD_HOLDING_ID));
   }
 
   @Test
@@ -146,8 +145,7 @@ public class InventoryHelperTest extends ApiTestBase {
     inventoryHelper.updateHoldingsRecord(holder).join();
     //Then
     verify(inventoryHelper, times(1)).getOrCreateHoldingsRecord(HOLDING_INSTANCE_ID, NON_EXISTED_NEW_HOLDING_ID);
-    assertThat(OLD_HOLDING_ID, equalTo(holder.getOldHoldingId()));
-    assertThat(NON_EXISTED_NEW_HOLDING_ID, equalTo(holder.getNewLocationId()));
+    assertThat(holder.getNewLocationId(), equalTo(NON_EXISTED_NEW_HOLDING_ID));
   }
 
   @Test
