@@ -45,6 +45,7 @@ import static org.folio.rest.impl.PurchaseOrdersApiTest.ID_FOR_PRINT_MONOGRAPH_O
 import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_EXPENSE_CLASS_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING_ITEM;
+import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.NONE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
@@ -188,7 +189,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
       .withQuantityElectronic(0)
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
     Eresource eresource = new  Eresource();
-    eresource.setCreateInventory(org.folio.rest.jaxrs.model.Eresource.CreateInventory.NONE);
+    eresource.setCreateInventory(NONE);
     reqData.setEresource(eresource);
 
     final Errors response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
@@ -1215,7 +1216,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
   @Test
   public void testUpdatePolineForOpenedOrderWithChangingOnlyLocation() {
-    logger.info("=== Test update poline for opened order with changed DistributionType ===");
+    logger.info("=== Test update poline for opened order with changed location ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
@@ -1237,6 +1238,37 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
 
     assertEquals(newLocationId, getRqRsEntries(HttpMethod.PUT, PIECES).get(0).getString("locationId"), "Location updated");
+  }
+
+  @Test
+  public void testUpdatePolineForOpenedOrderWithoutUpdatingInventory() {
+    logger.info("=== Test update poline for opened order with changed DistributionType ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
+    reqData.setId(poLineId);
+    reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
+    reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
+    reqData.getEresource().setCreateInventory(INSTANCE_HOLDING_ITEM);
+
+    addMockEntry(PIECES, new Piece()
+      .withFormat(Piece.Format.ELECTRONIC)
+      .withPoLineId(reqData.getId())
+      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+
+    addMockEntry(PO_LINES, reqData);
+
+    int expQtyElectronic = 3;
+    reqData.getLocations().get(0).setQuantityElectronic(expQtyElectronic);
+    reqData.getLocations().get(0).setQuantity(expQtyElectronic);
+    reqData.getCost().setQuantityElectronic(expQtyElectronic);
+    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+
+    assertEquals(expQtyElectronic, getRqRsEntries(HttpMethod.POST, PIECES).size(), "Location matched");
+    assertEquals(reqData.getLocations().get(0).getLocationId(), getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("locationId"), "Location matched");
+    assertEquals(poLineId, getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("poLineId"), "Line id matched");
+    assertEquals("Expected", getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("receivingStatus"), "Expected status");
   }
 
   private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {
