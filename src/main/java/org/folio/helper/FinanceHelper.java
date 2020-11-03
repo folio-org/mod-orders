@@ -208,14 +208,10 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   public CompletableFuture<Void> updateOrderTransactionSummary(String orderId, int number) {
-    if (number > 0) {
-      OrderTransactionSummary summary = new OrderTransactionSummary()
-          .withId(orderId)
-          .withNumTransactions(number);
-      return handleUpdateRequest(resourceByIdPath(ORDER_TRANSACTION_SUMMARIES, orderId), summary);
-    } else {
-      return CompletableFuture.completedFuture(null);
-    }
+    OrderTransactionSummary summary = new OrderTransactionSummary()
+      .withId(orderId)
+      .withNumTransactions(number);
+    return handleUpdateRequest(resourceByIdPath(ORDER_TRANSACTION_SUMMARIES, orderId), summary);
   }
 
   public CompletableFuture<List<EncumbranceRelationsHolder>> prepareEncumbrances(List<EncumbranceRelationsHolder> encumbranceHolders) {
