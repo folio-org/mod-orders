@@ -12,6 +12,9 @@ import static org.folio.helper.InventoryHelper.ITEMS;
 import static org.folio.helper.InventoryHelper.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.helper.InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.folio.helper.InventoryHelper.REQUESTS;
+import static org.folio.helper.InventoryHelperTest.NEW_LOCATION_ID;
+import static org.folio.helper.InventoryHelperTest.NON_EXISTED_NEW_HOLDING_ID;
+import static org.folio.helper.InventoryHelperTest.OLD_LOCATION_ID;
 import static org.folio.helper.ProtectionHelper.ACQUISITIONS_UNIT_ID;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
@@ -111,6 +114,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -890,8 +894,15 @@ public class MockServer {
     String queryParam = ctx.queryParam("query").get(0);
     JsonObject holdings;
     try {
-      if (queryParam.contains(OLD_HOLDING_ID) && queryParam.contains(NEW_HOLDING_ID)) {
-          holdings = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+      if ((queryParam.contains(OLD_HOLDING_ID) && queryParam.contains(NEW_HOLDING_ID))) {
+        holdings = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+      } else if (queryParam.contains(OLD_LOCATION_ID)) {
+        List holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
+          .map(o -> ((JsonObject) o))
+          .filter(holding -> holding.getString("permanentLocationId").equals(OLD_LOCATION_ID)
+            && !holding.getString("permanentLocationId").equals(NON_EXISTED_NEW_HOLDING_ID))
+          .collect(toList());
+        holdings = new JsonObject().put("holdingsRecords", new JsonArray(holdingsList));
       } else {
         holdings = new JsonObject().put("holdingsRecords", new JsonArray());
       }

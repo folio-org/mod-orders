@@ -1298,6 +1298,31 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertEquals(0, getRqRsEntries(HttpMethod.PUT, TITLES).size(), "Items should not updated");
   }
 
+  @Test
+  public void testUpdatePolineForOpenedOrderWithNewLocationWithoutUpdatingItems() {
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
+    reqData.setId(poLineId);
+    reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
+    reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
+    reqData.getEresource().setCreateInventory(INSTANCE_HOLDING);
+
+    addMockEntry(PIECES, new Piece()
+      .withFormat(Piece.Format.ELECTRONIC)
+      .withPoLineId(reqData.getId())
+      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+
+    addMockEntry(PO_LINES, reqData);
+
+    String newLocationId = "fcd64ce1-6995-48f0-840e-89ffa2288371";
+    reqData.getLocations().get(0).setLocationId(newLocationId);
+
+    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+
+    assertEquals(0, getRqRsEntries(HttpMethod.PUT, TITLES).size(), "Items should not updated");
+  }
+
   private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {
     CompositePoLine poLine = new JsonObject(getMockData(PO_LINE_MIN_CONTENT_PATH)).mapTo(CompositePoLine.class);
     poLine.setId(lineId);
