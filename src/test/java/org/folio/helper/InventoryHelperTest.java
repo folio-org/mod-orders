@@ -41,7 +41,7 @@ public class InventoryHelperTest extends ApiTestBase {
   public static final String TENANT_ID = "ordertest";
   public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, TENANT_ID);
   public static final String HOLDING_INSTANCE_ID = "5294d737-a04b-4158-857a-3f3c555bcc60";
-  public static final String OLD_LOCATION_ID = "758258bc-ecc1-41b8-abca-f7b610822ffd";
+  public static final String OLD_LOCATION_ID = "758258bc-ecc1-41b8-abca-f7b610822fff";
   public static final String NEW_LOCATION_ID = "fcd64ce1-6995-48f0-840e-89ffa2288371";
   public static final String OLD_HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d63";
   public static final String NEW_HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d64";
