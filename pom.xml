@@ -566,12 +566,13 @@
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                   <manifestEntries>
+                    <Multi-Release>true</Multi-Release>
                     <Main-Class>org.folio.rest.RestLauncher</Main-Class>
                     <Main-Verticle>org.folio.rest.RestVerticle</Main-Verticle>
                   </manifestEntries>
                 </transformer>
                 <!-- The following transformers are required to let javamoney API work fully as part of "fat" jar -->
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                   <resource>javamoney.properties</resource>
                 </transformer>
@@ -587,6 +588,7 @@
                   <artifact>*:*</artifact>
                   <excludes>
                     <exclude>**/log4j.properties</exclude>
+                    <exclude>**/Log4j2Plugins.dat</exclude>
                   </excludes>
                 </filter>
               </filters>

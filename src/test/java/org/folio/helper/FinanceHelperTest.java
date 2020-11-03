@@ -14,6 +14,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
@@ -432,4 +433,32 @@ public class FinanceHelperTest extends ApiTestBase {
     Budget budget = financeHelper.getActiveBudgetByFundId(UUID.randomUUID().toString()).join();
     assertNotNull(budget);
   }
+
+  @Test
+  public void testShouldNotTransactionsCreatedWhenNoEncumbrances() {
+    //Given
+    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    CompositePoLine line = order.getCompositePoLines().get(0);
+    List<Transaction> emptyEncumbrances = Collections.emptyList();
+    //When
+    financeHelper.updateOrderTransactionSummary(order.getId(), emptyEncumbrances.size());
+    //Then
+    assertNull(transactionService.getOrderTransactionSummary(order.getId()));
+  }
+
+  @Test
+  public void testShouldTransactionsCreatedForEncumbrances() {
+    //Given
+    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    CompositePoLine line = order.getCompositePoLines().get(0);
+    Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray( "transactions").getJsonObject(0).mapTo(Transaction.class);
+    FundDistribution fundDistribution = order.getCompositePoLines().get(0).getFundDistribution().get(0);
+    financeHelper.updateEncumbrance(fundDistribution, line, encumbrance);
+    //When
+    financeHelper.updateOrderTransactionSummary(order.getId(), 1);
+    //Then
+    assertNull(transactionService.getOrderTransactionSummary(order.getId()));
+  }	  
 }
