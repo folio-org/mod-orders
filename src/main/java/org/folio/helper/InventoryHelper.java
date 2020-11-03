@@ -35,12 +35,10 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -516,8 +514,8 @@ public class InventoryHelper extends AbstractHelper {
       return completedFuture(Collections.emptyList());
     }
     return getExpectedPiecesByLineId(compPOL.getId())
-                       .thenCompose(existingExpectedPieces -> searchExistingItems(compPOL.getId(), holder.getOldHoldingId(), Integer.MAX_VALUE)
-                                                                    .thenApply(existingItems -> getNeedUpdateItems(existingExpectedPieces, existingItems)))
+                       .thenApply(existingExpectedPieces -> existingExpectedPieces.getPieces().stream().map(Piece::getItemId).collect(toList()))
+                       .thenCompose(this::getItemRecordsByIds)
                        .thenCompose(needUpdateItems -> {
                             String locationId = polLocations.get(0).getLocationId();
                             List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.PieceFormat.values().length);
@@ -569,19 +567,6 @@ public class InventoryHelper extends AbstractHelper {
                               return results.stream().flatMap(List::stream).collect(toList());
                             });
                         });
-  }
-
-  private List<JsonObject> getNeedUpdateItems(PieceCollection existingExpectedPieces, List<JsonObject> jsonExistingItems) {
-    return existingExpectedPieces.getPieces().stream()
-                          .map(piece ->  IntStream.range(0, jsonExistingItems.size())
-                                            .filter(i -> jsonExistingItems.get(i).getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER).equals(piece.getPoLineId()))
-                                            .filter(i -> jsonExistingItems.get(i).getJsonObject(ITEM_EFFECTIVE_LOCATION).getString(ID).equals(piece.getLocationId()))
-                                            .boxed()
-                                            .findFirst()
-                                            .map(i -> jsonExistingItems.remove((int)i))
-                                            .orElse( null))
-                          .filter(Objects::nonNull)
-                          .collect(toList());
   }
 
   private List<String> getPhysicalItemIds(CompositePoLine compPOL, List<JsonObject> existingItems) {
