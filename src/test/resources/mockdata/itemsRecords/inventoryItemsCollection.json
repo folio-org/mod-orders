@@ -1601,7 +1601,46 @@
         "id": "758258bc-ecc1-41b8-abca-f7b610822ffd",
         "name": "ORWIG ETHNO CD"
       }
+    },
+    {
+      "id": "86481a22-633e-4b97-8061-0dc5fdaaeabb",
+      "status": {
+        "name": "Received"
+      },
+      "title": "Country Madness",
+      "hrid": "it00001889",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d63",
+      "barcode": "",
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "c0d08448-347b-418a-8c2f-5fb50248d67e",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "Elec resource"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-03-05T07:52:48.657+0000",
+        "createdByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9",
+        "updatedDate": "2019-03-05T08:43:38.089+0000",
+        "updatedByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/14428ffb-3c2e-4ccc-94dc-820d67f5d534"
+      },
+      "effectiveLocation": {
+        "id": "758258bc-ecc1-41b8-abca-f7b610822ffd",
+        "name": "Main"
+      }
     }
   ],
-  "totalRecords": 41
+  "totalRecords": 42
 }

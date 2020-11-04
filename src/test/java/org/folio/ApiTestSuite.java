@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.folio.helper.FinanceHelperTest;
+import org.folio.helper.InventoryHelperTest;
 import org.folio.helper.PiecesHelperTest;
 import org.folio.helper.PurchaseOrderHelperTest;
 import org.folio.helper.PurchaseOrderLineHelperTest;
@@ -216,4 +217,7 @@ public class ApiTestSuite {
   class RestClientTestNested extends RestClientTest {
   }
 
+  @Nested
+  class InventoryHelperTestNested extends InventoryHelperTest {
+  }
 }

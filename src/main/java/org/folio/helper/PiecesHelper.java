@@ -81,8 +81,6 @@ public class PiecesHelper extends AbstractHelper {
   private InventoryHelper inventoryHelper;
   private TitlesHelper titlesHelper;
 
-  private static final String GET_PIECES_BY_QUERY = resourcesPath(PIECES) + SEARCH_PARAMS;
-
   public PiecesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
     protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
@@ -412,11 +410,5 @@ public class PiecesHelper extends AbstractHelper {
        itemFuture.completeExceptionally(e);
     }
     return itemFuture;
-  }
-
-  public CompletableFuture<PieceCollection> getPieces(int limit, int offset, String query) {
-    String endpoint = String.format(GET_PIECES_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
-    return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenCompose(json -> VertxCompletableFuture.supplyBlockingAsync(ctx, () -> json.mapTo(PieceCollection.class)));
   }
 }

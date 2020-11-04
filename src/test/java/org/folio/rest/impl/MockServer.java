@@ -9,7 +9,13 @@ import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.assertj.core.api.Assertions.fail;
 import static org.folio.helper.InventoryHelper.ITEMS;
+import static org.folio.helper.InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.folio.helper.InventoryHelper.REQUESTS;
+import static org.folio.helper.InventoryHelperTest.HOLDING_INSTANCE_ID_2_HOLDING;
+import static org.folio.helper.InventoryHelperTest.NEW_LOCATION_ID;
+import static org.folio.helper.InventoryHelperTest.NON_EXISTED_NEW_HOLDING_ID;
+import static org.folio.helper.InventoryHelperTest.OLD_LOCATION_ID;
+import static org.folio.helper.InventoryHelperTest.ONLY_NEW_HOLDING_EXIST_ID;
 import static org.folio.helper.ProtectionHelper.ACQUISITIONS_UNIT_ID;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
@@ -20,36 +26,7 @@ import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.FUND_ID;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
-import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
-import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
-import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
-import static org.folio.orders.utils.ResourcePathResolver.EXPENSE_CLASSES_URL;
-import static org.folio.orders.utils.ResourcePathResolver.FINANCE_EXCHANGE_RATE;
-import static org.folio.orders.utils.ResourcePathResolver.FINANCE_RELEASE_ENCUMBRANCE;
-import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
-import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
-import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
-import static org.folio.orders.utils.ResourcePathResolver.PREFIXES;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
-import static org.folio.orders.utils.ResourcePathResolver.REASONS_FOR_CLOSURE;
-import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
-import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
-import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
-import static org.folio.orders.utils.ResourcePathResolver.SUFFIXES;
-import static org.folio.orders.utils.ResourcePathResolver.TITLES;
-import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_ENDPOINT;
-import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_STORAGE_ENDPOINT;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.impl.ApiTestBase.BAD_QUERY;
 import static org.folio.rest.impl.ApiTestBase.COMP_ORDER_MOCK_DATA_PATH;
@@ -195,7 +172,7 @@ public class MockServer {
   private static final String CONTRIBUTOR_NAME_TYPES_PATH = BASE_MOCK_DATA_PATH + "contributorNameTypes/contributorPersonalNameType.json";
   public static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
   public static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
-  private static final String ITEMS_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/";
+  public static final String ITEMS_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/";
   public static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
   public static final String BUDGET_EXPENSE_CLASSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "budgetExpenseClasses/budget_expense_classes.json";
   private static final String EXPENSE_CLASSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "expenseClasses/expense_classes.json";;
@@ -248,15 +225,16 @@ public class MockServer {
   private static final String INSTANCE_STATUSES = "instanceStatuses";
   private static final String IDENTIFIER_TYPES = "identifierTypes";
   private static final String ISBN_CONVERT13 = "ISBN13";
-  private static final String CURRENT_FISCAL_YEAR = "currentFiscalYear";
   private static final String HOLDING_PERMANENT_LOCATION_ID = "permanentLocationId";
   private static final String ORGANIZATIONS = "organizations";
   static final String LOAN_TYPES = "loantypes";
   static final String IS_DELETED_PROP = "isDeleted";
   static final String ALL_UNITS_CQL = IS_DELETED_PROP + "=*";
-  public static final String INSTANCE_ID = "45e6d2cc-e4ca-4048-b0f9-ec0be269342a";
   public static final String OLD_HOLDING_ID = "758258bc-ecc1-41b8-abca-f7b610822ffd";
   public static final String NEW_HOLDING_ID = "fcd64ce1-6995-48f0-840e-89ffa2288371";
+  public static final String IF_EQUAL_STR = "==";
+  private static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
+
   static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
 
@@ -887,10 +865,38 @@ public class MockServer {
     String queryParam = ctx.queryParam("query").get(0);
     JsonObject holdings;
     try {
-      if (queryParam.contains(OLD_HOLDING_ID) && queryParam.contains(NEW_HOLDING_ID)) {
-          holdings = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
-      } else {
+      if ((queryParam.contains(OLD_HOLDING_ID) && queryParam.contains(NEW_HOLDING_ID))) {
+        holdings = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+      } else if (queryParam.contains(OLD_LOCATION_ID) && queryParam.contains(NON_EXISTED_NEW_HOLDING_ID)) {
+        List holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
+          .map(o -> ((JsonObject) o))
+          .filter(holding -> holding.getString("permanentLocationId").equals(OLD_LOCATION_ID))
+          .collect(toList());
+        holdings = new JsonObject().put("holdingsRecords", new JsonArray(holdingsList));
+      }  else if (queryParam.contains(OLD_LOCATION_ID) && !queryParam.contains(NON_EXISTED_NEW_HOLDING_ID)) {
+        List holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
+          .map(o -> ((JsonObject) o))
+          .filter(holding -> holding.getString("permanentLocationId").equals(OLD_LOCATION_ID)
+            || !holding.getString("permanentLocationId").equals(NON_EXISTED_NEW_HOLDING_ID))
+          .collect(toList());
+        holdings = new JsonObject().put("holdingsRecords", new JsonArray(holdingsList));
+      }  else {
         holdings = new JsonObject().put("holdingsRecords", new JsonArray());
+      }
+      if (queryParam.contains(NEW_LOCATION_ID) && queryParam.contains(ONLY_NEW_HOLDING_EXIST_ID)) {
+        List holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
+          .map(o -> ((JsonObject) o))
+          .filter(holding -> holding.getString("permanentLocationId").equals(NEW_LOCATION_ID))
+          .collect(toList());
+        holdings = new JsonObject().put("holdingsRecords", new JsonArray(holdingsList));
+      }
+
+      if (queryParam.contains(OLD_LOCATION_ID) && queryParam.contains(HOLDING_INSTANCE_ID_2_HOLDING)) {
+        List holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
+                                                                              .collect(toList());
+        List doubleList = new ArrayList(holdingsList);
+        doubleList.addAll(holdingsList);
+        holdings = new JsonObject().put("holdingsRecords", new JsonArray(doubleList));
       }
     } catch (IOException e) {
       holdings = new JsonObject().put("holdingsRecords", new JsonArray());
@@ -953,6 +959,20 @@ public class MockServer {
           while (iterator.hasNext()) {
             JsonObject item = (JsonObject) iterator.next();
             if (!itemIds.contains(item.getString(ID))) {
+              iterator.remove();
+            }
+          }
+        } else if (query.contains(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER + IF_EQUAL_STR) && query.contains(ITEM_HOLDINGS_RECORD_ID + IF_EQUAL_STR)) {
+          int lineIndex = query.indexOf(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER) + ITEM_PURCHASE_ORDER_LINE_IDENTIFIER.length() + 2;
+          String purchaseOrderLineIdentifier = query.substring(lineIndex, lineIndex + 36);
+          int holdingIndex = query.indexOf(ITEM_HOLDINGS_RECORD_ID) + ITEM_HOLDINGS_RECORD_ID.length() + 2;
+          String holdingsRecordId = query.substring(holdingIndex,  holdingIndex + 36);
+          final Iterator iterator = jsonArray.iterator();
+          while (iterator.hasNext()) {
+            JsonObject item = (JsonObject) iterator.next();
+
+            if (!purchaseOrderLineIdentifier.equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER))
+                    || !holdingsRecordId.equals(item.getString(ITEM_HOLDINGS_RECORD_ID))) {
               iterator.remove();
             }
           }
