@@ -9,6 +9,7 @@ import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLD
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
@@ -49,8 +50,9 @@ public class InventoryHelperTest extends ApiTestBase {
   public static final String OLD_LOCATION_ID = "758258bc-ecc1-41b8-abca-f7b610822fff";
   public static final String NEW_LOCATION_ID = "fcd64ce1-6995-48f0-840e-89ffa2288371";
   public static final String OLD_HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d63";
-  public static final String NEW_HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d64";
   public static final String NON_EXISTED_NEW_HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d23";
+  public static final String ONLY_NEW_HOLDING_EXIST_ID = "65cb2bf0-d4c2-4822-8ad0-b76f1ba75d22";
+  public static final String HOLDING_INSTANCE_ID_2_HOLDING = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d48";
 
   private Context ctxMock;
   private Map<String, String> okapiHeadersMock;
@@ -189,5 +191,20 @@ public class InventoryHelperTest extends ApiTestBase {
     List<Piece> pieces = inventoryHelper.handleItemRecords(reqData, OLD_HOLDING_ID, Collections.singletonList(line)).join();
 
     assertEquals(0, pieces.size());
+  }
+
+  @Test
+  public void testShouldNotUpdateHolderIfReturnMoreThen2Record() {
+    //given
+    InventoryHelper inventoryHelper = spy(new InventoryHelper(httpClient, okapiHeadersMock, ctxMock, "en"));
+    doReturn(completedFuture(null)).when(inventoryHelper).deleteItem(any());
+    //When
+    PoLineUpdateHolder holder = new PoLineUpdateHolder().withInstanceId(HOLDING_INSTANCE_ID_2_HOLDING)
+      .withOldLocationId(OLD_LOCATION_ID);
+    inventoryHelper.updateHoldingsRecord(holder).join();
+    //Then
+    verify(inventoryHelper, times(0)).getOrCreateHoldingsRecord(HOLDING_INSTANCE_ID_2_HOLDING, OLD_LOCATION_ID);
+    assertNull(holder.getNewLocationId());
+    assertThat(holder.getOldLocationId(), equalTo(OLD_LOCATION_ID));
   }
 }

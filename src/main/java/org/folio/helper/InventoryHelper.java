@@ -25,8 +25,6 @@ import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.acq.model.Piece.PieceFormat.ELECTRONIC;
-import static org.folio.rest.acq.model.Piece.PieceFormat.PHYSICAL;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -459,7 +457,7 @@ public class InventoryHelper extends AbstractHelper {
             List<String> items;
             CompletableFuture<List<String>> newItems;
             // Depending on piece format get already existing items and send requests to create missing items
-            if (pieceFormat == ELECTRONIC) {
+            if (pieceFormat == Piece.PieceFormat.ELECTRONIC) {
               items = getElectronicItemIds(compPOL, existingItems);
               newItems = createMissingElectronicItems(compPOL, holdingId, expectedQuantity - items.size());
             } else {
@@ -521,10 +519,10 @@ public class InventoryHelper extends AbstractHelper {
                             List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.PieceFormat.values().length);
                             EnumMap<Piece.PieceFormat, Integer> piecesWithItem = new EnumMap<>(Piece.PieceFormat.class);
                             if (compPOL.getPhysical() != null) {
-                              piecesWithItem.put(PHYSICAL, getPhysicalItemIds(compPOL, needUpdateItems).size());
+                              piecesWithItem.put(Piece.PieceFormat.PHYSICAL, getPhysicalItemIds(compPOL, needUpdateItems).size());
                             }
                             if (compPOL.getEresource() != null) {
-                              piecesWithItem.put(ELECTRONIC, getElectronicItemIds(compPOL, needUpdateItems).size());
+                              piecesWithItem.put(Piece.PieceFormat.ELECTRONIC, getElectronicItemIds(compPOL, needUpdateItems).size());
                             }
                          piecesWithItem.forEach((pieceFormat, expectedQuantity) -> {
                               // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
@@ -532,7 +530,7 @@ public class InventoryHelper extends AbstractHelper {
                                 List<String> itemIds = new ArrayList<>();
                                 CompletableFuture<List<String>> updatedItemsIds;
                                 // Depending on piece format get already existing items and send requests to create missing items
-                                if (pieceFormat == ELECTRONIC) {
+                                if (pieceFormat == Piece.PieceFormat.ELECTRONIC) {
                                   List<String> elecItemIds = getElectronicItemIds(compPOL, needUpdateItems);
                                   itemIds.addAll(elecItemIds);
                                   List<JsonObject> updatedItems = needUpdateItems.stream().filter(item -> elecItemIds.contains(item.getString(ID)))

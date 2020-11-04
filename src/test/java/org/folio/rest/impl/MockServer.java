@@ -12,9 +12,11 @@ import static org.folio.helper.InventoryHelper.ITEMS;
 import static org.folio.helper.InventoryHelper.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.helper.InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.folio.helper.InventoryHelper.REQUESTS;
+import static org.folio.helper.InventoryHelperTest.HOLDING_INSTANCE_ID_2_HOLDING;
 import static org.folio.helper.InventoryHelperTest.NEW_LOCATION_ID;
 import static org.folio.helper.InventoryHelperTest.NON_EXISTED_NEW_HOLDING_ID;
 import static org.folio.helper.InventoryHelperTest.OLD_LOCATION_ID;
+import static org.folio.helper.InventoryHelperTest.ONLY_NEW_HOLDING_EXIST_ID;
 import static org.folio.helper.ProtectionHelper.ACQUISITIONS_UNIT_ID;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
@@ -909,8 +911,23 @@ public class MockServer {
             || !holding.getString("permanentLocationId").equals(NON_EXISTED_NEW_HOLDING_ID))
           .collect(toList());
         holdings = new JsonObject().put("holdingsRecords", new JsonArray(holdingsList));
-      } else {
+      }  else {
         holdings = new JsonObject().put("holdingsRecords", new JsonArray());
+      }
+      if (queryParam.contains(NEW_LOCATION_ID) && queryParam.contains(ONLY_NEW_HOLDING_EXIST_ID)) {
+        List holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
+          .map(o -> ((JsonObject) o))
+          .filter(holding -> holding.getString("permanentLocationId").equals(NEW_LOCATION_ID))
+          .collect(toList());
+        holdings = new JsonObject().put("holdingsRecords", new JsonArray(holdingsList));
+      }
+
+      if (queryParam.contains(OLD_LOCATION_ID) && queryParam.contains(HOLDING_INSTANCE_ID_2_HOLDING)) {
+        List holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
+                                                                              .collect(toList());
+        List doubleList = new ArrayList(holdingsList);
+        doubleList.addAll(holdingsList);
+        holdings = new JsonObject().put("holdingsRecords", new JsonArray(doubleList));
       }
     } catch (IOException e) {
       holdings = new JsonObject().put("holdingsRecords", new JsonArray());
