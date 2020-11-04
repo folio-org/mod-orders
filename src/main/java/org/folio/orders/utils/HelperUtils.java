@@ -20,8 +20,6 @@ import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
@@ -31,7 +29,6 @@ import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
 
 import java.io.UnsupportedEncodingException;
-import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -65,7 +62,6 @@ import org.folio.helper.AbstractHelper;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
-import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -102,12 +98,10 @@ public class HelperUtils {
 
   public static final String ID = "id";
   public static final String FUND_ID = "fundId";
-  public static final String EXPENSE_CLASS_ID = "expenseClassId";
   public static final String COMPOSITE_PO_LINES = "compositePoLines";
   public static final String CONFIGS = "configs";
   public static final String CONFIG_NAME = "configName";
   public static final String CONFIG_VALUE = "value";
-  private static final String CONFIG_QUERY = "module=ORDERS";
   private static final String ERROR_MESSAGE = "errorMessage";
 
   public static final String DEFAULT_POLINE_LIMIT = "1";
@@ -604,21 +598,6 @@ public class HelperUtils {
     return total.with(MonetaryOperators.rounding());
   }
 
-  /**
-   * Calculates PO's estimated price by summing the Estimated Price of the associated PO Lines.
-   * See MODORDERS-181 for more details. At the moment assumption is that all prices are in the same currency.
-   * @param poLines list of composite PO Lines
-   * @return estimated purchase order's total price
-   */
-  public static double calculateTotalEstimatedPrice(List<CompositePoLine> poLines) {
-    return poLines
-      .stream()
-      .map(CompositePoLine::getCost)
-      .map(Cost::getPoLineEstimatedPrice)
-      .map(BigDecimal::valueOf)
-      .reduce(BigDecimal.ZERO, BigDecimal::add)
-      .doubleValue();
-  }
 
   public static int getPhysicalLocationsQuantity(List<Location> locations) {
     if (CollectionUtils.isNotEmpty(locations)) {
@@ -850,51 +829,6 @@ public class HelperUtils {
     return future;
   }
 
-  /**
-   * Retrieve configuration for mod-orders from mod-configuration.
-   * @param okapiHeaders the headers provided by okapi
-   * @param ctx the context
-   * @param logger logger instance
-   * @param lang
-   * @return CompletableFuture with JsonObject
-   */
-  public static CompletableFuture<JsonObject> loadConfiguration(Map<String, String> okapiHeaders, Context ctx, Logger logger, String lang) {
-
-    String okapiURL = StringUtils.trimToEmpty(okapiHeaders.get(OKAPI_URL));
-    String tenant = okapiHeaders.get(OKAPI_HEADER_TENANT);
-    String token = okapiHeaders.get(OKAPI_HEADER_TOKEN);
-    CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
-    JsonObject config = new JsonObject();
-
-    ConfigurationsClient configurationsClient = new ConfigurationsClient(okapiURL, tenant, token, false);
-
-      try {
-      configurationsClient.getConfigurationsEntries(CONFIG_QUERY, 0, 100, null, lang, response -> response.bodyHandler(body -> {
-        if (response.statusCode() != 200) {
-          logger.error(String.format("Expected status code 200, got '%s' :%s", response.statusCode(), body.toString()));
-          future.complete(config);
-          return;
-        }
-
-        JsonObject entries = body.toJsonObject();
-
-        if (logger.isDebugEnabled()) {
-          logger.debug("The response from mod-configuration: {}", entries.encodePrettily());
-        }
-
-        entries.getJsonArray(CONFIGS)
-          .stream()
-          .map(o -> (JsonObject) o)
-          .forEach(entry -> config.put(entry.getString(CONFIG_NAME), entry.getValue(CONFIG_VALUE)));
-
-        future.complete(config);
-      }));
-    } catch (Exception e) {
-      logger.error("Error happened while getting configs", e);
-      future.complete(config);
-    }
-    return future;
-  }
 
   public static int getPoLineLimit(JsonObject config) {
     try {

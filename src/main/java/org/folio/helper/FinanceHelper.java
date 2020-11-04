@@ -105,7 +105,7 @@ public class FinanceHelper extends AbstractHelper {
 
   private final TransactionService transactionService;
 
-  private ExchangeRateProviderResolver exchangeRateProviderResolver;
+  private final ExchangeRateProviderResolver exchangeRateProviderResolver;
 
   private String systemCurrency;
 
@@ -115,10 +115,11 @@ public class FinanceHelper extends AbstractHelper {
     this.transactionService = new TransactionService(okapiHeaders, ctx, lang);
   }
 
-  public FinanceHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang
-          , TransactionService transactionService) {
+  public FinanceHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang,
+      TransactionService transactionService) {
     super(httpClient, okapiHeaders, ctx, lang);
     this.transactionService = transactionService;
+    this.exchangeRateProviderResolver = new ExchangeRateProviderResolver();
   }
 
   /**
