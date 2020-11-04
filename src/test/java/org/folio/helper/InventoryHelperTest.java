@@ -31,7 +31,9 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.junit.jupiter.api.BeforeEach;
@@ -206,5 +208,28 @@ public class InventoryHelperTest extends ApiTestBase {
     verify(inventoryHelper, times(0)).getOrCreateHoldingsRecord(HOLDING_INSTANCE_ID_2_HOLDING, OLD_LOCATION_ID);
     assertNull(holder.getNewLocationId());
     assertThat(holder.getOldLocationId(), equalTo(OLD_LOCATION_ID));
+  }
+
+  @Test
+  public void testHandleHoldingsAndItemsRecordsIsNotRequired() {
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
+    reqData.setId(poLineId);
+    reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
+    reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
+    reqData.getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE);
+    reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
+    reqData.setCheckinItems(true);
+
+    //given
+    InventoryHelper inventoryHelper = spy(new InventoryHelper(httpClient, okapiHeadersMock, ctxMock, "en"));
+    //When
+
+    Location line = new Location().withLocationId(NEW_LOCATION_ID);
+    PoLine storageData = JsonObject.mapFrom(reqData).mapTo(PoLine.class);
+    storageData.setLocations(Collections.singletonList(line));
+    List<Piece> pieces = inventoryHelper.handleHoldingsAndItemsRecords(reqData, storageData).join();
+
+    assertEquals(0, pieces.size());
   }
 }
