@@ -87,7 +87,7 @@ public class InventoryHelper extends AbstractHelper {
   static final String INSTANCE_IDENTIFIER_TYPE_VALUE = "value";
   static final String HOLDING_INSTANCE_ID = "instanceId";
   static final String HOLDING_PERMANENT_LOCATION_ID = "permanentLocationId";
-  public static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
+  static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
   static final String ITEM_BARCODE = "barcode";
   static final String ITEM_LEVEL_CALL_NUMBER = "itemLevelCallNumber";
   static final String ITEM_STATUS = "status";
@@ -131,7 +131,6 @@ public class InventoryHelper extends AbstractHelper {
   public static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
   private static final String GET_PIECES_BY_QUERY = resourcesPath(PIECES) + SEARCH_PARAMS;
-  public static final String ITEM_EFFECTIVE_LOCATION = "effectiveLocation";
 
   static {
     Map<String, String> apis = new HashMap<>();
@@ -418,7 +417,7 @@ public class InventoryHelper extends AbstractHelper {
     return String.format(INVENTORY_LOOKUP_ENDPOINTS.get(type), params);
   }
 
-  public CompletableFuture<String> createHoldingsRecord(String instanceId, String locationId) {
+  private CompletableFuture<String> createHoldingsRecord(String instanceId, String locationId) {
     JsonObject holdingsRecJson = new JsonObject();
     holdingsRecJson.put(HOLDING_INSTANCE_ID, instanceId);
     holdingsRecJson.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
