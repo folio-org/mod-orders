@@ -22,8 +22,6 @@ import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
-import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequiredForEresource;
-import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequiredForPhysical;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -31,10 +29,10 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -42,6 +40,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.models.PieceItemPair;
 import org.folio.models.PoLineUpdateHolder;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
@@ -133,6 +132,7 @@ public class InventoryHelper extends AbstractHelper {
   public static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
   private static final String GET_PIECES_BY_QUERY = resourcesPath(PIECES) + SEARCH_PARAMS;
+  public static final String EFFECTIVE_LOCATION = "effectiveLocation";
 
   static {
     Map<String, String> apis = new HashMap<>();
@@ -221,12 +221,12 @@ public class InventoryHelper extends AbstractHelper {
               .thenCompose(v -> {
                   // Items are not going to be created when create inventory is "Instance, Holding"
                   if (isItemsUpdateRequired) {
-                    return handleItemRecords(compPOL, poLineUpdateHolder);
+                    return handleItemRecords(compPOL, storagePoLine, poLineUpdateHolder);
                   } else {
                     return completedFuture(Collections.emptyList());
                   }
                 }
-            )
+              )
           );
         });
       } else {
@@ -292,6 +292,11 @@ public class InventoryHelper extends AbstractHelper {
   public CompletableFuture<Void> updateItem(JsonObject item) {
     String endpoint = String.format(UPDATE_ITEM_BY_ID_ENDPOINT, item.getString(ID), lang);
     return handlePutRequest(endpoint, item, httpClient, ctx, okapiHeaders, logger);
+  }
+
+  public CompletableFuture<String> saveItem(JsonObject item) {
+    String endpoint = String.format(UPDATE_ITEM_BY_ID_ENDPOINT, item.getString(ID), lang);
+    return handlePutRequest(endpoint, item, httpClient, ctx, okapiHeaders, logger).thenApply(v -> item.getString(ID));
   }
 
   /**
@@ -369,7 +374,7 @@ public class InventoryHelper extends AbstractHelper {
 
   public CompletableFuture<Void> updateHoldingsRecord(PoLineUpdateHolder holder) {
     String locationIds = StreamEx.of(Arrays.asList(holder.getOldLocationId(), holder.getNewLocationId()))
-                                 .joining(" or ", "(", ")");
+      .joining(" or ", "(", ")");
     String query = encodeQuery(String.format(HOLDINGS_LOOKUP_QUERY, holder.getInstanceId(), locationIds), logger);
     String endpoint = buildLookupEndpoint(HOLDINGS_RECORDS, query, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
@@ -384,7 +389,7 @@ public class InventoryHelper extends AbstractHelper {
         }
         if (holdings.getJsonArray(HOLDINGS_RECORDS).size() == 1) {
           return getOrCreateHoldingsRecord(holder.getInstanceId(), holder.getNewLocationId())
-                                  .thenAccept(holder::withNewHoldingId);
+            .thenAccept(holder::withNewHoldingId);
         } else if (holdings.getJsonArray(HOLDINGS_RECORDS).size() == 2) {
           newHolding = getHoldingByLocationId(holdings, holder.getNewLocationId());
           holder.withNewHoldingId(newHolding.getString(ID));
@@ -407,12 +412,12 @@ public class InventoryHelper extends AbstractHelper {
     String query = encodeQuery(String.format(HOLDINGS_LOOKUP_QUERY, instanceId, locationId), logger);
     String endpoint = buildLookupEndpoint(HOLDINGS_RECORDS, query, lang);
     return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-          .thenCompose(holdings -> {
-            if (!holdings.getJsonArray(HOLDINGS_RECORDS).isEmpty()) {
-              return completedFuture(extractId(getFirstObjectFromResponse(holdings, HOLDINGS_RECORDS)));
-            }
-            return createHoldingsRecord(instanceId, locationId);
-          });
+      .thenCompose(holdings -> {
+        if (!holdings.getJsonArray(HOLDINGS_RECORDS).isEmpty()) {
+          return completedFuture(extractId(getFirstObjectFromResponse(holdings, HOLDINGS_RECORDS)));
+        }
+        return createHoldingsRecord(instanceId, locationId);
+      });
   }
 
   public String buildLookupEndpoint(String type, Object... params) {
@@ -450,42 +455,42 @@ public class InventoryHelper extends AbstractHelper {
     // Search for already existing items
     return searchStorageExistingItems(compPOL.getId(), holdingId, piecesWithItemsQty)
       .thenCompose(existingItems -> {
-        String locationId = locations.get(0).getLocationId();
-        List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.PieceFormat.values().length);
-        piecesWithItemsQuantities.forEach((pieceFormat, expectedQuantity) -> {
-          // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
-          if (expectedQuantity > 0) {
-            List<String> items;
-            CompletableFuture<List<String>> newItems;
-            // Depending on piece format get already existing items and send requests to create missing items
-            if (pieceFormat == Piece.PieceFormat.ELECTRONIC) {
-              items = getElectronicItemIds(compPOL, existingItems);
-              newItems = createMissingElectronicItems(compPOL, holdingId, expectedQuantity - items.size());
-            } else {
-              items = getPhysicalItemIds(compPOL, existingItems);
-              newItems = createMissingPhysicalItems(compPOL, holdingId, expectedQuantity - items.size());
+          String locationId = locations.get(0).getLocationId();
+          List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.PieceFormat.values().length);
+          piecesWithItemsQuantities.forEach((pieceFormat, expectedQuantity) -> {
+            // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
+            if (expectedQuantity > 0) {
+              List<String> items;
+              CompletableFuture<List<String>> newItems;
+              // Depending on piece format get already existing items and send requests to create missing items
+              if (pieceFormat == Piece.PieceFormat.ELECTRONIC) {
+                items = getElectronicItemIds(compPOL, existingItems);
+                newItems = createMissingElectronicItems(compPOL, holdingId, expectedQuantity - items.size());
+              } else {
+                items = getPhysicalItemIds(compPOL, existingItems);
+                newItems = createMissingPhysicalItems(compPOL, holdingId, expectedQuantity - items.size());
+              }
+
+              // Build piece records once new items are created
+              pieces.add(newItems.thenApply(createdItemIds -> {
+                List<String> itemIds = ListUtils.union(createdItemIds, items);
+                logger.debug(BUILDING_PIECE_MESSAGE, itemIds.size(), pieceFormat, polId);
+                return StreamEx.of(itemIds)
+                  .map(itemId -> new Piece().withFormat(pieceFormat)
+                    .withItemId(itemId)
+                    .withPoLineId(polId)
+                    .withLocationId(locationId))
+                  .toList();
+              }));
             }
-
-            // Build piece records once new items are created
-            pieces.add(newItems.thenApply(createdItemIds -> {
-              List<String> itemIds = ListUtils.union(createdItemIds, items);
-              logger.debug(BUILDING_PIECE_MESSAGE, itemIds.size(), pieceFormat, polId);
-              return StreamEx.of(itemIds)
-                .map(itemId -> new Piece().withFormat(pieceFormat)
-                                          .withItemId(itemId)
-                                          .withPoLineId(polId)
-                                          .withLocationId(locationId))
-                .toList();
-            }));
-          }
-        });
-
-        // Wait for all items to be created and corresponding pieces are built
-        return collectResultsOnSuccess(pieces)
-          .thenApply(results -> {
-            validateItemsCreation(compPOL.getId(), pieces.size(), results.size());
-            return results.stream().flatMap(List::stream).collect(toList());
           });
+
+          // Wait for all items to be created and corresponding pieces are built
+          return collectResultsOnSuccess(pieces)
+            .thenApply(results -> {
+              validateItemsCreation(compPOL.getId(), pieces.size(), results.size());
+              return results.stream().flatMap(List::stream).collect(toList());
+            });
         }
       );
   }
@@ -500,10 +505,10 @@ public class InventoryHelper extends AbstractHelper {
    * @param holder pair of new location provided from POl and location from storage
    * @return future with list of piece objects
    */
-  public CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, PoLineUpdateHolder holder) {
+  public CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, PoLine storagePoLine, PoLineUpdateHolder holder) {
     List<Location> polLocations = compPOL.getLocations().stream()
-                                         .filter(location -> location.getLocationId().equals(holder.getNewLocationId()))
-                                         .collect(toList());
+      .filter(location -> location.getLocationId().equals(holder.getNewLocationId()))
+      .collect(toList());
     Map<Piece.PieceFormat, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, polLocations);
     int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
     String polId = compPOL.getId();
@@ -512,60 +517,57 @@ public class InventoryHelper extends AbstractHelper {
     if (piecesWithItemsQty == 0) {
       return completedFuture(Collections.emptyList());
     }
+
     return getExpectedPiecesByLineId(compPOL.getId())
-                       .thenApply(existingExpectedPieces -> existingExpectedPieces.getPieces().stream().map(Piece::getItemId).collect(toList()))
-                       .thenCompose(this::getItemRecordsByIds)
-                       .thenCompose(needUpdateItems -> {
-                            String locationId = polLocations.get(0).getLocationId();
-                            List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.PieceFormat.values().length);
-                            EnumMap<Piece.PieceFormat, Integer> piecesWithItem = new EnumMap<>(Piece.PieceFormat.class);
-                            if (isItemsUpdateRequiredForPhysical(compPOL)) {
-                              piecesWithItem.put(Piece.PieceFormat.PHYSICAL, getPhysicalItemIds(compPOL, needUpdateItems).size());
-                            }
-                            if (isItemsUpdateRequiredForEresource(compPOL)) {
-                              piecesWithItem.put(Piece.PieceFormat.ELECTRONIC, getElectronicItemIds(compPOL, needUpdateItems).size());
-                            }
-                         piecesWithItem.forEach((pieceFormat, expectedQuantity) -> {
-                              // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
-                              if (expectedQuantity > 0) {
-                                List<String> itemIds = new ArrayList<>();
-                                CompletableFuture<List<String>> updatedItemsIds;
-                                // Depending on piece format get already existing items and send requests to create missing items
-                                if (pieceFormat == Piece.PieceFormat.ELECTRONIC) {
-                                  List<String> elecItemIds = getElectronicItemIds(compPOL, needUpdateItems);
-                                  itemIds.addAll(elecItemIds);
-                                  List<JsonObject> updatedItems = needUpdateItems.stream().filter(item -> elecItemIds.contains(item.getString(ID)))
-                                                                               .map(item -> item.put(ITEM_HOLDINGS_RECORD_ID, holder.getNewHoldingId()))
-                                                                               .collect(toList());
-                                  updatedItemsIds = updateItemRecords(updatedItems);
-                                } else {
-                                  List<String> physItemIds = getPhysicalItemIds(compPOL, needUpdateItems);
-                                  itemIds.addAll(physItemIds);
-                                  List<JsonObject> updatedItems = needUpdateItems.stream().filter(item -> physItemIds.contains(item.getString(ID)))
-                                                                              .map(item -> item.put(ITEM_HOLDINGS_RECORD_ID, holder.getNewHoldingId()))
-                                                                              .collect(toList());
-                                  updatedItemsIds = updateItemRecords(updatedItems);
-                                }
-                                // Build piece records once new items are created
-                                pieces.add(updatedItemsIds.thenApply(createdItemIds -> {
-                                    logger.debug(BUILDING_PIECE_MESSAGE, itemIds.size(), pieceFormat, polId);
-                                    return StreamEx.of(itemIds)
-                                      .map(itemId -> new Piece().withFormat(pieceFormat)
-                                        .withItemId(itemId)
-                                        .withPoLineId(polId)
-                                        .withLocationId(locationId))
-                                      .toList();
-                                    })
-                                );
-                              }
-                          });
-                            // Wait for all items to be created and corresponding pieces are built
-                           return collectResultsOnSuccess(pieces)
-                            .thenApply(results -> {
-                              validateItemsCreation(compPOL.getId(), pieces.size(), results.size());
-                              return results.stream().flatMap(List::stream).collect(toList());
-                            });
-                        });
+      .thenApply(existingExpectedPieces -> {
+        List<Piece> needUpdatePeices = new ArrayList<>();
+        List<PoLineUpdateHolder> poLineUpdateHolders = LocationUtil.convertToOldNewLocationIdPair(compPOL.getLocations(), storagePoLine.getLocations());
+        if (!poLineUpdateHolders.isEmpty() ) {
+          poLineUpdateHolders.forEach(poLineUpdateHolder -> {
+            List<Piece> pieces = existingExpectedPieces.getPieces().stream()
+              .filter(piece -> piece.getLocationId().equals(poLineUpdateHolder.getOldLocationId()))
+              .map(piece -> piece.withLocationId(poLineUpdateHolder.getNewLocationId()))
+              .collect(toList());
+            if (!pieces.isEmpty()) {
+              needUpdatePeices.addAll(pieces);
+            }
+          });
+        }
+        return needUpdatePeices.stream().filter(piece -> Objects.nonNull(piece.getItemId())).collect(toList());
+      })
+      .thenCompose(needUpdatePiecesWithItem ->
+        getItemRecordsByIds(needUpdatePiecesWithItem.stream().map(Piece::getItemId).collect(toList()))
+          .thenApply(items -> buildPieceItemPairList(needUpdatePiecesWithItem, items))
+      )
+      .thenCompose(pieceItemPairs -> {
+        List<Piece> pieceWithItemList = pieceItemPairs.stream().map(PieceItemPair::getPiece).collect(toList());
+        List<JsonObject> itemList = pieceItemPairs.stream().map(PieceItemPair::getItem).collect(toList());
+        List<CompletableFuture<String>> needUpdateItemIds = new ArrayList<>(Piece.PieceFormat.values().length);
+        itemList.forEach(item -> {
+          if (!polLocations.contains(item.getJsonObject(EFFECTIVE_LOCATION).getString(ID))) {
+            item.put(ITEM_HOLDINGS_RECORD_ID, holder.getNewHoldingId());
+            needUpdateItemIds.add(saveItem(item));
+          }
+        });
+        // Wait for all items to be created and corresponding needUpdateItemIds are built
+        return collectResultsOnSuccess(needUpdateItemIds)
+          .thenApply(results -> {
+            validateItemsCreation(compPOL.getId(), pieceWithItemList.size(), results.size());
+            return pieceWithItemList;
+          });
+      });
+  }
+
+  private List<PieceItemPair> buildPieceItemPairList(List<Piece> needUpdatePieces, List<JsonObject> items) {
+    return needUpdatePieces.stream()
+      .filter(piece -> Objects.nonNull(piece.getItemId()))
+      .map(piece -> {
+        PieceItemPair pieceItemPair = new PieceItemPair().withPiece(piece);
+        items.stream().filter(item -> piece.getItemId().equals(item.getString(ID)))
+          .findAny()
+          .ifPresent(pieceItemPair::withItem);
+        return pieceItemPair;
+      }).collect(toList());
   }
 
   private List<String> getPhysicalItemIds(CompositePoLine compPOL, List<JsonObject> existingItems) {
@@ -689,7 +691,7 @@ public class InventoryHelper extends AbstractHelper {
         getEntryTypeValue(entryType)
           .thenAccept(entryTypeValue -> future.completeExceptionally(new HttpException(500, buildErrorWithParameter(entryTypeValue, errorCode))));
         return null;
-    });
+      });
     return future;
   }
 
@@ -702,8 +704,8 @@ public class InventoryHelper extends AbstractHelper {
 
   public String buildProductIdQuery(ProductId productId) {
     return String.format(
-        "(identifiers adj \"\\\"identifierTypeId\\\": \\\"%s\\\"\" " + "and identifiers adj \"\\\"value\\\": \\\"%s\\\"\")",
-        productId.getProductIdType(), productId.getProductId());
+      "(identifiers adj \"\\\"identifierTypeId\\\": \\\"%s\\\"\" " + "and identifiers adj \"\\\"value\\\": \\\"%s\\\"\")",
+      productId.getProductIdType(), productId.getProductId());
   }
 
   public JsonObject buildInstanceRecordJsonObject(CompositePoLine compPOL, JsonObject lookupObj) {
@@ -739,15 +741,15 @@ public class InventoryHelper extends AbstractHelper {
     if (isProductIdsExist(compPOL)) {
       List<JsonObject> identifiers =
         compPOL.getDetails()
-               .getProductIds()
-               .stream()
-               .map(pId -> {
-                 JsonObject identifier = new JsonObject();
-                 identifier.put(INSTANCE_IDENTIFIER_TYPE_ID, pId.getProductIdType());
-                 identifier.put(INSTANCE_IDENTIFIER_TYPE_VALUE, pId.getProductId());
-                 return identifier;
-               })
-               .collect(toList());
+          .getProductIds()
+          .stream()
+          .map(pId -> {
+            JsonObject identifier = new JsonObject();
+            identifier.put(INSTANCE_IDENTIFIER_TYPE_ID, pId.getProductIdType());
+            identifier.put(INSTANCE_IDENTIFIER_TYPE_VALUE, pId.getProductId());
+            return identifier;
+          })
+          .collect(toList());
       instance.put(INSTANCE_IDENTIFIERS, new JsonArray(identifiers));
     }
     return instance;
@@ -784,7 +786,7 @@ public class InventoryHelper extends AbstractHelper {
       .orElseGet(Collections::emptyList);
   }
 
-/**
+  /**
    * Creates Items in the inventory based on the PO line data.
    *
    * @param compPOL PO line to create Instance Record for
@@ -920,9 +922,9 @@ public class InventoryHelper extends AbstractHelper {
    */
   public JsonObject getFirstObjectFromResponse(JsonObject response, String propertyName) {
     return Optional.ofNullable(response.getJsonArray(propertyName))
-                   .flatMap(items -> items.stream().findFirst())
-                   .map(item -> (JsonObject) item)
-                   .orElseThrow(() -> new CompletionException(new InventoryException(String.format("No records of '%s' can be found", propertyName))));
+      .flatMap(items -> items.stream().findFirst())
+      .map(item -> (JsonObject) item)
+      .orElseThrow(() -> new CompletionException(new InventoryException(String.format("No records of '%s' can be found", propertyName))));
   }
 
   /**

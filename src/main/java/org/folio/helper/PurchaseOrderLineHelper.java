@@ -73,14 +73,12 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
-import org.folio.models.PoLineUpdateHolder;
 import org.folio.models.PoLineFundHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.orders.utils.LocationUtil;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.acq.model.Piece;
@@ -855,20 +853,8 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       .thenCompose(existingPieces -> {
         List<Piece> piecesToCreate = new ArrayList<>();
         List<Piece> piecesWithLocationToProcess = createPiecesByLocationId(compPOL, expectedPiecesWithItem, existingPieces);
-        List<PoLineUpdateHolder> poLineUpdateHolders = LocationUtil.convertToOldNewLocationIdPair(compPOL.getLocations(), storagePoLine.getLocations());
-        if (!poLineUpdateHolders.isEmpty() && !isOpenOrderFlow) {
-          List<Piece> needUpdatePeices = new ArrayList<>();
-          poLineUpdateHolders.forEach(poLineUpdateHolder -> {
-            List<Piece> pieces = existingPieces.stream()
-                                               .filter(piece -> piece.getLocationId().equals(poLineUpdateHolder.getOldLocationId()))
-                                               .map(piece -> piece.withLocationId(poLineUpdateHolder.getNewLocationId()))
-                                               .collect(toList());
-            if (!pieces.isEmpty()) {
-              needUpdatePeices.addAll(pieces);
-            }
-          });
-
-          return allOf(needUpdatePeices.stream().map(piecesHelper::updatePieceRecord).toArray(CompletableFuture[]::new));
+        if (!expectedPiecesWithItem.isEmpty() && !isOpenOrderFlow) {
+          return allOf(expectedPiecesWithItem.stream().map(piecesHelper::updatePieceRecord).toArray(CompletableFuture[]::new));
         } else {
           piecesToCreate.addAll(piecesWithLocationToProcess);
         }
