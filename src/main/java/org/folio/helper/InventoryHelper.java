@@ -22,6 +22,8 @@ import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
+import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequiredForEresource;
+import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequiredForPhysical;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -517,10 +519,10 @@ public class InventoryHelper extends AbstractHelper {
                             String locationId = polLocations.get(0).getLocationId();
                             List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.PieceFormat.values().length);
                             EnumMap<Piece.PieceFormat, Integer> piecesWithItem = new EnumMap<>(Piece.PieceFormat.class);
-                            if (compPOL.getPhysical() != null) {
+                            if (isItemsUpdateRequiredForPhysical(compPOL)) {
                               piecesWithItem.put(Piece.PieceFormat.PHYSICAL, getPhysicalItemIds(compPOL, needUpdateItems).size());
                             }
-                            if (compPOL.getEresource() != null) {
+                            if (isItemsUpdateRequiredForEresource(compPOL)) {
                               piecesWithItem.put(Piece.PieceFormat.ELECTRONIC, getElectronicItemIds(compPOL, needUpdateItems).size());
                             }
                          piecesWithItem.forEach((pieceFormat, expectedQuantity) -> {
