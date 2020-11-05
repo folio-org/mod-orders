@@ -501,7 +501,10 @@ public class FinanceHelper extends AbstractHelper {
     List<EncumbranceRelationsHolder> holders = buildUpdateEncumbranceHolders(compPoLines, storeEncumbrances);
     if (!holders.isEmpty()) {
       updateEncumbrancesWithPolFields(holders);
-      return prepareEncumbrances(holders);
+      return prepareEncumbrances(holders).thenApply(holdersParam -> {
+        convertTransactionAmountToFYCurrency(holdersParam);
+        return holdersParam;
+      });
     }
     return CompletableFuture.completedFuture(Collections.emptyList());
   }
