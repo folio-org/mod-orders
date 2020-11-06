@@ -517,10 +517,9 @@ public class InventoryHelper extends AbstractHelper {
     if (piecesWithItemsQty == 0) {
       return completedFuture(Collections.emptyList());
     }
-
     return getExpectedPiecesByLineId(compPOL.getId())
       .thenApply(existingExpectedPieces -> {
-        List<Piece> needUpdatePeices = new ArrayList<>();
+        List<Piece> needUpdatePieces = new ArrayList<>();
         List<PoLineUpdateHolder> poLineUpdateHolders = LocationUtil.convertToOldNewLocationIdPair(compPOL.getLocations(), storagePoLine.getLocations());
         if (!poLineUpdateHolders.isEmpty() ) {
           poLineUpdateHolders.forEach(poLineUpdateHolder -> {
@@ -529,41 +528,45 @@ public class InventoryHelper extends AbstractHelper {
               .map(piece -> piece.withLocationId(poLineUpdateHolder.getNewLocationId()))
               .collect(toList());
             if (!pieces.isEmpty()) {
-              needUpdatePeices.addAll(pieces);
+              needUpdatePieces.addAll(pieces);
             }
           });
         }
-        return needUpdatePeices.stream().filter(piece -> Objects.nonNull(piece.getItemId())).collect(toList());
+        return needUpdatePieces;
       })
-      .thenCompose(needUpdatePiecesWithItem ->
-        getItemRecordsByIds(needUpdatePiecesWithItem.stream().map(Piece::getItemId).collect(toList()))
-          .thenApply(items -> buildPieceItemPairList(needUpdatePiecesWithItem, items))
-      )
+      .thenCompose(needUpdatePieces -> {
+        if (!needUpdatePieces.isEmpty()) {
+          return getItemRecordsByIds(needUpdatePieces.stream()//.filter(piece -> Objects.nonNull(piece.getItemId()))
+                                                               .map(Piece::getItemId)
+                                                               .collect(toList()))
+                                      .thenApply(items -> buildPieceItemPairList(needUpdatePieces, items));
+        }
+        return completedFuture(Collections.<PieceItemPair>emptyList());
+      })
       .thenCompose(pieceItemPairs -> {
-        List<Piece> pieceWithItemList = pieceItemPairs.stream().map(PieceItemPair::getPiece).collect(toList());
-        List<JsonObject> itemList = pieceItemPairs.stream().map(PieceItemPair::getItem).collect(toList());
-        List<CompletableFuture<String>> needUpdateItemIds = new ArrayList<>(Piece.PieceFormat.values().length);
-        itemList.forEach(item -> {
-          if (!polLocations.contains(item.getJsonObject(EFFECTIVE_LOCATION).getString(ID))) {
+        List<CompletableFuture<String>> updatedItemIds = new ArrayList<>(pieceItemPairs.size());
+        pieceItemPairs.forEach(pair -> {
+          JsonObject item = pair.getItem();
+          if (item != null && !polLocations.contains(item.getJsonObject(EFFECTIVE_LOCATION).getString(ID))) {
             item.put(ITEM_HOLDINGS_RECORD_ID, holder.getNewHoldingId());
-            needUpdateItemIds.add(saveItem(item));
+            updatedItemIds.add(saveItem(item));
           }
         });
-        // Wait for all items to be created and corresponding needUpdateItemIds are built
-        return collectResultsOnSuccess(needUpdateItemIds)
+        // Wait for all items to be created and corresponding updatedItemIds are built
+        return collectResultsOnSuccess(updatedItemIds)
           .thenApply(results -> {
-            validateItemsCreation(compPOL.getId(), pieceWithItemList.size(), results.size());
-            return pieceWithItemList;
+            validateItemsCreation(compPOL.getId(), updatedItemIds.size(), results.size());
+            return pieceItemPairs.stream().map(PieceItemPair::getPiece).collect(toList());
           });
       });
   }
 
   private List<PieceItemPair> buildPieceItemPairList(List<Piece> needUpdatePieces, List<JsonObject> items) {
     return needUpdatePieces.stream()
-      .filter(piece -> Objects.nonNull(piece.getItemId()))
+  //    .filter(piece -> Objects.nonNull(piece.getItemId()))
       .map(piece -> {
         PieceItemPair pieceItemPair = new PieceItemPair().withPiece(piece);
-        items.stream().filter(item -> piece.getItemId().equals(item.getString(ID)))
+        items.stream().filter(item -> item.getString(ID).equals(piece.getItemId()))
           .findAny()
           .ifPresent(pieceItemPair::withItem);
         return pieceItemPair;

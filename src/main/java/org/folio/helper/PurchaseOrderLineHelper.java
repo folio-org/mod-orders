@@ -674,7 +674,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
           return completedFuture(null);
         }
         //create pieces only if receiving is required
-        return updatePoLinePieces(compPOL, storagePoLine, titleId, piecesWithItemId, isOpenOrderFlow);
+        return updatePoLinePieces(compPOL, titleId, piecesWithItemId, isOpenOrderFlow);
       });
   }
 
@@ -839,11 +839,10 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
    * Creates pieces that are not yet in storage
    *
    * @param compPOL PO line to create Pieces Records for
-   * @param expectedPiecesWithItem expected Pieces to create with created associated Items records
+   * @param needProcessExpectedPieces expected Pieces to create with created associated Items records
    * @return void future
    */
-  private CompletableFuture<Void> updatePoLinePieces(CompositePoLine compPOL, PoLine storagePoLine,
-                                                      String titleId, List<Piece> expectedPiecesWithItem, boolean isOpenOrderFlow) {
+  private CompletableFuture<Void> updatePoLinePieces(CompositePoLine compPOL, String titleId, List<Piece> needProcessExpectedPieces, boolean isOpenOrderFlow) {
     // do not create pieces in case of check-in flow
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
       return completedFuture(null);
@@ -851,17 +850,26 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     return inventoryHelper.getExpectedPiecesByLineId(compPOL.getId())
       .thenApply(PieceCollection::getPieces)
       .thenCompose(existingPieces -> {
-        List<Piece> piecesToCreate = new ArrayList<>();
-        List<Piece> piecesWithLocationToProcess = createPiecesByLocationId(compPOL, expectedPiecesWithItem, existingPieces);
-        if (!expectedPiecesWithItem.isEmpty() && !isOpenOrderFlow) {
-          return allOf(expectedPiecesWithItem.stream().map(piecesHelper::updatePieceRecord).toArray(CompletableFuture[]::new));
-        } else {
-          piecesToCreate.addAll(piecesWithLocationToProcess);
-        }
-        piecesToCreate.addAll(createPiecesWithoutLocationId(compPOL, existingPieces));
-        piecesToCreate.forEach(piece -> piece.setTitleId(titleId));
-
-        return allOf(piecesToCreate.stream().map(this::createPiece).toArray(CompletableFuture[]::new));
+          List<CompletableFuture<Void>> pieceProcessFutures = new ArrayList<>(needProcessExpectedPieces.size());
+          if (!needProcessExpectedPieces.isEmpty() && !existingPieces.isEmpty() && !isOpenOrderFlow) {
+            List<String> existPieceIds = existingPieces.stream().map(Piece::getId).collect(toList());
+            needProcessExpectedPieces.stream()
+                       .filter(piece -> existPieceIds.contains(piece.getId()))
+                       .forEach(piece -> pieceProcessFutures.add(piecesHelper.updatePieceRecord(piece)));
+            needProcessExpectedPieces.removeIf(piece -> existPieceIds.contains(piece.getId()));
+          }
+          if (!needProcessExpectedPieces.isEmpty()) {
+            List<Piece> needCreatePieces = needProcessExpectedPieces.stream().filter(piece -> Objects.isNull(piece.getId())).collect(toList());
+            List<Piece> piecesToCreate = new ArrayList<>();
+            List<Piece> piecesWithLocationToProcess = createPiecesByLocationId(compPOL, needCreatePieces, existingPieces);
+            piecesToCreate.addAll(piecesWithLocationToProcess);
+            piecesToCreate.addAll(createPiecesWithoutLocationId(compPOL, existingPieces));
+            piecesToCreate.forEach(piece -> {
+              piece.setTitleId(titleId);
+              pieceProcessFutures.add(createPiece(piece));
+            });
+          }
+          return allOf(pieceProcessFutures.toArray(new CompletableFuture[0]));
       });
   }
 
