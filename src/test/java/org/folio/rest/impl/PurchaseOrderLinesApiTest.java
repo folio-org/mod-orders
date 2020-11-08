@@ -71,6 +71,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.ErrorCodes;
@@ -1245,7 +1246,6 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
 
   @Test
-  @Disabled
   public void testUpdatePolineForOpenedOrderWithUpdatingInventoryAndCreateNewPieces() {
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
@@ -1254,12 +1254,14 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
     reqData.getEresource().setCreateInventory(INSTANCE_HOLDING_ITEM);
 
-    addMockEntry(PIECES, new Piece()
-      .withFormat(Piece.Format.ELECTRONIC)
-      .withPoLineId(reqData.getId())
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
-
     int expQtyElectronic = 3;
+    IntStream.range(0, 2).forEach(i -> {
+      addMockEntry(PIECES, new Piece()
+        .withFormat(Piece.Format.ELECTRONIC)
+        .withPoLineId(reqData.getId())
+        .withLocationId(reqData.getLocations().get(0).getLocationId()));
+    });
+
     reqData.getLocations().get(0).setQuantityElectronic(expQtyElectronic);
     reqData.getLocations().get(0).setQuantity(expQtyElectronic);
     reqData.getCost().setQuantityElectronic(expQtyElectronic);
@@ -1270,9 +1272,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
 
     assertEquals(expQtyElectronic, getRqRsEntries(HttpMethod.PUT, PIECES).size(), "Location matched");
-    assertEquals(reqData.getLocations().get(0).getLocationId(), getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("locationId"), "Location matched");
-    assertEquals(poLineId, getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("poLineId"), "Line id matched");
-    assertEquals("Expected", getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("receivingStatus"), "Expected status");
+    assertEquals(reqData.getLocations().get(0).getLocationId(), getRqRsEntries(HttpMethod.PUT, PIECES).get(0).getString("locationId"), "Location matched");
+    assertEquals(poLineId, getRqRsEntries(HttpMethod.PUT, PIECES).get(0).getString("poLineId"), "Line id matched");
+    assertEquals("Expected", getRqRsEntries(HttpMethod.PUT, PIECES).get(0).getString("receivingStatus"), "Expected status");
   }
 
   @Test
