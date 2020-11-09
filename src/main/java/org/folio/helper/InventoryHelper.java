@@ -536,9 +536,8 @@ public class InventoryHelper extends AbstractHelper {
       })
       .thenCompose(needUpdatePieces -> {
         if (!needUpdatePieces.isEmpty()) {
-          return getItemRecordsByIds(needUpdatePieces.stream()//.filter(piece -> Objects.nonNull(piece.getItemId()))
-                                                               .map(Piece::getItemId)
-                                                               .collect(toList()))
+          return getItemRecordsByIds(needUpdatePieces.stream().map(Piece::getItemId)
+                                                              .collect(toList()))
                                       .thenApply(items -> buildPieceItemPairList(needUpdatePieces, items));
         }
         return completedFuture(Collections.<PieceItemPair>emptyList());
@@ -563,14 +562,13 @@ public class InventoryHelper extends AbstractHelper {
 
   private List<PieceItemPair> buildPieceItemPairList(List<Piece> needUpdatePieces, List<JsonObject> items) {
     return needUpdatePieces.stream()
-  //    .filter(piece -> Objects.nonNull(piece.getItemId()))
-      .map(piece -> {
-        PieceItemPair pieceItemPair = new PieceItemPair().withPiece(piece);
-        items.stream().filter(item -> item.getString(ID).equals(piece.getItemId()))
-          .findAny()
-          .ifPresent(pieceItemPair::withItem);
-        return pieceItemPair;
-      }).collect(toList());
+                          .map(piece -> {
+                            PieceItemPair pieceItemPair = new PieceItemPair().withPiece(piece);
+                            items.stream().filter(item -> item.getString(ID).equals(piece.getItemId()))
+                              .findAny()
+                              .ifPresent(pieceItemPair::withItem);
+                            return pieceItemPair;
+                          }).collect(toList());
   }
 
   private List<String> getPhysicalItemIds(CompositePoLine compPOL, List<JsonObject> existingItems) {
