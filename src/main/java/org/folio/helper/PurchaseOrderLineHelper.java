@@ -73,8 +73,8 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
-import org.folio.models.PoLineUpdateHolder;
 import org.folio.models.PoLineFundHolder;
+import org.folio.models.PoLineUpdateHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
@@ -138,10 +138,10 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
 
   public PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
-    inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
-    protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
-    piecesHelper = new PiecesHelper(httpClient, okapiHeaders, ctx, lang);
-    financeHelper = new FinanceHelper(httpClient, okapiHeaders, ctx, lang);
+    this.inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
+    this.protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
+    this.piecesHelper = new PiecesHelper(httpClient, okapiHeaders, ctx, lang);
+    this.financeHelper = new FinanceHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
   public PurchaseOrderLineHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
