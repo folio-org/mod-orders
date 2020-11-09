@@ -623,7 +623,7 @@ public class HelperUtils {
     }
   }
 
-  private static boolean isItemsUpdateRequiredForEresource(CompositePoLine compPOL) {
+  public static boolean isItemsUpdateRequiredForEresource(CompositePoLine compPOL) {
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
       return false;
     }
@@ -632,7 +632,7 @@ public class HelperUtils {
       .orElse(false);
   }
 
-  private static boolean isItemsUpdateRequiredForPhysical(CompositePoLine compPOL) {
+  public static boolean isItemsUpdateRequiredForPhysical(CompositePoLine compPOL) {
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
       return false;
     }
