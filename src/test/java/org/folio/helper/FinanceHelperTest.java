@@ -17,14 +17,19 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,6 +48,7 @@ import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -54,6 +60,7 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.TransactionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -470,6 +477,69 @@ public class FinanceHelperTest extends ApiTestBase {
     financeHelper.updateOrderTransactionSummary(order.getId(), 1);
     //Then
     assertNull(transactionService.getOrderTransactionSummary(order.getId()));
+  }
+
+  @Test
+  void shouldReleaseEncumbrancesBeforeDeletionWhenDeleteOrderEncumbrances() {
+    //Given
+    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    String orderId = UUID.randomUUID().toString();
+    Transaction encumbrance = new Transaction()
+            .withId(UUID.randomUUID().toString())
+            .withEncumbrance(new Encumbrance().withSourcePurchaseOrderId(orderId));
+    Transaction encumbrance2 = new Transaction()
+            .withId(UUID.randomUUID().toString())
+            .withEncumbrance(new Encumbrance().withSourcePurchaseOrderId(orderId));
+    List<Transaction> transactions = new ArrayList<>();
+    transactions.add(encumbrance);
+    transactions.add(encumbrance2);
+    TransactionCollection transactionCollection = new TransactionCollection().withTransactions(transactions).withTotalRecords(1);
+    doReturn(CompletableFuture.completedFuture(transactionCollection)).when(transactionService).getTransactions(anyInt(), anyInt(), anyString());
+    doReturn(CompletableFuture.completedFuture(null)).when(transactionService).releaseEncumbrances(any());
+    doReturn(CompletableFuture.completedFuture(null)).when(transactionService).deleteTransactions(any());
+    //When
+    financeHelper.deleteOrderEncumbrances(orderId).join();
+
+    //Then
+    InOrder inOrder = inOrder(financeHelper, transactionService);
+    inOrder.verify(financeHelper).updateOrderTransactionSummary(eq(orderId), eq(2));
+    inOrder.verify(transactionService).releaseEncumbrances(any());
+    inOrder.verify(transactionService).deleteTransactions(any());
+
+  }
+
+  @Test
+  void shouldReleaseEncumbrancesBeforeDeletionWhenDeletePoLineEncumbrances() {
+    //Given
+    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    String lineId = UUID.randomUUID().toString();
+    String orderId = UUID.randomUUID().toString();
+    Transaction encumbrance = new Transaction()
+            .withId(UUID.randomUUID().toString())
+            .withEncumbrance(new Encumbrance()
+                    .withSourcePurchaseOrderId(orderId)
+                    .withSourcePoLineId(lineId));
+    Transaction encumbrance2 = new Transaction()
+            .withId(UUID.randomUUID().toString())
+            .withEncumbrance(new Encumbrance()
+                    .withSourcePurchaseOrderId(orderId)
+                    .withSourcePoLineId(lineId));
+    List<Transaction> transactions = new ArrayList<>();
+    transactions.add(encumbrance);
+    transactions.add(encumbrance2);
+    TransactionCollection transactionCollection = new TransactionCollection().withTransactions(transactions).withTotalRecords(1);
+    doReturn(CompletableFuture.completedFuture(transactionCollection)).when(transactionService).getTransactions(anyInt(), anyInt(), anyString());
+    doReturn(CompletableFuture.completedFuture(null)).when(transactionService).releaseEncumbrances(any());
+    doReturn(CompletableFuture.completedFuture(null)).when(transactionService).deleteTransactions(any());
+    //When
+    financeHelper.deletePoLineEncumbrances(lineId).join();
+
+    //Then
+    InOrder inOrder = inOrder(financeHelper, transactionService);
+    inOrder.verify(financeHelper).updateOrderTransactionSummary(eq(orderId), eq(2));
+    inOrder.verify(transactionService).releaseEncumbrances(any());
+    inOrder.verify(transactionService).deleteTransactions(any());
+
   }
 
 

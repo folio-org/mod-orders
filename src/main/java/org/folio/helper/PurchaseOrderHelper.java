@@ -119,6 +119,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private final FinanceHelper financeHelper;
   private final InventoryHelper inventoryHelper;
 
+
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
     financeHelper = new FinanceHelper(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
@@ -413,8 +414,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenAccept(purchaseOrder -> {
         CompositePurchaseOrder compPo = convertToCompositePurchaseOrder(purchaseOrder);
         protectionHelper.isOperationRestricted(compPo.getAcqUnitIds(), DELETE)
-          .thenAccept(aVoid -> deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger)
-            .thenCompose(v -> financeHelper.releaseOrderEncumbrances(id))
+          .thenAccept(aVoid -> financeHelper.deleteOrderEncumbrances(id)
+            .thenCompose(v -> deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger))
             .thenRun(() -> {
               logger.info("Successfully deleted poLines, proceeding with purchase order");
               handleDeleteRequest(resourceByIdPath(PURCHASE_ORDER, id), httpClient, ctx, okapiHeaders, logger)
@@ -949,8 +950,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
       futures.addAll(processPoLinesUpdate(compOrder, poLinesFromStorage));
       // The remaining unprocessed PoLines should be removed
       poLinesFromStorage
-        .forEach(poLine -> futures.add(deletePoLine(JsonObject.mapFrom(poLine), httpClient, ctx, okapiHeaders, logger)
-          .thenCompose(v -> financeHelper.releasePoLineEncumbrances(poLine.getId()))));
+        .forEach(poLine -> futures.add(financeHelper.deletePoLineEncumbrances(poLine.getId())
+          .thenCompose(v -> deletePoLine(JsonObject.mapFrom(poLine), httpClient, ctx, okapiHeaders, logger))));
     }
     return VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]));
   }
