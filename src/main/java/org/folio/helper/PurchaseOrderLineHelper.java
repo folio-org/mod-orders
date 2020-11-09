@@ -74,7 +74,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.models.PoLineFundHolder;
-import org.folio.models.PoLineUpdateHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
