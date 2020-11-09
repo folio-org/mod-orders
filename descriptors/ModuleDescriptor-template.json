@@ -52,7 +52,8 @@
             "orders-storage.reporting-codes.item.get",
             "configuration.entries.collection.get",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "finance.exchange-rate.item.get"
           ]
         },
         {
@@ -1301,6 +1302,7 @@
         "finance.ledgers.current-fiscal-year.item.get",
         "finance.transactions.collection.get",
         "finance.transactions.item.get",
+        "finance.exchange-rate.item.get",
         "finance.order-transaction-summaries.item.post",
         "finance.order-transaction-summaries.item.put",
         "finance.release-encumbrance.item.post",

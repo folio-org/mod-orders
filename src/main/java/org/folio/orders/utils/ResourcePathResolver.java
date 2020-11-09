@@ -43,6 +43,7 @@ public class ResourcePathResolver {
   public static final String CURRENT_BUDGET = "finance.current-budgets";
   public static final String FINANCE_EXCHANGE_RATE = "finance/exchange-rate";
   public static final String EXPENSE_CLASSES_URL = "finance.expense-classes";
+  public static final String CONFIGURATION_ENTRIES = "configurations.entries";
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
   private static final Map<String, String> SUB_OBJECT_COLLECTION_APIS;
@@ -78,6 +79,7 @@ public class ResourcePathResolver {
     apis.put(CURRENT_BUDGET, "/finance/funds/%s/budget");
     apis.put(FINANCE_EXCHANGE_RATE, "/finance/exchange-rate");
     apis.put(EXPENSE_CLASSES_URL, "/finance/expense-classes");
+    apis.put(CONFIGURATION_ENTRIES, "/configurations/entries");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);
     SUB_OBJECT_ITEM_APIS = Collections.unmodifiableMap(

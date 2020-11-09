@@ -17,8 +17,8 @@ import io.vertx.core.logging.LoggerFactory;
  * Define unit test specific beans to override actual ones
  */
 @Configuration
-public class ContextConfiguration {
-  private static final Logger logger = LoggerFactory.getLogger(ContextConfiguration.class);
+public class EventBusContextConfiguration {
+  private static final Logger logger = LoggerFactory.getLogger(EventBusContextConfiguration.class);
   // The variable is defined in main thread but the value is going to be inserted in vert.x event loop thread
   public static volatile List<Message<JsonObject>> eventMessages = new ArrayList<>();
 

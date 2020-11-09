@@ -13,7 +13,7 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.AcquisitionsMembershipsTest.USER_ID_ASSIGNED_TO_ACQ_UNITS;
-import static org.folio.rest.impl.ContextConfiguration.eventMessages;
+import static org.folio.rest.impl.EventBusContextConfiguration.eventMessages;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
@@ -131,7 +131,7 @@ public class ApiTestBase {
   static final String NON_EXIST_LOAN_TYPE_TENANT = "nonExistLoanType";
   static final String COMPOSITE_PO_LINES_PREFIX = "compositePoLines[0].";
 
-  protected static final Header X_OKAPI_URL = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
+  protected static final Header X_OKAPI_URL = new Header("x-okapi-url", "http://localhost:" + mockPort);
 
   static final Header INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT);
   static final Header NON_EXIST_INSTANCE_STATUS_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_INSTANCE_STATUS_TENANT);
