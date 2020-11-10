@@ -594,6 +594,7 @@ public class MockServer {
     router.delete(resourcePath(PREFIXES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PREFIXES));
     router.delete(resourcePath(SUFFIXES)).handler(ctx -> handleDeleteGenericSubObj(ctx, SUFFIXES));
     router.delete("/inventory/items/:id").handler(ctx -> handleDeleteGenericSubObj(ctx, ITEM_RECORDS));
+    router.delete(resourcePath(TRANSACTIONS_STORAGE_ENDPOINT)).handler(ctx -> handleDeleteGenericSubObj(ctx, TRANSACTIONS_STORAGE_ENDPOINT));
 
     router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
     return router;

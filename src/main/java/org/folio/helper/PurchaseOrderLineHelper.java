@@ -376,8 +376,8 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       .thenCompose(this::verifyDeleteAllowed)
       .thenCompose(line -> {
         logger.debug("Deleting PO line...");
-        return deletePoLine(line, httpClient, ctx, okapiHeaders, logger)
-          .thenCompose(v -> financeHelper.releasePoLineEncumbrances(lineId));
+        return financeHelper.deletePoLineEncumbrances(lineId)
+          .thenCompose(v -> deletePoLine(line, httpClient, ctx, okapiHeaders, logger));
       })
       .thenAccept(json -> logger.info("The PO Line with id='{}' has been deleted successfully", lineId));
   }

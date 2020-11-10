@@ -613,24 +613,25 @@ public class FinanceHelper extends AbstractHelper {
     return transactionService.createOrderTransactionSummary(orderId, number);
   }
 
-  CompletionStage<Void> releasePoLineEncumbrances(String lineId) {
-    return getPoLineEncumbrances(lineId).thenCompose(trs -> {
-      if (!trs.isEmpty()) {
-        return updateOrderTransactionSummary(trs.get(0).getEncumbrance().getSourcePurchaseOrderId(), trs.size())
-          .thenCompose(v -> transactionService.releaseEncumbrances(trs));
-      }
-      return CompletableFuture.completedFuture(null);
-    });
+  CompletableFuture<Void> deletePoLineEncumbrances(String lineId) {
+    return getPoLineEncumbrances(lineId)
+      .thenCompose(encumbrances -> releaseOrderEncumbrances(encumbrances)
+        .thenCompose(vVoid -> transactionService.deleteTransactions(encumbrances)));
   }
 
-  CompletionStage<Void> releaseOrderEncumbrances(String orderId) {
-    return getOrderEncumbrances(orderId).thenCompose(trs -> {
-      if (!trs.isEmpty()) {
-        return updateOrderTransactionSummary(orderId, trs.size())
-          .thenCompose(v -> transactionService.releaseEncumbrances(trs));
-      }
-      return CompletableFuture.completedFuture(null);
-    });
+  public CompletableFuture<Void> deleteOrderEncumbrances(String orderId) {
+    return getOrderEncumbrances(orderId)
+            .thenCompose(encumbrances -> releaseOrderEncumbrances(encumbrances)
+              .thenCompose(vVoid -> transactionService.deleteTransactions(encumbrances)));
+  }
+
+  private CompletionStage<Void> releaseOrderEncumbrances(List<Transaction> trs) {
+    if (!trs.isEmpty()) {
+      String orderId = trs.get(0).getEncumbrance().getSourcePurchaseOrderId();
+      return updateOrderTransactionSummary(orderId, trs.size())
+              .thenCompose(v -> transactionService.releaseEncumbrances(trs));
+    }
+    return CompletableFuture.completedFuture(null);
   }
 
   public CompletableFuture<Void> validateExpenseClasses(List<CompositePoLine> poLines) {

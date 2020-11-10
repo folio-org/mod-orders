@@ -3,6 +3,7 @@ package org.folio.service;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.getEndpointWithQuery;
+import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePostWithEmptyBody;
 import static org.folio.orders.utils.ResourcePathResolver.FINANCE_RELEASE_ENCUMBRANCE;
@@ -117,4 +118,14 @@ public class TransactionService extends AbstractHelper {
     return CompletableFuture.completedFuture(null);
   }
 
+  public CompletableFuture<Void> deleteTransactions(List<Transaction> transactions) {
+    return VertxCompletableFuture.allOf(ctx, transactions.stream()
+      .map(this::deleteTransaction)
+    .toArray(CompletableFuture[]::new));
+  }
+
+  private CompletableFuture<Void> deleteTransaction(Transaction transaction) {
+    String endpoint = String.format(TRANSACTION_STORAGE_ENDPOINT_BYID, transaction.getId(), lang);
+    return handleDeleteRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
+  }
 }
