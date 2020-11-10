@@ -26,10 +26,40 @@ import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.FUND_ID;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.orders.utils.ResourcePathResolver.*;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
+import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
+import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
+import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
+import static org.folio.orders.utils.ResourcePathResolver.EXPENSE_CLASSES_URL;
+import static org.folio.orders.utils.ResourcePathResolver.FINANCE_EXCHANGE_RATE;
+import static org.folio.orders.utils.ResourcePathResolver.FINANCE_RELEASE_ENCUMBRANCE;
+import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
+import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
+import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
+import static org.folio.orders.utils.ResourcePathResolver.PREFIXES;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.REASONS_FOR_CLOSURE;
+import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
+import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
+import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
+import static org.folio.orders.utils.ResourcePathResolver.SUFFIXES;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
+import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_ENDPOINT;
+import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_STORAGE_ENDPOINT;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.impl.ApiTestBase.BAD_QUERY;
 import static org.folio.rest.impl.ApiTestBase.COMP_ORDER_MOCK_DATA_PATH;
+import static org.folio.rest.impl.ApiTestBase.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1;
 import static org.folio.rest.impl.ApiTestBase.ID;
 import static org.folio.rest.impl.ApiTestBase.ID_BAD_FORMAT;
 import static org.folio.rest.impl.ApiTestBase.ID_DOES_NOT_EXIST;
@@ -40,8 +70,11 @@ import static org.folio.rest.impl.ApiTestBase.MIN_PO_ID;
 import static org.folio.rest.impl.ApiTestBase.MIN_PO_LINE_ID;
 import static org.folio.rest.impl.ApiTestBase.NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT;
 import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_STATUS_TENANT;
+import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_STATUS_TENANT_HEADER;
 import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_TYPE_TENANT;
+import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_TYPE_TENANT_HEADER;
 import static org.folio.rest.impl.ApiTestBase.NON_EXIST_LOAN_TYPE_TENANT;
+import static org.folio.rest.impl.ApiTestBase.NON_EXIST_LOAN_TYPE_TENANT_HEADER;
 import static org.folio.rest.impl.ApiTestBase.PO_ID_GET_LINES_INTERNAL_SERVER_ERROR;
 import static org.folio.rest.impl.ApiTestBase.PO_LINE_NUMBER_VALUE;
 import static org.folio.rest.impl.ApiTestBase.PROTECTED_READ_ONLY_TENANT;
@@ -1271,7 +1304,16 @@ public class MockServer {
       if (PO_NUMBER_ERROR_X_OKAPI_TENANT.getValue().equals(tenant)) {
         tenant = EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue();
       }
-      serverResponse(ctx, 200, APPLICATION_JSON, ApiTestBase.getMockData(String.format(CONFIG_MOCK_PATH, tenant)));
+      if (NON_EXIST_INSTANCE_STATUS_TENANT_HEADER.getValue().equals(tenant) ||
+       NON_EXIST_INSTANCE_TYPE_TENANT_HEADER.getValue().equals(tenant) ||
+       NON_EXIST_LOAN_TYPE_TENANT_HEADER.getValue().equals(tenant)) {
+        tenant = EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1.getValue();
+      }
+      try {
+        serverResponse(ctx, 200, APPLICATION_JSON, ApiTestBase.getMockData(String.format(CONFIG_MOCK_PATH, tenant)));
+      } catch(Exception exc){
+        serverResponse(ctx, 200, APPLICATION_JSON, ApiTestBase.getMockData(String.format(CONFIG_MOCK_PATH, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue())));
+      }
     } catch (IOException e) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     }

@@ -71,6 +71,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.ErrorCodes;
@@ -92,6 +93,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.Tags;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.restassured.response.Response;
@@ -282,7 +284,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     reqData.put(PURCHASE_ORDER_ID, ID_DOES_NOT_EXIST);
 
     Errors resp = verifyPostResponse(LINES_PATH, reqData.encodePrettily(),
-      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
 
     assertEquals(1, resp.getErrors().size());
     assertEquals(ErrorCodes.ORDER_NOT_FOUND.getCode(), resp.getErrors().get(0).getCode());
@@ -1252,24 +1254,27 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
     reqData.getEresource().setCreateInventory(INSTANCE_HOLDING_ITEM);
 
-    addMockEntry(PIECES, new Piece()
-      .withFormat(Piece.Format.ELECTRONIC)
-      .withPoLineId(reqData.getId())
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
-
-    addMockEntry(PO_LINES, reqData);
-
     int expQtyElectronic = 3;
+    IntStream.range(0, 2).forEach(i -> {
+      addMockEntry(PIECES, new Piece()
+        .withFormat(Piece.Format.ELECTRONIC)
+        .withPoLineId(reqData.getId())
+        .withLocationId(reqData.getLocations().get(0).getLocationId()));
+    });
+
     reqData.getLocations().get(0).setQuantityElectronic(expQtyElectronic);
     reqData.getLocations().get(0).setQuantity(expQtyElectronic);
     reqData.getCost().setQuantityElectronic(expQtyElectronic);
+
+    addMockEntry(PO_LINES, reqData);
+
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
 
-    assertEquals(expQtyElectronic, getRqRsEntries(HttpMethod.POST, PIECES).size(), "Location matched");
-    assertEquals(reqData.getLocations().get(0).getLocationId(), getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("locationId"), "Location matched");
-    assertEquals(poLineId, getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("poLineId"), "Line id matched");
-    assertEquals("Expected", getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("receivingStatus"), "Expected status");
+    assertEquals(expQtyElectronic, getRqRsEntries(HttpMethod.PUT, PIECES).size(), "Location matched");
+    assertEquals(reqData.getLocations().get(0).getLocationId(), getRqRsEntries(HttpMethod.PUT, PIECES).get(0).getString("locationId"), "Location matched");
+    assertEquals(poLineId, getRqRsEntries(HttpMethod.PUT, PIECES).get(0).getString("poLineId"), "Line id matched");
+    assertEquals("Expected", getRqRsEntries(HttpMethod.PUT, PIECES).get(0).getString("receivingStatus"), "Expected status");
   }
 
   @Test

@@ -15,7 +15,6 @@ import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_UNOPEN_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
-import static org.folio.orders.utils.HelperUtils.calculateTotalEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
@@ -69,6 +68,9 @@ import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.money.convert.ConversionQuery;
+import javax.money.convert.ConversionQueryBuilder;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -83,6 +85,7 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
@@ -94,6 +97,8 @@ import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.exchange.ExchangeRateProviderResolver;
+import org.javamoney.moneta.Money;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
@@ -118,16 +123,18 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private final TitlesHelper titlesHelper;
   private final FinanceHelper financeHelper;
   private final InventoryHelper inventoryHelper;
+  private final ExchangeRateProviderResolver exchangeRateProviderResolver;
 
 
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
-    financeHelper = new FinanceHelper(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
-    poNumberHelper = new PoNumberHelper(httpClient, okapiHeaders, ctx, lang);
-    orderLineHelper = new PurchaseOrderLineHelper(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
-    protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
-    titlesHelper = new TitlesHelper(httpClient, okapiHeaders, ctx, lang);
-    inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
+    this.financeHelper = new FinanceHelper(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
+    this.poNumberHelper = new PoNumberHelper(httpClient, okapiHeaders, ctx, lang);
+    this.orderLineHelper = new PurchaseOrderLineHelper(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
+    this.protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
+    this.titlesHelper = new TitlesHelper(httpClient, okapiHeaders, ctx, lang);
+    this.inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
+    this.exchangeRateProviderResolver = new ExchangeRateProviderResolver();
   }
 
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang,
@@ -138,6 +145,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     this.orderLineHelper = orderLineHelper;
     this.protectionHelper =  new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
     this.titlesHelper = new TitlesHelper(httpClient, okapiHeaders, ctx, lang);
+    this.exchangeRateProviderResolver = new ExchangeRateProviderResolver();
     this.inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
   }
 
@@ -197,7 +205,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
         .thenCompose(ok -> setPoNumberIfMissing(compPO)
         .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber()))
         .thenCompose(v -> createPOandPOLines(compPO))
-        .thenApply(this::populateOrderSummary));
+        .thenCompose(this::populateOrderSummary));
   }
 
   /**
@@ -466,7 +474,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
         .thenAccept(ok -> updateAndGetOrderWithLines(compPO)
           .thenCompose(this::fetchNonPackageTitles)
           .thenAccept(linesIdTitles -> populateInstanceId(linesIdTitles, compPO.getCompositePoLines()))
-          .thenApply(v -> populateOrderSummary(compPO))
+          .thenCompose(v -> populateOrderSummary(compPO))
           .thenAccept(future::complete)
           .exceptionally(t -> {
             logger.error("Failed to get lines for order with id={}", t.getCause(), id);
@@ -487,12 +495,42 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return future;
   }
 
-  private CompositePurchaseOrder populateOrderSummary(CompositePurchaseOrder compPO) {
+  private CompletableFuture<CompositePurchaseOrder> populateOrderSummary(CompositePurchaseOrder compPO) {
     List<CompositePoLine> compositePoLines = compPO.getCompositePoLines();
-    compPO.setTotalEstimatedPrice(calculateTotalEstimatedPrice(compositePoLines));
-    compPO.setTotalItems(calculateTotalItemsQuantity(compositePoLines));
+    return calculateTotalEstimatedPrice(compositePoLines).thenApply(totalAmount -> {
+      compPO.setTotalEstimatedPrice(totalAmount);
+      compPO.setTotalItems(calculateTotalItemsQuantity(compositePoLines));
+      return compPO;
+    });
+  }
 
-    return compPO;
+  /**
+   * Calculates PO's estimated price by summing the Estimated Price of the associated PO Lines. See MODORDERS-181 for more details.
+   * At the moment assumption is that all prices could be in the different currency.
+   *
+   * @param compositePoLines list of composite PO Lines
+   * @return estimated purchase order's total price
+   */
+  public CompletableFuture<Double> calculateTotalEstimatedPrice(List<CompositePoLine> compositePoLines) {
+    return getSystemCurrency().thenApply(toCurrency -> compositePoLines.stream()
+      .map(CompositePoLine::getCost)
+      .map(cost -> Money.of(cost.getPoLineEstimatedPrice(), cost.getCurrency()))
+      .map(money -> {
+        if (money.getCurrency().getCurrencyCode().equals(toCurrency)) {
+          return money;
+        }
+        ConversionQuery conversionQuery = ConversionQueryBuilder.of()
+          .setBaseCurrency(money.getCurrency())
+          .setTermCurrency(toCurrency)
+          .build();
+        var exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, new RequestContext(ctx, okapiHeaders));
+        var conversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
+
+        return money.with(conversion);
+      })
+      .reduce(Money.of(0, toCurrency), Money::add)
+      .getNumber()
+      .doubleValue());
   }
 
   private int calculateTotalItemsQuantity(List<CompositePoLine> poLines) {
@@ -571,7 +609,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> validateIsbnValues(CompositePurchaseOrder compPO) {
-    CompletableFuture[] futures = compPO.getCompositePoLines()
+    CompletableFuture<?>[] futures = compPO.getCompositePoLines()
       .stream()
       .map(orderLineHelper::validateAndNormalizeISBN)
       .toArray(CompletableFuture[]::new);
@@ -580,7 +618,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO) {
-    CompletableFuture[] futures = compPO.getCompositePoLines()
+    CompletableFuture<?>[] futures = compPO.getCompositePoLines()
       .stream()
       .map(orderLineHelper::setTenantDefaultCreateInventoryValues)
       .toArray(CompletableFuture[]::new);
@@ -752,7 +790,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   /**
    * If an order is transitioning to OPEN, checks if approval is required and throws an error if it is not approved
    *
-   * @param compPO
+   * @param compPO composite purchase order
    */
   private CompletableFuture<Void> checkOrderApprovalRequired(CompositePurchaseOrder compPO) {
     return getTenantConfiguration().thenAccept(config -> {
@@ -892,7 +930,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> updatePoLinesNumber(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage) {
-    CompletableFuture[] futures = poLinesFromStorage
+    CompletableFuture<?>[] futures = poLinesFromStorage
       .stream()
       .map(lineFromStorage -> {
         lineFromStorage.setPoLineNumber(orderLineHelper.buildNewPoLineNumber(lineFromStorage, compOrder.getPoNumber()));

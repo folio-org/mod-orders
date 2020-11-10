@@ -52,14 +52,14 @@
     <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
     <ramlfiles_util_path>${ramlfiles_path}/raml-util</ramlfiles_util_path>
     <ramlfiles_acq_models_path>${ramlfiles_path}/acq-models</ramlfiles_acq_models_path>
-    <raml-module-builder.version>31.1.1</raml-module-builder.version>
+    <raml-module-builder.version>31.1.5</raml-module-builder.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <mojo.java.target>1.8</mojo.java.target>
-    <mod-configuration-client.version>5.4.0</mod-configuration-client.version>
+    <mod-configuration-client.version>5.5.0</mod-configuration-client.version>
     <sonar.exclusions>**/models/**.java</sonar.exclusions>
     <sonar.test.exclusions>**/*Test.java</sonar.test.exclusions>
     <spring.version>5.2.7.RELEASE</spring.version>
-    <vertx.version>3.9.3</vertx.version>
+    <vertx.version>3.9.4</vertx.version>
     <argLine/>
   </properties>
 
@@ -149,7 +149,7 @@
     <dependency>
       <groupId>one.util</groupId>
       <artifactId>streamex</artifactId>
-      <version>0.7.2</version>
+      <version>0.7.3</version>
     </dependency>
     <dependency>
       <groupId>org.javamoney</groupId>

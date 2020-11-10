@@ -14,8 +14,9 @@ import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.HelperUtils.LANG;
 import static org.folio.orders.utils.HelperUtils.convertToJson;
-import static org.folio.orders.utils.HelperUtils.loadConfiguration;
 import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
+import static org.folio.orders.utils.ResourcePathResolver.CONFIGURATION_ENTRIES;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 
@@ -34,11 +35,14 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.core.RestClient;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
+import org.folio.service.configuration.ConfigurationEntriesService;
 
 import io.vertx.core.Context;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -73,12 +77,15 @@ public abstract class AbstractHelper {
   protected final String lang;
   private JsonObject tenantConfiguration;
 
+  private ConfigurationEntriesService configurationEntriesService;
+
   public AbstractHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     setDefaultHeaders(httpClient);
     this.httpClient = httpClient;
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
     this.lang = lang;
+    this.configurationEntriesService = new ConfigurationEntriesService(new RestClient(resourcesPath(CONFIGURATION_ENTRIES)));
   }
 
   public AbstractHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -86,6 +93,7 @@ public abstract class AbstractHelper {
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
     this.lang = lang;
+    this.configurationEntriesService = new ConfigurationEntriesService(new RestClient(resourcesPath(CONFIGURATION_ENTRIES)));
   }
 
   protected AbstractHelper(Context ctx) {
@@ -93,6 +101,7 @@ public abstract class AbstractHelper {
     this.okapiHeaders = null;
     this.lang = null;
     this.ctx = ctx;
+    this.configurationEntriesService = new ConfigurationEntriesService(new RestClient(resourcesPath(CONFIGURATION_ENTRIES)));
   }
 
   public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders, boolean setDefaultHeaders) {
@@ -316,7 +325,7 @@ public abstract class AbstractHelper {
     if (this.tenantConfiguration != null) {
       return CompletableFuture.completedFuture(this.tenantConfiguration);
     } else {
-      return loadConfiguration(okapiHeaders, ctx, logger, lang)
+      return configurationEntriesService.loadOrdersConfiguration(new RequestContext(ctx, okapiHeaders))
         .thenApply(config -> {
           this.tenantConfiguration = config;
           return config;

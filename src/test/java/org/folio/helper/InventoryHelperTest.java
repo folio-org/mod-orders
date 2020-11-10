@@ -256,17 +256,24 @@ public class InventoryHelperTest extends ApiTestBase {
     reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
     reqData.setCheckinItems(true);
 
+    CompositePoLine storagePoLineCom = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c0d08448-347b-418a-8c2f-5fb50248d67e").mapTo(CompositePoLine.class);
+    storagePoLineCom.setAlerts(null);
+    storagePoLineCom.setReportingCodes(null);
+    storagePoLineCom.getLocations().get(0).setQuantityPhysical(1);
+    storagePoLineCom.getLocations().get(0).setQuantity(1);
+    storagePoLineCom.getCost().setQuantityPhysical(1);
+    PoLine storagePoLine = JsonObject.mapFrom(storagePoLineCom).mapTo(PoLine.class);
     //given
     InventoryHelper inventoryHelper = spy(new InventoryHelper(httpClient, okapiHeadersMock, ctxMock, "en"));
     //When
     PoLineUpdateHolder poLineUpdateHolder = new PoLineUpdateHolder().withNewLocationId(NEW_LOCATION_ID);
-    List<Piece> pieces = inventoryHelper.handleItemRecords(reqData, poLineUpdateHolder).join();
+    List<Piece> pieces = inventoryHelper.handleItemRecords(reqData, storagePoLine, poLineUpdateHolder).join();
 
     assertEquals(0, pieces.size());
   }
 
   @Test
-  public void testShouldHandleItemRecordsIfPhysycAndElecPresentInUpdatePoLIneTime() throws IOException {
+  public void testShouldHandleItemRecordsIfPhysycPresentInUpdatePoLineTime() throws IOException {
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c0d08448-347b-418a-8c2f-5fb50248d67e").mapTo(CompositePoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67d";
     String itemId = "86481a22-633e-4b97-8061-0dc5fdaaeabb";
@@ -278,10 +285,18 @@ public class InventoryHelperTest extends ApiTestBase {
     reqData.getPhysical().setMaterialType(materialType);
     reqData.getPhysical().setMaterialSupplier(ACTIVE_ACCESS_PROVIDER_B);
     reqData.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
-    reqData.getLocations().get(0).setLocationId(locationId);
     reqData.getLocations().get(0).setQuantityPhysical(1);
     reqData.getLocations().get(0).setQuantity(1);
     reqData.getCost().setQuantityPhysical(1);
+    reqData.getLocations().get(0).setLocationId(locationId);
+
+    CompositePoLine storagePoLineCom = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c0d08448-347b-418a-8c2f-5fb50248d67e").mapTo(CompositePoLine.class);
+    storagePoLineCom.setAlerts(null);
+    storagePoLineCom.setReportingCodes(null);
+    storagePoLineCom.getLocations().get(0).setQuantityPhysical(1);
+    storagePoLineCom.getLocations().get(0).setQuantity(1);
+    storagePoLineCom.getCost().setQuantityPhysical(1);
+    PoLine storagePoLine = JsonObject.mapFrom(storagePoLineCom).mapTo(PoLine.class);
 
     JsonObject items = new JsonObject(ApiTestBase.getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
     List<JsonObject> needUpdateItems = items.getJsonArray(ITEMS).stream()
@@ -302,7 +317,7 @@ public class InventoryHelperTest extends ApiTestBase {
     doReturn(completedFuture(null)).when(inventoryHelper).updateItemRecords(any());
     //When
     PoLineUpdateHolder poLineUpdateHolder = new PoLineUpdateHolder().withNewLocationId(locationId);
-    List<Piece> pieces = inventoryHelper.handleItemRecords(reqData, poLineUpdateHolder).join();
+    List<Piece> pieces = inventoryHelper.handleItemRecords(reqData, storagePoLine, poLineUpdateHolder).join();
 
     assertEquals(1, pieces.size());
     assertEquals(itemId, pieces.get(0).getItemId());
