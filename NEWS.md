@@ -1,6 +1,6 @@
 ## 11.2.0 - Unreleased
 ## 11.1.1 - Released
-This bugfix release 
+The focus of this release was to fix issue with different finance data and operations
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v11.1.0...v11.1.1)
 
@@ -11,7 +11,6 @@ This bugfix release
  * [MODORDERS-437](https://issues.folio.org/browse/MODORDERS-437) Error must be returned in case of budget expense class mismatch
  * [MODORDERS-436](https://issues.folio.org/browse/MODORDERS-436) exchange rate not applied to encumbrance when POL in foreign currency.
  * [MODORDERS-435](https://issues.folio.org/browse/MODORDERS-435) unable to open order that references Funds from different ledgers
- * [MODORDERS-434](https://issues.folio.org/browse/MODORDERS-434) Extra items and holdings are created, when location is changed in Open order
  * [MODORDERS-430](https://issues.folio.org/browse/MODORDERS-430) Can't Unopen order - error response 2
  * [MODORDERS-429](https://issues.folio.org/browse/MODORDERS-429) Can't Unopen order - error response
  
