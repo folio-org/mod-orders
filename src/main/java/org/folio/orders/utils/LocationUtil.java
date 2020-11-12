@@ -1,14 +1,18 @@
 package org.folio.orders.utils;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.models.PoLineUpdateHolder;
+import org.folio.rest.acq.model.Piece;
 import org.folio.rest.jaxrs.model.Location;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 public final class LocationUtil {
   private LocationUtil() {
@@ -20,26 +24,27 @@ public final class LocationUtil {
   }
 
   public static List<PoLineUpdateHolder> convertToOldNewLocationIdPair(List<Location> newLocations, List<Location> oldLocations) {
+
     Map<String, Integer> newLocationQty = LocationUtil.groupLocationQtyByLocationId(newLocations);
     Map<String, Integer> storageLocationQty = LocationUtil.groupLocationQtyByLocationId(oldLocations);
-    int newQty = newLocations.stream().map(Location::getQuantity).mapToInt(Number::intValue).sum();
-    int storeQty = oldLocations.stream().map(Location::getQuantity).mapToInt(Number::intValue).sum();
+    int newLocationsQty = newLocations.stream().map(Location::getQuantity).mapToInt(Number::intValue).sum();
+    int storeLocationsQty = oldLocations.stream().map(Location::getQuantity).mapToInt(Number::intValue).sum();
     List<PoLineUpdateHolder> poLineUpdateHolders = new ArrayList<>();
-    if (newQty == storeQty) {
-      Deque<String> oldLocationIds = new ArrayDeque<>(storageLocationQty.keySet());
-      List<String> newLocationIds = new ArrayList<>(newLocationQty.keySet());
-      String oldLocationId = oldLocationIds.poll();
-      for (int i = 0; i < newLocationQty.values().size(); i++) {
-        String newLocationId = newLocationIds.get(i);
-        if (oldLocationId != null && !oldLocationId.equals(newLocationId)) {
-          poLineUpdateHolders.add(new PoLineUpdateHolder().withOldLocationId(oldLocationId).withNewLocationId(newLocationId));
-        }
-        if (oldLocationIds.size() == 1) {
-          oldLocationId = oldLocationIds.peek();
-        } else {
-          oldLocationId = oldLocationIds.poll();
-        }
+    if (newLocationsQty == storeLocationsQty && newLocationQty.size() == storageLocationQty.size()) {
+      List<String> originNewLocationIds = newLocations.stream().map(Location::getLocationId).collect(toList());
+      originNewLocationIds.retainAll(storageLocationQty.keySet());
+      if (!originNewLocationIds.isEmpty()) {
+        newLocationQty.entrySet().removeIf(e -> originNewLocationIds.contains(e.getKey()));
+        storageLocationQty.entrySet().removeIf(e -> originNewLocationIds.contains(e.getKey()));
       }
+      List<String> remNewLocationIds = new ArrayList<>(newLocationQty.keySet());
+      List<String> remOldLocationIds = new ArrayList<>(storageLocationQty.keySet());
+      IntStream.range(0, newLocationQty.size()).forEach(i -> {
+        String newLocationId = remNewLocationIds.get(i);
+        String oldLocationId = remOldLocationIds.get(i);
+        PoLineUpdateHolder holder = new PoLineUpdateHolder().withNewLocationId(newLocationId).withOldLocationId(oldLocationId);
+        poLineUpdateHolders.add(holder);
+      });
     }
     return poLineUpdateHolders;
   }

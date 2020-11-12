@@ -556,7 +556,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
 
     Map<String, List<JsonObject>> mockServerData = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertThat(mockServerData.get(PIECES), hasSize(2));
+    assertThat(mockServerData.get(PIECES), hasSize(3));
 
     mockServerData = MockServer.serverRqRs.column(HttpMethod.POST);
     assertThat(mockServerData.get(PIECES), hasSize(1));
