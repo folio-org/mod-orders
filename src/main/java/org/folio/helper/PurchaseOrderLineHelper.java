@@ -859,15 +859,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
             needProcessExpectedPieces.removeIf(piece -> existPieceIds.contains(piece.getId()));
           }
           if (!needProcessExpectedPieces.isEmpty()) {
-            List<Piece> needCreatePieces = needProcessExpectedPieces.stream().filter(piece -> Objects.isNull(piece.getId())).collect(toList());
-            List<Piece> piecesToCreate = new ArrayList<>();
-            List<Piece> piecesWithLocationToProcess = createPiecesByLocationId(compPOL, needCreatePieces, existingPieces);
-            piecesToCreate.addAll(piecesWithLocationToProcess);
-            piecesToCreate.addAll(createPiecesWithoutLocationId(compPOL, existingPieces));
-            piecesToCreate.forEach(piece -> {
-              piece.setTitleId(titleId);
-              pieceProcessFutures.add(createPiece(piece));
-            });
+            return createPieces(compPOL, titleId, needProcessExpectedPieces,  isOpenOrderFlow);
           }
           return allOf(pieceProcessFutures.toArray(new CompletableFuture[0]));
       });

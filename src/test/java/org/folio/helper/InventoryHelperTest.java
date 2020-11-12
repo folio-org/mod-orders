@@ -11,7 +11,6 @@ import static org.folio.rest.impl.MockServer.ITEMS_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.PurchaseOrderLinesApiTest.COMP_PO_LINES_MOCK_DATA_PATH;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING;
-import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING_ITEM;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,14 +45,12 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockitoAnnotations;
 
 import io.restassured.http.Header;
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class InventoryHelperTest extends ApiTestBase {
@@ -262,12 +259,11 @@ public class InventoryHelperTest extends ApiTestBase {
     storagePoLineCom.getLocations().get(0).setQuantityPhysical(1);
     storagePoLineCom.getLocations().get(0).setQuantity(1);
     storagePoLineCom.getCost().setQuantityPhysical(1);
-    PoLine storagePoLine = JsonObject.mapFrom(storagePoLineCom).mapTo(PoLine.class);
     //given
     InventoryHelper inventoryHelper = spy(new InventoryHelper(httpClient, okapiHeadersMock, ctxMock, "en"));
     //When
     PoLineUpdateHolder poLineUpdateHolder = new PoLineUpdateHolder().withNewLocationId(NEW_LOCATION_ID);
-    List<Piece> pieces = inventoryHelper.handleItemRecords(reqData, storagePoLine, poLineUpdateHolder).join();
+    List<Piece> pieces = inventoryHelper.handleItemRecords(reqData, poLineUpdateHolder).join();
 
     assertEquals(0, pieces.size());
   }
@@ -279,6 +275,7 @@ public class InventoryHelperTest extends ApiTestBase {
     String itemId = "86481a22-633e-4b97-8061-0dc5fdaaeabb";
     String materialType = "1a54b431-2e4f-452d-9cae-9cee66c9a892";
     String locationId = "758258bc-ecc1-41b8-abca-f7b610822fff";
+    String oldLocationId = "fcd64ce1-6995-48f0-840e-89ffa2288371";
 
     reqData.setId(poLineId);
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
@@ -296,7 +293,6 @@ public class InventoryHelperTest extends ApiTestBase {
     storagePoLineCom.getLocations().get(0).setQuantityPhysical(1);
     storagePoLineCom.getLocations().get(0).setQuantity(1);
     storagePoLineCom.getCost().setQuantityPhysical(1);
-    PoLine storagePoLine = JsonObject.mapFrom(storagePoLineCom).mapTo(PoLine.class);
 
     JsonObject items = new JsonObject(ApiTestBase.getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
     List<JsonObject> needUpdateItems = items.getJsonArray(ITEMS).stream()
@@ -316,8 +312,8 @@ public class InventoryHelperTest extends ApiTestBase {
     doReturn(completedFuture(needUpdateItems)).when(inventoryHelper).getItemRecordsByIds(Collections.singletonList(itemId));
     doReturn(completedFuture(null)).when(inventoryHelper).updateItemRecords(any());
     //When
-    PoLineUpdateHolder poLineUpdateHolder = new PoLineUpdateHolder().withNewLocationId(locationId);
-    List<Piece> pieces = inventoryHelper.handleItemRecords(reqData, storagePoLine, poLineUpdateHolder).join();
+    PoLineUpdateHolder poLineUpdateHolder = new PoLineUpdateHolder().withOldLocationId(oldLocationId).withNewLocationId(locationId);
+    List<Piece> pieces = inventoryHelper.handleItemRecords(reqData, poLineUpdateHolder).join();
 
     assertEquals(1, pieces.size());
     assertEquals(itemId, pieces.get(0).getItemId());

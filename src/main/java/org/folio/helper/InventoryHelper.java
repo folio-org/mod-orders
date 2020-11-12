@@ -130,6 +130,7 @@ public class InventoryHelper extends AbstractHelper {
   private static final Map<String, String> INVENTORY_LOOKUP_ENDPOINTS;
   public static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
+  private static final String PIECES_BY_POL_ID = "poLineId==%s";
   private static final String GET_PIECES_BY_QUERY = resourcesPath(PIECES) + SEARCH_PARAMS;
   public static final String EFFECTIVE_LOCATION = "effectiveLocation";
 
@@ -220,7 +221,7 @@ public class InventoryHelper extends AbstractHelper {
               .thenCompose(v -> {
                   // Items are not going to be created when create inventory is "Instance, Holding"
                   if (isItemsUpdateRequired) {
-                    return handleItemRecords(compPOL, storagePoLine, poLineUpdateHolder);
+                    return handleItemRecords(compPOL, poLineUpdateHolder);
                   } else {
                     return completedFuture(Collections.emptyList());
                   }
@@ -504,7 +505,7 @@ public class InventoryHelper extends AbstractHelper {
    * @param holder pair of new location provided from POl and location from storage
    * @return future with list of piece objects
    */
-  public CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, PoLine storagePoLine, PoLineUpdateHolder holder) {
+  public CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, PoLineUpdateHolder holder) {
     List<Location> polLocations = compPOL.getLocations().stream()
       .filter(location -> location.getLocationId().equals(holder.getNewLocationId()))
       .collect(toList());
@@ -517,20 +518,15 @@ public class InventoryHelper extends AbstractHelper {
       return completedFuture(Collections.emptyList());
     }
     return getExpectedPiecesByLineId(compPOL.getId())
-      .thenApply(existingExpectedPieces -> {
+      .thenApply(existingPieces -> {
         List<Piece> needUpdatePieces = new ArrayList<>();
-        List<PoLineUpdateHolder> poLineUpdateHolders = LocationUtil.convertToOldNewLocationIdPair(compPOL.getLocations(), storagePoLine.getLocations());
-        if (!poLineUpdateHolders.isEmpty() ) {
-          poLineUpdateHolders.forEach(poLineUpdateHolder -> {
-            List<Piece> pieces = existingExpectedPieces.getPieces().stream()
-              .filter(piece -> piece.getLocationId().equals(poLineUpdateHolder.getOldLocationId()))
-              .map(piece -> piece.withLocationId(poLineUpdateHolder.getNewLocationId()))
+            List<Piece> pieces = existingPieces.getPieces().stream()
+              .filter(piece -> piece.getLocationId().equals(holder.getOldLocationId()))
+              .map(piece -> piece.withLocationId(holder.getNewLocationId()))
               .collect(toList());
             if (!pieces.isEmpty()) {
               needUpdatePieces.addAll(pieces);
             }
-          });
-        }
         return needUpdatePieces;
       })
       .thenCompose(needUpdatePieces -> {
@@ -1027,5 +1023,4 @@ public class InventoryHelper extends AbstractHelper {
     String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, Piece.ReceivingStatus.EXPECTED.value());
     return getPieces(Integer.MAX_VALUE, 0, query);
   }
-
 }
