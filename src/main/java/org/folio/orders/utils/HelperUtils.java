@@ -104,6 +104,9 @@ public class HelperUtils {
   public static final String CONFIG_VALUE = "value";
   private static final String ERROR_MESSAGE = "errorMessage";
 
+  public static final String SYSTEM_CONFIG_MODULE_NAME = "ORG";
+  public static final String ORDER_CONFIG_MODULE_NAME = "ORDERS";
+
   public static final String DEFAULT_POLINE_LIMIT = "1";
   public static final String REASON_COMPLETE = "Complete";
   private static final String MAX_POLINE_LIMIT = "500";
