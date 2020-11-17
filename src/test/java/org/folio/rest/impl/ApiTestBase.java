@@ -120,7 +120,7 @@ public class ApiTestBase {
   static final String MIN_PO_ID = UUID.randomUUID().toString();
   static final String MIN_PO_LINE_ID = UUID.randomUUID().toString();
 
-  static final String COMP_ORDER_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/";
+  public static final String COMP_ORDER_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/";
 
   public static final String X_ECHO_STATUS = "X-Okapi-Echo-Status";
   static final String EMPTY_CONFIG_TENANT = "config_empty";
