@@ -14,6 +14,7 @@ import static org.folio.helper.PurchaseOrderHelper.ENCUMBRANCE_POST_ENDPOINT;
 import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
 import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_CREATED;
 import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_DELETED;
+import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
@@ -273,7 +274,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
 
     if (isCreateInventoryNull(compPOL)) {
-      getTenantConfiguration()
+      getTenantConfiguration(ORDER_CONFIG_MODULE_NAME)
         .thenApply(config -> {
           if (StringUtils.isNotEmpty(config.getString(CREATE_INVENTORY))) {
             return future.complete(new JsonObject(config.getString(CREATE_INVENTORY)));
@@ -721,7 +722,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
 
   private CompletableFuture<Boolean> validatePoLineLimit(CompositePoLine compPOL) {
     String query = PURCHASE_ORDER_ID + "==" + compPOL.getPurchaseOrderId();
-    return getTenantConfiguration()
+    return getTenantConfiguration(ORDER_CONFIG_MODULE_NAME)
       .thenCombine(getPoLines(0, 0, query), (config, poLines) -> {
         boolean isValid = poLines.getTotalRecords() < getPoLineLimit(config);
         if (!isValid) {

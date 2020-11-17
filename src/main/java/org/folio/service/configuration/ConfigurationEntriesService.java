@@ -14,17 +14,17 @@ public class ConfigurationEntriesService {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ConfigurationEntriesService.class);
 
-  private static final String CONFIG_QUERY = "module==ORDERS";
+  private static final String CONFIG_QUERY = "module==%s";
 
-  private RestClient configurationEntriesRestClient;
+  private final RestClient configurationEntriesRestClient;
 
   public ConfigurationEntriesService(RestClient configurationEntriesRestClient) {
     this.configurationEntriesRestClient = configurationEntriesRestClient;
   }
 
 
-  public CompletableFuture<JsonObject> loadOrdersConfiguration(RequestContext requestContext) {
-    return configurationEntriesRestClient.get(CONFIG_QUERY, 0, 100, requestContext, Configs.class)
+  public CompletableFuture<JsonObject> loadConfiguration(String moduleConfig, RequestContext requestContext) {
+    return configurationEntriesRestClient.get(String.format(CONFIG_QUERY, moduleConfig), 0, Integer.MAX_VALUE, requestContext, Configs.class)
       .thenApply(configs -> {
         if (LOGGER.isDebugEnabled()) {
           LOGGER.debug("The response from mod-configuration: {}", JsonObject.mapFrom(configs).encodePrettily());

@@ -13,6 +13,7 @@ import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.HelperUtils.LANG;
+import static org.folio.orders.utils.HelperUtils.SYSTEM_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.convertToJson;
 import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
 import static org.folio.orders.utils.ResourcePathResolver.CONFIGURATION_ENTRIES;
@@ -321,11 +322,11 @@ public abstract class AbstractHelper {
     }
   }
 
-  public CompletableFuture<JsonObject> getTenantConfiguration() {
+  public CompletableFuture<JsonObject> getTenantConfiguration(String moduleConfig) {
     if (this.tenantConfiguration != null) {
       return CompletableFuture.completedFuture(this.tenantConfiguration);
     } else {
-      return configurationEntriesService.loadOrdersConfiguration(new RequestContext(ctx, okapiHeaders))
+      return configurationEntriesService.loadConfiguration(moduleConfig, new RequestContext(ctx, okapiHeaders))
         .thenApply(config -> {
           this.tenantConfiguration = config;
           return config;
@@ -355,7 +356,7 @@ public abstract class AbstractHelper {
 
   protected CompletableFuture<String> getSystemCurrency() {
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
-    getTenantConfiguration().thenApply(config -> {
+    getTenantConfiguration(SYSTEM_CONFIG_MODULE_NAME).thenApply(config -> {
       String localeSettings = config.getString(LOCALE_SETTINGS);
       String systemCurrency;
       if (StringUtils.isEmpty(localeSettings)) {

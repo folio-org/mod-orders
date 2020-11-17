@@ -13,6 +13,7 @@ import static org.folio.orders.utils.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_LOAN_TYPE;
+import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
@@ -961,7 +962,7 @@ public class InventoryHelper extends AbstractHelper {
    * @return tenant specific value or system default one
    */
   private CompletableFuture<String> getEntryTypeValue(String entryType) {
-    return getTenantConfiguration()
+    return getTenantConfiguration(ORDER_CONFIG_MODULE_NAME)
       .thenApply(configs -> {
         switch (entryType) {
           case INSTANCE_STATUSES:
