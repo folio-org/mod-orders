@@ -65,32 +65,7 @@ import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.rest.impl.MockServer.BUDGET_IS_INACTIVE_TENANT;
-import static org.folio.rest.impl.MockServer.BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT;
-import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
-import static org.folio.rest.impl.MockServer.FUND_CANNOT_BE_PAID_TENANT;
-import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
-import static org.folio.rest.impl.MockServer.LEDGER_NOT_FOUND_FOR_TRANSACTION_TENANT;
-import static org.folio.rest.impl.MockServer.PO_LINES_EMPTY_COLLECTION_ID;
-import static org.folio.rest.impl.MockServer.addMockEntry;
-import static org.folio.rest.impl.MockServer.getContributorNameTypesSearches;
-import static org.folio.rest.impl.MockServer.getCreatedEncumbrances;
-import static org.folio.rest.impl.MockServer.getCreatedHoldings;
-import static org.folio.rest.impl.MockServer.getCreatedInstances;
-import static org.folio.rest.impl.MockServer.getCreatedItems;
-import static org.folio.rest.impl.MockServer.getCreatedOrderSummaries;
-import static org.folio.rest.impl.MockServer.getCreatedPieces;
-import static org.folio.rest.impl.MockServer.getExistingOrderSummaries;
-import static org.folio.rest.impl.MockServer.getHoldingsSearches;
-import static org.folio.rest.impl.MockServer.getInstanceStatusesSearches;
-import static org.folio.rest.impl.MockServer.getInstanceTypesSearches;
-import static org.folio.rest.impl.MockServer.getInstancesSearches;
-import static org.folio.rest.impl.MockServer.getItemUpdates;
-import static org.folio.rest.impl.MockServer.getItemsSearches;
-import static org.folio.rest.impl.MockServer.getLoanTypesSearches;
-import static org.folio.rest.impl.MockServer.getPieceSearches;
-import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
-import static org.folio.rest.impl.MockServer.getQueryParams;
+import static org.folio.rest.impl.MockServer.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
@@ -1157,23 +1132,39 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPoCreationFailure() throws Exception {
+  public void testShouldReturnErrorIfPoNumberDoesNotMatchPattern() throws Exception {
     logger.info("=== Test PO creation failure ===");
-
-    String body = getMockData(PO_CREATION_FAILURE_PATH);
-
-    final Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
+    JsonObject jsonObject = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, "0cb6741d-4a00-47e5-a902-5678eb24478d");
+    String body = getMockData("mockdata/compositeOrders/0cb6741d-4a00-47e5-a902-5678eb24478d.json");
+    String poNumber = "asdfgh123456789aaafffgghhhh";
+    jsonObject.put("poNumber", poNumber);
+    final Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, jsonObject.toString(),
       prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).body().as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
 
     assertFalse(errors.getErrors().isEmpty());
     assertNotNull(errors.getErrors().get(0));
-    assertEquals("must match \"^[a-zA-Z0-9]{1,16}$\"", errors.getErrors().get(0).getMessage());
+    assertEquals("must match \"^[a-zA-Z0-9]{1,22}$\"", errors.getErrors().get(0).getMessage());
     assertFalse(errors.getErrors().get(0).getParameters().isEmpty());
     assertNotNull(errors.getErrors().get(0).getParameters().get(0));
     assertEquals("poNumber", errors.getErrors().get(0).getParameters().get(0).getKey());
-    assertEquals("123123123123123123123", errors.getErrors().get(0).getParameters().get(0).getValue());
+    assertEquals(poNumber, errors.getErrors().get(0).getParameters().get(0).getValue());
+  }
+
+  @Test
+  public void testShouldCreateOrderIfPoNumberMatchPattern() throws Exception {
+    logger.info("=== Test PO creation failure ===");
+    JsonObject jsonObject = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, "0cb6741d-4a00-47e5-a902-5678eb24478d");
+    String body = getMockData("mockdata/compositeOrders/0cb6741d-4a00-47e5-a902-5678eb24478d.json");
+    String poNumber = "asdfghj100200jhgfdsa";
+    jsonObject.put("poNumber", poNumber);
+    final Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, jsonObject.toString(),
+      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 201).body().as(Errors.class);
+
+    logger.info(JsonObject.mapFrom(errors).encodePrettily());
+
+    assertTrue(errors.getErrors().isEmpty());
   }
 
   @Test
