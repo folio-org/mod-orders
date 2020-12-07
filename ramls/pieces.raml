@@ -1,0 +1,103 @@
+#%RAML 1.0
+title: Pieces
+baseUri: https://github.com/folio-org/mod-orders
+version: v1
+protocols: [ HTTP, HTTPS ]
+
+documentation:
+  - title: Orders Business Logic API
+    content: <b>API for managing pieces</b>
+
+types:
+  piece: !include acq-models/mod-orders-storage/schemas/piece.json
+  errors: !include raml-util/schemas/errors.schema
+  UUID:
+    type: string
+    pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+
+traits:
+  language: !include raml-util/traits/language.raml
+  validate: !include raml-util/traits/validation.raml
+
+resourceTypes:
+  collection: !include rtypes/collection-with-json-response.raml
+  post-with-201: !include rtypes/post-json-201.raml
+
+/orders/pieces:
+  displayName: Pieces
+  description: Create piece record
+  type:
+    post-with-201:
+      requestSchema: piece
+      responseSchema: piece
+      requestExample: !include acq-models/mod-orders-storage/examples/piece_post.sample
+      responseExample: !include acq-models/mod-orders-storage/examples/piece_get.sample
+  is: [validate]
+  post:
+    description: Create piece record
+  /{id}:
+    uriParameters:
+      id:
+        description: The UUID of a piece record
+        type: UUID
+    is: [validate, language]
+    put:
+      description: Update a piece record with given {id}
+      body:
+        application/json:
+          type: piece
+          example:
+            strict: false
+            value: !include acq-models/mod-orders-storage/examples/piece_get.sample
+      responses:
+        204:
+          description: "Piece record successfully updated"
+        400:
+          description: "Bad request"
+          body:
+            application/json:
+              example:
+                strict: false
+                value: !include examples/errors_400.sample
+            text/plain:
+              example: "unable to create Piece -- Bad request"
+        404:
+          description: "Request id does not exists"
+          body:
+            application/json:
+        500:
+          description: "Internal server error, e.g. due to misconfiguration"
+          body:
+            application/json:
+              example:
+                strict: false
+                value: !include examples/errors_500.sample
+            text/plain:
+              example: "unable to create Piece -- Internal server error, e.g. due to misconfiguration"
+    delete:
+      description: Delete a piece with given {id}
+      responses:
+        204:
+          description: "Piece record successfully deleted"
+        400:
+          description: "Bad request"
+          body:
+            application/json:
+              example:
+                strict: false
+                value: !include examples/errors_400.sample
+            text/plain:
+              example: "unable to delete Piece -- Bad request"
+        404:
+          description: "Request id does not exists"
+          body:
+            application/json:
+        500:
+          description: "Internal server error, e.g. due to misconfiguration"
+          body:
+            application/json:
+              example:
+                strict: false
+                value: !include examples/errors_500.sample
+            text/plain:
+              example: "unable to delete Piece -- Internal server error, e.g. due to misconfiguration"

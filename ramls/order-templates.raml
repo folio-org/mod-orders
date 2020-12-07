@@ -1,0 +1,56 @@
+#%RAML 1.0
+title: Order-templates
+baseUri: https://github.com/folio-org/mod-orders
+version: v1
+protocols: [ HTTP, HTTPS ]
+
+documentation:
+  - title: Orders Business Logic API
+    content: <b>API for managing order templates</b>
+
+types:
+  order-template: !include acq-models/mod-orders-storage/schemas/order_template.json
+  order-template-collection: !include acq-models/mod-orders-storage/schemas/order_template_collection.json
+  errors: !include raml-util/schemas/errors.schema
+  UUID:
+    type: string
+    pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+
+traits:
+  pageable: !include raml-util/traits/pageable.raml
+  searchable: !include raml-util/traits/searchable.raml
+  language: !include raml-util/traits/language.raml
+  validate: !include raml-util/traits/validation.raml
+
+resourceTypes:
+  collection: !include rtypes/collection-with-json-response.raml
+  collection-item: !include rtypes/item-collection-with-json-response.raml
+
+/orders/order-templates:
+  type:
+    collection:
+      exampleCollection: !include acq-models/mod-orders-storage/examples/order_template_collection.sample
+      exampleItem: !include acq-models/mod-orders-storage/examples/order_template_post.sample
+      schemaCollection: order-template-collection
+      schemaItem: order-template
+  post:
+    description: Create new order template
+    is: [validate]
+  get:
+    description: Get list of order templates
+    is: [
+      searchable: {description: "with valid searchable fields: for example templateCode", example: "[\"templateCode\", \"Amazon\", \"=\"]"},
+      pageable
+    ]
+  /{id}:
+    uriParameters:
+      id:
+        description: The UUID of an Order Template
+        type: UUID
+    type:
+      collection-item:
+        exampleItem: !include acq-models/mod-orders-storage/examples/order_template_get.sample
+        schema: order-template
+    put:
+      description: Update order template
+      is: [validate]
