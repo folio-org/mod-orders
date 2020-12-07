@@ -1,0 +1,40 @@
+#%RAML 1.0
+title: Receive
+baseUri: https://github.com/folio-org/mod-orders
+version: v1
+protocols: [ HTTP, HTTPS ]
+
+documentation:
+  - title: Orders Business Logic API
+    content: <b>API for receiving pieces</b>
+
+types:
+  receiving-collection: !include acq-models/mod-orders/schemas/receivingCollection.json
+  receiving-results: !include acq-models/mod-orders/schemas/receivingResults.json
+  errors: !include raml-util/schemas/errors.schema
+  UUID:
+    type: string
+    pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+
+traits:
+  language: !include raml-util/traits/language.raml
+  validate: !include raml-util/traits/validation.raml
+
+resourceTypes:
+  post-with-200: !include rtypes/post-json-200.raml
+
+/orders/receive:
+  displayName: Receive items
+  description: |
+    Receive items spanning one or more PO lines. The endpoint is used to:
+    - receive pieces and associated inventory items
+    - move a received piece back to "Expected" in case "receivedItems" element's "itemStatus" is "On order"
+  type:
+    post-with-200:
+      requestSchema: receiving-collection
+      responseSchema: receiving-results
+      requestExample: !include acq-models/mod-orders/examples/receivingCollection.sample
+      responseExample: !include acq-models/mod-orders/examples/receivingResults.sample
+  is: [validate]
+  post:
+    description: Receive items spanning one or more PO lines
