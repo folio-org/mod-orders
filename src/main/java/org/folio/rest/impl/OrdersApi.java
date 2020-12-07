@@ -15,7 +15,9 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.resource.OrdersCompositeOrders;
+import org.folio.rest.jaxrs.resource.OrdersRollover;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -24,7 +26,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-public class OrdersApi extends BaseApi implements OrdersCompositeOrders {
+public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersRollover {
 
   private static final Logger logger = LoggerFactory.getLogger(OrdersApi.class);
 
@@ -40,11 +42,6 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders {
       .deleteOrder(id)
       .thenAccept(v -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
       .exceptionally(t -> HelperUtils.handleErrorResponse(asyncResultHandler, helper, t));
-  }
-
-  @Override
-  public void postOrdersCompositeOrdersReEncumberById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
   }
 
   @Override
@@ -144,4 +141,15 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders {
       .exceptionally(t -> HelperUtils.handleErrorResponse(asyncResultHandler, helper, t));
   }
 
+  @Override
+  @Validate
+  public void postOrdersCompositeOrdersReEncumberById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
+  }
+
+  @Override
+  @Validate
+  public void postOrdersRollover(String lang, LedgerFiscalYearRollover entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
+  }
 }

@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "10.6",
+      "version": "10.7",
       "handlers": [
         {
           "methods": [
@@ -95,6 +95,15 @@
             "orders-storage.reporting-codes.item.delete",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get"
+          ]
+        },
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/orders/composite-orders/{id}/re-encumber",
+          "permissionsRequired": [
+            "orders.re-encumber.item.post"
           ]
         }
       ]
@@ -670,6 +679,21 @@
       ]
     },
     {
+      "id": "orders.rollover",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/orders/rollover",
+          "permissionsRequired": [
+            "orders.rollover.item.post"
+          ]
+        }
+      ]
+    },
+    {
       "id": "_jsonSchemas",
       "version": "1.0",
       "interfaceType" : "multiple",
@@ -837,6 +861,11 @@
       "permissionName": "orders.item.delete",
       "displayName": "orders - delete an existing order",
       "description": "Delete an existing order"
+    },
+    {
+      "permissionName": "orders.re-encumber.item.post",
+      "displayName": "orders - re-encumber an order",
+      "description": "Re-encumber an order"
     },
     {
       "permissionName": "orders.po-lines.collection.get",
@@ -1182,6 +1211,11 @@
       ]
     },
     {
+      "permissionName": "orders.rollover.item.post",
+      "displayName" : "orders-rollover post",
+      "description" : "Rollover orders"
+    },
+    {
       "permissionName": "orders.all",
       "displayName": "orders - all permissions",
       "description": "Entire set of permissions needed to use orders",
@@ -1209,7 +1243,9 @@
         "orders.titles.all",
         "orders.configuration.reasons-for-closure.all",
         "orders.configuration.prefixes.all",
-        "orders.configuration.suffixes.all"
+        "orders.configuration.suffixes.all",
+        "orders.re-encumber.item.post",
+        "orders.rollover.item.post"
       ]
     },
     {

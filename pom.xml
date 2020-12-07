@@ -252,6 +252,10 @@
           <excludes>
             <exclude>reason_for_closure.json</exclude>
             <exclude>reason_for_closure_collection.json</exclude>
+            <exclude>budget_rollover.json</exclude>
+            <exclude>encumbrance_rollover.json</exclude>
+            <exclude>ledger_fiscal_year_rollover.json</exclude>
+            <exclude>ledger_fiscal_year_rollover_collection.json</exclude>
           </excludes>
           <outputDirectory>${jsonschema2pojo_output_dir}</outputDirectory>
           <generateBuilders>true</generateBuilders>
