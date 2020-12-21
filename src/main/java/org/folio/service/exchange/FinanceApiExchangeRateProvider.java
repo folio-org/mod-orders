@@ -1,6 +1,7 @@
 package org.folio.service.exchange;
 
 import java.util.concurrent.CompletableFuture;
+
 import javax.money.convert.ConversionContext;
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.CurrencyConversion;
@@ -9,6 +10,7 @@ import javax.money.convert.ExchangeRateProvider;
 import javax.money.convert.ProviderContext;
 import javax.money.convert.ProviderContextBuilder;
 import javax.money.convert.RateType;
+
 import org.folio.rest.core.models.RequestContext;
 import org.folio.spring.SpringContextUtil;
 import org.javamoney.moneta.convert.ExchangeRateBuilder;

@@ -7,6 +7,8 @@ import static org.hamcrest.Matchers.notNullValue;
 
 import java.util.UUID;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.rest.impl.ApiTestBase;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -15,12 +17,10 @@ import org.junit.jupiter.params.provider.EnumSource;
 import io.restassured.http.Header;
 import io.restassured.response.Response;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 public class ConfigurationCrudTest extends ApiTestBase {
 
-  private final Logger logger = LoggerFactory.getLogger(ConfigurationCrudTest.class);
+  private final Logger logger = LogManager.getLogger();
 
   @ParameterizedTest
   @EnumSource(value = CrudTestEntities.class)

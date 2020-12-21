@@ -1,10 +1,10 @@
 package org.folio.helper;
 
 import static java.util.Collections.singletonList;
+import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.helper.InventoryHelper.CONTRIBUTOR_NAME;
 import static org.folio.helper.InventoryHelper.CONTRIBUTOR_NAME_TYPE_ID;
@@ -66,7 +66,6 @@ import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class PiecesHelper extends AbstractHelper {
   private static final String DELETE_PIECE_BY_ID = resourceByIdPath(PIECES, "%s") + "?lang=%s";
@@ -75,8 +74,8 @@ public class PiecesHelper extends AbstractHelper {
   private static final String QUERY_LANG = "lang";
   private static final String URL_WITH_LANG_PARAM = "%s?" + QUERY_LANG + "=%s";
 
-  private ProtectionHelper protectionHelper;
-  private InventoryHelper inventoryHelper;
+  private final ProtectionHelper protectionHelper;
+  private final InventoryHelper inventoryHelper;
   private TitlesHelper titlesHelper;
 
   public PiecesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -116,7 +115,7 @@ public class PiecesHelper extends AbstractHelper {
   // 2. Update piece with new content and complete future
   // 3. Create a message and check if receivingStatus is not consistent with storage; if yes - send a message to event bus
   public CompletableFuture<Void> updatePieceRecord(Piece piece) {
-    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<Void> future = new CompletableFuture<>();
     getOrderByPoLineId(piece.getPoLineId())
       .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE))
       .thenCompose(v -> inventoryHelper.updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId()))
@@ -124,7 +123,7 @@ public class PiecesHelper extends AbstractHelper {
         getPieceById(piece.getId()).thenAccept(pieceStorage -> {
           ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
 
-          handlePutRequest(resourceByIdPath(PIECES, piece.getId()), JsonObject.mapFrom(piece), httpClient, ctx, okapiHeaders, logger)
+          handlePutRequest(resourceByIdPath(PIECES, piece.getId()), JsonObject.mapFrom(piece), httpClient, okapiHeaders, logger)
             .thenAccept(future::complete)
             .thenAccept(afterUpdate -> {
 
@@ -132,8 +131,8 @@ public class PiecesHelper extends AbstractHelper {
               messageToEventBus.put("poLineIdUpdate", piece.getPoLineId());
 
               ReceivingStatus receivingStatusUpdate = piece.getReceivingStatus();
-              logger.debug("receivingStatusStorage -- " + receivingStatusStorage);
-              logger.debug("receivingStatusUpdate -- " + receivingStatusUpdate);
+              logger.debug("receivingStatusStorage -- {}", receivingStatusStorage);
+              logger.debug("receivingStatusUpdate -- {}", receivingStatusUpdate);
 
               if (receivingStatusStorage.compareTo(receivingStatusUpdate) != 0) {
                 receiptConsistencyPiecePoLine(messageToEventBus);
@@ -152,7 +151,7 @@ public class PiecesHelper extends AbstractHelper {
           })
     )
       .exceptionally(t -> {
-        logger.error("User with id={} is forbidden to update piece with id={}", t.getCause(), getCurrentUserId(), piece.getId());
+        logger.error("User with id={} is forbidden to update piece with id={} {}", getCurrentUserId(), piece.getId(), t.getCause());
         future.completeExceptionally(t);
         return null;
     });
@@ -171,7 +170,7 @@ public class PiecesHelper extends AbstractHelper {
 
   public CompletableFuture<Piece> getPieceById(String pieceId) {
     String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PIECES, pieceId), lang);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+    return handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
       .thenApply(jsonPiece -> jsonPiece.mapTo(Piece.class));
   }
 
@@ -193,7 +192,7 @@ public class PiecesHelper extends AbstractHelper {
               throw new HttpException(422, ErrorCodes.REQUEST_FOUND.toError());
             }
           })
-          .thenCompose(aVoid -> handleDeleteRequest(String.format(DELETE_PIECE_BY_ID, id, lang), httpClient, ctx, okapiHeaders, logger))
+          .thenCompose(aVoid -> handleDeleteRequest(String.format(DELETE_PIECE_BY_ID, id, lang), httpClient, okapiHeaders, logger))
           .thenCompose(aVoid -> {
             if (StringUtils.isNotEmpty(piece.getItemId())) {
               // Attempt to delete item
@@ -216,8 +215,8 @@ public class PiecesHelper extends AbstractHelper {
 
 
   public CompletableFuture<CompositePurchaseOrder> getCompositeOrderByPoLineId(String poLineId) {
-    return getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger)
-      .thenCompose(poLineJson -> HelperUtils.operateOnPoLine(HttpMethod.GET, poLineJson, httpClient, ctx, okapiHeaders, logger))
+    return getPoLineById(poLineId, lang, httpClient, okapiHeaders, logger)
+      .thenCompose(poLineJson -> HelperUtils.operateOnPoLine(HttpMethod.GET, poLineJson, httpClient,  okapiHeaders, logger))
       .thenCompose(poLine ->
         getCompositePurchaseOrder(poLine.getPurchaseOrderId())
         .thenApply(purchaseOrder -> purchaseOrder.withCompositePoLines(Collections.singletonList(poLine)))
@@ -225,14 +224,14 @@ public class PiecesHelper extends AbstractHelper {
   }
 
   public CompletableFuture<CompositePurchaseOrder> getOrderByPoLineId(String poLineId) {
-    return getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger)
+    return getPoLineById(poLineId, lang, httpClient, okapiHeaders, logger)
       .thenApply(json -> json.mapTo(PoLine.class))
-      .thenCompose(poLine -> HelperUtils.getPurchaseOrderById(poLine.getPurchaseOrderId(), lang, httpClient, ctx, okapiHeaders, logger))
+      .thenCompose(poLine -> HelperUtils.getPurchaseOrderById(poLine.getPurchaseOrderId(), lang, httpClient, okapiHeaders, logger))
       .thenApply(jsonObject -> jsonObject.mapTo(CompositePurchaseOrder.class));
   }
 
   public CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId) {
-    return HelperUtils.getPurchaseOrderById(purchaseOrderId, lang, httpClient, ctx, okapiHeaders, logger)
+    return HelperUtils.getPurchaseOrderById(purchaseOrderId, lang, httpClient, okapiHeaders, logger)
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
       .exceptionally(t -> {
         Throwable cause = t.getCause();
@@ -292,12 +291,12 @@ public class PiecesHelper extends AbstractHelper {
 
   public CompletableFuture<JsonObject> searchInstancesByProducts(List<ProductId> productIds) {
     String query = productIds.stream()
-      .map(productId -> inventoryHelper.buildProductIdQuery(productId))
+      .map(inventoryHelper::buildProductIdQuery)
       .collect(joining(" or "));
 
     // query contains special characters so must be encoded before submitting
     String endpoint = inventoryHelper.buildLookupEndpoint(INSTANCES, encodeQuery(query, logger), lang);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
+    return handleGetRequest(endpoint, httpClient, okapiHeaders, logger);
   }
 
   public CompletableFuture<String> createInstanceRecord(Title title) {
@@ -310,7 +309,7 @@ public class PiecesHelper extends AbstractHelper {
 
     CompletableFuture<Void> contributorNameTypeIdFuture = inventoryHelper.verifyContributorNameTypesExist(title.getContributors());
 
-    return allOf(ctx, instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
+    return allOf(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
       .thenApply(v -> buildInstanceRecordJsonObject(title, lookupObj))
       .thenCompose(instanceRecJson -> createRecordInStorage(instanceRecJson, String.format(CREATE_INSTANCE_ENDPOINT, lang)));
   }

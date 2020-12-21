@@ -2,17 +2,17 @@ package org.folio.service.configuration;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Configs;
 
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 public class ConfigurationEntriesService {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(ConfigurationEntriesService.class);
+  private static final Logger LOGGER = LogManager.getLogger();
 
   private static final String CONFIG_QUERY = "module==%s";
 

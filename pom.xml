@@ -51,14 +51,14 @@
     <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
     <ramlfiles_util_path>${ramlfiles_path}/raml-util</ramlfiles_util_path>
     <ramlfiles_acq_models_path>${ramlfiles_path}/acq-models</ramlfiles_acq_models_path>
-    <raml-module-builder.version>31.1.5</raml-module-builder.version>
+    <raml-module-builder.version>32.0.0-SNAPSHOT</raml-module-builder.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <mojo.java.target>1.8</mojo.java.target>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <mod-configuration-client.version>5.5.0</mod-configuration-client.version>
     <sonar.exclusions>**/models/**.java</sonar.exclusions>
     <sonar.test.exclusions>**/*Test.java</sonar.test.exclusions>
-    <spring.version>5.2.7.RELEASE</spring.version>
-    <vertx.version>3.9.4</vertx.version>
+    <spring.version>5.2.11.RELEASE</spring.version>
+    <vertx.version>4.0.0</vertx.version>
     <argLine />
   </properties>
 
@@ -112,11 +112,6 @@
       <groupId>org.folio</groupId>
       <artifactId>folio-di-support</artifactId>
       <version>1.1.0</version>
-    </dependency>
-    <dependency>
-      <groupId>me.escoffier.vertx</groupId>
-      <artifactId>vertx-completable-future</artifactId>
-      <version>0.1.2</version>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -363,7 +358,7 @@
         <version>1.12.6</version>
         <configuration>
           <verbose>true</verbose>
-          <complianceLevel>1.8</complianceLevel>
+          <complianceLevel>11</complianceLevel>
           <includes>
             <include>**/impl/*.java</include>
             <include>**/*.aj</include>
@@ -401,7 +396,7 @@
 
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>3.1.0</version>
+        <version>3.2.0</version>
         <executions>
           <execution>
             <id>copy-generated-code</id>
@@ -540,28 +535,6 @@
       </plugin>
 
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>properties-maven-plugin</artifactId>
-        <version>1.0.0</version>
-        <executions>
-          <execution>
-            <id>set-system-properties</id>
-            <goals>
-              <goal>set-system-properties</goal>
-            </goals>
-            <configuration>
-              <properties>
-                <property>
-                  <name>log4j.configuration</name>
-                  <value>${project.baseUri}src/main/resources/log4j2.properties</value>
-                </property>
-              </properties>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
         <version>3.2.4</version>
@@ -626,10 +599,6 @@
         <version>2.22.2</version>
         <configuration>
           <argLine>@{argLine} -Xmx1024m -Duser.language=en -Duser.region=US</argLine>
-          <systemPropertyVariables>
-            <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.Log4j2LogDelegateFactory
-            </vertx.logger-delegate-factory-class-name>
-          </systemPropertyVariables>
           <excludes>
             <exclude>org/folio/rest/impl/**Test.class</exclude>
           </excludes>
@@ -653,7 +622,7 @@
       <dependency>
         <groupId>org.junit</groupId>
         <artifactId>junit-bom</artifactId>
-        <version>5.6.2</version>
+        <version>5.7.0</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>

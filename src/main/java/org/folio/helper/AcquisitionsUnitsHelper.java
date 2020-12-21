@@ -25,7 +25,6 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
 
 public class AcquisitionsUnitsHelper extends AbstractHelper {
@@ -46,7 +45,7 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
   }
 
   public CompletableFuture<AcquisitionsUnitCollection> getAcquisitionsUnits(String query, int offset, int limit) {
-    CompletableFuture<AcquisitionsUnitCollection> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<AcquisitionsUnitCollection> future = new CompletableFuture<>();
 
     try {
       // In case if client did not specify filter by "deleted" units, return only "active" units
@@ -57,7 +56,7 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
       }
 
       String endpoint = String.format(GET_UNITS_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
-      handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
         .thenApply(jsonUnits -> jsonUnits.mapTo(AcquisitionsUnitCollection.class))
         .thenAccept(future::complete)
         .exceptionally(t -> {
@@ -77,11 +76,11 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
 
   public CompletableFuture<Void> updateAcquisitionsUnit(AcquisitionsUnit unit) {
     String endpoint = resourceByIdPath(ACQUISITIONS_UNITS, unit.getId());
-    return handlePutRequest(endpoint, JsonObject.mapFrom(unit), httpClient, ctx, okapiHeaders, logger);
+    return handlePutRequest(endpoint, JsonObject.mapFrom(unit), httpClient, okapiHeaders, logger);
   }
 
   public CompletableFuture<AcquisitionsUnit> getAcquisitionsUnit(String id) {
-    return handleGetRequest(resourceByIdPath(ACQUISITIONS_UNITS, id), httpClient, ctx, okapiHeaders, logger)
+    return handleGetRequest(resourceByIdPath(ACQUISITIONS_UNITS, id), httpClient, okapiHeaders, logger)
       .thenApply(json -> json.mapTo(AcquisitionsUnit.class));
   }
 
@@ -109,10 +108,10 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
   }
 
   public CompletableFuture<AcquisitionsUnitMembershipCollection> getAcquisitionsUnitsMemberships(String query, int offset, int limit) {
-    CompletableFuture<AcquisitionsUnitMembershipCollection> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<AcquisitionsUnitMembershipCollection> future = new CompletableFuture<>();
     try {
       String endpoint = String.format(GET_UNITS_MEMBERSHIPS_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
-      handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
         .thenApply(jsonUnitsMembership -> jsonUnitsMembership.mapTo(AcquisitionsUnitMembershipCollection.class))
         .thenAccept(future::complete)
         .exceptionally(t -> {
@@ -147,16 +146,16 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
 
   public CompletableFuture<Void> updateAcquisitionsUnitsMembership(AcquisitionsUnitMembership membership) {
     String endpoint = resourceByIdPath(ACQUISITIONS_MEMBERSHIPS, membership.getId());
-    return handlePutRequest(endpoint, JsonObject.mapFrom(membership), httpClient, ctx, okapiHeaders, logger);
+    return handlePutRequest(endpoint, JsonObject.mapFrom(membership), httpClient, okapiHeaders, logger);
   }
 
   public CompletableFuture<AcquisitionsUnitMembership> getAcquisitionsUnitsMembership(String id) {
-    return handleGetRequest(resourceByIdPath(ACQUISITIONS_MEMBERSHIPS, id), httpClient, ctx, okapiHeaders, logger)
+    return handleGetRequest(resourceByIdPath(ACQUISITIONS_MEMBERSHIPS, id), httpClient, okapiHeaders, logger)
       .thenApply(json -> json.mapTo(AcquisitionsUnitMembership.class));
   }
 
   public CompletableFuture<Void> deleteAcquisitionsUnitsMembership(String id) {
-    return handleDeleteRequest(resourceByIdPath(ACQUISITIONS_MEMBERSHIPS, id), httpClient, ctx, okapiHeaders, logger);
+    return handleDeleteRequest(resourceByIdPath(ACQUISITIONS_MEMBERSHIPS, id), httpClient, okapiHeaders, logger);
   }
 
   private CompletableFuture<List<String>> getOpenForReadAcqUnitIds() {

@@ -7,6 +7,8 @@ import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.helper.AbstractHelper;
 import org.folio.helper.AcquisitionsUnitsHelper;
 import org.folio.rest.annotations.Validate;
@@ -18,12 +20,10 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 public class AcquisitionsUnitsApi implements AcquisitionsUnits {
 
-  private static final Logger logger = LoggerFactory.getLogger(AcquisitionsUnitsApi.class);
+  private static final Logger logger = LogManager.getLogger();
 
   private static final String ACQUISITIONS_UNITS_LOCATION_PREFIX = "/acquisitions-units/units/%s";
   private static final String ACQUISITIONS_MEMBERSHIPS_LOCATION_PREFIX = "/acquisitions-units/memberships/%s";
@@ -37,7 +37,7 @@ public class AcquisitionsUnitsApi implements AcquisitionsUnits {
     helper.createAcquisitionsUnit(entity)
       .thenAccept(unit -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully created new acquisitions unit: " + JsonObject.mapFrom(unit).encodePrettily());
+          logger.info("Successfully created new acquisitions unit: {} ", JsonObject.mapFrom(unit).encodePrettily());
         }
 
         asyncResultHandler.handle(succeededFuture(helper
@@ -56,7 +56,7 @@ public class AcquisitionsUnitsApi implements AcquisitionsUnits {
     helper.getAcquisitionsUnits(query, offset, limit)
       .thenAccept(units -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully created new acquisitions units: " + JsonObject.mapFrom(units).encodePrettily());
+          logger.info("Successfully created new acquisitions units: {}", JsonObject.mapFrom(units).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(units)));
       })
@@ -93,7 +93,7 @@ public class AcquisitionsUnitsApi implements AcquisitionsUnits {
     helper.getAcquisitionsUnit(id)
       .thenAccept(unit -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved acquisitions unit: " + JsonObject.mapFrom(unit).encodePrettily());
+          logger.info("Successfully retrieved acquisitions unit: {}", JsonObject.mapFrom(unit).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(unit)));
       })
@@ -126,7 +126,7 @@ public class AcquisitionsUnitsApi implements AcquisitionsUnits {
     helper.createAcquisitionsUnitsMembership(entity)
       .thenAccept(membership -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully created new acquisitions units membership: " + JsonObject.mapFrom(membership).encodePrettily());
+          logger.info("Successfully created new acquisitions units membership: {}", JsonObject.mapFrom(membership).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper
           .buildResponseWithLocation(String.format(ACQUISITIONS_MEMBERSHIPS_LOCATION_PREFIX, membership.getId()), membership)));
@@ -144,7 +144,7 @@ public class AcquisitionsUnitsApi implements AcquisitionsUnits {
     helper.getAcquisitionsUnitsMemberships(query, offset, limit)
       .thenAccept(memberships -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully created new acquisitions units memberships: " + JsonObject.mapFrom(memberships).encodePrettily());
+          logger.info("Successfully created new acquisitions units memberships: {}", JsonObject.mapFrom(memberships).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(memberships)));
       })
@@ -179,7 +179,7 @@ public class AcquisitionsUnitsApi implements AcquisitionsUnits {
     helper.getAcquisitionsUnitsMembership(id)
       .thenAccept(membership -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved acquisitions units membership: " + JsonObject.mapFrom(membership).encodePrettily());
+          logger.info("Successfully retrieved acquisitions units membership: {}", JsonObject.mapFrom(membership).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(membership)));
       })

@@ -6,16 +6,16 @@ import static org.folio.rest.impl.MockServer.PO_NUMBER_ERROR_X_OKAPI_TENANT;
 import static org.folio.rest.impl.MockServer.PO_NUMBER_VALUE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.rest.jaxrs.model.PoNumber;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 public class PoNumberApiTest extends ApiTestBase {
 
-  private static final Logger logger = LoggerFactory.getLogger(PoNumberApiTest.class);
+  private static final Logger logger = LogManager.getLogger();
 
   private static final String PONUMBER_VALIDATE_PATH = "/orders/po-number/validate";
   private static final String GET_PO_NUMBER_PATH = "/orders/po-number";
