@@ -3,6 +3,8 @@ package org.folio.rest.impl;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -10,15 +12,13 @@ import org.springframework.context.annotation.Primary;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 /**
  * Define unit test specific beans to override actual ones
  */
 @Configuration
 public class EventBusContextConfiguration {
-  private static final Logger logger = LoggerFactory.getLogger(EventBusContextConfiguration.class);
+  private static final Logger logger = LogManager.getLogger();
   // The variable is defined in main thread but the value is going to be inserted in vert.x event loop thread
   public static volatile List<Message<JsonObject>> eventMessages = new ArrayList<>();
 

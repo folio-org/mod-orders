@@ -31,7 +31,7 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+
 
 
 public class VendorHelper extends AbstractHelper {
@@ -57,7 +57,7 @@ public class VendorHelper extends AbstractHelper {
    * @return CompletableFuture with {@link Errors} object
    */
   public CompletableFuture<Errors> validateVendor(CompositePurchaseOrder compPO) {
-    CompletableFuture<Errors> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<Errors> future = new CompletableFuture<>();
     String id = compPO.getVendor();
 
     logger.debug("Validating vendor with id={}", id);
@@ -98,7 +98,7 @@ public class VendorHelper extends AbstractHelper {
    * @return CompletableFuture with {@link Errors} object
    */
   public CompletableFuture<Errors> validateAccessProviders(List<CompositePoLine> poLines) {
-    CompletableFuture<Errors> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<Errors> future = new CompletableFuture<>();
 
     Map<String, List<CompositePoLine>> poLinesMap =
       poLines.stream()
@@ -191,7 +191,7 @@ public class VendorHelper extends AbstractHelper {
    * @return CompletableFuture with {@link Organization} object
    */
   private CompletableFuture<Organization> getVendorById(String vendorId) {
-    return handleGetRequest(ORGANIZATIONS_STORAGE_VENDORS + vendorId, httpClient, ctx, okapiHeaders, logger)
+    return handleGetRequest(ORGANIZATIONS_STORAGE_VENDORS + vendorId, httpClient, okapiHeaders, logger)
       .thenApply(json -> json.mapTo(Organization.class));
   }
 
@@ -204,10 +204,10 @@ public class VendorHelper extends AbstractHelper {
   private CompletableFuture<List<Organization>> getAccessProvidersByIds(Set<String> accessProviderIds) {
     String query = convertIdsToCqlQuery(new ArrayList<>(accessProviderIds));
     String endpoint = String.format(ORGANIZATIONS_WITH_QUERY_ENDPOINT, accessProviderIds.size(), lang, encodeQuery(query, logger));
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenApply(jsons -> jsons.getJsonArray(ORGANIZATIONS)
+    return handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
+      .thenApply(jsonArray -> jsonArray.getJsonArray(ORGANIZATIONS)
         .stream()
-        .map(obj -> ((JsonObject) obj).mapTo(Organization.class))
+        .map(obj -> JsonObject.mapFrom(obj).mapTo(Organization.class))
         .collect(toList())
       );
   }

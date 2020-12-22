@@ -47,7 +47,7 @@ public class PoNumberHelper extends AbstractHelper {
   }
 
   CompletableFuture<Void> checkPONumberUnique(String poNumber) {
-    return getPurchaseOrderByPONumber(poNumber, lang, httpClient, ctx, okapiHeaders, logger)
+    return getPurchaseOrderByPONumber(poNumber, lang, httpClient, okapiHeaders, logger)
       .thenAccept(po -> {
          if (po.getInteger("totalRecords") != 0) {
            logger.error("Exception validating PO Number existence");
@@ -57,7 +57,7 @@ public class PoNumberHelper extends AbstractHelper {
   }
 
   CompletableFuture<String> generatePoNumber() {
-    return HelperUtils.handleGetRequest(resourcesPath(PO_NUMBER), httpClient, ctx, okapiHeaders, logger)
+    return HelperUtils.handleGetRequest(resourcesPath(PO_NUMBER), httpClient, okapiHeaders, logger)
       .thenApply(seqNumber -> seqNumber.mapTo(SequenceNumber.class).getSequenceNumber());
   }
 

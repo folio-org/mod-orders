@@ -8,6 +8,8 @@ import java.util.Map;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.helper.PiecesHelper;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.Piece;
@@ -17,12 +19,10 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 public class PiecesAPI implements OrdersPieces {
 
-  private static final Logger logger = LoggerFactory.getLogger(PiecesAPI.class);
+  private static final Logger logger = LogManager.getLogger();
 
   @Override
   @Validate
@@ -32,7 +32,7 @@ public class PiecesAPI implements OrdersPieces {
     helper.createPiece(entity)
       .thenAccept(piece -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully created piece: " + JsonObject.mapFrom(piece)
+          logger.info("Successfully created piece: {}", JsonObject.mapFrom(piece)
             .encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildCreatedResponse(piece)));

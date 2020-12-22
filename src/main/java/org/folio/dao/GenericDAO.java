@@ -1,10 +1,11 @@
 package org.folio.dao;
 
-import io.vertx.core.Context;
-import org.folio.rest.jaxrs.model.Entity;
-
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+
+import org.folio.rest.jaxrs.model.Entity;
+
+import io.vertx.core.Context;
 
 /**
  * Generic data access object

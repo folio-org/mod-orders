@@ -7,7 +7,6 @@ public class LineFundId {
   private String fundDistributionId;
 
   public LineFundId() {
-
   }
 
   public LineFundId(String poLineId, String fundDistributionId) {

@@ -1,6 +1,7 @@
 package org.folio.models;
 
 import org.folio.rest.acq.model.Piece;
+
 import io.vertx.core.json.JsonObject;
 
 public class PieceItemPair {

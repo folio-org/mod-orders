@@ -10,6 +10,8 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
@@ -23,12 +25,10 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersRollover {
 
-  private static final Logger logger = LoggerFactory.getLogger(OrdersApi.class);
+  private static final Logger logger = LogManager.getLogger();
 
   private static final String ORDERS_LOCATION_PREFIX = "/orders/composite-orders/%s";
 
@@ -71,7 +71,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
           logger.info("Creating PO and POLines...");
           return helper.createPurchaseOrder(compPO)
             .thenAccept(withIds -> {
-              logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withIds).encodePrettily());
+              logger.info("Successfully Placed Order: {}", JsonObject.mapFrom(withIds).encodePrettily());
               asyncResultHandler.handle(succeededFuture(helper
                 .buildResponseWithLocation(String.format(ORDERS_LOCATION_PREFIX, withIds.getId()), withIds)));
             });
@@ -97,7 +97,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
           return helper.updateOrder(compPO)
             .thenAccept(v -> {
               if (logger.isInfoEnabled()) {
-                logger.info("Successfully Updated Order: " + JsonObject.mapFrom(compPO).encodePrettily());
+                logger.info("Successfully Updated Order: {}", JsonObject.mapFrom(compPO).encodePrettily());
               }
               asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
             });
@@ -107,7 +107,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
         }
       })
       .exceptionally(t -> {
-        logger.error("Failed to update purchase order with id={}", t, orderId);
+        logger.error("Failed to update purchase order with id={} : {}", orderId, t);
         return HelperUtils.handleErrorResponse(asyncResultHandler, helper, t);
       });
   }
@@ -134,7 +134,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
       .getPurchaseOrders(limit, offset, query)
       .thenAccept(orders -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved orders: " + JsonObject.mapFrom(orders).encodePrettily());
+          logger.info("Successfully retrieved orders: {}", JsonObject.mapFrom(orders).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(orders)));
       })

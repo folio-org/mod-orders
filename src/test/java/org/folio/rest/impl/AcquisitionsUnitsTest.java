@@ -25,6 +25,8 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.core.HttpHeaders;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.Errors;
@@ -35,11 +37,9 @@ import io.restassured.http.Headers;
 import io.restassured.response.Response;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 public class AcquisitionsUnitsTest extends ApiTestBase {
-  private static final Logger logger = LoggerFactory.getLogger(AcquisitionsUnitsTest.class);
+  private static final Logger logger = LogManager.getLogger();
 
   private static final String ACQ_UNITS_UNITS_ENDPOINT = "/acquisitions-units/units";
   static final String IS_DELETED_PROP = "isDeleted";

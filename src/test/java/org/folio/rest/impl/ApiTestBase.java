@@ -51,6 +51,8 @@ import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
 import org.folio.orders.events.handlers.MessageAddress;
@@ -83,17 +85,11 @@ import io.restassured.response.Response;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxTestContext;
 
 public class ApiTestBase {
 
-  static {
-    System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, "io.vertx.core.logging.Log4j2LogDelegateFactory");
-  }
-
-  private static final Logger logger = LoggerFactory.getLogger(ApiTestBase.class);
+  private static final Logger logger = LogManager.getLogger();
 
   public static final String ORDERS_RECEIVING_ENDPOINT = "/orders/receive";
   public static final String ORDERS_CHECKIN_ENDPOINT = "/orders/check-in";
@@ -434,7 +430,7 @@ public class ApiTestBase {
   Object[] getModifiedProtectedFields(Error error) {
     return Optional.of(error.getAdditionalProperties()
       .get("protectedAndModifiedFields"))
-      .map(obj -> (List) obj)
+      .map(obj -> (List<?>) obj)
       .get()
       .toArray();
   }

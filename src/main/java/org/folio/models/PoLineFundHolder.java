@@ -1,8 +1,9 @@
 package org.folio.models;
 
+import java.util.Objects;
+
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.FundDistribution;
-import java.util.Objects;
 
 public class PoLineFundHolder {
   private final LineFundId id;

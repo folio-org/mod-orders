@@ -27,6 +27,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
@@ -41,14 +43,12 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import io.restassured.http.Headers;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 
 
 public class OrdersProtectionTest extends ProtectedEntityTestBase {
 
-  private static final Logger logger = LoggerFactory.getLogger(OrdersProtectionTest.class);
+  private static final Logger logger = LogManager.getLogger();
 
 
   @ParameterizedTest

@@ -17,6 +17,8 @@ import java.util.concurrent.TimeoutException;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.acq.model.PoLine;
@@ -35,14 +37,12 @@ import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 public class ReceiptStatusConsistencyTest extends ApiTestBase {
-  private static final Logger logger = LoggerFactory.getLogger(ReceiptStatusConsistencyTest.class);
+  private static final Logger logger = LogManager.getLogger();
 
   public static final String TEST_ADDRESS = "testReceiptStatusAddress";
   private static final String BAD_PO_LINE_404 = "5b454292-6aaa-474f-9510-b59a564e0c8d";

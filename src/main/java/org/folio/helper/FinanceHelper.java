@@ -1,10 +1,10 @@
 package org.folio.helper;
 
+import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_EXPENSE_CLASS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
@@ -87,7 +87,6 @@ import org.javamoney.moneta.function.MonetaryFunctions;
 import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.Context;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
 
 public class FinanceHelper extends AbstractHelper {
@@ -167,8 +166,8 @@ public class FinanceHelper extends AbstractHelper {
               .thenApply(TransactionCollection::getTransactions);
   }
 
-  public CompletableFuture<List<Transaction>> getPoLineEncumbrances(String polineId) {
-    return transactionService.getTransactions(Integer.MAX_VALUE, 0, buildEncumbranceByPolineQuery(polineId))
+  public CompletableFuture<List<Transaction>> getPoLineEncumbrances(String poLineId) {
+    return transactionService.getTransactions(Integer.MAX_VALUE, 0, buildEncumbranceByPolineQuery(poLineId))
       .thenApply(TransactionCollection::getTransactions);
   }
 
@@ -224,20 +223,19 @@ public class FinanceHelper extends AbstractHelper {
     }
   }
 
-  public CompletableFuture<List<EncumbranceRelationsHolder>> prepareEncumbrances(List<EncumbranceRelationsHolder> encumbranceHolders) {
+  public CompletableFuture<List<EncumbranceRelationsHolder>> prepareEncumbrances(
+      List<EncumbranceRelationsHolder> encumbranceHolders) {
     Map<String, List<Transaction>> groupedByFund = encumbranceHolders.stream()
       .map(EncumbranceRelationsHolder::getTransaction)
       .collect(groupingBy(Transaction::getFromFundId));
-    return retrieveSystemCurrency()
-      .thenCompose(v -> groupByLedgerIds(groupedByFund))
+    return retrieveSystemCurrency().thenCompose(v -> groupByLedgerIds(groupedByFund))
       .thenCompose(trsGroupedByLedgerId -> checkEncumbranceRestrictions(trsGroupedByLedgerId, groupedByFund)
         .thenApply(v -> trsGroupedByLedgerId))
-      .thenCompose(trsGroupedByLedgerId -> allOf(ctx,
-        trsGroupedByLedgerId.entrySet()
-          .stream()
-          .map(entry -> getCurrentFiscalYear(entry.getKey()).thenAccept(fiscalYear -> buildEncumbrancesForUpdate(entry, fiscalYear)))
-          .collect(toList())
-          .toArray(new CompletableFuture[0])))
+      .thenCompose(trsGroupedByLedgerId -> allOf(trsGroupedByLedgerId.entrySet()
+        .stream()
+        .map(entry -> getCurrentFiscalYear(entry.getKey()).thenAccept(fiscalYear -> buildEncumbrancesForUpdate(entry, fiscalYear)))
+        .collect(toList())
+        .toArray(new CompletableFuture[0])))
       .thenApply(v -> encumbranceHolders);
   }
 
@@ -339,7 +337,7 @@ public class FinanceHelper extends AbstractHelper {
     String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
     String endpoint = String.format(GET_FUNDS_WITH_SEARCH_PARAMS, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
 
-    return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+    return HelperUtils.handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
       .thenApply(entries -> entries.mapTo(FundCollection.class))
       .thenApply(fundCollection -> {
         if (ids.size() == fundCollection.getFunds().size()) {
@@ -356,14 +354,14 @@ public class FinanceHelper extends AbstractHelper {
       .map(this::getActiveBudgetByFundId)
       .collect(toList());
 
-    return VertxCompletableFuture.allOf(ctx, futureList.toArray(new CompletableFuture[0]))
+    return CompletableFuture.allOf(futureList.toArray(new CompletableFuture[0]))
       .thenApply(v -> futureList.stream().map(CompletableFuture::join).collect(Collectors.toList()));
   }
 
   public CompletableFuture<Budget> getActiveBudgetByFundId(String fundId) {
     String endpoint = String.format(GET_CURRENT_ACTIVE_BUDGET_BY_FUND_ID, fundId, lang);
 
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger).thenApply(entries -> entries.mapTo(Budget.class))
+    return handleGetRequest(endpoint, httpClient, okapiHeaders, logger).thenApply(entries -> entries.mapTo(Budget.class))
       .exceptionally(t -> {
         if (t.getCause() instanceof HttpException) {
           throw new HttpException(404, BUDGET_NOT_FOUND_FOR_TRANSACTION
@@ -378,8 +376,8 @@ public class FinanceHelper extends AbstractHelper {
     String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
     String endpoint = String.format(GET_LEDGERS_WITH_SEARCH_PARAMS, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
 
-    return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenCompose(entries -> VertxCompletableFuture.supplyBlockingAsync(ctx, () -> entries.mapTo(LedgerCollection.class)))
+    return HelperUtils.handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
+      .thenCompose(entries -> CompletableFuture.supplyAsync(() -> entries.mapTo(LedgerCollection.class)))
       .thenApply(ledgerCollection -> {
         if (ledgerIds.size() == ledgerCollection.getLedgers().size()) {
           return ledgerCollection.getLedgers();
@@ -411,7 +409,7 @@ public class FinanceHelper extends AbstractHelper {
 
   public CompletableFuture<FiscalYear> getCurrentFiscalYear(String ledgerId) {
     String endpoint = String.format(GET_CURRENT_FISCAL_YEAR_BY_ID, ledgerId, lang);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger).thenApply(entry -> entry.mapTo(FiscalYear.class))
+    return handleGetRequest(endpoint, httpClient, okapiHeaders, logger).thenApply(entry -> entry.mapTo(FiscalYear.class))
       .exceptionally(t -> {
         if (isFiscalYearNotFound(t)) {
           List<Parameter> parameters = Collections.singletonList(new Parameter().withValue(ledgerId).withKey("ledgerId"));
@@ -554,7 +552,7 @@ public class FinanceHelper extends AbstractHelper {
         .forEach(line ->
           line.getFundDistribution().forEach(fund -> {
               boolean isFundForUpdate = Optional.ofNullable(groupedByFund.get(fund.getFundId()))
-                                                .map(encumbrances -> encumbrances.stream().anyMatch(encumbr -> line.getId().equals(encumbr.getEncumbrance().getSourcePoLineId())))
+                                                .map(encumbrances -> encumbrances.stream().anyMatch(encumbrance -> line.getId().equals(encumbrance.getEncumbrance().getSourcePoLineId())))
                                                 .orElse(false);
               if (!isFundForUpdate) {
                 encumbrancesInStorage.stream()
@@ -641,7 +639,7 @@ public class FinanceHelper extends AbstractHelper {
         .filter(fundDistribution -> Objects.nonNull(fundDistribution.getExpenseClassId()))
         .collect(toMap(Function.identity(), FundDistribution::getExpenseClassId));
 
-    return allOf(ctx, expenseClassesByFundId.entrySet().stream()
+    return allOf(expenseClassesByFundId.entrySet().stream()
       .map(this::checkExpenseClassIsActiveByFundDistribution)
       .toArray(CompletableFuture[]::new));
   }
@@ -651,7 +649,7 @@ public class FinanceHelper extends AbstractHelper {
     String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
     String endpoint = String.format(GET_BUDGET_EXPENSE_CLASSES_QUERY, MAX_IDS_FOR_GET_RQ, 0, queryParam, lang);
 
-    return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+    return HelperUtils.handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
       .thenApply(entries -> entries.mapTo(BudgetExpenseClassCollection.class))
       .thenCompose(budgetExpenseClasses -> {
         var budgetExpenseClassIdsList = budgetExpenseClasses.getBudgetExpenseClasses()
@@ -697,7 +695,7 @@ public class FinanceHelper extends AbstractHelper {
     List<Parameter> parameters = new ArrayList<>();
     parameters.add(new Parameter().withKey(FUND_CODE).withValue(expenseClassByFundId.getKey().getCode()));
 
-    return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+    return HelperUtils.handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
       .thenApply(expenseClasses -> {
         expenseClasses.mapTo(ExpenseClassCollection.class).getExpenseClasses()
           .forEach(exc -> parameters.add(new Parameter().withKey(EXPENSE_CLASS_NAME).withValue(exc.getName())));

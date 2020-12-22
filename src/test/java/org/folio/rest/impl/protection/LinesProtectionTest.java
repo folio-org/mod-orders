@@ -8,18 +8,18 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.hamcrest.core.IsEqual.equalTo;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.rest.jaxrs.model.Errors;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import io.restassured.http.Headers;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 public class LinesProtectionTest extends ProtectedEntityTestBase {
 
-  private static final Logger logger = LoggerFactory.getLogger(LinesProtectionTest.class);
+  private static final Logger logger = LogManager.getLogger();
 
   @ParameterizedTest
   @ValueSource(strings = { "CREATE", "UPDATE", "DELETE", "READ" })
