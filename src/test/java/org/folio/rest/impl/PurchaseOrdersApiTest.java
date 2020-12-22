@@ -2352,7 +2352,11 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
   private void validateUpdateRejectedForNonPendingOrder(String orderId, String errorCode) {
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, orderId).mapTo(CompositePurchaseOrder.class);
-
+    if (reqData.getOngoing() != null) {
+      reqData.setOrderType(CompositePurchaseOrder.OrderType.ONGOING);
+    } else {
+      reqData.setOrderType(CompositePurchaseOrder.OrderType.ONE_TIME);
+    }
     // Delete PO Line id emulating case when new PO Line is being added
     reqData.getCompositePoLines().forEach(line -> line.setId(null));
 

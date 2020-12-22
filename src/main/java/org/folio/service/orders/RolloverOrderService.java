@@ -1,10 +1,15 @@
 package org.folio.service.orders;
 
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
+import org.folio.models.PoLineEncumbrancesHolder;
+import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -12,15 +17,22 @@ import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.service.TransactionService;
 import org.folio.service.finance.FundService;
+import org.javamoney.moneta.Money;
+import javax.money.MonetaryAmount;
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
+import static org.folio.orders.utils.HelperUtils.calculateCostUnitsTotal;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 import static org.folio.rest.jaxrs.model.EncumbranceRollover.OrderType.ONE_TIME;
@@ -54,7 +66,6 @@ public class RolloverOrderService {
   }
 
   public CompletableFuture<Void> rollover(LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
-    List<String> requireRolloverFundIds = new ArrayList<>();
     return fundService.getFundsByLedgerId(ledgerFYRollover.getLedgerId(), requestContext)
                       .thenApply(ledgerFunds -> ledgerFunds.stream().map(Fund::getId).collect(toList()))
                       .thenCompose(ledgerFundIds -> getFundsOrderIds(ledgerFundIds, ledgerFYRollover, requestContext))
@@ -110,16 +121,86 @@ public class RolloverOrderService {
               });
   }
 
-  private CompletableFuture<List<PoLine>> rolloverPoLinesChunk(List<String> orderIds, LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
+  private CompletableFuture<List<PoLine>> rolloverPoLinesChunk(List<String> orderIds, LedgerFiscalYearRollover ledgerFYRollover,
+                                                                                 RequestContext requestContext) {
     CompletableFuture<List<PoLine>> poLinesFuture = getPoLinesByOrderIds(orderIds, requestContext);
     CompletableFuture<List<Transaction>> encumbrancesFuture = getEncumbrancesForRollover(orderIds, ledgerFYRollover, requestContext);
 
     return CompletableFuture.allOf(poLinesFuture, encumbrancesFuture)
       .thenApply(v -> poLinesFuture.join())
-      .thenApply(poLines -> {
-        List<Transaction> encumbrances = encumbrancesFuture.join();
-        return poLines;
+      .thenApply(poLines -> buildPoLineEncumbrancesHolders(ledgerFYRollover, poLines, encumbrancesFuture.join()))
+      .thenApply(this::applyPoLinesRolloverChanges);
+  }
+
+  private List<PoLine> applyPoLinesRolloverChanges(List<PoLineEncumbrancesHolder> poLineEncumbrancesHolders) {
+    poLineEncumbrancesHolders.forEach(holder -> {
+      PoLine poLine = holder.getPoLine();
+      var currEncumbranceFundIdMap = holder.getCurrEncumbrances().stream().collect(groupingBy(Transaction::getFromFundId));
+      if (!MapUtils.isEmpty(currEncumbranceFundIdMap)) {
+        poLine.getFundDistribution().forEach(fundDistribution -> {
+          var currEncumbrances = currEncumbranceFundIdMap.get(fundDistribution.getFundId());
+          if (!CollectionUtils.isEmpty(currEncumbrances)) {
+            fundDistribution.setEncumbrance(currEncumbrances.get(0).getId());
+            Double fyroAdjustmentAmount = calculateFYROAdjustmentAmount(holder).getNumber().doubleValue();
+            poLine.getCost().setFyroAdjustmentAmount(fyroAdjustmentAmount);
+            Double estimatedPrice = calculateEstimatedPrice(holder);
+            poLine.getCost().setPoLineEstimatedPrice(estimatedPrice);
+          }
+        });
+      }
+    });
+    return poLineEncumbrancesHolders.stream().map(PoLineEncumbrancesHolder::getPoLine).collect(toList());
+  }
+
+  private Double calculateEstimatedPrice(PoLineEncumbrancesHolder holder) {
+    BigDecimal totalCurrEncumbranceInitialAmount = calculateTotalInitialAmountEncumbered(holder.getCurrEncumbrances());
+    return totalCurrEncumbranceInitialAmount.doubleValue();
+  }
+
+  private MonetaryAmount calculateFYROAdjustmentAmount(PoLineEncumbrancesHolder holder) {
+    Cost cost = holder.getPoLine().getCost();
+    BigDecimal totalCurrEncumbranceInitialAmount = calculateTotalInitialAmountEncumbered(holder.getCurrEncumbrances());
+    MonetaryAmount costUnitsTotal = calculateCostUnitsTotal(cost);
+    MonetaryAmount totalMonetaryCurrEncumbranceInitialAmount = Money.of(totalCurrEncumbranceInitialAmount, cost.getCurrency());
+    if (ONE_TIME.value().equals(holder.getOrderType())) {
+      return costUnitsTotal.subtract(totalMonetaryCurrEncumbranceInitialAmount);
+    }
+    return totalMonetaryCurrEncumbranceInitialAmount.subtract(costUnitsTotal);
+  }
+
+  private BigDecimal calculateTotalInitialAmountEncumbered(List<Transaction> encumbrances) {
+    return encumbrances.stream()
+                       .map(Transaction::getEncumbrance)
+                       .map(Encumbrance::getInitialAmountEncumbered)
+                       .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
+  }
+
+  private List<PoLineEncumbrancesHolder> buildPoLineEncumbrancesHolders(LedgerFiscalYearRollover ledgerFYRollover, List<PoLine> poLines,
+                                                                        List<Transaction> encumbrances) {
+    List<PoLineEncumbrancesHolder> poLineEncumbrancesHolders = new ArrayList<>();
+    String prevFYId = ledgerFYRollover.getFromFiscalYearId();
+    String currFYId = ledgerFYRollover.getToFiscalYearId();
+    poLines.forEach(poLine -> {
+      PoLineEncumbrancesHolder holder = new PoLineEncumbrancesHolder(poLine);
+      extractPoLineEncumbrances(poLine, encumbrances).forEach(encumbrance -> {
+        String encumbranceFYId = encumbrance.getFiscalYearId();
+        if (encumbranceFYId.equals(prevFYId)) {
+          holder.addPrevEncumbrance(encumbrance);
+        } else if (encumbranceFYId.equals(currFYId)) {
+          holder.addCurrEncumbrance(encumbrance);
+        }
+        holder.withOrderType(encumbrance.getEncumbrance().getOrderType().value());
+        poLineEncumbrancesHolders.add(holder);
       });
+
+    });
+    return poLineEncumbrancesHolders;
+  }
+
+  private List<Transaction> extractPoLineEncumbrances(PoLine poLine, List<Transaction> encumbrances) {
+    return encumbrances.stream()
+                .filter(encumbrance -> poLine.getId().equals(encumbrance.getEncumbrance().getSourcePoLineId()))
+                .collect(toList());
   }
 
   private CompletableFuture<List<Transaction>> getEncumbrancesForRollover(List<String> orderIds, LedgerFiscalYearRollover ledgerFYRollover,
@@ -153,7 +234,7 @@ public class RolloverOrderService {
   private String buildOpenOrderQueryByFundIdsAndTypes(List<String> fundIds, LedgerFiscalYearRollover ledgerFYRollover) {
     String typesQuery = buildOrderTypesQuery(ledgerFYRollover);
     String fundIdsQuery = fundIds.stream().map(fundId -> String.format(PO_LINE_FUND_DISTR_QUERY, fundId)).collect(Collectors.joining(OR));
-    return "(" + typesQuery + ")" +  AND + WORKFLOW_STATUS_OPEN_QUERY;// + AND + "(" + fundIdsQuery + ")";
+    return "(" + typesQuery + ")" +  AND + WORKFLOW_STATUS_OPEN_QUERY + AND + "(" + fundIdsQuery + ")";
   }
 
   private String buildOrderTypesQuery(LedgerFiscalYearRollover ledgerFYRollover) {

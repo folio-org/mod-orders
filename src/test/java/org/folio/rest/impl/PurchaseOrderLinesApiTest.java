@@ -171,8 +171,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
       PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
       ZERO_LOCATION_QTY.getCode()));
 
-    // Check that no any calls made by the business logic to other services
-    assertTrue(MockServer.serverRqRs.isEmpty());
+    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(1, column.size());
+    assertThat(column, hasKey(PURCHASE_ORDER));
   }
 
   @Test
@@ -208,8 +209,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
       PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
       ZERO_LOCATION_QTY.getCode()));
 
-    // Check that no any calls made by the business logic to other services
-    assertTrue(MockServer.serverRqRs.isEmpty());
+    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(1, column.size());
+    assertThat(column, hasKey(PURCHASE_ORDER));
   }
 
   @Test
@@ -233,8 +235,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertThat(response.getErrors(), hasSize(1));
     assertThat(response.getErrors().get(0).getCode(), equalTo(COST_DISCOUNT_INVALID.getCode()));
 
-    // Check that no any calls made by the business logic to other services
-    assertTrue(MockServer.serverRqRs.isEmpty());
+    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(1, column.size());
+    assertThat(column, hasKey(PURCHASE_ORDER));
   }
 
   @Test
@@ -362,9 +365,9 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
       ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
       PHYSICAL_COST_LOC_QTY_MISMATCH.getCode()));
 
-
-    // Check that no any calls made by the business logic to other services
-    assertTrue(MockServer.serverRqRs.isEmpty());
+    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(1, column.size());
+    assertThat(column, hasKey(PURCHASE_ORDER));
   }
 
   @Test
@@ -692,7 +695,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertEquals(lineId, actual.as(Errors.class).getErrors().get(0).getMessage());
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(1, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
@@ -753,7 +756,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertNotNull(actual.asString());
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(1, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);

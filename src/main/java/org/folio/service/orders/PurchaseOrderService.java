@@ -4,6 +4,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 
 public class PurchaseOrderService {
@@ -17,4 +18,7 @@ public class PurchaseOrderService {
     return purchaseOrderRestClient.get(query, offset, limit, requestContext, PurchaseOrderCollection.class);
   }
 
+  public CompletableFuture<PurchaseOrder> getPurchaseOrdersById(String id, RequestContext requestContext) {
+    return purchaseOrderRestClient.getById(id, requestContext, PurchaseOrder.class);
+  }
 }

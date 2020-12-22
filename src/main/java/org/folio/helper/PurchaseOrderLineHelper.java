@@ -207,17 +207,16 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
    * @param compPOL {@link CompositePoLine} to be created
    * @return completable future which might hold {@link CompositePoLine} on success, {@code null} if validation fails or an exception if any issue happens
    */
-  public CompletableFuture<CompositePoLine> createPoLine(CompositePoLine compPOL) {
+  public CompletableFuture<CompositePoLine> saveValidPoLine(CompositePurchaseOrder compPO, CompositePoLine compPOL) {
     // Validate PO Line content and retrieve order only if this operation is allowed
     return setTenantDefaultCreateInventoryValues(compPOL)
-      .thenCompose(v -> validateNewPoLine(compPOL))
+      .thenCompose(v -> validateNewPoLine(compPO.getOrderType().value(), compPOL))
       .thenCompose(isValid -> {
         if (isValid) {
-          return getCompositePurchaseOrder(compPOL.getPurchaseOrderId())
             // The PO Line can be created only for order in Pending state
-            .thenApply(this::validateOrderState)
-            .thenCompose(po -> protectionHelper.isOperationRestricted(po.getAcqUnitIds(), ProtectedOperationType.CREATE).thenApply(vVoid -> po))
-            .thenCompose(po -> createPoLine(compPOL, po));
+            validateOrderState(compPO);
+          return protectionHelper.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.CREATE)
+                                 .thenCompose(po -> saveValidPoLine(compPOL, compPO));
         } else {
           return completedFuture(null);
         }
@@ -249,13 +248,13 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
    * @param compOrder associated {@link CompositePurchaseOrder} object
    * @return completable future which might hold {@link CompositePoLine} on success or an exception if any issue happens
    */
-  CompletableFuture<CompositePoLine> createPoLine(CompositePoLine compPoLine, CompositePurchaseOrder compOrder) {
+  CompletableFuture<CompositePoLine> saveValidPoLine(CompositePoLine compPoLine, CompositePurchaseOrder compOrder) {
     // The id is required because sub-objects are being created first
     if (isEmpty(compPoLine.getId())) {
       compPoLine.setId(UUID.randomUUID().toString());
     }
     compPoLine.setPurchaseOrderId(compOrder.getId());
-    updateEstimatedPrice(compPoLine);
+    updateEstimatedPrice(compOrder.getOrderType().value(), compPoLine);
     updateLocationsQuantity(compPoLine.getLocations());
 
     JsonObject line = mapFrom(compPoLine);
@@ -392,13 +391,12 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   /**
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
-  public CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine) {
+  public CompletableFuture<Void> updateOrderLine(CompositePurchaseOrder compOrder, CompositePoLine compOrderLine) {
     return getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
-        .thenCompose(lineFromStorage -> getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId())
-          .thenCompose(compOrder -> {
+          .thenCompose(lineFromStorage -> {
             validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage, compOrder);
             updateLocationsQuantity(compOrderLine.getLocations());
-            updateEstimatedPrice(compOrderLine);
+            updateEstimatedPrice(compOrder.getOrderType().value(), compOrderLine);
 
             return checkLocationsAndPiecesConsistency(compOrderLine, lineFromStorage.mapTo(PoLine.class), compOrder)
               .thenCompose(vVoid -> protectionHelper.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE)
@@ -407,15 +405,14 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
                 .thenCompose(v -> financeHelper.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine)))
                 .thenCompose(v -> processOpenedPoLine(compOrder, compOrderLine, lineFromStorage))
                 .thenApply(v -> lineFromStorage));
-          }))
-        .thenCompose(lineFromStorage -> {
-          // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
-          // update
-          compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
-          return updateOrderLine(compOrderLine, lineFromStorage)
-            .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage));
-        });
-
+          })
+          .thenCompose(lineFromStorage -> {
+            // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
+            // update
+            compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
+            return updateOrderLine(compOrderLine, lineFromStorage)
+              .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage));
+          });
   }
 
   private CompletableFuture<Void> processOpenedPoLine(CompositePurchaseOrder compOrder, CompositePoLine compositePoLine,
@@ -702,14 +699,14 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
    * @param compPOL Purchase Order Line to validate
    * @return completable future which might be completed with {@code true} if line is valid, {@code false} if not valid or an exception if processing fails
    */
-  private CompletableFuture<Boolean> validateNewPoLine(CompositePoLine compPOL) {
+  private CompletableFuture<Boolean> validateNewPoLine(String orderType, CompositePoLine compPOL) {
     logger.debug("Validating if PO Line is valid...");
 
     // PO id is required for PO Line to be created
     if (compPOL.getPurchaseOrderId() == null) {
       addProcessingError(ErrorCodes.MISSING_ORDER_ID_IN_POL.toError());
     }
-    addProcessingErrors(validatePoLine(compPOL));
+    addProcessingErrors(validatePoLine(orderType, compPOL));
 
     // If static validation has failed, no need to call other services
     if (!getErrors().isEmpty()) {
@@ -732,7 +729,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       });
   }
 
-  private CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId) {
+  public CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId) {
     return getPurchaseOrderById(purchaseOrderId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
       .exceptionally(t -> {
@@ -795,9 +792,9 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
    * See MODORDERS-180 for more details.
    * @param compPoLine composite PO Line
    */
-  public void updateEstimatedPrice(CompositePoLine compPoLine) {
+  public void updateEstimatedPrice(String orderType, CompositePoLine compPoLine) {
     Cost cost = compPoLine.getCost();
-    cost.setPoLineEstimatedPrice(calculateEstimatedPrice(cost).getNumber().doubleValue());
+    cost.setPoLineEstimatedPrice(calculateEstimatedPrice(orderType, cost).getNumber().doubleValue());
   }
 
   public void updateLocationsQuantity(List<Location> locations) {

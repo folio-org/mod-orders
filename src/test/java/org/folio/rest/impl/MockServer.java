@@ -1438,7 +1438,7 @@ public class MockServer {
   private void updatePoLineEstimatedPrice(PoLine line) {
     if (line.getCost() != null) {
       Cost cost = JsonObject.mapFrom(line.getCost()).mapTo(Cost.class);
-      line.getCost().setPoLineEstimatedPrice(calculateEstimatedPrice(cost).getNumber().doubleValue());
+      line.getCost().setPoLineEstimatedPrice(calculateEstimatedPrice(PurchaseOrder.OrderType.ONE_TIME.value(), cost).getNumber().doubleValue());
     }
   }
 
@@ -1790,6 +1790,9 @@ public class MockServer {
         org.folio.rest.acq.model.PurchaseOrder order = po.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
         order.setId(id);
         po = JsonObject.mapFrom(order);
+      }
+      if (po.getString("orderType") == null) {
+        po.put("orderType", org.folio.rest.acq.model.PurchaseOrder.OrderType.ONE_TIME.value());
       }
       addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
       serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
