@@ -9,8 +9,6 @@ import java.util.Map;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.helper.OrderTemplatesHelper;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.OrderTemplate;
@@ -20,10 +18,12 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class OrderTemplatesAPI implements OrdersOrderTemplates {
 
-  private static final Logger logger = LogManager.getLogger();
+  private static final Logger logger = LoggerFactory.getLogger(OrderTemplatesAPI.class);
 
   private static final String ORDER_TEMPLATE_LOCATION_PREFIX = "/orders/order-templates/%s";
 
@@ -35,7 +35,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
     helper.createOrderTemplate(entity)
       .thenAccept(template -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully created new order template: {}", JsonObject.mapFrom(template)
+          logger.info("Successfully created new order template: " + JsonObject.mapFrom(template)
             .encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(
@@ -52,7 +52,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
     helper.getOrderTemplates(query, offset, limit)
       .thenAccept(templates -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved order templates collection: {}", JsonObject.mapFrom(templates)
+          logger.info("Successfully retrieved order templates collection: " + JsonObject.mapFrom(templates)
             .encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(templates)));
@@ -93,7 +93,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
     helper.getOrderTemplateById(id)
       .thenAccept(template -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved order template: {}", JsonObject.mapFrom(template)
+          logger.info("Successfully retrieved order template: " + JsonObject.mapFrom(template)
             .encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(template)));

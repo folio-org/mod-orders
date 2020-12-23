@@ -11,8 +11,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.Entity;
 import org.folio.rest.tools.client.HttpClientFactory;
@@ -22,31 +20,33 @@ import org.folio.rest.tools.utils.TenantTool;
 import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
-
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public abstract class AbstractHttpDAO<T extends Entity, E> implements GenericDAO<T, E> {
 
-  protected final Logger logger = LogManager.getLogger();
+  protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
-  private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {} {}";
+  private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {}";
   public static final String OKAPI_URL = "x-okapi-url";
   static final String SEARCH_ENDPOINT = "%s?limit=%s&offset=%s%s";
 
   @Override
   public CompletableFuture<E> get(String query, int offset, int limit, Context context, Map<String, String> okapiHeaders) {
     String endpoint = String.format(SEARCH_ENDPOINT, getEndpoint(), limit, offset, buildQuery(query, logger));
-    return get(okapiHeaders, endpoint, getCollectionClazz());
+    return get(context, okapiHeaders, endpoint, getCollectionClazz());
   }
 
   @Override
   public CompletableFuture<T> getById(String id, Context context, Map<String, String> okapiHeaders) {
     String endpoint = getByIdEndpoint(id);
-    return get(okapiHeaders, endpoint, getClazz());
+    return get(context, okapiHeaders, endpoint, getClazz());
   }
 
-  private <S> CompletableFuture<S> get(Map<String, String> okapiHeaders, String endpoint, Class<S> sClass) {
-    CompletableFuture<S> future = new CompletableFuture<>();
+  private <S> CompletableFuture<S> get(Context context, Map<String, String> okapiHeaders, String endpoint, Class<S> sClass) {
+    CompletableFuture<S> future = new VertxCompletableFuture<>(context);
     HttpClientInterface client = getHttpClient(okapiHeaders);
     if (logger.isDebugEnabled()) {
       logger.debug("Calling GET {}", endpoint);
@@ -85,7 +85,7 @@ public abstract class AbstractHttpDAO<T extends Entity, E> implements GenericDAO
 
   @Override
   public CompletableFuture<T> save(T entity, Context context, Map<String, String> okapiHeaders) {
-    CompletableFuture<T> future = new CompletableFuture<>();
+    CompletableFuture<T> future = new VertxCompletableFuture<>(context);
     String endpoint = getEndpoint();
     JsonObject recordData = JsonObject.mapFrom(entity);
 
@@ -101,7 +101,7 @@ public abstract class AbstractHttpDAO<T extends Entity, E> implements GenericDAO
         .handle((body, t) -> {
           client.closeClient();
           if (t != null) {
-            logger.error("'POST {}' request failed. Request body: {} {}", t.getCause(), endpoint, recordData.encodePrettily());
+            logger.error("'POST {}' request failed. Request body: {}", t.getCause(), endpoint, recordData.encodePrettily());
             future.completeExceptionally(t.getCause());
           } else {
             T responseEntity = body.mapTo(getClazz());
@@ -113,7 +113,7 @@ public abstract class AbstractHttpDAO<T extends Entity, E> implements GenericDAO
           return null;
         });
     } catch (Exception e) {
-      logger.error("'POST {}' request failed. Request body: {} {}", e, endpoint, recordData.encodePrettily());
+      logger.error("'POST {}' request failed. Request body: {}", e, endpoint, recordData.encodePrettily());
       client.closeClient();
       future.completeExceptionally(e);
     }
@@ -123,7 +123,7 @@ public abstract class AbstractHttpDAO<T extends Entity, E> implements GenericDAO
 
   @Override
   public CompletableFuture<Void> update(String id, T entity, Context context, Map<String, String> okapiHeaders) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(context);
     String endpoint = getByIdEndpoint(id);
     JsonObject recordData = JsonObject.mapFrom(entity);
 
@@ -140,14 +140,14 @@ public abstract class AbstractHttpDAO<T extends Entity, E> implements GenericDAO
           client.closeClient();
           if (t != null) {
             future.completeExceptionally(t.getCause());
-            logger.error("'PUT {}' request failed. Request body: {} {}", t.getCause(), endpoint, recordData.encodePrettily());
+            logger.error("'PUT {}' request failed. Request body: {}", t.getCause(), endpoint, recordData.encodePrettily());
           } else {
             future.complete(null);
           }
           return null;
         });
     } catch (Exception e) {
-      logger.error("'PUT {}' request failed. Request body: {} {}", e, endpoint, recordData.encodePrettily());
+      logger.error("'PUT {}' request failed. Request body: {}", e, endpoint, recordData.encodePrettily());
       client.closeClient();
       future.completeExceptionally(e);
     }
@@ -157,7 +157,7 @@ public abstract class AbstractHttpDAO<T extends Entity, E> implements GenericDAO
 
   @Override
   public CompletableFuture<Void> delete(String id, Context context, Map<String, String> okapiHeaders) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(context);
     String endpoint = getByIdEndpoint(id);
     if (logger.isDebugEnabled()) {
       logger.debug(CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpoint);

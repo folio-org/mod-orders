@@ -64,6 +64,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -75,7 +76,9 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
+import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
+import org.folio.models.PoLineFundHolder;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.ErrorCodes;
@@ -101,6 +104,7 @@ import org.javamoney.moneta.Money;
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
 
 public class PurchaseOrderHelper extends AbstractHelper {
@@ -159,11 +163,11 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @return completable future with {@link PurchaseOrderCollection} object on success or an exception if processing fails
    */
   public CompletableFuture<PurchaseOrderCollection> getPurchaseOrders(int limit, int offset, String query) {
-    CompletableFuture<PurchaseOrderCollection> future = new CompletableFuture<>();
+    CompletableFuture<PurchaseOrderCollection> future = new VertxCompletableFuture<>(ctx);
 
     try {
       buildGetOrdersPath(limit, offset, query)
-        .thenCompose(endpoint -> handleGetRequest(endpoint, httpClient, okapiHeaders, logger))
+        .thenCompose(endpoint -> handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger))
         .thenAccept(jsonOrders -> future.complete(jsonOrders.mapTo(PurchaseOrderCollection.class)))
         .exceptionally(t -> {
           logger.error("Error getting orders", t);
@@ -215,7 +219,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       return completedFuture(null);
     }
 
-    return CompletableFuture.runAsync(() -> verifyUserHasAssignPermission(acqUnitIds))
+    return VertxCompletableFuture.runAsync(ctx, () -> verifyUserHasAssignPermission(acqUnitIds))
       .thenCompose(ok -> protectionHelper.verifyIfUnitsAreActive(acqUnitIds))
       .thenCompose(ok -> protectionHelper.isOperationRestricted(acqUnitIds, ProtectedOperationType.CREATE));
   }
@@ -226,7 +230,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @return completable future holding response indicating success (204 No Content) or error if failed
    */
   public CompletableFuture<Void> updateOrder(CompositePurchaseOrder compPO) {
-    return getPurchaseOrderById(compPO.getId(), lang, httpClient, okapiHeaders, logger)
+    return getPurchaseOrderById(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
       .thenCompose(jsonPoFromStorage -> validateIfPOProtectedFieldsChanged(compPO, jsonPoFromStorage))
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
       .thenCompose(poFromStorage -> {
@@ -284,7 +288,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     if (isEmpty(compPO.getCompositePoLines())) {
       future = fetchOrderLinesByOrderId(compPO.getId());
     } else {
-      future = CompletableFuture.supplyAsync(() -> {
+      future = VertxCompletableFuture.supplyBlockingAsync(ctx, () -> {
         List<PoLine> poLines = HelperUtils.convertToPoLines(compPO.getCompositePoLines());
         changeOrderStatus(purchaseOrder, poLines);
         return poLines;
@@ -413,35 +417,35 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @return completable future which is just completed with nothing on success or an exception if processing fails
    */
   public CompletableFuture<Void> deleteOrder(String id) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
-    getPurchaseOrderById(id, lang, httpClient, okapiHeaders, logger)
+    getPurchaseOrderById(id, lang, httpClient, ctx, okapiHeaders, logger)
       .thenAccept(purchaseOrder -> {
         CompositePurchaseOrder compPo = convertToCompositePurchaseOrder(purchaseOrder);
         protectionHelper.isOperationRestricted(compPo.getAcqUnitIds(), DELETE)
           .thenAccept(aVoid -> financeHelper.deleteOrderEncumbrances(id)
-            .thenCompose(v -> deletePoLines(id, lang, httpClient, okapiHeaders, logger))
+            .thenCompose(v -> deletePoLines(id, lang, httpClient, ctx, okapiHeaders, logger))
             .thenRun(() -> {
               logger.info("Successfully deleted poLines, proceeding with purchase order");
-              handleDeleteRequest(resourceByIdPath(PURCHASE_ORDER, id), httpClient, okapiHeaders, logger)
+              handleDeleteRequest(resourceByIdPath(PURCHASE_ORDER, id), httpClient, ctx, okapiHeaders, logger)
                 .thenAccept(rs -> {
                   logger.info("Successfully deleted order with id={}", id);
                   future.complete(null);
                 })
                 .exceptionally(t -> {
-                  logger.error("Failed to delete the order with id={} {}", id, t.getCause());
+                  logger.error("Failed to delete the order with id={}", t.getCause(), id);
                   future.completeExceptionally(t);
                   return null;
                 });
             })
             .exceptionally(t -> {
-              logger.error("Failed to delete PO Lines of the order with id={} {}", id, t.getCause());
+              logger.error("Failed to delete PO Lines of the order with id={}", t.getCause(), id);
               future.completeExceptionally(t);
               return null;
             })
           )
           .exceptionally(t -> {
-            logger.error("User with id={} is forbidden to view delete with id={} {}", getCurrentUserId(), id, t.getCause());
+            logger.error("User with id={} is forbidden to view delete with id={}", t.getCause(), getCurrentUserId(), id);
             future.completeExceptionally(t);
             return null;
           });
@@ -463,9 +467,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
    */
   public CompletableFuture<CompositePurchaseOrder> getCompositeOrder(String id) {
 
-    CompletableFuture<CompositePurchaseOrder> future = new CompletableFuture<>();
+    CompletableFuture<CompositePurchaseOrder> future = new VertxCompletableFuture<>(ctx);
 
-    getPurchaseOrderById(id, lang, httpClient, okapiHeaders, logger)
+    getPurchaseOrderById(id, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
       .thenAccept(compPO -> protectionHelper.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.READ)
         .thenAccept(ok -> updateAndGetOrderWithLines(compPO)
@@ -474,17 +478,17 @@ public class PurchaseOrderHelper extends AbstractHelper {
           .thenCompose(v -> populateOrderSummary(compPO))
           .thenAccept(future::complete)
           .exceptionally(t -> {
-            logger.error("Failed to get lines for order with id={} {}", id, t.getCause());
+            logger.error("Failed to get lines for order with id={}", t.getCause(), id);
             future.completeExceptionally(t);
             return null;
           }))
         .exceptionally(t -> {
-          logger.error("User with id={} is forbidden to view order with id={} {}", getCurrentUserId(), id, t.getCause());
+          logger.error("User with id={} is forbidden to view order with id={}", t.getCause(), getCurrentUserId(), id);
           future.completeExceptionally(t);
           return null;
         }))
       .exceptionally(t -> {
-        logger.error("Failed to build composite purchase order with id={} {}", id, t.getCause());
+        logger.error("Failed to build composite purchase order with id={}", t.getCause(), id);
         future.completeExceptionally(t);
         return null;
       });
@@ -557,7 +561,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> updateItemsInInventory(List<JsonObject> items) {
-    return CompletableFuture.allOf(items.stream()
+    return VertxCompletableFuture.allOf(ctx, items.stream()
       .map(inventoryHelper::updateItem)
       .toArray(CompletableFuture[]::new));
   }
@@ -611,7 +615,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .map(orderLineHelper::validateAndNormalizeISBN)
       .toArray(CompletableFuture[]::new);
 
-    return CompletableFuture.allOf(futures);
+    return VertxCompletableFuture.allOf(ctx, futures);
   }
 
   private CompletableFuture<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO) {
@@ -620,7 +624,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .map(orderLineHelper::setTenantDefaultCreateInventoryValues)
       .toArray(CompletableFuture[]::new);
 
-    return CompletableFuture.allOf(futures);
+    return VertxCompletableFuture.allOf(ctx, futures);
   }
 
   /**
@@ -811,7 +815,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private CompletableFuture<List<CompositePoLine>> fetchCompositePolLines(CompositePurchaseOrder compPO) {
     if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-      return  getCompositePoLines(compPO.getId(), lang, httpClient, okapiHeaders, logger)
+      return  getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
         .thenApply(poLines -> {
           orderLineHelper.sortPoLinesByPoLineNumber(poLines);
           return poLines;
@@ -823,7 +827,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   public CompletableFuture<CompositePurchaseOrder> updateAndGetOrderWithLines(CompositePurchaseOrder compPO) {
     if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-      return getCompositePoLines(compPO.getId(), lang, httpClient, okapiHeaders, logger)
+      return getCompositePoLines(compPO.getId(), lang, httpClient, ctx, okapiHeaders, logger)
         .thenApply(poLines -> {
           orderLineHelper.sortPoLinesByPoLineNumber(poLines);
           return compPO.withCompositePoLines(poLines);
@@ -907,7 +911,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   public CompletableFuture<Void> updateOrderSummary(PurchaseOrder purchaseOrder) {
     logger.debug("Updating order...");
-    return handlePutRequest(resourceByIdPath(PURCHASE_ORDER, purchaseOrder.getId()), JsonObject.mapFrom(purchaseOrder), httpClient, okapiHeaders, logger);
+    return handlePutRequest(resourceByIdPath(PURCHASE_ORDER, purchaseOrder.getId()), JsonObject.mapFrom(purchaseOrder), httpClient, ctx, okapiHeaders, logger);
   }
 
   /**
@@ -936,7 +940,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       })
        .toArray(CompletableFuture[]::new);
 
-    return CompletableFuture.allOf(futures);
+    return VertxCompletableFuture.allOf(ctx, futures);
   }
 
   public CompletableFuture<EncumbrancesProcessingHolder> processEncumbrances(CompositePurchaseOrder compPO) {
@@ -986,9 +990,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
       // The remaining unprocessed PoLines should be removed
       poLinesFromStorage
         .forEach(poLine -> futures.add(financeHelper.deletePoLineEncumbrances(poLine.getId())
-          .thenCompose(v -> deletePoLine(JsonObject.mapFrom(poLine), httpClient, okapiHeaders, logger))));
+          .thenCompose(v -> deletePoLine(JsonObject.mapFrom(poLine), httpClient, ctx, okapiHeaders, logger))));
     }
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+    return VertxCompletableFuture.allOf(ctx, futures.toArray(new CompletableFuture[0]));
   }
 
   private List<CompletableFuture<?>> processPoLinesUpdate(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage) {
@@ -1056,7 +1060,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     List<String> updatedAcqUnitIds = updatedOrder.getAcqUnitIds();
     List<String> currentAcqUnitIds = persistedOrder.getAcqUnitIds();
 
-    return CompletableFuture.runAsync(() -> verifyUserHasManagePermission(updatedAcqUnitIds, currentAcqUnitIds))
+    return VertxCompletableFuture.runAsync(ctx, () -> verifyUserHasManagePermission(updatedAcqUnitIds, currentAcqUnitIds))
       // Check that all newly assigned units are active/exist
       .thenCompose(ok -> protectionHelper.verifyIfUnitsAreActive(ListUtils.subtract(updatedAcqUnitIds, currentAcqUnitIds)))
       .thenCompose(ok -> getInvolvedOperations(updatedOrder))
@@ -1100,7 +1104,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       return CompletableFuture.completedFuture(new ArrayList<>(orderLines));
     }
 
-    return getPoLines(orderId, lang, httpClient, okapiHeaders, logger)
+    return getPoLines(orderId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(linesJsonArray -> {
         orderLines = HelperUtils.convertJsonToPoLines(linesJsonArray);
         return new ArrayList<>(orderLines);
@@ -1125,5 +1129,21 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return purchaseOrder;
   }
 
+  public CompletableFuture<Void> createEncumbrancesAndUpdatePoLines(List<EncumbranceRelationsHolder> relationsHolders) {
+    return VertxCompletableFuture.allOf(ctx, relationsHolders.stream()
+        .map(holder -> createRecordInStorage(JsonObject.mapFrom(holder.getTransaction()), String.format(ENCUMBRANCE_POST_ENDPOINT, lang))
+                              .thenCompose(id -> {
+                                PoLineFundHolder poLineFundHolder = holder.getPoLineFundHolder();
+                                poLineFundHolder.getFundDistribution().setEncumbrance(id);
+                                return orderLineHelper.updatePoLinesSummary(Collections.singletonList(poLineFundHolder.getPoLine()));
+                              })
+                              .exceptionally(fail -> {
+                                checkCustomTransactionError(fail);
+                                throw new CompletionException(fail);
+                              })
+        )
+      .toArray(CompletableFuture[]::new)
+    );
+  }
 
 }

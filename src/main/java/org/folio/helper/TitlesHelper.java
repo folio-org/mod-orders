@@ -25,6 +25,7 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
 
 public class TitlesHelper extends AbstractHelper {
@@ -39,7 +40,7 @@ public class TitlesHelper extends AbstractHelper {
   }
 
   public CompletableFuture<Title> createTitle(Title title) {
-    CompletableFuture<Title> future = new CompletableFuture<>();
+    CompletableFuture<Title> future = new VertxCompletableFuture<>(ctx);
     populateTitle(title, title.getPoLineId())
       .thenCompose(v -> createRecordInStorage(JsonObject.mapFrom(title), resourcesPath(TITLES)).thenApply(title::withId))
       .thenAccept(future::complete)
@@ -51,9 +52,9 @@ public class TitlesHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> populateTitle(Title title, String poLineId) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
-    getPoLineById(poLineId, lang, httpClient, okapiHeaders, logger)
+    getPoLineById(poLineId, lang, httpClient, ctx, okapiHeaders, logger)
       .thenApply(json -> json.mapTo(PoLine.class))
       .thenAccept(poLine -> {
         if(Boolean.TRUE.equals(poLine.getIsPackage())) {
@@ -90,21 +91,21 @@ public class TitlesHelper extends AbstractHelper {
 
   public CompletableFuture<TitleCollection> getTitles(int limit, int offset, String query) {
     String endpoint = String.format(GET_TITLES_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
-    return HelperUtils.handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
-      .thenApply(json -> json.mapTo(TitleCollection.class));
+    return HelperUtils.handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      .thenCompose(json -> VertxCompletableFuture.supplyBlockingAsync(ctx, () -> json.mapTo(TitleCollection.class)));
   }
 
   public CompletableFuture<Title> getTitle(String id) {
-    return HelperUtils.handleGetRequest(resourceByIdPath(TITLES, id), httpClient, okapiHeaders,logger)
+    return HelperUtils.handleGetRequest(resourceByIdPath(TITLES, id), httpClient, ctx, okapiHeaders,logger)
       .thenApply(json -> json.mapTo(Title.class));
   }
 
   public CompletableFuture<Void> updateTitle(Title title) {
-    return HelperUtils.handlePutRequest(resourceByIdPath(TITLES, title.getId()), JsonObject.mapFrom(title), httpClient, okapiHeaders, logger);
+    return HelperUtils.handlePutRequest(resourceByIdPath(TITLES, title.getId()), JsonObject.mapFrom(title), httpClient, ctx, okapiHeaders, logger);
   }
 
   public CompletableFuture<Void> deleteTitle(String id) {
-    return HelperUtils.handleDeleteRequest(resourceByIdPath(TITLES, id), httpClient, okapiHeaders, logger);
+    return HelperUtils.handleDeleteRequest(resourceByIdPath(TITLES, id), httpClient, ctx, okapiHeaders, logger);
   }
 
   public CompletableFuture<Map<String, List<Title>>> getTitlesByPoLineIds(List<String> poLineIds) {

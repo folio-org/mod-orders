@@ -16,7 +16,7 @@ import org.folio.rest.jaxrs.model.OrderTemplateCollection;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
-
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class OrderTemplatesHelper extends AbstractHelper {
 
@@ -32,20 +32,20 @@ public class OrderTemplatesHelper extends AbstractHelper {
 
   public CompletableFuture<Void> updateOrderTemplate(OrderTemplate template) {
     String endpoint = resourceByIdPath(ORDER_TEMPLATES, template.getId());
-    return handlePutRequest(endpoint, JsonObject.mapFrom(template), httpClient, okapiHeaders, logger);
+    return handlePutRequest(endpoint, JsonObject.mapFrom(template), httpClient, ctx, okapiHeaders, logger);
   }
 
   public CompletableFuture<OrderTemplate> getOrderTemplateById(String id) {
-    return handleGetRequest(resourceByIdPath(ORDER_TEMPLATES, id), httpClient, okapiHeaders, logger)
+    return handleGetRequest(resourceByIdPath(ORDER_TEMPLATES, id), httpClient, ctx, okapiHeaders, logger)
       .thenApply(json -> json.mapTo(OrderTemplate.class));
   }
 
   public CompletableFuture<OrderTemplateCollection> getOrderTemplates(String query, int offset, int limit) {
-    CompletableFuture<OrderTemplateCollection> future = new CompletableFuture<>();
+    CompletableFuture<OrderTemplateCollection> future = new VertxCompletableFuture<>(ctx);
     try {
       String endpoint = String.format(GET_ORDER_TEMPLATES_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
-      handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
-        .thenCompose(json -> CompletableFuture.supplyAsync(() -> json.mapTo(OrderTemplateCollection.class)))
+      handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+        .thenCompose(json -> VertxCompletableFuture.supplyBlockingAsync(ctx, () -> json.mapTo(OrderTemplateCollection.class)))
         .thenAccept(future::complete)
         .exceptionally(t -> {
           future.completeExceptionally(t.getCause());
@@ -58,6 +58,6 @@ public class OrderTemplatesHelper extends AbstractHelper {
   }
 
   public CompletableFuture<Void> deleteOrderTemplate(String id) {
-    return handleDeleteRequest(resourceByIdPath(ORDER_TEMPLATES, id), httpClient, okapiHeaders, logger);
+    return handleDeleteRequest(resourceByIdPath(ORDER_TEMPLATES, id), httpClient, ctx, okapiHeaders, logger);
   }
 }

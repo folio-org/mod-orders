@@ -1,7 +1,5 @@
 package org.folio.rest.impl;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.resource.interfaces.PostDeployVerticle;
 import org.folio.spring.SpringContextUtil;
@@ -19,12 +17,14 @@ import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 /**
  * The class initializes event bus handlers
  */
 public class InitEventBus implements PostDeployVerticle {
-  private final Logger logger = LogManager.getLogger();
+  private final Logger logger = LoggerFactory.getLogger(InitEventBus.class);
 
   @Autowired
   @Qualifier("receiveOrderStatusChangeHandler")

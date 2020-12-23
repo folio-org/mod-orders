@@ -1,9 +1,8 @@
 package org.folio.rest.core.models;
 
+import io.vertx.core.Context;
 import java.util.Collections;
 import java.util.Map;
-
-import io.vertx.core.Context;
 
 public class RequestContext {
   private Context context;

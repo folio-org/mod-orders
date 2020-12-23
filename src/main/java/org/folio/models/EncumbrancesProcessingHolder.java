@@ -1,11 +1,9 @@
 package org.folio.models;
 
+import com.google.common.collect.ImmutableList;
+import org.folio.rest.acq.model.finance.Transaction;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.folio.rest.acq.model.finance.Transaction;
-
-import com.google.common.collect.ImmutableList;
 
 public class EncumbrancesProcessingHolder {
   private List<Transaction> encumbrancesFromStorage;

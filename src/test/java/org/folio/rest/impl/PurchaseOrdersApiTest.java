@@ -65,32 +65,7 @@ import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.rest.impl.MockServer.BUDGET_IS_INACTIVE_TENANT;
-import static org.folio.rest.impl.MockServer.BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT;
-import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
-import static org.folio.rest.impl.MockServer.FUND_CANNOT_BE_PAID_TENANT;
-import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
-import static org.folio.rest.impl.MockServer.LEDGER_NOT_FOUND_FOR_TRANSACTION_TENANT;
-import static org.folio.rest.impl.MockServer.PO_LINES_EMPTY_COLLECTION_ID;
-import static org.folio.rest.impl.MockServer.addMockEntry;
-import static org.folio.rest.impl.MockServer.getContributorNameTypesSearches;
-import static org.folio.rest.impl.MockServer.getCreatedEncumbrances;
-import static org.folio.rest.impl.MockServer.getCreatedHoldings;
-import static org.folio.rest.impl.MockServer.getCreatedInstances;
-import static org.folio.rest.impl.MockServer.getCreatedItems;
-import static org.folio.rest.impl.MockServer.getCreatedOrderSummaries;
-import static org.folio.rest.impl.MockServer.getCreatedPieces;
-import static org.folio.rest.impl.MockServer.getExistingOrderSummaries;
-import static org.folio.rest.impl.MockServer.getHoldingsSearches;
-import static org.folio.rest.impl.MockServer.getInstanceStatusesSearches;
-import static org.folio.rest.impl.MockServer.getInstanceTypesSearches;
-import static org.folio.rest.impl.MockServer.getInstancesSearches;
-import static org.folio.rest.impl.MockServer.getItemUpdates;
-import static org.folio.rest.impl.MockServer.getItemsSearches;
-import static org.folio.rest.impl.MockServer.getLoanTypesSearches;
-import static org.folio.rest.impl.MockServer.getPieceSearches;
-import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
-import static org.folio.rest.impl.MockServer.getQueryParams;
+import static org.folio.rest.impl.MockServer.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
@@ -129,8 +104,6 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.VendorHelper;
@@ -183,12 +156,14 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class PurchaseOrdersApiTest extends ApiTestBase {
 
   private static final String PENDING_ORDER_APPROVED_FALSE = "e5ae4afd-3fa9-494e-a972-f541df9b877e";
 
-  private static final Logger logger = LogManager.getLogger();
+  private static final Logger logger = LoggerFactory.getLogger(PurchaseOrdersApiTest.class);
 
   private static final String ORDER_WITHOUT_PO_LINES = "order_without_po_lines.json";
   private static final String ORDER_WITHOUT_VENDOR_ID = "order_without_vendor_id.json";
@@ -593,7 +568,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     assertThat(error.getCode(), is(ONGOING_NOT_ALLOWED.getCode()));
 
-    MockServer.serverRqRs.columnKeySet().remove(HttpMethod.SEARCH);
+    MockServer.serverRqRs.columnKeySet().remove(HttpMethod.OTHER);
     // Check that no any calls made by the business logic to other services
     assertEquals(0, MockServer.serverRqRs.size());
   }
@@ -617,7 +592,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     assertThat(error.getCode(), is(MISSING_ONGOING.getCode()));
 
-    MockServer.serverRqRs.columnKeySet().remove(HttpMethod.SEARCH);
+    MockServer.serverRqRs.columnKeySet().remove(HttpMethod.OTHER);
     // Check that no any calls made by the business logic to other services
     assertEquals(0, MockServer.serverRqRs.size());
   }

@@ -1,16 +1,14 @@
 package org.folio.service.exchange;
 
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import java.util.Optional;
-
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ExchangeRateProvider;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.models.RequestContext;
 
 public class ExchangeRateProviderResolver {
-  private final Logger logger = LogManager.getLogger();
+  private final Logger logger = LoggerFactory.getLogger(this.getClass());
   public static final String RATE_KEY = "factor";
 
   public ExchangeRateProvider resolve(ConversionQuery conversionQuery, RequestContext requestContext){

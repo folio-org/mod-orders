@@ -15,18 +15,18 @@ import static org.hamcrest.Matchers.not;
 
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.rest.acq.model.ReceivingHistoryCollection;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 import org.junit.jupiter.api.Test;
 
 import io.restassured.http.Headers;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class ReceivingHistoryApiTest extends ApiTestBase {
 
-  private static final Logger logger = LogManager.getLogger();
+  private static final Logger logger = LoggerFactory.getLogger(ReceivingHistoryApiTest.class);
 
   static final String RECEIVING_HISTORY_PURCHASE_ORDER_ID = "0804ddec-6545-404a-b54d-a693f505681d";
   private static final String ORDERS_RECEIVING_HISTORY_ENDPOINT = "/orders/receiving-history";

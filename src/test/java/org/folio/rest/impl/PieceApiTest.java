@@ -18,8 +18,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -33,10 +31,12 @@ import org.junit.jupiter.api.Test;
 
 import io.restassured.http.Header;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class PieceApiTest extends ApiTestBase {
 
-  private static final Logger logger = LogManager.getLogger();
+  private static final Logger logger = LoggerFactory.getLogger(PieceApiTest.class);
 
   public static final String PIECES_ENDPOINT = "/orders/pieces";
   private static final String PIECES_ID_PATH = PIECES_ENDPOINT + "/%s";
