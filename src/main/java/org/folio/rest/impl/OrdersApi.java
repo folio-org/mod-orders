@@ -19,7 +19,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.resource.OrdersCompositeOrders;
 import org.folio.rest.jaxrs.resource.OrdersRollover;
-import org.folio.service.orders.RolloverOrderService;
+import org.folio.service.orders.OrderRolloverService;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -34,10 +34,11 @@ import io.vertx.core.logging.LoggerFactory;
 public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersRollover {
 
   private static final Logger logger = LoggerFactory.getLogger(OrdersApi.class);
+
   private static final String ORDERS_LOCATION_PREFIX = "/orders/composite-orders/%s";
 
   @Autowired
-  private RolloverOrderService rolloverOrderService;
+  private OrderRolloverService orderRolloverService;
 
   public OrdersApi(Vertx vertx, String tenantId) {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -82,7 +83,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
           logger.info("Creating PO and POLines...");
           return helper.createPurchaseOrder(compPO)
             .thenAccept(withIds -> {
-              logger.info("Successfully Placed Order: " + JsonObject.mapFrom(withIds).encodePrettily());
+              logger.info("Successfully Placed Order: {}", JsonObject.mapFrom(withIds).encodePrettily());
               asyncResultHandler.handle(succeededFuture(helper
                 .buildResponseWithLocation(String.format(ORDERS_LOCATION_PREFIX, withIds.getId()), withIds)));
             });
@@ -108,7 +109,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
           return helper.updateOrder(compPO)
             .thenAccept(v -> {
               if (logger.isInfoEnabled()) {
-                logger.info("Successfully Updated Order: " + JsonObject.mapFrom(compPO).encodePrettily());
+                logger.info("Successfully Updated Order: {}", JsonObject.mapFrom(compPO).encodePrettily());
               }
               asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
             });
@@ -118,7 +119,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
         }
       })
       .exceptionally(t -> {
-        logger.error("Failed to update purchase order with id={}", t, orderId);
+        logger.error("Failed to update purchase order with id={} : {}", orderId, t);
         return HelperUtils.handleErrorResponse(asyncResultHandler, helper, t);
       });
   }
@@ -145,7 +146,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
       .getPurchaseOrders(limit, offset, query)
       .thenAccept(orders -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved orders: " + JsonObject.mapFrom(orders).encodePrettily());
+          logger.info("Successfully retrieved orders: {}", JsonObject.mapFrom(orders).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(orders)));
       })
@@ -161,7 +162,8 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
   @Override
   @Validate
   public void postOrdersRollover(String lang, LedgerFiscalYearRollover ledgerFYRollover, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    rolloverOrderService.rollover(ledgerFYRollover, new RequestContext(vertxContext, okapiHeaders))
-        .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())));
+    orderRolloverService.rollover(ledgerFYRollover, new RequestContext(vertxContext, okapiHeaders))
+        .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+        .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 }

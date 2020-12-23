@@ -3,39 +3,26 @@ package org.folio.models;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.PoLine;
 
 public class PoLineEncumbrancesHolder {
   private final PoLine poLine;
   private String orderType;
-  private List<Transaction> prevEncumbrances;
-  private List<Transaction> currEncumbrances;
+  private List<Transaction> encumbrances;
 
   public PoLineEncumbrancesHolder(PoLine poLine) {
     this.poLine = poLine;
-    this.prevEncumbrances = new ArrayList<>();
-    this.currEncumbrances = new ArrayList<>();
+    this.encumbrances = new ArrayList<>();
   }
 
-  public PoLineEncumbrancesHolder addPrevEncumbrance(Transaction prevEncumbrance) {
-    this.prevEncumbrances.add(prevEncumbrance);
+  public PoLineEncumbrancesHolder addEncumbrance(Transaction encumbrance) {
+    this.encumbrances.add(encumbrance);
     return this;
   }
 
-  public PoLineEncumbrancesHolder withPrevEncumbrances(List<Transaction> prevEncumbrances) {
-    this.prevEncumbrances = new ArrayList<>(prevEncumbrances);
-    return this;
-  }
-
-  public PoLineEncumbrancesHolder addCurrEncumbrance(Transaction currEncumbrance) {
-    this.currEncumbrances.add(currEncumbrance);
-    return this;
-  }
-
-  public PoLineEncumbrancesHolder withCurrEncumbrances(List<Transaction> currEncumbrances) {
-    this.currEncumbrances = new ArrayList<>(currEncumbrances);
+  public PoLineEncumbrancesHolder withPrevEncumbrances(List<Transaction> encumbrances) {
+    this.encumbrances = new ArrayList<>(encumbrances);
     return this;
   }
 
@@ -48,12 +35,8 @@ public class PoLineEncumbrancesHolder {
     return this.poLine;
   }
 
-  public List<Transaction> getPrevEncumbrances() {
-    return this.prevEncumbrances;
-  }
-
-  public List<Transaction> getCurrEncumbrances() {
-    return this.currEncumbrances;
+  public List<Transaction> getEncumbrances() {
+    return this.encumbrances;
   }
 
   public String getOrderType() {
