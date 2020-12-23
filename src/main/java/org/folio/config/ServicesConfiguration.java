@@ -3,9 +3,9 @@ package org.folio.config;
 import org.folio.rest.core.RestClient;
 import org.folio.service.exchange.FinanceExchangeRateService;
 import org.folio.service.finance.FundService;
+import org.folio.service.orders.OrderRolloverService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
-import org.folio.service.orders.RolloverOrderService;
 import org.springframework.context.annotation.Bean;
 
 public class ServicesConfiguration {
@@ -30,9 +30,9 @@ public class ServicesConfiguration {
   }
 
   @Bean
-  RolloverOrderService rolloverOrderService(FundService fundService, PurchaseOrderService purchaseOrderService,
+  OrderRolloverService rolloverOrderService(FundService fundService, PurchaseOrderService purchaseOrderService,
                                             PurchaseOrderLineService purchaseOrderLineService, RestClient transactionRestClient) {
-    return new RolloverOrderService(fundService, purchaseOrderService, purchaseOrderLineService, transactionRestClient);
+    return new OrderRolloverService(fundService, purchaseOrderService, purchaseOrderLineService, transactionRestClient);
   }
 
 
