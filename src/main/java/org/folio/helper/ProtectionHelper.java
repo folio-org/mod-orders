@@ -1,11 +1,11 @@
 package org.folio.helper;
 
-import static org.folio.helper.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
-import static org.folio.helper.AcquisitionsUnitsHelper.ALL_UNITS_CQL;
 import static org.folio.orders.utils.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.helper.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
+import static org.folio.helper.AcquisitionsUnitsHelper.ALL_UNITS_CQL;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,8 +30,8 @@ import io.vertx.core.Context;
 public class ProtectionHelper extends AbstractHelper {
 
   public static final String ACQUISITIONS_UNIT_ID = "acquisitionsUnitId";
-  private final AcquisitionsUnitsHelper acquisitionsUnitsHelper;
-  private final List<AcquisitionsUnit> fetchedUnits = new ArrayList<>();
+  private AcquisitionsUnitsHelper acquisitionsUnitsHelper;
+  private List<AcquisitionsUnit> fetchedUnits = new ArrayList<>();
 
   public ProtectionHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);

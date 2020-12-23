@@ -120,6 +120,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -135,8 +136,6 @@ import java.util.stream.Collectors;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.helper.AbstractHelper;
 import org.folio.isbn.IsbnUtil;
@@ -190,6 +189,8 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -197,7 +198,7 @@ import one.util.streamex.StreamEx;
 
 public class MockServer {
 
-  private static final Logger logger = LogManager.getLogger();
+  private static final Logger logger = LoggerFactory.getLogger(MockServer.class);
 
   // Mock data paths
   public static final String BASE_MOCK_DATA_PATH = "mockdata/";
@@ -463,17 +464,17 @@ public class MockServer {
   }
 
   public static void addMockEntry(String objName, Object data) {
-    addServerRqRsData(HttpMethod.SEARCH, objName, (data instanceof JsonObject) ? (JsonObject) data : JsonObject.mapFrom(data));
+    addServerRqRsData(HttpMethod.OTHER, objName, (data instanceof JsonObject) ? (JsonObject) data : JsonObject.mapFrom(data));
   }
 
   private Optional<JsonObject> getMockEntry(String objName, String id) {
-    return getRqRsEntries(HttpMethod.SEARCH, objName).stream()
+    return getRqRsEntries(HttpMethod.OTHER, objName).stream()
       .filter(obj -> id.equals(obj.getString(AbstractHelper.ID)))
       .findAny();
   }
 
   private <T> Optional<List<T>> getMockEntries(String objName, Class<T> tClass) {
-    List<T> entryList =  getRqRsEntries(HttpMethod.SEARCH, objName).stream()
+    List<T> entryList =  getRqRsEntries(HttpMethod.OTHER, objName).stream()
       .map(entries -> entries.mapTo(tClass))
       .collect(toList());
     return Optional.ofNullable(entryList.isEmpty() ? null : entryList);
@@ -988,7 +989,7 @@ public class MockServer {
 
         if (query.startsWith("id==")) {
           List<String> itemIds = extractIdsFromQuery(query);
-          final Iterator<Object> iterator = jsonArray.iterator();
+          final Iterator iterator = jsonArray.iterator();
           while (iterator.hasNext()) {
             JsonObject item = (JsonObject) iterator.next();
             if (!itemIds.contains(item.getString(ID))) {
@@ -1000,7 +1001,7 @@ public class MockServer {
           String purchaseOrderLineIdentifier = query.substring(lineIndex, lineIndex + 36);
           int holdingIndex = query.indexOf(ITEM_HOLDINGS_RECORD_ID) + ITEM_HOLDINGS_RECORD_ID.length() + 2;
           String holdingsRecordId = query.substring(holdingIndex,  holdingIndex + 36);
-          final Iterator<Object> iterator = jsonArray.iterator();
+          final Iterator iterator = jsonArray.iterator();
           while (iterator.hasNext()) {
             JsonObject item = (JsonObject) iterator.next();
 
@@ -1358,7 +1359,7 @@ public class MockServer {
         polIds = extractIdsFromQuery(queryParam);
       }
 
-      List<JsonObject> postedPoLines = getRqRsEntries(HttpMethod.SEARCH, type);
+      List<JsonObject> postedPoLines = getRqRsEntries(HttpMethod.OTHER, type);
 
       try {
         PoLineCollection poLineCollection = new PoLineCollection();
@@ -1449,7 +1450,7 @@ public class MockServer {
       // Transform composite PO Lines to storage representation
       List<PoLine> poLines = lines
         .stream()
-        .map(JsonObject::mapFrom)
+        .map(l -> (JsonObject) l)
         .map(line -> {
           replaceObjectsByIds(line, ALERTS, REPORTING_CODES);
           return line.mapTo(PoLine.class);
@@ -1476,10 +1477,10 @@ public class MockServer {
 
   private void replaceObjectsByIds(JsonObject line, String... property) {
     for (String prop : property) {
-      JsonArray objs = (JsonArray) line.remove(prop);
+      List<?> objs = ((List<?>) line.remove(prop));
       if (objs != null) {
         line.put(prop, new JsonArray(objs.stream()
-          .map(o -> JsonObject.mapFrom(o).getString(ID))
+          .map(o -> ((Map<?, ?>) o).get(ID))
           .filter(Objects::nonNull)
           .collect(Collectors.toList())));
       }
@@ -1808,7 +1809,7 @@ public class MockServer {
     PurchaseOrderCollection orderCollection = new PurchaseOrderCollection();
 
     // Attempt to find POLine in mock server memory
-    List<JsonObject> postedOrders = serverRqRs.column(HttpMethod.SEARCH).get(orderType);
+    List<JsonObject> postedOrders = serverRqRs.column(HttpMethod.OTHER).get(orderType);
 
     if (postedOrders != null) {
       orderCollection

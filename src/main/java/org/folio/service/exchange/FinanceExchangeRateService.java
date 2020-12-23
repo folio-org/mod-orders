@@ -4,7 +4,6 @@ package org.folio.service.exchange;
 import static org.folio.orders.utils.ResourcePathResolver.FINANCE_EXCHANGE_RATE;
 
 import java.util.concurrent.CompletableFuture;
-
 import org.folio.orders.utils.ResourcePathResolver;
 import org.folio.rest.acq.model.finance.ExchangeRate;
 import org.folio.rest.core.RestClient;

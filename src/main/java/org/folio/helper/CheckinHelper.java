@@ -240,7 +240,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       for (PoLine poLine : poLines) {
         List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
         futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces)
-          .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, okapiHeaders, logger)));
+          .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, ctx, okapiHeaders, logger)));
       }
 
       return collectResultsOnSuccess(futures).thenAccept(updatedPoLines -> {

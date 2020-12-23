@@ -23,8 +23,6 @@ import java.util.UUID;
 
 import javax.ws.rs.core.HttpHeaders;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.OrderTemplate;
@@ -36,10 +34,12 @@ import io.restassured.http.Headers;
 import io.restassured.response.Response;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class OrderTemplateTest extends ApiTestBase {
 
-  private static final Logger logger = LogManager.getLogger();
+  private static final Logger logger = LoggerFactory.getLogger(OrderTemplateTest.class);
 
   private static final String ORDER_TEMPLATES_ENDPOINT = "/orders/order-templates";
   private static final String ORDER_TEMPLATE_ID = "0e9525aa-d123-4e4d-9f7e-1b302a97eb90";

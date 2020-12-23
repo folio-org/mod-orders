@@ -17,8 +17,6 @@ import java.util.UUID;
 
 import javax.ws.rs.core.HttpHeaders;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 import org.folio.rest.jaxrs.model.Errors;
@@ -28,10 +26,12 @@ import io.restassured.http.Header;
 import io.restassured.http.Headers;
 import io.restassured.response.Response;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class AcquisitionsMembershipsTest extends ApiTestBase {
 
-  private static final Logger logger = LogManager.getLogger();
+  private static final Logger logger = LoggerFactory.getLogger(AcquisitionsMembershipsTest.class);
 
   private static final String ACQ_UNITS_MEMBERSHIPS_ENDPOINT = "/acquisitions-units/memberships";
   public static final String USER_ID_ASSIGNED_TO_ACQ_UNITS = "480dba68-ee84-4b9c-a374-7e824fc49227";

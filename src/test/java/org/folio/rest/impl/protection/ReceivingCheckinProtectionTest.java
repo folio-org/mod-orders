@@ -22,8 +22,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.CheckinCollection;
@@ -41,11 +39,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 
 public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
 
-  private static final Logger logger = LogManager.getLogger();
+  private static final Logger logger = LoggerFactory.getLogger(PiecesProtectionTest.class);
 
 
   private static final String ORDER_WITH_PROTECTED_UNITS_ID = getRandomId();
