@@ -168,11 +168,11 @@ public class OrderRolloverService {
     poLine.getFundDistribution().forEach(fundDistr -> {
       var currEncumbrances = currEncumbranceFundIdMap.getOrDefault(fundDistr.getFundId(), Collections.emptyList());
       currEncumbrances.forEach(encumbr -> {
-        if (encumbr.getExpenseClassId() != null) {
+        if (encumbr.getExpenseClassId() != null && fundDistr.getExpenseClassId() != null) {
           if (encumbr.getExpenseClassId().equals(fundDistr.getExpenseClassId())) {
             fundDistr.setEncumbrance(encumbr.getId());
           }
-        } else
+        } else if (encumbr.getExpenseClassId() == null && fundDistr.getExpenseClassId() == null)
         {
           fundDistr.setEncumbrance(encumbr.getId());
         }

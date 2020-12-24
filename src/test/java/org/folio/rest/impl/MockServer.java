@@ -268,8 +268,8 @@ public class MockServer {
   public static final String IF_EQUAL_STR = "==";
   private static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
 
-  static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
-  static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
+  public static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
+  public static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
 
   private final int port;
   private final Vertx vertx;
