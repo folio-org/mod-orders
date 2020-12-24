@@ -39,7 +39,7 @@ public class FundService {
       .collect(Collectors.toList()));
   }
 
-  public CompletableFuture<Fund> getFundById(String fundId, RequestContext requestContext) {
+  public CompletableFuture<Fund> retrieveFundById(String fundId, RequestContext requestContext) {
     return fundRestClient.getById(fundId, requestContext, CompositeFund.class)
       .thenApply(CompositeFund::getFund)
       .exceptionally(t -> {
