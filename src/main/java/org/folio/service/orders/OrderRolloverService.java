@@ -9,7 +9,9 @@ import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -18,7 +20,6 @@ import java.util.stream.Collectors;
 
 import javax.money.MonetaryAmount;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.folio.models.PoLineEncumbrancesHolder;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -101,19 +102,11 @@ public class OrderRolloverService {
     );
   }
 
-  /**
-   * Retrieve order ids for rollover
-   *
-   * @param chunkFundIds chunk of ledger's funds
-   * @param ledgerFYRollover ledger rollover
-   * @param requestContext request context
-   * @return Set of order ids
-   */
   private CompletableFuture<Set<String>> getFundsOrderIdsByChunk(List<String> chunkFundIds, LedgerFiscalYearRollover ledgerFYRollover,
                                                                  RequestContext requestContext) {
 
     String query = buildOpenOrderQueryByFundIdsAndTypes(chunkFundIds, ledgerFYRollover);
-    return purchaseOrderService.getPurchaseOrdersByFunds(query, 0, 0, requestContext)
+    return purchaseOrderService.getPurchaseOrders(query, 0, 0, requestContext)
               .thenApply(PurchaseOrderCollection::getTotalRecords)
               .thenCompose(orderTotalRecords -> getOrderIdsByChunks(requestContext, query, orderTotalRecords))
               .exceptionally(t -> {
@@ -126,7 +119,7 @@ public class OrderRolloverService {
     List<CompletableFuture<Set<String>>> futures = new ArrayList<>();
     int numberOfChuncks = orderTotalRecords/ORDERS_CHUNK + 1;
     for (int chunkNumber = 0; chunkNumber < numberOfChuncks; chunkNumber++)  {
-      futures.add(purchaseOrderService.getPurchaseOrdersByFunds(query, ORDERS_CHUNK, chunkNumber * ORDERS_CHUNK, requestContext)
+      futures.add(purchaseOrderService.getPurchaseOrders(query, ORDERS_CHUNK, chunkNumber * ORDERS_CHUNK, requestContext)
         .thenApply(this::extractOrderIds)
       );
       logger.debug("Order chunk query : {}", query);
@@ -157,29 +150,38 @@ public class OrderRolloverService {
       PoLine poLine = holder.getPoLine();
       var currEncumbranceFundIdMap = holder.getEncumbrances().stream().collect(groupingBy(Transaction::getFromFundId));
       if (!MapUtils.isEmpty(currEncumbranceFundIdMap)) {
-        poLine.getFundDistribution().forEach(fundDistribution -> {
-          var currEncumbrances = currEncumbranceFundIdMap.get(fundDistribution.getFundId());
-          if (!CollectionUtils.isEmpty(currEncumbrances)) {
-            fundDistribution.setEncumbrance(currEncumbrances.get(0).getId());
-            Double fyroAdjustmentAmount = calculateFYROAdjustmentAmount(holder).getNumber().doubleValue();
-            poLine.getCost().setFyroAdjustmentAmount(fyroAdjustmentAmount);
-            Double estimatedPrice = calculateEstimatedPrice(holder);
-            poLine.getCost().setPoLineEstimatedPrice(estimatedPrice);
-          }
-        });
+        updatePoLineCost(holder, poLine);
+        updateFundDistribution(poLine, currEncumbranceFundIdMap);
       }
     });
     return poLineEncumbrancesHolders.stream().map(PoLineEncumbrancesHolder::getPoLine).collect(toList());
   }
 
-  private Double calculateEstimatedPrice(PoLineEncumbrancesHolder holder) {
+  private void updatePoLineCost(PoLineEncumbrancesHolder holder, PoLine poLine) {
     BigDecimal totalCurrEncumbranceInitialAmount = calculateTotalInitialAmountEncumbered(holder.getEncumbrances());
-    return totalCurrEncumbranceInitialAmount.doubleValue();
+    Double fyroAdjustmentAmount = calculateFYROAdjustmentAmount(holder, totalCurrEncumbranceInitialAmount).getNumber().doubleValue();
+    poLine.getCost().setFyroAdjustmentAmount(fyroAdjustmentAmount);
+    poLine.getCost().setPoLineEstimatedPrice(totalCurrEncumbranceInitialAmount.doubleValue());
   }
 
-  private MonetaryAmount calculateFYROAdjustmentAmount(PoLineEncumbrancesHolder holder) {
+  private void updateFundDistribution(PoLine poLine, Map<String, List<Transaction>> currEncumbranceFundIdMap) {
+    poLine.getFundDistribution().forEach(fundDistr -> {
+      var currEncumbrances = currEncumbranceFundIdMap.getOrDefault(fundDistr.getFundId(), Collections.emptyList());
+      currEncumbrances.forEach(encumbr -> {
+        if (encumbr.getExpenseClassId() != null) {
+          if (encumbr.getExpenseClassId().equals(fundDistr.getExpenseClassId())) {
+            fundDistr.setEncumbrance(encumbr.getId());
+          }
+        } else
+        {
+          fundDistr.setEncumbrance(encumbr.getId());
+        }
+      });
+    });
+  }
+
+  private MonetaryAmount calculateFYROAdjustmentAmount(PoLineEncumbrancesHolder holder, BigDecimal totalCurrEncumbranceInitialAmount) {
     Cost cost = holder.getPoLine().getCost();
-    BigDecimal totalCurrEncumbranceInitialAmount = calculateTotalInitialAmountEncumbered(holder.getEncumbrances());
     MonetaryAmount costUnitsTotal = calculateCostUnitsTotal(cost);
     MonetaryAmount totalMonetaryCurrEncumbranceInitialAmount = Money.of(totalCurrEncumbranceInitialAmount, cost.getCurrency());
     if (PurchaseOrder.OrderType.ONE_TIME.value().equals(holder.getOrderType())) {

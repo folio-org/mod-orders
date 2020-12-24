@@ -2,7 +2,7 @@ package org.folio.config;
 
 import static org.folio.orders.utils.ResourcePathResolver.FINANCE_EXCHANGE_RATE;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_ENDPOINT;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -26,7 +26,7 @@ public class RestClientsConfiguration {
 
   @Bean
   RestClient orderLinesRestClient() {
-    return new RestClient(resourcesPath(ORDER_LINES));
+    return new RestClient(resourcesPath(PO_LINES));
   }
 
   @Bean

@@ -38,6 +38,8 @@ import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
 import org.folio.service.TransactionServiceTest;
 import org.folio.service.exchange.ManualExchangeRateProviderTest;
+import org.folio.service.orders.PurchaseOrderLineServiceTest;
+import org.folio.service.orders.PurchaseOrderServiceTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
@@ -219,5 +221,13 @@ public class ApiTestSuite {
 
   @Nested
   class InventoryHelperTestNested extends InventoryHelperTest {
+  }
+
+  @Nested
+  class PurchaseOrderLineServiceTestNested extends PurchaseOrderLineServiceTest {
+  }
+
+  @Nested
+  class PurchaseOrderServiceTestNested extends PurchaseOrderServiceTest {
   }
 }
