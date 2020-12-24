@@ -6,6 +6,8 @@ import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.helper.PoNumberHelper;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.PoNumber;
@@ -14,12 +16,10 @@ import org.folio.rest.jaxrs.resource.OrdersPoNumber;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 public class PoNumberAPI implements OrdersPoNumber {
 
-  private static final Logger logger = LoggerFactory.getLogger(PoNumberAPI.class);
+  private static final Logger logger = LogManager.getLogger();
 
   @Override
   @Validate

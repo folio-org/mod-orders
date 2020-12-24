@@ -6,7 +6,6 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static javax.ws.rs.core.Response.Status.CREATED;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.allOf;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
@@ -33,6 +32,8 @@ import java.util.concurrent.CompletionException;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
@@ -50,9 +51,6 @@ import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public abstract class AbstractHelper {
   public static final String ORDER_ID = "orderId";
@@ -65,10 +63,10 @@ public abstract class AbstractHelper {
   public static final String CURRENCY_USD = "USD";
   public static final int MAX_IDS_FOR_GET_RQ = 15;
   public static final String SEARCH_PARAMS = "?limit=%s&offset=%s%s&lang=%s";
-  public static final String EXCEPTION_CALLING_ENDPOINT_WITH_BODY_MSG = "{} {} request failed. Request body: {}";
+  public static final String EXCEPTION_CALLING_ENDPOINT_WITH_BODY_MSG = "{} {} {} request failed. Request body: {}";
   public static final String CALLING_ENDPOINT_WITH_BODY_MSG = "Sending {} {} with body: {}";
 
-  protected final Logger logger = LoggerFactory.getLogger(this.getClass());
+  protected final Logger logger = LogManager.getLogger();
 
   private final Errors processingErrors = new Errors();
 
@@ -78,9 +76,9 @@ public abstract class AbstractHelper {
   protected final String lang;
   private JsonObject tenantConfiguration;
 
-  private ConfigurationEntriesService configurationEntriesService;
+  private final ConfigurationEntriesService configurationEntriesService;
 
-  public AbstractHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
+  protected AbstractHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     setDefaultHeaders(httpClient);
     this.httpClient = httpClient;
     this.okapiHeaders = okapiHeaders;
@@ -89,7 +87,7 @@ public abstract class AbstractHelper {
     this.configurationEntriesService = new ConfigurationEntriesService(new RestClient(resourcesPath(CONFIGURATION_ENTRIES)));
   }
 
-  public AbstractHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
+  protected AbstractHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
     this.httpClient = getHttpClient(okapiHeaders, true);
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
@@ -130,9 +128,10 @@ public abstract class AbstractHelper {
     return processingErrors.getErrors();
   }
 
-  protected <T> void completeAllFutures(Context ctx, HttpClientInterface httpClient, List<CompletableFuture<T>> futures, Message<JsonObject> message) {
+  protected <T> void completeAllFutures(HttpClientInterface httpClient, List<CompletableFuture<T>> futures,
+      Message<JsonObject> message) {
     // Now wait for all operations to be completed and send reply
-    allOf(ctx, futures.toArray(new CompletableFuture[0])).thenAccept(v -> {
+    CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenAccept(v -> {
       // Sending reply message just in case some logic requires it
       message.reply(Response.Status.OK.getReasonPhrase());
       httpClient.closeClient();
@@ -173,7 +172,7 @@ public abstract class AbstractHelper {
    * @return completable future holding id of newly created entity Record or an exception if process failed
    */
   protected CompletableFuture<String> createRecordInStorage(JsonObject recordData, String endpoint) {
-    CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<String> future = new CompletableFuture<>();
     try {
       if (logger.isDebugEnabled()) {
         logger.debug("Sending 'POST {}' with body: {}", endpoint, recordData.encodePrettily());
@@ -187,7 +186,7 @@ public abstract class AbstractHelper {
         })
         .exceptionally(throwable -> {
           future.completeExceptionally(throwable);
-          logger.error("'POST {}' request failed. Request body: {}", throwable, endpoint, recordData.encodePrettily());
+          logger.error("'POST {}' request failed. Request body: {} {}", throwable, endpoint, recordData.encodePrettily());
           return null;
         });
     } catch (Exception e) {
@@ -204,7 +203,7 @@ public abstract class AbstractHelper {
    * @param recordData json to use for update operation
    */
   protected CompletableFuture<Void> handleUpdateRequest(String endpoint, Object recordData) {
-    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<Void> future = new CompletableFuture<>();
     try {
       JsonObject json = convertToJson(recordData);
 
@@ -355,7 +354,7 @@ public abstract class AbstractHelper {
   }
 
   protected CompletableFuture<String> getSystemCurrency() {
-    CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<String> future = new CompletableFuture<>();
     getTenantConfiguration(SYSTEM_CONFIG_MODULE_NAME).thenApply(config -> {
       String localeSettings = config.getString(LOCALE_SETTINGS);
       String systemCurrency;

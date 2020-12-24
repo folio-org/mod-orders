@@ -18,15 +18,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.folio.helper.AbstractHelper;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
-import org.folio.helper.AbstractHelper;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+
 
 public class TransactionService extends AbstractHelper {
   private static final String TRANSACTION_ENDPOINT_BY_QUERY = resourcesPath(TRANSACTIONS_ENDPOINT) + SEARCH_PARAMS;
@@ -41,13 +41,13 @@ public class TransactionService extends AbstractHelper {
   }
 
   public CompletableFuture<TransactionCollection> getTransactions(int limit, int offset, String query) {
-    CompletableFuture<TransactionCollection> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<TransactionCollection> future = new CompletableFuture<>();
     try {
       String queryParam = getEndpointWithQuery(query, logger);
       String endpoint = String.format(TRANSACTION_ENDPOINT_BY_QUERY, limit, offset, queryParam, lang);
-      handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
         .thenAccept(jsonTransactions -> {
-          logger.info("Successfully retrieved voucher lines: " + jsonTransactions.encodePrettily());
+          logger.info("Successfully retrieved voucher lines: {}", jsonTransactions.encodePrettily());
           future.complete(jsonTransactions.mapTo(TransactionCollection.class));
         })
         .exceptionally(t -> {
@@ -69,10 +69,10 @@ public class TransactionService extends AbstractHelper {
   }
 
   public CompletableFuture<OrderTransactionSummary> getOrderTransactionSummary(String orderId) {
-    CompletableFuture<OrderTransactionSummary> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<OrderTransactionSummary> future = new CompletableFuture<>();
     try {
       String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(ORDER_TRANSACTION_SUMMARIES, orderId), lang);
-      handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger).thenAccept(jsonObject -> {
+      handleGetRequest(endpoint, httpClient, okapiHeaders, logger).thenAccept(jsonObject -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully retrieved transaction summary: {}", jsonObject.encodePrettily());
         }
@@ -94,7 +94,7 @@ public class TransactionService extends AbstractHelper {
   }
 
   public CompletableFuture<Void> updateTransactions(List<Transaction> transactions) {
-    return VertxCompletableFuture.allOf(ctx, transactions.stream()
+    return CompletableFuture.allOf(transactions.stream()
       .map(this::updateTransaction)
       .toArray(CompletableFuture[]::new));
   }
@@ -105,7 +105,7 @@ public class TransactionService extends AbstractHelper {
     if (!encumbrances.isEmpty()) {
       encumbrances.forEach(encumbrance -> {
         CompletableFuture<Void> future = handlePostWithEmptyBody(resourceByIdPath(FINANCE_RELEASE_ENCUMBRANCE, encumbrance.getId())
-          , httpClient, ctx, okapiHeaders, logger);
+          , httpClient, okapiHeaders, logger);
         futures.add(future);
       });
       return collectResultsOnSuccess(futures)
@@ -119,13 +119,13 @@ public class TransactionService extends AbstractHelper {
   }
 
   public CompletableFuture<Void> deleteTransactions(List<Transaction> transactions) {
-    return VertxCompletableFuture.allOf(ctx, transactions.stream()
+    return CompletableFuture.allOf(transactions.stream()
       .map(this::deleteTransaction)
     .toArray(CompletableFuture[]::new));
   }
 
   private CompletableFuture<Void> deleteTransaction(Transaction transaction) {
     String endpoint = String.format(TRANSACTION_STORAGE_ENDPOINT_BYID, transaction.getId(), lang);
-    return handleDeleteRequest(endpoint, httpClient, ctx, okapiHeaders, logger);
+    return handleDeleteRequest(endpoint, httpClient, okapiHeaders, logger);
   }
 }

@@ -1,5 +1,7 @@
 package org.folio.rest.impl;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.rest.resource.interfaces.InitAPI;
@@ -14,14 +16,12 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.jackson.DatabindCodec;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 /**
  * The class initializes vertx context adding spring context
  */
 public class InitAPIs implements InitAPI {
-  private final Logger logger = LoggerFactory.getLogger(InitAPIs.class);
+  private final Logger logger = LogManager.getLogger();
 
   @Override
   public void init(Vertx vertx, Context context, Handler<AsyncResult<Boolean>> resultHandler) {
