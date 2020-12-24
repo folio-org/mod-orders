@@ -692,7 +692,10 @@
           ],
           "modulePermissions": [
             "finance-storage.funds.collection.get",
-            "orders-storage.purchase-orders.collection.get"
+            "orders-storage.purchase-orders.collection.get",
+            "orders-storage.po-lines.collection.get",
+            "orders-storage.po-lines.item.put",
+            "finance.transactions.collection.get"
           ]
         }
       ]
