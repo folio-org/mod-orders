@@ -11,6 +11,8 @@ import java.util.Map;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
@@ -24,12 +26,10 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 public class CompositePoLineAPI implements OrdersOrderLines {
 
-  private static final Logger logger = LoggerFactory.getLogger(CompositePoLineAPI.class);
+  private static final Logger logger = LogManager.getLogger();
 
   private static final String ORDER_LINE_LOCATION_PREFIX = "/orders/order-lines/%s";
 
@@ -59,7 +59,7 @@ public class CompositePoLineAPI implements OrdersOrderLines {
         if (helper.getErrors()
           .isEmpty()) {
           if (logger.isInfoEnabled()) {
-            logger.info("Successfully added PO Line: " + JsonObject.mapFrom(pol)
+            logger.info("Successfully added PO Line: {}", JsonObject.mapFrom(pol)
               .encodePrettily());
           }
           asyncResultHandler

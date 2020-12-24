@@ -27,6 +27,8 @@ import java.util.stream.Stream;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
 import org.folio.helper.CheckinHelper;
 import org.folio.orders.utils.HelperUtils;
@@ -46,14 +48,12 @@ import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 public class CheckInOrderStatusChangeChangeHandlerTest extends ApiTestBase {
-  private static final Logger logger = LoggerFactory.getLogger(CheckInOrderStatusChangeChangeHandlerTest.class);
+  private static final Logger logger = LogManager.getLogger();
 
   private static final String PO_ID_OPEN_TO_BE_CLOSED_500_ON_UPDATE = "bad500cc-cccc-500c-accc-cccccccccccc";
 

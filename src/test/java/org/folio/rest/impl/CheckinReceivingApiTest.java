@@ -53,6 +53,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.helper.AbstractHelper;
 import org.folio.rest.acq.model.PieceCollection;
@@ -76,12 +78,10 @@ import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 public class CheckinReceivingApiTest extends ApiTestBase {
 
-  private static final Logger logger = LoggerFactory.getLogger(CheckinReceivingApiTest.class);
+  private static final Logger logger = LogManager.getLogger();
 
   private static final String RECEIVING_RQ_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receiving/";
   private static final String CHECKIN_RQ_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "checkIn/";

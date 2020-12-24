@@ -7,7 +7,6 @@ import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.helper.PurchaseOrderHelper.ENCUMBRANCE_POST_ENDPOINT;
@@ -111,7 +110,6 @@ import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
 
 public class PurchaseOrderLineHelper extends AbstractHelper {
@@ -148,11 +146,11 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   CompletableFuture<PoLineCollection> getPoLines(int limit, int offset, String query, String path) {
-    CompletableFuture<PoLineCollection> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<PoLineCollection> future = new CompletableFuture<>();
     try {
       String queryParam = isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
       String endpoint = String.format(path, limit, offset, queryParam, lang);
-      handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+      handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
         .thenAccept(jsonOrderLines -> {
           if (logger.isInfoEnabled()) {
             logger.info("Successfully retrieved order lines: {}", jsonOrderLines.encodePrettily());
@@ -271,7 +269,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   public CompletableFuture<Void> setTenantDefaultCreateInventoryValues(CompositePoLine compPOL) {
-    CompletableFuture<JsonObject> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<JsonObject> future = new CompletableFuture<>();
 
     if (isCreateInventoryNull(compPOL)) {
       getTenantConfiguration(ORDER_CONFIG_MODULE_NAME)
@@ -323,8 +321,8 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
    * Physical : CreateInventory.INSTANCE_HOLDING_ITEM
    * Eresource: CreateInventory.INSTANCE_HOLDING
    *
-   * @param compPOL
-   * @param jsonConfig
+   * @param compPOL composite purchase order
+   * @param jsonConfig createInventory configuration
    */
   private void updateCreateInventory(CompositePoLine compPOL, JsonObject jsonConfig) {
     // try to set createInventory by values from mod-configuration. If empty -
@@ -366,19 +364,19 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   public CompletableFuture<CompositePoLine> getCompositePoLine(String polineId) {
-    return getPoLineById(polineId, lang, httpClient, ctx, okapiHeaders, logger)
+    return getPoLineById(polineId, lang, httpClient, okapiHeaders, logger)
       .thenCompose(line -> getCompositePurchaseOrder(line.getString(PURCHASE_ORDER_ID))
         .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.READ))
         .thenCompose(ok -> populateCompositeLine(line)));
   }
 
   public CompletableFuture<Void> deleteLine(String lineId) {
-    return getPoLineById(lineId, lang, httpClient, ctx, okapiHeaders, logger)
+    return getPoLineById(lineId, lang, httpClient, okapiHeaders, logger)
       .thenCompose(this::verifyDeleteAllowed)
       .thenCompose(line -> {
         logger.debug("Deleting PO line...");
         return financeHelper.deletePoLineEncumbrances(lineId)
-          .thenCompose(v -> deletePoLine(line, httpClient, ctx, okapiHeaders, logger));
+          .thenCompose(v -> deletePoLine(line, httpClient, okapiHeaders, logger));
       })
       .thenAccept(json -> logger.info("The PO Line with id='{}' has been deleted successfully", lineId));
   }
@@ -494,7 +492,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   public CompletableFuture<Void> createEncumbrancesAndUpdatePoLines(List<EncumbranceRelationsHolder> relationsHolders) {
-    return VertxCompletableFuture.allOf(ctx, relationsHolders.stream()
+    return CompletableFuture.allOf(relationsHolders.stream()
       .map(holder -> createRecordInStorage(JsonObject.mapFrom(holder.getTransaction()), String.format(ENCUMBRANCE_POST_ENDPOINT, lang))
         .thenCompose(id -> {
           PoLineFundHolder poLineFundHolder = holder.getPoLineFundHolder();
@@ -525,14 +523,8 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
           MonetaryAmount amountValueMoney = Money.of(value, currency);
 
           if (dType == FundDistribution.DistributionType.PERCENTAGE) {
-            /**
-             * calculate remaining amount to carry forward, required if there are more fund distributions with percentage and
-             * percentToAmount = poLineEstimatedPrice * value/100;
-             */
-            MonetaryAmount poLineEstimatedPriceMoney = Money.of(poLineEstimatedPrice, currency);
             // convert percent to amount
-            MonetaryAmount percentToAmount = poLineEstimatedPriceMoney.with(MonetaryOperators.percent(value));
-            amountValueMoney = percentToAmount;
+            amountValueMoney = Money.of(poLineEstimatedPrice, currency).with(MonetaryOperators.percent(value));
           }
 
           remainingAmount = remainingAmount.subtract(amountValueMoney);
@@ -562,7 +554,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private void updateOrderStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
-    supplyBlockingAsync(ctx, () -> lineFromStorage.mapTo(PoLine.class))
+    CompletableFuture.supplyAsync(() -> lineFromStorage.mapTo(PoLine.class))
       .thenAccept(poLine -> {
         // See MODORDERS-218
         if (!StringUtils.equals(poLine.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value())
@@ -588,7 +580,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
    * @param lineFromStorage {@link JsonObject} representing PO line from storage (/acq-models/mod-orders-storage/schemas/po_line.json)
    */
   CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
-    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<Void> future = new CompletableFuture<>();
 
     updatePoLineSubObjects(compOrderLine, lineFromStorage)
       .thenCompose(poLine -> updateOrderLineSummary(compOrderLine.getId(), poLine))
@@ -615,11 +607,11 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   public CompletableFuture<JsonObject> updateOrderLineSummary(String poLineId, JsonObject poLine) {
     logger.debug("Updating PO line...");
     String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES, poLineId), lang);
-    return operateOnObject(HttpMethod.PUT, endpoint, poLine, httpClient, ctx, okapiHeaders, logger);
+    return operateOnObject(HttpMethod.PUT, endpoint, poLine, httpClient, okapiHeaders, logger);
   }
 
   public CompletableFuture<Void> updatePoLinesSummary(List<CompositePoLine> compositePoLines) {
-    return VertxCompletableFuture.allOf(ctx, compositePoLines.stream()
+    return CompletableFuture.allOf( compositePoLines.stream()
       .map(HelperUtils::convertToPoLine)
       .map(line -> updateOrderLineSummary(line.getId(), JsonObject.mapFrom(line)))
       .toArray(CompletableFuture[]::new));
@@ -733,7 +725,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId) {
-    return getPurchaseOrderById(purchaseOrderId, lang, httpClient, ctx, okapiHeaders, logger)
+    return getPurchaseOrderById(purchaseOrderId, lang, httpClient, okapiHeaders, logger)
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
       .exceptionally(t -> {
         Throwable cause = t.getCause();
@@ -746,7 +738,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private CompletableFuture<String> generateLineNumber(CompositePurchaseOrder compOrder) {
-    return handleGetRequest(getPoLineNumberEndpoint(compOrder.getId()), httpClient, ctx, okapiHeaders, logger)
+    return handleGetRequest(getPoLineNumberEndpoint(compOrder.getId()), httpClient, okapiHeaders, logger)
       .thenApply(sequenceNumberJson -> {
         SequenceNumber sequenceNumber = sequenceNumberJson.mapTo(SequenceNumber.class);
         return buildPoLineNumber(compOrder.getPoNumber(), sequenceNumber.getSequenceNumber());
@@ -755,7 +747,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
 
 
   private CompletionStage<CompositePoLine> populateCompositeLine(JsonObject poline) {
-    return HelperUtils.operateOnPoLine(HttpMethod.GET, poline, httpClient, ctx, okapiHeaders, logger)
+    return HelperUtils.operateOnPoLine(HttpMethod.GET, poline, httpClient, okapiHeaders, logger)
       .thenCompose(this::getLineWithInstanceId);
   }
 
@@ -820,13 +812,13 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     }
     return searchForExistingPieces(compPOL)
       .thenCompose(existingPieces -> {
-        List<Piece> piecesToCreate = new ArrayList<>();
+        List<Piece> piecesToCreate;
         List<Piece> piecesWithLocationToProcess = createPiecesByLocationId(compPOL, expectedPiecesWithItem, existingPieces);
         List<Piece> onlyLocationChangedPieces = getPiecesWithChangedLocation(compPOL, piecesWithLocationToProcess, existingPieces);
         if ((onlyLocationChangedPieces.size() == piecesWithLocationToProcess.size()) && !isOpenOrderFlow) {
           return allOf(onlyLocationChangedPieces.stream().map(piecesHelper::updatePieceRecord).toArray(CompletableFuture[]::new));
         } else {
-          piecesToCreate.addAll(piecesWithLocationToProcess);
+          piecesToCreate = new ArrayList<>(piecesWithLocationToProcess);
         }
         piecesToCreate.addAll(createPiecesWithoutLocationId(compPOL, existingPieces));
         piecesToCreate.forEach(piece -> piece.setTitleId(titleId));
@@ -877,18 +869,17 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
         for (Map.Entry<Piece.PieceFormat, Integer> existPieceFormatQty : existingPieceQtyMap.entrySet()) {
           Map<Piece.PieceFormat, Integer> pieceLocationMap = needProcessPiecesMap.get(existingPieceLocationId);
           if (pieceLocationMap == null) {
-            needProcessPiecesMap.entrySet().forEach(e -> {
-                String newLocationId = e.getKey();
-                Integer pieceQty = e.getValue().get(existPieceFormatQty.getKey());
-                if (pieceQty != null && pieceQty.equals(existPieceFormatQty.getValue())) {
-                  List<Piece> piecesWithUpdatedLocation = existingPieces.stream()
-                                      .filter(piece -> existingPieceLocationId.equals(piece.getLocationId())
-                                                           && existPieceFormatQty.getKey() == piece.getFormat())
-                                      .map(piece -> piece.withLocationId(newLocationId))
-                                      .collect(Collectors.toList());
-                  piecesForLocationUpdate.addAll(piecesWithUpdatedLocation);
-                }
-              });
+            needProcessPiecesMap.forEach((newLocationId, value) -> {
+              Integer pieceQty = value.get(existPieceFormatQty.getKey());
+              if (pieceQty != null && pieceQty.equals(existPieceFormatQty.getValue())) {
+                List<Piece> piecesWithUpdatedLocation = existingPieces.stream()
+                  .filter(piece -> existingPieceLocationId.equals(piece.getLocationId())
+                    && existPieceFormatQty.getKey() == piece.getFormat())
+                  .map(piece -> piece.withLocationId(newLocationId))
+                  .collect(Collectors.toList());
+                piecesForLocationUpdate.addAll(piecesWithUpdatedLocation);
+              }
+            });
           }
         }
       }
@@ -951,7 +942,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
    */
   private CompletableFuture<List<Piece>> searchForExistingPieces(CompositePoLine compPOL) {
     String endpoint = String.format(LOOKUP_PIECES_ENDPOINT, compPOL.getId(), calculateTotalQuantity(compPOL), lang);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+    return handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
       .thenApply(body -> {
         PieceCollection existedPieces = body.mapTo(PieceCollection.class);
         logger.debug("{} existing pieces found out for PO Line with '{}' id", existedPieces.getTotalRecords(), compPOL.getId());
@@ -998,7 +989,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
    * @return CompletableFuture
    */
   private CompletableFuture<Void> createPiece(Piece piece) {
-    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<Void> future = new CompletableFuture<>();
 
     JsonObject pieceObj = mapFrom(piece);
     createRecordInStorage(pieceObj, resourcesPath(PIECES))
@@ -1041,7 +1032,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       return completedFuture(null);
     }
 
-    return operateOnObject(operation, url, subObjContent, httpClient, ctx, okapiHeaders, logger)
+    return operateOnObject(operation, url, subObjContent, httpClient, okapiHeaders, logger)
       .thenApply(json -> {
         if (operation == HttpMethod.PUT) {
           return storageId;
@@ -1107,7 +1098,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
    * Retrieves PO line from storage by PO line id as JsonObject and validates order id match.
    */
   private CompletableFuture<JsonObject> getPoLineByIdAndValidate(String orderId, String lineId) {
-    return getPoLineById(lineId, lang, httpClient, ctx, okapiHeaders, logger)
+    return getPoLineById(lineId, lang, httpClient, okapiHeaders, logger)
       .thenApply(line -> {
         logger.debug("Validating if the retrieved PO line corresponds to PO");
         validateOrderId(orderId, line);
@@ -1214,7 +1205,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   CompletableFuture<Void> validateIsbnValues(CompositePoLine compPOL, String isbnTypeId) {
-    CompletableFuture[] futures = compPOL.getDetails()
+    CompletableFuture<?>[] futures = compPOL.getDetails()
       .getProductIds()
       .stream()
       .filter(productId -> isISBN(isbnTypeId, productId))
@@ -1222,7 +1213,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
         .thenAccept(productID::setProductId))
       .toArray(CompletableFuture[]::new);
 
-    return VertxCompletableFuture.allOf(ctx, futures);
+    return CompletableFuture.allOf(futures);
   }
 
   private void removeISBNDuplicates(CompositePoLine compPOL, String isbnTypeId) {
@@ -1283,7 +1274,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       return CompletableFuture.completedFuture(null);
     }
 
-    VertxCompletableFuture<ErrorCodes> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<ErrorCodes> future = new CompletableFuture<>();
 
     Map<String, Map<String, Integer>> numOfLocationsByPoLineIdAndLocationId = numOfLocationsByPoLineIdAndLocationId(poLines);
     Map<String, Map<String, Integer>> numOfPiecesByPoLineIdAndLocationId = numOfPiecesByPoLineAndLocationId(pieces);

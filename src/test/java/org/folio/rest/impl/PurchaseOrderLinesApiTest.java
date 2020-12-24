@@ -74,6 +74,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.rest.acq.model.Title;
@@ -93,18 +95,15 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.Tags;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.restassured.response.Response;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
-  private static final Logger logger = LoggerFactory.getLogger(PurchaseOrderLinesApiTest.class);
+  private static final Logger logger = LogManager.getLogger();
 
   private static final String PO_LINE_ID_WITH_SOME_SUB_OBJECTS_ALREADY_REMOVED = "0009662b-8b80-4001-b704-ca10971f175d";
   static final String ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE = "c0d08448-347b-418a-8c2f-5fb50248d67e";

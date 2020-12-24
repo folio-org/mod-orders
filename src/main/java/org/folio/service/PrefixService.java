@@ -3,11 +3,12 @@ package org.folio.service;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.orders.utils.ErrorCodes.PREFIX_IS_USED;
-import static org.folio.orders.utils.HelperUtils.buildQuery;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.dao.PrefixDAO;
 import org.folio.dao.PurchaseOrderDAO;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -16,12 +17,10 @@ import org.folio.rest.jaxrs.model.PrefixCollection;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 public class PrefixService {
 
-  private static final Logger logger = LoggerFactory.getLogger(PrefixService.class);
+  private static final Logger logger = LogManager.getLogger();
 
   @Autowired
   private PrefixDAO prefixDAO;

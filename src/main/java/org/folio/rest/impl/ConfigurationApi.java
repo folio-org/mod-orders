@@ -3,7 +3,6 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.OKAPI_URL;
-import static org.folio.orders.utils.HelperUtils.getEndpoint;
 import static org.folio.orders.utils.ResourcePathResolver.PREFIXES;
 import static org.folio.orders.utils.ResourcePathResolver.REASONS_FOR_CLOSURE;
 import static org.folio.orders.utils.ResourcePathResolver.SUFFIXES;
@@ -13,7 +12,6 @@ import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
-import io.vertx.core.Vertx;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.Prefix;
 import org.folio.rest.jaxrs.model.ReasonForClosure;
@@ -28,11 +26,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 
 
 public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
-
-  public static final String ORDERS_CONFIGURATION_PREFIX = getEndpoint(OrdersConfiguration.class) + "/%s";
 
   @Autowired
   private SuffixService suffixService;
