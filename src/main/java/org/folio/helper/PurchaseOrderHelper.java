@@ -604,7 +604,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   public void validateOrderPoLines(CompositePurchaseOrder compositeOrder) {
     List<Error> errors = new ArrayList<>();
     for (CompositePoLine compositePoLine : compositeOrder.getCompositePoLines()) {
-      errors.addAll(CompositePoLineValidationUtil.validatePoLine(compositeOrder.getOrderType().value(), compositePoLine));
+      errors.addAll(CompositePoLineValidationUtil.validatePoLine(compositePoLine));
     }
     addProcessingErrors(errors);
   }
@@ -808,7 +808,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     List<CompletableFuture<CompositePoLine>> futures =
       compPO.getCompositePoLines()
             .stream()
-            .map(compositePoLine -> orderLineHelper.saveValidPoLine(compositePoLine, compPO))
+            .map(compositePoLine -> orderLineHelper.createPoLine(compositePoLine, compPO))
             .collect(Collectors.toList());
     return HelperUtils.collectResultsOnSuccess(futures);
   }
@@ -1004,7 +1004,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
         if (StringUtils.equals(lineFromStorage.getId(), line.getId())) {
           line.setPoLineNumber(orderLineHelper.buildNewPoLineNumber(lineFromStorage, compOrder.getPoNumber()));
           orderLineHelper.updateLocationsQuantity(line.getLocations());
-          orderLineHelper.updateEstimatedPrice(compOrder.getOrderType().value(), line);
+          orderLineHelper.updateEstimatedPrice(line);
 
           futures.add(orderLineHelper.updateOrderLine(line, JsonObject.mapFrom(lineFromStorage)));
           iterator.remove();
@@ -1017,7 +1017,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private List<CompletableFuture<CompositePoLine>> processPoLinesCreation(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage) {
     return getNewPoLines(compOrder, poLinesFromStorage)
-      .map(compPOL -> orderLineHelper.saveValidPoLine(compPOL, compOrder))
+      .map(compPOL -> orderLineHelper.createPoLine(compPOL, compOrder))
       .collect(toList());
   }
 

@@ -182,7 +182,7 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   public void updateEncumbrance(FundDistribution fundDistribution, CompositePoLine poLine, Transaction trEncumbrance) {
-    MonetaryAmount estimatedPrice = calculateEstimatedPrice(trEncumbrance.getEncumbrance().getOrderType().value(), poLine.getCost());
+    MonetaryAmount estimatedPrice = calculateEstimatedPrice(poLine.getCost());
     trEncumbrance.setAmount(calculateAmountEncumbered(fundDistribution, estimatedPrice));
     trEncumbrance.setCurrency(systemCurrency);
     trEncumbrance.setExpenseClassId(fundDistribution.getExpenseClassId());
@@ -426,7 +426,7 @@ public class FinanceHelper extends AbstractHelper {
   }
 
   private Transaction buildEncumbrance(FundDistribution distribution, CompositePoLine poLine, Encumbrance encumbrance) {
-    MonetaryAmount estimatedPrice = calculateEstimatedPrice(encumbrance.getOrderType().value(), poLine.getCost());
+    MonetaryAmount estimatedPrice = calculateEstimatedPrice(poLine.getCost());
     Transaction transaction = new Transaction();
     transaction.setTransactionType(Transaction.TransactionType.ENCUMBRANCE);
     transaction.setFromFundId(distribution.getFundId());

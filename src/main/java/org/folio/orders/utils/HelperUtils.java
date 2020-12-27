@@ -566,17 +566,13 @@ public class HelperUtils {
   /**
    * Calculates total estimated price. See MODORDERS-180 for more details.
    * @param cost PO Line's cost
-   * @param orderType the order type
    */
-  public static MonetaryAmount calculateEstimatedPrice(String orderType, Cost cost) {
+  public static MonetaryAmount calculateEstimatedPrice(Cost cost) {
     CurrencyUnit currency = Monetary.getCurrency(cost.getCurrency());
     MonetaryAmount total = calculateCostUnitsTotal(cost);
     Double fyroAdjustmentAmountD = Optional.ofNullable(cost.getFyroAdjustmentAmount()).orElse(0.0d);
     MonetaryAmount fyroAdjustmentAmount = Money.of(fyroAdjustmentAmountD, currency);
-    if (PurchaseOrder.OrderType.ONGOING.value().equals(orderType)) {
-      return total.add(fyroAdjustmentAmount).with(MonetaryOperators.rounding());
-    }
-    return total.subtract(fyroAdjustmentAmount).with(MonetaryOperators.rounding());
+    return total.add(fyroAdjustmentAmount).with(MonetaryOperators.rounding());
   }
 
   public static MonetaryAmount calculateCostUnitsTotal(Cost cost) {

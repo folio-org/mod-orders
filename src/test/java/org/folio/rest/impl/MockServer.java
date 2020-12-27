@@ -1438,7 +1438,7 @@ public class MockServer {
   private void updatePoLineEstimatedPrice(PoLine line) {
     if (line.getCost() != null) {
       Cost cost = JsonObject.mapFrom(line.getCost()).mapTo(Cost.class);
-      line.getCost().setPoLineEstimatedPrice(calculateEstimatedPrice(PurchaseOrder.OrderType.ONE_TIME.value(), cost).getNumber().doubleValue());
+      line.getCost().setPoLineEstimatedPrice(calculateEstimatedPrice(cost).getNumber().doubleValue());
     }
   }
 

@@ -35,13 +35,13 @@ public final class CompositePoLineValidationUtil {
 
   }
 
-  public static List<Error> validatePoLine(String orderType, CompositePoLine compPOL) {
+  public static List<Error> validatePoLine(CompositePoLine compPOL) {
     List<Error> errors = new ArrayList<>();
 
     errors.addAll(validatePoLineFormats(compPOL));
     errors.addAll(validatePackagePoLine(compPOL));
     errors.addAll(validateLocations(compPOL));
-    errors.addAll(validateCostPrices(orderType, compPOL));
+    errors.addAll(validateCostPrices(compPOL));
 
     return errors;
   }
@@ -175,7 +175,7 @@ public final class CompositePoLineValidationUtil {
     return validatePoLineWithPhysicalFormat(compPOL);
   }
 
-  private static List<Error> validateCostPrices(String orderType, CompositePoLine compLine) {
+  private static List<Error> validateCostPrices(CompositePoLine compLine) {
     List<ErrorCodes> errors = new ArrayList<>();
     Cost cost = compLine.getCost();
     CompositePoLine.OrderFormat orderFormat = compLine.getOrderFormat();
@@ -203,7 +203,7 @@ public final class CompositePoLineValidationUtil {
       errors.add(ErrorCodes.COST_ADDITIONAL_COST_INVALID);
     }
 
-    if (isDiscountNotValid(orderType, cost)) {
+    if (isDiscountNotValid(cost)) {
       errors.add(ErrorCodes.COST_DISCOUNT_INVALID);
     }
 
@@ -216,10 +216,10 @@ public final class CompositePoLineValidationUtil {
    * @param cost for which discount is checked
    * @return true if cost.discount not valid
    */
-  private static boolean isDiscountNotValid(String orderType, Cost cost) {
+  private static boolean isDiscountNotValid(Cost cost) {
     double discount = defaultIfNull(cost.getDiscount(), 0d);
     return (discount < 0d || cost.getDiscountType() == Cost.DiscountType.PERCENTAGE && discount > 100d)
-      || (discount > 0d && cost.getDiscountType() == Cost.DiscountType.AMOUNT && calculateEstimatedPrice(orderType, cost).isNegative());
+      || (discount > 0d && cost.getDiscountType() == Cost.DiscountType.AMOUNT && calculateEstimatedPrice(cost).isNegative());
   }
 
   /**
