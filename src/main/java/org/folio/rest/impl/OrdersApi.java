@@ -10,6 +10,8 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
@@ -28,12 +30,10 @@ import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersRollover {
 
-  private static final Logger logger = LoggerFactory.getLogger(OrdersApi.class);
+  private static final Logger logger = LogManager.getLogger();
 
   private static final String ORDERS_LOCATION_PREFIX = "/orders/composite-orders/%s";
 

@@ -31,7 +31,6 @@ import org.folio.rest.jaxrs.model.ToBeReceived;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import one.util.streamex.StreamEx;
 
 public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
@@ -102,7 +101,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   }
 
   public CompletableFuture<ReceivingHistoryCollection> getReceivingHistory(int limit, int offset, String query) {
-    CompletableFuture<ReceivingHistoryCollection> future = new VertxCompletableFuture<>(ctx);
+    CompletableFuture<ReceivingHistoryCollection> future = new CompletableFuture<>();
 
     try {
       AcquisitionsUnitsHelper acqUnitsHelper = new AcquisitionsUnitsHelper(httpClient, okapiHeaders, ctx, lang);
@@ -110,7 +109,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
         .thenCompose(acqUnitsCqlExpr -> {
           String cql = StringUtils.isEmpty(query) ? acqUnitsCqlExpr : combineCqlExpressions("and", acqUnitsCqlExpr, query);
           String endpoint = String.format(GET_RECEIVING_HISTORY_BY_QUERY, limit, offset, buildQuery(cql, logger), lang);
-          return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+          return handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
             .thenAccept(jsonReceivingHistory -> future.complete(jsonReceivingHistory.mapTo(ReceivingHistoryCollection.class)));
         })
         .exceptionally(t -> {

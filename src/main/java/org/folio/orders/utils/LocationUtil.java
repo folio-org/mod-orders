@@ -1,18 +1,15 @@
 package org.folio.orders.utils;
 
+import static java.util.stream.Collectors.toList;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.folio.models.PoLineUpdateHolder;
-import org.folio.rest.acq.model.Piece;
 import org.folio.rest.jaxrs.model.Location;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 
 public final class LocationUtil {
   private LocationUtil() {
