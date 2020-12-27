@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -137,7 +138,7 @@ public class OrderRolloverService {
 
     return CompletableFuture.allOf(poLinesFuture, encumbrancesFuture)
       .thenApply(v -> poLinesFuture.join())
-      .thenApply(poLines -> buildPoLineEncumbrancesHolders(poLines, encumbrancesFuture.join()))
+      .thenApply(poLines -> buildPoLineEncumbrancesHolders(poLines, ledgerFYRollover, encumbrancesFuture.join()))
       .thenApply(this::applyPoLinesRolloverChanges)
       .exceptionally(t -> {
         logger.error(ErrorCodes.ROLLOVER_PO_LINES_ERROR.getDescription());
@@ -184,7 +185,7 @@ public class OrderRolloverService {
     Cost cost = holder.getPoLine().getCost();
     MonetaryAmount costUnitsTotal = calculateCostUnitsTotal(cost);
     MonetaryAmount totalMonetaryCurrEncumbranceInitialAmount = Money.of(totalCurrEncumbranceInitialAmount, cost.getCurrency());
-    if (PurchaseOrder.OrderType.ONE_TIME.value().equals(holder.getOrderType())) {
+    if (EncumbranceRollover.BasedOn.REMAINING == holder.getBaseOn()) {
       return costUnitsTotal.subtract(totalMonetaryCurrEncumbranceInitialAmount);
     }
     return totalMonetaryCurrEncumbranceInitialAmount.subtract(costUnitsTotal);
@@ -197,17 +198,33 @@ public class OrderRolloverService {
                        .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
   }
 
-  private List<PoLineEncumbrancesHolder> buildPoLineEncumbrancesHolders(List<PoLine> poLines, List<Transaction> encumbrances) {
+  private List<PoLineEncumbrancesHolder> buildPoLineEncumbrancesHolders(List<PoLine> poLines, LedgerFiscalYearRollover ledgerFYRollover,
+                                                                        List<Transaction> encumbrances) {
     List<PoLineEncumbrancesHolder> poLineEncumbrancesHolders = new ArrayList<>();
+    var orderTypeToBaseOnMap = ledgerFYRollover.getEncumbrancesRollover().stream().collect(groupingBy(EncumbranceRollover::getOrderType));
     poLines.forEach(poLine -> {
       PoLineEncumbrancesHolder holder = new PoLineEncumbrancesHolder(poLine);
       extractPoLineEncumbrances(poLine, encumbrances).forEach(encumbrance -> {
         holder.addEncumbrance(encumbrance);
-        holder.withOrderType(encumbrance.getEncumbrance().getOrderType().value());
+        EncumbranceRollover.BasedOn basedOn = defineRolloverEncumbrance(orderTypeToBaseOnMap, encumbrance.getEncumbrance());
+        holder.withBasedOn(basedOn);
         poLineEncumbrancesHolders.add(holder);
       });
     });
     return poLineEncumbrancesHolders;
+  }
+
+  private EncumbranceRollover.BasedOn defineRolloverEncumbrance(Map<EncumbranceRollover.OrderType,
+                                                                List<EncumbranceRollover>> orderTypeToBaseOnMap,
+                                                                Encumbrance encumbrance) {
+    boolean subscription = Optional.ofNullable(encumbrance.getSubscription()).orElse(false);
+    String orderType = encumbrance.getOrderType().value();
+    if (subscription && (PurchaseOrder.OrderType.ONGOING.value().equals(orderType))) {
+      return orderTypeToBaseOnMap.get(EncumbranceRollover.OrderType.ONGOING_SUBSCRIPTION).get(0).getBasedOn();
+    } else if (PurchaseOrder.OrderType.ONGOING.value().equals(orderType)) {
+      return orderTypeToBaseOnMap.get(EncumbranceRollover.OrderType.ONGOING).get(0).getBasedOn();
+    }
+    return orderTypeToBaseOnMap.get(EncumbranceRollover.OrderType.ONE_TIME).get(0).getBasedOn();
   }
 
   private List<Transaction> extractPoLineEncumbrances(PoLine poLine, List<Transaction> encumbrances) {

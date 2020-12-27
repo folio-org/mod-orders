@@ -4,11 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.jaxrs.model.EncumbranceRollover;
 import org.folio.rest.jaxrs.model.PoLine;
 
 public class PoLineEncumbrancesHolder {
   private final PoLine poLine;
-  private String orderType;
+  private EncumbranceRollover.BasedOn baseOn;
   private List<Transaction> encumbrances;
 
   public PoLineEncumbrancesHolder(PoLine poLine) {
@@ -21,13 +22,13 @@ public class PoLineEncumbrancesHolder {
     return this;
   }
 
-  public PoLineEncumbrancesHolder withPrevEncumbrances(List<Transaction> encumbrances) {
+  public PoLineEncumbrancesHolder withEncumbrances(List<Transaction> encumbrances) {
     this.encumbrances = new ArrayList<>(encumbrances);
     return this;
   }
 
-  public PoLineEncumbrancesHolder withOrderType(String orderType) {
-    this.orderType = orderType;
+  public PoLineEncumbrancesHolder withBasedOn(EncumbranceRollover.BasedOn baseOn) {
+    this.baseOn = baseOn;
     return this;
   }
 
@@ -39,7 +40,7 @@ public class PoLineEncumbrancesHolder {
     return this.encumbrances;
   }
 
-  public String getOrderType() {
-    return this.orderType;
+  public EncumbranceRollover.BasedOn getBaseOn() {
+    return this.baseOn;
   }
 }

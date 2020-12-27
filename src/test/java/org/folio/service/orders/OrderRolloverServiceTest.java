@@ -19,6 +19,7 @@ import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.EncumbranceRollover;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -69,11 +70,18 @@ public class OrderRolloverServiceTest {
     String currEncumbrId2 = UUID.randomUUID().toString();
     String expClassId2 = UUID.randomUUID().toString();
 
+    EncumbranceRollover ongoingEncumbrance = new EncumbranceRollover()
+        .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.EXPENDED);
+    EncumbranceRollover oneTimeEncumbrance = new EncumbranceRollover()
+      .withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.REMAINING);
+
+
     LedgerFiscalYearRollover ledgerFiscalYearRollover = new LedgerFiscalYearRollover()
       .withId(UUID.randomUUID().toString())
       .withFromFiscalYearId(fromFiscalYearId)
       .withLedgerId(ledgerId)
-      .withToFiscalYearId(toFiscalYearId);
+      .withToFiscalYearId(toFiscalYearId)
+      .withEncumbrancesRollover(List.of(ongoingEncumbrance, oneTimeEncumbrance));
 
     List<Fund> funds = List.of(new Fund().withId(fundId1).withLedgerId(ledgerId), new Fund().withId(fundId2).withLedgerId(ledgerId));
 
