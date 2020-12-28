@@ -123,7 +123,7 @@ public class OrderRolloverServiceTest {
     assertThat(costOneTime.getPoLineEstimatedPrice(), equalTo(60d));
     assertThat(costOngoing.getPoLineEstimatedPrice(), equalTo(90d));
 
-    assertThat(costOneTime.getFyroAdjustmentAmount(), equalTo(40d));
+    assertThat(costOneTime.getFyroAdjustmentAmount(), equalTo(-40d));
     assertThat(costOngoing.getFyroAdjustmentAmount(), equalTo(-10d));
   }
 

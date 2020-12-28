@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -22,6 +21,8 @@ import java.util.stream.Collectors;
 import javax.money.MonetaryAmount;
 
 import org.apache.commons.collections4.MapUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.models.PoLineEncumbrancesHolder;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
@@ -40,11 +41,8 @@ import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.service.finance.FundService;
 import org.javamoney.moneta.Money;
 
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-
 public class OrderRolloverService {
-  private final Logger logger = LoggerFactory.getLogger(this.getClass());
+  private static final Logger logger = LogManager.getLogger();
 
   private static final String PO_LINE_FUND_DISTR_QUERY = "poLine.fundDistribution == \"*\\\"fundId\\\":*\\\"%s\\\"*\"";
   private static final String ORDER_TYPE_QUERY = "orderType == %s";
@@ -138,7 +136,7 @@ public class OrderRolloverService {
 
     return CompletableFuture.allOf(poLinesFuture, encumbrancesFuture)
       .thenApply(v -> poLinesFuture.join())
-      .thenApply(poLines -> buildPoLineEncumbrancesHolders(poLines, ledgerFYRollover, encumbrancesFuture.join()))
+      .thenApply(poLines -> buildPoLineEncumbrancesHolders(poLines, encumbrancesFuture.join()))
       .thenApply(this::applyPoLinesRolloverChanges)
       .exceptionally(t -> {
         logger.error(ErrorCodes.ROLLOVER_PO_LINES_ERROR.getDescription());
@@ -185,9 +183,6 @@ public class OrderRolloverService {
     Cost cost = holder.getPoLine().getCost();
     MonetaryAmount costUnitsTotal = calculateCostUnitsTotal(cost);
     MonetaryAmount totalMonetaryCurrEncumbranceInitialAmount = Money.of(totalCurrEncumbranceInitialAmount, cost.getCurrency());
-    if (EncumbranceRollover.BasedOn.REMAINING == holder.getBaseOn()) {
-      return costUnitsTotal.subtract(totalMonetaryCurrEncumbranceInitialAmount);
-    }
     return totalMonetaryCurrEncumbranceInitialAmount.subtract(costUnitsTotal);
   }
 
@@ -198,33 +193,16 @@ public class OrderRolloverService {
                        .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
   }
 
-  private List<PoLineEncumbrancesHolder> buildPoLineEncumbrancesHolders(List<PoLine> poLines, LedgerFiscalYearRollover ledgerFYRollover,
-                                                                        List<Transaction> encumbrances) {
+  private List<PoLineEncumbrancesHolder> buildPoLineEncumbrancesHolders(List<PoLine> poLines, List<Transaction> encumbrances) {
     List<PoLineEncumbrancesHolder> poLineEncumbrancesHolders = new ArrayList<>();
-    var orderTypeToBaseOnMap = ledgerFYRollover.getEncumbrancesRollover().stream().collect(groupingBy(EncumbranceRollover::getOrderType));
     poLines.forEach(poLine -> {
       PoLineEncumbrancesHolder holder = new PoLineEncumbrancesHolder(poLine);
       extractPoLineEncumbrances(poLine, encumbrances).forEach(encumbrance -> {
         holder.addEncumbrance(encumbrance);
-        EncumbranceRollover.BasedOn basedOn = defineRolloverEncumbrance(orderTypeToBaseOnMap, encumbrance.getEncumbrance());
-        holder.withBasedOn(basedOn);
         poLineEncumbrancesHolders.add(holder);
       });
     });
     return poLineEncumbrancesHolders;
-  }
-
-  private EncumbranceRollover.BasedOn defineRolloverEncumbrance(Map<EncumbranceRollover.OrderType,
-                                                                List<EncumbranceRollover>> orderTypeToBaseOnMap,
-                                                                Encumbrance encumbrance) {
-    boolean subscription = Optional.ofNullable(encumbrance.getSubscription()).orElse(false);
-    String orderType = encumbrance.getOrderType().value();
-    if (subscription && (PurchaseOrder.OrderType.ONGOING.value().equals(orderType))) {
-      return orderTypeToBaseOnMap.get(EncumbranceRollover.OrderType.ONGOING_SUBSCRIPTION).get(0).getBasedOn();
-    } else if (PurchaseOrder.OrderType.ONGOING.value().equals(orderType)) {
-      return orderTypeToBaseOnMap.get(EncumbranceRollover.OrderType.ONGOING).get(0).getBasedOn();
-    }
-    return orderTypeToBaseOnMap.get(EncumbranceRollover.OrderType.ONE_TIME).get(0).getBasedOn();
   }
 
   private List<Transaction> extractPoLineEncumbrances(PoLine poLine, List<Transaction> encumbrances) {
