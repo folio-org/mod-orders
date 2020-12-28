@@ -267,8 +267,8 @@ public class MockServer {
   public static final String IF_EQUAL_STR = "==";
   private static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
 
-  static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
-  static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
+  public static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
+  public static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
 
   private final int port;
   private final Vertx vertx;
@@ -1789,6 +1789,9 @@ public class MockServer {
         org.folio.rest.acq.model.PurchaseOrder order = po.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
         order.setId(id);
         po = JsonObject.mapFrom(order);
+      }
+      if (po.getString("orderType") == null) {
+        po.put("orderType", org.folio.rest.acq.model.PurchaseOrder.OrderType.ONE_TIME.value());
       }
       addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
       serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());

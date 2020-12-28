@@ -16,14 +16,19 @@ import org.folio.helper.PurchaseOrderHelper;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.annotations.Validate;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.resource.OrdersCompositeOrders;
 import org.folio.rest.jaxrs.resource.OrdersRollover;
+import org.folio.service.orders.OrderRolloverService;
+import org.folio.spring.SpringContextUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersRollover {
@@ -31,6 +36,13 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
   private static final Logger logger = LogManager.getLogger();
 
   private static final String ORDERS_LOCATION_PREFIX = "/orders/composite-orders/%s";
+
+  @Autowired
+  private OrderRolloverService orderRolloverService;
+
+  public OrdersApi(Vertx vertx, String tenantId) {
+    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
+  }
 
   @Override
   @Validate
@@ -149,7 +161,9 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
   @Override
   @Validate
-  public void postOrdersRollover(String lang, LedgerFiscalYearRollover entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
+  public void postOrdersRollover(String lang, LedgerFiscalYearRollover ledgerFYRollover, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    orderRolloverService.rollover(ledgerFYRollover, new RequestContext(vertxContext, okapiHeaders))
+        .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+        .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 }

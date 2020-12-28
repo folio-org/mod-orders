@@ -570,6 +570,14 @@ public class HelperUtils {
    */
   public static MonetaryAmount calculateEstimatedPrice(Cost cost) {
     CurrencyUnit currency = Monetary.getCurrency(cost.getCurrency());
+    MonetaryAmount total = calculateCostUnitsTotal(cost);
+    Double fyroAdjustmentAmountD = Optional.ofNullable(cost.getFyroAdjustmentAmount()).orElse(0.0d);
+    MonetaryAmount fyroAdjustmentAmount = Money.of(fyroAdjustmentAmountD, currency);
+    return total.add(fyroAdjustmentAmount).with(MonetaryOperators.rounding());
+  }
+
+  public static MonetaryAmount calculateCostUnitsTotal(Cost cost) {
+    CurrencyUnit currency = Monetary.getCurrency(cost.getCurrency());
     MonetaryAmount total = Money.of(0, currency);
 
     // Physical resources price
@@ -598,10 +606,8 @@ public class HelperUtils {
     if (cost.getAdditionalCost() != null) {
       total = total.add(Money.of(cost.getAdditionalCost(), currency));
     }
-    // Grand total
-    return total.with(MonetaryOperators.rounding());
+    return total;
   }
-
 
   public static int getPhysicalLocationsQuantity(List<Location> locations) {
     if (CollectionUtils.isNotEmpty(locations)) {
@@ -1074,5 +1080,9 @@ public class HelperUtils {
                                 && Objects.nonNull(piece.getLocationId())
                                     && piece.getPoLineId().equals(poLineId))
       .collect(groupingBy(Piece::getLocationId, groupingBy(Piece::getFormat, summingInt(q -> 1))));
+  }
+
+  public static boolean isNotFound(Throwable t) {
+    return t instanceof HttpException && ((HttpException) t).getCode() == 404;
   }
 }
