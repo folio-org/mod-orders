@@ -361,6 +361,7 @@
           <complianceLevel>11</complianceLevel>
           <XaddSerialVersionUID>true</XaddSerialVersionUID>
           <showWeaveInfo>true</showWeaveInfo>
+          <forceAjcCompile>true</forceAjcCompile>
           <aspectLibraries>
             <aspectLibrary>
               <groupId>org.folio</groupId>

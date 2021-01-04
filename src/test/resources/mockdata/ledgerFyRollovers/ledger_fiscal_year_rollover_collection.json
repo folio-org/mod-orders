@@ -1,0 +1,39 @@
+{
+  "ledgerFiscalYearRollovers": [
+    {
+      "id": "e7ed4439-a5ea-4976-b7e6-264e495fbfe8",
+      "ledgerId": "7cef8378-7cbd-1fae-bcdd-8b9d7c0af9de",
+      "fromFiscalYearId": "ac2164c7-ba3d-1bc2-a12c-e35ceccbfaf2",
+      "toFiscalYearId": "517efc6a-f218-4d25-a832-10de4dc32f25",
+      "restrictEncumbrance": false,
+      "restrictExpenditures": false,
+      "needCloseBudgets": true,
+      "budgetsRollover": [
+        {
+          "fundTypeId": "c93373df-e7ec-4d31-b200-719736610d89",
+          "rolloverAllocation": true,
+          "rolloverAvailable": true,
+          "adjustAllocation": 5,
+          "addAvailableTo": "Available",
+          "allowableEncumbrance": 100,
+          "allowableExpenditure": 100
+        }
+      ],
+      "encumbrancesRollover": [
+        {
+          "orderType": "Ongoing",
+          "basedOn": "Expended",
+          "increaseBy": 5
+        },
+        {
+          "orderType": "One-time",
+          "basedOn": "Expended",
+          "increaseBy": 4
+        }
+      ]
+    }
+  ],
+  "totalRecords": 1
+}
+
+

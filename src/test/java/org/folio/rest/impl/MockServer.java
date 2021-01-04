@@ -37,6 +37,8 @@ import static org.folio.orders.utils.ResourcePathResolver.FINANCE_EXCHANGE_RATE;
 import static org.folio.orders.utils.ResourcePathResolver.FINANCE_RELEASE_ENCUMBRANCE;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
+import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVERS;
+import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVER_ERRORS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
@@ -204,10 +206,12 @@ public class MockServer {
   private static final String CONTRIBUTOR_NAME_TYPES_PATH = BASE_MOCK_DATA_PATH + "contributorNameTypes/contributorPersonalNameType.json";
   public static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
   public static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
+  public static final String LEDGER_FY_ROLLOVERS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRollovers/";
+  public static final String LEDGER_FY_ROLLOVERS_ERRORS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRolloverErrors/";
   public static final String ITEMS_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/";
   public static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
   public static final String BUDGET_EXPENSE_CLASSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "budgetExpenseClasses/budget_expense_classes.json";
-  private static final String EXPENSE_CLASSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "expenseClasses/expense_classes.json";;
+  private static final String EXPENSE_CLASSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "expenseClasses/expense_classes.json";
   public static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
   public static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
@@ -549,6 +553,7 @@ public class MockServer {
     router.get("/finance-storage/budget-expense-classes").handler(this::handleGetBudgetExpenseClass);
     router.get(resourcesPath(EXPENSE_CLASSES_URL)).handler(this::handleGetExpenseClasses);
     router.get(resourcesPath(FUNDS)).handler(this::handleGetFunds);
+    router.get(resourcePath(FUNDS)).handler(this::handleGetFundById);
     router.get(resourcesPath(BUDGETS)).handler(this::handleGetBudgets);
     router.get(resourcesPath(LEDGERS)).handler(this::handleGetLedgers);
     router.get(resourcesPath(TITLES)).handler(this::handleGetTitles);
@@ -562,6 +567,8 @@ public class MockServer {
     router.get(resourcesPath(TRANSACTIONS_ENDPOINT)).handler(this::handleTransactionGetEntry);
     router.get("/finance/funds/:id/budget").handler(this::handleGetBudgetByFinanceId);
     router.get(resourcesPath(FINANCE_EXCHANGE_RATE)).handler(this::handleGetRateOfExchange);
+    router.get(resourcesPath(LEDGER_FY_ROLLOVERS)).handler(this::handleGetFyRollovers);
+    router.get(resourcesPath(LEDGER_FY_ROLLOVER_ERRORS)).handler(this::handleGetFyRolloverErrors);
 
     router.put(resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
     router.put(resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -645,6 +652,28 @@ public class MockServer {
         serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
       }
     }
+  }
+
+  private void handleGetFundById(RoutingContext ctx) {
+    logger.info("got: " + ctx.request().path());
+    String id = ctx.request().getParam(ID);
+    logger.info("id: " + id);
+
+    FundCollection funds = getFundsByIds(Collections.singletonList(id))
+      .mapTo(FundCollection.class);
+
+    if (funds.getTotalRecords() == 0){
+      serverResponse(ctx, 404, APPLICATION_JSON, id);
+    }
+    else {
+      JsonObject fund = new JsonObject()
+        .put("fund",JsonObject.mapFrom(funds.getFunds().get(0)))
+        .put("groupIds", new JsonArray());
+      addServerRqRsData(HttpMethod.GET, FUNDS, fund);
+
+      serverResponse(ctx, 200, APPLICATION_JSON, fund.encodePrettily());
+    }
+
   }
 
   private void handleGetBudgets(RoutingContext ctx) {
@@ -2377,7 +2406,39 @@ public class MockServer {
     String fromParam = StringUtils.trimToEmpty(ctx.request().getParam("from"));
     String toParam = StringUtils.trimToEmpty(ctx.request().getParam("to"));
     ExchangeRate exchangeRate = new ExchangeRate().withExchangeRate(1.0d).withFrom(fromParam).withTo(toParam);
-    addServerRqRsData(HttpMethod.GET, FINANCE_EXCHANGE_RATE, new JsonObject().mapFrom(exchangeRate));
+    addServerRqRsData(HttpMethod.GET, FINANCE_EXCHANGE_RATE, JsonObject.mapFrom(exchangeRate));
     serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(exchangeRate).encodePrettily());
   }
+
+
+  private void handleGetFyRollovers(RoutingContext ctx) {
+    logger.info("handleGetFyRollovers got: " + ctx.request().path());
+    try {
+        JsonObject entries = new JsonObject(ApiTestBase.getMockData(LEDGER_FY_ROLLOVERS_PATH + "ledger_fiscal_year_rollover_collection.json"));
+
+        serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+        addServerRqRsData(HttpMethod.GET, "ledgerFiscalYearRollovers", entries);
+
+    } catch (IOException e) {
+      String body = buildEmptyCollection("ledgerFiscalYearRollovers");
+      serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
+      addServerRqRsData(HttpMethod.GET, "ledgerFiscalYearRollovers", new JsonObject(body));
+    }
+  }
+
+  private void handleGetFyRolloverErrors(RoutingContext ctx) {
+    logger.info("handleGetFyRolloverErrors got: " + ctx.request().path());
+    try {
+        JsonObject entries = new JsonObject(ApiTestBase.getMockData(LEDGER_FY_ROLLOVERS_ERRORS_PATH + "ledger_fiscal_year_rollover_error_collection.json"));
+
+        serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+        addServerRqRsData(HttpMethod.GET, "ledgerFiscalYearRolloverErrors", entries);
+
+    } catch (IOException e) {
+      ctx.response()
+        .setStatusCode(404)
+        .end();
+    }
+  }
+
 }

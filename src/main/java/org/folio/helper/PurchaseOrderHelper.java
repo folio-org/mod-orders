@@ -44,6 +44,7 @@ import static org.folio.orders.utils.ProtectedOperationType.CREATE;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
 import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
+import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
@@ -83,12 +84,14 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
+import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
@@ -96,6 +99,7 @@ import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
+import org.folio.service.finance.FundService;
 import org.javamoney.moneta.Money;
 
 import io.vertx.core.Context;
@@ -122,6 +126,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private final InventoryHelper inventoryHelper;
   private final ExchangeRateProviderResolver exchangeRateProviderResolver;
 
+  private final FundService fundService;
+
 
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -132,6 +138,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     this.titlesHelper = new TitlesHelper(httpClient, okapiHeaders, ctx, lang);
     this.inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
     this.exchangeRateProviderResolver = new ExchangeRateProviderResolver();
+    this.fundService = new FundService(new RestClient(resourcesPath(FUNDS)));
   }
 
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang,
@@ -144,6 +151,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
     this.titlesHelper = new TitlesHelper(httpClient, okapiHeaders, ctx, lang);
     this.exchangeRateProviderResolver = new ExchangeRateProviderResolver();
     this.inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
+    this.fundService = new FundService(new RestClient(resourcesPath(FUNDS)));
+
   }
 
   public PurchaseOrderHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -472,6 +481,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           .thenCompose(this::fetchNonPackageTitles)
           .thenAccept(linesIdTitles -> populateInstanceId(linesIdTitles, compPO.getCompositePoLines()))
           .thenCompose(v -> populateOrderSummary(compPO))
+          .thenCompose(this::populateNeedReEncumberFlag)
           .thenAccept(future::complete)
           .exceptionally(t -> {
             logger.error("Failed to get lines for order with id={} {}", id, t.getCause());
@@ -490,6 +500,39 @@ public class PurchaseOrderHelper extends AbstractHelper {
       });
 
     return future;
+  }
+
+  private CompletableFuture<CompositePurchaseOrder> populateNeedReEncumberFlag(CompositePurchaseOrder compPO) {
+    try {
+      var fundIds = compPO.getCompositePoLines()
+        .stream()
+        .flatMap(op -> op.getFundDistribution().stream())
+        .map(FundDistribution::getFundId)
+        .collect(toList());
+
+      if (fundIds.isEmpty()) {
+        compPO.setNeedReEncumber(false);
+        return CompletableFuture.completedFuture(compPO);
+      }
+
+      return fundService.retrieveFundById(fundIds.get(0), new RequestContext(ctx, okapiHeaders))
+        .thenCompose(fund -> financeHelper.getCurrentFiscalYear(fund.getLedgerId())
+          .thenCompose(currentFY -> financeHelper.getLedgerFyRollover(currentFY.getId(), fund.getLedgerId()))
+          .thenCompose(ledgerFyRollover -> {
+            if (ledgerFyRollover == null) {
+              compPO.setNeedReEncumber(false);
+              return CompletableFuture.completedFuture(compPO);
+            } else {
+              return financeHelper.getLedgerFyRolloverErrors(compPO.getId(), ledgerFyRollover.getId())
+                .thenApply(ledgerFyRolloverErrors ->
+                  compPO.withNeedReEncumber(!ledgerFyRolloverErrors.getLedgerFiscalYearRolloverErrors().isEmpty()));
+            }
+          }));
+
+    } catch (Exception e) {
+      logger.error(compPO, e);
+      return CompletableFuture.failedFuture(e);
+    }
   }
 
   private CompletableFuture<CompositePurchaseOrder> populateOrderSummary(CompositePurchaseOrder compPO) {

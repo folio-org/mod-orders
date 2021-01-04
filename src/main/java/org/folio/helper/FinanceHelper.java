@@ -24,6 +24,8 @@ import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
 import static org.folio.orders.utils.ResourcePathResolver.EXPENSE_CLASSES_URL;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
+import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVERS;
+import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVER_ERRORS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -70,6 +72,7 @@ import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.FundCollection;
 import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.LedgerCollection;
+import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Tags;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -78,6 +81,8 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
+import org.folio.rest.jaxrs.model.LedgerFiscalYearRolloverCollection;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.TransactionService;
@@ -96,6 +101,8 @@ public class FinanceHelper extends AbstractHelper {
   private static final String GET_BUDGET_EXPENSE_CLASSES_QUERY = resourcesPath(BUDGET_EXPENSE_CLASSES) + SEARCH_PARAMS;
   private static final String GET_EXPENSE_CLASSES_QUERY = resourcesPath(EXPENSE_CLASSES_URL) + SEARCH_PARAMS;
   private static final String GET_LEDGERS_WITH_SEARCH_PARAMS = resourcesPath(LEDGERS) + SEARCH_PARAMS;
+  private static final String GET_LEDGER_FY_ROLLOVER_WITH_SEARCH_PARAMS = resourcesPath(LEDGER_FY_ROLLOVERS) + SEARCH_PARAMS;
+  private static final String GET_LEDGER_FY_ROLLOVER_ERRORS_WITH_SEARCH_PARAMS = resourcesPath(LEDGER_FY_ROLLOVER_ERRORS) + SEARCH_PARAMS;
   private static final String QUERY_EQUALS = "&query=";
   private static final String ENCUMBRANCE_CRITERIA = "transactionType==Encumbrance";
   private static final String AND = " and ";
@@ -701,5 +708,25 @@ public class FinanceHelper extends AbstractHelper {
           .forEach(exc -> parameters.add(new Parameter().withKey(EXPENSE_CLASS_NAME).withValue(exc.getName())));
         return parameters;
       });
+  }
+
+  public CompletableFuture<LedgerFiscalYearRollover> getLedgerFyRollover(String fyId, String ledgerId) {
+    String query = "fromFiscalYearId==" + fyId + AND + "ledgerId==" + ledgerId ;
+    String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
+    String endpoint = String.format(GET_LEDGER_FY_ROLLOVER_WITH_SEARCH_PARAMS, 1, 0, queryParam, lang);
+
+    return HelperUtils.handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
+      .thenApply(fyRollovers -> fyRollovers.mapTo(LedgerFiscalYearRolloverCollection.class)
+        .getLedgerFiscalYearRollovers()
+        .get(0));
+  }
+
+  public CompletableFuture<LedgerFiscalYearRolloverErrorCollection> getLedgerFyRolloverErrors(String orderId, String rolloverId) {
+    String query = "details.purchaseOrderId==" + orderId + AND + "ledgerRolloverId==" + rolloverId ;
+    String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
+    String endpoint = String.format(GET_LEDGER_FY_ROLLOVER_ERRORS_WITH_SEARCH_PARAMS, 1, 0, queryParam, lang);
+
+    return HelperUtils.handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
+      .thenApply(fyRolloverErrors -> fyRolloverErrors.mapTo(LedgerFiscalYearRolloverErrorCollection.class));
   }
 }

@@ -44,6 +44,8 @@ public class ResourcePathResolver {
   public static final String FINANCE_EXCHANGE_RATE = "finance/exchange-rate";
   public static final String EXPENSE_CLASSES_URL = "finance.expense-classes";
   public static final String CONFIGURATION_ENTRIES = "configurations.entries";
+  public static final String LEDGER_FY_ROLLOVERS = "finance.ledger-rollovers";
+  public static final String LEDGER_FY_ROLLOVER_ERRORS = "finance.ledger-rollovers-errors";
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
   private static final Map<String, String> SUB_OBJECT_COLLECTION_APIS;
@@ -80,6 +82,8 @@ public class ResourcePathResolver {
     apis.put(FINANCE_EXCHANGE_RATE, "/finance/exchange-rate");
     apis.put(EXPENSE_CLASSES_URL, "/finance/expense-classes");
     apis.put(CONFIGURATION_ENTRIES, "/configurations/entries");
+    apis.put(LEDGER_FY_ROLLOVERS, "/finance/ledger-rollovers");
+    apis.put(LEDGER_FY_ROLLOVER_ERRORS, "/finance/ledger-rollovers-errors");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);
     SUB_OBJECT_ITEM_APIS = Collections.unmodifiableMap(
