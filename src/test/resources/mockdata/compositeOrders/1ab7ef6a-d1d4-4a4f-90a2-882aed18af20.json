@@ -55,14 +55,14 @@
         {
           "code": "AFRICAHIST",
           "encumbrance": "d66a23f3-7222-48c0-af25-0a0aa200d4c7",
-          "fundId": "7fbd5d84-62d1-44c6-9c45-6cb173998bbd",
+          "fundId": "e9285a1c-1dfc-4380-868c-e74073003f43",
           "distributionType": "percentage",
           "value": 50
         },
         {
           "code": "CANHIST",
           "encumbrance": "b6169c02-6879-49c2-8d05-53c773fe5cdc",
-          "fundId": "68872d8a-bf16-420b-829f-206da38f6c10",
+          "fundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
           "distributionType": "amount",
           "value": 1.8
         },

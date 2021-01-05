@@ -724,7 +724,7 @@ public class FinanceHelper extends AbstractHelper {
   public CompletableFuture<LedgerFiscalYearRolloverErrorCollection> getLedgerFyRolloverErrors(String orderId, String rolloverId) {
     String query = "details.purchaseOrderId==" + orderId + AND + "ledgerRolloverId==" + rolloverId ;
     String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
-    String endpoint = String.format(GET_LEDGER_FY_ROLLOVER_ERRORS_WITH_SEARCH_PARAMS, 1, 0, queryParam, lang);
+    String endpoint = String.format(GET_LEDGER_FY_ROLLOVER_ERRORS_WITH_SEARCH_PARAMS, Integer.MAX_VALUE, 0, queryParam, lang);
 
     return HelperUtils.handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
       .thenApply(fyRolloverErrors -> fyRolloverErrors.mapTo(LedgerFiscalYearRolloverErrorCollection.class));

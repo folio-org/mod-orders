@@ -502,7 +502,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return future;
   }
 
-  private CompletableFuture<CompositePurchaseOrder> populateNeedReEncumberFlag(CompositePurchaseOrder compPO) {
+  CompletableFuture<CompositePurchaseOrder> populateNeedReEncumberFlag(CompositePurchaseOrder compPO) {
     try {
       var fundIds = compPO.getCompositePoLines()
         .stream()
@@ -515,19 +515,25 @@ public class PurchaseOrderHelper extends AbstractHelper {
         return CompletableFuture.completedFuture(compPO);
       }
 
-      return fundService.retrieveFundById(fundIds.get(0), new RequestContext(ctx, okapiHeaders))
-        .thenCompose(fund -> financeHelper.getCurrentFiscalYear(fund.getLedgerId())
-          .thenCompose(currentFY -> financeHelper.getLedgerFyRollover(currentFY.getId(), fund.getLedgerId()))
-          .thenCompose(ledgerFyRollover -> {
-            if (ledgerFyRollover == null) {
-              compPO.setNeedReEncumber(false);
-              return CompletableFuture.completedFuture(compPO);
-            } else {
-              return financeHelper.getLedgerFyRolloverErrors(compPO.getId(), ledgerFyRollover.getId())
-                .thenApply(ledgerFyRolloverErrors ->
-                  compPO.withNeedReEncumber(!ledgerFyRolloverErrors.getLedgerFiscalYearRolloverErrors().isEmpty()));
-            }
-          }));
+      return fundService.getFunds(fundIds, new RequestContext(ctx, okapiHeaders))
+        .thenCompose(funds -> {
+          if (funds.isEmpty()) {
+            compPO.setNeedReEncumber(false);
+            return CompletableFuture.completedFuture(compPO);
+          }
+          return financeHelper.getCurrentFiscalYear(funds.get(0).getLedgerId())
+            .thenCompose(currentFY -> financeHelper.getLedgerFyRollover(currentFY.getId(), funds.get(0).getLedgerId()))
+            .thenCompose(ledgerFyRollover -> {
+              if (ledgerFyRollover == null) {
+                compPO.setNeedReEncumber(false);
+                return CompletableFuture.completedFuture(compPO);
+              } else {
+                return financeHelper.getLedgerFyRolloverErrors(compPO.getId(), ledgerFyRollover.getId())
+                  .thenApply(ledgerFyRolloverErrors -> compPO
+                    .withNeedReEncumber(!ledgerFyRolloverErrors.getLedgerFiscalYearRolloverErrors().isEmpty()));
+              }
+            });
+        });
 
     } catch (Exception e) {
       logger.error(compPO, e);
