@@ -8,6 +8,7 @@ import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -25,6 +26,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
@@ -37,6 +39,7 @@ import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.finance.FundService;
+import org.folio.service.orders.OrderInvoiceRelationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -76,8 +79,9 @@ public class PurchaseOrderHelperTest  extends ApiTestBase {
     //given
     PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
     FinanceHelper financeHelper = mock(FinanceHelper.class, CALLS_REAL_METHODS);
+    OrderInvoiceRelationService orderInvoiceRelationService = mock(OrderInvoiceRelationService.class, CALLS_REAL_METHODS);
     PurchaseOrderHelper serviceSpy = spy(
-        new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en", poNumberHelper, orderLineHelper, financeHelper));
+        new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en", poNumberHelper, orderLineHelper, financeHelper, orderInvoiceRelationService));
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
     Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
@@ -107,9 +111,10 @@ public class PurchaseOrderHelperTest  extends ApiTestBase {
     //given
     PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
     FinanceHelper financeHelper = mock(FinanceHelper.class, CALLS_REAL_METHODS);
+    OrderInvoiceRelationService orderInvoiceRelationService = mock(OrderInvoiceRelationService.class, CALLS_REAL_METHODS);
 
     PurchaseOrderHelper serviceSpy = spy(new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en", poNumberHelper,
-        orderLineHelper, financeHelper));
+        orderLineHelper, financeHelper, orderInvoiceRelationService));
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
     doReturn(completedFuture(order)).when(serviceSpy).updateAndGetOrderWithLines(any(CompositePurchaseOrder.class));
@@ -128,13 +133,14 @@ public class PurchaseOrderHelperTest  extends ApiTestBase {
     PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
     FinanceHelper financeHelper = mock(FinanceHelper.class, CALLS_REAL_METHODS);
     FundService fundService = mock(FundService.class, CALLS_REAL_METHODS);
+    OrderInvoiceRelationService orderInvoiceRelationService = mock(OrderInvoiceRelationService.class, CALLS_REAL_METHODS);
 
     PurchaseOrderHelper serviceSpy = spy(
-        new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en", poNumberHelper, orderLineHelper, financeHelper));
+        new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en", poNumberHelper, orderLineHelper, financeHelper, orderInvoiceRelationService));
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
     Fund sampleFund = new Fund()
-        .withLedgerId(UUID.randomUUID().toString())
+      .withLedgerId(UUID.randomUUID().toString())
       .withFundStatus(Fund.FundStatus.ACTIVE)
       .withCode(UUID.randomUUID().toString());
 
@@ -165,5 +171,24 @@ public class PurchaseOrderHelperTest  extends ApiTestBase {
     doReturn(completedFuture(null)).when(financeHelper).getLedgerFyRollover(any(), any());
     compOrder = serviceSpy.populateNeedReEncumberFlag(order).join();
     assertFalse(compOrder.getNeedReEncumber());
+  }
+
+  @Test
+  public void testDeleteOrderLinkedToInvoiceWithError() {
+    // given
+    PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
+    FinanceHelper financeHelper = mock(FinanceHelper.class, CALLS_REAL_METHODS);
+    OrderInvoiceRelationService orderInvoiceRelationService = mock(OrderInvoiceRelationService.class, CALLS_REAL_METHODS);
+
+    PurchaseOrderHelper serviceSpy = spy(
+      new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en", poNumberHelper, orderLineHelper, financeHelper, orderInvoiceRelationService));
+
+    OrderInvoiceRelationshipCollection oirCollection = new OrderInvoiceRelationshipCollection().withTotalRecords(1);
+
+    doReturn(completedFuture(oirCollection)).when(orderInvoiceRelationService).getOrderInvoiceRelationshipCollection(any(), any(), any(), any());
+
+    assertThrows(Exception.class, () -> {
+      serviceSpy.deleteOrder(ORDER_ID).join();
+    });
   }
 }

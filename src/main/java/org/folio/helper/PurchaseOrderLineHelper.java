@@ -38,6 +38,7 @@ import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_INVOICE_RELATIONSHIP;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
@@ -85,6 +86,8 @@ import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.core.RestClient;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
@@ -103,6 +106,7 @@ import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.orders.OrderInvoiceRelationService;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
@@ -132,6 +136,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   private final ProtectionHelper protectionHelper;
   private final PiecesHelper piecesHelper;
   private final FinanceHelper financeHelper;
+  private final OrderInvoiceRelationService orderInvoiceRelationService;
 
   public PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -139,6 +144,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     this.protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
     this.piecesHelper = new PiecesHelper(httpClient, okapiHeaders, ctx, lang);
     this.financeHelper = new FinanceHelper(httpClient, okapiHeaders, ctx, lang);
+    this.orderInvoiceRelationService = new OrderInvoiceRelationService(new RestClient(resourcesPath(ORDER_INVOICE_RELATIONSHIP)));
   }
 
   public PurchaseOrderLineHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -382,9 +388,10 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private CompletableFuture<JsonObject> verifyDeleteAllowed(JsonObject line) {
-    return getCompositePurchaseOrder(line.getString(PURCHASE_ORDER_ID))
-      .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), DELETE))
-      .thenApply(aVoid -> line);
+    return orderInvoiceRelationService.checkOrderInvoiceRelationship(line.getString(PURCHASE_ORDER_ID), new RequestContext(ctx, okapiHeaders))
+      .thenCompose(v -> getCompositePurchaseOrder(line.getString(PURCHASE_ORDER_ID))
+        .thenCompose(order -> protectionHelper.isOperationRestricted(order.getAcqUnitIds(), DELETE))
+        .thenApply(aVoid -> line));
   }
 
   /**
