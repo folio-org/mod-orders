@@ -522,13 +522,13 @@ public class PurchaseOrderHelper extends AbstractHelper {
             return CompletableFuture.completedFuture(compPO);
           }
           return financeHelper.getCurrentFiscalYear(funds.get(0).getLedgerId())
-            .thenCompose(currentFY -> financeHelper.getLedgerFyRollover(currentFY.getId(), funds.get(0).getLedgerId()))
-            .thenCompose(ledgerFyRollover -> {
-              if (ledgerFyRollover == null) {
+            .thenCompose(currentFY -> financeHelper.getLedgerFyRollovers(currentFY.getId(), funds.get(0).getLedgerId()))
+            .thenCompose(ledgerFyRollovers -> {
+              if (ledgerFyRollovers.getLedgerFiscalYearRollovers().isEmpty()) {
                 compPO.setNeedReEncumber(false);
                 return CompletableFuture.completedFuture(compPO);
               } else {
-                return financeHelper.getLedgerFyRolloverErrors(compPO.getId(), ledgerFyRollover.getId())
+                return financeHelper.getLedgerFyRolloverErrors(compPO.getId(), ledgerFyRollovers.getLedgerFiscalYearRollovers().get(0).getId())
                   .thenApply(ledgerFyRolloverErrors -> compPO
                     .withNeedReEncumber(!ledgerFyRolloverErrors.getLedgerFiscalYearRolloverErrors().isEmpty()));
               }
