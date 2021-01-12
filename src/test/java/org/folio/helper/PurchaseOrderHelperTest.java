@@ -25,7 +25,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.ErrorCodes;
+import org.folio.rest.acq.model.OrderInvoiceRelationship;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.FiscalYear;
@@ -33,6 +37,8 @@ import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.core.RestClient;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
@@ -42,11 +48,15 @@ import org.folio.service.finance.FundService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
+@ExtendWith(VertxExtension.class)
 public class PurchaseOrderHelperTest  extends ApiTestBase {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";
   private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
@@ -174,21 +184,27 @@ public class PurchaseOrderHelperTest  extends ApiTestBase {
   }
 
   @Test
-  public void testDeleteOrderLinkedToInvoiceWithError() {
+  public void testDeleteOrderLinkedToInvoiceWithError(VertxTestContext ctx) throws Throwable {
     // given
-    PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
-    FinanceHelper financeHelper = mock(FinanceHelper.class, CALLS_REAL_METHODS);
-    OrderInvoiceRelationService orderInvoiceRelationService = mock(OrderInvoiceRelationService.class, CALLS_REAL_METHODS);
+    RestClient restClient = mock(RestClient.class, CALLS_REAL_METHODS);
+    OrderInvoiceRelationService orderInvoiceRelationService = spy(new OrderInvoiceRelationService(restClient));
 
-    PurchaseOrderHelper serviceSpy = spy(
-      new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en", poNumberHelper, orderLineHelper, financeHelper, orderInvoiceRelationService));
+    // for returning non empty collection
+    OrderInvoiceRelationshipCollection oirCollection = new OrderInvoiceRelationshipCollection()
+      .withOrderInvoiceRelationships(Collections.singletonList(new OrderInvoiceRelationship()))
+      .withTotalRecords(1);
 
-    OrderInvoiceRelationshipCollection oirCollection = new OrderInvoiceRelationshipCollection().withTotalRecords(1);
+    doReturn(completedFuture(oirCollection)).when(restClient).get(anyString(), anyInt(), anyInt(), any(), any());
 
-    doReturn(completedFuture(oirCollection)).when(orderInvoiceRelationService).getOrderInvoiceRelationshipCollection(any(), any(), any(), any());
+    CompletableFuture<Void> future = orderInvoiceRelationService.checkOrderInvoiceRelationship(ORDER_ID, new RequestContext(ctxMock, okapiHeadersMock));
+    assertThrows(CompletionException.class, future::join);
 
-    assertThrows(Exception.class, () -> {
-      serviceSpy.deleteOrder(ORDER_ID).join();
+    future.exceptionally(t -> {
+      HttpException httpException = (HttpException) t.getCause();
+      assertEquals(ErrorCodes.ORDER_RELATES_TO_INVOICE.getDescription(), httpException.getMessage());
+      ctx.completeNow();
+      return null;
     });
+    checkVertxContextCompletion(ctx);
   }
 }

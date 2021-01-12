@@ -31,7 +31,7 @@ public class OrderInvoiceRelationService {
     return getOrderInvoiceRelationshipCollection(query, 0,0, requestContext)
       .thenApply(oirs -> {
         if (oirs.getTotalRecords() > 0) {
-          logger.error("Order {} is linked to invoice and can not be deleted", id);
+          logger.error("Order or order line {} is linked to the invoice and can not be deleted", id);
           throw new HttpException(400, ORDER_RELATES_TO_INVOICE);
         }
         return null;

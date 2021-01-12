@@ -937,7 +937,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
               throw new HttpException(422, poFromStorage.getWorkflowStatus() == OPEN ? ErrorCodes.ORDER_OPEN : ErrorCodes.ORDER_CLOSED);
             }
             validatePOLineProtectedFieldsChangedInPO(poFromStorage, compPO, existingPoLines);
-            //check if the order is in open status and the fields are being changed
+
             return handlePoLines(compPO, existingPoLines);
           } else {
             return updatePoLinesNumber(compPO, existingPoLines);
@@ -1040,8 +1040,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
       futures.addAll(processPoLinesUpdate(compOrder, poLinesFromStorage));
       // The remaining unprocessed PoLines should be removed
       poLinesFromStorage
-        .forEach(poLine -> futures.add(financeHelper.deletePoLineEncumbrances(poLine.getId())
-          .thenCompose(v -> deletePoLine(JsonObject.mapFrom(poLine), httpClient, okapiHeaders, logger))));
+        .forEach(poLine -> futures.add(orderInvoiceRelationService.checkOrderInvoiceRelationship(compOrder.getId(), new RequestContext(ctx, okapiHeaders))
+            .thenCompose(v -> financeHelper.deletePoLineEncumbrances(poLine.getId())
+              .thenCompose(ok -> deletePoLine(JsonObject.mapFrom(poLine), httpClient, okapiHeaders, logger)))));
+
     }
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
   }

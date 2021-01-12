@@ -533,7 +533,7 @@ public class ApiTestBase {
   }
 
   public static void checkVertxContextCompletion(VertxTestContext context) throws Throwable {
-    assertTrue(context.awaitCompletion(30, TimeUnit.SECONDS));
+    assertTrue(context.awaitCompletion(10, TimeUnit.SECONDS));
     if (context.failed()) {
       throw context.causeOfFailure();
     }
