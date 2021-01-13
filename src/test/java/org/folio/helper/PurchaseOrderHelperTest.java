@@ -42,6 +42,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
+import org.folio.rest.jaxrs.model.LedgerFiscalYearRolloverCollection;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.finance.FundService;
@@ -154,14 +155,17 @@ public class PurchaseOrderHelperTest  extends ApiTestBase {
       .withFundStatus(Fund.FundStatus.ACTIVE)
       .withCode(UUID.randomUUID().toString());
 
-    LedgerFiscalYearRollover ledgerFiscalYearRollover = new LedgerFiscalYearRollover();
+    LedgerFiscalYearRolloverCollection ledgerFiscalYearRollover = new LedgerFiscalYearRolloverCollection()
+      .withLedgerFiscalYearRollovers(Collections.singletonList(new LedgerFiscalYearRollover()))
+      .withTotalRecords(1);
+
     LedgerFiscalYearRolloverErrorCollection ledgerFiscalYearRolloverErrors = new LedgerFiscalYearRolloverErrorCollection()
       .withLedgerFiscalYearRolloverErrors(Collections.singletonList(new LedgerFiscalYearRolloverError()));
 
     // LedgerFiscalYearRolloverErrorCollection is not empty. Expected "needReEncumber" = true
     doReturn(completedFuture(sampleFund)).when(fundService).retrieveFundById(any(), any());
     doReturn(completedFuture(new FiscalYear())).when(financeHelper).getCurrentFiscalYear(any());
-    doReturn(completedFuture(ledgerFiscalYearRollover)).when(financeHelper).getLedgerFyRollover(any(), any());
+    doReturn(completedFuture(ledgerFiscalYearRollover)).when(financeHelper).getLedgerFyRollovers(any(), any());
     doReturn(completedFuture(ledgerFiscalYearRolloverErrors)).when(financeHelper).getLedgerFyRolloverErrors(any(), any());
 
     CompositePurchaseOrder compOrder = serviceSpy.populateNeedReEncumberFlag(order).join();
@@ -173,14 +177,10 @@ public class PurchaseOrderHelperTest  extends ApiTestBase {
     assertFalse(compOrder.getNeedReEncumber());
 
     // LedgerFyRollover not exists. Expected "needReEncumber" = false
-    doReturn(completedFuture(null)).when(financeHelper).getLedgerFyRollover(any(), any());
+    doReturn(completedFuture(new LedgerFiscalYearRolloverCollection())).when(financeHelper).getLedgerFyRollovers(any(), any());
     compOrder = serviceSpy.populateNeedReEncumberFlag(order).join();
     assertFalse(compOrder.getNeedReEncumber());
 
-    // LedgerFyRollover not exists. Expected "needReEncumber" = false
-    doReturn(completedFuture(null)).when(financeHelper).getLedgerFyRollover(any(), any());
-    compOrder = serviceSpy.populateNeedReEncumberFlag(order).join();
-    assertFalse(compOrder.getNeedReEncumber());
   }
 
   @Test

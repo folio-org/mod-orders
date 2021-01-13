@@ -81,7 +81,6 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
-import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRolloverCollection;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -710,15 +709,13 @@ public class FinanceHelper extends AbstractHelper {
       });
   }
 
-  public CompletableFuture<LedgerFiscalYearRollover> getLedgerFyRollover(String fyId, String ledgerId) {
+  public CompletableFuture<LedgerFiscalYearRolloverCollection> getLedgerFyRollovers(String fyId, String ledgerId) {
     String query = "fromFiscalYearId==" + fyId + AND + "ledgerId==" + ledgerId ;
     String queryParam = QUERY_EQUALS + encodeQuery(query, logger);
     String endpoint = String.format(GET_LEDGER_FY_ROLLOVER_WITH_SEARCH_PARAMS, 1, 0, queryParam, lang);
 
     return HelperUtils.handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
-      .thenApply(fyRollovers -> fyRollovers.mapTo(LedgerFiscalYearRolloverCollection.class)
-        .getLedgerFiscalYearRollovers()
-        .get(0));
+      .thenApply(fyRollovers -> fyRollovers.mapTo(LedgerFiscalYearRolloverCollection.class));
   }
 
   public CompletableFuture<LedgerFiscalYearRolloverErrorCollection> getLedgerFyRolloverErrors(String orderId, String rolloverId) {
