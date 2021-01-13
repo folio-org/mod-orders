@@ -6,7 +6,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMM
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
-import static org.folio.service.TransactionService.TRANSACTION_STORAGE_ENDPOINT_BYID;
+import static org.folio.service.finance.TransactionService.TRANSACTION_STORAGE_ENDPOINT_BYID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -22,6 +22,7 @@ import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.finance.TransactionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;

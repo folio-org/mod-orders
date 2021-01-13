@@ -1,4 +1,4 @@
-package org.folio.service;
+package org.folio.service.finance;
 
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
