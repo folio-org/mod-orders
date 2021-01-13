@@ -36,6 +36,7 @@ import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isOrderClosing;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isOrderReopening;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToApproved;
+import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToClosed;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToOpen;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToPending;
 import static org.folio.orders.utils.POProtectedFields.getFieldNames;
@@ -255,6 +256,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
             }
             return CompletableFuture.completedFuture(null);
           })
+          .thenCompose(ok -> {
+            if (isTransitionToClosed(poFromStorage, compPO)) {
+              return closeOrder(compPO);
+            }
+            return CompletableFuture.completedFuture(null);
+          })
           .thenCompose(v -> {
             if (isTransitionToOpen) {
               return updateAndGetOrderWithLines(compPO)
@@ -277,6 +284,26 @@ public class PurchaseOrderHelper extends AbstractHelper {
           .thenCompose(ok -> handleFinalOrderStatus(compPO, poFromStorage.getWorkflowStatus().value()));
 
       });
+  }
+
+  private CompletionStage<Void> closeOrder(CompositePurchaseOrder compPO) {
+    return releaseEncumbrancesForOrder(compPO);
+  }
+
+  private CompletableFuture<Void> releaseEncumbrancesForOrder(CompositePurchaseOrder compPO) {
+    EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
+    return fetchCompositePolLines(compPO).thenCompose(compositePoLines -> {
+        if (isFundDistributionsPresent(compositePoLines)) {
+          return financeHelper.getOrderEncumbrances(compPO.getId())
+            .thenAccept(holder::withEncumbrancesFromStorage)
+            .thenApply(v -> holder.getEncumbrancesFromStorage())
+            .thenAccept(holder::withEncumbrancesForRelease)
+            .thenCompose(v -> orderLineHelper.createOrUpdateOrderTransactionSummary(compPO.getId(), holder))
+            .thenCompose(v -> orderLineHelper.createOrUpdateEncumbrances(holder));
+        }
+        return CompletableFuture.completedFuture(null);
+      }
+    );
   }
 
   private CompletableFuture<Void> checkLocationsAndPiecesConsistency(List<CompositePoLine> poLines) {
