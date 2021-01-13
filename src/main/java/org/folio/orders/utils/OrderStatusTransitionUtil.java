@@ -34,4 +34,8 @@ public final class OrderStatusTransitionUtil {
   public static boolean isTransitionToPending(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO) {
     return poFromStorage.getWorkflowStatus() == OPEN && compPO.getWorkflowStatus() == PENDING;
   }
+
+  public static boolean isTransitionToClosed(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO) {
+    return poFromStorage.getWorkflowStatus() == OPEN && compPO.getWorkflowStatus() == CLOSED;
+  }
 }
