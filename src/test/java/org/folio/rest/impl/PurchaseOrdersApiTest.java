@@ -2976,6 +2976,22 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
+  public void testUpdateOrderCloseOrderWithCloseReasonAndFundDistribution() {
+    logger.info("=== Test case: Able to Close Order with close Reason and fund distribution ===");
+
+    JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_WFD_ID_OPEN_STATUS);
+    assertThat(reqData.getString("workflowStatus"), is(CompositePurchaseOrder.WorkflowStatus.OPEN.value()));
+    reqData.put("workflowStatus", "Closed");
+    // close reason must not be checked if the Order is in OPEN status in storage
+    CloseReason closeReason = new CloseReason();
+    closeReason.setNote("can set close reason");
+    closeReason.setReason("Complete");
+    reqData.put("closeReason", JsonObject.mapFrom(closeReason));
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getString("id")), JsonObject.mapFrom(reqData), "", 204);
+  }
+
+  @Test
   public void testUpdateOrderWithLineProtectedFieldsChanging() {
     logger.info("=== Test case when OPEN order errors if protected fields are changed in CompositePoLine===");
 
