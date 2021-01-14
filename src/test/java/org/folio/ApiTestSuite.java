@@ -5,7 +5,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.folio.helper.FinanceHelperTest;
+import org.folio.service.finance.EncumbranceServiceTest;
 import org.folio.helper.InventoryHelperTest;
 import org.folio.helper.PiecesHelperTest;
 import org.folio.helper.PurchaseOrderHelperTest;
@@ -198,7 +198,7 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class FinanceHelperTestNested extends FinanceHelperTest {
+  class EncumbranceServiceTestNested extends EncumbranceServiceTest {
   }
 
   @Nested

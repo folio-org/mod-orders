@@ -549,7 +549,7 @@ public class MockServer {
     router.get("/isbn/convertTo13").handler(this::handleGetIsbnConverter);
     router.get(resourcePath(ORDER_TEMPLATES)).handler(ctx -> handleGetGenericSubObj(ctx, ORDER_TEMPLATES));
     router.get(resourcesPath(ORDER_TEMPLATES)).handler(this::handleGetOrderTemplates);
-    router.get("/finance/ledgers/:id/current-fiscal-year").handler(this::handleGetCurrentFiscalYearByLedgerId);
+    router.get("`/finance/ledgers/:id/current-fiscal-year`").handler(this::handleGetCurrentFiscalYearByLedgerId);
     router.get("/finance-storage/budget-expense-classes").handler(this::handleGetBudgetExpenseClass);
     router.get(resourcesPath(EXPENSE_CLASSES_URL)).handler(this::handleGetExpenseClasses);
     router.get(resourcesPath(FUNDS)).handler(this::handleGetFunds);

@@ -1,4 +1,4 @@
-package org.folio.helper;
+package org.folio.service.finance;
 
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -39,6 +39,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.PoLineFundHolder;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -49,6 +50,7 @@ import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -57,7 +59,8 @@ import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.service.TransactionService;
+import org.folio.service.finance.EncumbranceService;
+import org.folio.service.finance.TransactionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -69,7 +72,7 @@ import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
-public class FinanceHelperTest extends ApiTestBase {
+public class EncumbranceServiceTest extends ApiTestBase {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14";
   private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
   public static final String TENANT_ID = "ordertest";
@@ -80,6 +83,7 @@ public class FinanceHelperTest extends ApiTestBase {
   private Context ctxMock;
   private Map<String, String> okapiHeadersMock;
   private HttpClientInterface httpClient;
+  private RequestContext requestContextMock;
 
   @Mock
   private TransactionService transactionService;
@@ -96,17 +100,18 @@ public class FinanceHelperTest extends ApiTestBase {
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
+    requestContextMock = new RequestContext(ctxMock, okapiHeadersMock);
     httpClient = HttpClientFactory.getHttpClient(okapiURL, TENANT_ID);
     MockitoAnnotations.openMocks(this);
   }
 
   @Test
-  public void testShouldMakeEncumbrancesPending() {
+  void testShouldMakeEncumbrancesPending() {
     //given
-    FinanceHelper financeHelper = mock(FinanceHelper.class, CALLS_REAL_METHODS);
+    EncumbranceService encumbranceService = mock(EncumbranceService.class, CALLS_REAL_METHODS);
     Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
     //When
-    financeHelper.makeEncumbrancesPending(Collections.singletonList(encumbrance));
+    encumbranceService.makeEncumbrancesPending(Collections.singletonList(encumbrance));
     //Then
     assertEquals(0d, encumbrance.getAmount(), 0.0);
     assertEquals(0d, encumbrance.getEncumbrance().getInitialAmountEncumbered(), 0.0);
@@ -114,77 +119,76 @@ public class FinanceHelperTest extends ApiTestBase {
   }
 
   @Test
-  public void testShouldInvokeUpdateTransactionTimesEqualToTransactionQuantity() {
+  void testShouldInvokeUpdateTransactionTimesEqualToTransactionQuantity() {
     //given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en"
-                        , transactionService));
+    EncumbranceService encumbranceService = spy(new EncumbranceService());
     Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
-    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any());
+    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any(), requestContextMock);
     //When
-    financeHelper.updateTransactions(Arrays.asList(encumbrance, encumbrance));
+    encumbranceService.updateTransactions(Arrays.asList(encumbrance, encumbrance), requestContextMock);
     //Then
-    verify(transactionService, times(1)).updateTransactions(any());
+    verify(transactionService, times(1)).updateTransactions(any(), requestContextMock);
   }
 
   @Test
-  public void testShouldReturnHoldersIfAllFundsInPOLDoesNotExistInStorageTransactions() {
+  void testShouldReturnHoldersIfAllFundsInPOLDoesNotExistInStorageTransactions() {
     //given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    EncumbranceService encumbranceService = spy(new EncumbranceService());
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
     encumbrance.getEncumbrance().setSourcePoLineId(order.getCompositePoLines().get(0).getId());
-    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any());
+    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any(), requestContextMock);
     //When
-    List<PoLineFundHolder> actLines = financeHelper.buildNewEncumbrancesHolders(order.getCompositePoLines(), Arrays.asList(encumbrance, encumbrance));
+    List<PoLineFundHolder> actLines = encumbranceService.buildNewEncumbrancesHolders(order.getCompositePoLines(), Arrays.asList(encumbrance, encumbrance));
     //Then
     assertEquals(3, actLines.size());
   }
 
 
   @Test
-  public void testShouldReturnHoldersForAllPoLinesByFundsFromOrderIfNoEncumbrancesInStorage() {
+  void testShouldReturnHoldersForAllPoLinesByFundsFromOrderIfNoEncumbrancesInStorage() {
     //given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    EncumbranceService encumbranceService = spy(new EncumbranceService());
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     order.getCompositePoLines().get(0).getFundDistribution().add(new FundDistribution().withFundId(UUID.randomUUID().toString()));
-    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any());
+    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any(), requestContextMock);
     //When
-    List<PoLineFundHolder> actLines = financeHelper.buildNewEncumbrancesHolders(order.getCompositePoLines(), null);
+    List<PoLineFundHolder> actLines = encumbranceService.buildNewEncumbrancesHolders(order.getCompositePoLines(), null);
     //Then
     assertEquals(4, actLines.size());
   }
 
   @Test
-  public void testShouldReturnHoldersForAllPoLinesByFundsFromOrderExceptPoLineWithEmptyFundsAndNoEncumbrancesInStorage() {
+  void testShouldReturnHoldersForAllPoLinesByFundsFromOrderExceptPoLineWithEmptyFundsAndNoEncumbrancesInStorage() {
     //given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    EncumbranceService encumbranceService = spy(new EncumbranceService());
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     order.getCompositePoLines().get(0).setFundDistribution(null);
-    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any());
+    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any(), requestContextMock);
     //When
-    List<PoLineFundHolder> actLines = financeHelper.buildNewEncumbrancesHolders(order.getCompositePoLines(), null);
+    List<PoLineFundHolder> actLines = encumbranceService.buildNewEncumbrancesHolders(order.getCompositePoLines(), null);
     //Then
     assertEquals(2, actLines.size());
   }
 
   @Test
-  public void testShouldReturnAllPoLinesIfAllPOLIdsDoesNotExistInStorageTransactions() {
+  void testShouldReturnAllPoLinesIfAllPOLIdsDoesNotExistInStorageTransactions() {
     //given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    EncumbranceService encumbranceService = spy(new EncumbranceService());
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
     encumbrance.setFromFundId(order.getCompositePoLines().get(0).getFundDistribution().get(0).getFundId());
-    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any());
+    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any(), requestContextMock);
     //When
-    List<PoLineFundHolder> actLines = financeHelper.buildNewEncumbrancesHolders(order.getCompositePoLines(), Arrays.asList(encumbrance, encumbrance));
+    List<PoLineFundHolder> actLines = encumbranceService.buildNewEncumbrancesHolders(order.getCompositePoLines(), Arrays.asList(encumbrance, encumbrance));
     //Then
     assertEquals(3, actLines.size());
   }
 
   @Test
-  public void testShouldReturnAllPoLinesIfAllFundsInPOLDoesNotExistInStorageTransactionsAndOnePOLHasMultiplyFunds() {
+  void testShouldReturnAllPoLinesIfAllFundsInPOLDoesNotExistInStorageTransactionsAndOnePOLHasMultiplyFunds() {
     //given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    EncumbranceService encumbranceService = spy(new EncumbranceService());
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     order.getCompositePoLines().get(0).getFundDistribution().add(new FundDistribution().withFundId(UUID.randomUUID().toString()));
 
@@ -194,49 +198,49 @@ public class FinanceHelperTest extends ApiTestBase {
     matchedEncumbrance.setFromFundId(order.getCompositePoLines().get(0).getFundDistribution().get(0).getFundId());
     order.getCompositePoLines().get(0).getFundDistribution().get(0).setEncumbrance(matchedEncumbrance.getId());
 
-    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any());
+    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any(), requestContextMock);
     //When
-    List<PoLineFundHolder> actLines = financeHelper.buildNewEncumbrancesHolders(order.getCompositePoLines(), Arrays.asList(notMatchesEncumbrance, matchedEncumbrance));
+    List<PoLineFundHolder> actLines = encumbranceService.buildNewEncumbrancesHolders(order.getCompositePoLines(), Arrays.asList(notMatchesEncumbrance, matchedEncumbrance));
     //Then
     assertEquals(3, actLines.size());
   }
 
   @Test
-  public void testShouldReturnAllPoLinesIfOnePOLHasMultiplyFundsAndOneFundForExistingEncumbrance() {
+  void testShouldReturnAllPoLinesIfOnePOLHasMultiplyFundsAndOneFundForExistingEncumbrance() {
     //given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    EncumbranceService encumbranceService = spy(new EncumbranceService());
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     order.getCompositePoLines().get(0).getFundDistribution().add(new FundDistribution().withFundId(UUID.randomUUID().toString()));
 
     Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
     encumbrance.getEncumbrance().setSourcePoLineId(order.getCompositePoLines().get(0).getId());
-    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any());
+    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any(), requestContextMock);
     //When
-    List<PoLineFundHolder> actLines = financeHelper.buildNewEncumbrancesHolders(order.getCompositePoLines(), Arrays.asList(encumbrance, encumbrance));
+    List<PoLineFundHolder> actLines = encumbranceService.buildNewEncumbrancesHolders(order.getCompositePoLines(), Arrays.asList(encumbrance, encumbrance));
     //Then
     assertEquals(4, actLines.size());
   }
 
   @Test
-  public void testShouldReturnOnlyPoLinesWhichIsNotMatchesWithEncumbranceByIdAndFundId() {
+  void testShouldReturnOnlyPoLinesWhichIsNotMatchesWithEncumbranceByIdAndFundId() {
     //given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    EncumbranceService encumbranceService = spy(new EncumbranceService());
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
     Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
     encumbrance.getEncumbrance().setSourcePoLineId(order.getCompositePoLines().get(0).getId());
     encumbrance.setFromFundId(order.getCompositePoLines().get(0).getFundDistribution().get(0).getFundId());
-    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any());
+    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any(), requestContextMock);
     //When
-    List<PoLineFundHolder> actLines = financeHelper.buildNewEncumbrancesHolders(order.getCompositePoLines(), Arrays.asList(encumbrance, encumbrance));
+    List<PoLineFundHolder> actLines = encumbranceService.buildNewEncumbrancesHolders(order.getCompositePoLines(), Arrays.asList(encumbrance, encumbrance));
     //Then
     assertEquals(2, actLines.size());
   }
 
   @Test
-  public void testShouldReturnAllEncumbranceHoldersWhichIsNotMatchesWithAnyPoLinesOrFundsInPoLInes() {
+  void testShouldReturnAllEncumbranceHoldersWhichIsNotMatchesWithAnyPoLinesOrFundsInPoLInes() {
     //given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    EncumbranceService encumbranceService = spy(new EncumbranceService());
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
     Transaction notMatchesEncumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
@@ -244,10 +248,10 @@ public class FinanceHelperTest extends ApiTestBase {
     matchedEncumbrance.getEncumbrance().setSourcePoLineId(order.getCompositePoLines().get(0).getId());
     matchedEncumbrance.setFromFundId(order.getCompositePoLines().get(0).getFundDistribution().get(0).getFundId());
 
-    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any());
+    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any(), requestContextMock);
     //When
     List<Transaction> actEncumbranceForRelease =
-      financeHelper.findNeedReleaseEncumbrances(order.getCompositePoLines(), Arrays.asList(notMatchesEncumbrance, matchedEncumbrance));
+      encumbranceService.findNeedReleaseEncumbrances(order.getCompositePoLines(), Arrays.asList(notMatchesEncumbrance, matchedEncumbrance));
     //Then
     assertEquals(1, actEncumbranceForRelease.size());
     Transaction encumbrance = actEncumbranceForRelease.get(0);
@@ -256,45 +260,45 @@ public class FinanceHelperTest extends ApiTestBase {
   }
 
   @Test
-  public void testShouldReturnEmptyListWhenAllEncumbrancesMatchesWithAllPoLinesByIdAndFundIdInPoLines() {
+  void testShouldReturnEmptyListWhenAllEncumbrancesMatchesWithAllPoLinesByIdAndFundIdInPoLines() {
     //given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    EncumbranceService encumbranceService = spy(new EncumbranceService());
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     order.getCompositePoLines().remove(1);
     order.getCompositePoLines().remove(1);
     Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
     encumbrance.getEncumbrance().setSourcePoLineId(order.getCompositePoLines().get(0).getId());
     encumbrance.setFromFundId(order.getCompositePoLines().get(0).getFundDistribution().get(0).getFundId());
-    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any());
+    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any(), requestContextMock);
     //When
     List<Transaction> actEncumbranceForRelease =
-      financeHelper.findNeedReleaseEncumbrances(order.getCompositePoLines(), Arrays.asList(encumbrance, encumbrance));
+      encumbranceService.findNeedReleaseEncumbrances(order.getCompositePoLines(), Arrays.asList(encumbrance, encumbrance));
     //Then
     assertEquals(0, actEncumbranceForRelease.size());
   }
 
   @Test
-  public void testShouldReturnOneTransactionWhenOneEncumbrancesMatchesWithOnePoLinesByIdAndFundIdInPoLines() {
+  void testShouldReturnOneTransactionWhenOneEncumbrancesMatchesWithOnePoLinesByIdAndFundIdInPoLines() {
     //given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    EncumbranceService encumbranceService = spy(new EncumbranceService());
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     order.getCompositePoLines().remove(1);
     Transaction notMatchesEncumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
     Transaction matchedEncumbrance = JsonObject.mapFrom(notMatchesEncumbrance).mapTo(Transaction.class);
     matchedEncumbrance.getEncumbrance().setSourcePoLineId(order.getCompositePoLines().get(0).getId());
     matchedEncumbrance.setFromFundId(order.getCompositePoLines().get(0).getFundDistribution().get(0).getFundId());
-    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any());
+    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any(), requestContextMock);
     //When
     List<Transaction> actEncumbranceForRelease =
-      financeHelper.findNeedReleaseEncumbrances(order.getCompositePoLines(), Arrays.asList(notMatchesEncumbrance, matchedEncumbrance));
+      encumbranceService.findNeedReleaseEncumbrances(order.getCompositePoLines(), Arrays.asList(notMatchesEncumbrance, matchedEncumbrance));
     //Then
     assertEquals(1, actEncumbranceForRelease.size());
   }
 
   @Test
-  public void testShouldBuildHolderOnlyForEncumbrancesMatchesWithAnyPoLinesByIdAndFundsInPoLinesAndEncumbranceInPoLinesFunds() {
+  void testShouldBuildHolderOnlyForEncumbrancesMatchesWithAnyPoLinesByIdAndFundsInPoLinesAndEncumbranceInPoLinesFunds() {
     //given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    EncumbranceService encumbranceService = spy(new EncumbranceService());
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
     Transaction notMatchesEncumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
@@ -305,10 +309,10 @@ public class FinanceHelperTest extends ApiTestBase {
     matchedEncumbrance.getEncumbrance().setSourcePoLineId(firstPoLine.getId());
     matchedEncumbrance.setFromFundId(firstPoLine.getFundDistribution().get(0).getFundId());
 
-    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any());
+    doReturn(completedFuture(null)).when(transactionService).updateTransaction(any(), requestContextMock);
     //When
     List<EncumbranceRelationsHolder> holders =
-      financeHelper.buildUpdateEncumbranceHolders(order.getCompositePoLines(), Arrays.asList(notMatchesEncumbrance, matchedEncumbrance));
+      encumbranceService.buildUpdateEncumbranceHolders(order.getCompositePoLines(), Arrays.asList(notMatchesEncumbrance, matchedEncumbrance));
     //Then
     assertEquals(1, holders.size());
     assertEquals(matchedEncumbrance.getEncumbrance().getSourcePoLineId(), holders.get(0).getTransaction().getEncumbrance().getSourcePoLineId());
@@ -319,8 +323,8 @@ public class FinanceHelperTest extends ApiTestBase {
   }
 
   @Test
-  public void shouldBuildEncumbrancesForFundDistributionsRelatedToDifferentLedgers() {
-    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
+  void shouldBuildEncumbrancesForFundDistributionsRelatedToDifferentLedgers() {
+    EncumbranceService encumbranceService = new EncumbranceService();
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     String fund1Id = UUID.randomUUID().toString();
     String fund2Id = UUID.randomUUID().toString();
@@ -375,114 +379,53 @@ public class FinanceHelperTest extends ApiTestBase {
               .withPoLineEstimatedPrice(10d))
             .withFundDistribution(Arrays.asList(fundDistribution1, fundDistribution2));
 
-    CompletableFuture<List<EncumbranceRelationsHolder>> future = financeHelper.buildNewEncumbrances(order, Collections.singletonList(line), emptyList());
+    CompletableFuture<List<EncumbranceRelationsHolder>> future = encumbranceService.buildNewEncumbrances(order, Collections.singletonList(line), emptyList(), requestContextMock);
     List<EncumbranceRelationsHolder> holders = future.join();
 
     assertThat(holders, hasSize(2));
   }
 
   @Test
-  public void testShouldUpdateEncumbranceWithNewAmountFromLineAndFundFromLine() {
+  void testShouldUpdateEncumbranceWithNewAmountFromLineAndFundFromLine() {
     //Given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    EncumbranceService encumbranceService = spy(new EncumbranceService());
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePoLine line = order.getCompositePoLines().get(0);
     FundDistribution fundDistribution = order.getCompositePoLines().get(0).getFundDistribution().get(0);
     Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
     //When
-    financeHelper.updateEncumbrance(fundDistribution, line, encumbrance);
+    encumbranceService.updateEncumbrance(fundDistribution, line, encumbrance);
     //Then
     assertEquals(BigDecimal.valueOf(line.getCost().getListUnitPrice()), BigDecimal.valueOf(encumbrance.getAmount()));
     assertEquals(BigDecimal.valueOf(encumbrance.getAmount()), BigDecimal.valueOf(encumbrance.getEncumbrance().getInitialAmountEncumbered()));
   }
 
-  @Test
-  public void testShouldReturnCurrentFiscalYearForLedger() {
-    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
-    String ledgerId = UUID.randomUUID().toString();
-    FiscalYear fy = financeHelper.getCurrentFiscalYear(ledgerId).join();
-    assertNotNull(fy);
-  }
+
 
   @Test
-  public void testShouldThrowHttpException() {
-    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
-    CompletableFuture<FiscalYear> result =  financeHelper.getCurrentFiscalYear(ID_DOES_NOT_EXIST);
-    CompletionException expectedException = assertThrows(CompletionException.class, result::join);
-
-    HttpException httpException = (HttpException) expectedException.getCause();
-    assertEquals(404, httpException.getCode());
-  }
-
-  @Test
-  public void testBudgetShouldBeActive() {
-    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
+  void testBudgetShouldBeActive() {
+    EncumbranceService encumbranceService = new EncumbranceService);
     String budgetId = UUID.randomUUID().toString();
     String fundId = UUID.randomUUID().toString();
     List<Budget> budgets = Collections.singletonList(new Budget().withId(budgetId).withFundId(fundId).withBudgetStatus(Budget.BudgetStatus.ACTIVE));
-    financeHelper.verifyBudgetsForEncumbrancesAreActive(budgets);
+    encumbranceService.verifyBudgetsForEncumbrancesAreActive(budgets);
   }
 
   @Test
-  public void testShouldThrowExceptionIfBudgetIsNotActive() {
-    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
+  void testShouldThrowExceptionIfBudgetIsNotActive() {
+    EncumbranceService encumbranceService = new EncumbranceService();
     String budgetId = UUID.randomUUID().toString();
     String fundId = UUID.randomUUID().toString();
     List<Budget> budgets = Collections.singletonList(new Budget().withId(budgetId)
       .withFundId(fundId)
       .withBudgetStatus(Budget.BudgetStatus.INACTIVE));
-    assertThrows(HttpException.class, () -> financeHelper.verifyBudgetsForEncumbrancesAreActive(budgets));
-  }
-
-  @Test
-  public void testShouldReturnActiveBudgetForFund() {
-    FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
-    Budget budget = financeHelper.getActiveBudgetByFundId(ACTIVE_BUDGET).join();
-    assertNotNull(budget);
-  }
-
-  @Test
-  public void testShouldThrowExceptionIfActiveBudgetForFund() {
-    assertThrows(CompletionException.class, () -> {
-      FinanceHelper financeHelper = new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService);
-      Budget budget = financeHelper.getActiveBudgetByFundId(UUID.randomUUID().toString())
-        .join();
-      assertNotNull(budget);
-    });
-  }
-
-  @Test
-  public void testShouldNotTransactionsCreatedWhenNoEncumbrances() {
-    //Given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
-    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine line = order.getCompositePoLines().get(0);
-    List<Transaction> emptyEncumbrances = Collections.emptyList();
-    //When
-    financeHelper.updateOrderTransactionSummary(order.getId(), emptyEncumbrances.size());
-    //Then
-    assertNull(transactionService.getOrderTransactionSummary(order.getId()));
-  }
-
-  @Test
-  public void testShouldTransactionsCreatedForEncumbrances() {
-    //Given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
-    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine line = order.getCompositePoLines().get(0);
-    Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray( "transactions").getJsonObject(0).mapTo(Transaction.class);
-    FundDistribution fundDistribution = order.getCompositePoLines().get(0).getFundDistribution().get(0);
-    financeHelper.updateEncumbrance(fundDistribution, line, encumbrance);
-    //When
-    financeHelper.updateOrderTransactionSummary(order.getId(), 1);
-    //Then
-    assertNull(transactionService.getOrderTransactionSummary(order.getId()));
+    assertThrows(HttpException.class, () -> encumbranceService.verifyBudgetsForEncumbrancesAreActive(budgets));
   }
 
   @Test
   void shouldReleaseEncumbrancesBeforeDeletionWhenDeleteOrderEncumbrances() {
     //Given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    EncumbranceService encumbranceService = spy(new EncumbranceService(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
     String orderId = UUID.randomUUID().toString();
     Transaction encumbrance = new Transaction()
             .withId(UUID.randomUUID().toString())
@@ -494,15 +437,15 @@ public class FinanceHelperTest extends ApiTestBase {
     transactions.add(encumbrance);
     transactions.add(encumbrance2);
     TransactionCollection transactionCollection = new TransactionCollection().withTransactions(transactions).withTotalRecords(1);
-    doReturn(CompletableFuture.completedFuture(transactionCollection)).when(transactionService).getTransactions(anyInt(), anyInt(), anyString());
-    doReturn(CompletableFuture.completedFuture(null)).when(transactionService).releaseEncumbrances(any());
-    doReturn(CompletableFuture.completedFuture(null)).when(transactionService).deleteTransactions(any());
+    doReturn(CompletableFuture.completedFuture(transactionCollection)).when(transactionService).getTransactions(anyString(), anyInt(), anyInt(), eq(requestContextMock));
+    doReturn(CompletableFuture.completedFuture(null)).when(transactionService).releaseEncumbrances(any(), eq(requestContextMock));
+    doReturn(CompletableFuture.completedFuture(null)).when(transactionService).deleteTransactions(any(), eq(requestContextMock));
     //When
-    financeHelper.deleteOrderEncumbrances(orderId).join();
+    encumbranceService.deleteOrderEncumbrances(orderId).join();
 
     //Then
-    InOrder inOrder = inOrder(financeHelper, transactionService);
-    inOrder.verify(financeHelper).updateOrderTransactionSummary(eq(orderId), eq(2));
+    InOrder inOrder = inOrder(encumbranceService, transactionService);
+    inOrder.verify(encumbranceService).updateOrderTransactionSummary(eq(orderId), eq(2));
     inOrder.verify(transactionService).releaseEncumbrances(any());
     inOrder.verify(transactionService).deleteTransactions(any());
 
@@ -511,7 +454,7 @@ public class FinanceHelperTest extends ApiTestBase {
   @Test
   void shouldReleaseEncumbrancesBeforeDeletionWhenDeletePoLineEncumbrances() {
     //Given
-    FinanceHelper financeHelper = spy(new FinanceHelper(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
+    EncumbranceService encumbranceService = spy(new EncumbranceService(httpClient, okapiHeadersMock, ctxMock, "en", transactionService));
     String lineId = UUID.randomUUID().toString();
     String orderId = UUID.randomUUID().toString();
     Transaction encumbrance = new Transaction()
@@ -532,11 +475,11 @@ public class FinanceHelperTest extends ApiTestBase {
     doReturn(CompletableFuture.completedFuture(null)).when(transactionService).releaseEncumbrances(any());
     doReturn(CompletableFuture.completedFuture(null)).when(transactionService).deleteTransactions(any());
     //When
-    financeHelper.deletePoLineEncumbrances(lineId).join();
+    encumbranceService.deletePoLineEncumbrances(lineId).join();
 
     //Then
-    InOrder inOrder = inOrder(financeHelper, transactionService);
-    inOrder.verify(financeHelper).updateOrderTransactionSummary(eq(orderId), eq(2));
+    InOrder inOrder = inOrder(encumbranceService, transactionService);
+    inOrder.verify(encumbranceService).updateOrderTransactionSummary(eq(orderId), eq(2));
     inOrder.verify(transactionService).releaseEncumbrances(any());
     inOrder.verify(transactionService).deleteTransactions(any());
 

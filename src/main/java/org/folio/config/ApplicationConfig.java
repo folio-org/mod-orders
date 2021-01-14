@@ -44,17 +44,17 @@ public class ApplicationConfig {
 
   @Bean
   public SuffixService suffixService() {
-    return new SuffixService();
+    return new SuffixService(restClient, purchaseOrderService);
   }
 
   @Bean
   public PrefixService prefixService() {
-    return new PrefixService();
+    return new PrefixService(restClient, purchaseOrderService);
   }
 
   @Bean
   public ReasonForClosureService reasonForClosureService() {
-    return new ReasonForClosureService();
+    return new ReasonForClosureService(restClient);
   }
 
   @Bean

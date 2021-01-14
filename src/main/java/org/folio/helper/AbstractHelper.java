@@ -6,17 +6,11 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static javax.ws.rs.core.Response.Status.CREATED;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
-import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
-import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
-import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
-import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.HelperUtils.LANG;
 import static org.folio.orders.utils.HelperUtils.SYSTEM_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.convertToJson;
 import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
-import static org.folio.orders.utils.ResourcePathResolver.CONFIGURATION_ENTRIES;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 
@@ -27,7 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import javax.ws.rs.core.Response;
 
@@ -84,7 +77,7 @@ public abstract class AbstractHelper {
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
     this.lang = lang;
-    this.configurationEntriesService = new ConfigurationEntriesService(new RestClient(resourcesPath(CONFIGURATION_ENTRIES)));
+    this.configurationEntriesService = new ConfigurationEntriesService(new RestClient());
   }
 
   protected AbstractHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -92,7 +85,7 @@ public abstract class AbstractHelper {
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
     this.lang = lang;
-    this.configurationEntriesService = new ConfigurationEntriesService(new RestClient(resourcesPath(CONFIGURATION_ENTRIES)));
+    this.configurationEntriesService = new ConfigurationEntriesService(new RestClient());
   }
 
   protected AbstractHelper(Context ctx) {
@@ -100,7 +93,7 @@ public abstract class AbstractHelper {
     this.okapiHeaders = null;
     this.lang = null;
     this.ctx = ctx;
-    this.configurationEntriesService = new ConfigurationEntriesService(new RestClient(resourcesPath(CONFIGURATION_ENTRIES)));
+    this.configurationEntriesService = new ConfigurationEntriesService(new RestClient());
   }
 
   public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders, boolean setDefaultHeaders) {
@@ -163,6 +156,11 @@ public abstract class AbstractHelper {
 
   protected void addProcessingErrors(List<Error> errors) {
     processingErrors.getErrors().addAll(errors);
+  }
+
+
+  public RequestContext getRequestContext() {
+    return new RequestContext(ctx, okapiHeaders);
   }
 
   /**
@@ -369,17 +367,5 @@ public abstract class AbstractHelper {
     return future;
   }
 
-  protected void checkCustomTransactionError(Throwable fail) {
-    if (fail.getCause().getMessage().contains(BUDGET_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
-      throw new CompletionException(new HttpException(422, BUDGET_NOT_FOUND_FOR_TRANSACTION));
-    } else if (fail.getCause().getMessage().contains(LEDGER_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
-      throw new CompletionException(new HttpException(422, LEDGER_NOT_FOUND_FOR_TRANSACTION));
-    } else if (fail.getCause().getMessage().contains(BUDGET_IS_INACTIVE.getDescription())) {
-      throw new CompletionException(new HttpException(422, BUDGET_IS_INACTIVE));
-    } else if (fail.getCause().getMessage().contains(FUND_CANNOT_BE_PAID.getDescription())) {
-      throw new CompletionException(new HttpException(422, FUND_CANNOT_BE_PAID));
-    } else {
-      throw new CompletionException(fail.getCause());
-    }
-  }
+
 }

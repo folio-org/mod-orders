@@ -39,6 +39,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.service.finance.FundService;
+import org.folio.service.finance.TransactionService;
 import org.javamoney.moneta.Money;
 
 public class OrderRolloverService {
@@ -58,14 +59,14 @@ public class OrderRolloverService {
   private final FundService fundService;
   private final PurchaseOrderService purchaseOrderService;
   private final PurchaseOrderLineService purchaseOrderLineService;
-  private final RestClient transactionRestClient;
+  private final TransactionService transactionService;
 
   public OrderRolloverService(FundService fundService, PurchaseOrderService purchaseOrderService,
-                              PurchaseOrderLineService purchaseOrderLineService, RestClient transactionRestClient) {
+                              PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService) {
     this.fundService = fundService;
     this.purchaseOrderService = purchaseOrderService;
     this.purchaseOrderLineService = purchaseOrderLineService;
-    this.transactionRestClient = transactionRestClient;
+    this.transactionService = transactionService;
   }
 
   public CompletableFuture<Void> rollover(LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
@@ -214,7 +215,7 @@ public class OrderRolloverService {
   private CompletableFuture<List<Transaction>> getEncumbrancesForRollover(List<String> orderIds, LedgerFiscalYearRollover ledgerFYRollover,
                                                                           RequestContext requestContext) {
     String query = buildQueryEncumbrancesForRollover(orderIds, ledgerFYRollover);
-    return transactionRestClient.get(query, 0, Integer.MAX_VALUE, requestContext, TransactionCollection.class)
+    return transactionService.getTransactions(query, 0, Integer.MAX_VALUE, requestContext)
                                 .thenApply(TransactionCollection::getTransactions);
   }
 

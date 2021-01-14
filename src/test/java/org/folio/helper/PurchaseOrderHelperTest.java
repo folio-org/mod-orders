@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -31,13 +32,17 @@ import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRolloverCollection;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.finance.EncumbranceService;
+import org.folio.service.finance.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.FundService;
+import org.folio.service.finance.OpenToPendingEncumbranceStrategy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -47,17 +52,22 @@ import io.vertx.core.Vertx;
 
 public class PurchaseOrderHelperTest  extends ApiTestBase {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";
-  private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
+  public static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
   public static final String TWO_ENCUMBRANCE_PATH = BASE_MOCK_DATA_PATH + "encumbrances/two_pending_encumbrances.json";
 
   @Mock
   private PoNumberHelper poNumberHelper;
+  @Mock
+  private EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
+  @Mock
+  private OpenToPendingEncumbranceStrategy openToPendingEncumbranceStrategy;
 
   private  Map<String, String> okapiHeadersMock;
 
   private Context ctxMock;
 
   private HttpClientInterface httpClient;
+
 
   @BeforeEach
   public void initMocks() {
@@ -73,21 +83,19 @@ public class PurchaseOrderHelperTest  extends ApiTestBase {
   }
 
   @Test
-  public void testShouldSetEncumbrancesToPending() {
+  void testShouldSetEncumbrancesToPending() {
     //given
     PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
-    FinanceHelper financeHelper = mock(FinanceHelper.class, CALLS_REAL_METHODS);
+    EncumbranceService encumbranceService = mock(EncumbranceService.class, CALLS_REAL_METHODS);
     PurchaseOrderHelper serviceSpy = spy(
-        new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en", poNumberHelper, orderLineHelper, financeHelper));
+        new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en", poNumberHelper, orderLineHelper, encumbranceService));
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
     Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
 
     doReturn(completedFuture(order)).when(serviceSpy).updateAndGetOrderWithLines(any(CompositePurchaseOrder.class));
-    doReturn(completedFuture(Collections.singletonList(encumbrance))).when(financeHelper).getOrderEncumbrances(any());
-    doReturn(completedFuture(null)).when(financeHelper).updateTransactions(any());
-    doReturn(completedFuture(null)).when(financeHelper).updateOrderTransactionSummary(anyString(), anyInt());
-    doNothing().when(financeHelper).closeHttpClient();
+    doReturn(openToPendingEncumbranceStrategy).when(encumbranceWorkflowStrategyFactory).getStrategy(any());
+    doReturn(completedFuture(null)).when(openToPendingEncumbranceStrategy).processEncumbrances(any(), any());
     doNothing().when(orderLineHelper).closeHttpClient();
     doReturn(completedFuture(null)).when(orderLineHelper).updatePoLinesSummary(any());
     //When
@@ -97,25 +105,23 @@ public class PurchaseOrderHelperTest  extends ApiTestBase {
     assertEquals(0d, encumbrance.getEncumbrance().getInitialAmountEncumbered(), 0.0);
     assertEquals(Encumbrance.Status.PENDING, encumbrance.getEncumbrance().getStatus());
 
-    verify(financeHelper).makeEncumbrancesPending(any());
-    verify(financeHelper).getOrderEncumbrances(any());
-    verify(financeHelper).updateTransactions(any());
     verify(orderLineHelper).updatePoLinesSummary(any());
   }
 
   @Test
-  public void testShouldEndExceptionallyAndCloseConnection() {
+  void testShouldEndExceptionallyAndCloseConnection() {
     //given
     PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
-    FinanceHelper financeHelper = mock(FinanceHelper.class, CALLS_REAL_METHODS);
+    EncumbranceService encumbranceService = mock(EncumbranceService.class, CALLS_REAL_METHODS);
 
     PurchaseOrderHelper serviceSpy = spy(new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en", poNumberHelper,
-        orderLineHelper, financeHelper));
+        orderLineHelper, encumbranceService));
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
     doReturn(completedFuture(order)).when(serviceSpy).updateAndGetOrderWithLines(any(CompositePurchaseOrder.class));
-    doReturn(completedFuture(null)).when(financeHelper).getOrderEncumbrances(any());
-    doNothing().when(financeHelper).closeHttpClient();
+    doReturn(openToPendingEncumbranceStrategy).when(encumbranceWorkflowStrategyFactory).getStrategy(any());
+    doReturn(completedFuture(null)).when(openToPendingEncumbranceStrategy).processEncumbrances(any(), any());
+
     doNothing().when(orderLineHelper).closeHttpClient();
     //When
     CompletableFuture<Void> act = serviceSpy.unOpenOrder(order);
@@ -123,47 +129,5 @@ public class PurchaseOrderHelperTest  extends ApiTestBase {
     assertTrue(act.isCompletedExceptionally());
   }
 
-  @Test
-  public void testPopulateNeedReEncumberField() {
-    // given
-    PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
-    FinanceHelper financeHelper = mock(FinanceHelper.class, CALLS_REAL_METHODS);
-    FundService fundService = mock(FundService.class, CALLS_REAL_METHODS);
 
-    PurchaseOrderHelper serviceSpy = spy(
-        new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en", poNumberHelper, orderLineHelper, financeHelper));
-    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-
-    Fund sampleFund = new Fund()
-        .withLedgerId(UUID.randomUUID().toString())
-      .withFundStatus(Fund.FundStatus.ACTIVE)
-      .withCode(UUID.randomUUID().toString());
-
-    LedgerFiscalYearRolloverCollection ledgerFiscalYearRollover = new LedgerFiscalYearRolloverCollection()
-      .withLedgerFiscalYearRollovers(Collections.singletonList(new LedgerFiscalYearRollover()))
-      .withTotalRecords(1);
-
-    LedgerFiscalYearRolloverErrorCollection ledgerFiscalYearRolloverErrors = new LedgerFiscalYearRolloverErrorCollection()
-      .withLedgerFiscalYearRolloverErrors(Collections.singletonList(new LedgerFiscalYearRolloverError()));
-
-    // LedgerFiscalYearRolloverErrorCollection is not empty. Expected "needReEncumber" = true
-    doReturn(completedFuture(sampleFund)).when(fundService).retrieveFundById(any(), any());
-    doReturn(completedFuture(new FiscalYear())).when(financeHelper).getCurrentFiscalYear(any());
-    doReturn(completedFuture(ledgerFiscalYearRollover)).when(financeHelper).getLedgerFyRollovers(any(), any());
-    doReturn(completedFuture(ledgerFiscalYearRolloverErrors)).when(financeHelper).getLedgerFyRolloverErrors(any(), any());
-
-    CompositePurchaseOrder compOrder = serviceSpy.populateNeedReEncumberFlag(order).join();
-    assertTrue(compOrder.getNeedReEncumber());
-
-    // LedgerFiscalYearRolloverErrorCollection is empty. Expected "needReEncumber" = false
-    doReturn(completedFuture(new LedgerFiscalYearRolloverErrorCollection())).when(financeHelper).getLedgerFyRolloverErrors(any(), any());
-    compOrder = serviceSpy.populateNeedReEncumberFlag(order).join();
-    assertFalse(compOrder.getNeedReEncumber());
-
-    // LedgerFyRollover not exists. Expected "needReEncumber" = false
-    doReturn(completedFuture(new LedgerFiscalYearRolloverCollection())).when(financeHelper).getLedgerFyRollovers(any(), any());
-    compOrder = serviceSpy.populateNeedReEncumberFlag(order).join();
-    assertFalse(compOrder.getNeedReEncumber());
-
-  }
 }

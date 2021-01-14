@@ -4,16 +4,32 @@ import java.util.concurrent.CompletableFuture;
 
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 
-public class PurchaseOrderService {
-  private final RestClient purchaseOrderRestClient;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
-  public PurchaseOrderService(RestClient purchaseOrderRestClient) {
-    this.purchaseOrderRestClient = purchaseOrderRestClient;
+public class PurchaseOrderService {
+
+  private static final String ENDPOINT = "/finance/funds";
+  private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
+  private final RestClient restClient;
+
+  public PurchaseOrderService(RestClient restClient) {
+    this.restClient = restClient;
+  }
+
+  public CompletableFuture<PurchaseOrder> getPurchaseOrderById(String id, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(id);
+    return restClient.get(requestEntry, requestContext, PurchaseOrder.class);
   }
 
   public CompletableFuture<PurchaseOrderCollection> getPurchaseOrders(String query, int limit, int offset, RequestContext requestContext) {
-    return purchaseOrderRestClient.get(query, offset, limit, requestContext, PurchaseOrderCollection.class);
+    RequestEntry requestEntry = new RequestEntry(resourcesPath(ENDPOINT))
+            .withQuery(query)
+            .withLimit(limit)
+            .withOffset(offset);
+    return restClient.get(requestEntry, requestContext, PurchaseOrderCollection.class);
   }
 }
