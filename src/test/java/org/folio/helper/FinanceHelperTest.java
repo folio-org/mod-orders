@@ -57,7 +57,7 @@ import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.service.TransactionService;
+import org.folio.service.finance.TransactionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;

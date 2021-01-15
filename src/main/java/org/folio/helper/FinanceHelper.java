@@ -84,7 +84,7 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRolloverCollection;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.service.TransactionService;
+import org.folio.service.finance.TransactionService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryFunctions;
@@ -606,11 +606,17 @@ public class FinanceHelper extends AbstractHelper {
 
 
   public CompletableFuture<Void> updateTransactions(List<Transaction> transactions) {
-    return transactionService.updateTransactions(transactions);
+    if (!CollectionUtils.isEmpty(transactions)) {
+      return transactionService.updateTransactions(transactions);
+    }
+    return CompletableFuture.completedFuture(null);
   }
 
   public CompletableFuture<Void> releaseEncumbrances(List<Transaction> encumbrances) {
-    return transactionService.releaseEncumbrances(encumbrances);
+    if (!CollectionUtils.isEmpty(encumbrances)) {
+      return transactionService.releaseEncumbrances(encumbrances);
+    }
+    return CompletableFuture.completedFuture(null);
   }
 
   public CompletableFuture<String> createOrderTransactionSummary(String orderId, int number) {
