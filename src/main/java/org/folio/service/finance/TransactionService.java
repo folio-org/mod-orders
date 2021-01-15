@@ -1,4 +1,4 @@
-package org.folio.service;
+package org.folio.service.finance;
 
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
@@ -71,7 +71,7 @@ public class TransactionService extends AbstractHelper {
   public CompletableFuture<OrderTransactionSummary> getOrderTransactionSummary(String orderId) {
     CompletableFuture<OrderTransactionSummary> future = new CompletableFuture<>();
     try {
-      String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(ORDER_TRANSACTION_SUMMARIES, orderId), lang);
+      String endpoint = resourceByIdPath(ORDER_TRANSACTION_SUMMARIES, orderId);
       handleGetRequest(endpoint, httpClient, okapiHeaders, logger).thenAccept(jsonObject -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully retrieved transaction summary: {}", jsonObject.encodePrettily());

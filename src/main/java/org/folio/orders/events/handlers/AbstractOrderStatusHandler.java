@@ -13,6 +13,7 @@ import java.util.concurrent.CompletableFuture;
 import org.folio.helper.AbstractHelper;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -86,8 +87,9 @@ public abstract class AbstractOrderStatusHandler extends AbstractHelper implemen
     return CompletableFuture.supplyAsync(() -> changeOrderStatus(purchaseOrder, poLines))
       .thenCompose(isStatusChanged -> {
         if (Boolean.TRUE.equals(isStatusChanged)) {
-          return helper.handleFinalOrderStatus(purchaseOrder, poLines, initialStatus.value())
-            .thenCompose(aVoid -> helper.updateOrderSummary(purchaseOrder));
+          return helper.handleFinalOrderItemsStatus(purchaseOrder, poLines, initialStatus.value())
+            .thenCompose(aVoid -> helper.updateOrderSummary(purchaseOrder))
+            .thenCompose(purchaseOrderParam -> helper.updateEncumbrancesOrderStatus(purchaseOrder.getId(), convert(purchaseOrder.getWorkflowStatus())));
         }
         return CompletableFuture.completedFuture(null);
       });
@@ -97,6 +99,10 @@ public abstract class AbstractOrderStatusHandler extends AbstractHelper implemen
     JsonObject body = message.body();
     logger.debug("Received message body: {}", body);
     return body.getJsonArray(rootElement);
+  }
+
+  protected CompositePurchaseOrder.WorkflowStatus convert(PurchaseOrder.WorkflowStatus workflowStatus) {
+    return CompositePurchaseOrder.WorkflowStatus.fromValue(workflowStatus.value());
   }
 
   protected abstract boolean isOrdersStatusChangeSkip(PurchaseOrder purchaseOrder, JsonObject ordersPayload);
