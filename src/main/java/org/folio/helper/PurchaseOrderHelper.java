@@ -227,7 +227,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   public CompletionStage<Void> updateEncumbrancesOrderStatus(String orderId, CompositePurchaseOrder.WorkflowStatus orderStatus) {
     return financeHelper.getOrderEncumbrances(orderId)
                    .thenCompose(encumbrs -> {
-                     if (!CollectionUtils.isEmpty(encumbrs)) {
+                     if (isEncumbrancesOrderStatusUpdateNeeded(orderStatus, encumbrs)) {
                        return financeHelper.updateOrderTransactionSummary(orderId, encumbrs.size())
                                            .thenApply(v -> {
                                                syncEncumbrancesOrderStatus(orderStatus, encumbrs);
@@ -237,6 +237,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
                      }
                      return CompletableFuture.completedFuture(null);
                    });
+  }
+
+  private boolean isEncumbrancesOrderStatusUpdateNeeded(WorkflowStatus orderStatus, List<Transaction> encumbrs) {
+    return !CollectionUtils.isEmpty(encumbrs) && !orderStatus.value().equals(encumbrs.get(0).getEncumbrance().getOrderStatus().value());
   }
 
   /**
