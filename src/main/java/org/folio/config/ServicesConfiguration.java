@@ -3,6 +3,7 @@ package org.folio.config;
 import org.folio.rest.core.RestClient;
 import org.folio.service.exchange.FinanceExchangeRateService;
 import org.folio.service.finance.FundService;
+import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderRolloverService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
@@ -33,6 +34,11 @@ public class ServicesConfiguration {
   OrderRolloverService rolloverOrderService(FundService fundService, PurchaseOrderService purchaseOrderService,
                                             PurchaseOrderLineService purchaseOrderLineService, RestClient transactionRestClient) {
     return new OrderRolloverService(fundService, purchaseOrderService, purchaseOrderLineService, transactionRestClient);
+  }
+
+  @Bean
+  OrderInvoiceRelationService orderInvoiceRelationService (RestClient orderInvoiceRelationRestClient) {
+    return new OrderInvoiceRelationService(orderInvoiceRelationRestClient);
   }
 
 

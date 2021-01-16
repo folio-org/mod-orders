@@ -76,7 +76,8 @@ public enum ErrorCodes {
   INACTIVE_EXPENSE_CLASS("inactiveExpenseClass", "Expense class is Inactive"),
   HOLDINGS_BY_INSTANCE_AND_LOCATION_NOT_FOUND("holdingsByInstanceAndLocationNotFoundError", "Holdings by instance id %s and location id %s not found"),
   ROLLOVER_PO_LINES_ERROR("rolloverPoLinesError", "Rollover poLines by chunks failed"),
-  RETRIEVE_ROLLOVER_ORDER_ERROR("retrieveRolloverOrdersError", "Retrieve rollover order ids by chunks failed");
+  RETRIEVE_ROLLOVER_ORDER_ERROR("retrieveRolloverOrdersError", "Retrieve rollover order ids by chunks failed"),
+  ORDER_RELATES_TO_INVOICE("orderRelatesToInvoice", "This order or order line is linked to Invoice number(s) and can not be deleted");
 
   private final String code;
   private final String description;

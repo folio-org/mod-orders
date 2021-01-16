@@ -46,6 +46,7 @@ import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
 import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_INVOICE_RELATIONSHIP;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
@@ -103,6 +104,7 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.finance.FundService;
+import org.folio.service.orders.OrderInvoiceRelationService;
 import org.javamoney.moneta.Money;
 
 import io.vertx.core.Context;
@@ -117,6 +119,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private static final String SEARCH_ORDERS_BY_LINES_DATA = resourcesPath(SEARCH_ORDERS) + SEARCH_PARAMS;
   public static final String GET_PURCHASE_ORDERS = resourcesPath(PURCHASE_ORDER) + SEARCH_PARAMS;
   public static final String EMPTY_ARRAY = "[]";
+  private final OrderInvoiceRelationService orderInvoiceRelationService;
 
   // Using variable to "cache" lines for particular order base on assumption that the helper is stateful and new instance is used
   private List<PoLine> orderLines;
@@ -142,10 +145,11 @@ public class PurchaseOrderHelper extends AbstractHelper {
     this.inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
     this.exchangeRateProviderResolver = new ExchangeRateProviderResolver();
     this.fundService = new FundService(new RestClient(resourcesPath(FUNDS)));
+    this.orderInvoiceRelationService = new OrderInvoiceRelationService(new RestClient(resourcesPath(ORDER_INVOICE_RELATIONSHIP)));
   }
 
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang,
-      PoNumberHelper poNumberHelper, PurchaseOrderLineHelper orderLineHelper, FinanceHelper financeHelper) {
+      PoNumberHelper poNumberHelper, PurchaseOrderLineHelper orderLineHelper, FinanceHelper financeHelper, OrderInvoiceRelationService orderInvoiceRelationService) {
     super(httpClient, okapiHeaders, ctx, lang);
     this.financeHelper = financeHelper;
     this.poNumberHelper = poNumberHelper;
@@ -155,6 +159,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     this.exchangeRateProviderResolver = new ExchangeRateProviderResolver();
     this.inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
     this.fundService = new FundService(new RestClient(resourcesPath(FUNDS)));
+    this.orderInvoiceRelationService = orderInvoiceRelationService;
 
   }
 
@@ -463,8 +468,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenAccept(purchaseOrder -> {
         CompositePurchaseOrder compPo = convertToCompositePurchaseOrder(purchaseOrder);
         protectionHelper.isOperationRestricted(compPo.getAcqUnitIds(), DELETE)
-          .thenAccept(aVoid -> financeHelper.deleteOrderEncumbrances(id)
-            .thenCompose(v -> deletePoLines(id, lang, httpClient, okapiHeaders, logger))
+          .thenCompose(v -> orderInvoiceRelationService.checkOrderInvoiceRelationship(id, new RequestContext(ctx, okapiHeaders)))
+            .thenAccept(ok -> financeHelper.deleteOrderEncumbrances(id)
+            .thenCompose(v1 -> deletePoLines(id, lang, httpClient, okapiHeaders, logger))
             .thenRun(() -> {
               logger.info("Successfully deleted poLines, proceeding with purchase order");
               handleDeleteRequest(resourceByIdPath(PURCHASE_ORDER, id), httpClient, okapiHeaders, logger)
@@ -490,7 +496,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
             return null;
           });
       })
-    .exceptionally(t ->{
+    .exceptionally(t -> {
       logger.error("Failed to delete PO Lines", t);
       future.completeExceptionally(t);
       return null;
@@ -966,7 +972,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
               throw new HttpException(422, poFromStorage.getWorkflowStatus() == OPEN ? ErrorCodes.ORDER_OPEN : ErrorCodes.ORDER_CLOSED);
             }
             validatePOLineProtectedFieldsChangedInPO(poFromStorage, compPO, existingPoLines);
-            //check if the order is in open status and the fields are being changed
+
             return handlePoLines(compPO, existingPoLines);
           } else {
             return updatePoLinesNumber(compPO, existingPoLines);
@@ -1069,8 +1075,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
       futures.addAll(processPoLinesUpdate(compOrder, poLinesFromStorage));
       // The remaining unprocessed PoLines should be removed
       poLinesFromStorage
-        .forEach(poLine -> futures.add(financeHelper.deletePoLineEncumbrances(poLine.getId())
-          .thenCompose(v -> deletePoLine(JsonObject.mapFrom(poLine), httpClient, okapiHeaders, logger))));
+        .forEach(poLine -> futures.add(orderInvoiceRelationService.checkOrderInvoiceRelationship(compOrder.getId(), new RequestContext(ctx, okapiHeaders))
+            .thenCompose(v -> financeHelper.deletePoLineEncumbrances(poLine.getId())
+              .thenCompose(ok -> deletePoLine(JsonObject.mapFrom(poLine), httpClient, okapiHeaders, logger)))));
+
     }
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
   }
