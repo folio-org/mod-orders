@@ -1,12 +1,12 @@
 package org.folio.service.finance;
 
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.Set;
 
 public class EncumbranceWorkflowStrategyFactory {
 
-    private final Map<WorkflowStatusName, EncumbranceWorkflowStrategy> strategyMap =  new HashMap<>();
+    private final Map<WorkflowStatusName, EncumbranceWorkflowStrategy> strategyMap =  new EnumMap<>(WorkflowStatusName.class);
 
     public EncumbranceWorkflowStrategyFactory(Set<EncumbranceWorkflowStrategy> strategies) {
         strategies.forEach(strategy -> this.strategyMap.put(strategy.getStrategyName(), strategy));

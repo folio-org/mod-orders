@@ -11,7 +11,7 @@ import org.folio.rest.core.models.RequestEntry;
 
 public class TransactionSummariesService {
 
-    private static final String ENDPOINT = "/finance/funds";
+    private static final String ENDPOINT = "/finance/order-transaction-summaries";
     private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
 
     private final RestClient restClient;

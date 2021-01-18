@@ -1,15 +1,17 @@
 package org.folio.rest.core;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.TestConstants.X_OKAPI_TOKEN;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.rest.impl.ApiTestBase.X_OKAPI_TOKEN;
-import static org.folio.rest.impl.ApiTestBase.X_OKAPI_USER_ID;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
@@ -22,6 +24,7 @@ import java.util.concurrent.CompletionException;
 
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,35 +61,35 @@ public class RestClientTest {
   }
 
   @Test
-  public void testGetShouldSearchById() throws Exception {
-    RestClient restClient = Mockito.spy(new RestClient(PURCHASE_ORDER));
+  void testGetShouldSearchById() throws Exception {
+    RestClient restClient = Mockito.spy(new RestClient());
     String uuid = UUID.randomUUID().toString();
-    String endpoint = PURCHASE_ORDER + "/" + uuid;
+    String endpoint = resourcesPath(PURCHASE_ORDER) + "/{id}";
     Transaction expTransaction = new Transaction().withId(uuid);
     Response response = new Response();
     response.setBody(JsonObject.mapFrom(expTransaction));
     response.setCode(200);
 
     doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
-    doReturn(completedFuture(response)).when(httpClient).request(HttpMethod.GET, endpoint, okapiHeaders);
+    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.GET), anyString(), eq(okapiHeaders));
 
-    Transaction actTransaction = restClient.getById(uuid, requestContext, Transaction.class).join();
+    Transaction actTransaction = restClient.getById(endpoint, uuid, requestContext, Transaction.class).join();
 
     assertThat(actTransaction, equalTo(expTransaction));
   }
 
   @Test
-  public void testGetShouldThrowExceptionWhenSearchById() {
-    RestClient restClient = Mockito.spy(new RestClient(PURCHASE_ORDER));
+  void testGetShouldThrowExceptionWhenSearchById() {
+    RestClient restClient = Mockito.spy(new RestClient());
     String uuid = UUID.randomUUID().toString();
     doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
-    CompletableFuture<Transaction> result = restClient.getById(uuid, requestContext, Transaction.class);
+    CompletableFuture<Transaction> result = restClient.getById(resourcesPath(PURCHASE_ORDER), uuid, requestContext, Transaction.class);
     assertThrows(CompletionException.class, result::join);
   }
 
   @Test
-  public void testPostShouldCreateEntity() throws Exception {
-    RestClient restClient = Mockito.spy(new RestClient(PURCHASE_ORDER));
+  void testPostShouldCreateEntity() throws Exception {
+    RestClient restClient = Mockito.spy(new RestClient());
 
     String uuid = UUID.randomUUID().toString();
     Transaction expTransaction = new Transaction().withId(uuid);
@@ -95,16 +98,16 @@ public class RestClientTest {
     response.setCode(201);
 
     doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
-    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.POST), any(), eq(PURCHASE_ORDER), eq(okapiHeaders));
-
-    Transaction actTransaction = restClient.post(expTransaction, requestContext, Transaction.class).join();
+    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.POST), any(), eq(resourcesPath(PURCHASE_ORDER)), eq(okapiHeaders));
+    RequestEntry requestEntry = new RequestEntry(resourcesPath(PURCHASE_ORDER));
+    Transaction actTransaction = restClient.post(requestEntry, expTransaction, requestContext, Transaction.class).join();
 
     assertThat(actTransaction, equalTo(expTransaction));
   }
 
   @Test
-  public void testPutShouldCreateEntity() throws Exception {
-    RestClient restClient = Mockito.spy(new RestClient(PURCHASE_ORDER));
+  void testPutShouldCreateEntity() throws Exception {
+    RestClient restClient = Mockito.spy(new RestClient());
 
     String uuid = UUID.randomUUID().toString();
     Transaction expTransaction = new Transaction().withId(uuid);
@@ -112,41 +115,44 @@ public class RestClientTest {
     response.setCode(204);
 
     doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
-    String endpoint = PURCHASE_ORDER + "/" + uuid;
-    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.PUT), any(), eq(endpoint), eq(okapiHeaders));
+    String endpoint = resourcesPath(PURCHASE_ORDER) + "/{id}";
+    RequestEntry requestEntry = new RequestEntry(endpoint).withId(uuid);
+    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.PUT), any(), eq(requestEntry.buildEndpoint()), eq(okapiHeaders));
 
-    restClient.put(uuid, expTransaction, requestContext).get();
+    restClient.put(requestEntry, expTransaction, requestContext).get();
 
-    verify(httpClient).request(eq(HttpMethod.PUT), any(), eq(endpoint), eq(okapiHeaders));
+    verify(httpClient).request(eq(HttpMethod.PUT), any(), eq(requestEntry.buildEndpoint()), eq(okapiHeaders));
   }
 
   @Test
-  public void testDeleteShouldCreateEntity() throws Exception {
-    RestClient restClient = Mockito.spy(new RestClient(PURCHASE_ORDER));
+  void testDeleteShouldCreateEntity() throws Exception {
+    RestClient restClient = Mockito.spy(new RestClient());
 
     String uuid = UUID.randomUUID().toString();
     Response response = new Response();
     response.setCode(204);
 
     doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
-    String endpoint = PURCHASE_ORDER + "/" + uuid;
-    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.DELETE), eq(endpoint), eq(okapiHeaders));
+    String endpoint = resourcesPath(PURCHASE_ORDER) + "/{id}";
+    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.DELETE), anyString(), eq(okapiHeaders));
 
-    restClient.delete(uuid, requestContext).get();
+    RequestEntry requestEntry = new RequestEntry(endpoint).withId(uuid);
+    restClient.delete(requestEntry, requestContext).get();
 
-    verify(httpClient).request(eq(HttpMethod.DELETE), eq(endpoint), eq(okapiHeaders));
+    verify(httpClient).request(eq(HttpMethod.DELETE), eq(requestEntry.buildEndpoint()), eq(okapiHeaders));
   }
 
   @Test
-  public void testShouldThrowExceptionWhenCreatingEntity() {
+  void testShouldThrowExceptionWhenCreatingEntity() {
     assertThrows(CompletionException.class, () -> {
 
-      RestClient restClient = Mockito.spy(new RestClient(PURCHASE_ORDER));
+      RestClient restClient = Mockito.spy(new RestClient());
 
       String uuid = UUID.randomUUID().toString();
       Transaction expTransaction = new Transaction().withId(uuid);
       doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
-      restClient.post(expTransaction, requestContext, Transaction.class).join();
+      RequestEntry requestEntry = new RequestEntry(resourcesPath(PURCHASE_ORDER));
+      restClient.post(requestEntry, expTransaction, requestContext, Transaction.class).join();
     });
   }
 }

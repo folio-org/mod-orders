@@ -30,7 +30,6 @@ import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
-import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
@@ -132,17 +131,15 @@ public class OrderRolloverService {
 
   private CompletableFuture<List<PoLine>> rolloverPoLinesChunk(List<String> orderIds, LedgerFiscalYearRollover ledgerFYRollover,
                                                                                  RequestContext requestContext) {
-    CompletableFuture<List<PoLine>> poLinesFuture = getPoLinesByOrderIds(orderIds, requestContext);
-    CompletableFuture<List<Transaction>> encumbrancesFuture = getEncumbrancesForRollover(orderIds, ledgerFYRollover, requestContext);
 
-    return CompletableFuture.allOf(poLinesFuture, encumbrancesFuture)
-      .thenApply(v -> poLinesFuture.join())
-      .thenApply(poLines -> buildPoLineEncumbrancesHolders(poLines, encumbrancesFuture.join()))
-      .thenApply(this::applyPoLinesRolloverChanges)
-      .exceptionally(t -> {
-        logger.error(ErrorCodes.ROLLOVER_PO_LINES_ERROR.getDescription());
-        throw new CompletionException(new HttpException(500, ErrorCodes.ROLLOVER_PO_LINES_ERROR));
-      });
+    return getPoLinesByOrderIds(orderIds, requestContext)
+            .thenCompose(poLines -> getEncumbrancesForRollover(orderIds, ledgerFYRollover, requestContext)
+              .thenApply(transactions -> buildPoLineEncumbrancesHolders(poLines, transactions))
+              .thenApply(this::applyPoLinesRolloverChanges))
+            .exceptionally(t -> {
+              logger.error(ErrorCodes.ROLLOVER_PO_LINES_ERROR.getDescription());
+              throw new CompletionException(new HttpException(500, ErrorCodes.ROLLOVER_PO_LINES_ERROR));
+            });
   }
 
   private List<PoLine> applyPoLinesRolloverChanges(List<PoLineEncumbrancesHolder> poLineEncumbrancesHolders) {

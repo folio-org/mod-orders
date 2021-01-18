@@ -4,6 +4,7 @@ import static org.folio.orders.utils.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
@@ -29,17 +30,18 @@ public class FiscalYearService {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withId(ledgerId);
     return restClient.get(requestEntry, requestContext, FiscalYear.class)
       .exceptionally(t -> {
-        if (isFiscalYearNotFound(t)) {
+        Throwable cause = Objects.nonNull(t.getCause()) ? t.getCause() : t;
+        if (isFiscalYearNotFound(cause)) {
           List<Parameter> parameters = Collections.singletonList(new Parameter().withValue(ledgerId)
             .withKey("ledgerId"));
           throw new HttpException(404, CURRENT_FISCAL_YEAR_NOT_FOUND.toError()
             .withParameters(parameters));
         }
-        throw new CompletionException(t.getCause());
+        throw new CompletionException(cause);
       });
   }
 
   private boolean isFiscalYearNotFound(Throwable t) {
-    return t.getCause() instanceof HttpException && ((HttpException) t.getCause()).getCode() == 404;
+    return t instanceof HttpException && ((HttpException) t).getCode() == 404;
   }
 }

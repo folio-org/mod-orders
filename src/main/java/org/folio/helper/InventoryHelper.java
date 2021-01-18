@@ -536,7 +536,7 @@ public class InventoryHelper extends AbstractHelper {
         List<CompletableFuture<String>> updatedItemIds = new ArrayList<>(pieceItemPairs.size());
         pieceItemPairs.forEach(pair -> {
           JsonObject item = pair.getItem();
-          if (item != null && !polLocations.contains(item.getJsonObject(EFFECTIVE_LOCATION).getString(ID))) {
+          if (isLocationContainsItemLocation(polLocations, item)) {
             item.put(ITEM_HOLDINGS_RECORD_ID, holder.getNewHoldingId());
             updatedItemIds.add(saveItem(item));
           }
@@ -548,6 +548,10 @@ public class InventoryHelper extends AbstractHelper {
             return pieceItemPairs.stream().map(PieceItemPair::getPiece).collect(toList());
           });
       });
+  }
+
+  boolean isLocationContainsItemLocation(List<Location> polLocations, JsonObject item) {
+    return item != null && polLocations.stream().noneMatch(location -> location.getLocationId().equals(item.getJsonObject(EFFECTIVE_LOCATION).getString(ID)));
   }
 
   private List<PieceItemPair> buildPieceItemPairList(List<Piece> needUpdatePieces, List<JsonObject> items) {

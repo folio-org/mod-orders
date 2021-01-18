@@ -1,8 +1,8 @@
 package org.folio.service.orders;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.helper.PurchaseOrderHelperTest.ORDER_PATH;
-import static org.folio.rest.impl.ApiTestBase.getMockAsJson;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;

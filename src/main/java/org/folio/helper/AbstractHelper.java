@@ -30,7 +30,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -38,6 +37,8 @@ import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.spring.SpringContextUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -69,7 +70,8 @@ public abstract class AbstractHelper {
   protected final String lang;
   private JsonObject tenantConfiguration;
 
-  private final ConfigurationEntriesService configurationEntriesService;
+  @Autowired
+  private ConfigurationEntriesService configurationEntriesService;
 
   protected AbstractHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     setDefaultHeaders(httpClient);
@@ -77,7 +79,7 @@ public abstract class AbstractHelper {
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
     this.lang = lang;
-    this.configurationEntriesService = new ConfigurationEntriesService(new RestClient());
+    SpringContextUtil.autowireDependencies(this, ctx);
   }
 
   protected AbstractHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -85,7 +87,7 @@ public abstract class AbstractHelper {
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
     this.lang = lang;
-    this.configurationEntriesService = new ConfigurationEntriesService(new RestClient());
+    SpringContextUtil.autowireDependencies(this, ctx);
   }
 
   protected AbstractHelper(Context ctx) {
@@ -93,7 +95,7 @@ public abstract class AbstractHelper {
     this.okapiHeaders = null;
     this.lang = null;
     this.ctx = ctx;
-    this.configurationEntriesService = new ConfigurationEntriesService(new RestClient());
+    SpringContextUtil.autowireDependencies(this, ctx);
   }
 
   public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders, boolean setDefaultHeaders) {

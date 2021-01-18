@@ -32,7 +32,7 @@ public class LedgerService {
 
   public CompletableFuture<List<Ledger>> getLedgersByIds(Collection<String> ledgerIds, RequestContext requestContext) {
     String query = convertIdsToCqlQuery(ledgerIds, ID);
-      RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query)
+    RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query)
               .withLimit(MAX_IDS_FOR_GET_RQ).withOffset(0);
     return restClient.get(requestEntry, requestContext, LedgerCollection.class)
       .thenApply(ledgerCollection -> {

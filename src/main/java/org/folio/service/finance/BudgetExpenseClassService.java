@@ -20,7 +20,7 @@ public class BudgetExpenseClassService {
     }
 
     public CompletableFuture<BudgetExpenseClassCollection> getBudgetExpenseClasses(String query, int offset, int limit, RequestContext requestContext) {
-        RequestEntry requestEntry = new RequestEntry(resourcesPath(ENDPOINT))
+        RequestEntry requestEntry = new RequestEntry(ENDPOINT)
                 .withQuery(query)
                 .withLimit(limit)
                 .withOffset(offset);

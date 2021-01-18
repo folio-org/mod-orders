@@ -1,6 +1,12 @@
 package org.folio.rest.impl.protection;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.RestTestUtils.prepareHeaders;
+import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.initSpringContext;
+import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.helper.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
 import static org.folio.orders.utils.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
@@ -8,6 +14,9 @@ import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.TestUtils.encodePrettily;
+import static org.folio.TestUtils.getMinimalContentCompositePoLine;
+import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ALL_DESIRED_PERMISSIONS_HEADER;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.COMPOSITE_ORDERS_PATH;
@@ -26,10 +35,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
+import org.folio.config.ApplicationConfig;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
@@ -37,6 +50,9 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -50,6 +66,29 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
 
   private static final Logger logger = LogManager.getLogger();
 
+  private static boolean runningOnOwn;
+
+  @BeforeAll
+  static void before() throws InterruptedException, ExecutionException, TimeoutException {
+    if (isVerticleNotDeployed()) {
+      ApiTestSuite.before();
+      runningOnOwn = true;
+    }
+    initSpringContext(ApplicationConfig.class);
+  }
+
+  @AfterEach
+  void afterEach() {
+    clearServiceInteractions();
+  }
+
+  @AfterAll
+  static void after() {
+    if (runningOnOwn) {
+      ApiTestSuite.after();
+    }
+  }
+
 
   @ParameterizedTest
   @ValueSource(strings = {
@@ -58,7 +97,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     "DELETE",
     "READ"
   })
-  public void testOperationWithNonExistedUnits(ProtectedOperations operation) {
+  void testOperationWithNonExistedUnits(ProtectedOperations operation) {
     logger.info("=== Test order contains non-existent unit ids - expecting of call only to Units API ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_ID);
@@ -78,7 +117,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     "DELETE",
     "READ"
   })
-  public void testOperationWithAllowedUnits(ProtectedOperations operation) {
+  void testOperationWithAllowedUnits(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units allowed operation - expecting of call only to Units API ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_ID);
@@ -95,7 +134,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     "DELETE",
     "READ"
   })
-  public void testWithRestrictedUnitsAndAllowedUser(ProtectedOperations operation) {
+  void testWithRestrictedUnitsAndAllowedUser(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units, units protect operation, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
 
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER);
@@ -112,7 +151,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     "DELETE",
     "READ"
   })
-  public void testWithProtectedUnitsAndForbiddenUser(ProtectedOperations operation) {
+  void testWithProtectedUnitsAndForbiddenUser(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units, units protect operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");
 
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER);
@@ -130,7 +169,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     "CREATE",
     "UPDATE"
   })
-  public void testModifyUnitsList(ProtectedOperations operation) {
+  void testModifyUnitsList(ProtectedOperations operation) {
     logger.info("=== Test user without desired permissions modifying acqUnitsIds ===");
 
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER);
@@ -149,7 +188,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     "CREATE",
     "UPDATE"
   })
-  public void testAssigningSoftDeletedUnit(ProtectedOperations operation) {
+  void testAssigningSoftDeletedUnit(ProtectedOperations operation) {
     logger.info("=== Test order contains \"soft deleted\" unit id - expecting of call only to Units API ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_ID);
@@ -191,7 +230,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
   }
 
   @Test
-  public void testGetOrderWithAssignedSoftDeletedUnit() {
+  void testGetOrderWithAssignedSoftDeletedUnit() {
     logger.info("=== Test order contains only \"soft deleted\" unit id - expecting of call only to Units API ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_ID);
@@ -220,7 +259,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
   }
 
   @Test
-  public void testUpdateOrderAssignedToCreateProtectedUnitAddingPoLineUserNotAssigned() {
+  void testUpdateOrderAssignedToCreateProtectedUnitAddingPoLineUserNotAssigned() {
     logger.info("=== Test corresponding order has units, poLine is going to be added to order, units protect only create operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");
 
     CompositePurchaseOrder order = prepareOrder(CREATE_PROTECTED_UNITS);
@@ -238,7 +277,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
   }
 
   @Test
-  public void testUpdateOrderAssignedToDeleteProtectedUnitDeletingPoLineUserNotAssigned() {
+  void testUpdateOrderAssignedToDeleteProtectedUnitDeletingPoLineUserNotAssigned() {
     logger.info("=== Test corresponding order has units, poLine is going to be deleted from order, units protect only delete operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");
 
     CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder();
@@ -264,7 +303,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
   }
 
   @Test
-  public void testUpdateOrderAssignedToCreateProtectedUnitAddingAndDeletingPoLinesUserAssigned() {
+  void testUpdateOrderAssignedToCreateProtectedUnitAddingAndDeletingPoLinesUserAssigned() {
     logger.info("=== Test corresponding order has units, poLine is going to be deleted, new line will be added ===");
     logger.info("=== Units protect all operations, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
 

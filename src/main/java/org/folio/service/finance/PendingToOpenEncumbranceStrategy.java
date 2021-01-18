@@ -23,8 +23,8 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
     public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, RequestContext requestContext) {
         EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
         if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
-            return CompletableFuture.runAsync(() -> validateFundDistributionTotal(compPO.getCompositePoLines()))
-                    .thenCompose(v -> encumbranceService.getPoLinesEncumbrances(compPO.getCompositePoLines(), requestContext))
+            validateFundDistributionTotal(compPO.getCompositePoLines());
+            return encumbranceService.getPoLinesEncumbrances(compPO.getCompositePoLines(), requestContext)
                     .thenAccept(holder::withEncumbrancesFromStorage)
                     .thenCompose(v -> encumbranceService.buildNewEncumbrances(compPO, compPO.getCompositePoLines(), holder.getEncumbrancesFromStorage(),requestContext))
                     .thenAccept(holder::withEncumbrancesForCreate)

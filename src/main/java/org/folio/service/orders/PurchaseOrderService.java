@@ -12,7 +12,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 public class PurchaseOrderService {
 
-  private static final String ENDPOINT = "/finance/funds";
+  private static final String ENDPOINT = "/orders-storage/purchase-orders";
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
   private final RestClient restClient;
 
@@ -26,7 +26,7 @@ public class PurchaseOrderService {
   }
 
   public CompletableFuture<PurchaseOrderCollection> getPurchaseOrders(String query, int limit, int offset, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(resourcesPath(ENDPOINT))
+    RequestEntry requestEntry = new RequestEntry(ENDPOINT)
             .withQuery(query)
             .withLimit(limit)
             .withOffset(offset);

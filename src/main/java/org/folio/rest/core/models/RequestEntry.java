@@ -4,81 +4,97 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.glassfish.jersey.uri.UriTemplate;
 import scala.Int;
 
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
+
 public class RequestEntry {
-    private String baseEndpoint;
-    private Map<String, String> pathParams = new HashMap<>();
-    private Map<String, Object> queryParams = new HashMap<>();
 
-    public RequestEntry(String baseEndpoint) {
-        this.baseEndpoint = baseEndpoint;
-    }
+  private static final Logger logger = LogManager.getLogger();
 
-    public RequestEntry withPathParameter(String key, String value) {
-        pathParams.put(key, value);
-        return this;
-    }
+  private String baseEndpoint;
+  private Map<String, String> pathParams = new HashMap<>();
+  private Map<String, Object> queryParams = new HashMap<>();
 
-    public RequestEntry withQueryParameter(String key, Object value) {
-        queryParams.put(key, value);
-        return this;
-    }
+  public RequestEntry(String baseEndpoint) {
+    this.baseEndpoint = baseEndpoint;
+  }
 
-    public RequestEntry withId(String id) {
-        pathParams.put("id", id);
-        return this;
-    }
+  public RequestEntry withPathParameter(String key, String value) {
+    pathParams.put(key, value);
+    return this;
+  }
 
-    public RequestEntry withQuery(String query) {
-        queryParams.put("query", query);
-        return this;
-    }
+  public RequestEntry withQueryParameter(String key, Object value) {
+    queryParams.put(key, value);
+    return this;
+  }
 
-    public RequestEntry withLimit(Integer limit) {
-        queryParams.put("limit", limit);
-        return this;
-    }
+  public RequestEntry withId(String id) {
+    pathParams.put("id", id);
+    return this;
+  }
 
-    public RequestEntry withOffset(Integer offset) {
-        queryParams.put("offset", offset);
-        return this;
+  public RequestEntry withQuery(String query) {
+    if (StringUtils.isEmpty(query)) {
+      return this;
     }
+    queryParams.put("query", encodeQuery(query, logger));
+    return this;
+  }
 
-    public String getBaseEndpoint() {
-        return baseEndpoint;
-    }
+  public RequestEntry withLimit(Integer limit) {
+    queryParams.put("limit", limit);
+    return this;
+  }
 
-    public void setBaseEndpoint(String baseEndpoint) {
-        this.baseEndpoint = baseEndpoint;
-    }
+  public RequestEntry withOffset(Integer offset) {
+    queryParams.put("offset", offset);
+    return this;
+  }
 
-    public Map<String, String> getPathParams() {
-        return pathParams;
-    }
+  public String getBaseEndpoint() {
+    return baseEndpoint;
+  }
 
-    public void setPathParams(Map<String, String> pathParams) {
-        this.pathParams = pathParams;
-    }
+  public void setBaseEndpoint(String baseEndpoint) {
+    this.baseEndpoint = baseEndpoint;
+  }
 
-    public Map<String, Object> getQueryParams() {
-        return queryParams;
-    }
+  public Map<String, String> getPathParams() {
+    return pathParams;
+  }
 
-    public void setQueryParams(Map<String, Object> queryParams) {
-        this.queryParams = queryParams;
-    }
-    public String buildEndpoint() {
-        UriTemplate uriTemplate = new UriTemplate(baseEndpoint);
-        String endpoint = uriTemplate.createURI(pathParams);
-        return endpoint + addQueryParams();
-    }
+  public void setPathParams(Map<String, String> pathParams) {
+    this.pathParams = pathParams;
+  }
 
-    private String addQueryParams() {
-        if (queryParams.isEmpty()) {
-            return "";
-        }
-        return queryParams.entrySet().stream().map(entry -> entry.getKey() + "=" + entry.getValue().toString()).collect(Collectors.joining("&", "?", ""));
+  public Map<String, Object> getQueryParams() {
+    return queryParams;
+  }
+
+  public void setQueryParams(Map<String, Object> queryParams) {
+    this.queryParams = queryParams;
+  }
+
+  public String buildEndpoint() {
+    UriTemplate uriTemplate = new UriTemplate(baseEndpoint);
+    String endpoint = uriTemplate.createURI(pathParams);
+    return endpoint + addQueryParams();
+  }
+
+  private String addQueryParams() {
+    if (queryParams.isEmpty()) {
+      return "";
     }
+    return queryParams.entrySet()
+      .stream()
+      .map(entry -> entry.getKey() + "=" + entry.getValue()
+        .toString())
+      .collect(Collectors.joining("&", "?", ""));
+  }
 }

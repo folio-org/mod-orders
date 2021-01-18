@@ -35,13 +35,29 @@ public class FundService {
     this.restClient = restClient;
   }
 
-  public CompletableFuture<List<Fund>> getFunds(Collection<String> fundIds, RequestContext requestContext) {
+  public CompletableFuture<List<Fund>> getAllFunds(Collection<String> fundIds, RequestContext requestContext) {
     return collectResultsOnSuccess(ofSubLists(new ArrayList<>(fundIds), MAX_IDS_FOR_GET_RQ)
-      .map(ids -> getFundsByIds(ids, requestContext))
+      .map(ids -> getAllFundsByIds(ids, requestContext))
       .toList())
       .thenApply(lists -> lists.stream().flatMap(Collection::stream)
       .collect(Collectors.toList()));
   }
+
+    public CompletableFuture<List<Fund>> getFunds(Collection<String> fundIds, RequestContext requestContext) {
+        return collectResultsOnSuccess(ofSubLists(new ArrayList<>(fundIds), MAX_IDS_FOR_GET_RQ)
+                .map(ids -> getFundsByIds(ids, requestContext))
+                .toList())
+                .thenApply(lists -> lists.stream().flatMap(Collection::stream)
+                        .collect(Collectors.toList()));
+    }
+
+    private CompletableFuture<List<Fund>> getFundsByIds(Collection<String> ids, RequestContext requestContext) {
+        String query = convertIdsToCqlQuery(ids);
+        RequestEntry requestEntry = new RequestEntry(ENDPOINT)
+                .withQuery(query).withLimit(MAX_IDS_FOR_GET_RQ).withOffset(0);
+        return restClient.get(requestEntry, requestContext, FundCollection.class)
+                .thenApply(FundCollection::getFunds);
+    }
 
   public CompletableFuture<Fund> retrieveFundById(String fundId, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(fundId);
@@ -65,11 +81,21 @@ public class FundService {
                          .thenApply(FundCollection::getFunds);
   }
 
-  private CompletableFuture<List<Fund>> getFundsByIds(Collection<String> ids, RequestContext requestContext) {
+  private CompletableFuture<List<Fund>> getAllFundsByIds(Collection<String> ids, RequestContext requestContext) {
     String query = convertIdsToCqlQuery(ids);
     RequestEntry requestEntry = new RequestEntry(ENDPOINT)
             .withQuery(query).withLimit(MAX_IDS_FOR_GET_RQ).withOffset(0);
     return restClient.get(requestEntry, requestContext, FundCollection.class)
-                         .thenApply(FundCollection::getFunds);
+                         .thenApply(FundCollection::getFunds)
+            .thenApply(funds -> {
+              if (funds.size() == ids.size()) {
+                return funds;
+              }
+              List<Parameter> parameters = ids.stream()
+                      .filter(id -> funds.stream().noneMatch(fund -> fund.getId().equals(id)))
+                      .map(id -> new Parameter().withValue(id).withKey("funds"))
+                      .collect(Collectors.toList());
+              throw new HttpException(404, FUNDS_NOT_FOUND.toError().withParameters(parameters));
+            });
   }
 }

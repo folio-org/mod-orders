@@ -9,7 +9,6 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.helper.PurchaseOrderHelper.ENCUMBRANCE_POST_ENDPOINT;
 import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_CREATED;
 import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_DELETED;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
@@ -69,8 +68,6 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.folio.models.EncumbranceRelationsHolder;
-import org.folio.models.PoLineFundHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
@@ -103,13 +100,14 @@ import org.folio.service.finance.EncumbranceService;
 import org.folio.service.finance.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.ExpenseClassValidationService;
+import org.folio.service.finance.WorkflowStatusName;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
-import org.folio.service.finance.WorkflowStatusName;
 
 public class PurchaseOrderLineHelper extends AbstractHelper {
 
@@ -130,8 +128,11 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   private final InventoryHelper inventoryHelper;
   private final ProtectionHelper protectionHelper;
   private final PiecesHelper piecesHelper;
+  @Autowired
   private EncumbranceService encumbranceService;
+  @Autowired
   private ExpenseClassValidationService expenseClassValidationService;
+  @Autowired
   private EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
 
   public PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -210,7 +211,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     return setTenantDefaultCreateInventoryValues(compPOL)
       .thenCompose(v -> validateNewPoLine(compPOL))
       .thenCompose(isValid -> {
-        if (isValid) {
+        if (isValid.equals(Boolean.TRUE)) {
           return getCompositePurchaseOrder(compPOL.getPurchaseOrderId())
             // The PO Line can be created only for order in Pending state
             .thenApply(this::validateOrderState)
@@ -303,13 +304,13 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     }
   }
 
-  private static Boolean isPhysicalInventoryNotPresent(CompositePoLine compPOL) {
+  private static boolean isPhysicalInventoryNotPresent(CompositePoLine compPOL) {
     return Optional.ofNullable(compPOL.getPhysical())
       .map(physical -> physical.getCreateInventory() == null)
       .orElse(true);
   }
 
-  private static Boolean isEresourceInventoryNotPresent(CompositePoLine compPOL) {
+  private static boolean isEresourceInventoryNotPresent(CompositePoLine compPOL) {
     return Optional.ofNullable(compPOL.getEresource())
       .map(eresource -> eresource.getCreateInventory() == null)
       .orElse(true);

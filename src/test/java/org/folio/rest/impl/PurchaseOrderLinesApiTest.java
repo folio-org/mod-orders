@@ -2,6 +2,37 @@ package org.folio.rest.impl;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
+import static org.folio.RestTestUtils.checkPreventProtectedFieldsModificationRule;
+import static org.folio.RestTestUtils.prepareHeaders;
+import static org.folio.RestTestUtils.verifyDeleteResponse;
+import static org.folio.RestTestUtils.verifyGet;
+import static org.folio.RestTestUtils.verifyPostResponse;
+import static org.folio.RestTestUtils.verifyPut;
+import static org.folio.RestTestUtils.verifySuccessGet;
+import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.initSpringContext;
+import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConstants.ACTIVE_ACCESS_PROVIDER_B;
+import static org.folio.TestConstants.BAD_QUERY;
+import static org.folio.TestConstants.COMP_ORDER_MOCK_DATA_PATH;
+import static org.folio.TestConstants.EMPTY_CONFIG_X_OKAPI_TENANT;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.TestConstants.ID_BAD_FORMAT;
+import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
+import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
+import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_A;
+import static org.folio.TestConstants.INVALID_LANG;
+import static org.folio.TestConstants.NON_EXIST_CONFIG_X_OKAPI_TENANT;
+import static org.folio.TestConstants.PO_ID_CLOSED_STATUS;
+import static org.folio.TestConstants.PO_ID_OPEN_STATUS;
+import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITH_PO_LINES;
+import static org.folio.TestConstants.PO_LINE_ID_FOR_SUCCESS_CASE;
+import static org.folio.TestConstants.PO_LINE_NUMBER_VALUE;
+import static org.folio.TestConstants.PROTECTED_READ_ONLY_TENANT;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.TestUtils.getMockData;
 import static org.folio.orders.utils.ErrorCodes.COST_ADDITIONAL_COST_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_DISCOUNT_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
@@ -24,6 +55,7 @@ import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
@@ -32,6 +64,9 @@ import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_STORAGE_ENDPOINT;
+import static org.folio.TestUtils.getMinimalContentCompositePoLine;
+import static org.folio.TestUtils.validatePoLineCreationErrorForNonPendingOrder;
+import static org.folio.TestUtils.verifyLocationQuantity;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ORDER_ID_WITH_PO_LINES;
 import static org.folio.rest.impl.MockServer.PO_NUMBER_ERROR_X_OKAPI_TENANT;
@@ -70,12 +105,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.ApiTestSuite;
+import org.folio.config.ApplicationConfig;
+import org.folio.orders.events.handlers.HandlersTestHelper;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.rest.acq.model.Title;
@@ -95,13 +135,16 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.Tags;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import io.restassured.response.Response;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 
-public class PurchaseOrderLinesApiTest extends ApiTestBase {
+public class PurchaseOrderLinesApiTest {
 
   private static final Logger logger = LogManager.getLogger();
 
@@ -116,8 +159,31 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   private static final String ACQUISITIONS_UNIT_IDS = "acqUnitIds";
   private static final String NO_ACQ_UNIT_ASSIGNED_CQL = "cql.allRecords=1 not " + ACQUISITIONS_UNIT_IDS + " <> []";
 
+  private static boolean runningOnOwn;
+
+  @BeforeAll
+  static void before() throws InterruptedException, ExecutionException, TimeoutException {
+    if (isVerticleNotDeployed()) {
+      ApiTestSuite.before();
+      runningOnOwn = true;
+    }
+    initSpringContext(ApplicationConfig.class);
+  }
+
+  @AfterEach
+  void afterEach() {
+    clearServiceInteractions();
+  }
+
+  @AfterAll
+  static void after() {
+    if (runningOnOwn) {
+      ApiTestSuite.after();
+    }
+  }
+
   @Test
-  public void testPostOrderLine() {
+  void testPostOrderLine() {
     logger.info("=== Test Post Order Line (expected flow) ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
@@ -142,7 +208,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersLinePhysicalFormatIncorrectQuantity() {
+  void testPostOrdersLinePhysicalFormatIncorrectQuantity() {
     logger.info("=== Test Post Physical Order Line - incorrect quantity ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
@@ -175,7 +241,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersLineElectronicFormatIncorrectQuantity() {
+  void testPostOrdersLineElectronicFormatIncorrectQuantity() {
     logger.info("=== Test Post Electronic Order Line - incorrect quantity ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
@@ -212,7 +278,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersLinePhysicalFormatDiscount() {
+  void testPostOrdersLinePhysicalFormatDiscount() {
     logger.info("=== Test Post Physical Order Line - discount exceeds total price ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
@@ -237,7 +303,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostWithEmptyConfigOverLimit() {
+  void testPostWithEmptyConfigOverLimit() {
     logger.info("=== Test PO creation fail with default limit ===");
 
     JsonObject compPoLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
@@ -252,7 +318,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPoLineCreationIfPoAlreadyReachedLimit() {
+  void testPoLineCreationIfPoAlreadyReachedLimit() {
     logger.info("=== Test PO Line over limit creation ===");
     JsonObject compPoLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
 
@@ -266,7 +332,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersLinesByIdPoLineWithoutId() throws IOException {
+  void testPostOrdersLinesByIdPoLineWithoutId() throws IOException {
     logger.info("=== Test Post Order Lines By Id (empty id in body) ===");
 
     Errors resp = verifyPostResponse(LINES_PATH, getMockData(PO_LINE_MIN_CONTENT_PATH),
@@ -277,7 +343,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersLinesByIdPoLineWithNonExistPurchaseOrder() {
+  void testPostOrdersLinesByIdPoLineWithNonExistPurchaseOrder() {
     logger.info("=== Test Post Order Lines By Id (empty id in body) ===");
     JsonObject reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, PO_LINE_ID_FOR_SUCCESS_CASE);
     reqData.put(PURCHASE_ORDER_ID, ID_DOES_NOT_EXIST);
@@ -290,14 +356,14 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testAddOrderLineToOrderInClosedStatus() {
+  void testAddOrderLineToOrderInClosedStatus() {
     logger.info("=== Test add new line to Closed order ===");
 
     validateNoLineCreatedForNonPendingOrder(PO_ID_CLOSED_STATUS, ORDER_CLOSED.getCode());
   }
 
   @Test
-  public void testAddOrderLineToOrderInOpenStatus() {
+  void testAddOrderLineToOrderInOpenStatus() {
     logger.info("=== Test add new line to Open order ===");
 
     validateNoLineCreatedForNonPendingOrder(PO_ID_OPEN_STATUS, ORDER_OPEN.getCode());
@@ -315,7 +381,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testCreatePoLineWithGetPoLineNumberError() throws IOException {
+  void testCreatePoLineWithGetPoLineNumberError() throws IOException {
     logger.info("=== Test Create PO Line - fail on PO Line number generation ===");
     JsonObject json = new JsonObject(getMockData(String.format("%s%s.json", COMP_PO_LINES_MOCK_DATA_PATH, PO_LINE_ID_FOR_SUCCESS_CASE)));
     CompositePoLine poLine = json.mapTo(CompositePoLine.class);
@@ -325,7 +391,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderLineElectronicFormatIncorrectQuantityAndPrice() {
+  void testPutOrderLineElectronicFormatIncorrectQuantityAndPrice() {
     logger.info("=== Test Put Electronic Order Line - incorrect quantity and Price ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
@@ -367,25 +433,25 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testValidationOnPutLineWithoutBody() {
+  void testValidationOnPutLineWithoutBody() {
     logger.info("=== Test validation on PUT line with no body ===");
     verifyPut(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST), "", TEXT_PLAIN, 400);
   }
 
   @Test
-  public void testValidationOnPutWithIncorrectLang() throws IOException {
+  void testValidationOnPutWithIncorrectLang() throws IOException {
     logger.info("=== Test validation on PUT line with invalid lang query parameter ===");
     verifyPut(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST) + INVALID_LANG, getMockData(PO_LINE_MIN_CONTENT_PATH), TEXT_PLAIN, 400);
   }
 
   @Test
-  public void testValidationOnPutWithIncorrectLineId() throws IOException {
+  void testValidationOnPutWithIncorrectLineId() throws IOException {
     logger.info("=== Test validation on PUT line with invalid line ID path parameter ===");
     verifyPut(String.format(LINE_BY_ID_PATH, ID_BAD_FORMAT), getMockData(PO_LINE_MIN_CONTENT_PATH), TEXT_PLAIN, 400);
   }
 
   @Test
-  public void testPutOrderLineByIdWithEmptyBody() throws IOException {
+  void testPutOrderLineByIdWithEmptyBody() throws IOException {
     logger.info("=== Test PUT Order Line By Id With Empty Json - validation error because of required properties like PO ID ===");
 
     String url = String.format(LINE_BY_ID_PATH, PO_LINE_ID_FOR_SUCCESS_CASE);
@@ -396,7 +462,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderLineById() {
+  void testPutOrderLineById() {
     logger.info("=== Test PUT Order Line By Id - Success case ===");
 
     String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
@@ -439,11 +505,11 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertEquals(location.getQuantityPhysical(), location.getQuantity());
 
     // Verify messages sent via event bus
-    verifyOrderStatusUpdateEvent(1);
+    HandlersTestHelper.verifyOrderStatusUpdateEvent(1);
   }
 
   @Test
-  public void testPutOrderLineWithTagInheritance() {
+  void testPutOrderLineWithTagInheritance() {
     logger.info("=== Test PUT Order Line With Tag Inheritance ===");
     String lineId = "bb66b269-76ed-4616-8da9-730d9b817247";
     CompositePoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
@@ -482,12 +548,12 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
       .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
       .withValue(100D)));
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
-    Transaction updatedEncumbrance = MockServer.getUpdatedTransactions().get(0);
+    Transaction updatedEncumbrance = MockServer.getCreatedEncumbrances().get(1);
     assertEquals(Collections.singletonList("updated"), updatedEncumbrance.getTags().getTagList());
   }
 
   @Test
-  public void testPutOrderLineWithNoTags() {
+  void testPutOrderLineWithNoTags() {
     logger.info("=== Test PUT Order Line With No Tags ===");
     String lineId = "bb66b269-76ed-4616-8da9-730d9b817247";
     CompositePoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
@@ -531,7 +597,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderLineByIdPiecesWillBeCreated() {
+  void testPutOrderLineByIdPiecesWillBeCreated() {
     logger.info("=== Test PUT Order Line By Id - Pieces will be created ===");
 
     String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
@@ -562,7 +628,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderLineByIdPiecesNeedToBeDeleted() {
+  void testPutOrderLineByIdPiecesNeedToBeDeleted() {
     logger.info("=== Test PUT Order Line By Id - Pieces need to be deleted ===");
 
     String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
@@ -599,7 +665,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderLineByIdWithoutOrderUpdate() {
+  void testPutOrderLineByIdWithoutOrderUpdate() {
     logger.info("=== Test PUT Order Line By Id - No Order update event sent on success ===");
 
     String lineId = ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE;
@@ -619,11 +685,11 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertThat(column.keySet(), containsInAnyOrder(PO_LINES, ALERTS, REPORTING_CODES));
 
     // Verify no message sent via event bus
-    verifyOrderStatusUpdateEvent(0);
+    HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
   }
 
   @Test
-  public void testUpdatePackagePoLineWithInstanceId() {
+  void testUpdatePackagePoLineWithInstanceId() {
     logger.info("=== Test PUT Order Line By Id - No Order update event sent on success ===");
 
     String lineId = ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE;
@@ -642,7 +708,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
 
   @Test
-  public void testPutOrderLineByIdProtectedFieldsChanged() {
+  void testPutOrderLineByIdProtectedFieldsChanged() {
     logger.info("=== Test PUT Order Line By Id - Protected fields changed ===");
 
     String lineId = "0009662b-8b80-4001-b704-ca10971f175d";
@@ -675,11 +741,11 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertThat(column, hasKey(PO_LINES));
 
     // Verify no message sent via event bus
-    verifyOrderStatusUpdateEvent(0);
+    HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
   }
 
   @Test
-  public void testPutOrderLineByIdNotFound() throws IOException {
+  void testPutOrderLineByIdNotFound() throws IOException {
     logger.info("=== Test PUT Order Line By Id - Not Found ===");
 
     String lineId = ID_DOES_NOT_EXIST;
@@ -705,7 +771,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderLineByIdWithInvalidContentInBody() throws IOException {
+  void testPutOrderLineByIdWithInvalidContentInBody() throws IOException {
     logger.info("=== Test PUT Order Line By Id - Body Validation Error ===");
 
     String url = String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST);
@@ -722,7 +788,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
 
 
   @Test
-  public void testPutOrderLineByIdWithIdMismatch() throws IOException {
+  void testPutOrderLineByIdWithIdMismatch() throws IOException {
     logger.info("=== Test PUT Order Line By Id - Ids mismatch ===");
 
     String url = String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST);
@@ -739,7 +805,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderLineById500FromStorageOnGetPoLine() throws IOException {
+  void testPutOrderLineById500FromStorageOnGetPoLine() throws IOException {
     logger.info("=== Test PUT Order Line By Id - 500 From Storage On Get PO Line ===");
 
     String lineId = ID_FOR_INTERNAL_SERVER_ERROR;
@@ -766,14 +832,14 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testDeleteOrderLineById() {
+  void testDeleteOrderLineById() {
     logger.info("=== Test Delete Order Line By Id - Success case ===");
 
     deleteOrderLineByIdSuccess(PO_LINE_ID_FOR_SUCCESS_CASE);
   }
 
   @Test
-  public void testDeleteOrderLineByIdWithPartiallyDeletedSubObjects() {
+  void testDeleteOrderLineByIdWithPartiallyDeletedSubObjects() {
     logger.info("=== Test Delete Order Line By Id - Success case ===");
 
     // This test should behave the same as regular test and only warning in log expected
@@ -788,7 +854,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testDeleteOrderLineByIdNotFound() {
+  void testDeleteOrderLineByIdNotFound() {
     logger.info("=== Test Delete Order Line By Id - Not Found ===");
 
     String url = String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST);
@@ -798,7 +864,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testDeleteOrderLineById500FromStorageOnSubObjectDeletion() {
+  void testDeleteOrderLineById500FromStorageOnSubObjectDeletion() {
     logger.info("=== Test Delete Order Line By Id - 500 From Storage On Sub-Object deletion ===");
 
     String url = String.format(LINE_BY_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR);
@@ -808,7 +874,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderLineByIdWithoutTitle() {
+  void testGetOrderLineByIdWithoutTitle() {
     logger.info("=== Test Get Orderline By Id without title ===");
 
     final CompositePoLine resp = verifySuccessGet(String.format(LINE_BY_ID_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE), CompositePoLine.class);
@@ -822,7 +888,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderLineByIdWithTitleNoInstanceId() {
+  void testGetOrderLineByIdWithTitleNoInstanceId() {
     logger.info("=== Test Get Orderline By Id with title but without instanceId ===");
 
     addMockEntry(TITLES, new Title().withId(UUID.randomUUID().toString())
@@ -840,7 +906,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderLineByIdWithTitle() {
+  void testGetOrderLineByIdWithTitle() {
     logger.info("=== Test Get Orderline By Id with title ===");
 
     String instanceId = UUID.randomUUID().toString();
@@ -862,7 +928,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetPackageOrderLineByIdWithTitle() {
+  void testGetPackageOrderLineByIdWithTitle() {
     logger.info("=== Test Get Orderline By Id with title ===");
 
     String instanceId = UUID.randomUUID().toString();
@@ -885,7 +951,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderLineByIdWith404() {
+  void testGetOrderLineByIdWith404() {
     logger.info("=== Test Get Orderline By Id - With 404 ===");
 
     String lineId = ID_DOES_NOT_EXIST;
@@ -896,7 +962,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderLineByIdWith500() {
+  void testGetOrderLineByIdWith500() {
     logger.info("=== Test Get Orderline By Id - With 500 ===");
 
     final Response resp = verifyGet(String.format(LINE_BY_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), APPLICATION_JSON, 500);
@@ -905,7 +971,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderLinesInternalServerError() {
+  void testGetOrderLinesInternalServerError() {
     logger.info("=== Test Get Order Lines by query - emulating 500 from storage ===");
 
     String endpointQuery = String.format("%s?query=%s", LINES_PATH, ID_FOR_INTERNAL_SERVER_ERROR);
@@ -914,7 +980,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderLinesBadQuery() {
+  void testGetOrderLinesBadQuery() {
     logger.info("=== Test Get Order Lines by query - unprocessable query to emulate 400 from storage ===");
 
     String endpointQuery = String.format("%s?query=%s", LINES_PATH, BAD_QUERY);
@@ -924,7 +990,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderPoLinesByEmptyQuery() {
+  void testGetOrderPoLinesByEmptyQuery() {
     logger.info("=== Test Get Orders lines - by empty query ===");
 
     verifySuccessGet(LINES_PATH, PoLineCollection.class, PROTECTED_READ_ONLY_TENANT);
@@ -941,7 +1007,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderPOLinesByPoId() {
+  void testGetOrderPOLinesByPoId() {
     logger.info("=== Test Get Orders lines - by PO id ===");
 
     String sortBy = " sortBy poNumber";
@@ -968,7 +1034,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersWithInvalidIsbn() {
+  void testPostOrdersWithInvalidIsbn() {
     logger.info("=== Test Post Order line with invalid ISBN ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
@@ -995,7 +1061,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrderLineToConvertToIsbn13() {
+  void testPostOrderLineToConvertToIsbn13() {
     logger.info("=== Test Post order line to verify ISBN 10 is normalized to ISBN 13 ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
@@ -1019,7 +1085,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrderLineToRemoveISBNDuplicates() {
+  void testPostOrderLineToRemoveISBNDuplicates() {
     logger.info("=== Test Post order line to verify ISBN 13 is not repeated ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
@@ -1072,7 +1138,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersWithInvalidIsbn() {
+  void testPutOrdersWithInvalidIsbn() {
     logger.info("=== Test Put Order line with invalid ISBN ===");
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
       .mapTo(CompositePoLine.class);
@@ -1093,7 +1159,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdatePolineForOpenedOrderWithInactiveAccessProvider() {
+  void testUpdatePolineForOpenedOrderWithInactiveAccessProvider() {
     logger.info("=== Test update poline with inactive access provider for opened order  ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
@@ -1113,7 +1179,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdatePolineForOpenedOrderWithChangingCost() {
+  void testUpdatePolineForOpenedOrderWithChangingCost() {
     logger.info("=== Test update poline for opened order with changed cost ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
@@ -1134,11 +1200,11 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
 
-   assertThat("One or more transactions have been updated", MockServer.getRqRsEntries(HttpMethod.PUT, TRANSACTIONS_STORAGE_ENDPOINT).size() > 0);
+   assertThat("One or more transactions have been updated", MockServer.getRqRsEntries(HttpMethod.PUT, ENCUMBRANCES).size() > 0);
   }
 
   @Test
-  public void testUpdatePolineForOpenedOrderWithInactiveExpenseClass() {
+  void testUpdatePolineForOpenedOrderWithInactiveExpenseClass() {
     logger.info("=== Test update poline for opened order with inactive expense class ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
@@ -1162,7 +1228,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdatePolineForOpenedOrderWithChangingDistributionType() {
+  void testUpdatePolineForOpenedOrderWithChangingDistributionType() {
     logger.info("=== Test update poline for opened order with changed DistributionType ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
@@ -1181,11 +1247,11 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
 
-    assertThat("One or more transactions have been updated", MockServer.getRqRsEntries(HttpMethod.PUT, TRANSACTIONS_STORAGE_ENDPOINT).size() > 0);
+    assertThat("One or more transactions have been updated", MockServer.getRqRsEntries(HttpMethod.PUT, ENCUMBRANCES).size() > 0);
   }
 
   @Test
-  public void testUpdatePolineForOpenedOrderWithoutUpdatingEncumbrances() {
+  void testUpdatePolineForOpenedOrderWithoutUpdatingEncumbrances() {
     logger.info("=== Test update poline. Fund distributions not changed ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
@@ -1217,7 +1283,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdatePolineForOpenedOrderWithChangingOnlyLocation() {
+  void testUpdatePolineForOpenedOrderWithChangingOnlyLocation() {
     logger.info("=== Test update poline for opened order with changed location ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
@@ -1243,9 +1309,8 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
     assertEquals(newLocationId, getRqRsEntries(HttpMethod.PUT, PIECES).get(0).getString("locationId"), "Location updated");
   }
 
-
   @Test
-  public void testUpdatePolineForOpenedOrderWithUpdatingInventoryAndCreateNewPieces() {
+  void testUpdatePolineForOpenedOrderWithUpdatingInventoryAndCreateNewPieces() {
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
     reqData.setId(poLineId);
@@ -1277,7 +1342,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdatePolineForOpenedOrderWithoutUpdatingItems() {
+  void testUpdatePolineForOpenedOrderWithoutUpdatingItems() {
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
     reqData.setId(poLineId);
@@ -1304,7 +1369,7 @@ public class PurchaseOrderLinesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdatePolineForOpenedOrderWithNewLocationWithoutUpdatingItems() {
+  void testUpdatePolineForOpenedOrderWithNewLocationWithoutUpdatingItems() {
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
     reqData.setId(poLineId);

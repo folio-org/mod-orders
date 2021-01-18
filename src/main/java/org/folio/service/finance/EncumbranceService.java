@@ -48,7 +48,6 @@ import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Ledger;
-import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Tags;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
@@ -69,15 +68,32 @@ public class EncumbranceService {
   public static final String FUND_CODE = "fundCode";
   public static final String EXPENSE_CLASS_NAME = "expenseClassName";
 
-  private TransactionService transactionService;
-  private TransactionSummariesService transactionSummariesService;
-  private ExchangeRateProviderResolver exchangeRateProviderResolver;
-  private FundService fundService;
-  private LedgerService ledgerService;
-  private BudgetService budgetService;
-  private FiscalYearService fiscalYearService;
-  private ConfigurationEntriesService configurationEntriesService;
+  private final TransactionService transactionService;
+  private final TransactionSummariesService transactionSummariesService;
+  private final ExchangeRateProviderResolver exchangeRateProviderResolver;
+  private final FundService fundService;
+  private final LedgerService ledgerService;
+  private final BudgetService budgetService;
+  private final FiscalYearService fiscalYearService;
+  private final ConfigurationEntriesService configurationEntriesService;
 
+  public EncumbranceService(TransactionService transactionService,
+                            TransactionSummariesService transactionSummariesService,
+                            ExchangeRateProviderResolver exchangeRateProviderResolver,
+                            FundService fundService,
+                            LedgerService ledgerService,
+                            BudgetService budgetService,
+                            FiscalYearService fiscalYearService,
+                            ConfigurationEntriesService configurationEntriesService) {
+    this.transactionService = transactionService;
+    this.transactionSummariesService = transactionSummariesService;
+    this.exchangeRateProviderResolver = exchangeRateProviderResolver;
+    this.fundService = fundService;
+    this.ledgerService = ledgerService;
+    this.budgetService = budgetService;
+    this.fiscalYearService = fiscalYearService;
+    this.configurationEntriesService = configurationEntriesService;
+  }
 
 
   CompletableFuture<Void> createOrUpdateEncumbrances(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
@@ -106,7 +122,7 @@ public class EncumbranceService {
     List<Transaction> encumbrances = holder.getEncumbrancesForUpdate().stream()
             .map(EncumbranceRelationsHolder::getTransaction)
             .collect(toList());
-    return updateTransactions(encumbrances, requestContext);
+    return updateEncumbrances(encumbrances, requestContext);
   }
 
 
@@ -156,22 +172,13 @@ public class EncumbranceService {
   }
 
   public CompletableFuture<List<Transaction>> getPoLineEncumbrances(String poLineId, RequestContext requestContext) {
-    return transactionService.getTransactions(buildEncumbranceByPolineQuery(poLineId), 0, Integer.MAX_VALUE, requestContext)
+    return transactionService.getTransactions(buildEncumbranceByPoLineQuery(poLineId), 0, Integer.MAX_VALUE, requestContext)
       .thenApply(TransactionCollection::getTransactions);
   }
 
   public CompletableFuture<List<Transaction>> getPoLinesEncumbrances(List<CompositePoLine> poLines, RequestContext requestContext) {
     List<String> poLineIds = poLines.stream().map(CompositePoLine::getId).collect(toList());
     return transactionService.getTransactions(poLineIds, requestContext);
-  }
-
-  public List<Transaction> makeEncumbrancesPending(List<Transaction> encumbrances) {
-    encumbrances.forEach(encumbrance -> {
-      encumbrance.setAmount(0d);
-      encumbrance.getEncumbrance().setInitialAmountEncumbered(0d);
-      encumbrance.getEncumbrance().setStatus(Encumbrance.Status.PENDING);
-    });
-    return encumbrances;
   }
 
   public void updateEncumbrance(FundDistribution fundDistribution, CompositePoLine poLine, Transaction trEncumbrance) {
@@ -195,9 +202,9 @@ public class EncumbranceService {
     return encumbrance;
   }
 
-  private Collector<Transaction, ?, MonetaryAmount> sumTransactionAmounts() {
+  private Collector<Transaction, ?, MonetaryAmount> sumTransactionAmounts(String currency) {
     return mapping(tx -> Money.of(tx.getAmount(), tx.getCurrency()),
-      Collectors.reducing(Money.of(0, "systemCurrency"), MonetaryFunctions::sum));
+      Collectors.reducing(Money.of(0, currency), MonetaryFunctions::sum));
   }
 
 
@@ -244,13 +251,16 @@ public class EncumbranceService {
   }
 
   private void checkEnoughMoneyForTransactions(List<Transaction> encumbrances, List<Budget> budgets) {
-    Map<String, MonetaryAmount> remainingAmountsByFunds = encumbrances.stream()
-            .collect(groupingBy(Transaction::getFromFundId, sumTransactionAmounts()));
-    Set<String> fundIds = encumbrances.stream().map(Transaction::getFromFundId).collect(Collectors.toSet());
+    if (!encumbrances.isEmpty()) {
+      String currency = encumbrances.get(0).getCurrency();
+      Map<String, MonetaryAmount> remainingAmountsByFunds = encumbrances.stream()
+              .collect(groupingBy(Transaction::getFromFundId, sumTransactionAmounts(currency)));
+      Set<String> fundIds = encumbrances.stream().map(Transaction::getFromFundId).collect(Collectors.toSet());
 
-    List<Budget> relatedBudgets = budgets.stream().filter(budget -> fundIds.contains(budget.getFundId())).collect(toList());
+      List<Budget> relatedBudgets = budgets.stream().filter(budget -> fundIds.contains(budget.getFundId())).collect(toList());
 
-    checkEnoughMoneyInBudgets(relatedBudgets, remainingAmountsByFunds);
+      checkEnoughMoneyInBudgets(relatedBudgets, remainingAmountsByFunds);
+    }
   }
 
   private void checkEnoughMoneyInBudgets(List<Budget> budgets, Map<String, MonetaryAmount> transactionAmountsByFunds) {
@@ -270,12 +280,8 @@ public class EncumbranceService {
   }
 
   public CompletableFuture<Void> releaseEncumbrances(List<Transaction> encumbrances, RequestContext requestContext) {
-    return CompletableFuture.allOf(encumbrances.stream().map(transaction -> {
-      transaction.getEncumbrance().withStatus(Encumbrance.Status.RELEASED);
-      return transaction;
-    })
-            .map(transaction -> transactionService.updateTransaction(transaction, requestContext))
-            .toArray(CompletableFuture[]::new));
+    encumbrances.forEach(transaction -> transaction.getEncumbrance().setStatus(Encumbrance.Status.RELEASED));
+    return transactionService.updateTransactions(encumbrances, requestContext);
   }
 
   private void buildEncumbrancesForUpdate(Map.Entry<String, List<Transaction>> entry, FiscalYear fiscalYear, String systemCurrency) {
@@ -290,12 +296,12 @@ public class EncumbranceService {
 
   private CompletableFuture<Map<String, List<Transaction>>> groupTransactionsByLedgerIds(Map<String, List<Transaction>> groupedByFund, RequestContext requestContext) {
     return getFunds(groupedByFund, requestContext).thenApply(lists -> lists.stream()
-      .collect(HashMap::new, accumulator(groupedByFund), Map::putAll));
+            .collect(HashMap::new, accumulator(groupedByFund), Map::putAll));
   }
 
   private CompletableFuture<List<Fund>> getFunds(Map<String, List<Transaction>> groupedByFund, RequestContext requestContext) {
     Collection<String> ids = groupedByFund.keySet();
-    return fundService.getFunds(ids, requestContext);
+    return fundService.getAllFunds(ids, requestContext).thenApply(funds -> funds);
   }
 
   private BiConsumer<HashMap<String, List<Transaction>>, Fund> accumulator(Map<String, List<Transaction>> groupedByFund) {
@@ -307,12 +313,12 @@ public class EncumbranceService {
 
   private List<EncumbranceRelationsHolder> buildEncumbrances(List<PoLineFundHolder> holders, CompositePurchaseOrder compPO) {
     return holders.stream()
-                  .map(holder -> {
-                    Encumbrance encumbranceSkeleton = buildEncumbranceWithOrderFields(compPO);
-                    Transaction encumbrance = buildEncumbrance(holder.getFundDistribution(), holder.getPoLine(), encumbranceSkeleton);
-                    return new EncumbranceRelationsHolder(encumbrance, holder);
-                  })
-                  .collect(toList());
+      .map(holder -> {
+        Encumbrance encumbranceSkeleton = buildEncumbranceWithOrderFields(compPO);
+        Transaction encumbrance = buildEncumbrance(holder.getFundDistribution(), holder.getPoLine(), encumbranceSkeleton);
+        return new EncumbranceRelationsHolder(encumbrance, holder);
+      })
+      .collect(toList());
   }
 
   private void updateEncumbrancesWithPolFields(List<EncumbranceRelationsHolder> holders) {
@@ -380,7 +386,7 @@ public class EncumbranceService {
                     + AND + "encumbrance.status <> " + Encumbrance.Status.RELEASED;
   }
 
-  private String buildEncumbranceByPolineQuery(String polineId) {
+  private String buildEncumbranceByPoLineQuery(String polineId) {
     return ENCUMBRANCE_CRITERIA
       + AND + "encumbrance.sourcePoLineId==" + polineId
       + AND + "encumbrance.status <> " + Encumbrance.Status.RELEASED;
@@ -396,8 +402,8 @@ public class EncumbranceService {
     return resultMap;
   }
 
-  public CompletableFuture<List<EncumbranceRelationsHolder>> buildEncumbrancesForUpdate(List<CompositePoLine> compPoLines
-                              , List<Transaction> storeEncumbrances, RequestContext requestContext) {
+  public CompletableFuture<List<EncumbranceRelationsHolder>> buildEncumbrancesForUpdate(List<CompositePoLine> compPoLines,
+                                                                                        List<Transaction> storeEncumbrances, RequestContext requestContext) {
     List<EncumbranceRelationsHolder> holders = buildUpdateEncumbranceHolders(compPoLines, storeEncumbrances);
     if (!holders.isEmpty()) {
       updateEncumbrancesWithPolFields(holders);
@@ -409,8 +415,8 @@ public class EncumbranceService {
     return CompletableFuture.completedFuture(Collections.emptyList());
   }
 
-  public List<EncumbranceRelationsHolder> buildUpdateEncumbranceHolders(List<CompositePoLine> poLines
-                          , List<Transaction> orderEncumbrancesInStorage) {
+  public List<EncumbranceRelationsHolder> buildUpdateEncumbranceHolders(List<CompositePoLine> poLines,
+                                                                        List<Transaction> orderEncumbrancesInStorage) {
     List<EncumbranceRelationsHolder> holders = new ArrayList<>();
     if (!CollectionUtils.isEmpty(orderEncumbrancesInStorage)) {
       poLines.stream()
@@ -442,7 +448,7 @@ public class EncumbranceService {
   }
 
   public List<PoLineFundHolder> buildNewEncumbrancesHolders(List<CompositePoLine> poLines,
-      List<Transaction> encumbrancesInStorage) {
+                                                            List<Transaction> encumbrancesInStorage) {
     List<PoLineFundHolder> holders = new ArrayList<>();
     if (!CollectionUtils.isEmpty(encumbrancesInStorage)) {
 
@@ -484,7 +490,7 @@ public class EncumbranceService {
   }
 
   public List<Transaction> findNeedReleaseEncumbrances(List<CompositePoLine> compositePoLines,
-      List<Transaction> orderEncumbrancesInStorage) {
+                                                       List<Transaction> orderEncumbrancesInStorage) {
     List<Transaction> encumbrancesForRelease = new ArrayList<>();
     Map<LineFundId, PoLineFundHolder> poLineFundHolderMap = convertToLineFundMap(compositePoLines);
     if (!CollectionUtils.isEmpty(orderEncumbrancesInStorage)) {
@@ -499,13 +505,8 @@ public class EncumbranceService {
     return encumbrancesForRelease;
   }
 
-
-  public CompletableFuture<Void> updateTransactions(List<Transaction> transactions, RequestContext requestContext) {
+  public CompletableFuture<Void> updateEncumbrances(List<Transaction> transactions, RequestContext requestContext) {
     return transactionService.updateTransactions(transactions, requestContext);
-  }
-
-  public CompletableFuture<OrderTransactionSummary> createOrderTransactionSummary(String orderId, int number, RequestContext requestContext) {
-    return transactionSummariesService.createOrderTransactionSummary(orderId, number, requestContext);
   }
 
   public CompletableFuture<Void> deletePoLineEncumbrances(String lineId, RequestContext requestContext) {

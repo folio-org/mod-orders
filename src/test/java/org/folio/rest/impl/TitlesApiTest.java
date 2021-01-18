@@ -2,8 +2,25 @@ package org.folio.rest.impl;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
+import static org.folio.RestTestUtils.prepareHeaders;
+import static org.folio.RestTestUtils.verifyDeleteResponse;
+import static org.folio.RestTestUtils.verifyPostResponse;
+import static org.folio.RestTestUtils.verifyPut;
+import static org.folio.RestTestUtils.verifySuccessGet;
+import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.initSpringContext;
+import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.TestConstants.ID_BAD_FORMAT;
+import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
+import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
+import static org.folio.TestConstants.X_ECHO_STATUS;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.TestUtils.getMockData;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
+import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.rest.impl.MockServer.TITLES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -12,10 +29,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Date;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
+import org.folio.config.ApplicationConfig;
 import org.folio.rest.acq.model.Title;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Details;
@@ -23,23 +44,56 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockitoAnnotations;
 
 import io.restassured.http.Header;
 import io.vertx.core.json.JsonObject;
 
-public class TitlesApiTest extends ApiTestBase {
+public class TitlesApiTest {
   private static final Logger logger = LogManager.getLogger();
 
   public static final String TITLES_ENDPOINT = "/orders/titles";
   private static final String TITLES_ID_PATH = TITLES_ENDPOINT + "/%s";
   static final String VALID_UUID = "c3e26c0e-d6a6-46fb-9309-d494cd0c82de";
   static final String CONSISTENT_RECEIVED_STATUS_TITLE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
-  static final String SAMPLE_TITLE_ID = "9a665b22-9fe5-4c95-b4ee-837a5433c95d";
-  private JsonObject titleJsonReqData = getMockAsJson(TITLES_MOCK_DATA_PATH + "title.json");
+  public static final String SAMPLE_TITLE_ID = "9a665b22-9fe5-4c95-b4ee-837a5433c95d";
+  private final JsonObject titleJsonReqData = getMockAsJson(TITLES_MOCK_DATA_PATH + "title.json");
+
+  private static boolean runningOnOwn;
+
+  @BeforeAll
+  static void before() throws InterruptedException, ExecutionException, TimeoutException {
+    if (isVerticleNotDeployed()) {
+      ApiTestSuite.before();
+      runningOnOwn = true;
+    }
+    initSpringContext(ApplicationConfig.class);
+  }
+
+  @AfterEach
+  void afterEach() {
+    clearServiceInteractions();
+  }
+
+  @AfterAll
+  static void after() {
+    if (runningOnOwn) {
+      ApiTestSuite.after();
+    }
+  }
+
+  @BeforeEach
+  void initMocks(){
+    MockitoAnnotations.openMocks(this);
+  }
 
   @Test
-  public void testPostTitle() {
+  void testPostTitle() {
     logger.info("=== Test POST Title (Create Title) ===");
 
     String poLineId = UUID.randomUUID().toString();
@@ -82,7 +136,7 @@ public class TitlesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void titleShouldBePopulatedFromPackagePoLine() {
+  void titleShouldBePopulatedFromPackagePoLine() {
 
     String packagePoLineId = UUID.randomUUID().toString();
     String packageTitleName = "test title name";
@@ -113,7 +167,7 @@ public class TitlesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetTitles() {
+  void testGetTitles() {
     logger.info("=== Test Get Titles  ===");
 
     final TitleCollection resp = verifySuccessGet(TITLES_ENDPOINT, TitleCollection.class);
@@ -124,7 +178,7 @@ public class TitlesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetTitleById() {
+  void testGetTitleById() {
     logger.info("=== Test Get Title By Id ===");
 
     final Title resp = verifySuccessGet(String.format(TITLES_ID_PATH, SAMPLE_TITLE_ID), Title.class);
@@ -135,7 +189,7 @@ public class TitlesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutTitlesByIdTest() throws Exception {
+  void testPutTitlesByIdTest() throws Exception {
     logger.info("=== Test update title by id - valid Id 204 ===");
 
     String reqData = getMockData(TITLES_MOCK_DATA_PATH + "title.json");
@@ -144,7 +198,7 @@ public class TitlesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutTitleWithoutPoLineTest() throws Exception {
+  void testPutTitleWithoutPoLineTest() throws Exception {
     logger.info("=== Test update title without specified poline - 422 ===");
 
     String reqData = getMockData(TITLES_MOCK_DATA_PATH + "title_without_poLine.json");
@@ -153,7 +207,7 @@ public class TitlesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutTitlesByNonExistentId() {
+  void testPutTitlesByNonExistentId() {
     logger.info("=== Test update title by id - Id does not exists 404 ===");
 
     Title reqData = titleJsonReqData.mapTo(Title.class);
@@ -164,7 +218,7 @@ public class TitlesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutTitlesWithError() {
+  void testPutTitlesWithError() {
     logger.info("=== Test update title by id - internal error from storage 500 ===");
 
     Title reqData = titleJsonReqData.mapTo(Title.class);
@@ -175,26 +229,26 @@ public class TitlesApiTest extends ApiTestBase {
   }
 
   @Test
-  public void deleteTitleByIdTest() {
+  void deleteTitleByIdTest() {
     logger.info("=== Test delete title by id ===");
 
     verifyDeleteResponse(String.format(TITLES_ID_PATH, VALID_UUID), "", 204);
   }
 
   @Test
-  public void deleteTitlesByIdWithInvalidFormatTest() {
+  void deleteTitlesByIdWithInvalidFormatTest() {
     logger.info("=== Test delete title by id - bad Id format 400 ===");
     verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_BAD_FORMAT), TEXT_PLAIN, 400);
   }
 
   @Test
-  public void deleteNotExistentTitleTest() {
+  void deleteNotExistentTitleTest() {
     logger.info("=== Test delete title by id - id does not exists 404 ===");
     verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_DOES_NOT_EXIST), APPLICATION_JSON, 404);
   }
 
   @Test
-  public void deleteTitleInternalErrorOnStorageTest() {
+  void deleteTitleInternalErrorOnStorageTest() {
     logger.info("=== Test delete title by id - internal error from storage 500 ===");
     verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), APPLICATION_JSON, 500);
   }

@@ -1,11 +1,8 @@
 package org.folio.service.finance;
 
 import static one.util.streamex.StreamEx.ofSubLists;
-import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_STORAGE_ENDPOINT;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 
 import java.util.ArrayList;
@@ -25,6 +22,7 @@ public class TransactionService {
   private static final String ENDPOINT = "/finance/transactions";
   private static final String ENCUMBRANCE_ENDPOINT = "/finance/encumbrances";
   private static final String ENCUMBRANCE_BY_ID_ENDPOINT = "/finance/encumbrances/{id}";
+  private static final String ENCUMBRANCE_STORAGE_BY_ID_ENDPOINT = "/finance-storage/transactions/{id}";
 
   private final RestClient restClient;
 
@@ -82,7 +80,7 @@ public class TransactionService {
   }
 
   private CompletableFuture<Void> deleteTransaction(Transaction transaction, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(ENCUMBRANCE_BY_ID_ENDPOINT).withId(transaction.getId());
+    RequestEntry requestEntry = new RequestEntry(ENCUMBRANCE_STORAGE_BY_ID_ENDPOINT).withId(transaction.getId());
     return restClient.delete(requestEntry, requestContext);
   }
 }

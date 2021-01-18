@@ -1,36 +1,10 @@
 package org.folio.helper;
 
 import static org.assertj.core.api.Assertions.fail;
-import static org.folio.helper.InventoryHelper.CONFIG_NAME_INSTANCE_STATUS_CODE;
-import static org.folio.helper.InventoryHelper.CONFIG_NAME_INSTANCE_TYPE_CODE;
-import static org.folio.helper.InventoryHelper.CONFIG_NAME_LOAN_TYPE_NAME;
-import static org.folio.helper.InventoryHelper.CONTRIBUTOR_NAME;
-import static org.folio.helper.InventoryHelper.CONTRIBUTOR_NAME_TYPE_ID;
-import static org.folio.helper.InventoryHelper.DEFAULT_INSTANCE_STATUS_CODE;
-import static org.folio.helper.InventoryHelper.DEFAULT_INSTANCE_TYPE_CODE;
-import static org.folio.helper.InventoryHelper.DEFAULT_LOAN_TYPE_NAME;
-import static org.folio.helper.InventoryHelper.HOLDING_INSTANCE_ID;
-import static org.folio.helper.InventoryHelper.HOLDING_PERMANENT_LOCATION_ID;
-import static org.folio.helper.InventoryHelper.INSTANCE_CONTRIBUTORS;
-import static org.folio.helper.InventoryHelper.INSTANCE_DATE_OF_PUBLICATION;
-import static org.folio.helper.InventoryHelper.INSTANCE_IDENTIFIERS;
-import static org.folio.helper.InventoryHelper.INSTANCE_IDENTIFIER_TYPE_ID;
-import static org.folio.helper.InventoryHelper.INSTANCE_IDENTIFIER_TYPE_VALUE;
-import static org.folio.helper.InventoryHelper.INSTANCE_PUBLICATION;
-import static org.folio.helper.InventoryHelper.INSTANCE_PUBLISHER;
-import static org.folio.helper.InventoryHelper.INSTANCE_SOURCE;
-import static org.folio.helper.InventoryHelper.INSTANCE_STATUSES;
-import static org.folio.helper.InventoryHelper.INSTANCE_STATUS_ID;
-import static org.folio.helper.InventoryHelper.INSTANCE_TITLE;
-import static org.folio.helper.InventoryHelper.INSTANCE_TYPES;
-import static org.folio.helper.InventoryHelper.INSTANCE_TYPE_ID;
-import static org.folio.helper.InventoryHelper.ITEM_HOLDINGS_RECORD_ID;
-import static org.folio.helper.InventoryHelper.ITEM_MATERIAL_TYPE_ID;
-import static org.folio.helper.InventoryHelper.ITEM_PERMANENT_LOAN_TYPE_ID;
-import static org.folio.helper.InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
-import static org.folio.helper.InventoryHelper.ITEM_STATUS;
-import static org.folio.helper.InventoryHelper.ITEM_STATUS_NAME;
-import static org.folio.helper.InventoryHelper.LOAN_TYPES;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
+import static org.folio.TestUtils.getMockData;
+import static org.folio.helper.InventoryHelper.*;
 import static org.folio.orders.utils.HelperUtils.CONFIGS;
 import static org.folio.orders.utils.HelperUtils.CONFIG_NAME;
 import static org.folio.orders.utils.HelperUtils.CONFIG_VALUE;
@@ -42,8 +16,6 @@ import static org.folio.orders.utils.HelperUtils.getElectronicCostQuantity;
 import static org.folio.orders.utils.HelperUtils.getPhysicalCostQuantity;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.isHoldingCreationRequiredForLocation;
-import static org.folio.rest.impl.ApiTestBase.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
-import static org.folio.rest.impl.ApiTestBase.ID_FOR_INTERNAL_SERVER_ERROR;
 import static org.folio.rest.impl.MockServer.CONFIG_MOCK_PATH;
 import static org.folio.rest.impl.MockServer.INSTANCE_STATUSES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.INSTANCE_TYPES_MOCK_DATA_PATH;
@@ -60,7 +32,6 @@ import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderRetrievals;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -89,7 +60,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
-import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
@@ -427,7 +397,7 @@ public class InventoryInteractionTestHelper {
   private static String getInstanceStatusId(Header tenant) {
     try {
       String code = getConfigValue(tenant, CONFIG_NAME_INSTANCE_STATUS_CODE, DEFAULT_INSTANCE_STATUS_CODE);
-      JsonArray types = new JsonObject(ApiTestBase.getMockData(INSTANCE_STATUSES_MOCK_DATA_PATH + "types.json"))
+      JsonArray types = new JsonObject(getMockData(INSTANCE_STATUSES_MOCK_DATA_PATH + "types.json"))
         .getJsonArray(INSTANCE_STATUSES);
       return getIdByKeyValue("code", code, types);
     } catch (IOException e) {
@@ -438,7 +408,7 @@ public class InventoryInteractionTestHelper {
   private static String getInstanceTypeId(Header tenant) {
     try {
       String code = getConfigValue(tenant, CONFIG_NAME_INSTANCE_TYPE_CODE, DEFAULT_INSTANCE_TYPE_CODE);
-      JsonArray types = new JsonObject(ApiTestBase.getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "types.json"))
+      JsonArray types = new JsonObject(getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "types.json"))
         .getJsonArray(INSTANCE_TYPES);
       return getIdByKeyValue("code", code, types);
     } catch (IOException e) {
@@ -449,7 +419,7 @@ public class InventoryInteractionTestHelper {
   private static String getLoanTypeId(Header tenant) {
     try {
       String name = getConfigValue(tenant, CONFIG_NAME_LOAN_TYPE_NAME, DEFAULT_LOAN_TYPE_NAME);
-      JsonArray types = new JsonObject(ApiTestBase.getMockData(LOAN_TYPES_MOCK_DATA_PATH + "types.json"))
+      JsonArray types = new JsonObject(getMockData(LOAN_TYPES_MOCK_DATA_PATH + "types.json"))
         .getJsonArray(LOAN_TYPES);
       return getIdByKeyValue("name", name, types);
     } catch (IOException e) {
@@ -467,7 +437,7 @@ public class InventoryInteractionTestHelper {
   }
 
   private static String getConfigValue(Header tenant, String configName, String defaultValue) throws IOException {
-    JsonObject configs = new JsonObject(ApiTestBase.getMockData(String.format(CONFIG_MOCK_PATH, tenant.getValue())));
+    JsonObject configs = new JsonObject(getMockData(String.format(CONFIG_MOCK_PATH, tenant.getValue())));
     return configs.getJsonArray(CONFIGS)
       .stream()
       .map(o -> (JsonObject) o)

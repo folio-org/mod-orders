@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
@@ -23,7 +24,7 @@ import one.util.streamex.StreamEx;
 
 public class BudgetService {
 
-  private static final String ENDPOINT = "/finance/funds/{fundId}/budget";
+  private static final String ENDPOINT = "/finance/funds/{id}/budget";
 
   private final RestClient restClient;
 
@@ -59,12 +60,13 @@ public class BudgetService {
 
     return restClient.getById(ENDPOINT, fundId, requestContext, Budget.class)
       .exceptionally(t -> {
-        if (t.getCause() instanceof HttpException) {
+        Throwable cause = Objects.nonNull(t.getCause()) ? t.getCause() : t;
+        if (cause instanceof HttpException) {
           throw new HttpException(404, BUDGET_NOT_FOUND_FOR_TRANSACTION.toError()
             .withParameters(Collections.singletonList(new Parameter().withKey("fund")
               .withValue(fundId))));
         }
-        throw new CompletionException(t.getCause());
+        throw new CompletionException(cause);
       });
   }
 }

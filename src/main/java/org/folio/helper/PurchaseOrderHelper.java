@@ -44,7 +44,6 @@ import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder
 import static org.folio.orders.utils.ProtectedOperationType.CREATE;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
-import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
@@ -97,11 +96,13 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.finance.EncumbranceService;
+import org.folio.service.finance.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.ExpenseClassValidationService;
 import org.folio.service.finance.WorkflowStatusName;
 import org.folio.service.orders.OrderReEncumberService;
 import org.javamoney.moneta.Money;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
@@ -109,7 +110,7 @@ import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 
 public class PurchaseOrderHelper extends AbstractHelper {
-  static final String ENCUMBRANCE_POST_ENDPOINT = resourcesPath(ENCUMBRANCES) + "?lang=%s";
+
   private static final String PERMISSION_ORDER_APPROVE = "orders.item.approve";
   private static final String PERMISSION_ORDER_UNOPEN = "orders.item.unopen";
   private static final String SEARCH_ORDERS_BY_LINES_DATA = resourcesPath(SEARCH_ORDERS) + SEARCH_PARAMS;
@@ -124,11 +125,16 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private final ProtectionHelper protectionHelper;
   private final TitlesHelper titlesHelper;
   private final InventoryHelper inventoryHelper;
-  private final ExchangeRateProviderResolver exchangeRateProviderResolver;
 
+  @Autowired
+  private ExchangeRateProviderResolver exchangeRateProviderResolver;
+  @Autowired
   private EncumbranceService encumbranceService;
+  @Autowired
   private OrderReEncumberService orderReEncumberService;
+  @Autowired
   private ExpenseClassValidationService expenseClassValidationService;
+  @Autowired
   private EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
 
 
@@ -140,14 +146,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
     this.protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
     this.titlesHelper = new TitlesHelper(httpClient, okapiHeaders, ctx, lang);
     this.inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
-    this.exchangeRateProviderResolver = new ExchangeRateProviderResolver();
   }
 
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang,
-      PoNumberHelper poNumberHelper, PurchaseOrderLineHelper orderLineHelper, EncumbranceService encumbranceService) {
+      PurchaseOrderLineHelper orderLineHelper) {
     super(httpClient, okapiHeaders, ctx, lang);
-    this.encumbranceService = encumbranceService;
-    this.poNumberHelper = poNumberHelper;
+    this.poNumberHelper = new PoNumberHelper(httpClient, okapiHeaders, ctx, lang);
     this.orderLineHelper = orderLineHelper;
     this.protectionHelper =  new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
     this.titlesHelper = new TitlesHelper(httpClient, okapiHeaders, ctx, lang);
@@ -287,23 +291,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletionStage<Void> closeOrder(CompositePurchaseOrder compPO) {
-    return releaseEncumbrancesForOrder(compPO);
-  }
-
-  private CompletableFuture<Void> releaseEncumbrancesForOrder(CompositePurchaseOrder compPO) {
-    EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
-    return fetchCompositePolLines(compPO).thenCompose(compositePoLines -> {
-        if (isFundDistributionsPresent(compositePoLines)) {
-          return financeHelper.getOrderEncumbrances(compPO.getId())
-            .thenAccept(holder::withEncumbrancesFromStorage)
-            .thenApply(v -> holder.getEncumbrancesFromStorage())
-            .thenAccept(holder::withEncumbrancesForRelease)
-            .thenCompose(v -> orderLineHelper.createOrUpdateOrderTransactionSummary(compPO.getId(), holder))
-            .thenCompose(v -> orderLineHelper.createOrUpdateEncumbrances(holder));
-        }
-        return CompletableFuture.completedFuture(null);
-      }
-    );
+    return fetchCompositePolLines(compPO)
+    .thenCompose(lines -> {
+      EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(WorkflowStatusName.OPEN_TO_CLOSE);
+      CompositePurchaseOrder cloneCompPO = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
+      return strategy.processEncumbrances(cloneCompPO.withCompositePoLines(lines), getRequestContext());
+    });
   }
 
   private CompletableFuture<Void> checkLocationsAndPiecesConsistency(List<CompositePoLine> poLines) {
@@ -465,13 +458,13 @@ public class PurchaseOrderHelper extends AbstractHelper {
                   future.complete(null);
                 })
                 .exceptionally(t -> {
-                  logger.error("Failed to delete the order with id={} {}", id, t.getCause());
+                  logger.error("Failed to delete the order with id={}", id, t.getCause());
                   future.completeExceptionally(t);
                   return null;
                 });
             })
             .exceptionally(t -> {
-              logger.error("Failed to delete PO Lines of the order with id={} {}", id, t.getCause());
+              logger.error("Failed to delete PO Lines of the order with id={}", id, t.getCause());
               future.completeExceptionally(t);
               return null;
             })
@@ -511,7 +504,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           .thenCompose(po -> orderReEncumberService.populateNeedReEncumberFlag(po, getRequestContext()))
           .thenAccept(future::complete)
           .exceptionally(t -> {
-            logger.error("Failed to get lines for order with id={} {}", id, t.getCause());
+            logger.error("Failed to get lines for order with id={}", id, t.getCause());
             future.completeExceptionally(t);
             return null;
           }))

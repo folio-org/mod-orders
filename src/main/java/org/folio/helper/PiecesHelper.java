@@ -91,8 +91,7 @@ public class PiecesHelper extends AbstractHelper {
     titlesHelper = new TitlesHelper(okapiHeaders, ctx, lang);
   }
 
-  public PiecesHelper(Map<String, String> okapiHeaders, Context ctx, String lang
-          , ProtectionHelper protectionHelper, InventoryHelper inventoryHelper, TitlesHelper titlesHelper) {
+  public PiecesHelper(Map<String, String> okapiHeaders, Context ctx, String lang, ProtectionHelper protectionHelper, InventoryHelper inventoryHelper, TitlesHelper titlesHelper) {
     super(okapiHeaders, ctx, lang);
     this.protectionHelper = protectionHelper;
     this.inventoryHelper = inventoryHelper;
@@ -151,7 +150,7 @@ public class PiecesHelper extends AbstractHelper {
           })
     )
       .exceptionally(t -> {
-        logger.error("User with id={} is forbidden to update piece with id={} {}", getCurrentUserId(), piece.getId(), t.getCause());
+        logger.error("User with id={} is forbidden to update piece with id={}", getCurrentUserId(), piece.getId(), t.getCause());
         future.completeExceptionally(t);
         return null;
     });
@@ -365,20 +364,17 @@ public class PiecesHelper extends AbstractHelper {
    * Return id of created  Holding
    */
   public CompletableFuture<String> handleHoldingsRecord(final CompositePoLine compPOL, String locationId, String instanceId) {
-    CompletableFuture<String> holdingFuture = new CompletableFuture<>();
     try {
       if (HelperUtils.isHoldingsUpdateRequired(compPOL.getEresource(), compPOL.getPhysical())) {
-        inventoryHelper.getOrCreateHoldingsRecord(instanceId, locationId)
-          .thenApply(holdingFuture::complete)
-          .exceptionally(holdingFuture::completeExceptionally);
+        return inventoryHelper.getOrCreateHoldingsRecord(instanceId, locationId);
       } else {
-        holdingFuture.complete(null);
+        return CompletableFuture.completedFuture(null);
       }
     }
     catch (Exception e) {
-      holdingFuture.completeExceptionally(e);
+      return CompletableFuture.failedFuture(e);
     }
-    return holdingFuture;
+
   }
 
   /**

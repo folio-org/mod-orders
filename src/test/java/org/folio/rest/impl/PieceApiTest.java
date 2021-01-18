@@ -2,6 +2,21 @@ package org.folio.rest.impl;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
+import static org.folio.RestTestUtils.prepareHeaders;
+import static org.folio.RestTestUtils.verifyDeleteResponse;
+import static org.folio.RestTestUtils.verifyPostResponse;
+import static org.folio.RestTestUtils.verifyPut;
+import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.initSpringContext;
+import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.TestConstants.ID_BAD_FORMAT;
+import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
+import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
+import static org.folio.TestConstants.X_ECHO_STATUS;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.TestUtils.getMockData;
 import static org.folio.orders.utils.ErrorCodes.REQUEST_FOUND;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
@@ -17,10 +32,15 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
+import org.folio.config.ApplicationConfig;
+import org.folio.orders.events.handlers.HandlersTestHelper;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -29,12 +49,15 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import io.restassured.http.Header;
 import io.vertx.core.json.JsonObject;
 
-public class PieceApiTest extends ApiTestBase {
+public class PieceApiTest {
 
   private static final Logger logger = LogManager.getLogger();
 
@@ -44,8 +67,31 @@ public class PieceApiTest extends ApiTestBase {
   static final String CONSISTENT_RECEIVED_STATUS_PIECE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
   private JsonObject pieceJsonReqData = getMockAsJson(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord.json");
 
+  private static boolean runningOnOwn;
+
+  @BeforeAll
+  static void before() throws InterruptedException, ExecutionException, TimeoutException {
+    if (isVerticleNotDeployed()) {
+      ApiTestSuite.before();
+      runningOnOwn = true;
+    }
+    initSpringContext(ApplicationConfig.class);
+  }
+
+  @AfterEach
+  void afterEach() {
+    clearServiceInteractions();
+  }
+
+  @AfterAll
+  static void after() {
+    if (runningOnOwn) {
+      ApiTestSuite.after();
+    }
+  }
+
   @Test
-  public void testPostPiece() {
+  void testPostPiece() {
     logger.info("=== Test POST Piece (Create Piece) ===");
 
     Piece postPieceRq = pieceJsonReqData.mapTo(Piece.class);
@@ -75,7 +121,7 @@ public class PieceApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostShouldSuccessfullyCreatePieceWithoutReceiptDate() {
+  void testPostShouldSuccessfullyCreatePieceWithoutReceiptDate() {
     logger.info("=== Test POST Piece (Create Piece) without receiptDate===");
 
     Piece postPieceRq = pieceJsonReqData.mapTo(Piece.class);
@@ -90,7 +136,7 @@ public class PieceApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutPiecesByIdTest() throws Exception {
+  void testPutPiecesByIdTest() throws Exception {
     logger.info("=== Test update piece by id - valid Id 204 ===");
 
     String reqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord.json");
@@ -98,11 +144,11 @@ public class PieceApiTest extends ApiTestBase {
     verifyPut(String.format(PIECES_ID_PATH, VALID_UUID), reqData, "", 204);
 
     // Message sent to event bus
-    verifyReceiptStatusUpdateEvent(1);
+    HandlersTestHelper.verifyReceiptStatusUpdateEvent(1);
   }
 
   @Test
-  public void testPutPiecesByIdConsistentReceiptStatusTest() throws Exception {
+  void testPutPiecesByIdConsistentReceiptStatusTest() throws Exception {
     logger.info("=== Test update piece by id when receipt status is consistent - valid Id 204 ===");
 
     String reqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-received-consistent-receipt-status-5b454292-6aaa-474f-9510-b59a564e0c8d2.json");
@@ -110,11 +156,11 @@ public class PieceApiTest extends ApiTestBase {
     verifyPut(String.format(PIECES_ID_PATH, CONSISTENT_RECEIVED_STATUS_PIECE_UUID), reqData, "", 204);
 
     // Message not sent to event bus
-    verifyReceiptStatusUpdateEvent(0);
+    HandlersTestHelper.verifyReceiptStatusUpdateEvent(0);
   }
 
   @Test
-  public void testPutPiecesByNonExistentId() {
+  void testPutPiecesByNonExistentId() {
     logger.info("=== Test update piece by id - Id does not exists 404 ===");
 
     Piece reqData = pieceJsonReqData.mapTo(Piece.class);
@@ -126,7 +172,7 @@ public class PieceApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutPiecesWithError() {
+  void testPutPiecesWithError() {
     logger.info("=== Test update piece by id - internal error from storage 500 ===");
 
     Piece reqData = pieceJsonReqData.mapTo(Piece.class);
@@ -138,7 +184,7 @@ public class PieceApiTest extends ApiTestBase {
   }
 
   @Test
-  public void deletePieceByIdItemAlreadyDeletedTest() {
+  void deletePieceByIdItemAlreadyDeletedTest() {
     logger.info("=== Test delete piece by id - item has already deleted ===");
 
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
@@ -156,7 +202,7 @@ public class PieceApiTest extends ApiTestBase {
   }
 
   @Test
-  public void deletePieceByIdItemDeletionInternalServerErrorTest() {
+  void deletePieceByIdItemDeletionInternalServerErrorTest() {
     logger.info("=== Test delete piece by id - item deletion Internal Server Error ===");
 
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
@@ -174,7 +220,7 @@ public class PieceApiTest extends ApiTestBase {
   }
 
   @Test
-  public void deletePieceByIdWithoutItemDeletionTest() {
+  void deletePieceByIdWithoutItemDeletionTest() {
     logger.info("=== Test delete piece by id - piece without item id ===");
 
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
@@ -192,7 +238,7 @@ public class PieceApiTest extends ApiTestBase {
   }
 
   @Test
-  public void deletePieceByIdWithItemDeletionTest() {
+  void deletePieceByIdWithItemDeletionTest() {
     logger.info("=== Test delete piece by id - item deleted ===");
 
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
@@ -210,7 +256,7 @@ public class PieceApiTest extends ApiTestBase {
   }
 
   @Test
-  public void deletePieceByIdWithRequestsTest() {
+  void deletePieceByIdWithRequestsTest() {
     logger.info("=== Test delete piece by id without requests ===");
 
     PurchaseOrder order = new PurchaseOrder().withId(UUID.randomUUID().toString());
@@ -232,19 +278,19 @@ public class PieceApiTest extends ApiTestBase {
   }
 
   @Test
-  public void deletePiecesByIdWithInvalidFormatTest() {
+  void deletePiecesByIdWithInvalidFormatTest() {
     logger.info("=== Test delete piece by id - bad Id format 400 ===");
     verifyDeleteResponse(String.format(PIECES_ID_PATH, ID_BAD_FORMAT), TEXT_PLAIN, 400);
   }
 
   @Test
-  public void deleteNotExistentPieceTest() {
+  void deleteNotExistentPieceTest() {
     logger.info("=== Test delete piece by id - id does not exists 404 ===");
     verifyDeleteResponse(String.format(PIECES_ID_PATH, ID_DOES_NOT_EXIST), APPLICATION_JSON, 404);
   }
 
   @Test
-  public void deletePieceInternalErrorOnStorageTest() {
+  void deletePieceInternalErrorOnStorageTest() {
     logger.info("=== Test delete piece by id - internal error from storage 500 ===");
     verifyDeleteResponse(String.format(PIECES_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), APPLICATION_JSON, 500);
   }

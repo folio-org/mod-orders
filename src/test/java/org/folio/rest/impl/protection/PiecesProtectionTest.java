@@ -1,8 +1,16 @@
 package org.folio.rest.impl.protection;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.RestTestUtils.prepareHeaders;
+import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.clearVertxContext;
+import static org.folio.TestConfig.initSpringContext;
+import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.orders.utils.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
+import static org.folio.TestUtils.encodePrettily;
 import static org.folio.rest.impl.PieceApiTest.PIECES_ENDPOINT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
@@ -10,18 +18,49 @@ import static org.hamcrest.core.IsEqual.equalTo;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
+import org.folio.config.ApplicationConfig;
+import org.folio.rest.impl.EventBusContextConfiguration;
 import org.folio.rest.jaxrs.model.Errors;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import io.restassured.http.Headers;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 
 public class PiecesProtectionTest extends ProtectedEntityTestBase {
 
   private static final Logger logger = LogManager.getLogger();
+
+  private static boolean runningOnOwn;
+
+  @BeforeAll
+  static void before() throws InterruptedException, ExecutionException, TimeoutException {
+    if (isVerticleNotDeployed()) {
+      ApiTestSuite.before();
+      runningOnOwn = true;
+    }
+    initSpringContext(ApplicationConfig.class);
+  }
+
+  @AfterEach
+  void afterEach() {
+    clearServiceInteractions();
+  }
+
+  @AfterAll
+  static void after() {
+    if (runningOnOwn) {
+      ApiTestSuite.after();
+    }
+  }
 
   @ParameterizedTest
   @ValueSource(strings = {
@@ -29,7 +68,7 @@ public class PiecesProtectionTest extends ProtectedEntityTestBase {
     "UPDATE",
     "DELETE"
   })
-  public void testOperationWithNonExistedUnits(ProtectedOperations operation) {
+  void testOperationWithNonExistedUnits(ProtectedOperations operation) {
     logger.info("=== Test corresponding order contains non-existent unit ids - expecting of call only to Units API ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID);
@@ -48,7 +87,7 @@ public class PiecesProtectionTest extends ProtectedEntityTestBase {
     "UPDATE",
     "DELETE"
   })
-  public void testOperationWithAllowedUnits(ProtectedOperations operation) {
+  void testOperationWithAllowedUnits(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units allowed operation - expecting of call only to Units API ===");
 
     operation.process(PIECES_ENDPOINT, encodePrettily(preparePiece(NOT_PROTECTED_UNITS)),
@@ -63,7 +102,7 @@ public class PiecesProtectionTest extends ProtectedEntityTestBase {
     "UPDATE",
     "DELETE"
   })
-  public void testWithRestrictedUnitsAndAllowedUser(ProtectedOperations operation) {
+  void testWithRestrictedUnitsAndAllowedUser(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units, units protect operation, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER);
@@ -78,7 +117,7 @@ public class PiecesProtectionTest extends ProtectedEntityTestBase {
     "UPDATE",
     "DELETE"
   })
-  public void testWithProtectedUnitsAndForbiddenUser(ProtectedOperations operation) {
+  void testWithProtectedUnitsAndForbiddenUser(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units, units protect operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER);
