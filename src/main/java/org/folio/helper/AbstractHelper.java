@@ -59,6 +59,8 @@ public abstract class AbstractHelper {
   public static final String SEARCH_PARAMS = "?limit=%s&offset=%s%s&lang=%s";
   public static final String EXCEPTION_CALLING_ENDPOINT_WITH_BODY_MSG = "{} {} {} request failed. Request body: {}";
   public static final String CALLING_ENDPOINT_WITH_BODY_MSG = "Sending {} {} with body: {}";
+  static final String QUERY_EQUALS = "&query=";
+
 
   protected final Logger logger = LogManager.getLogger();
 

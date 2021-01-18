@@ -35,7 +35,7 @@ import org.folio.rest.impl.protection.ReceivingCheckinProtectionTest;
 import org.folio.service.PrefixServiceTest;
 import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
-import org.folio.service.TransactionServiceTest;
+import org.folio.service.finance.TransactionServiceTest;
 import org.folio.service.exchange.ManualExchangeRateProviderTest;
 import org.folio.service.finance.EncumbranceServiceTest;
 import org.folio.service.finance.FundServiceTest;

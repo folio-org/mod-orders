@@ -113,6 +113,7 @@ import org.folio.HttpStatus;
 import org.folio.helper.AbstractHelper;
 import org.folio.isbn.IsbnUtil;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.SequenceNumber;
@@ -539,6 +540,7 @@ public class MockServer {
     router.get(resourcesPath(FINANCE_EXCHANGE_RATE)).handler(this::handleGetRateOfExchange);
     router.get(resourcesPath(LEDGER_FY_ROLLOVERS)).handler(this::handleGetFyRollovers);
     router.get(resourcesPath(LEDGER_FY_ROLLOVER_ERRORS)).handler(this::handleGetFyRolloverErrors);
+    router.get(resourcesPath(ORDER_INVOICE_RELATIONSHIP)).handler(this::handleGetOrderInvoiceRelationship);
 
     router.put(resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
     router.put(resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -2409,6 +2411,15 @@ public class MockServer {
         .setStatusCode(404)
         .end();
     }
+  }
+
+  private void handleGetOrderInvoiceRelationship(RoutingContext ctx) {
+    logger.info("handleGetOrderInvoiceRelationship got: " + ctx.request().path());
+    JsonObject emptyCollection = JsonObject.mapFrom(new OrderInvoiceRelationshipCollection().withTotalRecords(0));
+
+    serverResponse(ctx, 200, APPLICATION_JSON, emptyCollection.encodePrettily());
+    addServerRqRsData(HttpMethod.GET, "orderInvoiceRelationship", emptyCollection);
+
   }
 
 }

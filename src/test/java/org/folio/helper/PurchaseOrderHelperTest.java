@@ -16,6 +16,9 @@ import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
 import static org.folio.service.finance.WorkflowStatusName.OPEN_TO_PENDING;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -32,8 +35,22 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.CompletionException;
 
 import org.folio.ApiTestSuite;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.ErrorCodes;
+import org.folio.rest.acq.model.OrderInvoiceRelationship;
+import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
+import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.acq.model.finance.FiscalYear;
+import org.folio.rest.acq.model.finance.Fund;
+import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError;
+import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
+import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.core.RestClient;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -47,14 +64,20 @@ import org.folio.service.orders.OrderReEncumberService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.folio.service.finance.FundService;
+import org.folio.service.orders.OrderInvoiceRelationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
 import io.vertx.core.Context;
+import io.vertx.core.Vertx;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 public class PurchaseOrderHelperTest {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";
@@ -117,7 +140,7 @@ public class PurchaseOrderHelperTest {
     PurchaseOrderHelper serviceSpy = spy(
         new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en", orderLineHelper));
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-
+    OrderInvoiceRelationService orderInvoiceRelationService = mock(OrderInvoiceRelationService.class, CALLS_REAL_METHODS);
 
     doReturn(completedFuture(order)).when(serviceSpy).updateAndGetOrderWithLines(any(CompositePurchaseOrder.class));
     doReturn(openToPendingEncumbranceStrategy).when(encumbranceWorkflowStrategyFactory).getStrategy(eq(OPEN_TO_PENDING));
@@ -135,6 +158,7 @@ public class PurchaseOrderHelperTest {
   void testShouldEndExceptionallyAndCloseConnection() {
     //given
     PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
+    OrderInvoiceRelationService orderInvoiceRelationService = mock(OrderInvoiceRelationService.class, CALLS_REAL_METHODS);
 
     PurchaseOrderHelper serviceSpy = spy(new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en", orderLineHelper));
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
@@ -185,6 +209,31 @@ public class PurchaseOrderHelperTest {
       return mock(ExchangeRateProviderResolver.class);
     }
 
+  }
+
+  @Test
+  public void testDeleteOrderLinkedToInvoiceWithError(VertxTestContext ctx) throws Throwable {
+    // given
+    RestClient restClient = mock(RestClient.class, CALLS_REAL_METHODS);
+    OrderInvoiceRelationService orderInvoiceRelationService = spy(new OrderInvoiceRelationService(restClient));
+
+    // for returning non empty collection
+    OrderInvoiceRelationshipCollection oirCollection = new OrderInvoiceRelationshipCollection()
+      .withOrderInvoiceRelationships(Collections.singletonList(new OrderInvoiceRelationship()))
+      .withTotalRecords(1);
+
+    doReturn(completedFuture(oirCollection)).when(restClient).get(anyString(), anyInt(), anyInt(), any(), any());
+
+    CompletableFuture<Void> future = orderInvoiceRelationService.checkOrderInvoiceRelationship(ORDER_ID, new RequestContext(ctxMock, okapiHeadersMock));
+    assertThrows(CompletionException.class, future::join);
+
+    future.exceptionally(t -> {
+      HttpException httpException = (HttpException) t.getCause();
+      assertEquals(ErrorCodes.ORDER_RELATES_TO_INVOICE.getDescription(), httpException.getMessage());
+      ctx.completeNow();
+      return null;
+    });
+    checkVertxContextCompletion(ctx);
   }
 
 }

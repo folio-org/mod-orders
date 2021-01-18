@@ -98,7 +98,8 @@
             "orders-storage.alerts.item.delete",
             "orders-storage.reporting-codes.item.delete",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "orders-storage.order-invoice-relationships.collection.get"
           ]
         },
         {
@@ -242,7 +243,8 @@
             "orders-storage.alerts.item.delete",
             "orders-storage.reporting-codes.item.delete",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "orders-storage.order-invoice-relationships.collection.get"
           ]
         }
       ]
@@ -1317,7 +1319,8 @@
         "isbn-utils.convert-to-13.get",
         "inventory-storage.identifier-types.collection.get",
         "acquisitions-units-storage.units.collection.get",
-        "acquisitions-units-storage.memberships.collection.get"
+        "acquisitions-units-storage.memberships.collection.get",
+        "orders-storage.order-invoice-relationships.collection.get"
       ],
       "visible": false
     },
