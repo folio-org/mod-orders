@@ -25,6 +25,7 @@ import org.folio.service.finance.RolloverRetrieveService;
 import org.folio.service.finance.TransactionService;
 import org.folio.service.finance.TransactionSummariesService;
 import org.folio.service.orders.CompositePurchaseOrderService;
+import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderReEncumberService;
 import org.folio.service.orders.OrderRolloverService;
 import org.folio.service.orders.PurchaseOrderLineService;
@@ -188,5 +189,10 @@ public class ApplicationConfig {
   @Bean
   EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory(Set<EncumbranceWorkflowStrategy> strategies) {
     return new EncumbranceWorkflowStrategyFactory(strategies);
+  }
+
+  @Bean
+  OrderInvoiceRelationService orderInvoiceRelationService (RestClient orderInvoiceRelationRestClient) {
+    return new OrderInvoiceRelationService(orderInvoiceRelationRestClient);
   }
 }

@@ -118,6 +118,33 @@ public class EncumbranceService {
     );
   }
 
+  public CompletionStage<Void> updateEncumbrancesOrderStatus(String orderId, CompositePurchaseOrder.WorkflowStatus orderStatus, RequestContext requestContext) {
+    return getOrderEncumbrances(orderId, requestContext)
+            .thenCompose(encumbrs -> {
+              if (isEncumbrancesOrderStatusUpdateNeeded(orderStatus, encumbrs)) {
+                return transactionSummariesService.updateOrderTransactionSummary(orderId, encumbrs.size(), requestContext)
+                        .thenApply(v -> {
+                          syncEncumbrancesOrderStatus(orderStatus, encumbrs);
+                          return encumbrs;
+                        })
+                        .thenCompose(transactions -> transactionService.updateTransactions(transactions, requestContext));
+              }
+              return CompletableFuture.completedFuture(null);
+            });
+  }
+
+  private void syncEncumbrancesOrderStatus(CompositePurchaseOrder.WorkflowStatus workflowStatus,
+                                           List<Transaction> encumbrances) {
+    Encumbrance.OrderStatus orderStatus = Encumbrance.OrderStatus.fromValue(workflowStatus.value());
+    encumbrances.forEach(encumbrance -> encumbrance.getEncumbrance().setOrderStatus(orderStatus));
+  }
+
+
+  private boolean isEncumbrancesOrderStatusUpdateNeeded(CompositePurchaseOrder.WorkflowStatus orderStatus, List<Transaction> encumbrs) {
+    return !CollectionUtils.isEmpty(encumbrs) && !orderStatus.value().equals(encumbrs.get(0).getEncumbrance().getOrderStatus().value());
+  }
+
+
   private CompletionStage<Void> updateEncumbrances(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
     List<Transaction> encumbrances = holder.getEncumbrancesForUpdate().stream()
             .map(EncumbranceRelationsHolder::getTransaction)
