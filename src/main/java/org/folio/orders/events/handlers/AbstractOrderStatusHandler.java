@@ -19,7 +19,6 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.finance.EncumbranceService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
@@ -30,10 +29,11 @@ import io.vertx.core.json.JsonObject;
 
 public abstract class AbstractOrderStatusHandler extends AbstractHelper implements Handler<Message<JsonObject>> {
 
-  @Autowired
-  private EncumbranceService encumbranceService;
-  protected AbstractOrderStatusHandler(Context ctx) {
+
+  private final EncumbranceService encumbranceService;
+  protected AbstractOrderStatusHandler(Context ctx, EncumbranceService encumbranceService) {
     super(ctx);
+    this.encumbranceService = encumbranceService;
   }
 
   @Override

@@ -30,8 +30,8 @@ public class TransactionService {
     this.restClient = restClient;
   }
 
-  public CompletableFuture<TransactionCollection> getTransactions(String query, int offset, int limit,
-      RequestContext requestContext) {
+  public CompletableFuture<TransactionCollection> getTransactionsByPoLinesIds(String query, int offset, int limit,
+                                                                              RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query)
       .withOffset(offset)
       .withLimit(limit);
@@ -39,20 +39,20 @@ public class TransactionService {
     return restClient.get(requestEntry, requestContext, TransactionCollection.class);
   }
 
-  public CompletableFuture<List<Transaction>> getTransactions(List<String> trIds, RequestContext requestContext) {
+  public CompletableFuture<List<Transaction>> getTransactionsByPoLinesIds(List<String> trIds, RequestContext requestContext) {
     return collectResultsOnSuccess(
-        ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ).map(ids -> getTransactionsByIds(ids, requestContext))
+        ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ).map(ids -> getTransactionsChunksByIds(ids, requestContext))
           .toList()).thenApply(
               lists -> lists.stream()
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList()));
   }
 
-  private CompletableFuture<List<Transaction>> getTransactionsByIds(Collection<String> ids, RequestContext requestContext) {
-    String query = convertIdsToCqlQuery(ids);
+  private CompletableFuture<List<Transaction>> getTransactionsChunksByIds(Collection<String> ids, RequestContext requestContext) {
+    String query = convertIdsToCqlQuery(ids, "encumbrance.sourcePoLineId");
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query)
       .withOffset(0)
-      .withLimit(MAX_IDS_FOR_GET_RQ);
+      .withLimit(Integer.MAX_VALUE);
     return restClient.get(requestEntry, requestContext, TransactionCollection.class)
       .thenApply(TransactionCollection::getTransactions);
   }

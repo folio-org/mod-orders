@@ -97,6 +97,7 @@ import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.finance.EncumbranceService;
 import org.folio.service.finance.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.EncumbranceWorkflowStrategyFactory;
@@ -138,6 +139,8 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   private EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
   @Autowired
   private OrderInvoiceRelationService orderInvoiceRelationService;
+  @Autowired
+  private ConfigurationEntriesService configurationEntriesService;
 
   public PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -277,7 +280,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     CompletableFuture<JsonObject> future = new CompletableFuture<>();
 
     if (isCreateInventoryNull(compPOL)) {
-      getTenantConfiguration(ORDER_CONFIG_MODULE_NAME)
+      configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext())
         .thenApply(config -> {
           if (StringUtils.isNotEmpty(config.getString(CREATE_INVENTORY))) {
             return future.complete(new JsonObject(config.getString(CREATE_INVENTORY)));
@@ -627,7 +630,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
 
   private CompletableFuture<Boolean> validatePoLineLimit(CompositePoLine compPOL) {
     String query = PURCHASE_ORDER_ID + "==" + compPOL.getPurchaseOrderId();
-    return getTenantConfiguration(ORDER_CONFIG_MODULE_NAME)
+    return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext())
       .thenCombine(getPoLines(0, 0, query), (config, poLines) -> {
         boolean isValid = poLines.getTotalRecords() < getPoLineLimit(config);
         if (!isValid) {

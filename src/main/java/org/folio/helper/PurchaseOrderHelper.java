@@ -95,6 +95,7 @@ import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.finance.EncumbranceService;
 import org.folio.service.finance.EncumbranceWorkflowStrategy;
@@ -140,6 +141,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
   @Autowired
   private OrderInvoiceRelationService orderInvoiceRelationService;
+  @Autowired
+  private ConfigurationEntriesService configurationEntriesService;
 
 
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -528,7 +531,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @return estimated purchase order's total price
    */
   public CompletableFuture<Double> calculateTotalEstimatedPrice(List<CompositePoLine> compositePoLines) {
-    return getSystemCurrency().thenApply(toCurrency -> compositePoLines.stream()
+    return configurationEntriesService.getSystemCurrency(getRequestContext()).thenApply(toCurrency -> compositePoLines.stream()
       .map(CompositePoLine::getCost)
       .map(cost -> Money.of(cost.getPoLineEstimatedPrice(), cost.getCurrency()))
       .map(money -> {
@@ -731,7 +734,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private CompletableFuture<Void> validatePoLineLimit(CompositePurchaseOrder compPO) {
     if (CollectionUtils.isNotEmpty(compPO.getCompositePoLines())) {
-       return getTenantConfiguration(ORDER_CONFIG_MODULE_NAME)
+       return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext())
         .thenAccept(config -> {
           int limit = getPoLineLimit(config);
           if (compPO.getCompositePoLines().size() > limit) {
@@ -776,7 +779,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @param compPO composite purchase order for checking permissions
    */
   private CompletableFuture<Void> checkOrderApprovalPermissions(CompositePurchaseOrder compPO) {
-    return getTenantConfiguration(ORDER_CONFIG_MODULE_NAME).thenAccept(config -> {
+    return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext()).thenAccept(config -> {
       boolean isApprovalRequired = isApprovalRequiredConfiguration(config);
       if (isApprovalRequired && compPO.getApproved().equals(Boolean.TRUE)) {
         if (isUserNotHaveApprovePermission()) {
@@ -806,7 +809,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @param compPO composite purchase order
    */
   private CompletableFuture<Void> checkOrderApprovalRequired(CompositePurchaseOrder compPO) {
-    return getTenantConfiguration(ORDER_CONFIG_MODULE_NAME).thenAccept(config -> {
+    return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext()).thenAccept(config -> {
       boolean isApprovalRequired = isApprovalRequiredConfiguration(config);
       if (isApprovalRequired && !compPO.getApproved().equals(Boolean.TRUE)) {
         throw new HttpException(400, APPROVAL_REQUIRED_TO_OPEN);

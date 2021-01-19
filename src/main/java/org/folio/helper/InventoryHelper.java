@@ -66,6 +66,8 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
+import org.folio.service.configuration.ConfigurationEntriesService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 public class InventoryHelper extends AbstractHelper {
 
@@ -130,6 +132,9 @@ public class InventoryHelper extends AbstractHelper {
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
   private static final String GET_PIECES_BY_QUERY = resourcesPath(PIECES) + SEARCH_PARAMS;
   public static final String EFFECTIVE_LOCATION = "effectiveLocation";
+
+  @Autowired
+  private ConfigurationEntriesService configurationEntriesService;
 
   static {
     INVENTORY_LOOKUP_ENDPOINTS = Map.of(
@@ -960,7 +965,7 @@ public class InventoryHelper extends AbstractHelper {
    * @return tenant specific value or system default one
    */
   private CompletableFuture<String> getEntryTypeValue(String entryType) {
-    return getTenantConfiguration(ORDER_CONFIG_MODULE_NAME)
+    return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext())
       .thenApply(configs -> {
         switch (entryType) {
           case INSTANCE_STATUSES:

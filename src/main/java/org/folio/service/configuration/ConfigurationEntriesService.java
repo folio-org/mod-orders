@@ -62,4 +62,5 @@ public class ConfigurationEntriesService {
       .exceptionally(future::completeExceptionally);
     return future;
   }
+
 }

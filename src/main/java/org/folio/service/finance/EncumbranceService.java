@@ -194,18 +194,18 @@ public class EncumbranceService {
   }
 
   public CompletableFuture<List<Transaction>> getOrderEncumbrances(String orderId, RequestContext requestContext) {
-    return transactionService.getTransactions(buildEncumbranceOrderQuery(orderId), 0, Integer.MAX_VALUE, requestContext)
+    return transactionService.getTransactionsByPoLinesIds(buildEncumbranceOrderQuery(orderId), 0, Integer.MAX_VALUE, requestContext)
               .thenApply(TransactionCollection::getTransactions);
   }
 
   public CompletableFuture<List<Transaction>> getPoLineEncumbrances(String poLineId, RequestContext requestContext) {
-    return transactionService.getTransactions(buildEncumbranceByPoLineQuery(poLineId), 0, Integer.MAX_VALUE, requestContext)
+    return transactionService.getTransactionsByPoLinesIds(buildEncumbranceByPoLineQuery(poLineId), 0, Integer.MAX_VALUE, requestContext)
       .thenApply(TransactionCollection::getTransactions);
   }
 
   public CompletableFuture<List<Transaction>> getPoLinesEncumbrances(List<CompositePoLine> poLines, RequestContext requestContext) {
     List<String> poLineIds = poLines.stream().map(CompositePoLine::getId).collect(toList());
-    return transactionService.getTransactions(poLineIds, requestContext);
+    return transactionService.getTransactionsByPoLinesIds(poLineIds, requestContext);
   }
 
   public void updateEncumbrance(FundDistribution fundDistribution, CompositePoLine poLine, Transaction trEncumbrance) {

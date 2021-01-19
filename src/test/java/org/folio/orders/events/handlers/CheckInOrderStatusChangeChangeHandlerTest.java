@@ -33,9 +33,13 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -52,6 +56,7 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.impl.EventBusContextConfiguration;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus;
+import org.folio.service.finance.EncumbranceService;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -88,7 +93,9 @@ public class CheckInOrderStatusChangeChangeHandlerTest {
     }
 
     SpringContextUtil.init(vertx, vertx.getOrCreateContext(), ApplicationConfig.class);
-    vertx.eventBus().consumer(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address, new CheckInOrderStatusChangeChangeHandler(vertx));
+    EncumbranceService encumbranceService = mock(EncumbranceService.class);
+    doReturn(CompletableFuture.completedFuture(null)).when(encumbranceService).updateEncumbrancesOrderStatus(any(), any(), any());
+    vertx.eventBus().consumer(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address, new CheckInOrderStatusChangeChangeHandler(vertx, encumbranceService));
   }
 
   @AfterEach

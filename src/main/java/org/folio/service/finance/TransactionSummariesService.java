@@ -45,7 +45,6 @@ public class TransactionSummariesService {
         }
     }
 
-
     public CompletableFuture<Void> createOrUpdateOrderTransactionSummary(String orderId, EncumbrancesProcessingHolder holder, RequestContext requestContext) {
         if (CollectionUtils.isEmpty(holder.getEncumbrancesFromStorage())) {
             return createOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext)

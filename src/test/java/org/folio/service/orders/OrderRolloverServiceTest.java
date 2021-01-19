@@ -11,7 +11,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -20,7 +19,6 @@ import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
-import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
@@ -120,7 +118,7 @@ public class OrderRolloverServiceTest {
     Transaction transactionOngoing = new Transaction().withId(currEncumbrId2).withFromFundId(fundId2).withEncumbrance(encumbranceOngoing).withExpenseClassId(expClassId2);
     List<Transaction> encumbrances = List.of(transactionOneTime, transactionOngoing);
     TransactionCollection encumbranceCollection = new TransactionCollection().withTransactions(encumbrances).withTotalRecords(2);
-    doReturn(completedFuture(encumbranceCollection)).when(transactionService).getTransactions(anyString(), anyInt(), anyInt(), any());
+    doReturn(completedFuture(encumbranceCollection)).when(transactionService).getTransactionsByPoLinesIds(anyString(), anyInt(), anyInt(), any());
 
     CompletableFuture<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
     future.join();

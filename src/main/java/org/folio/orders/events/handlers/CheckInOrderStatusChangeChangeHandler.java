@@ -3,6 +3,7 @@ package org.folio.orders.events.handlers;
 import static org.folio.helper.CheckinHelper.IS_ITEM_ORDER_CLOSED_PRESENT;
 
 import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.service.finance.EncumbranceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -14,8 +15,8 @@ import io.vertx.core.json.JsonObject;
 public class CheckInOrderStatusChangeChangeHandler extends AbstractOrderStatusHandler {
 
   @Autowired
-  public CheckInOrderStatusChangeChangeHandler(Vertx vertx) {
-    super(vertx.getOrCreateContext());
+  public CheckInOrderStatusChangeChangeHandler(Vertx vertx, EncumbranceService encumbranceService) {
+    super(vertx.getOrCreateContext(), encumbranceService);
   }
 
   @Override
