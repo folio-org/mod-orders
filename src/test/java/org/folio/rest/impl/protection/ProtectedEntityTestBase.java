@@ -4,6 +4,10 @@ import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
+import static org.folio.TestUtils.getMinimalContentCompositePoLine;
+import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
+import static org.folio.TestUtils.getMinimalContentPiece;
+import static org.folio.TestUtils.getRandomId;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
@@ -13,7 +17,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -24,7 +27,7 @@ import org.hamcrest.Matcher;
 import io.restassured.http.Header;
 import io.vertx.core.json.JsonObject;
 
-public abstract class ProtectedEntityTestBase extends ApiTestBase {
+public abstract class ProtectedEntityTestBase {
 
   static final String DELETE_PROTECTED_UNIT = "2e6a170f-ae20-4889-813f-641831e24b84";
   public static final List<String> DELETE_PROTECTED_UNITS = Arrays.asList(DELETE_PROTECTED_UNIT);

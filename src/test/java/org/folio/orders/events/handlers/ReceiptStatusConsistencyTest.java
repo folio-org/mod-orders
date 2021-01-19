@@ -1,5 +1,13 @@
 package org.folio.orders.events.handlers;
 
+import static org.folio.TestConfig.X_OKAPI_URL;
+import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.getFirstContextFromVertx;
+import static org.folio.TestConfig.getVertx;
+import static org.folio.TestConfig.initSpringContext;
+import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.TestUtils.checkVertxContextCompletion;
 import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
 import static org.folio.rest.impl.MockServer.PO_LINES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
@@ -10,6 +18,7 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 import java.util.concurrent.ExecutionException;
@@ -19,13 +28,18 @@ import javax.ws.rs.core.Response;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.ApiTestSuite;
+import org.folio.config.ApplicationConfig;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.acq.model.PoLine;
 import org.folio.rest.acq.model.PoLine.ReceiptStatus;
-import org.folio.rest.impl.ApiTestBase;
+import org.folio.rest.impl.EventBusContextConfiguration;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.spring.SpringContextUtil;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,9 +53,10 @@ import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.mockito.Mockito;
 
 @ExtendWith(VertxExtension.class)
-public class ReceiptStatusConsistencyTest extends ApiTestBase {
+public class ReceiptStatusConsistencyTest {
   private static final Logger logger = LogManager.getLogger();
 
   public static final String TEST_ADDRESS = "testReceiptStatusAddress";
@@ -53,16 +68,35 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
 
   private static Vertx vertx;
 
+  private static boolean runningOnOwn;
+
   @BeforeAll
-  public static void before() throws InterruptedException, ExecutionException, TimeoutException {
-    ApiTestBase.before();
+  static void before() throws InterruptedException, ExecutionException, TimeoutException {
+    if (isVerticleNotDeployed()) {
+      ApiTestSuite.before();
+      runningOnOwn = true;
+    }
 
     vertx = Vertx.vertx();
+
+    SpringContextUtil.init(vertx, vertx.getOrCreateContext(), ApplicationConfig.class);
     vertx.eventBus().consumer(TEST_ADDRESS, new ReceiptStatusConsistency(vertx));
   }
 
+  @AfterEach
+  void afterEach() {
+    clearServiceInteractions();
+  }
+
+  @AfterAll
+  static void after() {
+    if (runningOnOwn) {
+      ApiTestSuite.after();
+    }
+  }
+
   @Test
-  public void testSuccessReceiptStatusWhenReceiptStatusBetweenPiecesAndPoLineNotConsistent(VertxTestContext context) throws Throwable {
+  void testSuccessReceiptStatusWhenReceiptStatusBetweenPiecesAndPoLineNotConsistent(VertxTestContext context) throws Throwable {
     logger.info("=== Test case when piece receipt status changes from Received to Expected ===");
 
     sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE), context.succeeding(result -> {
@@ -86,7 +120,7 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
   }
 
   @Test
-  public void testSuccessPartiallyReceivedStatusWhenAtleastOneSuccessfullyReceivedPiece(VertxTestContext context) throws Throwable {
+  void testSuccessPartiallyReceivedStatusWhenAtleastOneSuccessfullyReceivedPiece(VertxTestContext context) throws Throwable {
     logger.info("=== Test case to verify partially received status when at least one successfully received piece ===");
 
     CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
@@ -119,7 +153,7 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
   }
 
   @Test
-  public void testSuccessFullyReceivedStatusWhenAllPiecesSuccessfullyReceived(VertxTestContext context) throws Throwable {
+  void testSuccessFullyReceivedStatusWhenAllPiecesSuccessfullyReceived(VertxTestContext context) throws Throwable {
     logger.info("=== Test case to verify fully received status when all pieces successfully received ===");
 
     CompositePoLine compositePoLine = getMockAsJson(PO_LINES_MOCK_DATA_PATH, POLINE_UUID_TIED_TO_PIECE_FULLY_RECEIVED).mapTo(CompositePoLine.class);
@@ -152,7 +186,7 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
   }
 
   @Test
-  public void testSuccessReceiptStatusWhenTotalPiecesEmpty(VertxTestContext context) throws Throwable {
+  void testSuccessReceiptStatusWhenTotalPiecesEmpty(VertxTestContext context) throws Throwable {
     logger.info("=== Test case to verify receipt status when total pieces empty ===");
 
     sendEvent(createBody(PO_LINE_ID_TIED_TO_PIECE_WHEN_TOTAL_PIECES_EMPTY), context.succeeding(result -> {
@@ -169,7 +203,7 @@ public class ReceiptStatusConsistencyTest extends ApiTestBase {
   }
 
   @Test
-  public void testPieceReceiptStatusFailureWhenNoMatchingPoLineForPiece(VertxTestContext context) throws Throwable {
+  void testPieceReceiptStatusFailureWhenNoMatchingPoLineForPiece(VertxTestContext context) throws Throwable {
     logger.info("=== Test case when no poLines exists referenced by a piece which should throw a 404 Exception ===");
 
     sendEvent(createBody(BAD_PO_LINE_404), context.failing(result -> {

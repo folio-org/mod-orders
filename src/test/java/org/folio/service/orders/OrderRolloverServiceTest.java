@@ -3,6 +3,8 @@ package org.folio.service.orders;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -11,12 +13,12 @@ import static org.mockito.Mockito.doReturn;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
-import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
@@ -26,6 +28,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.service.finance.FundService;
+import org.folio.service.finance.TransactionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -39,17 +42,17 @@ public class OrderRolloverServiceTest {
   @Mock
   private FundService fundService;
   @Mock
+  private TransactionService transactionService;
+  @Mock
   private PurchaseOrderService purchaseOrderService;
   @Mock
   private PurchaseOrderLineService purchaseOrderLineService;
-  @Mock
-  private RestClient transactionRestClient;
   @Mock
   private RequestContext requestContext;
 
   @BeforeEach
   public void initMocks() {
-    MockitoAnnotations.initMocks(this);
+    MockitoAnnotations.openMocks(this);
   }
 
 
@@ -100,6 +103,8 @@ public class OrderRolloverServiceTest {
     PoLine poLineOngoing = new PoLine().withId(poLineId2).withPurchaseOrderId(orderId2).withCost(costOngoing).withFundDistribution(List.of(fundDistributionOngoing));
     List<PoLine> poLines = List.of(poLineOneTime, poLineOngoing);
 
+
+
     doReturn(completedFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
     doReturn(completedFuture(purchaseOrderCollection)).when(purchaseOrderService).getPurchaseOrders(anyString(), anyInt(), anyInt(), any());
     doReturn(completedFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
@@ -113,9 +118,11 @@ public class OrderRolloverServiceTest {
     Transaction transactionOngoing = new Transaction().withId(currEncumbrId2).withFromFundId(fundId2).withEncumbrance(encumbranceOngoing).withExpenseClassId(expClassId2);
     List<Transaction> encumbrances = List.of(transactionOneTime, transactionOngoing);
     TransactionCollection encumbranceCollection = new TransactionCollection().withTransactions(encumbrances).withTotalRecords(2);
-    doReturn(completedFuture(encumbranceCollection)).when(transactionRestClient).get(anyString(), anyInt(), anyInt(), any(), any());
+    doReturn(completedFuture(encumbranceCollection)).when(transactionService).getTransactionsByPoLinesIds(anyString(), anyInt(), anyInt(), any());
 
-    orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
+    CompletableFuture<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
+    future.join();
+    assertFalse(future.isCompletedExceptionally());
 
     assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
     assertThat(fundDistributionOngoing.getEncumbrance(), equalTo(currEncumbrId2));

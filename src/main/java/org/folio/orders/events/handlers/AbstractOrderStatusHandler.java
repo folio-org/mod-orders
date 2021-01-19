@@ -13,10 +13,12 @@ import java.util.concurrent.CompletableFuture;
 import org.folio.helper.AbstractHelper;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.finance.EncumbranceService;
 
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
@@ -27,8 +29,11 @@ import io.vertx.core.json.JsonObject;
 
 public abstract class AbstractOrderStatusHandler extends AbstractHelper implements Handler<Message<JsonObject>> {
 
-  protected AbstractOrderStatusHandler(Context ctx) {
+
+  private final EncumbranceService encumbranceService;
+  protected AbstractOrderStatusHandler(Context ctx, EncumbranceService encumbranceService) {
     super(ctx);
+    this.encumbranceService = encumbranceService;
   }
 
   @Override
@@ -89,7 +94,7 @@ public abstract class AbstractOrderStatusHandler extends AbstractHelper implemen
         if (Boolean.TRUE.equals(isStatusChanged)) {
           return helper.handleFinalOrderItemsStatus(purchaseOrder, poLines, initialStatus.value())
             .thenCompose(aVoid -> helper.updateOrderSummary(purchaseOrder))
-            .thenCompose(purchaseOrderParam -> helper.updateEncumbrancesOrderStatus(purchaseOrder.getId(), convert(purchaseOrder.getWorkflowStatus())));
+            .thenCompose(purchaseOrderParam -> encumbranceService.updateEncumbrancesOrderStatus(purchaseOrder.getId(), convert(purchaseOrder.getWorkflowStatus()), new RequestContext(ctx, okapiHeaders)));
         }
         return CompletableFuture.completedFuture(null);
       });

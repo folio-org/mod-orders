@@ -8,6 +8,37 @@ import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.assertj.core.api.Assertions.fail;
+import static org.folio.TestConstants.ACTIVE_ACCESS_PROVIDER_A;
+import static org.folio.TestConstants.ACTIVE_ACCESS_PROVIDER_B;
+import static org.folio.TestConstants.BAD_QUERY;
+import static org.folio.TestConstants.COMP_ORDER_MOCK_DATA_PATH;
+import static org.folio.TestConstants.EMPTY_CONFIG_TENANT;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.TestConstants.ID;
+import static org.folio.TestConstants.ID_BAD_FORMAT;
+import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
+import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
+import static org.folio.TestConstants.ID_FOR_PIECES_INTERNAL_SERVER_ERROR;
+import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_A;
+import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_B;
+import static org.folio.TestConstants.INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT;
+import static org.folio.TestConstants.MIN_PO_ID;
+import static org.folio.TestConstants.MIN_PO_LINE_ID;
+import static org.folio.TestConstants.NON_EXIST_ACCESS_PROVIDER_A;
+import static org.folio.TestConstants.NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT;
+import static org.folio.TestConstants.NON_EXIST_INSTANCE_STATUS_TENANT;
+import static org.folio.TestConstants.NON_EXIST_INSTANCE_STATUS_TENANT_HEADER;
+import static org.folio.TestConstants.NON_EXIST_INSTANCE_TYPE_TENANT;
+import static org.folio.TestConstants.NON_EXIST_INSTANCE_TYPE_TENANT_HEADER;
+import static org.folio.TestConstants.NON_EXIST_LOAN_TYPE_TENANT;
+import static org.folio.TestConstants.NON_EXIST_LOAN_TYPE_TENANT_HEADER;
+import static org.folio.TestConstants.PO_ID_GET_LINES_INTERNAL_SERVER_ERROR;
+import static org.folio.TestConstants.PO_LINE_NUMBER_VALUE;
+import static org.folio.TestConstants.PROTECTED_READ_ONLY_TENANT;
+import static org.folio.TestConstants.X_ECHO_STATUS;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.TestUtils.getMockData;
 import static org.folio.helper.InventoryHelper.ITEMS;
 import static org.folio.helper.InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.folio.helper.InventoryHelper.REQUESTS;
@@ -26,83 +57,21 @@ import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.FUND_ID;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
-import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
-import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
-import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
-import static org.folio.orders.utils.ResourcePathResolver.EXPENSE_CLASSES_URL;
-import static org.folio.orders.utils.ResourcePathResolver.FINANCE_EXCHANGE_RATE;
-import static org.folio.orders.utils.ResourcePathResolver.FINANCE_RELEASE_ENCUMBRANCE;
-import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
-import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
-import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVERS;
-import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVER_ERRORS;
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_INVOICE_RELATIONSHIP;
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
-import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
-import static org.folio.orders.utils.ResourcePathResolver.PREFIXES;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
-import static org.folio.orders.utils.ResourcePathResolver.REASONS_FOR_CLOSURE;
-import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
-import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
-import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
-import static org.folio.orders.utils.ResourcePathResolver.SUFFIXES;
-import static org.folio.orders.utils.ResourcePathResolver.TITLES;
-import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_ENDPOINT;
-import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_STORAGE_ENDPOINT;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.rest.impl.ApiTestBase.BAD_QUERY;
-import static org.folio.rest.impl.ApiTestBase.COMP_ORDER_MOCK_DATA_PATH;
-import static org.folio.rest.impl.ApiTestBase.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1;
-import static org.folio.rest.impl.ApiTestBase.ID;
-import static org.folio.rest.impl.ApiTestBase.ID_BAD_FORMAT;
-import static org.folio.rest.impl.ApiTestBase.ID_DOES_NOT_EXIST;
-import static org.folio.rest.impl.ApiTestBase.ID_FOR_INTERNAL_SERVER_ERROR;
-import static org.folio.rest.impl.ApiTestBase.ID_FOR_PIECES_INTERNAL_SERVER_ERROR;
-import static org.folio.rest.impl.ApiTestBase.INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT;
-import static org.folio.rest.impl.ApiTestBase.MIN_PO_ID;
-import static org.folio.rest.impl.ApiTestBase.MIN_PO_LINE_ID;
-import static org.folio.rest.impl.ApiTestBase.NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT;
-import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_STATUS_TENANT;
-import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_STATUS_TENANT_HEADER;
-import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_TYPE_TENANT;
-import static org.folio.rest.impl.ApiTestBase.NON_EXIST_INSTANCE_TYPE_TENANT_HEADER;
-import static org.folio.rest.impl.ApiTestBase.NON_EXIST_LOAN_TYPE_TENANT;
-import static org.folio.rest.impl.ApiTestBase.NON_EXIST_LOAN_TYPE_TENANT_HEADER;
-import static org.folio.rest.impl.ApiTestBase.PO_ID_GET_LINES_INTERNAL_SERVER_ERROR;
-import static org.folio.rest.impl.ApiTestBase.PO_LINE_NUMBER_VALUE;
-import static org.folio.rest.impl.ApiTestBase.PROTECTED_READ_ONLY_TENANT;
-import static org.folio.rest.impl.ApiTestBase.X_ECHO_STATUS;
-import static org.folio.rest.impl.ApiTestBase.encodePrettily;
-import static org.folio.rest.impl.ApiTestBase.getMinimalContentCompositePoLine;
-import static org.folio.rest.impl.ApiTestBase.getMinimalContentCompositePurchaseOrder;
-import static org.folio.rest.impl.ApiTestBase.getMockAsJson;
-import static org.folio.rest.impl.ApiTestBase.getMockData;
+import static org.folio.TestUtils.encodePrettily;
+import static org.folio.TestUtils.getMinimalContentCompositePoLine;
+import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
+import static org.folio.TestUtils.getTitle;
 import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
 import static org.folio.rest.impl.PoNumberApiTest.NONEXISTING_PO_NUMBER;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_A;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_ACCESS_PROVIDER_B;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_VENDOR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.EMPTY_CONFIG_TENANT;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.FUND_ENCUMBRANCE_ERROR;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ID_FOR_PRINT_MONOGRAPH_ORDER;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_ACCESS_PROVIDER_A;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_ACCESS_PROVIDER_B;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_VENDOR_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ITEMS_NOT_FOUND;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.LISTED_PRINT_MONOGRAPH_PATH;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.MOD_VENDOR_INTERNAL_ERROR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_ACCESS_PROVIDER_A;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_VENDOR_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ORDER_DELETE_ERROR_TENANT;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ORGANIZATION_NOT_VENDOR;
@@ -287,7 +256,7 @@ public class MockServer {
   public static void addMockTitles(List<CompositePoLine> poLines) {
     poLines.stream()
       .filter(line -> !line.getIsPackage() && isNotEmpty(line.getId()))
-      .forEach(line -> addMockEntry(TITLES, ApiTestBase.getTitle(line)));
+      .forEach(line -> addMockEntry(TITLES, getTitle(line)));
   }
 
   public void start() throws InterruptedException, ExecutionException, TimeoutException {
@@ -432,7 +401,7 @@ public class MockServer {
   }
 
   public static List<Transaction> getUpdatedTransactions() {
-    List<JsonObject> jsonObjects = serverRqRs.get(TRANSACTIONS_STORAGE_ENDPOINT, HttpMethod.PUT);
+    List<JsonObject> jsonObjects = serverRqRs.get(ENCUMBRANCES, HttpMethod.PUT);
     return jsonObjects == null ? Collections.emptyList()
       : jsonObjects.stream()
       .map(json -> json.mapTo(Transaction.class))
@@ -588,7 +557,8 @@ public class MockServer {
     router.put(resourcePath(PREFIXES)).handler(ctx -> handlePutGenericSubObj(ctx, PREFIXES));
     router.put(resourcePath(SUFFIXES)).handler(ctx -> handlePutGenericSubObj(ctx, SUFFIXES));
     router.put("/finance/order-transaction-summaries/:id").handler(ctx -> handlePutGenericSubObj(ctx, ORDER_TRANSACTION_SUMMARIES));
-    router.put(resourcePath(TRANSACTIONS_STORAGE_ENDPOINT)).handler(ctx -> handlePutGenericSubObj(ctx, TRANSACTIONS_STORAGE_ENDPOINT));
+    router.put(resourcePath(ENCUMBRANCES)).handler(ctx -> handlePutGenericSubObj(ctx, ENCUMBRANCES));
+
 
     router.delete(resourcePath(PURCHASE_ORDER)).handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER));
     router.delete(resourcePath(PO_LINES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES));
@@ -912,7 +882,7 @@ public class MockServer {
     try {
       JsonObject instance;
       if (ctx.request().getParam("query").contains("ocn956625961")) {
-        instance = new JsonObject(ApiTestBase.getMockData(INSTANCE_RECORDS_MOCK_DATA_PATH + "instance.json"));
+        instance = new JsonObject(getMockData(INSTANCE_RECORDS_MOCK_DATA_PATH + "instance.json"));
       } else {
         instance = new JsonObject().put("instances", new JsonArray());
       }
@@ -1015,7 +985,7 @@ public class MockServer {
         .end(items.encodePrettily());
     } else {
       try {
-        JsonObject items = new JsonObject(ApiTestBase.getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
+        JsonObject items = new JsonObject(getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
         JsonArray jsonArray = items.getJsonArray(ITEMS);
 
         if (query.startsWith("id==")) {
@@ -1061,7 +1031,7 @@ public class MockServer {
     try {
       String itemId = ctx.request().getParam("query").split("and")[0].split("==")[1].trim();
       int limit = Integer.parseInt(ctx.request().getParam("limit"));
-      JsonObject entries = new JsonObject(ApiTestBase.getMockData(ITEM_REQUESTS_MOCK_DATA_PATH + "itemRequests.json"));
+      JsonObject entries = new JsonObject(getMockData(ITEM_REQUESTS_MOCK_DATA_PATH + "itemRequests.json"));
       filterByKeyValue("itemId", itemId, entries.getJsonArray(REQUESTS));
       entries.put("totalRecords", entries.getJsonArray(REQUESTS).size());
       if (limit == 0) {
@@ -1087,7 +1057,7 @@ public class MockServer {
       } else {
         // Filter result based on name from query
         String name = ctx.request().getParam("query").split("==")[1];
-        JsonObject entries = new JsonObject(ApiTestBase.getMockData(LOAN_TYPES_MOCK_DATA_PATH + "types.json"));
+        JsonObject entries = new JsonObject(getMockData(LOAN_TYPES_MOCK_DATA_PATH + "types.json"));
         filterByKeyValue("name", name, entries.getJsonArray(LOAN_TYPES));
 
         serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
@@ -1105,7 +1075,7 @@ public class MockServer {
     try {
         // Filter result based on name from query
         String name = ctx.request().getParam("query").split("==")[1];
-        JsonObject entries = new JsonObject(ApiTestBase.getMockData(IDENTIFIER_TYPES_MOCK_DATA_PATH + "identifierTypes.json"));
+        JsonObject entries = new JsonObject(getMockData(IDENTIFIER_TYPES_MOCK_DATA_PATH + "identifierTypes.json"));
         filterByKeyValue("name", name, entries.getJsonArray(IDENTIFIER_TYPES));
 
         serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
@@ -1124,25 +1094,25 @@ public class MockServer {
 
     try {
       if (getQuery(ACTIVE_ACCESS_PROVIDER_A, NON_EXIST_ACCESS_PROVIDER_A).equals(query)) {
-        body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_provider_not_found.json"));
+        body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_provider_not_found.json"));
       } else if (getQuery(ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_B).equals(query)
         || getQuery(ACTIVE_ACCESS_PROVIDER_A, ACTIVE_ACCESS_PROVIDER_A).equals(query)
         || getQuery(ACTIVE_ACCESS_PROVIDER_B, ACTIVE_ACCESS_PROVIDER_A).equals(query)) {
-        body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "all_access_providers_active.json"));
+        body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "all_access_providers_active.json"));
       } else if (getQuery(ACTIVE_ACCESS_PROVIDER_A, INACTIVE_ACCESS_PROVIDER_A).equals(query)) {
-        body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "active_inactive_access_providers.json"));
+        body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "active_inactive_access_providers.json"));
       } else if (getQuery(INACTIVE_ACCESS_PROVIDER_A, INACTIVE_ACCESS_PROVIDER_B).equals(query)
         || getQuery(INACTIVE_ACCESS_PROVIDER_B, INACTIVE_ACCESS_PROVIDER_A).equals(query)) {
-        body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "all_inactive_access_providers.json"));
+        body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "all_inactive_access_providers.json"));
       } else if (getQuery(INACTIVE_ACCESS_PROVIDER_A).equals(query)) {
-        body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "inactive_vendors.json"));
+        body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "inactive_vendors.json"));
       } else if (getQuery(ACTIVE_ACCESS_PROVIDER_A).equals(query)) {
-        body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_provider_not_found.json"));
+        body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_provider_not_found.json"));
       } else if (getQuery(ACTIVE_ACCESS_PROVIDER_B).equals(query)) {
-        body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_providers_active.json"));
+        body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_providers_active.json"));
       } else if (getQuery(ORGANIZATION_NOT_VENDOR).equals(query)) {
         body = new JsonObject(
-            ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "not_vendor.json"));
+            getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "not_vendor.json"));
       }
       else {
         JsonArray organizations = new JsonArray();
@@ -1195,23 +1165,23 @@ public class MockServer {
     try {
       switch (organizationId) {
         case ACTIVE_VENDOR_ID:
-          body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "active_vendor.json"));
+          body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "active_vendor.json"));
           break;
         case INACTIVE_VENDOR_ID:
-          body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "inactive_vendor.json"));
+          body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "inactive_vendor.json"));
           break;
         case PENDING_VENDOR_ID:
-          body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "pending_vendor.json"));
+          body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "pending_vendor.json"));
           break;
         case ACTIVE_ACCESS_PROVIDER_B:
-          body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_providers_active.json"))
+          body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_providers_active.json"))
             .getJsonArray(ORGANIZATIONS).getJsonObject(0);
           break;
         case ORGANIZATION_NOT_VENDOR:
-          body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "not_vendor.json"));
+          body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "not_vendor.json"));
           break;
         case VENDOR_WITH_BAD_CONTENT:
-          body = new JsonObject(ApiTestBase.getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "vendor_bad_content.json"));
+          body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "vendor_bad_content.json"));
           break;
         default:
           body = null;
@@ -1238,7 +1208,7 @@ public class MockServer {
       } else {
         // Filter result based on code from query
         String code = ctx.request().getParam("query").split("==")[1];
-        JsonObject entries = new JsonObject(ApiTestBase.getMockData(INSTANCE_STATUSES_MOCK_DATA_PATH + "types.json"));
+        JsonObject entries = new JsonObject(getMockData(INSTANCE_STATUSES_MOCK_DATA_PATH + "types.json"));
         filterByKeyValue("code", code, entries.getJsonArray(INSTANCE_STATUSES));
 
         serverResponse(ctx, 200, APPLICATION_JSON, entries.encode());
@@ -1255,7 +1225,7 @@ public class MockServer {
     String tenantId = ctx.request().getHeader(OKAPI_HEADER_TENANT);
     try {
       if (INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT.equals(tenantId)) {
-        String body = ApiTestBase.getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "temp.json");
+        String body = getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "temp.json");
         serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
         addServerRqRsData(HttpMethod.GET, INSTANCE_TYPES, new JsonObject(body));
       } else if (NON_EXIST_INSTANCE_TYPE_TENANT.equals(tenantId)) {
@@ -1265,7 +1235,7 @@ public class MockServer {
       } else {
         // Filter result based on code from query
         String code = ctx.request().getParam("query").split("==")[1];
-        JsonObject entries = new JsonObject(ApiTestBase.getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "types.json"));
+        JsonObject entries = new JsonObject(getMockData(INSTANCE_TYPES_MOCK_DATA_PATH + "types.json"));
         filterByKeyValue("code", code, entries.getJsonArray(INSTANCE_TYPES));
 
         serverResponse(ctx, 200, APPLICATION_JSON, entries.encode());
@@ -1300,7 +1270,7 @@ public class MockServer {
     try {
       JsonObject receivingHistory;
       if (queryParam.contains(RECEIVING_HISTORY_PURCHASE_ORDER_ID)) {
-        receivingHistory = new JsonObject(ApiTestBase.getMockData(RECEIVING_HISTORY_MOCK_DATA_PATH + "receivingHistory.json"));
+        receivingHistory = new JsonObject(getMockData(RECEIVING_HISTORY_MOCK_DATA_PATH + "receivingHistory.json"));
       } else if(queryParam.contains(INTERNAL_SERVER_ERROR.getReasonPhrase())) {
         throw new HttpException(500, "Exception in orders-storage module");
       }
@@ -1341,9 +1311,9 @@ public class MockServer {
         tenant = EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1.getValue();
       }
       try {
-        serverResponse(ctx, 200, APPLICATION_JSON, ApiTestBase.getMockData(String.format(CONFIG_MOCK_PATH, tenant)));
+        serverResponse(ctx, 200, APPLICATION_JSON, getMockData(String.format(CONFIG_MOCK_PATH, tenant)));
       } catch(Exception exc){
-        serverResponse(ctx, 200, APPLICATION_JSON, ApiTestBase.getMockData(String.format(CONFIG_MOCK_PATH, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue())));
+        serverResponse(ctx, 200, APPLICATION_JSON, getMockData(String.format(CONFIG_MOCK_PATH, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue())));
       }
     } catch (IOException e) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
@@ -1396,7 +1366,7 @@ public class MockServer {
         PoLineCollection poLineCollection = new PoLineCollection();
         if (postedPoLines.isEmpty()) {
           if (poId.equals(ORDER_ID_WITH_PO_LINES) || !polIds.isEmpty()) {
-            poLineCollection = new JsonObject(ApiTestBase.getMockData(POLINES_COLLECTION)).mapTo(PoLineCollection.class);
+            poLineCollection = new JsonObject(getMockData(POLINES_COLLECTION)).mapTo(PoLineCollection.class);
 
             // Filter PO Lines either by PO id or by expected line ids
             Iterator<PoLine> iterator = poLineCollection.getPoLines().iterator();
@@ -1414,7 +1384,7 @@ public class MockServer {
             } else {
               filePath = String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, poId);
             }
-            JsonObject compPO = new JsonObject(ApiTestBase.getMockData(filePath));
+            JsonObject compPO = new JsonObject(getMockData(filePath));
             // Build PoLineCollection to make sure content is valid
             poLineCollection = buildPoLineCollection(tenant, compPO.getJsonArray(COMPOSITE_PO_LINES));
           }
@@ -1537,7 +1507,7 @@ public class MockServer {
 
         // If previous step has no result then attempt to find POLine in stubs
         if (pol == null) {
-          PoLine poLine = new JsonObject(ApiTestBase.getMockData(String.format("%s%s.json", PO_LINES_MOCK_DATA_PATH, id))).mapTo(PoLine.class);
+          PoLine poLine = new JsonObject(getMockData(String.format("%s%s.json", PO_LINES_MOCK_DATA_PATH, id))).mapTo(PoLine.class);
           updatePoLineEstimatedPrice(poLine);
           pol = JsonObject.mapFrom(poLine);
         }
@@ -1628,15 +1598,14 @@ public class MockServer {
       JsonObject body = getMockEntry(PIECES, pieceId).orElse(null);
       if (body == null) {
         if (PIECE_POLINE_CONSISTENCY_404_POLINE_NOT_FOUND_ID.equals(pieceId)) {
-          body = new JsonObject(ApiTestBase
-            .getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d.json"));
+          body = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d.json"));
 
         } else if (PIECE_POLINE_CONSISTENT_RECEIPT_STATUS_ID.equals(pieceId)) {
-          body = new JsonObject(ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH
+          body = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH
             + "pieceRecord-received-consistent-receipt-status-5b454292-6aaa-474f-9510-b59a564e0c8d2.json"));
         } else {
           body = new JsonObject(
-            ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json"));
+            getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json"));
         }
       }
       serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
@@ -1677,7 +1646,7 @@ public class MockServer {
             logger.info("receivingStatus: " + status);
 
             String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", polId);
-            pieces = new JsonObject(ApiTestBase.getMockData(path)).mapTo(PieceCollection.class);
+            pieces = new JsonObject(getMockData(path)).mapTo(PieceCollection.class);
 
             // Filter piece records by receiving status
             if (StringUtils.isNotEmpty(status)) {
@@ -1686,7 +1655,7 @@ public class MockServer {
                 .removeIf(piece -> receivingStatus != piece.getReceivingStatus());
             }
           } else if (query.contains("id==")) {
-            pieces = new JsonObject(ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecordsCollection.json")).mapTo(PieceCollection.class);
+            pieces = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecordsCollection.json")).mapTo(PieceCollection.class);
 //            if (query.contains("id==")) {
               List<String> pieceIds = extractIdsFromQuery(query);
               pieces.getPieces()
@@ -1814,7 +1783,7 @@ public class MockServer {
         } else {
           filePath = String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id);
         }
-        po = new JsonObject(ApiTestBase.getMockData(filePath));
+        po = new JsonObject(getMockData(filePath));
         po.remove(COMPOSITE_PO_LINES);
 
         // Validate the content against schema
@@ -2039,19 +2008,19 @@ public class MockServer {
   }
 
   private void handleTransactionGetEntry(RoutingContext ctx) {
-    Transaction transaction = null;
+
     try {
       String query = ctx.request().params().get("query");
-      if (query.contains("transactionType==Encumbrance")) {
-        String body;
-        if (query.contains("encumbrance.sourcePoLineId==bb66b269-76ed-4616-8da9-730d9b817247")) {
-          body = getMockData(ENCUMBRANCE_FOR_TAGS_PATH);
-        } else {
-          body = getMockData(ENCUMBRANCE_PATH);
-        }
-        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
-        addServerRqRsData(HttpMethod.GET, TRANSACTIONS_ENDPOINT, new JsonObject(body));
+
+      String body;
+      if (query.contains("encumbrance.sourcePoLineId==bb66b269-76ed-4616-8da9-730d9b817247")) {
+        body = getMockData(ENCUMBRANCE_FOR_TAGS_PATH);
+      } else {
+        body = getMockData(ENCUMBRANCE_PATH);
       }
+      serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
+      addServerRqRsData(HttpMethod.GET, TRANSACTIONS_ENDPOINT, new JsonObject(body));
+
     } catch(IOException e) {
       logger.error("handleTransactionGetEntry error", e);
     }
@@ -2164,7 +2133,7 @@ public class MockServer {
 
   Supplier<List<AcquisitionsUnit>> getAcqUnitsFromFile = () -> {
     try {
-      return new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_UNITS_COLLECTION)).mapTo(AcquisitionsUnitCollection.class)
+      return new JsonObject(getMockData(ACQUISITIONS_UNITS_COLLECTION)).mapTo(AcquisitionsUnitCollection.class)
         .getAcquisitionsUnits();
     } catch (IOException e) {
       return Collections.emptyList();
@@ -2221,7 +2190,7 @@ public class MockServer {
 
     AcquisitionsUnitCollection units;
     try {
-      units = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_UNITS_COLLECTION)).mapTo(AcquisitionsUnitCollection.class);
+      units = new JsonObject(getMockData(ACQUISITIONS_UNITS_COLLECTION)).mapTo(AcquisitionsUnitCollection.class);
     } catch (IOException e) {
       units = new AcquisitionsUnitCollection();
     }
@@ -2254,7 +2223,7 @@ public class MockServer {
 
       AcquisitionsUnitMembershipCollection memberships;
       try {
-        memberships = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_MEMBERSHIPS_COLLECTION)).mapTo(AcquisitionsUnitMembershipCollection.class);
+        memberships = new JsonObject(getMockData(ACQUISITIONS_MEMBERSHIPS_COLLECTION)).mapTo(AcquisitionsUnitMembershipCollection.class);
       } catch (IOException e) {
         memberships = new AcquisitionsUnitMembershipCollection();
       }
@@ -2279,7 +2248,7 @@ public class MockServer {
 
     AcquisitionsUnitMembershipCollection memberships;
     try {
-      memberships = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_MEMBERSHIPS_COLLECTION)).mapTo(AcquisitionsUnitMembershipCollection.class);
+      memberships = new JsonObject(getMockData(ACQUISITIONS_MEMBERSHIPS_COLLECTION)).mapTo(AcquisitionsUnitMembershipCollection.class);
     } catch (IOException e) {
       memberships = new AcquisitionsUnitMembershipCollection();
     }
@@ -2334,7 +2303,7 @@ public class MockServer {
       OrderTemplateCollection templates;
 
       try {
-        templates = new JsonObject(ApiTestBase.getMockData(ORDER_TEMPLATES_COLLECTION)).mapTo(OrderTemplateCollection.class);
+        templates = new JsonObject(getMockData(ORDER_TEMPLATES_COLLECTION)).mapTo(OrderTemplateCollection.class);
       } catch (IOException e) {
         templates = new OrderTemplateCollection();
       }
@@ -2371,7 +2340,7 @@ public class MockServer {
 
         // If previous step has no result then attempt to find title in stubs
         if (existantTitle == null) {
-          Title title = new JsonObject(ApiTestBase.getMockData(String.format("%s%s.json", TITLES_MOCK_DATA_PATH, id))).mapTo(Title.class);
+          Title title = new JsonObject(getMockData(String.format("%s%s.json", TITLES_MOCK_DATA_PATH, id))).mapTo(Title.class);
           existantTitle = JsonObject.mapFrom(title);
         }
 
@@ -2417,7 +2386,7 @@ public class MockServer {
   private void handleGetFyRollovers(RoutingContext ctx) {
     logger.info("handleGetFyRollovers got: " + ctx.request().path());
     try {
-        JsonObject entries = new JsonObject(ApiTestBase.getMockData(LEDGER_FY_ROLLOVERS_PATH + "ledger_fiscal_year_rollover_collection.json"));
+        JsonObject entries = new JsonObject(getMockData(LEDGER_FY_ROLLOVERS_PATH + "ledger_fiscal_year_rollover_collection.json"));
 
         serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
         addServerRqRsData(HttpMethod.GET, "ledgerFiscalYearRollovers", entries);
@@ -2432,7 +2401,7 @@ public class MockServer {
   private void handleGetFyRolloverErrors(RoutingContext ctx) {
     logger.info("handleGetFyRolloverErrors got: " + ctx.request().path());
     try {
-        JsonObject entries = new JsonObject(ApiTestBase.getMockData(LEDGER_FY_ROLLOVERS_ERRORS_PATH + "ledger_fiscal_year_rollover_error_collection.json"));
+        JsonObject entries = new JsonObject(getMockData(LEDGER_FY_ROLLOVERS_ERRORS_PATH + "ledger_fiscal_year_rollover_error_collection.json"));
 
         serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
         addServerRqRsData(HttpMethod.GET, "ledgerFiscalYearRolloverErrors", entries);

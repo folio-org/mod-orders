@@ -1,8 +1,11 @@
 package org.folio.rest.impl.protection;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.RestTestUtils.verifyDeleteResponse;
+import static org.folio.RestTestUtils.verifyGet;
+import static org.folio.RestTestUtils.verifyPostResponse;
+import static org.folio.RestTestUtils.verifyPut;
 
-import org.folio.rest.impl.ApiTestBase;
 
 import io.restassured.http.Headers;
 import io.restassured.response.Response;
@@ -14,7 +17,7 @@ enum ProtectedOperations {
   CREATE(201,  APPLICATION_JSON) {
     @Override
     Response process(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
-      return apiTestBase.verifyPostResponse(url, body, headers, expectedContentType, expectedCode);
+      return verifyPostResponse(url, body, headers, expectedContentType, expectedCode);
     }
   },
   READ(200, APPLICATION_JSON) {
@@ -22,7 +25,7 @@ enum ProtectedOperations {
     Response process(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
       JsonObject obj = new JsonObject(body);
       String id = obj.getString("id");
-      return apiTestBase.verifyGet(String.format("%s/%s", url, id), headers, expectedContentType, expectedCode);
+      return verifyGet(String.format("%s/%s", url, id), headers, expectedContentType, expectedCode);
       }
     },
   UPDATE(204) {
@@ -30,7 +33,7 @@ enum ProtectedOperations {
     Response process(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
       JsonObject obj = new JsonObject(body);
       String id = obj.getString("id");
-      return apiTestBase.verifyPut(String.format("%s/%s", url, id), body, headers, expectedContentType, expectedCode);
+      return verifyPut(String.format("%s/%s", url, id), body, headers, expectedContentType, expectedCode);
     }
   },
   DELETE(204) {
@@ -38,7 +41,7 @@ enum ProtectedOperations {
     Response process(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
       JsonObject obj = new JsonObject(body);
       String id = obj.getString("id");
-      return apiTestBase.verifyDeleteResponse(String.format("%s/%s", url, id), headers, expectedContentType, expectedCode);
+      return verifyDeleteResponse(String.format("%s/%s", url, id), headers, expectedContentType, expectedCode);
     }
   };
 
@@ -60,8 +63,6 @@ enum ProtectedOperations {
   public String getContentType() {
     return contentType;
   }
-
-  private static ApiTestBase apiTestBase = new ApiTestBase();
 
   abstract Response process(String url, String body, Headers headers, String expectedContentType, int expectedCode);
 

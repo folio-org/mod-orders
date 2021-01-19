@@ -9,8 +9,6 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.helper.PurchaseOrderHelper.ENCUMBRANCE_POST_ENDPOINT;
-import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
 import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_CREATED;
 import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_DELETED;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
@@ -38,7 +36,6 @@ import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_INVOICE_RELATIONSHIP;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
@@ -67,14 +64,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import javax.money.MonetaryAmount;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.folio.models.EncumbranceRelationsHolder;
-import org.folio.models.EncumbrancesProcessingHolder;
-import org.folio.models.PoLineFundHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
@@ -85,8 +78,6 @@ import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.SequenceNumber;
-import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -106,9 +97,14 @@ import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.finance.EncumbranceService;
+import org.folio.service.finance.EncumbranceWorkflowStrategy;
+import org.folio.service.finance.EncumbranceWorkflowStrategyFactory;
+import org.folio.service.finance.ExpenseClassValidationService;
+import org.folio.service.finance.WorkflowStatusName;
 import org.folio.service.orders.OrderInvoiceRelationService;
-import org.javamoney.moneta.Money;
-import org.javamoney.moneta.function.MonetaryOperators;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
@@ -135,16 +131,22 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   private final InventoryHelper inventoryHelper;
   private final ProtectionHelper protectionHelper;
   private final PiecesHelper piecesHelper;
-  private final FinanceHelper financeHelper;
-  private final OrderInvoiceRelationService orderInvoiceRelationService;
+  @Autowired
+  private EncumbranceService encumbranceService;
+  @Autowired
+  private ExpenseClassValidationService expenseClassValidationService;
+  @Autowired
+  private EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
+  @Autowired
+  private OrderInvoiceRelationService orderInvoiceRelationService;
+  @Autowired
+  private ConfigurationEntriesService configurationEntriesService;
 
   public PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
     this.inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
     this.protectionHelper = new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
     this.piecesHelper = new PiecesHelper(httpClient, okapiHeaders, ctx, lang);
-    this.financeHelper = new FinanceHelper(httpClient, okapiHeaders, ctx, lang);
-    this.orderInvoiceRelationService = new OrderInvoiceRelationService(new RestClient(resourcesPath(ORDER_INVOICE_RELATIONSHIP)));
   }
 
   public PurchaseOrderLineHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -216,7 +218,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     return setTenantDefaultCreateInventoryValues(compPOL)
       .thenCompose(v -> validateNewPoLine(compPOL))
       .thenCompose(isValid -> {
-        if (isValid) {
+        if (isValid.equals(Boolean.TRUE)) {
           return getCompositePurchaseOrder(compPOL.getPurchaseOrderId())
             // The PO Line can be created only for order in Pending state
             .thenApply(this::validateOrderState)
@@ -278,7 +280,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     CompletableFuture<JsonObject> future = new CompletableFuture<>();
 
     if (isCreateInventoryNull(compPOL)) {
-      getTenantConfiguration(ORDER_CONFIG_MODULE_NAME)
+      configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext())
         .thenApply(config -> {
           if (StringUtils.isNotEmpty(config.getString(CREATE_INVENTORY))) {
             return future.complete(new JsonObject(config.getString(CREATE_INVENTORY)));
@@ -309,13 +311,13 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     }
   }
 
-  private static Boolean isPhysicalInventoryNotPresent(CompositePoLine compPOL) {
+  private static boolean isPhysicalInventoryNotPresent(CompositePoLine compPOL) {
     return Optional.ofNullable(compPOL.getPhysical())
       .map(physical -> physical.getCreateInventory() == null)
       .orElse(true);
   }
 
-  private static Boolean isEresourceInventoryNotPresent(CompositePoLine compPOL) {
+  private static boolean isEresourceInventoryNotPresent(CompositePoLine compPOL) {
     return Optional.ofNullable(compPOL.getEresource())
       .map(eresource -> eresource.getCreateInventory() == null)
       .orElse(true);
@@ -381,7 +383,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       .thenCompose(this::verifyDeleteAllowed)
       .thenCompose(line -> {
         logger.debug("Deleting PO line...");
-        return financeHelper.deletePoLineEncumbrances(lineId)
+        return encumbranceService.deletePoLineEncumbrances(lineId, getRequestContext())
           .thenCompose(v -> deletePoLine(line, httpClient, okapiHeaders, logger));
       })
       .thenAccept(json -> logger.info("The PO Line with id='{}' has been deleted successfully", lineId));
@@ -409,7 +411,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
               .thenCompose(vVoid -> protectionHelper.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE)
                 .thenCompose(v -> validateAndNormalizeISBN(compOrderLine))
                 .thenCompose(v -> validateAccessProviders(compOrderLine))
-                .thenCompose(v -> financeHelper.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine)))
+                .thenCompose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine), getRequestContext()))
                 .thenCompose(v -> processOpenedPoLine(compOrder, compOrderLine, lineFromStorage))
                 .thenApply(v -> lineFromStorage));
           }))
@@ -428,7 +430,8 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     PoLine storagePoLine = lineFromStorage.mapTo(PoLine.class);
 
     if (isEncumbranceUpdateNeeded(compOrder, compositePoLine, storagePoLine)) {
-      return processEncumbrance(compOrder, compositePoLine).thenApply(holder -> null);
+      EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(WorkflowStatusName.PENDING_TO_OPEN);
+      return strategy.processEncumbrances(compOrder.withCompositePoLines(Collections.singletonList(compositePoLine)), getRequestContext());
     }
     return completedFuture(null);
   }
@@ -447,100 +450,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     }
 
     return !CollectionUtils.isEqualCollection(requestFundDistros, storageFundDistros);
-  }
-
-
-  public CompletableFuture<EncumbrancesProcessingHolder> processEncumbrance(CompositePurchaseOrder compPO, CompositePoLine compositePoLine) {
-    EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
-    List<CompositePoLine> compositePoLines = Collections.singletonList(compositePoLine);
-
-    if (!compositePoLine.getFundDistribution().isEmpty()) {
-      return CompletableFuture.runAsync(() -> validateFundDistributionTotal(compositePoLines))
-        .thenCompose(v -> financeHelper.getPoLineEncumbrances(compositePoLine.getId()))
-        .thenAccept(holder::withEncumbrancesFromStorage)
-        .thenCompose(v -> financeHelper.buildNewEncumbrances(compPO, compositePoLines, holder.getEncumbrancesFromStorage()))
-        .thenAccept(holder::withEncumbrancesForCreate)
-        .thenCompose(v -> financeHelper.buildEncumbrancesForUpdate(compositePoLines, holder.getEncumbrancesFromStorage()))
-        .thenAccept(holder::withEncumbrancesForUpdate)
-        .thenApply(v -> financeHelper.findNeedReleaseEncumbrances(compositePoLines, holder.getEncumbrancesFromStorage()))
-        .thenAccept(holder::withEncumbrancesForRelease)
-        .thenCompose(v -> createOrUpdateOrderTransactionSummary(compPO.getId(), holder))
-        .thenCompose(v -> createOrUpdateEncumbrances(holder))
-        .thenApply(v -> holder);
-    }
-    return CompletableFuture.completedFuture(null);
-  }
-
-
-  CompletableFuture<Void> createOrUpdateOrderTransactionSummary(String orderId, EncumbrancesProcessingHolder holder) {
-    if (CollectionUtils.isEmpty(holder.getEncumbrancesFromStorage())) {
-      return financeHelper.createOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity())
-        .thenApply(id -> null);
-    }
-    else if (holder.getAllEncumbrancesQuantity() == 0) {
-      return CompletableFuture.completedFuture(null);
-    }
-    else {
-      return financeHelper.updateOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity());
-    }
-  }
-
-  CompletableFuture<Void> createOrUpdateEncumbrances(EncumbrancesProcessingHolder holder) {
-    return createEncumbrancesAndUpdatePoLines(holder.getEncumbrancesForCreate())
-      .thenCompose(v -> financeHelper.releaseEncumbrances(holder.getEncumbrancesForRelease()))
-      .thenCompose(v -> updateEncumbrances(holder));
-  }
-
-  private CompletionStage<Void> updateEncumbrances(EncumbrancesProcessingHolder holder) {
-    List<Transaction> encumbrances = holder.getEncumbrancesForUpdate().stream()
-      .map(EncumbranceRelationsHolder::getTransaction)
-      .collect(toList());
-    return financeHelper.updateTransactions(encumbrances);
-  }
-
-  public CompletableFuture<Void> createEncumbrancesAndUpdatePoLines(List<EncumbranceRelationsHolder> relationsHolders) {
-    return CompletableFuture.allOf(relationsHolders.stream()
-      .map(holder -> createRecordInStorage(JsonObject.mapFrom(holder.getTransaction()), String.format(ENCUMBRANCE_POST_ENDPOINT, lang))
-        .thenCompose(id -> {
-          PoLineFundHolder poLineFundHolder = holder.getPoLineFundHolder();
-          poLineFundHolder.getFundDistribution().setEncumbrance(id);
-          return updatePoLinesSummary(Collections.singletonList(poLineFundHolder.getPoLine()));
-        })
-        .exceptionally(fail -> {
-          checkCustomTransactionError(fail);
-          throw new CompletionException(fail);
-        })
-      )
-      .toArray(CompletableFuture[]::new)
-    );
-  }
-
-
-  void validateFundDistributionTotal(List<CompositePoLine> compositePoLines) {
-    for (CompositePoLine cPoLine : compositePoLines) {
-
-      if (cPoLine.getCost().getPoLineEstimatedPrice() != null && !cPoLine.getFundDistribution().isEmpty()) {
-        Double poLineEstimatedPrice = cPoLine.getCost().getPoLineEstimatedPrice();
-        String currency = cPoLine.getCost().getCurrency();
-        MonetaryAmount remainingAmount = Money.of(poLineEstimatedPrice, currency);
-
-        for (FundDistribution fundDistribution : cPoLine.getFundDistribution()) {
-          FundDistribution.DistributionType dType = fundDistribution.getDistributionType();
-          Double value = fundDistribution.getValue();
-          MonetaryAmount amountValueMoney = Money.of(value, currency);
-
-          if (dType == FundDistribution.DistributionType.PERCENTAGE) {
-            // convert percent to amount
-            amountValueMoney = Money.of(poLineEstimatedPrice, currency).with(MonetaryOperators.percent(value));
-          }
-
-          remainingAmount = remainingAmount.subtract(amountValueMoney);
-        }
-        if (!remainingAmount.isZero()) {
-          throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL);
-        }
-      }
-    }
   }
 
   private CompletableFuture<Void> validateAccessProviders(CompositePoLine compOrderLine) {
@@ -721,7 +630,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
 
   private CompletableFuture<Boolean> validatePoLineLimit(CompositePoLine compPOL) {
     String query = PURCHASE_ORDER_ID + "==" + compPOL.getPurchaseOrderId();
-    return getTenantConfiguration(ORDER_CONFIG_MODULE_NAME)
+    return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext())
       .thenCombine(getPoLines(0, 0, query), (config, poLines) -> {
         boolean isValid = poLines.getTotalRecords() < getPoLineLimit(config);
         if (!isValid) {

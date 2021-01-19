@@ -2,8 +2,6 @@ package org.folio.service.orders;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -48,13 +46,13 @@ public class PurchaseOrderServiceTest {
       .withPurchaseOrders(purchaseOrders)
       .withTotalRecords(1);
 
-    when(restClientMock.get(anyString(), anyInt(), anyInt(), any(), any()))
+    when(restClientMock.get(any(), any(), any()))
       .thenReturn(CompletableFuture.completedFuture(purchaseOrderCollection));
 
     String expectedQuery =  String.format("id==%s", orderId);
     PurchaseOrderCollection actOrders = purchaseOrderService.getPurchaseOrders(expectedQuery, Integer.MAX_VALUE, 0, requestContext).join();
 
-    verify(restClientMock).get(eq(expectedQuery), eq(0), eq(Integer.MAX_VALUE), eq(requestContext), eq(PurchaseOrderCollection.class));
+    verify(restClientMock).get(any(), eq(requestContext), eq(PurchaseOrderCollection.class));
     assertEquals(purchaseOrderCollection, actOrders);
   }
 

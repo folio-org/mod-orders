@@ -1,11 +1,13 @@
 package org.folio;
 
-import java.util.concurrent.CompletableFuture;
+import static org.folio.TestConfig.closeMockServer;
+import static org.folio.TestConfig.closeVertx;
+import static org.folio.TestConfig.deployVerticle;
+import static org.folio.TestConfig.startMockServer;
+
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.folio.helper.FinanceHelperTest;
 import org.folio.helper.InventoryHelperTest;
 import org.folio.helper.PiecesHelperTest;
 import org.folio.helper.PurchaseOrderHelperTest;
@@ -14,12 +16,10 @@ import org.folio.orders.events.handlers.CheckInOrderStatusChangeChangeHandlerTes
 import org.folio.orders.events.handlers.ReceiptStatusConsistencyTest;
 import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
 import org.folio.orders.utils.HelperUtilsTest;
-import org.folio.rest.RestVerticle;
 import org.folio.rest.core.RestClientTest;
 import org.folio.rest.impl.AcquisitionsMembershipsTest;
 import org.folio.rest.impl.AcquisitionsUnitsTest;
 import org.folio.rest.impl.CheckinReceivingApiTest;
-import org.folio.rest.impl.MockServer;
 import org.folio.rest.impl.OrderTemplateTest;
 import org.folio.rest.impl.PieceApiTest;
 import org.folio.rest.impl.PoNumberApiTest;
@@ -32,13 +32,14 @@ import org.folio.rest.impl.protection.LinesProtectionTest;
 import org.folio.rest.impl.protection.OrdersProtectionTest;
 import org.folio.rest.impl.protection.PiecesProtectionTest;
 import org.folio.rest.impl.protection.ReceivingCheckinProtectionTest;
-import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.service.PrefixServiceTest;
 import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
 import org.folio.service.finance.TransactionServiceTest;
 import org.folio.service.exchange.ManualExchangeRateProviderTest;
+import org.folio.service.finance.EncumbranceServiceTest;
 import org.folio.service.finance.FundServiceTest;
+import org.folio.service.finance.OpenToPendingEncumbranceStrategyTest;
 import org.folio.service.orders.OrderRolloverServiceTest;
 import org.folio.service.orders.PurchaseOrderLineServiceTest;
 import org.folio.service.orders.PurchaseOrderServiceTest;
@@ -48,59 +49,20 @@ import org.junit.jupiter.api.Nested;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
-import io.restassured.RestAssured;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-
 
 @RunWith(JUnitPlatform.class)
 public class ApiTestSuite {
 
-  private static final int okapiPort = NetworkUtils.nextFreePort();
-  public static final int mockPort = NetworkUtils.nextFreePort();
-  private static MockServer mockServer;
-  private static Vertx vertx;
-  private static boolean initialised;
-
   @BeforeAll
   public static void before() throws InterruptedException, ExecutionException, TimeoutException {
-    if (vertx == null) {
-      vertx = Vertx.vertx();
-    }
-
-    mockServer = new MockServer(mockPort);
-    mockServer.start();
-
-    RestAssured.baseURI = "http://localhost:" + okapiPort;
-    RestAssured.port = okapiPort;
-    RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
-
-    final JsonObject conf = new JsonObject();
-    conf.put("http.port", okapiPort);
-
-    final DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
-    CompletableFuture<String> deploymentComplete = new CompletableFuture<>();
-    vertx.deployVerticle(RestVerticle.class.getName(), opt, res -> {
-      if (res.succeeded()) {
-        deploymentComplete.complete(res.result());
-      } else {
-        deploymentComplete.completeExceptionally(res.cause());
-      }
-    });
-    deploymentComplete.get(60, TimeUnit.SECONDS);
-    initialised = true;
+    startMockServer();
+    deployVerticle();
   }
 
   @AfterAll
   public static void after() {
-    mockServer.close();
-    vertx.close();
-    initialised = false;
-  }
-
-  public static boolean isNotInitialised() {
-    return !initialised;
+    closeMockServer();
+    closeVertx();
   }
 
   @Nested
@@ -198,7 +160,7 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class FinanceHelperTestNested extends FinanceHelperTest {
+  class EncumbranceServiceTestNested extends EncumbranceServiceTest {
   }
 
   @Nested
@@ -239,5 +201,9 @@ public class ApiTestSuite {
 
   @Nested
   class OrderRolloverServiceTestNested extends OrderRolloverServiceTest {
+  }
+
+  @Nested
+  class OpenToPendingEncumbranceStrategyTestNested extends OpenToPendingEncumbranceStrategyTest {
   }
 }

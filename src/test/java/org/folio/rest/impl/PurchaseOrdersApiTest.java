@@ -5,7 +5,20 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.containsAny;
-import static org.folio.ApiTestSuite.mockPort;
+import static org.folio.RestTestUtils.checkPreventProtectedFieldsModificationRule;
+import static org.folio.RestTestUtils.prepareHeaders;
+import static org.folio.RestTestUtils.verifyDeleteResponse;
+import static org.folio.RestTestUtils.verifyGet;
+import static org.folio.RestTestUtils.verifyPostResponse;
+import static org.folio.RestTestUtils.verifyPut;
+import static org.folio.RestTestUtils.verifySuccessGet;
+import static org.folio.TestConfig.X_OKAPI_URL;
+import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.initSpringContext;
+import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConstants.*;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.TestUtils.getMockData;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoCreation;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
 import static org.folio.helper.InventoryInteractionTestHelper.joinExistingAndNewItems;
@@ -14,38 +27,7 @@ import static org.folio.helper.InventoryInteractionTestHelper.verifyInventoryInt
 import static org.folio.helper.InventoryInteractionTestHelper.verifyInventoryNonInteraction;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyPiecesCreated;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyPiecesQuantityForSuccessCase;
-import static org.folio.orders.utils.ErrorCodes.BUDGET_EXPENSE_CLASS_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
-import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
-import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_INVALID;
-import static org.folio.orders.utils.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
-import static org.folio.orders.utils.ErrorCodes.FUNDS_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
-import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
-import static org.folio.orders.utils.ErrorCodes.INACTIVE_EXPENSE_CLASS;
-import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
-import static org.folio.orders.utils.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
-import static org.folio.orders.utils.ErrorCodes.ISBN_NOT_VALID;
-import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
-import static org.folio.orders.utils.ErrorCodes.MISSING_MATERIAL_TYPE;
-import static org.folio.orders.utils.ErrorCodes.MISSING_ONGOING;
-import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
-import static org.folio.orders.utils.ErrorCodes.ONGOING_NOT_ALLOWED;
-import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
-import static org.folio.orders.utils.ErrorCodes.ORDER_OPEN;
-import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
-import static org.folio.orders.utils.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.ORGANIZATION_NOT_A_VENDOR;
-import static org.folio.orders.utils.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
-import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_DELETED;
-import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
-import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
-import static org.folio.orders.utils.ErrorCodes.VENDOR_ISSUE;
-import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
-import static org.folio.orders.utils.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
-import static org.folio.orders.utils.ErrorCodes.ZERO_LOCATION_QTY;
+import static org.folio.orders.utils.ErrorCodes.*;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
@@ -62,9 +44,13 @@ import static org.folio.orders.utils.ResourcePathResolver.RECEIPT_STATUS;
 import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
-import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.TestUtils.getInstanceId;
+import static org.folio.TestUtils.getMinimalContentCompositePoLine;
+import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
+import static org.folio.TestUtils.validatePoLineCreationErrorForNonPendingOrder;
+import static org.folio.TestUtils.verifyLocationQuantity;
 import static org.folio.rest.impl.MockServer.BUDGET_IS_INACTIVE_TENANT;
 import static org.folio.rest.impl.MockServer.BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT;
 import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
@@ -123,6 +109,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -131,7 +119,9 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
+import org.folio.config.ApplicationConfig;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.VendorHelper;
 import org.folio.orders.utils.AcqDesiredPermissions;
@@ -164,12 +154,13 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.exchange.FinanceExchangeRateService;
 import org.hamcrest.beans.HasPropertyWithValue;
 import org.hamcrest.core.Every;
 import org.hamcrest.core.Is;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -178,18 +169,16 @@ import org.mockito.MockitoAnnotations;
 import io.restassured.http.Header;
 import io.restassured.http.Headers;
 import io.restassured.response.Response;
-import io.vertx.core.Context;
-import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-public class PurchaseOrdersApiTest extends ApiTestBase {
+public class PurchaseOrdersApiTest {
 
-  private static final String PENDING_ORDER_APPROVED_FALSE = "e5ae4afd-3fa9-494e-a972-f541df9b877e";
 
   private static final Logger logger = LogManager.getLogger();
 
+  private static final String PENDING_ORDER_APPROVED_FALSE = "e5ae4afd-3fa9-494e-a972-f541df9b877e";
   private static final String ORDER_WITHOUT_PO_LINES = "order_without_po_lines.json";
   private static final String ORDER_WITHOUT_VENDOR_ID = "order_without_vendor_id.json";
   public static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
@@ -213,7 +202,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   static final String VALID_FUND_ID =  "fb7b70f1-b898-4924-a991-0e4b6312bb5f";
   static final String FUND_ID_RESTRICTED =  "72330c92-087e-4cdc-a82e-acadd9332659";
   static final String FUND_ENCUMBRANCE_ERROR =  "f1654bbe-dd76-4bfe-a96a-e764141e6aac";
-  static final String VALID_LEDGER_ID =  "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
+
   public static final String ORDER_WITHOUT_MATERIAL_TYPES_ID =  "0cb6741d-4a00-47e5-a902-5678eb24478d";
 
   // API paths
@@ -227,7 +216,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   private static final String MONOGRAPH_FOR_CREATE_INVENTORY_TEST = "print_monograph_for_create_inventory_test.json";
   private static final String LISTED_PRINT_SERIAL_PATH = "po_listed_print_serial.json";
   private static final String MINIMAL_ORDER_PATH = "minimal_order.json";
-  private static final String PO_CREATION_FAILURE_PATH = "po_creation_failure.json";
   private static final String ELECTRONIC_FOR_CREATE_INVENTORY_TEST = "po_listed_electronic_monograph.json";
   private static final String PO_FOR_TAGS_INHERITANCE_TEST = "po_tags_inheritance.json";
 
@@ -254,28 +242,39 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   public static final String TENANT_ID = "ordertest";
   public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, TENANT_ID);
 
-  private Context ctxMock;
-  private Map<String, String> okapiHeadersMock;
-  private HttpClientInterface httpClient;
-
   @Mock
   private FinanceExchangeRateService financeExchangeRateService;
+
+  private static boolean runningOnOwn;
+
+  @BeforeAll
+  static void before() throws InterruptedException, ExecutionException, TimeoutException {
+    if (isVerticleNotDeployed()) {
+      ApiTestSuite.before();
+      runningOnOwn = true;
+    }
+    initSpringContext(ApplicationConfig.class);
+  }
+
+  @AfterEach
+  void afterEach() {
+    clearServiceInteractions();
+  }
+
+  @AfterAll
+  static void after() {
+    if (runningOnOwn) {
+      ApiTestSuite.after();
+    }
+  }
+  
   @BeforeEach
-  public void initMocks(){
-    super.setUp();
-    ctxMock = Vertx.vertx().getOrCreateContext();
-    okapiHeadersMock = new HashMap<>();
-    okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
-    okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
-    okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
-    okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
-    String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
-    httpClient = HttpClientFactory.getHttpClient(okapiURL, TENANT_ID);
+  void initMocks(){
     MockitoAnnotations.openMocks(this);
   }
 
   @Test
-  public void testValidFundDistributionTotalPercentage() throws Exception {
+  void testValidFundDistributionTotalPercentage() throws Exception {
     logger.info("=== Test fund distribution total must add upto totalEstimatedPrice - valid total percentage ===");
 
     JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
@@ -303,7 +302,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testInvalidFundDistributionTotalPercentage() throws Exception {
+  void testInvalidFundDistributionTotalPercentage() throws Exception {
     logger.info("===  Test fund distribution total must add upto totalEstimatedPrice - invalid total percentage ===");
 
     JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
@@ -336,7 +335,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testInvalidFundDistributionTotalAmountPercentage() throws Exception {
+  void testInvalidFundDistributionTotalAmountPercentage() throws Exception {
     logger.info("===  Test fund distribution total must add upto totalEstimatedPrice - invalid total amount and percentage ===");
 
     JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
@@ -367,7 +366,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testInvalidFundDistributionTotalAmount() throws Exception {
+  void testInvalidFundDistributionTotalAmount() throws Exception {
     logger.info("===  Test fund distribution total must add upto totalEstimatedPrice - invalid total amount ===");
 
     JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
@@ -399,7 +398,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testListedPrintMonograph() throws Exception {
+  void testListedPrintMonograph() throws Exception {
     logger.info("=== Test Listed Print Monograph ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -485,7 +484,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrderWithIncorrectCost() throws Exception {
+  void testPostOrderWithIncorrectCost() throws Exception {
     logger.info("=== Test Order creation - Cost validation fails ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -537,7 +536,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOneTimeOrderWithOngoingFields() {
+  void testPostOneTimeOrderWithOngoingFields() {
     logger.info("=== Test Order creation - Ongoing field validation fails ===");
 
     CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
@@ -556,7 +555,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOngoingOrderWithoutOngoingFields() {
+  void testPostOngoingOrderWithoutOngoingFields() {
     logger.info("=== Test Order creation - Ongoing field validation fails ===");
 
     CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
@@ -575,7 +574,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOneTimeOrderWithOngoingField() {
+  void testPutOneTimeOrderWithOngoingField() {
     logger.info("=== Test Order update - Ongoing field validation fails ===");
 
     CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
@@ -599,7 +598,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOngoingOrderWithoutOngoingField() {
+  void testPutOngoingOrderWithoutOngoingField() {
     logger.info("=== Test Order update - Ongoing field validation fails ===");
 
     CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
@@ -623,7 +622,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderWithIncorrectQuantities() throws Exception {
+  void testPutOrderWithIncorrectQuantities() throws Exception {
     logger.info("=== Test Order update - Quantity validation fails for the first PO Line ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -664,7 +663,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testListedPrintMonographInOpenStatus() throws Exception {
+  void testListedPrintMonographInOpenStatus() throws Exception {
     logger.info("=== Test Listed Print Monograph in Open status ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -751,7 +750,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testOrderWithPoLinesWithoutSource() throws Exception {
+  void testOrderWithPoLinesWithoutSource() throws Exception {
     logger.info("=== Test Listed Print Monograph with POL without source ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -768,7 +767,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testDateOrderedIsNotSetForPendingOrder() throws Exception {
+  void testDateOrderedIsNotSetForPendingOrder() throws Exception {
     logger.info("=== Test POST Order By Id to change status of Order to Open - Date Ordered is empty ===");
 
     // Get Open Order
@@ -786,7 +785,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOpenOrderInventoryUpdateWithOrderFormatOther() throws Exception {
+  void testPostOpenOrderInventoryUpdateWithOrderFormatOther() throws Exception {
     logger.info("=== Test POST Order By Id to change status of Order to Open - inventory interaction required only for first POL ===");
 
     // Get Open Order
@@ -850,7 +849,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOpenOrderInventoryUpdateOnlyForFirstPOL() throws Exception {
+  void testPostOpenOrderInventoryUpdateOnlyForFirstPOL() throws Exception {
     logger.info("=== Test POST Order By Id to change status of Order to Open - inventory interaction required only for first POL ===");
 
     // Get Open Order
@@ -907,7 +906,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdPEMixFormat() {
+  void testPutOrdersByIdPEMixFormat() {
     logger.info("=== Test Put Order By Id create Pieces with P/E Mix format ===");
     CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
 
@@ -958,7 +957,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdFundsNotFound() {
+  void testPutOrdersByIdFundsNotFound() {
     logger.info("=== Test Put Order By Id Funds not found ===");
     CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
     MockServer.addMockTitles(reqData.getCompositePoLines());
@@ -984,7 +983,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdCurrentFiscalYearNotFound() {
+  void testPutOrdersByIdCurrentFiscalYearNotFound() {
     logger.info("=== Test Put Order By Id Current fiscal year not found ===");
     CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
     MockServer.addMockTitles(reqData.getCompositePoLines());
@@ -1011,7 +1010,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdCurrentFiscalYearServerError() {
+  void testPutOrdersByIdCurrentFiscalYearServerError() {
     logger.info("=== Test Put Order By Id, get Current fiscal year Internal Server Error ===");
     CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
     MockServer.addMockTitles(reqData.getCompositePoLines());
@@ -1036,7 +1035,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdEmptyFundDistributions() {
+  void testPutOrdersByIdEmptyFundDistributions() {
     logger.info("=== Test Put Order By Id Current empty fundDistributions ===");
     CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
 
@@ -1058,7 +1057,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdTotalPiecesEqualsTotalQuantityWhenCreateInventoryIsFalse() throws Exception {
+  void testPutOrdersByIdTotalPiecesEqualsTotalQuantityWhenCreateInventoryIsFalse() throws Exception {
     logger.info("=== Test Put Order By Id create Pieces when Item record does not exist ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -1078,7 +1077,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPlaceOrderMinimal() throws Exception {
+  void testPlaceOrderMinimal() throws Exception {
     logger.info("=== Test Placement of minimal order ===");
 
     String body = getMockData(MINIMAL_ORDER_PATH);
@@ -1110,7 +1109,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrderFailsWithInvalidPONumber() {
+  void testPostOrderFailsWithInvalidPONumber() {
     logger.info("=== Test Placement of minimal order failure with Invalid PO Number===");
 
     JsonObject request = new JsonObject();
@@ -1123,7 +1122,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrderFailsWithExistingPONumber() {
+  void testPostOrderFailsWithExistingPONumber() {
     logger.info("=== Test Placement of minimal order failure with Existing PO Number===");
 
     JsonObject request = new JsonObject();
@@ -1138,7 +1137,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrderPONumberAutoGenerated() {
+  void testPostOrderPONumberAutoGenerated() {
     logger.info("=== Test Placement of Empty order with Auto Generated PO Number===");
 
     JsonObject request = new JsonObject();
@@ -1157,10 +1156,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testShouldReturnErrorIfPoNumberDoesNotMatchPattern() throws Exception {
+  void testShouldReturnErrorIfPoNumberDoesNotMatchPattern() {
     logger.info("=== Test PO creation failure ===");
     JsonObject jsonObject = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, "0cb6741d-4a00-47e5-a902-5678eb24478d");
-    String body = getMockData("mockdata/compositeOrders/0cb6741d-4a00-47e5-a902-5678eb24478d.json");
+
     String poNumber = "asdfgh123456789aaafffgghhhh";
     jsonObject.put("poNumber", poNumber);
     final Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, jsonObject.toString(),
@@ -1178,10 +1177,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testShouldCreateOrderIfPoNumberMatchPattern() throws Exception {
+  void testShouldCreateOrderIfPoNumberMatchPattern() {
     logger.info("=== Test PO creation failure ===");
     JsonObject jsonObject = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, "0cb6741d-4a00-47e5-a902-5678eb24478d");
-    String body = getMockData("mockdata/compositeOrders/0cb6741d-4a00-47e5-a902-5678eb24478d.json");
+
     String poNumber = "asdfghj100200jhgfdsa";
     jsonObject.put("poNumber", poNumber);
     final Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, jsonObject.toString(),
@@ -1193,7 +1192,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPoCreationWithOverLimitPOLines() throws Exception {
+  void testPoCreationWithOverLimitPOLines() throws Exception {
     logger.info("=== Test PO, with over limit lines quantity, creation ===");
 
     String body = getMockDraftOrder().toString();
@@ -1209,7 +1208,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
 
   @Test
-  public void testPostWithInvalidConfig() throws Exception {
+  void testPostWithInvalidConfig() throws Exception {
     logger.info("=== Test PO creation fail if config is invalid ===");
 
     String body = getMockDraftOrder().toString();
@@ -1222,7 +1221,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
 
   @Test
-  public void testSubObjectCreationFailure() throws Exception {
+  void testSubObjectCreationFailure() throws Exception {
     logger.info("=== Test Details creation failure ===");
 
     String body = getMockDraftOrder().toString();
@@ -1238,7 +1237,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderById() throws Exception {
+  void testGetOrderById() throws IOException {
     logger.info("=== Test Get Order By Id ===");
 
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
@@ -1257,7 +1256,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderWithConvertedTotals() throws Exception {
+  void testGetOrderWithConvertedTotals() throws Exception {
     logger.info("=== Test Get Order With Converted Totals ===");
 
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
@@ -1282,7 +1281,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderByIdWithPoLinesSorting() {
+  void testGetOrderByIdWithPoLinesSorting() {
     logger.info("=== Test Get Order By Id - PoLines sorting ===");
 
     String[] expectedPoLineNumbers = {"841240-001", "841240-02", "841240-3", "841240-21"};
@@ -1317,7 +1316,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderByIdWithPoLines() {
+  void testGetOrderByIdWithPoLines() {
     logger.info("=== Test Get Order By Id - PoLines with items ===");
 
     String[] expectedPoLineNumbers = {"841240-001", "841240-02", "841240-3", "841240-21"};
@@ -1331,7 +1330,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderByIdWithPoLinesWithInstanceId() {
+  void testGetOrderByIdWithPoLinesWithInstanceId() {
     logger.info("=== Test Get Order By Id - PoLines with items ===");
 
     String[] expectedPoLineNumbers = {"841240-001", "841240-02", "841240-3", "841240-21"};
@@ -1350,7 +1349,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetPOByIdTotalItemsWithoutPOLines() {
+  void testGetPOByIdTotalItemsWithoutPOLines() {
     logger.info("=== Test Get Order By Id without PO Line totalItems value is 0 ===");
 
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, ORDER_ID_WITHOUT_PO_LINES));
@@ -1363,7 +1362,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderByIdWithOnePoLine() {
+  void testGetOrderByIdWithOnePoLine() {
     logger.info("=== Test Get Order By Id - With one PO Line and empty source ===");
 
     String id = PO_ID_CLOSED_STATUS;
@@ -1380,7 +1379,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderByIdIncorrectIdFormat() {
+  void testGetOrderByIdIncorrectIdFormat() {
     logger.info("=== Test Get Order By Id - Incorrect Id format - 400 ===");
 
     String id = ID_BAD_FORMAT;
@@ -1394,7 +1393,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrderByIdNotFound() {
+  void testGetOrderByIdNotFound() {
     logger.info("=== Test Get Order By Id - Not Found ===");
 
     String id = ID_DOES_NOT_EXIST;
@@ -1407,7 +1406,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testDeleteById() throws Exception {
+  void testDeleteById() throws IOException {
     logger.info("=== Test Delete Order By Id ===");
 
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
@@ -1418,23 +1417,23 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testDeleteByIdNoOrderFound() {
+  void testDeleteByIdNoOrderFound() {
     logger.info("=== Test Delete Order By Id - Not Found ===");
     verifyDeleteResponse(COMPOSITE_ORDERS_PATH + "/" + ID_DOES_NOT_EXIST, "", 404);
   }
 
   @Test
-  public void testDeleteById500Error() {
+  void testDeleteById500Error() {
     logger.info("=== Test Delete Order By Id - Storage Internal Server Error ===");
-    Headers headers =  prepareHeaders(ERROR_ORDER_DELETE_TENANT_HEADER);
+    Headers headers = prepareHeaders(ERROR_ORDER_DELETE_TENANT_HEADER);
     verifyDeleteResponse(COMPOSITE_ORDERS_PATH + "/" + MIN_PO_ID, headers, APPLICATION_JSON, 500);
   }
 
   @Test
-  public void testDeleteByIdWhenDeletingPoLine500Error() {
+  void testDeleteByIdWhenDeletingPoLine500Error() {
     logger.info("=== Test Delete Order By Id - Storage Internal Server Error on PO Line deletion ===");
     CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder();
-    CompositePoLine line= getMinimalContentCompositePoLine(order.getId());
+    CompositePoLine line = getMinimalContentCompositePoLine(order.getId());
     line.setId(ID_FOR_INTERNAL_SERVER_ERROR);
     addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
     addMockEntry(PO_LINES, JsonObject.mapFrom(line));
@@ -1443,7 +1442,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdWorkflowStatusOpenForStorageAndCurrentRequest() throws Exception {
+  void testPutOrdersByIdWorkflowStatusOpenForStorageAndCurrentRequest() throws IOException {
     logger.info("=== Test Put Order By Id workflowStatus is Open from storage and workflowStatus is Open in current request  ===");
 
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
@@ -1481,7 +1480,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdateOrderWithDefaultStatus() throws Exception {
+  void testUpdateOrderWithDefaultStatus() throws IOException {
     logger.info("=== Test Put Order By Id - Make sure that default status is used ===");
 
     CompositePurchaseOrder reqData = new JsonObject(getMockData(MINIMAL_ORDER_PATH)).mapTo(CompositePurchaseOrder.class);
@@ -1511,7 +1510,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdWithIdMismatch() throws Exception {
+  void testPutOrdersByIdWithIdMismatch() throws IOException {
     logger.info("=== Test Put Order By Id with id mismatch  ===");
 
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
@@ -1523,7 +1522,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdatePoNumber() throws Exception {
+  void testUpdatePoNumber() throws IOException {
     logger.info("=== Test Put Order By Id without POLines, with new PO number  ===");
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("compositePurchaseOrders").getJsonObject(0).getString(ID);
@@ -1546,7 +1545,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdatePoNumberWithPoLines() throws Exception {
+  void testUpdatePoNumberWithPoLines() throws IOException {
     logger.info("=== Test Put Order By Id without POLines, with new PO number  ===");
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("compositePurchaseOrders").getJsonObject(0).getString(ID);
@@ -1566,7 +1565,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderWithoutPoNumberValidation() throws IOException {
+  void testPutOrderWithoutPoNumberValidation() throws IOException {
     logger.info("=== Test Put Order By Id without po number validation  ===");
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("compositePurchaseOrders").getJsonObject(0).getString(ID);
@@ -1578,7 +1577,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderFailsWithInvalidPONumber() throws Exception {
+  void testPutOrderFailsWithInvalidPONumber() throws Exception {
     logger.info("=== Test update order failure with Invalid PO Number===");
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("compositePurchaseOrders").getJsonObject(0).getString(ID);
@@ -1591,7 +1590,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderFailsWithExistingPONumber() throws Exception {
+  void testPutOrderFailsWithExistingPONumber() throws Exception {
     logger.info("=== Test update of order failure with Existing PO Number===");
 
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
@@ -1606,7 +1605,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPoUpdateWithOverLimitPOLines() throws Exception {
+  void testPoUpdateWithOverLimitPOLines() throws Exception {
     logger.info("=== Test PUT PO, with over limit lines quantity ===");
 
     String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID_PENDING_STATUS_WITHOUT_PO_LINES);
@@ -1621,7 +1620,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPoUpdateWithOverLimitPOLinesWithDefaultLimit() throws Exception {
+  void testPoUpdateWithOverLimitPOLinesWithDefaultLimit() throws Exception {
     logger.info("=== Test PUT PO, with over limit lines quantity with default limit ===");
 
     String url = String.format(COMPOSITE_ORDERS_BY_ID_PATH, PO_ID_PENDING_STATUS_WITHOUT_PO_LINES);
@@ -1636,7 +1635,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testOpenOrderWithDifferentPoLineCurrency() throws Exception {
+  void testOpenOrderWithDifferentPoLineCurrency() throws Exception {
     logger.info("=== Test to try open order with different poLine currency ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -1649,7 +1648,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testOpenOrderForInactiveExpenseClass() throws Exception {
+  void testOpenOrderForInactiveExpenseClass() throws Exception {
     logger.info("=== Test to try open order with inactive expense class ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -1666,7 +1665,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testOpenOrderWithExpenseClassNotFound() throws Exception {
+  void testOpenOrderWithExpenseClassNotFound() throws Exception {
     logger.info("=== Test to try open order with expense class not found ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -1684,7 +1683,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
 
   @Test
-  public void testPutOrdersByIdToChangeStatusToOpen() throws Exception {
+  void testPutOrdersByIdToChangeStatusToOpen() throws Exception {
     logger.info("=== Test Put Order By Id to change status of Order to Open ===");
 
     // Get Open Order
@@ -1717,7 +1716,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdToChangeStatusToOpenRestricted() throws Exception {
+  void testPutOrdersByIdToChangeStatusToOpenRestricted() throws Exception {
     logger.info("=== Test Put Order By Id to change status of Order to Open ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -1740,7 +1739,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdToOpenOrderWithLocationButCreateInventoryNoneForOneOfResources() {
+  void testPutOrdersByIdToOpenOrderWithLocationButCreateInventoryNoneForOneOfResources() {
     logger.info("=== Test Put Order By Id to open order - P/E Mix PO Line, location specified but create inventory is None for electronic resource ===");
 
     CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
@@ -1783,7 +1782,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdInstanceCreation() throws Exception {
+  void testPutOrdersByIdInstanceCreation() throws Exception {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
@@ -1803,7 +1802,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersWithPackagePolinesAndInstanceIdSpecified() throws Exception {
+  void testPutOrdersWithPackagePolinesAndInstanceIdSpecified() throws Exception {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
@@ -1833,7 +1832,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersWithOpenStatusAndCheckinItems() throws Exception {
+  void testPostOrdersWithOpenStatusAndCheckinItems() throws Exception {
     logger.info("=== Test POST Order By Id to change status of Order to Open - inventory interaction required only for first POL ===");
 
     // Get Open Order
@@ -1860,7 +1859,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOpenOrdersWithExtraLargeCost() throws Exception {
+  void testPostOpenOrdersWithExtraLargeCost() throws Exception {
     logger.info("=== Test POST Order By Id with extra large unit cost - error expected ===");
 
     // Get Open Order
@@ -1895,7 +1894,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersCreateInventoryPhysicalNone() throws Exception {
+  void testPostOrdersCreateInventoryPhysicalNone() throws Exception {
     logger.info("=== Test POST Order By Id to change status of Order to Open - inventory interaction not required for Physical Resource  ===");
 
     JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
@@ -1920,7 +1919,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersCreateInventoryElcetronicNone() throws Exception {
+  void testPostOrdersCreateInventoryElcetronicNone() throws Exception {
     logger.info("=== Test POST Order By Id to change status of Order to Open - inventory interaction not required for Electronic Resource  ===");
 
     JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
@@ -1953,7 +1952,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersCreateInventoryInstance() throws Exception {
+  void testPostOrdersCreateInventoryInstance() throws Exception {
     JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
     // Get Open Order
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
@@ -1975,7 +1974,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersCreateInventoryInstanceHolding() throws Exception {
+  void testPostOrdersCreateInventoryInstanceHolding() throws Exception {
     JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
     // Get Open Order
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
@@ -1995,7 +1994,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersCreateInventoryInstanceHoldingItem() throws Exception {
+  void testPostOrdersCreateInventoryInstanceHoldingItem() throws Exception {
     JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
     // Get Open Order
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
@@ -2016,7 +2015,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersWithEmptyCreateInventory() throws Exception {
+  void testPostOrdersWithEmptyCreateInventory() throws Exception {
     JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
     // Get Open Order
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
@@ -2040,7 +2039,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersWithEmptyCreateInventoryAndEmptyConfiguration() throws Exception {
+  void testPostOrdersWithEmptyCreateInventoryAndEmptyConfiguration() throws Exception {
     JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
     // Get Open Order
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
@@ -2066,7 +2065,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdToChangeStatusToOpenWithCheckinItems() throws Exception {
+  void testPutOrdersByIdToChangeStatusToOpenWithCheckinItems() throws Exception {
     logger.info("=== Test Put Order By Id to change status of Order to Open ===");
 
     // Get Open Order
@@ -2091,7 +2090,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testEncumbranceTagInheritance() throws Exception {
+  void testEncumbranceTagInheritance() throws Exception {
     logger.info("=== Test encumbrance tag inheritance upon order opening ===");
 
     JsonObject order = new JsonObject(getMockData(PO_FOR_TAGS_INHERITANCE_TEST));
@@ -2105,7 +2104,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdToChangeStatusToOpenWithEmptyPoLines() throws Exception {
+  void testPutOrdersByIdToChangeStatusToOpenWithEmptyPoLines() throws Exception {
     logger.info("=== Test Put (WithEmptyPoLines) Order By Id to change status of Order to Open ===");
 
     // Get Open Order
@@ -2139,7 +2138,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdateOrderToOpenWithPartialItemsCreation() throws Exception {
+  void testUpdateOrderToOpenWithPartialItemsCreation() throws Exception {
     logger.info("=== Test Order update to Open status - Inventory items expected to be created partially ===");
 
     // One item for each location will be found
@@ -2177,7 +2176,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
 
   @Test
-  public void testPutOrdersByIdToChangeStatusToOpenButWithFailureFromStorage() throws Exception {
+  void testPutOrdersByIdToChangeStatusToOpenButWithFailureFromStorage() throws Exception {
     logger.info("=== Test Put Order By Id to change status of Order to Open - Storage errors expected and no interaction with Inventory===");
 
     CompositePurchaseOrder reqData = new JsonObject(getMockData(ORDER_FOR_FAILURE_CASE_MOCK_DATA_PATH)).mapTo(CompositePurchaseOrder.class);
@@ -2198,7 +2197,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdToChangeStatusToOpenButWithErrorCreatingItemsForSecondPOL() throws Exception {
+  void testPutOrdersByIdToChangeStatusToOpenButWithErrorCreatingItemsForSecondPOL() throws Exception {
     logger.info("=== Test Put Order By Id to change Order's status to Open - Inventory errors expected on items creation for second POL ===");
 
     /*==============  Preparation ==============*/
@@ -2257,21 +2256,19 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     // Effectively remove non-processed locations with ID_FOR_INTERNAL_SERVER_ERROR to exclude them from
     // created pieces verification
-    reqData.getCompositePoLines().forEach(poLine -> {
-      poLine.getLocations().removeIf(l -> {
-        if (l.getLocationId().equals(ID_FOR_INTERNAL_SERVER_ERROR)) {
-          if (poLine.getCost().getQuantityElectronic() != null) {
-            poLine.getCost().setQuantityElectronic(poLine.getCost().getQuantityElectronic() - l.getQuantityElectronic());
-          }
-          if (poLine.getCost().getQuantityPhysical() != null) {
-            poLine.getCost().setQuantityPhysical(poLine.getCost().getQuantityPhysical() - l.getQuantityPhysical());
-          }
-          return true;
-        } else {
-          return false;
+    reqData.getCompositePoLines().forEach(poLine -> poLine.getLocations().removeIf(l -> {
+      if (l.getLocationId().equals(ID_FOR_INTERNAL_SERVER_ERROR)) {
+        if (poLine.getCost().getQuantityElectronic() != null) {
+          poLine.getCost().setQuantityElectronic(poLine.getCost().getQuantityElectronic() - l.getQuantityElectronic());
         }
-      });
-    });
+        if (poLine.getCost().getQuantityPhysical() != null) {
+          poLine.getCost().setQuantityPhysical(poLine.getCost().getQuantityPhysical() - l.getQuantityPhysical());
+        }
+        return true;
+      } else {
+        return false;
+      }
+    }));
 
     verifyPiecesCreated(items, reqData.getCompositePoLines(), createdPieces);
   }
@@ -2292,7 +2289,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderByIdWithPoLinesInRequestAndNoPoLinesInStorage() throws Exception {
+  void testPutOrderByIdWithPoLinesInRequestAndNoPoLinesInStorage() throws Exception {
     logger.info("=== Test Put Order By Id with PO lines and without PO lines in order from storage ===");
 
     JsonObject reqData = getMockDraftOrder();
@@ -2308,7 +2305,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderByIdWithoutPoLinesInRequestDoesNotDeletePoLinesFromStorage() throws IOException {
+  void testPutOrderByIdWithoutPoLinesInRequestDoesNotDeletePoLinesFromStorage() throws IOException {
     logger.info("=== Test Put Order By Id without PO lines doesn't delete lines from storage ===");
 
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
@@ -2323,7 +2320,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderByIdWith404InvalidId() {
+  void testPutOrderByIdWith404InvalidId() {
     logger.info("=== Test Put Order By Id for 404 with Invalid Id or Order not found ===");
 
     JsonObject reqData = getMockAsJson(LISTED_PRINT_SERIAL_PATH);
@@ -2331,7 +2328,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderByIdWithInvalidOrderIdInBody() {
+  void testPutOrderByIdWithInvalidOrderIdInBody() {
     logger.info("=== Test Put Order By Id for 422 with Invalid Id in the Order ===");
 
     CompositePurchaseOrder reqData = getMockAsJson(LISTED_PRINT_SERIAL_PATH).mapTo(CompositePurchaseOrder.class);
@@ -2345,7 +2342,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderByIdWithInvalidOrderIdInPol() {
+  void testPutOrderByIdWithInvalidOrderIdInPol() {
     logger.info("=== Test Put Order By Id for 422 with invalid purchase order Id in the POL ===");
 
     CompositePurchaseOrder reqData = getMockAsJson(LISTED_PRINT_SERIAL_PATH).mapTo(CompositePurchaseOrder.class);
@@ -2362,14 +2359,14 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderInOpenStatusAddingNewLine() {
+  void testPutOrderInOpenStatusAddingNewLine() {
     logger.info("=== Test update Open order - add new line ===");
 
     validateUpdateRejectedForNonPendingOrder(PO_ID_OPEN_STATUS, ORDER_OPEN.getCode());
   }
 
   @Test
-  public void testPutOrderInClosedStatusAddingNewLine() {
+  void testPutOrderInClosedStatusAddingNewLine() {
     logger.info("=== Test update Closed order - add new line ===");
 
     validateUpdateRejectedForNonPendingOrder(PO_ID_CLOSED_STATUS, ORDER_CLOSED.getCode());
@@ -2390,7 +2387,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testValidationOnPost() throws IOException {
+  void testValidationOnPost() throws IOException {
     logger.info("=== Test validation Annotation on POST API ===");
 
     logger.info("=== Test validation with no body ===");
@@ -2401,12 +2398,12 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
     logger.info("=== Test validation on invalid lang query parameter ===");
 
-    verifyPostResponse(COMPOSITE_ORDERS_PATH +INVALID_LANG, getMockData(MINIMAL_ORDER_PATH), headers, TEXT_PLAIN, 400);
+    verifyPostResponse(COMPOSITE_ORDERS_PATH + INVALID_LANG, getMockData(MINIMAL_ORDER_PATH), headers, TEXT_PLAIN, 400);
 
   }
 
   @Test
-  public void testValidationOnGetById() {
+  void testValidationOnGetById() {
     logger.info("=== Test validation Annotation on GET ORDER BY ID API ===");
     String id = "non-existent-po-id";
 
@@ -2415,7 +2412,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testValidationDelete() {
+  void testValidationDelete() {
     logger.info("=== Test validation Annotation on DELETE API ===");
 
     logger.info("=== Test validation on invalid lang query parameter ===");
@@ -2424,7 +2421,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testValidationOnPut() throws IOException {
+  void testValidationOnPut() throws IOException {
     logger.info("=== Test validation Annotation on PUT API ===");
     String id = "non-existent-po-id";
     logger.info("=== Test validation with no body ===");
@@ -2437,7 +2434,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersWithMissingVendorId() throws IOException {
+  void testPostOrdersWithMissingVendorId() throws IOException {
     logger.info("=== Test Post Order with missing Vendor Id ===");
 
     Errors resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, getMockData(ORDER_WITHOUT_VENDOR_ID),
@@ -2450,7 +2447,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
 
   @Test
-  public void testGetOrdersNoParameters() {
+  void testGetOrdersNoParameters() {
     logger.info("=== Test Get Orders - With empty query ===");
 
     addMockEntry(PURCHASE_ORDER, getMinimalContentCompositePurchaseOrder().withId(UUID.randomUUID().toString()));
@@ -2471,7 +2468,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrdersWithParameters() {
+  void testGetOrdersWithParameters() {
     logger.info("=== Test Get Orders - With empty query ===");
     String sortBy = " sortBy poNumber";
     String queryValue = "poNumber==" + EXISTING_PO_NUMBER;
@@ -2494,7 +2491,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrdersForUserAssignedToAcqUnits() {
+  void testGetOrdersForUserAssignedToAcqUnits() {
     logger.info("=== Test Get Orders by query - user assigned to acq units ===");
 
     Headers headers = prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID_WITH_ACQ_UNITS);
@@ -2519,7 +2516,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrdersBadQuery() {
+  void testGetOrdersBadQuery() {
     logger.info("=== Test Get Orders by query - unprocessable query to emulate 400 from storage ===");
 
     String endpointQuery = String.format("%s?query=%s", COMPOSITE_ORDERS_PATH, BAD_QUERY);
@@ -2529,7 +2526,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetOrdersInternalServerError() {
+  void testGetOrdersInternalServerError() {
     logger.info("=== Test Get Orders by query - emulating 500 from storage ===");
 
     String endpointQuery = String.format("%s?query=%s", COMPOSITE_ORDERS_PATH, ID_FOR_INTERNAL_SERVER_ERROR);
@@ -2539,7 +2536,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testCreatePoWithDifferentVendorStatus() throws Exception {
+  void testCreatePoWithDifferentVendorStatus() throws Exception {
 
     logger.info("=== Test POST PO with vendor's status ===");
 
@@ -2595,7 +2592,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersByIdToChangeStatusToOpenInactiveVendor() throws Exception {
+  void testPutOrdersByIdToChangeStatusToOpenInactiveVendor() throws Exception {
 
     logger.info("=== Test Put Order By Id to change status of Order to Open for different vendor's status ===");
 
@@ -2652,7 +2649,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderToChangeStatusToOpenVendorWithUnexpectedContent() throws Exception {
+  void testPutOrderToChangeStatusToOpenVendorWithUnexpectedContent() throws Exception {
 
     logger.info("=== Test Put Order to change status of Order to Open - vendor with unexpected content ===");
 
@@ -2690,7 +2687,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderToChangeStatusToOpenWithOrganizationNotVendor() throws Exception {
+  void testPutOrderToChangeStatusToOpenWithOrganizationNotVendor() throws Exception {
 
     logger.info("=== Test Put Order to change status of Order to Open - organization which is not vendor ===");
 
@@ -2712,7 +2709,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderToAutomaticallyChangeStatusFromOpenToClosed() {
+  void testPutOrderToAutomaticallyChangeStatusFromOpenToClosed() {
 
     logger.info("===  Test case when order status update is expected from Open to Closed ===");
 
@@ -2734,7 +2731,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrderToAutomaticallyChangeStatusFromOpenToClosed() {
+  void testPostOrderToAutomaticallyChangeStatusFromOpenToClosed() {
 
     logger.info("===  Test case when order status update is expected from Open to Closed ===");
 
@@ -2760,7 +2757,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrderToAutomaticallyChangeStatusFromOpenToClosedNoItemsFound() {
+  void testPostOrderToAutomaticallyChangeStatusFromOpenToClosedNoItemsFound() {
 
     logger.info("===  Test case when order status update is expected from Open to Closed no On order items in inventory ===");
 
@@ -2790,7 +2787,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderWithoutPoLinesToChangeStatusFromOpenToClosedItemsHaveToBeUpdate() {
+  void testPutOrderWithoutPoLinesToChangeStatusFromOpenToClosedItemsHaveToBeUpdate() {
     logger.info("===  Test case when order status updated from Open to Closed no PO Lines in payload - related items have to be updated ===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
@@ -2828,7 +2825,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderWithoutPoLinesToReOpenItemsHaveToBeUpdate() {
+  void testPutOrderWithoutPoLinesToReOpenItemsHaveToBeUpdate() {
     logger.info("===  Test case when order status updated from Closed to Open no PO Lines in payload - related items have to be updated ===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_CLOSED_STATUS).mapTo(CompositePurchaseOrder.class);
@@ -2866,7 +2863,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderToAutomaticallyChangeStatusFromClosedToOpen() {
+  void testPutOrderToAutomaticallyChangeStatusFromClosedToOpen() {
 
     logger.info("=== Test case when order status update is expected from Closed to Open ===");
 
@@ -2889,7 +2886,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdateOrderWithoutPoLineToWithClosedStatus() {
+  void testUpdateOrderWithoutPoLineToWithClosedStatus() {
     logger.info("===  Test Put Order to change status of Order from Pending to Closed without PO Lines - no items searches and updates ===");
 
     CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
@@ -2906,7 +2903,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdateNotRequiredForOpenOrder() {
+  void testUpdateNotRequiredForOpenOrder() {
     logger.info("=== Test case when no workflowStatus update is expected for Open order ===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS).mapTo(CompositePurchaseOrder.class);
@@ -2920,7 +2917,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testNoUpdatesForPendingOrderWithLines() {
+  void testNoUpdatesForPendingOrderWithLines() {
     logger.info("=== Test case when no order update is expected for Pending order with a few PO Lines ===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_PENDING_STATUS_WITH_PO_LINES).mapTo(CompositePurchaseOrder.class);
@@ -2937,7 +2934,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdateOrderWithProtectedFieldsChanging() {
+  void testUpdateOrderWithProtectedFieldsChanging() {
     logger.info("=== Test case when OPEN order errors if protected fields are changed ===");
 
     JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS);
@@ -2960,7 +2957,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
 
   @Test
-  public void testUpdateOrderCloseOrderWithCloseReason() {
+  void testUpdateOrderCloseOrderWithCloseReason() {
     logger.info("=== Test case: Able to Close Order with close Reason ===");
 
     JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS);
@@ -2976,7 +2973,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdateOrderCloseOrderWithCloseReasonAndFundDistribution() {
+  void testUpdateOrderCloseOrderWithCloseReasonAndFundDistribution() {
     logger.info("=== Test case: Able to Close Order with close Reason and fund distribution ===");
 
     JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_WFD_ID_OPEN_STATUS);
@@ -2992,7 +2989,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdateOrderWithLineProtectedFieldsChanging() {
+  void testUpdateOrderWithLineProtectedFieldsChanging() {
     logger.info("=== Test case when OPEN order errors if protected fields are changed in CompositePoLine===");
 
     JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS);
@@ -3010,7 +3007,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testUpdateOrderWithProtectedFieldsChangingForClosedOrder() {
+  void testUpdateOrderWithProtectedFieldsChangingForClosedOrder() {
     logger.info("=== Test case when closed order errors if protected fields are changed ===");
 
     JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_CLOSED_STATUS);
@@ -3034,7 +3031,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOpenOrderCacheKayMustBeTenantSpecific() throws Exception {
+  void testPostOpenOrderCacheKayMustBeTenantSpecific() throws Exception {
 
     MockServer.serverRqRs.clear();
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -3075,7 +3072,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testInventoryHelperCacheDoesNotKeepEmptyValuesWhenFails() throws Exception {
+  void testInventoryHelperCacheDoesNotKeepEmptyValuesWhenFails() throws Exception {
 
     MockServer.serverRqRs.clear();
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -3111,7 +3108,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testInventoryHelperCacheContainsDifferentValuesForInstanceTypeAndInstanceStatusWithSameCode() throws Exception {
+  void testInventoryHelperCacheContainsDifferentValuesForInstanceTypeAndInstanceStatusWithSameCode() throws Exception {
 
     MockServer.serverRqRs.clear();
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -3142,7 +3139,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testInventoryHelperEmptyInstanceTypeThrowsProperError() throws Exception {
+  void testInventoryHelperEmptyInstanceTypeThrowsProperError() throws Exception {
     Error err = verifyMissingInventoryEntryErrorHandling(NON_EXIST_INSTANCE_TYPE_TENANT_HEADER);
 
     assertThat(err.getCode(), equalTo(ErrorCodes.MISSING_INSTANCE_TYPE.getCode()));
@@ -3151,7 +3148,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testInventoryHelperEmptyContributors() throws Exception {
+  void testInventoryHelperEmptyContributors() throws Exception {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     MockServer.addMockTitles(reqData.getCompositePoLines());
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
@@ -3174,7 +3171,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
 
   @Test
-  public void testInventoryHelperMissingContributorNameTypeThrowsProperError() throws Exception {
+  void testInventoryHelperMissingContributorNameTypeThrowsProperError() throws Exception {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     MockServer.addMockTitles(reqData.getCompositePoLines());
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
@@ -3207,7 +3204,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testInventoryHelperEmptyLoanTypeThrowsProperError() throws Exception {
+  void testInventoryHelperEmptyLoanTypeThrowsProperError() throws Exception {
 
     Error err = verifyMissingInventoryEntryErrorHandling(NON_EXIST_LOAN_TYPE_TENANT_HEADER);
 
@@ -3217,7 +3214,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersWithInvalidIsbn() throws Exception {
+  void testPostOrdersWithInvalidIsbn() throws Exception {
     logger.info("=== Test Post Order with invalid ISBN ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -3241,7 +3238,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersToConvertToIsbn13() throws Exception {
+  void testPostOrdersToConvertToIsbn13() throws Exception {
     logger.info("=== Test Post order to verify ISBN 10 is normalized to ISBN 13 ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -3256,7 +3253,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersWithInvalidIsbn() throws Exception {
+  void testPutOrdersWithInvalidIsbn() throws Exception {
     logger.info("=== Test Put Order with invalid ISBN ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -3279,7 +3276,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrdersToConvertToIsbn13() throws Exception {
+  void testPutOrdersToConvertToIsbn13() throws Exception {
     logger.info("=== Test Put order to verify ISBN 10 is normalized to ISBN 13 ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -3296,7 +3293,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
 
   @Test
-  public void testPostOrderWithUserNotHavingApprovalPermissions() {
+  void testPostOrderWithUserNotHavingApprovalPermissions() {
     logger.info("===  Test case when approval is required and user does not have required permission===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
@@ -3315,7 +3312,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrderWithHonorUserUnopenPermissions() {
+  void testPostOrderWithHonorUserUnopenPermissions() {
     logger.info("===  Test case when unopen permission is required and user does not have required permission===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, "c1465131-ed35-4308-872c-d7cdf0afc5f7")
@@ -3335,7 +3332,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrderToFailOnNonApprovedOrder() {
+  void testPostOrderToFailOnNonApprovedOrder() {
     logger.info("===  Test case when approval is required to open order and order not approved ===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
@@ -3355,7 +3352,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrderToSetRequiredFieldsOnApproval() {
+  void testPostOrderToSetRequiredFieldsOnApproval() {
     logger.info("===  Test required Fields are set/not set based on approval required field===");
 
     // -- test config set to "isApprovalRequired":true, approval details are set when order is approved in PENDING state
@@ -3394,7 +3391,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
 
 
   @Test
-  public void testPostOrderApprovalNotRequired() {
+  void testPostOrderApprovalNotRequired() {
     logger.info("===  Test case when approval is not required to open order, and order not approved, set required Fields when opening Order ===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_BE_CLOSED).mapTo(CompositePurchaseOrder.class);
@@ -3411,7 +3408,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutOrderWithUserNotHavingApprovalPermissions() {
+  void testPutOrderWithUserNotHavingApprovalPermissions() {
     logger.info("=== Test PUT PO, with User not having Approval permission==");
 
     CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
@@ -3422,7 +3419,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersInventoryInteractionWithReceiptNotRequired() throws Exception {
+  void testPostOrdersInventoryInteractionWithReceiptNotRequired() throws Exception {
     logger.info("=== Test POST electronic PO, to create Instance and Holding even if receipt not required==");
 
     JsonObject order = new JsonObject(getMockData(ELECTRONIC_FOR_CREATE_INVENTORY_TEST));
@@ -3444,7 +3441,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersInventoryInteractionWithPackagePoLine() throws Exception {
+  void testPostOrdersInventoryInteractionWithPackagePoLine() throws Exception {
     logger.info("=== Test POST electronic PO, to no interaction with inventory if poLine.isPackage=true ==");
 
     JsonObject order = new JsonObject(getMockData(ELECTRONIC_FOR_CREATE_INVENTORY_TEST));
@@ -3464,7 +3461,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOrdersNoInventoryInteractionWithReceiptNotRequired() throws Exception {
+  void testPostOrdersNoInventoryInteractionWithReceiptNotRequired() throws Exception {
     logger.info("=== Test POST PO, to have no inventory Interaction, with CreateInventory None and receipt not required==");
 
     JsonObject order = new JsonObject(getMockData(MONOGRAPH_FOR_CREATE_INVENTORY_TEST));
@@ -3490,7 +3487,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostOpenOrderWithEncumbranceCreationError() throws Exception {
+  void testPostOpenOrderWithEncumbranceCreationError() throws Exception {
     logger.info("=== Test Placement of minimal order ===");
 
     MockServer.serverRqRs.clear();
@@ -3516,35 +3513,6 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(errorHeader, X_OKAPI_USER_ID), APPLICATION_JSON, 422);
 
-  }
-
-  @Test
-  public void testPostOpenOrderWithOnlyOneLinkedEncumbrance() throws Exception {
-    logger.info("=== Test Placement of minimal order ===");
-    MockServer.serverRqRs.clear();
-    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
-    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    reqData.getCompositePoLines()
-      .stream()
-      .flatMap(poline -> poline.getFundDistribution().stream()).forEach(fd -> fd.setEncumbrance(null));
-
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setFundId(FUND_ENCUMBRANCE_ERROR);
-    Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422).as(Errors.class);
-
-    assertEquals(BUDGET_IS_INACTIVE.getCode(), errors.getErrors().get(0).getCode());
-
-    List<PoLine> updatedPolines = MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT)
-      .stream()
-      .map(poline -> poline.mapTo(PoLine.class))
-      .collect(Collectors.toList());
-    // check size of update request (expected 2 of 3)
-    assertEquals(2, updatedPolines.size());
-    // check encumbrance id was populated
-    updatedPolines.stream()
-      .flatMap(poline -> poline.getFundDistribution().stream())
-      .filter(fd-> !fd.getFundId().equals(FUND_ENCUMBRANCE_ERROR))
-      .forEach(fd -> assertNotNull(fd.getEncumbrance()));
   }
 
   private void prepareOrderForPostRequest(CompositePurchaseOrder reqData) {
@@ -3621,7 +3589,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostShouldBeSuccessIfOrderInPendingStatusAndMaterialTypeIsAbsentInOrderLine() {
+  void testPostShouldBeSuccessIfOrderInPendingStatusAndMaterialTypeIsAbsentInOrderLine() {
     logger.info("===Test Post Successful test completion if material type is absent and Order in PENDING status ===");
     CompositePurchaseOrder reqData = getMockAsJson(ORDER_WITHOUT_MATERIAL_TYPE_JSON).mapTo(CompositePurchaseOrder.class);
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
@@ -3629,7 +3597,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostShouldFailedIfOrderIsNotInPendingStatusAndMaterialTypeIsAbsentInOrderLine() {
+  void testPostShouldFailedIfOrderIsNotInPendingStatusAndMaterialTypeIsAbsentInOrderLine() {
     logger.info("===Test Post Failed test completion if material type is absent and Order in OPEN status ===");
     CompositePurchaseOrder reqData = getMockAsJson(ORDER_WITHOUT_MATERIAL_TYPE_JSON).mapTo(CompositePurchaseOrder.class);
 
@@ -3643,7 +3611,7 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutShouldFailedIfOrderTransitFromPendingToOpenStatusAndMaterialTypeIsAbsentInOrderLine() {
+  void testPutShouldFailedIfOrderTransitFromPendingToOpenStatusAndMaterialTypeIsAbsentInOrderLine() {
     logger.info("===Test Success Post Failed test completion if material type is absent and Order in PENDING status");
     CompositePurchaseOrder reqData = getMockAsJson(ORDER_WITHOUT_MATERIAL_TYPE_JSON).mapTo(CompositePurchaseOrder.class);
     reqData.getCompositePoLines().forEach(poLine -> {
@@ -3701,12 +3669,10 @@ public class PurchaseOrdersApiTest extends ApiTestBase {
   }
 
   private void preparePiecesForCompositePo(CompositePurchaseOrder reqData) {
-    reqData.getCompositePoLines().forEach(poLine -> {
-      poLine.getLocations().forEach(location -> {
-        for (int i = 0; i < location.getQuantity(); i++) {
-          addMockEntry(PIECES, new Piece().withPoLineId(poLine.getId()).withLocationId(location.getLocationId()).withFormat(Piece.Format.OTHER).withReceivingStatus(Piece.ReceivingStatus.EXPECTED));
-        }
-      });
-    });
+    reqData.getCompositePoLines().forEach(poLine -> poLine.getLocations().forEach(location -> {
+      for (int i = 0; i < location.getQuantity(); i++) {
+        addMockEntry(PIECES, new Piece().withPoLineId(poLine.getId()).withLocationId(location.getLocationId()).withFormat(Piece.Format.OTHER).withReceivingStatus(Piece.ReceivingStatus.EXPECTED));
+      }
+    }));
   }
 }

@@ -179,14 +179,14 @@ public class HelperUtils {
     return handleGetRequest(endpoint, httpClient, okapiHeaders, logger);
   }
 
-	public static CompletableFuture<Void> deletePoLines(String orderId, String lang, HttpClientInterface httpClient,
+  public static CompletableFuture<Void> deletePoLines(String orderId, String lang, HttpClientInterface httpClient,
        Map<String, String> okapiHeaders, Logger logger) {
 
     return getPoLines(orderId, lang, httpClient, okapiHeaders, logger)
       .thenCompose(jsonObjects -> CompletableFuture.allOf(jsonObjects.stream()
         .map(line -> deletePoLine(line, httpClient, okapiHeaders, logger)).toArray(CompletableFuture[]::new)))
       .exceptionally(t -> {
-        logger.error("Exception deleting poLine data for order id={}: {}", orderId, t);
+        logger.error("Exception deleting poLine data for order id={}", orderId, t);
         throw new CompletionException(t.getCause());
       });
   }
@@ -243,7 +243,7 @@ public class HelperUtils {
         future.complete(line.mapTo(CompositePoLine.class));
       })
       .exceptionally(t -> {
-        logger.error("Exception resolving one or more poLine sub-object(s) on {} operation: {}", operation,t);
+        logger.error("Exception resolving one or more poLine sub-object(s) on {} operation", operation,t);
         future.completeExceptionally(t);
         return null;
       });
@@ -328,7 +328,7 @@ public class HelperUtils {
     try {
       return URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
     } catch (UnsupportedEncodingException e) {
-      logger.error("Error happened while attempting to encode {} : {}", query, e);
+      logger.error("Error happened while attempting to encode {}", query, e);
       throw new CompletionException(e);
     }
   }
@@ -959,7 +959,7 @@ public class HelperUtils {
     return handlePutRequest(resourceByIdPath(PO_LINES, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, okapiHeaders,
         logger).thenApply(v -> poLine.getId())
           .exceptionally(e -> {
-            logger.error("The PO Line '{}' cannot be updated with new receipt status : {}", poLine.getId(), e);
+            logger.error("The PO Line '{}' cannot be updated with new receipt status", poLine.getId(), e);
             return null;
           });
   }

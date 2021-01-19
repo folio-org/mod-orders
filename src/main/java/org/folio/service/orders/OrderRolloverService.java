@@ -30,7 +30,6 @@ import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
-import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
@@ -39,6 +38,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.service.finance.FundService;
+import org.folio.service.finance.TransactionService;
 import org.javamoney.moneta.Money;
 
 public class OrderRolloverService {
@@ -58,14 +58,14 @@ public class OrderRolloverService {
   private final FundService fundService;
   private final PurchaseOrderService purchaseOrderService;
   private final PurchaseOrderLineService purchaseOrderLineService;
-  private final RestClient transactionRestClient;
+  private final TransactionService transactionService;
 
   public OrderRolloverService(FundService fundService, PurchaseOrderService purchaseOrderService,
-                              PurchaseOrderLineService purchaseOrderLineService, RestClient transactionRestClient) {
+                              PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService) {
     this.fundService = fundService;
     this.purchaseOrderService = purchaseOrderService;
     this.purchaseOrderLineService = purchaseOrderLineService;
-    this.transactionRestClient = transactionRestClient;
+    this.transactionService = transactionService;
   }
 
   public CompletableFuture<Void> rollover(LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
@@ -131,17 +131,15 @@ public class OrderRolloverService {
 
   private CompletableFuture<List<PoLine>> rolloverPoLinesChunk(List<String> orderIds, LedgerFiscalYearRollover ledgerFYRollover,
                                                                                  RequestContext requestContext) {
-    CompletableFuture<List<PoLine>> poLinesFuture = getPoLinesByOrderIds(orderIds, requestContext);
-    CompletableFuture<List<Transaction>> encumbrancesFuture = getEncumbrancesForRollover(orderIds, ledgerFYRollover, requestContext);
 
-    return CompletableFuture.allOf(poLinesFuture, encumbrancesFuture)
-      .thenApply(v -> poLinesFuture.join())
-      .thenApply(poLines -> buildPoLineEncumbrancesHolders(poLines, encumbrancesFuture.join()))
-      .thenApply(this::applyPoLinesRolloverChanges)
-      .exceptionally(t -> {
-        logger.error(ErrorCodes.ROLLOVER_PO_LINES_ERROR.getDescription());
-        throw new CompletionException(new HttpException(500, ErrorCodes.ROLLOVER_PO_LINES_ERROR));
-      });
+    return getPoLinesByOrderIds(orderIds, requestContext)
+            .thenCompose(poLines -> getEncumbrancesForRollover(orderIds, ledgerFYRollover, requestContext)
+              .thenApply(transactions -> buildPoLineEncumbrancesHolders(poLines, transactions))
+              .thenApply(this::applyPoLinesRolloverChanges))
+            .exceptionally(t -> {
+              logger.error(ErrorCodes.ROLLOVER_PO_LINES_ERROR.getDescription());
+              throw new CompletionException(new HttpException(500, ErrorCodes.ROLLOVER_PO_LINES_ERROR));
+            });
   }
 
   private List<PoLine> applyPoLinesRolloverChanges(List<PoLineEncumbrancesHolder> poLineEncumbrancesHolders) {
@@ -214,7 +212,7 @@ public class OrderRolloverService {
   private CompletableFuture<List<Transaction>> getEncumbrancesForRollover(List<String> orderIds, LedgerFiscalYearRollover ledgerFYRollover,
                                                                           RequestContext requestContext) {
     String query = buildQueryEncumbrancesForRollover(orderIds, ledgerFYRollover);
-    return transactionRestClient.get(query, 0, Integer.MAX_VALUE, requestContext, TransactionCollection.class)
+    return transactionService.getTransactionsByPoLinesIds(query, 0, Integer.MAX_VALUE, requestContext)
                                 .thenApply(TransactionCollection::getTransactions);
   }
 

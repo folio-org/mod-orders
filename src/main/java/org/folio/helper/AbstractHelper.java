@@ -6,17 +6,10 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static javax.ws.rs.core.Response.Status.CREATED;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
-import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
-import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
-import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
-import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.HelperUtils.LANG;
-import static org.folio.orders.utils.HelperUtils.SYSTEM_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.convertToJson;
 import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
-import static org.folio.orders.utils.ResourcePathResolver.CONFIGURATION_ENTRIES;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 
@@ -27,17 +20,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import javax.ws.rs.core.Response;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -45,6 +35,8 @@ import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.spring.SpringContextUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -76,9 +68,10 @@ public abstract class AbstractHelper {
   protected Map<String, String> okapiHeaders;
   protected final Context ctx;
   protected final String lang;
-  private JsonObject tenantConfiguration;
 
-  private final ConfigurationEntriesService configurationEntriesService;
+
+  @Autowired
+  private ConfigurationEntriesService configurationEntriesService;
 
   protected AbstractHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     setDefaultHeaders(httpClient);
@@ -86,7 +79,7 @@ public abstract class AbstractHelper {
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
     this.lang = lang;
-    this.configurationEntriesService = new ConfigurationEntriesService(new RestClient(resourcesPath(CONFIGURATION_ENTRIES)));
+    SpringContextUtil.autowireDependencies(this, ctx);
   }
 
   protected AbstractHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -94,7 +87,7 @@ public abstract class AbstractHelper {
     this.okapiHeaders = okapiHeaders;
     this.ctx = ctx;
     this.lang = lang;
-    this.configurationEntriesService = new ConfigurationEntriesService(new RestClient(resourcesPath(CONFIGURATION_ENTRIES)));
+    SpringContextUtil.autowireDependencies(this, ctx);
   }
 
   protected AbstractHelper(Context ctx) {
@@ -102,7 +95,6 @@ public abstract class AbstractHelper {
     this.okapiHeaders = null;
     this.lang = null;
     this.ctx = ctx;
-    this.configurationEntriesService = new ConfigurationEntriesService(new RestClient(resourcesPath(CONFIGURATION_ENTRIES)));
   }
 
   public static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders, boolean setDefaultHeaders) {
@@ -165,6 +157,11 @@ public abstract class AbstractHelper {
 
   protected void addProcessingErrors(List<Error> errors) {
     processingErrors.getErrors().addAll(errors);
+  }
+
+
+  public RequestContext getRequestContext() {
+    return new RequestContext(ctx, okapiHeaders);
   }
 
   /**
@@ -323,18 +320,6 @@ public abstract class AbstractHelper {
     }
   }
 
-  public CompletableFuture<JsonObject> getTenantConfiguration(String moduleConfig) {
-    if (this.tenantConfiguration != null) {
-      return CompletableFuture.completedFuture(this.tenantConfiguration);
-    } else {
-      return configurationEntriesService.loadConfiguration(moduleConfig, new RequestContext(ctx, okapiHeaders))
-        .thenApply(config -> {
-          this.tenantConfiguration = config;
-          return config;
-        });
-    }
-  }
-
   protected void sendEvent(MessageAddress messageAddress, JsonObject data) {
     DeliveryOptions deliveryOptions = new DeliveryOptions();
 
@@ -355,33 +340,5 @@ public abstract class AbstractHelper {
       .send(messageAddress.address, data, deliveryOptions);
   }
 
-  protected CompletableFuture<String> getSystemCurrency() {
-    CompletableFuture<String> future = new CompletableFuture<>();
-    getTenantConfiguration(SYSTEM_CONFIG_MODULE_NAME).thenApply(config -> {
-      String localeSettings = config.getString(LOCALE_SETTINGS);
-      String systemCurrency;
-      if (StringUtils.isEmpty(localeSettings)) {
-        systemCurrency = CURRENCY_USD;
-      } else {
-        systemCurrency = new JsonObject(config.getString(LOCALE_SETTINGS)).getString("currency", "USD");
-      }
-      return future.complete(systemCurrency);
-    })
-      .exceptionally(future::completeExceptionally);
-    return future;
-  }
 
-  protected void checkCustomTransactionError(Throwable fail) {
-    if (fail.getCause().getMessage().contains(BUDGET_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
-      throw new CompletionException(new HttpException(422, BUDGET_NOT_FOUND_FOR_TRANSACTION));
-    } else if (fail.getCause().getMessage().contains(LEDGER_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
-      throw new CompletionException(new HttpException(422, LEDGER_NOT_FOUND_FOR_TRANSACTION));
-    } else if (fail.getCause().getMessage().contains(BUDGET_IS_INACTIVE.getDescription())) {
-      throw new CompletionException(new HttpException(422, BUDGET_IS_INACTIVE));
-    } else if (fail.getCause().getMessage().contains(FUND_CANNOT_BE_PAID.getDescription())) {
-      throw new CompletionException(new HttpException(422, FUND_CANNOT_BE_PAID));
-    } else {
-      throw new CompletionException(fail.getCause());
-    }
-  }
 }

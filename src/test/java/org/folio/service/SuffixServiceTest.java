@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -21,20 +20,18 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import org.folio.dao.PurchaseOrderDAO;
-import org.folio.dao.SuffixDAO;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.core.RestClient;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Suffix;
 import org.folio.rest.jaxrs.model.SuffixCollection;
+import org.folio.service.orders.PurchaseOrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-
-import io.vertx.core.impl.EventLoopContext;
 
 public class SuffixServiceTest {
 
@@ -42,16 +39,16 @@ public class SuffixServiceTest {
   private SuffixService suffixService;
 
   @Mock
-  private SuffixDAO suffixDAO;
+  private RestClient restClient;
 
   @Mock
-  private PurchaseOrderDAO purchaseOrderDAO;
+  private PurchaseOrderService purchaseOrderService;
 
   @Mock
   private Map<String, String> okapiHeadersMock;
 
   @Mock
-  private EventLoopContext ctxMock;
+  private RequestContext requestContext;
 
 
   @BeforeEach
@@ -60,111 +57,111 @@ public class SuffixServiceTest {
   }
 
   @Test
-  public void testDeleteSuffixFailedIfSuffixUsedByOrder() {
+  void testDeleteSuffixFailedIfSuffixUsedByOrder() {
     //given
-    when(suffixDAO.getById(Mockito.anyString(), any(), anyMap()))
+    when(restClient.get(any(), any(), any()))
       .thenReturn(CompletableFuture.completedFuture(new Suffix().withName("test")));
-    when(suffixDAO.delete(anyString(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(null));
-    when(purchaseOrderDAO.get(anyString(), anyInt(), anyInt(), any(), anyMap()))
+    when(restClient.delete(any(), any())).thenReturn(CompletableFuture.completedFuture(null));
+    when(purchaseOrderService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any()))
       .thenReturn(CompletableFuture.completedFuture(new PurchaseOrderCollection().withTotalRecords(1)));
 
     String id = UUID.randomUUID().toString();
-    CompletableFuture<Void> result = suffixService.deleteSuffix(id, ctxMock, okapiHeadersMock);
+    CompletableFuture<Void> result = suffixService.deleteSuffix(id, requestContext);
     CompletionException expectedException = assertThrows(CompletionException.class, result::join);
 
     HttpException httpException = (HttpException) expectedException.getCause();
     assertEquals(400, httpException.getCode());
     assertEquals(SUFFIX_IS_USED.toError(), httpException.getError());
 
-    verify(suffixDAO).getById(eq(id), any(), anyMap());
-    verify(suffixDAO, never()).delete(eq(id), any(), anyMap());
-    verify(purchaseOrderDAO).get(eq("poNumberSuffix==test"), eq(0), eq(0), any(), anyMap());
+    verify(restClient).get(any(), any(), any());
+    verify(restClient, never()).delete(any(), any());
+    verify(purchaseOrderService).getPurchaseOrders(eq("poNumberSuffix==test"), eq(0), eq(0), any());
   }
 
   @Test
-  public void testDeleteSuffixSuccessIfNotUsed() {
+  void testDeleteSuffixSuccessIfNotUsed() {
     //given
-    when(suffixDAO.getById(anyString(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(new Suffix().withName("test")));
-    when(suffixDAO.delete(anyString(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(null));
-    when(purchaseOrderDAO.get(anyString(), anyInt(), anyInt(), any(), anyMap()))
+    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(new Suffix().withName("test")));
+    when(restClient.delete(any(), any())).thenReturn(CompletableFuture.completedFuture(null));
+    when(purchaseOrderService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any()))
       .thenReturn(CompletableFuture.completedFuture(new PurchaseOrderCollection().withTotalRecords(0)));
 
     String id = UUID.randomUUID().toString();
-    CompletableFuture<Void> result = suffixService.deleteSuffix(id, ctxMock, okapiHeadersMock);
+    CompletableFuture<Void> result = suffixService.deleteSuffix(id, requestContext);
     assertFalse(result.isCompletedExceptionally());
     result.join();
 
-    verify(suffixDAO).getById(eq(id), any(), anyMap());
-    verify(suffixDAO).delete(eq(id), any(), anyMap());
-    verify(purchaseOrderDAO).get(eq("poNumberSuffix==test"), eq(0), eq(0), any(), anyMap());
+    verify(restClient).get(any(), any(), any());
+    verify(restClient).delete(any(), any());
+    verify(purchaseOrderService).getPurchaseOrders(eq("poNumberSuffix==test"), eq(0), eq(0), any());
   }
 
   @Test
-  public void testGetSuffixById() {
+  void testGetSuffixById() {
     Suffix suffix = new Suffix().withName("suf").withId(UUID.randomUUID().toString()).withDescription("Test suffix");
-    when(suffixDAO.getById(Mockito.anyString(), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(suffix));
+    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(suffix));
 
-    CompletableFuture<Suffix> result = suffixService.getSuffixById(suffix.getId(), ctxMock, okapiHeadersMock);
+    CompletableFuture<Suffix> result = suffixService.getSuffixById(suffix.getId(), requestContext);
     assertFalse(result.isCompletedExceptionally());
 
     Suffix resultSuffix = result.join();
     assertEquals(suffix, resultSuffix);
 
-    verify(suffixDAO).getById(eq(suffix.getId()), any(), anyMap());
+    verify(restClient).get(any(), any(), any());
   }
 
   @Test
-  public void testGetSuffixesByQuery() {
+  void testGetSuffixesByQuery() {
     String query = "name==suf";
     Suffix suffix = new Suffix().withName("suf").withId(UUID.randomUUID().toString()).withDescription("Test suffix");
     SuffixCollection suffixCollection = new SuffixCollection().withTotalRecords(1).withSuffixes(Collections.singletonList(suffix));
-    when(suffixDAO.get(eq(query), eq(1), eq(0), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(suffixCollection));
+    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(suffixCollection));
 
-    CompletableFuture<SuffixCollection> result = suffixService.getSuffixes(query, 1, 0, ctxMock, okapiHeadersMock);
+    CompletableFuture<SuffixCollection> result = suffixService.getSuffixes(query, 1, 0, requestContext);
     assertFalse(result.isCompletedExceptionally());
 
     SuffixCollection resultSuffixCollection = result.join();
 
     assertEquals(suffixCollection, resultSuffixCollection);
-    verify(suffixDAO).get(eq(query), eq(1), eq(0), any(), anyMap());
+    verify(restClient).get(any(), any(), any());
   }
 
   @Test
-  public void testUpdateSuffix() {
+  void testUpdateSuffix() {
     Suffix suffix = new Suffix().withId(UUID.randomUUID().toString())
       .withName("suff");
 
-    when(suffixDAO.update(eq(suffix.getId()), eq(suffix), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(null));
+    when(restClient.put(any(), eq(suffix), any())).thenReturn(CompletableFuture.completedFuture(null));
 
-    CompletableFuture<Void> result = suffixService.updateSuffix(suffix.getId(), suffix, ctxMock, okapiHeadersMock);
+    CompletableFuture<Void> result = suffixService.updateSuffix(suffix.getId(), suffix, requestContext);
     assertFalse(result.isCompletedExceptionally());
     result.join();
 
-    verify(suffixDAO).update(eq(suffix.getId()), eq(suffix), any(), anyMap());
+    verify(restClient).put(any(), eq(suffix), any());
   }
 
   @Test
-  public void testUpdateSuffixWithoutIdInBody() {
+  void testUpdateSuffixWithoutIdInBody() {
     Suffix suffix = new Suffix()
       .withName("suff");
 
     String id = UUID.randomUUID().toString();
-    when(suffixDAO.update(eq(id), eq(suffix), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(null));
+    when(restClient.put(any(), eq(suffix), any())).thenReturn(CompletableFuture.completedFuture(null));
 
-    CompletableFuture<Void> result = suffixService.updateSuffix(id, suffix, ctxMock, okapiHeadersMock);
+    CompletableFuture<Void> result = suffixService.updateSuffix(id, suffix, requestContext);
     assertFalse(result.isCompletedExceptionally());
     result.join();
 
     assertEquals(id, suffix.getId());
-    verify(suffixDAO).update(eq(id), eq(suffix), any(), anyMap());
+    verify(restClient).put(any(), eq(suffix), any());
   }
 
   @Test
-  public void testUpdateSuffixWithIdMismatchFails() {
+  void testUpdateSuffixWithIdMismatchFails() {
     Suffix suffix = new Suffix().withId(UUID.randomUUID().toString());
 
     CompletionException expectedException = assertThrows(CompletionException.class, () -> {
-      CompletableFuture<Void> result = suffixService.updateSuffix(UUID.randomUUID().toString(), suffix, ctxMock, okapiHeadersMock);
+      CompletableFuture<Void> result = suffixService.updateSuffix(UUID.randomUUID().toString(), suffix, requestContext);
       assertTrue(result.isCompletedExceptionally());
       result.join();
     });
@@ -174,17 +171,17 @@ public class SuffixServiceTest {
   }
 
   @Test
-  public void testCreateSuffix() {
+  void testCreateSuffix() {
     Suffix suffix = new Suffix().withName("suf").withId(UUID.randomUUID().toString()).withDescription("Test suffix");
 
-    when(suffixDAO.save(eq(suffix), any(), anyMap())).thenReturn(CompletableFuture.completedFuture(suffix));
+    when(restClient.post(any(), eq(suffix), any(), any())).thenReturn(CompletableFuture.completedFuture(suffix));
 
-    CompletableFuture<Suffix> result = suffixService.createSuffix(suffix, ctxMock, okapiHeadersMock);
+    CompletableFuture<Suffix> result = suffixService.createSuffix(suffix, requestContext);
     assertFalse(result.isCompletedExceptionally());
     Suffix resultSuffix = result.join();
     assertEquals(suffix, resultSuffix);
 
-    verify(suffixDAO).save(eq(suffix), any(), anyMap());
+    verify(restClient).post(any(), eq(suffix), any(), any());
 
 
   }

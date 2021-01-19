@@ -1,7 +1,20 @@
 package org.folio.helper;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.TestConfig.autowireDependencies;
+import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.clearVertxContext;
+import static org.folio.TestConfig.getFirstContextFromVertx;
+import static org.folio.TestConfig.getVertx;
+import static org.folio.TestConfig.initSpringContext;
+import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConfig.mockPort;
+import static org.folio.TestConstants.X_OKAPI_TOKEN;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,22 +25,37 @@ import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
-import org.folio.rest.impl.ApiTestBase;
+import io.vertx.core.Context;
+import org.folio.ApiTestSuite;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.rest.tools.client.HttpClientFactory;
+import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.exchange.ExchangeRateProviderResolver;
+import org.folio.service.finance.EncumbranceService;
+import org.folio.service.finance.EncumbranceWorkflowStrategyFactory;
+import org.folio.service.finance.ExpenseClassValidationService;
+import org.folio.service.orders.OrderReEncumberService;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -36,6 +64,8 @@ import org.mockito.MockitoAnnotations;
 
 import io.vertx.core.impl.EventLoopContext;
 import io.vertx.core.json.JsonObject;
+import org.mockito.Spy;
+import org.springframework.context.annotation.Bean;
 
 public class PiecesHelperTest {
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
@@ -54,38 +84,62 @@ public class PiecesHelperTest {
   private TitlesHelper titlesHelper;
   @Mock
   private Map<String, String> okapiHeadersMock;
-  @Mock
-  private EventLoopContext ctxMock;
+  @Spy
+  private Context ctxMock = getFirstContextFromVertx(getVertx());
+
+  private static boolean runningOnOwn;
 
   @BeforeEach
-  public void initMocks(){
+  void initMocks(){
     MockitoAnnotations.openMocks(this);
+    autowireDependencies(this);
+  }
+
+  @BeforeAll
+  public static void before() throws InterruptedException, ExecutionException, TimeoutException {
+    if (isVerticleNotDeployed()) {
+      ApiTestSuite.before();
+      runningOnOwn = true;
+    }
+    initSpringContext(PiecesHelperTest.ContextConfiguration.class);
+  }
+
+  @AfterAll
+  public static void after() {
+    clearVertxContext();
+    if (runningOnOwn) {
+      ApiTestSuite.after();
+    }
+  }
+
+  @AfterEach
+  void resetMocks() {
+    clearServiceInteractions();
   }
 
   @Test
-  public void testHoldingsRecordShouldBeCreated() throws ExecutionException, InterruptedException {
+  void testHoldingsRecordShouldBeCreated() throws ExecutionException, InterruptedException {
     //given
-    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
-    org.folio.rest.acq.model.Piece piece = ApiTestBase.getMockAsJson(PIECE_PATH,"pieceRecord")
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    org.folio.rest.acq.model.Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord")
                 .mapTo(org.folio.rest.acq.model.Piece.class);
-    Title title = ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
 
-    doReturn(completedFuture(HOLDING_ID))
-      .when(inventoryHelper).getOrCreateHoldingsRecord(anyString(), anyString());
+    when(inventoryHelper.getOrCreateHoldingsRecord(anyString(), anyString())).thenReturn(completedFuture(HOLDING_ID));
     //When
     CompletableFuture<String> result = piecesHelper.handleHoldingsRecord(line, piece.getLocationId(), title.getInstanceId());
     String actHoldingId = result.get();
     //Then
-    verify(inventoryHelper).getOrCreateHoldingsRecord(title.getInstanceId(), piece.getLocationId());
+    verify(inventoryHelper).getOrCreateHoldingsRecord(eq(title.getInstanceId()), eq(piece.getLocationId()));
     assertEquals(HOLDING_ID, actHoldingId);
   }
 
   @Test
-  public void testHoldingsItemShouldNotBeCreatedIfPOLIsNull() {
+  void testHoldingsItemShouldNotBeCreatedIfPOLIsNull() {
     //given
-    org.folio.rest.acq.model.Piece piece = ApiTestBase.getMockAsJson(PIECE_PATH,"pieceRecord")
+    org.folio.rest.acq.model.Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord")
       .mapTo(org.folio.rest.acq.model.Piece.class);
-    Title title = ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     //When
     CompletableFuture<String> result = piecesHelper.handleHoldingsRecord(null, piece.getLocationId(), title.getInstanceId());
     //Then
@@ -94,15 +148,15 @@ public class PiecesHelperTest {
 
 
   @Test
-  public void testHoldingsItemCreationShouldBeSkippedIfEresourceOrPhysicsIsAbsent() throws ExecutionException, InterruptedException {
+  void testHoldingsItemCreationShouldBeSkippedIfEresourceOrPhysicsIsAbsent() throws ExecutionException, InterruptedException {
     //given
-    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     line.setEresource(null);
     line.setPhysical(null);
 
-    org.folio.rest.acq.model.Piece piece = ApiTestBase.getMockAsJson(PIECE_PATH,"pieceRecord")
+    org.folio.rest.acq.model.Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord")
       .mapTo(org.folio.rest.acq.model.Piece.class);
-    Title title = ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
 
     doReturn(completedFuture(HOLDING_ID))
       .when(inventoryHelper).getOrCreateHoldingsRecord(anyString(), anyString());
@@ -117,9 +171,9 @@ public class PiecesHelperTest {
   }
 
   @Test
-  public void testShouldCreateInstanceIfInstanceIdIsNotProvided() throws ExecutionException, InterruptedException {
+  void testShouldCreateInstanceIfInstanceIdIsNotProvided() throws ExecutionException, InterruptedException {
     //given
-    Title title = ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     title.setInstanceId(null);
     PiecesHelper piecesHelper = mock(PiecesHelper.class, CALLS_REAL_METHODS);
     doReturn(completedFuture(UUID.randomUUID().toString())).when(piecesHelper).getInstanceRecord(any(Title.class));
@@ -130,9 +184,9 @@ public class PiecesHelperTest {
   }
 
   @Test
-  public void testShouldSkipCreationNewInstanceIfInstanceIdIsProvided() throws ExecutionException, InterruptedException {
+  void testShouldSkipCreationNewInstanceIfInstanceIdIsProvided() throws ExecutionException, InterruptedException {
     //given
-    Title title = ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     //When
     CompletableFuture<Title> result = piecesHelper.handleInstanceRecord(title);
     //Then
@@ -141,9 +195,9 @@ public class PiecesHelperTest {
   }
 
   @Test
-  public void testShouldCreateItemRecordForPhysical() throws ExecutionException, InterruptedException {
+  void testShouldCreateItemRecordForPhysical() throws ExecutionException, InterruptedException {
     //given
-    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
 
     String expItemId = UUID.randomUUID().toString();
     doReturn(completedFuture(Collections.singletonList(expItemId)))
@@ -158,9 +212,9 @@ public class PiecesHelperTest {
   }
 
   @Test
-  public void testShouldCreateItemRecordForEresources() throws ExecutionException, InterruptedException {
+  void testShouldCreateItemRecordForEresources() throws ExecutionException, InterruptedException {
     //given
-    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     Eresource eresource = new Eresource().withMaterialType(line.getPhysical().getMaterialType())
             .withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
     line.setPhysical(null);
@@ -179,9 +233,9 @@ public class PiecesHelperTest {
   }
 
   @Test
-  public void testShouldSkipCreationItemRecord() throws ExecutionException, InterruptedException {
+  void testShouldSkipCreationItemRecord() throws ExecutionException, InterruptedException {
     //given
-    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     line.setCheckinItems(true);
     //When
     CompletableFuture<String> result = piecesHelper.createItemRecord(line, HOLDING_ID);
@@ -191,10 +245,10 @@ public class PiecesHelperTest {
   }
 
   @Test
-  public void testShouldBuildInstanceWithFieldFromTitles() {
+  void testShouldBuildInstanceWithFieldFromTitles() {
     //given
-    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
-    Title title = spy(ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class));
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    Title title = spy(getMockAsJson(TILES_PATH,"title").mapTo(Title.class));
     title.setContributors(line.getContributors());
     title.setPublishedDate(line.getPublicationDate());
     title.setPublisher(line.getPublisher());
@@ -212,9 +266,9 @@ public class PiecesHelperTest {
   }
 
   @Test
-  public void testShouldBuildInstanceWithoutTitleFields() {
+  void testShouldBuildInstanceWithoutTitleFields() {
     //given
-    Title title = spy(ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class));
+    Title title = spy(getMockAsJson(TILES_PATH,"title").mapTo(Title.class));
     title.setContributors(null);
     title.setPublishedDate(null);
     title.setPublisher(null);
@@ -231,10 +285,10 @@ public class PiecesHelperTest {
   }
 
   @Test
-  public void testShouldBuildInstanceWithPublishedDateFromTitle() {
+  void testShouldBuildInstanceWithPublishedDateFromTitle() {
     //given
-    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
-    Title title = spy(ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class));
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    Title title = spy(getMockAsJson(TILES_PATH,"title").mapTo(Title.class));
     title.setContributors(line.getContributors());
     title.setPublishedDate(line.getPublicationDate());
     title.setPublisher(null);
@@ -252,10 +306,10 @@ public class PiecesHelperTest {
   }
 
   @Test
-  public void testShouldBuildInstanceWithPublisherFromTitle() {
+  void testShouldBuildInstanceWithPublisherFromTitle() {
     //given
-    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
-    Title title = spy(ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class));
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    Title title = spy(getMockAsJson(TILES_PATH,"title").mapTo(Title.class));
     title.setContributors(line.getContributors());
     title.setPublishedDate(null);
     title.setPublisher(line.getPublisher());
@@ -273,12 +327,12 @@ public class PiecesHelperTest {
   }
 
   @Test
-  public void testUpdateInventoryPositiveCaseIfPOLIsTitle() throws ExecutionException, InterruptedException {
+  void testUpdateInventoryPositiveCaseIfPOLIsTitle() throws ExecutionException, InterruptedException {
     //given
     PiecesHelper piecesHelper = spy(new PiecesHelper(okapiHeadersMock, ctxMock, "en"
       ,protectionHelper, inventoryHelper, titlesHelper));
-    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
-    Title title = ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     Piece piece = createPiece(line, title);
     doReturn(completedFuture(null))
       .when(inventoryHelper).updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId());
@@ -290,12 +344,12 @@ public class PiecesHelperTest {
   }
 
   @Test
-  public void testShouldCreateInstanceRecordIfProductIsEmpty() throws ExecutionException, InterruptedException {
+  void testShouldCreateInstanceRecordIfProductIsEmpty() throws ExecutionException, InterruptedException {
     //given
     PiecesHelper piecesHelper = spy(new PiecesHelper(okapiHeadersMock, ctxMock, "en"
       ,protectionHelper, inventoryHelper, titlesHelper));
 
-    Title title = ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     title.setProductIds(null);
     doReturn(completedFuture(UUID.randomUUID().toString())).when(piecesHelper).createInstanceRecord(any(Title.class));
     //When
@@ -305,12 +359,12 @@ public class PiecesHelperTest {
   }
 
   @Test
-  public void testShouldCreateInstanceRecordIfProductPresentAndInstancesNotFoundInDB() throws ExecutionException, InterruptedException {
+  void testShouldCreateInstanceRecordIfProductPresentAndInstancesNotFoundInDB() throws ExecutionException, InterruptedException {
     //given
     PiecesHelper piecesHelper = spy(new PiecesHelper(okapiHeadersMock, ctxMock, "en"
       ,protectionHelper, inventoryHelper, titlesHelper));
 
-    Title title = ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     doReturn(completedFuture(new JsonObject("{\"instances\" : []}"))).when(piecesHelper).searchInstancesByProducts(any(List.class));
     doReturn(completedFuture(UUID.randomUUID().toString())).when(piecesHelper).createInstanceRecord(any(Title.class));
     //When
@@ -320,13 +374,13 @@ public class PiecesHelperTest {
   }
 
   @Test
-  public void testUpdateInventoryPositiveCaseIfPOLIsPackage() throws ExecutionException, InterruptedException {
+  void testUpdateInventoryPositiveCaseIfPOLIsPackage() throws ExecutionException, InterruptedException {
     //given
     PiecesHelper piecesHelper = spy(new PiecesHelper(okapiHeadersMock, ctxMock, "en"
                     ,protectionHelper, inventoryHelper, titlesHelper));
-    CompositePoLine line = ApiTestBase.getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     line.setIsPackage(true);
-    Title title = ApiTestBase.getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     Piece piece = createPiece(line, title);
 
     doReturn(completedFuture(title)).when(titlesHelper).getTitle(piece.getTitleId());
@@ -349,7 +403,7 @@ public class PiecesHelperTest {
   }
 
   @Test
-  public void testUpdateInventoryNegativeCaseIfPOLIsNull() {
+  void testUpdateInventoryNegativeCaseIfPOLIsNull() {
     //given
     PiecesHelper piecesHelper = spy(new PiecesHelper(okapiHeadersMock, ctxMock, "en"
       ,protectionHelper, inventoryHelper, titlesHelper));
@@ -361,9 +415,9 @@ public class PiecesHelperTest {
 
 
   @Test
-  public void testShouldUpdatePieceByInvokingMethodWithJaxRsModelIfAcqModelProvided() {
+  void testShouldUpdatePieceByInvokingMethodWithJaxRsModelIfAcqModelProvided() {
     //given
-    org.folio.rest.acq.model.Piece piece = ApiTestBase.getMockAsJson(PIECE_PATH,"pieceRecord")
+    org.folio.rest.acq.model.Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord")
       .mapTo(org.folio.rest.acq.model.Piece.class);
     PiecesHelper piecesHelper = spy(new PiecesHelper(okapiHeadersMock, ctxMock, "en"
       ,protectionHelper, inventoryHelper, titlesHelper));
@@ -381,5 +435,13 @@ public class PiecesHelperTest {
       .withPoLineId(line.getId())
       .withLocationId(line.getLocations().get(0).getLocationId())
       .withFormat(Piece.Format.PHYSICAL);
+  }
+
+  private static class ContextConfiguration {
+
+    @Bean
+    public ConfigurationEntriesService configurationEntriesService() {
+      return mock(ConfigurationEntriesService.class);
+    }
   }
 }

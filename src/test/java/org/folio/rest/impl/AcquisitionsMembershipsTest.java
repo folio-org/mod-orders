@@ -2,6 +2,20 @@ package org.folio.rest.impl;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
+import static org.folio.RestTestUtils.prepareHeaders;
+import static org.folio.RestTestUtils.verifyDeleteResponse;
+import static org.folio.RestTestUtils.verifyGet;
+import static org.folio.RestTestUtils.verifyPostResponse;
+import static org.folio.RestTestUtils.verifyPut;
+import static org.folio.RestTestUtils.verifySuccessGet;
+import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.initSpringContext;
+import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConstants.BAD_QUERY;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
+import static org.folio.TestConstants.X_ECHO_STATUS;
+import static org.folio.TestUtils.getMockData;
 import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.rest.impl.MockServer.ACQUISITIONS_MEMBERSHIPS_COLLECTION;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -14,14 +28,21 @@ import static org.hamcrest.Matchers.notNullValue;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 import javax.ws.rs.core.HttpHeaders;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.ApiTestSuite;
+import org.folio.config.ApplicationConfig;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 import org.folio.rest.jaxrs.model.Errors;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import io.restassured.http.Header;
@@ -29,24 +50,47 @@ import io.restassured.http.Headers;
 import io.restassured.response.Response;
 import io.vertx.core.json.JsonObject;
 
-public class AcquisitionsMembershipsTest extends ApiTestBase {
+public class AcquisitionsMembershipsTest {
 
   private static final Logger logger = LogManager.getLogger();
 
   private static final String ACQ_UNITS_MEMBERSHIPS_ENDPOINT = "/acquisitions-units/memberships";
   public static final String USER_ID_ASSIGNED_TO_ACQ_UNITS = "480dba68-ee84-4b9c-a374-7e824fc49227";
 
+  private static boolean runningOnOwn;
+
+  @BeforeAll
+  static void before() throws InterruptedException, ExecutionException, TimeoutException {
+    if (isVerticleNotDeployed()) {
+      ApiTestSuite.before();
+      runningOnOwn = true;
+    }
+    initSpringContext(ApplicationConfig.class);
+  }
+
+  @AfterEach
+  void afterEach() {
+    clearServiceInteractions();
+  }
+
+  @AfterAll
+  static void after() {
+    if (runningOnOwn) {
+      ApiTestSuite.after();
+    }
+  }
+
   @Test
-  public void testGetAcqMembershipsNoQuery() throws IOException {
+  void testGetAcqMembershipsNoQuery() throws IOException {
     logger.info("=== Test GET acquisitions units - with empty query ===");
-    AcquisitionsUnitMembershipCollection expected = new JsonObject(ApiTestBase.getMockData(ACQUISITIONS_MEMBERSHIPS_COLLECTION)).mapTo(AcquisitionsUnitMembershipCollection.class);
+    AcquisitionsUnitMembershipCollection expected = new JsonObject(getMockData(ACQUISITIONS_MEMBERSHIPS_COLLECTION)).mapTo(AcquisitionsUnitMembershipCollection.class);
     final AcquisitionsUnitMembershipCollection memberships = verifySuccessGet(ACQ_UNITS_MEMBERSHIPS_ENDPOINT, AcquisitionsUnitMembershipCollection.class);
     assertThat(expected.getAcquisitionsUnitMemberships(), hasSize(expected.getTotalRecords()));
     assertThat(memberships.getAcquisitionsUnitMemberships(), hasSize(expected.getTotalRecords()));
   }
 
   @Test
-  public void testGetAcqUnitsMembershipsWithQuery() {
+  void testGetAcqUnitsMembershipsWithQuery() {
     logger.info("=== Test GET acquisitions units memberships - search by query ===");
     String url = ACQ_UNITS_MEMBERSHIPS_ENDPOINT + "?query=userId==" + USER_ID_ASSIGNED_TO_ACQ_UNITS;
 
@@ -55,7 +99,7 @@ public class AcquisitionsMembershipsTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetAcqUnitsMembershipsWithUnprocessableQuery() {
+  void testGetAcqUnitsMembershipsWithUnprocessableQuery() {
     logger.info("=== Test GET acquisitions units memberships - unprocessable query ===");
     String url = ACQ_UNITS_MEMBERSHIPS_ENDPOINT + "?query=" + BAD_QUERY;
 
@@ -63,7 +107,7 @@ public class AcquisitionsMembershipsTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetAcqUnitsMembershipSuccess() {
+  void testGetAcqUnitsMembershipSuccess() {
     logger.info("=== Test GET acquisitions units membership - success case ===");
     String url = ACQ_UNITS_MEMBERSHIPS_ENDPOINT + "/567a6d67-460f-43ab-af28-8c730c9aa4da";
 
@@ -72,7 +116,7 @@ public class AcquisitionsMembershipsTest extends ApiTestBase {
   }
 
   @Test
-  public void testGetAcqUnitsMembershipNotFound() {
+  void testGetAcqUnitsMembershipNotFound() {
     logger.info("=== Test GET acquisitions units membership - not found ===");
     String url = ACQ_UNITS_MEMBERSHIPS_ENDPOINT + "/" + ID_DOES_NOT_EXIST;
 
@@ -80,7 +124,7 @@ public class AcquisitionsMembershipsTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutAcqUnitsMembershipSuccess() {
+  void testPutAcqUnitsMembershipSuccess() {
     logger.info("=== Test PUT acquisitions units membership - success case ===");
     String url = ACQ_UNITS_MEMBERSHIPS_ENDPOINT + "/0e9525aa-d123-4e4d-9f7e-1b302a97eb90";
 
@@ -88,7 +132,7 @@ public class AcquisitionsMembershipsTest extends ApiTestBase {
   }
 
   @Test
-  public void testValidationOnPutUnitsMembershipWithoutBody() {
+  void testValidationOnPutUnitsMembershipWithoutBody() {
     logger.info("=== Test validation on PUT acquisitions units membership with no body ===");
     String url = ACQ_UNITS_MEMBERSHIPS_ENDPOINT + "/" + UUID.randomUUID().toString();
 
@@ -96,7 +140,7 @@ public class AcquisitionsMembershipsTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutUnitsMembershipNotFound() {
+  void testPutUnitsMembershipNotFound() {
     logger.info("=== Test PUT acquisitions units membership - not found ===");
     String url = ACQ_UNITS_MEMBERSHIPS_ENDPOINT + "/" + ID_DOES_NOT_EXIST;
 
@@ -104,7 +148,7 @@ public class AcquisitionsMembershipsTest extends ApiTestBase {
   }
 
   @Test
-  public void testPutUnitsMembershipIdMismatch() {
+  void testPutUnitsMembershipIdMismatch() {
     logger.info("=== Test PUT acquisitions units membership - different ids in path and body ===");
     String url = ACQ_UNITS_MEMBERSHIPS_ENDPOINT + "/" + UUID.randomUUID().toString();
 
@@ -115,7 +159,7 @@ public class AcquisitionsMembershipsTest extends ApiTestBase {
   }
 
   @Test
-  public void testDeleteAcqUnitsMembershipSuccess() {
+  void testDeleteAcqUnitsMembershipSuccess() {
     logger.info("=== Test DELETE acquisitions units membership - success case ===");
     String url = ACQ_UNITS_MEMBERSHIPS_ENDPOINT + "/0e9525aa-d123-4e4d-9f7e-1b302a97eb90";
 
@@ -123,7 +167,7 @@ public class AcquisitionsMembershipsTest extends ApiTestBase {
   }
 
   @Test
-  public void testDeletePutUnitsMembershipNotFound() {
+  void testDeletePutUnitsMembershipNotFound() {
     logger.info("=== Test DELETE acquisitions units membership - not found ===");
     String url = ACQ_UNITS_MEMBERSHIPS_ENDPOINT + "/" + ID_DOES_NOT_EXIST;
 
@@ -131,7 +175,7 @@ public class AcquisitionsMembershipsTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostAcqUnitsMembershipSuccess() {
+  void testPostAcqUnitsMembershipSuccess() {
     logger.info("=== Test POST acquisitions unit - success case ===");
 
     String body = JsonObject.mapFrom(new AcquisitionsUnitMembership().withUserId(UUID.randomUUID().toString()).withAcquisitionsUnitId(UUID.randomUUID().toString())).encode();
@@ -145,7 +189,7 @@ public class AcquisitionsMembershipsTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostAcqUnitsMembershipServerError() {
+  void testPostAcqUnitsMembershipServerError() {
     logger.info("=== Test POST acquisitions unit - Server Error ===");
 
     String body = JsonObject.mapFrom(new AcquisitionsUnitMembership().withUserId(UUID.randomUUID().toString()).withAcquisitionsUnitId(UUID.randomUUID().toString())).encode();

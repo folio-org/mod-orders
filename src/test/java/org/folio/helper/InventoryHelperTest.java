@@ -2,7 +2,18 @@ package org.folio.helper;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
-import static org.folio.ApiTestSuite.mockPort;
+import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.getFirstContextFromVertx;
+import static org.folio.TestConfig.getVertx;
+import static org.folio.TestConfig.initSpringContext;
+import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConfig.mockPort;
+import static org.folio.TestConstants.ACTIVE_ACCESS_PROVIDER_B;
+import static org.folio.TestConstants.ID;
+import static org.folio.TestConstants.X_OKAPI_TOKEN;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.TestUtils.getMockData;
 import static org.folio.helper.InventoryHelper.ITEMS;
 import static org.folio.helper.InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.folio.rest.RestConstants.OKAPI_URL;
@@ -10,6 +21,7 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.impl.MockServer.ITEMS_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.PurchaseOrderLinesApiTest.COMP_PO_LINES_MOCK_DATA_PATH;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -31,12 +43,16 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
+import io.vertx.core.Vertx;
+import org.folio.ApiTestSuite;
+import org.folio.config.ApplicationConfig;
 import org.folio.models.PoLineUpdateHolder;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
-import org.folio.rest.impl.ApiTestBase;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
@@ -44,18 +60,18 @@ import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockitoAnnotations;
 
 import io.restassured.http.Header;
 import io.vertx.core.Context;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
-public class InventoryHelperTest extends ApiTestBase {
+public class InventoryHelperTest {
   public static final String TENANT_ID = "ordertest";
-  public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, TENANT_ID);
   public static final String HOLDING_INSTANCE_ID = "5294d737-a04b-4158-857a-3f3c555bcc60";
   public static final String OLD_LOCATION_ID = "758258bc-ecc1-41b8-abca-f7b610822fff";
   public static final String NEW_LOCATION_ID = "fcd64ce1-6995-48f0-840e-89ffa2288371";
@@ -68,24 +84,43 @@ public class InventoryHelperTest extends ApiTestBase {
   private Map<String, String> okapiHeadersMock;
   private HttpClientInterface httpClient;
 
+  private static boolean runningOnOwn;
 
+  @BeforeAll
+  static void before() throws InterruptedException, ExecutionException, TimeoutException {
+    if (isVerticleNotDeployed()) {
+      ApiTestSuite.before();
+      runningOnOwn = true;
+    }
+    initSpringContext(ApplicationConfig.class);
+  }
   @BeforeEach
-  public void initMocks(){
-    super.setUp();
-    ctxMock = Vertx.vertx().getOrCreateContext();
+  void beforeEach() {
+    ctxMock = getFirstContextFromVertx(getVertx());
     okapiHeadersMock = new HashMap<>();
     okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
     okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
-    httpClient = HttpClientFactory.getHttpClient(okapiURL, TENANT_ID);
-    MockitoAnnotations.openMocks(this);
+    httpClient = HttpClientFactory.getHttpClient(okapiURL, X_OKAPI_TENANT.getValue());
+  }
+
+  @AfterEach
+  void afterEach() {
+    clearServiceInteractions();
+  }
+
+  @AfterAll
+  static void after() {
+    if (runningOnOwn) {
+      ApiTestSuite.after();
+    }
   }
 
 
   @Test
-  public void testShouldUpdateAllItemOneByOneIfProvidedListNonEmpty() {
+  void testShouldUpdateAllItemOneByOneIfProvidedListNonEmpty() {
     //given
     InventoryHelper inventoryHelper = spy(new InventoryHelper(httpClient, okapiHeadersMock, ctxMock, "en"));
     doReturn(completedFuture(null)).when(inventoryHelper).updateItem(any());
@@ -100,7 +135,7 @@ public class InventoryHelperTest extends ApiTestBase {
   }
 
   @Test
-  public void testShouldNotUpdateItemIfProvidedListEmpty() {
+  void testShouldNotUpdateItemIfProvidedListEmpty() {
     //given
     InventoryHelper inventoryHelper = spy(new InventoryHelper(httpClient, okapiHeadersMock, ctxMock, "en"));
     doReturn(completedFuture(null)).when(inventoryHelper).updateItem(any());
@@ -111,7 +146,7 @@ public class InventoryHelperTest extends ApiTestBase {
   }
 
   @Test
-  public void testShouldDeleteAllItemOneByOneIfProvidedListNonEmpty() {
+  void testShouldDeleteAllItemOneByOneIfProvidedListNonEmpty() {
     //given
     InventoryHelper inventoryHelper = spy(new InventoryHelper(httpClient, okapiHeadersMock, ctxMock, "en"));
     doReturn(completedFuture(null)).when(inventoryHelper).deleteItem(any());
@@ -126,7 +161,7 @@ public class InventoryHelperTest extends ApiTestBase {
   }
 
   @Test
-  public void testShouldNotDeleteItemIfProvidedListEmpty() {
+  void testShouldNotDeleteItemIfProvidedListEmpty() {
     //given
     InventoryHelper inventoryHelper = spy(new InventoryHelper(httpClient, okapiHeadersMock, ctxMock, "en"));
     doReturn(completedFuture(null)).when(inventoryHelper).deleteItem(any());
@@ -137,7 +172,7 @@ public class InventoryHelperTest extends ApiTestBase {
   }
 
   @Test
-  public void testShouldUpdateHoldingsRecordIfOldAndNewLocationProvided() {
+  void testShouldUpdateHoldingsRecordIfOldAndNewLocationProvided() {
     //given
     InventoryHelper inventoryHelper = spy(new InventoryHelper(httpClient, okapiHeadersMock, ctxMock, "en"));
     doReturn(completedFuture(null)).when(inventoryHelper).deleteItem(any());
@@ -151,7 +186,7 @@ public class InventoryHelperTest extends ApiTestBase {
   }
 
   @Test
-  public void testShouldCreateNewHoldingsRecordIfOnlyOldLocationProvided() {
+  void testShouldCreateNewHoldingsRecordIfOnlyOldLocationProvided() {
     //given
     InventoryHelper inventoryHelper = spy(new InventoryHelper(httpClient, okapiHeadersMock, ctxMock, "en"));
     doReturn(completedFuture(null)).when(inventoryHelper).deleteItem(any());
@@ -166,7 +201,7 @@ public class InventoryHelperTest extends ApiTestBase {
   }
 
   @Test
-  public void testShouldThrowExceptionIfHoldingWithOldLocationIsNotExist() {
+  void testShouldThrowExceptionIfHoldingWithOldLocationIsNotExist() {
     //given
     InventoryHelper inventoryHelper = spy(new InventoryHelper(httpClient, okapiHeadersMock, ctxMock, "en"));
     doReturn(completedFuture(null)).when(inventoryHelper).deleteItem(any());
@@ -183,7 +218,7 @@ public class InventoryHelperTest extends ApiTestBase {
   }
 
   @Test
-  public void testShouldNotHandleItemRecordsIfCheckinItemsIsTrue() {
+  void testShouldNotHandleItemRecordsIfCheckinItemsIsTrue() {
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
     reqData.setId(poLineId);
@@ -204,7 +239,7 @@ public class InventoryHelperTest extends ApiTestBase {
   }
 
   @Test
-  public void testShouldNotUpdateHolderIfReturnMoreThen2Record() {
+  void testShouldNotUpdateHolderIfReturnMoreThen2Record() {
     //given
     InventoryHelper inventoryHelper = spy(new InventoryHelper(httpClient, okapiHeadersMock, ctxMock, "en"));
     doReturn(completedFuture(null)).when(inventoryHelper).deleteItem(any());
@@ -219,7 +254,7 @@ public class InventoryHelperTest extends ApiTestBase {
   }
 
   @Test
-  public void testHandleHoldingsAndItemsRecordsIsNotRequired() {
+  void testHandleHoldingsAndItemsRecordsIsNotRequired() {
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
     reqData.setId(poLineId);
@@ -243,7 +278,7 @@ public class InventoryHelperTest extends ApiTestBase {
 
 
   @Test
-  public void testShouldNotHandleItemRecordsIfCheckinItemsIsTrueInUpdatePoLIneTime() {
+  void testShouldNotHandleItemRecordsIfCheckinItemsIsTrueInUpdatePoLIneTime() {
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
     reqData.setId(poLineId);
@@ -269,7 +304,7 @@ public class InventoryHelperTest extends ApiTestBase {
   }
 
   @Test
-  public void testShouldHandleItemRecordsIfPhysycPresentInUpdatePoLineTime() throws IOException {
+  void testShouldHandleItemRecordsIfPhysycPresentInUpdatePoLineTime() throws IOException {
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c0d08448-347b-418a-8c2f-5fb50248d67e").mapTo(CompositePoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67d";
     String itemId = "86481a22-633e-4b97-8061-0dc5fdaaeabb";
@@ -294,7 +329,7 @@ public class InventoryHelperTest extends ApiTestBase {
     storagePoLineCom.getLocations().get(0).setQuantity(1);
     storagePoLineCom.getCost().setQuantityPhysical(1);
 
-    JsonObject items = new JsonObject(ApiTestBase.getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
+    JsonObject items = new JsonObject(getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
     List<JsonObject> needUpdateItems = items.getJsonArray(ITEMS).stream()
                                   .map(o -> ((JsonObject) o))
                                   .filter(item -> item.getString(ID).equals(itemId))
@@ -302,7 +337,7 @@ public class InventoryHelperTest extends ApiTestBase {
                                   .collect(toList());;
 
     String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", poLineId);
-    PieceCollection existedPieces = new JsonObject(ApiTestBase.getMockData(path)).mapTo(PieceCollection.class);
+    PieceCollection existedPieces = new JsonObject(getMockData(path)).mapTo(PieceCollection.class);
     existedPieces.getPieces().get(0).setItemId(itemId);
     existedPieces.getPieces().get(0).setFormat(Piece.PieceFormat.PHYSICAL);
     existedPieces.getPieces().get(0).setPoLineId(poLineId);
@@ -319,4 +354,5 @@ public class InventoryHelperTest extends ApiTestBase {
     assertEquals(itemId, pieces.get(0).getItemId());
     assertEquals(locationId, pieces.get(0).getLocationId());
   }
+
 }

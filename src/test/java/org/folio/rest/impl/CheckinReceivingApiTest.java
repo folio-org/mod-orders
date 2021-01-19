@@ -1,6 +1,18 @@
 package org.folio.rest.impl;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.RestTestUtils.prepareHeaders;
+import static org.folio.RestTestUtils.verifyPostResponse;
+import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.initSpringContext;
+import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.TestConstants.ORDERS_CHECKIN_ENDPOINT;
+import static org.folio.TestConstants.ORDERS_RECEIVING_ENDPOINT;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.TestUtils.getMockData;
+import static org.folio.orders.events.handlers.HandlersTestHelper.verifyCheckinOrderStatusUpdateEvent;
+import static org.folio.orders.events.handlers.HandlersTestHelper.verifyOrderStatusUpdateEvent;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.orders.utils.ErrorCodes.LOC_NOT_PROVIDED;
@@ -14,6 +26,10 @@ import static org.folio.orders.utils.HelperUtils.isHoldingUpdateRequiredForPhysi
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.TestUtils.getInstanceId;
+import static org.folio.TestUtils.getMinimalContentCompositePoLine;
+import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
+import static org.folio.TestUtils.getMinimalContentPiece;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
@@ -51,11 +67,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
+import org.folio.config.ApplicationConfig;
 import org.folio.helper.AbstractHelper;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.CheckInPiece;
@@ -75,11 +95,14 @@ import org.folio.rest.jaxrs.model.ReceivingItemResult;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
 
-public class CheckinReceivingApiTest extends ApiTestBase {
+public class CheckinReceivingApiTest {
 
   private static final Logger logger = LogManager.getLogger();
 
@@ -91,8 +114,31 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   private static final String ITEM_STATUS_NAME = "name";
   private static final String ITEM_STATUS = "status";
 
+  private static boolean runningOnOwn;
+
+  @BeforeAll
+  static void before() throws InterruptedException, ExecutionException, TimeoutException {
+    if (isVerticleNotDeployed()) {
+      ApiTestSuite.before();
+      runningOnOwn = true;
+    }
+    initSpringContext(ApplicationConfig.class);
+  }
+
+  @AfterEach
+  void afterEach() {
+    clearServiceInteractions();
+  }
+
+  @AfterAll
+  static void after() {
+    if (runningOnOwn) {
+      ApiTestSuite.after();
+    }
+  }
+
   @Test
-  public void testPostCheckInElectronicWithNoItems() {
+  void testPostCheckInElectronicWithNoItems() {
     logger.info("=== Test POST Checkin - CheckIn Electronic resource");
 
     CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(7).mapTo(CompositePoLine.class);
@@ -139,7 +185,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostCheckInPhysicalWithMissingItem() {
+  void testPostCheckInPhysicalWithMissingItem() {
     logger.info("=== Test POST Checkin - CheckIn physical resource with only one item updated");
 
     CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(7).mapTo(CompositePoLine.class);
@@ -198,7 +244,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostCheckinRevertPhysicalResource() {
+  void testPostCheckinRevertPhysicalResource() {
     logger.info("=== Test POST Check-in - Revert received Physical resource");
 
     CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(8).mapTo(CompositePoLine.class);
@@ -254,7 +300,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostCheckInLocationId() {
+  void testPostCheckInLocationId() {
    logger.info("=== Test POST Checkin - locationId checking ===");
 
     String poLineId = "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56";
@@ -322,7 +368,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostReceivingPhysicalAll() {
+  void testPostReceivingPhysicalAll() {
     logger.info("=== Test POST Receiving - Receive physical resources ===");
 
     CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(2).mapTo(CompositePoLine.class);
@@ -378,7 +424,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostCheckinElectronicPhysicalChangeLocationIdHoldingIsCreatedForPhysicalPiece() {
+  void testPostCheckinElectronicPhysicalChangeLocationIdHoldingIsCreatedForPhysicalPiece() {
 
     logger.info("=== Test POST check-in - Check-in physical and electronic resource with new locationId ===");
 
@@ -433,7 +479,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostReceivingElectronicPartially() {
+  void testPostReceivingElectronicPartially() {
     logger.info("=== Test POST Receiving - Receive partially electronic resources");
 
     CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(4).mapTo(CompositePoLine.class);
@@ -479,7 +525,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostReceivingPhysicalWithErrors() throws IOException {
+  void testPostReceivingPhysicalWithErrors() throws IOException {
     logger.info("=== Test POST Receiving - Receive physical resources with different errors");
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-physical-resources-6-of-10-with-errors.json").mapTo(ReceivingCollection.class);
@@ -540,7 +586,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
     Set<String> expectedHoldings = new HashSet<>();
 
     // get processed poline
-    PoLineCollection poLineCollection = new JsonObject(ApiTestBase.getMockData(POLINES_COLLECTION)).mapTo(PoLineCollection.class);
+    PoLineCollection poLineCollection = new JsonObject(getMockData(POLINES_COLLECTION)).mapTo(PoLineCollection.class);
     PoLine poline = poLineCollection.getPoLines()
       .stream()
       .filter(poLine -> poLine.getId()
@@ -551,7 +597,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
       .get();
 
     // get processed pieces for receiving
-    PieceCollection pieces = new JsonObject(ApiTestBase.getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecordsCollection.json"))
+    PieceCollection pieces = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecordsCollection.json"))
       .mapTo(PieceCollection.class);
 
     List<String> pieceIds = new ArrayList<>();
@@ -591,7 +637,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
 
 
   @Test
-  public void testPostReceivingWithErrorSearchingForPiece() {
+  void testPostReceivingWithErrorSearchingForPiece() {
     logger.info("=== Test POST Receiving - Receive resources with error searching for piece");
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-500-error-for-pieces-lookup.json").mapTo(ReceivingCollection.class);
@@ -626,7 +672,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostReceivingWithErrorSearchingForItem() {
+  void testPostReceivingWithErrorSearchingForItem() {
     logger.info("=== Test POST Receiving - Receive resources with error searching for item");
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-500-error-for-items-lookup.json").mapTo(ReceivingCollection.class);
@@ -665,7 +711,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostReceivingRevertMixedResources() {
+  void testPostReceivingRevertMixedResources() {
     logger.info("=== Test POST Receiving - Revert received P/E Mix resources");
 
     CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
@@ -720,7 +766,7 @@ public class CheckinReceivingApiTest extends ApiTestBase {
   }
 
   @Test
-  public void testPostReceivingRevertElectronicResource() {
+  void testPostReceivingRevertElectronicResource() {
     logger.info("=== Test POST Receiving - Revert received electronic resource");
 
     CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(6).mapTo(CompositePoLine.class);

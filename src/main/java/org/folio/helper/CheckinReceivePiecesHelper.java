@@ -562,7 +562,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
         // Calculate receipt status
         .thenCompose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, poLine, pieces))
         .exceptionally(e -> {
-          logger.error("The expected receipt status for PO Line '{}' cannot be calculated {}", poLine.getId(), e);
+          logger.error("The expected receipt status for PO Line '{}' cannot be calculated", poLine.getId(), e);
           return null;
       });
   }
@@ -582,7 +582,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   private CompletableFuture<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity, PoLine poLine,
       List<Piece> pieces) {
     // Fully Received:If receiving and there is no expected piece remaining
-    if (!poLine.getCheckinItems() && expectedPiecesQuantity == 0) {
+    if (!poLine.getCheckinItems().equals(Boolean.TRUE) && expectedPiecesQuantity == 0) {
       return CompletableFuture.completedFuture(FULLY_RECEIVED);
     }
     // Partially Received: In case there is at least one successfully received
