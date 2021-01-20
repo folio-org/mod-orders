@@ -42,6 +42,7 @@ import org.folio.models.PieceItemPair;
 import org.folio.models.PoLineUpdateHolder;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
+import org.folio.orders.utils.AsyncUtil;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.LocationUtil;
@@ -1020,7 +1021,7 @@ public class InventoryHelper extends AbstractHelper {
   public CompletableFuture<PieceCollection> getPieces(int limit, int offset, String query) {
     String endpoint = String.format(GET_PIECES_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
     return HelperUtils.handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
-      .thenCompose(json -> CompletableFuture.supplyAsync(() -> json.mapTo(PieceCollection.class)));
+      .thenCompose(json -> AsyncUtil.executeBlocking(ctx, false, () -> json.mapTo(PieceCollection.class)));
   }
 
   public CompletableFuture<PieceCollection> getExpectedPiecesByLineId(String poLineId) {

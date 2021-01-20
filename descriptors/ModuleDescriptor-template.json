@@ -309,7 +309,8 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.purchase-orders.collection.get",
-            "finance.encumbrances.item.put"
+            "finance.encumbrances.item.put",
+            "finance.transactions.collection.get"
           ]
         },
         {
@@ -335,7 +336,8 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.purchase-orders.collection.get",
-            "finance.encumbrances.item.put"
+            "finance.encumbrances.item.put",
+            "finance.transactions.collection.get"
           ]
         },
         {
@@ -349,7 +351,8 @@
           "modulePermissions": [
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
-            "orders-storage.receiving-history.collection.get"
+            "orders-storage.receiving-history.collection.get",
+            "finance.transactions.collection.get"
           ]
         }
       ]

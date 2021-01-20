@@ -12,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.folio.helper.AbstractHelper;
 import org.folio.helper.PurchaseOrderHelper;
+import org.folio.orders.utils.AsyncUtil;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -64,8 +65,8 @@ public abstract class AbstractOrderStatusHandler extends AbstractHelper implemen
           } else {
             // Get purchase order lines to check if order status needs to be changed.
             getPoLines(orderId, lang, httpClient, okapiHeaders, logger)
-              .thenCompose(linesArray -> CompletableFuture.supplyAsync(() -> HelperUtils.convertJsonToPoLines(linesArray)))
-              .thenCompose(poLines -> updateOrderStatus(okapiHeaders, httpClient, purchaseOrder, poLines))
+              .thenCompose(linesArray -> AsyncUtil.executeBlocking(ctx, false, () -> HelperUtils.convertJsonToPoLines(linesArray)))
+              .thenCompose(poLines -> updateOrderStatus(okapiHeaders, lang, httpClient, purchaseOrder, poLines))
               .thenAccept(future::complete)
               .exceptionally(e -> {
                 logger.error("The error happened processing workflow status update logic for order {}", orderId, e);
@@ -85,11 +86,12 @@ public abstract class AbstractOrderStatusHandler extends AbstractHelper implemen
     completeAllFutures(httpClient, futures, message);
   }
 
-  protected CompletableFuture<Void> updateOrderStatus(Map<String, String> okapiHeaders, HttpClientInterface httpClient,
-    PurchaseOrder purchaseOrder, List<PoLine> poLines) {
+  protected CompletableFuture<Void> updateOrderStatus(Map<String, String> okapiHeaders, String lang, HttpClientInterface httpClient,
+      PurchaseOrder purchaseOrder, List<PoLine> poLines) {
+
     PurchaseOrder.WorkflowStatus initialStatus = purchaseOrder.getWorkflowStatus();
     PurchaseOrderHelper helper = new PurchaseOrderHelper(httpClient, okapiHeaders, ctx, lang);
-    return CompletableFuture.supplyAsync(() -> changeOrderStatus(purchaseOrder, poLines))
+    return AsyncUtil.executeBlocking(ctx, false, () -> changeOrderStatus(purchaseOrder, poLines))
       .thenCompose(isStatusChanged -> {
         if (Boolean.TRUE.equals(isStatusChanged)) {
           return helper.handleFinalOrderItemsStatus(purchaseOrder, poLines, initialStatus.value())
