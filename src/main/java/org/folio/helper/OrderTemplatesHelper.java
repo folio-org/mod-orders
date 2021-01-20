@@ -11,6 +11,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.folio.orders.utils.AsyncUtil;
 import org.folio.rest.jaxrs.model.OrderTemplate;
 import org.folio.rest.jaxrs.model.OrderTemplateCollection;
 
@@ -45,7 +46,7 @@ public class OrderTemplatesHelper extends AbstractHelper {
     try {
       String endpoint = String.format(GET_ORDER_TEMPLATES_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
       handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
-        .thenCompose(json -> CompletableFuture.supplyAsync(() -> json.mapTo(OrderTemplateCollection.class)))
+        .thenCompose(json -> AsyncUtil.executeBlocking(ctx, false, () -> json.mapTo(OrderTemplateCollection.class)))
         .thenAccept(future::complete)
         .exceptionally(t -> {
           future.completeExceptionally(t.getCause());

@@ -18,6 +18,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.apache.logging.log4j.Logger;
 import org.folio.helper.AbstractHelper;
+import org.folio.orders.utils.AsyncUtil;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.acq.model.PieceCollection;
@@ -144,7 +145,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
   }
 
   private CompletableFuture<Integer> getPiecesQuantityByPoLineAndStatus(ReceivingStatus receivingStatus, List<Piece> pieces) {
-    return CompletableFuture.supplyAsync(() -> (int) pieces.stream()
+    return AsyncUtil.executeBlocking(ctx, false, () -> (int) pieces.stream()
       .filter(piece -> piece.getReceivingStatus() == receivingStatus)
       .count());
   }

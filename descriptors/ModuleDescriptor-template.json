@@ -17,7 +17,8 @@
           "modulePermissions": [
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
-            "orders-storage.purchase-orders.collection.get"
+            "orders-storage.purchase-orders.collection.get",
+            "finance.transactions.collection.get"
           ]
         },
         {
@@ -265,7 +266,8 @@
             "orders.po-number.item.post"
           ],
           "modulePermissions": [
-            "orders-storage.purchase-orders.collection.get"
+            "orders-storage.purchase-orders.collection.get",
+            "finance.transactions.collection.get"
           ]
         },
         {
@@ -349,7 +351,8 @@
           "modulePermissions": [
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
-            "orders-storage.receiving-history.collection.get"
+            "orders-storage.receiving-history.collection.get",
+            "finance.transactions.collection.get"
           ]
         }
       ]
