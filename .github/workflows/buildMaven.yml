@@ -8,7 +8,7 @@ on:
     branches: [ FOLIO-2913 ]
 
 jobs:
-  ste-up:
+  set-up:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -17,8 +17,8 @@ jobs:
     - uses: actions/setup-java@v1
       with:
         java-version: '11'
-    - run: echo "Okapi URL is ${okapiUrl}"
-    - run: echo "FOLIO registry is ${folioRegistry}"
+    - run: echo "Okapi URL is $okapiUrl"
+    - run: echo "FOLIO registry is $folioRegistry"
       env:
         okapiUrl: https://folio-snapshot-stable-okapi.dev.folio.org
         folioRegistry:  https://repository.folio.org/repository/maven-snapshots/
