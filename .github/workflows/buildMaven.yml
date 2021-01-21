@@ -18,8 +18,9 @@ jobs:
       with:
         java-version: '11'
     - run: echo "Okapi URL is $okapiUrl"
-    - run: echo "FOLIO registry is $folioRegistry"
       env:
         okapiUrl: https://folio-snapshot-stable-okapi.dev.folio.org
+    - run: echo "FOLIO registry is $folioRegistry"
+      env:
         folioRegistry:  https://repository.folio.org/repository/maven-snapshots/
    
