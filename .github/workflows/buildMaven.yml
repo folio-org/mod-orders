@@ -23,4 +23,5 @@ jobs:
     - run: echo "FOLIO registry is $folioRegistry"
       env:
         folioRegistry:  https://repository.folio.org/repository/maven-snapshots/
+    - run: test -d "/usr/lib/jvm/java-11-openjdk-amd64"
    
