@@ -25,6 +25,11 @@ jobs:
         folioRegistry:  https://repository.folio.org/repository/maven-snapshots/
     - run: mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout
     - run: mvn help:evaluate -Dexpression=project.version -q -DforceStdout
+    # - run: git tag -l --points-at HEAD
+    - run: git config remote.origin.url | awk -F \'/\' \'{print $5}\' | sed -e \'s/\\.git//\'
+    - run: git rev-parse HEAD
+    - run: git config remote.origin.url
+
   RAML-lint:
     runs-on: ubuntu-latest
     steps:
