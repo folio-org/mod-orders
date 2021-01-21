@@ -23,5 +23,18 @@ jobs:
     - run: echo "FOLIO registry is $folioRegistry"
       env:
         folioRegistry:  https://repository.folio.org/repository/maven-snapshots/
-    - run: test -d "/usr/lib/jvm/java-11-openjdk-amd64"
+    - run: mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout
+    - run: mvn help:evaluate -Dexpression=project.version -q -DforceStdout
+  RAML-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.REF }}
+      - run: echo "Assesing RAML and running raml-cop..."
+      - run: mkdir -p ci
+      - run: echo "<html><body><pre>" > ci/lintRamlCop.html
+      # - run: python3 /usr/local/bin/lint_raml_cop.py -l info --validate-only >> ci/lintRamlCop.html
+      - run: echo "</pre><body></html>" >> ci/lintRamlCop.html
+      - run: rm -rf ci
    
