@@ -52,6 +52,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.REF }}
+          submodules: recursive
       - run: echo "Starting MvnDeploy stage..."
       - run: mvn dependency:list | { grep -i snapshot || true; }
       - run: >
