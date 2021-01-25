@@ -25,7 +25,6 @@ jobs:
         folioRegistry:  https://repository.folio.org/repository/maven-snapshots/
     - run: mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout
     - run: mvn help:evaluate -Dexpression=project.version -q -DforceStdout
-    # - run: git tag -l --points-at HEAD
     - run: echo "project name is ${{ github.REPOSITORY }}"
     - run: git rev-parse HEAD
     - run: git config remote.origin.url
@@ -45,7 +44,14 @@ jobs:
       - run: echo "<html><body><pre>" > ci/lintRamlCop.html
       - run: python3 --version
       - run: ls -a
-      - run: python3 folio-tools/lint-raml/lint_raml_cop.py -l info
+      - run: python3 folio-tools/lint-raml/lint_raml_cop.py -l info --validate-only >> ci/lintRamlCop.html
       - run: echo "</pre><body></html>" >> ci/lintRamlCop.html
       - run: rm -rf ci && rm -rf folio-tools
+  Maven-Deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.REF }}
+      - run: echo "Starting MvnDeploy stage..."
    
