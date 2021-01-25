@@ -26,9 +26,7 @@ jobs:
     - run: mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout
     - run: mvn help:evaluate -Dexpression=project.version -q -DforceStdout
     # - run: git tag -l --points-at HEAD
-    - run: echo "project name is $projectName"
-      env:
-        projectName: ${GITHUB_REPOSITORY}
+    - run: echo "project name is ${{ github.REPOSITORY }}"
     - run: git rev-parse HEAD
     - run: git config remote.origin.url
 
@@ -41,7 +39,7 @@ jobs:
       - run: echo "Assesing RAML and running raml-cop..."
       - run: mkdir -p ci
       - run: echo "<html><body><pre>" > ci/lintRamlCop.html
-      # - run: python3 /usr/local/bin/lint_raml_cop.py -l info --validate-only >> ci/lintRamlCop.html
+      - run: python3 /usr/local/bin/lint_raml_cop.py -l info --validate-only >> ci/lintRamlCop.html
       - run: echo "</pre><body></html>" >> ci/lintRamlCop.html
       - run: rm -rf ci
    
