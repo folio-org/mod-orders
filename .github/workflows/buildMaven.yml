@@ -29,27 +29,22 @@ jobs:
     - run: echo "project name is ${{ github.REPOSITORY }}"
     - run: git rev-parse HEAD
     - run: git config remote.origin.url
-    - run: echo "Assesing RAML and running raml-cop..."
-    - run: mkdir -p ci
-    - run: echo "<html><body><pre>" > ci/lintRamlCop.html
-    - run: python3 --version
-    - run: cd /usr/local/bin/ && ls -a
-    - run: python3 /usr/local/bin/lint_raml_cop.py -l info --validate-only >> ci/lintRamlCop.html
-    - run: echo "</pre><body></html>" >> ci/lintRamlCop.html
-    - run: rm -rf ci
-
-  # RAML-lint:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #       with:
-  #         ref: ${{ github.REF }}
-  #     - run: echo "Assesing RAML and running raml-cop..."
-  #     - run: mkdir -p ci
-  #     - run: echo "<html><body><pre>" > ci/lintRamlCop.html
-  #     - run: python3 --version
-  #     - run: cd /usr/local/bin/ && ls -a
-  #     # - run: python3 /usr/local/bin/lint_raml_cop.py -l info --validate-only >> ci/lintRamlCop.html
-  #     - run: echo "</pre><body></html>" >> ci/lintRamlCop.html
-  #     - run: rm -rf ci
+    - run: java --version
+  RAML-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.REF }}
+      - run: echo "Assesing RAML and running raml-cop..."
+      - run: git clone $FOLIO_TOOLS
+        env:
+          FOLIO_TOOLS: https://github.com/folio-org/folio-tools.git
+      - run: mkdir -p ci
+      - run: echo "<html><body><pre>" > ci/lintRamlCop.html
+      - run: python3 --version
+      - run: cd /usr/local/bin/ && ls -a
+      - run: python3 ..folio-tools/lint-raml/lint_raml_cop.py -l info --validate-only >> ci/lintRamlCop.html
+      - run: echo "</pre><body></html>" >> ci/lintRamlCop.html
+      - run: rm -rf ci 
    
