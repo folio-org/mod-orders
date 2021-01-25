@@ -35,7 +35,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.REF }}
-          submodules: recursive
       - run: echo "Assesing RAML and running raml-cop..."
       - run: git clone $FOLIO_TOOLS
         env:
@@ -43,8 +42,7 @@ jobs:
       - run: cd folio-tools/lint-raml && yarn install && pip3 install -r requirements.txt
       - run: mkdir -p ci
       - run: echo "<html><body><pre>" > ci/lintRamlCop.html
-      - run: python3 --version
-      - run: cd ramls/acq-models/acquisition-unit && ls -a
+      - run: ls -a
       - run: python3 folio-tools/lint-raml/lint_raml_cop.py -l info
       - run: echo "</pre><body></html>" >> ci/lintRamlCop.html
       - run: rm -rf ci && rm -rf folio-tools
