@@ -43,8 +43,7 @@ jobs:
       - run: cd folio-tools/lint-raml && yarn install && pip3 install -r requirements.txt
       - run: mkdir -p ci
       - run: echo "<html><body><pre>" > ci/lintRamlCop.html
-      - run: ls -a
-      - run: python3 folio-tools/lint-raml/lint_raml_cop.py -l info
+      - run: python3 folio-tools/lint-raml/lint_raml_cop.py -l info --validate-only >>ci/lintRamlCop.html
       - run: echo "</pre><body></html>" >> ci/lintRamlCop.html
       - run: rm -rf ci && rm -rf folio-tools
   Maven-Deploy:
@@ -54,4 +53,8 @@ jobs:
         with:
           ref: ${{ github.REF }}
       - run: echo "Starting MvnDeploy stage..."
+      - run: mvn dependency:list | { grep -i snapshot || true; }
+      - run: >
+          mvn clean org.jacoco:jacoco-maven-plugin:prepare-agent install 
+          org.jacoco:jacoco-maven-plugin:report
    
