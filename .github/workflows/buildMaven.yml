@@ -65,7 +65,7 @@ jobs:
             echo "ModuleDescriptor.json found!!!"
             mv $MOD_DESCRIPTOR $MOD_DESCRIPTOR.orig
           else
-            echo "ModuleDescriptor.json not found..."
+            echo "ModuleDescriptor.json not found.."
           fi
         env:
           MOD_DESCRIPTOR: target/ModuleDescriptor.json
