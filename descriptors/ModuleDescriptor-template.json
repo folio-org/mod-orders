@@ -191,6 +191,7 @@
             "finance.funds.collection.get",
             "finance.transactions.collection.get",
             "finance.budgets.collection.get",
+            "finance.funds.budget.item.get",
             "finance.ledgers.collection.get",
             "finance.encumbrances.item.post",
             "finance.encumbrances.item.put",
