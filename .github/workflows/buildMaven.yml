@@ -6,7 +6,6 @@ name: Java CI with Maven
 on:
   push:
     branches: [ FOLIO-2913 ]
-
 jobs:
   set-up:
     runs-on: ubuntu-latest
@@ -53,9 +52,12 @@ jobs:
         with:
           ref: ${{ github.REF }}
           submodules: recursive
+      - uses: actions/setup-java@v1
+        with:
+          java-version: '11'
       - run: echo "Starting MvnDeploy stage..."
       - run: mvn dependency:list | { grep -i snapshot || true; }
       - run: >
           mvn clean org.jacoco:jacoco-maven-plugin:prepare-agent install 
           org.jacoco:jacoco-maven-plugin:report
-   
+  
