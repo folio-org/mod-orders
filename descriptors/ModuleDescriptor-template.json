@@ -57,6 +57,7 @@
             "finance.funds.collection.get",
             "finance.ledgers.current-fiscal-year.item.get",
             "finance.ledger-rollovers.collection.get",
+            "finance.ledger-rollovers-progress.collection.get",
             "finance.ledger-rollovers-errors.collection.get"
           ]
         },
@@ -110,6 +111,21 @@
           "pathPattern": "/orders/composite-orders/{id}/re-encumber",
           "permissionsRequired": [
             "orders.re-encumber.item.post"
+          ],
+          "modulePermissions": [
+            "orders-storage.purchase-orders.item.get",
+            "orders-storage.po-lines.collection.get",
+            "orders-storage.po-lines.item.put",
+            "finance.funds.collection.get",
+            "finance.ledgers.current-fiscal-year.item.get",
+            "finance.ledgers.collection.get",
+            "finance.funds.budget.item.get",
+            "finance.transactions.collection.get",
+            "finance.ledger-rollovers.collection.get",
+            "finance.ledger-rollovers-progress.collection.get",
+            "finance.ledger-rollovers-errors.collection.get",
+            "finance-storage.ledger-rollovers-errors.item.delete",
+            "finance.exchange-rate.item.get"
           ]
         }
       ]
@@ -191,6 +207,7 @@
             "finance.funds.collection.get",
             "finance.transactions.collection.get",
             "finance.budgets.collection.get",
+            "finance.funds.budget.item.get",
             "finance.ledgers.collection.get",
             "finance.encumbrances.item.post",
             "finance.encumbrances.item.put",
@@ -858,6 +875,22 @@
     {
       "id": "finance-storage.transactions",
       "version": "3.1"
+    },
+    {
+      "id": "finance.exchange-rate",
+      "version": "1.0"
+    },
+    {
+      "id": "finance.ledger-rollovers",
+      "version": "1.0"
+    },
+    {
+      "id": "finance.ledger-rollovers-progress",
+      "version": "1.0"
+    },
+    {
+      "id": "finance.ledger-rollovers-errors",
+      "version": "1.0"
     }
   ],
   "permissionSets": [

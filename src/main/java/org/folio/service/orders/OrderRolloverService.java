@@ -212,7 +212,7 @@ public class OrderRolloverService {
   private CompletableFuture<List<Transaction>> getEncumbrancesForRollover(List<String> orderIds, LedgerFiscalYearRollover ledgerFYRollover,
                                                                           RequestContext requestContext) {
     String query = buildQueryEncumbrancesForRollover(orderIds, ledgerFYRollover);
-    return transactionService.getTransactionsByPoLinesIds(query, 0, Integer.MAX_VALUE, requestContext)
+    return transactionService.getTransactions(query, 0, Integer.MAX_VALUE, requestContext)
                                 .thenApply(TransactionCollection::getTransactions);
   }
 
@@ -229,7 +229,7 @@ public class OrderRolloverService {
 
   private String buildQuery(List<String> orderIds, String queryTemplate, String delimiter) {
     return orderIds.stream()
-                   .map(orderId -> String.format(queryTemplate, orderId))
+            .map(orderId -> String.format(queryTemplate, orderId))
                    .collect(Collectors.joining(delimiter));
   }
 

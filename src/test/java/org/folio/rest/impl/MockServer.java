@@ -179,6 +179,7 @@ public class MockServer {
   public static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
   public static final String LEDGER_FY_ROLLOVERS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRollovers/";
   public static final String LEDGER_FY_ROLLOVERS_ERRORS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRolloverErrors/";
+  public static final String LEDGER_FY_ROLLOVERS_PROGRESS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRolloverProgress/";
   public static final String ITEMS_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/";
   public static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
   public static final String BUDGET_EXPENSE_CLASSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "budgetExpenseClasses/budget_expense_classes.json";
@@ -539,6 +540,7 @@ public class MockServer {
     router.get("/finance/funds/:id/budget").handler(this::handleGetBudgetByFinanceId);
     router.get(resourcesPath(FINANCE_EXCHANGE_RATE)).handler(this::handleGetRateOfExchange);
     router.get(resourcesPath(LEDGER_FY_ROLLOVERS)).handler(this::handleGetFyRollovers);
+    router.get("/finance/ledger-rollovers-progress").handler(this::handleGetFyRolloverProgress);
     router.get(resourcesPath(LEDGER_FY_ROLLOVER_ERRORS)).handler(this::handleGetFyRolloverErrors);
     router.get(resourcesPath(ORDER_INVOICE_RELATIONSHIP)).handler(this::handleGetOrderInvoiceRelationship);
 
@@ -577,6 +579,21 @@ public class MockServer {
 
     router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
     return router;
+  }
+
+  private void handleGetFyRolloverProgress(RoutingContext ctx) {
+    logger.info("handleGetFyRolloverProgress got: " + ctx.request().path());
+    try {
+      JsonObject entries = new JsonObject(getMockData(LEDGER_FY_ROLLOVERS_PROGRESS_PATH + "ledger_fiscal_year_rollover_progress_collection.json"));
+
+      serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+      addServerRqRsData(HttpMethod.GET, "ledgerFiscalYearRolloverProgress", entries);
+
+    } catch (IOException e) {
+      ctx.response()
+              .setStatusCode(404)
+              .end();
+    }
   }
 
 

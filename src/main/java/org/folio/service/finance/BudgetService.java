@@ -18,6 +18,7 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Parameter;
 
 import one.util.streamex.StreamEx;
@@ -57,8 +58,8 @@ public class BudgetService {
   }
 
   public CompletableFuture<Budget> getActiveBudgetByFundId(String fundId, RequestContext requestContext) {
-
-    return restClient.getById(ENDPOINT, fundId, requestContext, Budget.class)
+    RequestEntry requestEntry = new RequestEntry(ENDPOINT).withId(fundId).withQueryParameter("status", "Active");
+    return restClient.get(requestEntry, requestContext, Budget.class)
       .exceptionally(t -> {
         Throwable cause = Objects.nonNull(t.getCause()) ? t.getCause() : t;
         if (cause instanceof HttpException) {

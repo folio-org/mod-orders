@@ -77,7 +77,8 @@ public enum ErrorCodes {
   HOLDINGS_BY_INSTANCE_AND_LOCATION_NOT_FOUND("holdingsByInstanceAndLocationNotFoundError", "Holdings by instance id %s and location id %s not found"),
   ROLLOVER_PO_LINES_ERROR("rolloverPoLinesError", "Rollover poLines by chunks failed"),
   RETRIEVE_ROLLOVER_ORDER_ERROR("retrieveRolloverOrdersError", "Retrieve rollover order ids by chunks failed"),
-  ORDER_RELATES_TO_INVOICE("orderRelatesToInvoice", "This order or order line is linked to Invoice number(s) and can not be deleted");
+  ORDER_RELATES_TO_INVOICE("orderRelatesToInvoice", "This order or order line is linked to Invoice number(s) and can not be deleted"),
+  ROLLOVER_NOT_COMPLETED("rolloverNotCompleted", "Rollover has not been completed for some ledgers related to this order");
 
   private final String code;
   private final String description;
