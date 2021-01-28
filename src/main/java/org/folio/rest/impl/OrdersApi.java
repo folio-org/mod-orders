@@ -21,6 +21,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.resource.OrdersCompositeOrders;
 import org.folio.rest.jaxrs.resource.OrdersRollover;
+import org.folio.service.orders.OrderReEncumberService;
 import org.folio.service.orders.OrderRolloverService;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +40,8 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
   @Autowired
   private OrderRolloverService orderRolloverService;
+  @Autowired
+  private OrderReEncumberService orderReEncumberService;
 
   public OrdersApi(Vertx vertx, String tenantId) {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -119,7 +122,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
         }
       })
       .exceptionally(t -> {
-        logger.error("Failed to update purchase order with id={} : {}", orderId, t);
+        logger.error("Failed to update purchase order with id={}", orderId, t);
         return HelperUtils.handleErrorResponse(asyncResultHandler, helper, t);
       });
   }
@@ -156,7 +159,9 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
   @Override
   @Validate
   public void postOrdersCompositeOrdersReEncumberById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
+    orderReEncumberService.reEncumber(id, new RequestContext(vertxContext, okapiHeaders))
+          .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+          .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
