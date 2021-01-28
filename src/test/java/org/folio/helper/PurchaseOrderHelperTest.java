@@ -70,12 +70,13 @@ import io.vertx.core.Context;
 public class PurchaseOrderHelperTest {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";
   public static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
-  public static final String TWO_ENCUMBRANCE_PATH = BASE_MOCK_DATA_PATH + "encumbrances/two_pending_encumbrances.json";
 
   @Autowired
   private EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
   @Mock
   private OpenToPendingEncumbranceStrategy openToPendingEncumbranceStrategy;
+  @Mock
+  private RestClient restClient;
 
   private  Map<String, String> okapiHeadersMock;
 
@@ -220,6 +221,10 @@ public class PurchaseOrderHelperTest {
       return mock(OrderInvoiceRelationService.class);
     }
 
+    @Bean
+    public RestClient restClient() {
+      return mock(RestClient.class);
+    }
   }
 
 }
