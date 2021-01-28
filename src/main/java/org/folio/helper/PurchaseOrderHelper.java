@@ -2,6 +2,7 @@ package org.folio.helper;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
+import static one.util.streamex.StreamEx.ofSubLists;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.AcqDesiredPermissions.ASSIGN;
@@ -44,6 +45,7 @@ import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder
 import static org.folio.orders.utils.ProtectedOperationType.CREATE;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
@@ -54,6 +56,7 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.O
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -83,7 +86,11 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
+import org.folio.rest.acq.model.Piece;
+import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
@@ -143,6 +150,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private OrderInvoiceRelationService orderInvoiceRelationService;
   @Autowired
   private ConfigurationEntriesService configurationEntriesService;
+  @Autowired
+  private RestClient restClient;
 
 
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
@@ -312,9 +321,28 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private CompletableFuture<Void> checkLocationsAndPiecesConsistency(List<CompositePoLine> poLines) {
     List<CompositePoLine> linesWithId = poLines.stream().filter(compositePoLine -> StringUtils.isNotEmpty(compositePoLine.getId())).collect(Collectors.toList());
-    String query = convertIdsToCqlQuery(linesWithId.stream().map(CompositePoLine::getId).collect(toList()), "poLineId");
-    return inventoryHelper.getPieces(Integer.MAX_VALUE, 0, query)
-      .thenAccept(pieces -> verifyLocationsAndPiecesConsistency(linesWithId, pieces));
+    List<String> lineIds = linesWithId.stream().map(CompositePoLine::getId).collect(toList());
+    return getPiecesByLineIdsByChunks(lineIds, new RequestContext(ctx, okapiHeaders))
+                  .thenApply(pieces -> new PieceCollection().withPieces(pieces).withTotalRecords(pieces.size()))
+                  .thenAccept(pieces -> verifyLocationsAndPiecesConsistency(linesWithId, pieces));
+  }
+
+  public CompletableFuture<List<Piece>> getPiecesByLineIdsByChunks(List<String> lineIds, RequestContext requestContext) {
+    return collectResultsOnSuccess(
+      ofSubLists(new ArrayList<>(lineIds), MAX_IDS_FOR_GET_RQ).map(ids -> getPieceChunkByLineIds(ids, requestContext))
+        .toList()).thenApply(
+      lists -> lists.stream()
+        .flatMap(Collection::stream)
+        .collect(Collectors.toList()));
+  }
+
+  private CompletableFuture<List<Piece>> getPieceChunkByLineIds(Collection<String> poLineIds, RequestContext requestContext) {
+    String query = convertIdsToCqlQuery(poLineIds, "poLineId");
+    RequestEntry requestEntry = new RequestEntry(resourcesPath(PIECES)).withQuery(query)
+      .withOffset(0)
+      .withLimit(poLineIds.size());
+    return restClient.get(requestEntry, requestContext, PieceCollection.class)
+                     .thenApply(PieceCollection::getPieces);
   }
 
   public CompletableFuture<Void> handleFinalOrderStatus(CompositePurchaseOrder compPO, String initialOrdersStatus) {
