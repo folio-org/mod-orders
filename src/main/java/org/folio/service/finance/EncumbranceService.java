@@ -9,6 +9,7 @@ import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION
 import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
+import static org.folio.orders.utils.HelperUtils.getConversionQuery;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
 
 import java.math.BigDecimal;
@@ -27,14 +28,11 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.BiConsumer;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
-
 import javax.money.CurrencyUnit;
 import javax.money.MonetaryAmount;
 import javax.money.convert.ConversionQuery;
-import javax.money.convert.ConversionQueryBuilder;
 import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRateProvider;
-
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
@@ -181,8 +179,8 @@ public class EncumbranceService {
 
       if (!poLineCurrency.equals(transactionCurrency)) {
         Money amount = Money.of(transaction.getAmount(), poLineCurrency);
-        ConversionQuery conversionQuery = ConversionQueryBuilder.of().setBaseCurrency(poLineCurrency)
-          .setTermCurrency(transactionCurrency).build();
+        Double exchangeRate = holder.getPoLineFundHolder().getPoLine().getCost().getExchangeRate();
+        ConversionQuery conversionQuery = getConversionQuery(exchangeRate, poLineCurrency, transactionCurrency);
         ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver
           .resolve(conversionQuery, requestContext);
         CurrencyConversion conversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
