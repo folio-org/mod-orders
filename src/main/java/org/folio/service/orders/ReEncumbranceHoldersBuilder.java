@@ -328,18 +328,18 @@ public class ReEncumbranceHoldersBuilder {
 
   private ReEncumbranceHolder withEncumbranceRollover(ReEncumbranceHolder reEncumbranceHolder) {
     CompositePurchaseOrder purchaseOrder = reEncumbranceHolder.getPurchaseOrder();
-    return reEncumbranceHolder.getRollover()
-      .getEncumbrancesRollover()
-      .stream()
-      .filter(er -> (er.getOrderType() == EncumbranceRollover.OrderType.ONE_TIME
-          && purchaseOrder.getOrderType() == CompositePurchaseOrder.OrderType.ONE_TIME)
-          || (er.getOrderType() == EncumbranceRollover.OrderType.ONGOING
-              && purchaseOrder.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING && !purchaseOrder.getOngoing()
-                .getIsSubscription())
-          || (er.getOrderType() == EncumbranceRollover.OrderType.ONGOING_SUBSCRIPTION
-              && purchaseOrder.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING && purchaseOrder.getOngoing()
-                .getIsSubscription()))
-      .findFirst()
+    return Optional.ofNullable(reEncumbranceHolder.getRollover())
+      .map(LedgerFiscalYearRollover::getEncumbrancesRollover)
+      .flatMap(encumbranceRollovers -> encumbranceRollovers.stream()
+        .filter(er -> (er.getOrderType() == EncumbranceRollover.OrderType.ONE_TIME
+            && purchaseOrder.getOrderType() == CompositePurchaseOrder.OrderType.ONE_TIME)
+            || (er.getOrderType() == EncumbranceRollover.OrderType.ONGOING
+                && purchaseOrder.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING && !purchaseOrder.getOngoing()
+                  .getIsSubscription())
+            || (er.getOrderType() == EncumbranceRollover.OrderType.ONGOING_SUBSCRIPTION
+                && purchaseOrder.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING && purchaseOrder.getOngoing()
+                  .getIsSubscription()))
+        .findFirst())
       .map(reEncumbranceHolder::withEncumbranceRollover)
       .orElse(reEncumbranceHolder);
   }

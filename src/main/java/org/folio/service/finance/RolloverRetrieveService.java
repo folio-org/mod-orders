@@ -34,7 +34,7 @@ public class RolloverRetrieveService {
     }
 
     public CompletableFuture<List<LedgerFiscalYearRollover>> getLedgerFyRollovers(String fiscalYeaId, List<String> ledgerIds, RequestContext requestContext) {
-        String query = "fromFiscalYearId==" + fiscalYeaId + AND + convertIdsToCqlQuery(ledgerIds, "ledgerId");
+        String query = "toFiscalYearId==" + fiscalYeaId + AND + convertIdsToCqlQuery(ledgerIds, "ledgerId");
         RequestEntry requestEntry = new RequestEntry(LEDGER_ROLLOVERS_ENDPOINT)
                 .withQuery(query).withOffset(0).withLimit(ledgerIds.size());
         return restClient.get(requestEntry, requestContext, LedgerFiscalYearRolloverCollection.class)
