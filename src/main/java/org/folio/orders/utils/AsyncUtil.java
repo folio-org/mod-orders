@@ -34,4 +34,18 @@ public final class AsyncUtil {
     }, isOrdered, asyncResultHandler(future));
     return future;
   }
+
+  public static CompletableFuture<Void> executeBlocking(Context ctx, boolean isOrdered, Runnable runnable) {
+    Objects.requireNonNull(runnable);
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    ctx.owner().executeBlocking(blockingFeature -> {
+      try {
+        runnable.run();
+        blockingFeature.complete(null);
+      } catch (Throwable e) {
+        blockingFeature.fail(e);
+      }
+    }, isOrdered, asyncResultHandler(future));
+    return future;
+  }
 }

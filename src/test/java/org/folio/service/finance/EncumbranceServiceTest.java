@@ -13,10 +13,10 @@ import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -36,12 +36,9 @@ import java.util.concurrent.CompletableFuture;
 
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.PoLineFundHolder;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
-import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.core.models.RequestContext;
@@ -67,13 +64,9 @@ public class EncumbranceServiceTest {
   private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
   public static final String TENANT_ID = "ordertest";
   public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, TENANT_ID);
-  public static final String ACTIVE_BUDGET = "68872d8a-bf16-420b-829f-206da38f6c10";
 
   @InjectMocks
   private EncumbranceService encumbranceService;
-
-  private Context ctxMock;
-  private Map<String, String> okapiHeadersMock;
 
   private RequestContext requestContextMock;
 
@@ -86,22 +79,20 @@ public class EncumbranceServiceTest {
   @Mock
   private FundService fundService;
   @Mock
-  private LedgerService ledgerService;
+  private BudgetRestrictionService budgetRestrictionService;
   @Mock
   private FiscalYearService fiscalYearService;
-  @Mock
-  private BudgetService budgetService;
+
 
 
   @BeforeEach
   public void initMocks(){
-    ctxMock = Vertx.vertx().getOrCreateContext();
-    okapiHeadersMock = new HashMap<>();
+    Context ctxMock = Vertx.vertx().getOrCreateContext();
+    Map<String, String> okapiHeadersMock = new HashMap<>();
     okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
     okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
-    String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
     requestContextMock = new RequestContext(ctxMock, okapiHeadersMock);
     MockitoAnnotations.openMocks(this);
   }
@@ -318,34 +309,17 @@ public class EncumbranceServiceTest {
     String fund1Id = UUID.randomUUID().toString();
     String fund2Id = UUID.randomUUID().toString();
 
-    Ledger ledger1 = new Ledger().withId(UUID.randomUUID().toString())
-            .withRestrictEncumbrance(false);
-
-    Ledger ledger2 = new Ledger().withId(UUID.randomUUID().toString())
-            .withRestrictEncumbrance(true);
 
     Fund fund1 = new Fund().withId(fund1Id)
-            .withLedgerId(ledger1.getId());
+            .withLedgerId(UUID.randomUUID().toString());
 
     Fund fund2 = new Fund().withId(fund2Id)
-            .withLedgerId(ledger2.getId());
+            .withLedgerId(UUID.randomUUID().toString());
 
 
-    Budget budget1 = new Budget()
-            .withFundId(fund1Id)
-            .withAllocated(0d)
-            .withAllowableEncumbrance(100d)
-            .withBudgetStatus(Budget.BudgetStatus.ACTIVE);
-
-    Budget budget2 = new Budget()
-            .withFundId(fund2Id)
-            .withAllocated(1000d)
-            .withAllowableEncumbrance(100d)
-            .withBudgetStatus(Budget.BudgetStatus.ACTIVE);
 
     doReturn(completedFuture(Arrays.asList(fund1, fund2))).when(fundService).getAllFunds(anyCollection(), any());
-    doReturn(completedFuture(Arrays.asList(budget1, budget2))).when(budgetService).getBudgets(anyCollection(), any());
-    doReturn(completedFuture(Arrays.asList(ledger1, ledger2))).when(ledgerService).getLedgersByIds(anyCollection(), any());
+    doReturn(completedFuture(null)).when(budgetRestrictionService).checkEncumbranceRestrictions(anyList(), anyList(), any());
     doReturn(completedFuture(new FiscalYear().withId(UUID.randomUUID().toString()).withCurrency("USD")))
             .when(fiscalYearService).getCurrentFiscalYear(anyString(), any());
 
@@ -389,28 +363,6 @@ public class EncumbranceServiceTest {
     assertEquals(BigDecimal.valueOf(encumbrance.getAmount()), BigDecimal.valueOf(encumbrance.getEncumbrance().getInitialAmountEncumbered()));
   }
 
-
-
-  @Test
-  void testBudgetShouldBeActive() {
-
-    String budgetId = UUID.randomUUID().toString();
-    String fundId = UUID.randomUUID().toString();
-    List<Budget> budgets = Collections.singletonList(new Budget().withId(budgetId).withFundId(fundId).withBudgetStatus(Budget.BudgetStatus.ACTIVE));
-    encumbranceService.verifyBudgetsForEncumbrancesAreActive(budgets);
-  }
-
-  @Test
-  void testShouldThrowExceptionIfBudgetIsNotActive() {
-
-    String budgetId = UUID.randomUUID().toString();
-    String fundId = UUID.randomUUID().toString();
-    List<Budget> budgets = Collections.singletonList(new Budget().withId(budgetId)
-      .withFundId(fundId)
-      .withBudgetStatus(Budget.BudgetStatus.INACTIVE));
-    assertThrows(HttpException.class, () -> encumbranceService.verifyBudgetsForEncumbrancesAreActive(budgets));
-  }
-
   @Test
   void shouldReleaseEncumbrancesBeforeDeletionWhenDeleteOrderEncumbrances() {
     //Given
@@ -426,7 +378,7 @@ public class EncumbranceServiceTest {
     transactions.add(encumbrance);
     transactions.add(encumbrance2);
     TransactionCollection transactionCollection = new TransactionCollection().withTransactions(transactions).withTotalRecords(1);
-    doReturn(CompletableFuture.completedFuture(transactionCollection)).when(transactionService).getTransactionsByPoLinesIds(anyString(), anyInt(), anyInt(), eq(requestContextMock));
+    doReturn(CompletableFuture.completedFuture(transactionCollection)).when(transactionService).getTransactions(anyString(), anyInt(), anyInt(), eq(requestContextMock));
     doReturn(CompletableFuture.completedFuture(null)).when(transactionService).updateTransactions(any(), eq(requestContextMock));
     doReturn(CompletableFuture.completedFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(anyString(), anyInt(), any());
     doReturn(CompletableFuture.completedFuture(null)).when(transactionService).deleteTransactions(any(), eq(requestContextMock));
@@ -461,7 +413,7 @@ public class EncumbranceServiceTest {
     transactions.add(encumbrance);
     transactions.add(encumbrance2);
     TransactionCollection transactionCollection = new TransactionCollection().withTransactions(transactions).withTotalRecords(1);
-    doReturn(CompletableFuture.completedFuture(transactionCollection)).when(transactionService).getTransactionsByPoLinesIds(anyString(), anyInt(), anyInt(), any());
+    doReturn(CompletableFuture.completedFuture(transactionCollection)).when(transactionService).getTransactions(anyString(), anyInt(), anyInt(), any());
     doReturn(CompletableFuture.completedFuture(null)).when(transactionService).updateTransactions(any(), any());
     doReturn(CompletableFuture.completedFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(anyString(), anyInt(), any());
     doReturn(CompletableFuture.completedFuture(null)).when(transactionService).deleteTransactions(any(), any());

@@ -30,8 +30,8 @@ public class TransactionService {
     this.restClient = restClient;
   }
 
-  public CompletableFuture<TransactionCollection> getTransactionsByPoLinesIds(String query, int offset, int limit,
-                                                                              RequestContext requestContext) {
+  public CompletableFuture<TransactionCollection> getTransactions(String query, int offset, int limit,
+                                                                  RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query)
       .withOffset(offset)
       .withLimit(limit);

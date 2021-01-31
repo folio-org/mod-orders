@@ -118,7 +118,7 @@ public class OrderRolloverServiceTest {
     Transaction transactionOngoing = new Transaction().withId(currEncumbrId2).withFromFundId(fundId2).withEncumbrance(encumbranceOngoing).withExpenseClassId(expClassId2);
     List<Transaction> encumbrances = List.of(transactionOneTime, transactionOngoing);
     TransactionCollection encumbranceCollection = new TransactionCollection().withTransactions(encumbrances).withTotalRecords(2);
-    doReturn(completedFuture(encumbranceCollection)).when(transactionService).getTransactionsByPoLinesIds(anyString(), anyInt(), anyInt(), any());
+    doReturn(completedFuture(encumbranceCollection)).when(transactionService).getTransactions(anyString(), anyInt(), anyInt(), any());
 
     CompletableFuture<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
     future.join();
