@@ -11,17 +11,15 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-import javax.money.CurrencyUnit;
-import javax.money.Monetary;
 import javax.money.MonetaryAmount;
 import javax.money.MonetaryOperator;
 import javax.money.convert.ConversionQuery;
-import javax.money.convert.ConversionQueryBuilder;
 import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRateProvider;
 
 import org.folio.models.ReEncumbranceHolder;
 import org.folio.orders.utils.AsyncUtil;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.FiscalYear;
@@ -30,7 +28,9 @@ import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
@@ -177,26 +177,28 @@ public class ReEncumbranceHoldersBuilder {
 
   public CompletableFuture<List<ReEncumbranceHolder>> withConversion(List<ReEncumbranceHolder> reEncumbranceHolders,
       RequestContext requestContext) {
-    Optional<CurrencyUnit> fyCurrency = reEncumbranceHolders.stream()
+    Optional<String> fyCurrency = reEncumbranceHolders.stream()
             .map(ReEncumbranceHolder::getCurrentFiscalYear)
             .filter(Objects::nonNull)
             .map(FiscalYear::getCurrency)
-            .map(currency -> Monetary.getCurrency(currency))
             .findFirst();
     if (fyCurrency.isEmpty()) {
       return CompletableFuture.completedFuture(reEncumbranceHolders);
     }
     return AsyncUtil.executeBlocking(requestContext.getContext(), false, () -> {
 
-      Map<CurrencyUnit, List<ReEncumbranceHolder>> currencyHoldersMap = reEncumbranceHolders.stream()
-        .collect(groupingBy(reEncumbranceHolder -> Monetary.getCurrency(reEncumbranceHolder.getPoLine()
+      Map<String, List<ReEncumbranceHolder>> currencyHoldersMap = reEncumbranceHolders.stream()
+        .collect(groupingBy(reEncumbranceHolder -> reEncumbranceHolder.getPoLine()
           .getCost()
-          .getCurrency())));
+          .getCurrency()));
       currencyHoldersMap.forEach((poLineCurrency, holders) -> {
-        ConversionQuery conversionQuery = ConversionQueryBuilder.of()
-          .setBaseCurrency(poLineCurrency)
-          .setTermCurrency(fyCurrency.get())
-          .build();
+        Double exchangeRate = holders.stream()
+                .map(ReEncumbranceHolder::getPoLine)
+                .map(CompositePoLine::getCost)
+                .map(Cost::getExchangeRate)
+                .filter(Objects::nonNull)
+                .findFirst().orElse(null);
+        ConversionQuery conversionQuery = HelperUtils.getConversionQuery(exchangeRate, poLineCurrency, fyCurrency.get());
         ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
         CurrencyConversion conversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
         holders.forEach(holder -> holder.withPoLineToFyConversion(conversion));
