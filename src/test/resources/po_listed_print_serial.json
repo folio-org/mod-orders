@@ -7,21 +7,17 @@
     "ABCDEFGHIJKLMNOPQRST",
     "ABCDEFGHIJKLMNOPQRSTUV"
   ],
+  "ongoing": {
+    "interval": 180,
+    "manualRenewal": true,
+    "renewalDate": "2019-04-09T00:00:00.000Z",
+    "reviewPeriod": 0
+  },
   "orderType": "Ongoing",
   "poNumber": "268758",
   "reEncumber": false,
-  "ongoing": {
-     "interval": 0,
-     "manualRenewal": true,
-     "reviewPeriod": 0,
-     "renewalDate": "2019-04-09T00:00:00.000Z"
-  },
   "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Open",
-  "metadata": {
-    "createdDate": "2010-10-08T03:53:00.000",
-    "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
-  },
   "compositePoLines": [
     {
       "acquisitionMethod": "Purchase At Vendor System",
@@ -36,8 +32,8 @@
       "claims": [
         {
           "claimed": false,
-          "sent": "2018-10-09T00:00:00.000Z",
-          "grace": 30
+          "grace": 30,
+          "sent": "2018-10-09T00:00:00.000Z"
         }
       ],
       "collection": false,
@@ -56,43 +52,44 @@
       },
       "description": "ABCDEFGH",
       "details": {
-        "receivingNote": "ABCDEFGHIJKL",
         "productIds": [
           {
             "productId": "9780764354113",
             "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422"
           }
         ],
+        "receivingNote": "ABCDEFGHIJKL",
         "subscriptionFrom": "2018-10-09T00:00:00.000Z",
         "subscriptionInterval": 824,
         "subscriptionTo": "2020-10-09T00:00:00.000Z"
       },
       "donor": "ABCDEFGHIJKLM",
       "eresource": {
+        "accessProvider": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
         "activated": false,
         "activationDue": 0,
         "createInventory": "None",
+        "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
         "trial": false,
-        "userLimit": 10,
-        "accessProvider": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
-        "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
+        "userLimit": 10
       },
       "fundDistribution": [
         {
           "code": "HIST",
-          "fundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
-          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3",
           "distributionType": "percentage",
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3",
+          "fundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
           "value": 80
         },
         {
           "code": "GENRL",
-          "fundId": "1b6d3338-186e-4e35-9e75-1b886b0da53e",
           "distributionType": "percentage",
-          "value": 20.0,
-          "encumbrance": "0466cb77-0344-43c6-85eb-0a64aa2934e5"
+          "encumbrance": "0466cb77-0344-43c6-85eb-0a64aa2934e5",
+          "fundId": "1b6d3338-186e-4e35-9e75-1b886b0da53e",
+          "value": 20.0
         }
       ],
+      "isPackage": false,
       "locations": [
         {
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
@@ -105,12 +102,12 @@
       "paymentStatus": "Awaiting Payment",
       "physical": {
         "createInventory": "Instance, Holding, Item",
-        "volumes": [
-          "vol.1"
-        ],
         "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
         "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8",
-        "receiptDue": "2018-10-10T00:00:00.000Z"
+        "receiptDue": "2018-10-10T00:00:00.000Z",
+        "volumes": [
+          "vol.1"
+        ]
       },
       "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
       "poLineNumber": "268758-03",
@@ -121,18 +118,18 @@
       "reportingCodes": [
         {
           "code": "CODE1",
-          "id": "5926dcd7-85f5-4504-8283-712595ebc38b",
-          "description": "ABCDEF"
+          "description": "ABCDEF",
+          "id": "5926dcd7-85f5-4504-8283-712595ebc38b"
         },
         {
           "code": "CODE2",
-          "id": "fa316c04-8101-4e72-8aaf-01281bac718f",
-          "description": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+          "description": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+          "id": "fa316c04-8101-4e72-8aaf-01281bac718f"
         },
         {
           "code": "CODE3",
-          "id": "ea68b696-3125-4940-bf91-1d128323473e",
-          "description": "ABCDE"
+          "description": "ABCDE",
+          "id": "ea68b696-3125-4940-bf91-1d128323473e"
         }
       ],
       "requester": "Leo Bulero",
@@ -153,9 +150,13 @@
         "vendorAccount": "8910-10"
       },
       "metadata": {
-        "createdDate": "2010-10-08T03:53:00.000",
-        "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
+        "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88",
+        "createdDate": "2010-10-08T03:53:00.000"
       }
     }
-  ]
+  ],
+  "metadata": {
+    "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88",
+    "createdDate": "2010-10-08T03:53:00.000"
+  }
 }
