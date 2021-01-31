@@ -302,8 +302,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletionStage<Void> closeOrder(CompositePurchaseOrder compPO) {
-    return fetchCompositePolLines(compPO)
-    .thenCompose(lines -> {
+    return fetchCompositePoLines(compPO).thenCompose(lines -> {
       EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(WorkflowStatusName.OPEN_TO_CLOSE);
       CompositePurchaseOrder cloneCompPO = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
       return strategy.processEncumbrances(cloneCompPO.withCompositePoLines(lines), getRequestContext());
@@ -575,7 +574,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
         })
       .thenApply(aVoid -> encumbranceWorkflowStrategyFactory.getStrategy(WorkflowStatusName.PENDING_TO_OPEN))
       .thenCompose(strategy -> strategy.processEncumbrances(compPO, getRequestContext()))
-      .thenAccept(ok -> changePoLineStatuses(compPO.getCompositePoLines()))
+      .thenAccept(ok -> changePoLineStatuses(compPO))
       .thenCompose(ok -> orderLineHelper.updatePoLinesSummary(compPO.getCompositePoLines()));
   }
 
@@ -716,7 +715,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       return vendorHelper.validateVendor(compPO)
         .thenCompose(errors -> {
           addProcessingErrors(errors.getErrors());
-          return fetchCompositePolLines(compPO)
+          return fetchCompositePoLines(compPO)
             .thenCompose(vendorHelper::validateAccessProviders);
         })
         .thenAccept(errors -> addProcessingErrors(errors.getErrors()));
@@ -828,7 +827,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return HelperUtils.collectResultsOnSuccess(futures);
   }
 
-  private CompletableFuture<List<CompositePoLine>> fetchCompositePolLines(CompositePurchaseOrder compPO) {
+  private CompletableFuture<List<CompositePoLine>> fetchCompositePoLines(CompositePurchaseOrder compPO) {
     if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
       return  getCompositePoLines(compPO.getId(), lang, httpClient, okapiHeaders, logger)
         .thenApply(poLines -> {
@@ -861,21 +860,27 @@ public class PurchaseOrderHelper extends AbstractHelper {
     });
   }
 
-  private void changePoLineStatuses(List<CompositePoLine> compositePoLines) {
-    compositePoLines.forEach(poLine -> {
-      changeReceiptStatus(poLine);
-      changePaymentStatus(poLine);
+  private void changePoLineStatuses(CompositePurchaseOrder compPO) {
+    compPO.getCompositePoLines().forEach(poLine -> {
+      changeReceiptStatus(compPO, poLine);
+      changePaymentStatus(compPO, poLine);
     });
   }
 
-  private void changePaymentStatus(CompositePoLine poLine) {
-    if (poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.PENDING) {
+  private void changePaymentStatus(CompositePurchaseOrder compPO, CompositePoLine poLine) {
+    if (compPO.getOrderType().equals(CompositePurchaseOrder.OrderType.ONGOING)) {
+      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.ONGOING);
+    }
+    else if (poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.PENDING) {
       poLine.setPaymentStatus(CompositePoLine.PaymentStatus.AWAITING_PAYMENT);
     }
   }
 
-  private void changeReceiptStatus(CompositePoLine poLine) {
-    if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.PENDING) {
+  private void changeReceiptStatus(CompositePurchaseOrder compPO, CompositePoLine poLine) {
+    if (compPO.getOrderType().equals(CompositePurchaseOrder.OrderType.ONGOING)) {
+      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.ONGOING);
+    }
+    else if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.PENDING) {
       poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
     }
   }

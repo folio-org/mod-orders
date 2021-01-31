@@ -267,7 +267,7 @@ public class PurchaseOrdersApiTest {
       ApiTestSuite.after();
     }
   }
-  
+
   @BeforeEach
   void initMocks(){
     MockitoAnnotations.openMocks(this);
@@ -748,6 +748,106 @@ public class PurchaseOrdersApiTest {
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
   }
+
+
+  @Test
+  void testPostListedPrintSerialInOpenStatus() throws Exception {
+    logger.info("=== Test Listed Print Monograph in Open status ===");
+
+    CompositePurchaseOrder reqData = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH)).mapTo(CompositePurchaseOrder.class);
+    String orderId = UUID.randomUUID().toString();
+    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
+
+    MockServer.addMockTitles(reqData.getCompositePoLines());
+    prepareOrderForPostRequest(reqData);
+
+    reqData.setId(orderId);
+
+    reqData.getCompositePoLines().forEach(poLine -> {
+      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
+      poLine.setReceiptStatus(ReceiptStatus.PENDING);
+    });
+
+    LocalDate now = LocalDate.now();
+
+    final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    LocalDate dateOrdered = resp.getDateOrdered().toInstant().atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDate();
+    assertThat(dateOrdered.getMonth(), equalTo(now.getMonth()));
+    assertThat(dateOrdered.getYear(), equalTo(now.getYear()));
+
+    logger.info(JsonObject.mapFrom(resp));
+
+    String poId = resp.getId();
+    String poNumber = resp.getPoNumber();
+
+    assertNotNull(poId);
+    assertNotNull(poNumber);
+    assertEquals(reqData.getCompositePoLines().size(), resp.getCompositePoLines().size());
+
+    for (int i = 0; i < resp.getCompositePoLines().size(); i++) {
+      CompositePoLine line = resp.getCompositePoLines().get(i);
+      String polNumber = line.getPoLineNumber();
+      String polId = line.getId();
+
+      assertEquals(poId, line.getPurchaseOrderId());
+      assertNotNull(polId);
+      assertNotNull(polNumber);
+      assertTrue(polNumber.startsWith(poNumber));
+      assertNotNull(line.getInstanceId());
+      line.getLocations().forEach(location -> verifyLocationQuantity(location, line.getOrderFormat()));
+    }
+
+    int polCount = resp.getCompositePoLines().size();
+
+    List<JsonObject> instancesSearches = getInstancesSearches();
+    assertNotNull(instancesSearches);
+    assertEquals(polCount, instancesSearches.size());
+
+    verifyInventoryInteraction(resp, polCount);
+    verifyEncumbrancesOnPoCreation(reqData, resp);
+    assertThat(getExistingOrderSummaries(), hasSize(1));
+    verifyCalculatedData(resp);
+
+    // MODORDERS-459 - check status changed to ONGOING
+    verifyReceiptStatusChangedTo(ReceiptStatus.ONGOING.value(), reqData.getCompositePoLines().size());
+    verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.ONGOING.value(), reqData.getCompositePoLines().size());
+  }
+
+  @Test
+  void tesPutListedPrintSerialInOpenStatus() throws Exception {
+    logger.info("=== Test Put Listed Print Serial in Open status ===");
+
+    // create order in pending status
+    CompositePurchaseOrder reqData = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH)).mapTo(CompositePurchaseOrder.class);
+    String orderId = UUID.randomUUID().toString();
+    reqData.setWorkflowStatus(WorkflowStatus.PENDING);
+
+    MockServer.addMockTitles(reqData.getCompositePoLines());
+    prepareOrderForPostRequest(reqData);
+
+    reqData.setId(orderId);
+
+    reqData.getCompositePoLines().forEach(poLine -> {
+      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
+      poLine.setReceiptStatus(ReceiptStatus.PENDING);
+    });
+
+    final CompositePurchaseOrder createdOrder = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+    MockServer.addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(createdOrder));
+
+    // open Order
+    createdOrder.setWorkflowStatus(WorkflowStatus.OPEN);
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, createdOrder.getId()), JsonObject.mapFrom(createdOrder), "", 204);
+
+    // MODORDERS-459 - check status changed to ONGOING
+    verifyReceiptStatusChangedTo(ReceiptStatus.ONGOING.value(), reqData.getCompositePoLines().size());
+    verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.ONGOING.value(), reqData.getCompositePoLines().size());
+  }
+
 
   @Test
   void testOrderWithPoLinesWithoutSource() throws Exception {
