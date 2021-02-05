@@ -891,6 +891,10 @@
     {
       "id": "finance.ledger-rollovers-errors",
       "version": "1.0"
+    },
+    {
+      "id": "tags",
+      "version": "1.0"
     }
   ],
   "permissionSets": [
@@ -1424,7 +1428,9 @@
         "acquisitions-units-storage.units.collection.get",
         "acquisitions-units-storage.memberships.collection.get",
         "inventory-storage.identifier-types.collection.get",
-        "isbn-utils.convert-to-13.get"
+        "isbn-utils.convert-to-13.get",
+        "tags.collection.get",
+        "tags.item.post"
       ],
       "visible": false
     }

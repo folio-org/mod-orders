@@ -104,6 +104,7 @@ import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.TagService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.finance.EncumbranceService;
@@ -147,6 +148,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private OrderInvoiceRelationService orderInvoiceRelationService;
   @Autowired
   private ConfigurationEntriesService configurationEntriesService;
+  @Autowired
+  private TagService tagService;
   @Autowired
   private RestClient restClient;
 
@@ -228,13 +231,20 @@ public class PurchaseOrderHelper extends AbstractHelper {
         .thenCompose(ok -> checkOrderApprovalPermissions(compPO))
         .thenCompose(ok -> setPoNumberIfMissing(compPO)
         .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber()))
+        .thenCompose(v -> createTagsIfMissing(compPO))
         .thenCompose(v -> createPOandPOLines(compPO))
         .thenCompose(this::populateOrderSummary))
         .thenCompose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder.getId(), compOrder.getWorkflowStatus(), getRequestContext())
                 .thenApply(v -> compOrder));
   }
 
+  private CompletionStage<Void> createTagsIfMissing(CompositePurchaseOrder compPO) {
+    Set<String> tagLabels = compPO.getCompositePoLines().stream()
+      .flatMap(line -> line.getTags().getTagList().stream())
+      .collect(Collectors.toSet());
 
+    return tagService.createTagsIfMissing(tagLabels, getRequestContext());
+  }
 
   /**
    * @param acqUnitIds acquisitions units assigned to purchase order from request
@@ -384,7 +394,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .ofSubLists(lineIds, MAX_IDS_FOR_GET_RQ)
       // Get item records from Inventory storage
       .map(ids -> {
-        String query = encodeQuery(String.format("status.name==%s and %s", itemStatus, convertIdsToCqlQuery(ids, InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, true)), logger);
+        String query = encodeQuery(String.format("status.name==%s and %s", itemStatus, HelperUtils.convertFieldListToCqlQuery(ids, InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, true)), logger);
         return inventoryHelper.getItemRecordsByQuery(query);
       })
       .toList();

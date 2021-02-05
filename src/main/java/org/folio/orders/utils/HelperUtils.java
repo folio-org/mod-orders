@@ -698,11 +698,11 @@ public class HelperUtils {
    * @return String representing CQL query to get records by id's
    */
   public static String convertIdsToCqlQuery(Collection<String> ids, String idField) {
-    return convertIdsToCqlQuery(ids, idField, true);
+    return convertFieldListToCqlQuery(ids, idField, true);
   }
 
   public static String convertIdsToCqlQuery(Collection<String> ids) {
-    return convertIdsToCqlQuery(ids, ID, true);
+    return convertFieldListToCqlQuery(ids, ID, true);
   }
 
   /**
@@ -712,7 +712,7 @@ public class HelperUtils {
    * @param strictMatch indicates whether strict match mode (i.e. ==) should be used or not (i.e. =)
    * @return String representing CQL query to get records by some property values
    */
-  public static String convertIdsToCqlQuery(Collection<String> values, String fieldName, boolean strictMatch) {
+  public static String convertFieldListToCqlQuery(Collection<String> values, String fieldName, boolean strictMatch) {
     String prefix = fieldName + (strictMatch ? "==(" : "=(");
     return StreamEx.of(values).joining(" or ", prefix, ")");
   }

@@ -487,6 +487,7 @@ public class MockServer {
     router.post(resourcesPath(REASONS_FOR_CLOSURE)).handler(ctx -> handlePostGenericSubObj(ctx, REASONS_FOR_CLOSURE));
     router.post(resourcesPath(PREFIXES)).handler(ctx -> handlePostGenericSubObj(ctx, PREFIXES));
     router.post(resourcesPath(SUFFIXES)).handler(ctx -> handlePostGenericSubObj(ctx, SUFFIXES));
+    router.post(resourcesPath(TAGS)).handler(ctx -> handlePostGenericSubObj(ctx, TAGS));
 
     router.get(resourcePath(PURCHASE_ORDER)).handler(this::handleGetPurchaseOrderById);
     router.get(resourcesPath(PURCHASE_ORDER)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, PURCHASE_ORDER));
@@ -543,6 +544,7 @@ public class MockServer {
     router.get("/finance/ledger-rollovers-progress").handler(this::handleGetFyRolloverProgress);
     router.get(resourcesPath(LEDGER_FY_ROLLOVER_ERRORS)).handler(this::handleGetFyRolloverErrors);
     router.get(resourcesPath(ORDER_INVOICE_RELATIONSHIP)).handler(this::handleGetOrderInvoiceRelationship);
+    router.get(resourcesPath(TAGS)).handler(ctx -> handleGetGenericSubObj(ctx, TAGS));
 
     router.put(resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
     router.put(resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
