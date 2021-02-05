@@ -109,8 +109,13 @@
       "vendorDetail": {
         "instructions": "",
         "noteFromVendor": "",
-        "refNumber": "999632785",
-        "refNumberType": "Supplier's unique order line reference number",
+        "referenceNumbers": [
+          {
+            "refNumber": "123456-78",
+            "refNumberType": "Vendor title number",
+            "vendorDetailsSource": "OrderLine"
+          }
+        ],
         "vendorAccount": "12345-50"
       },
       "metadata": {

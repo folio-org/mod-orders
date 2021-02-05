@@ -97,8 +97,13 @@
       "vendorDetail": {
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
-        "refNumber": "123456-78",
-        "refNumberType": "Supplier's unique order line reference number",
+        "referenceNumbers": [
+          {
+            "refNumber": "123456-78",
+            "refNumberType": "Vendor title number",
+            "vendorDetailsSource": "OrderLine"
+          }
+        ],
         "vendorAccount": "8910-10"
       },
       "metadata": {
@@ -210,8 +215,13 @@
       "vendorDetail": {
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
-        "refNumber": "123456-78",
-        "refNumberType": "Supplier's unique order line reference number",
+        "referenceNumbers": [
+          {
+            "refNumber": "123456-78",
+            "refNumberType": "Vendor title number",
+            "vendorDetailsSource": "OrderLine"
+          }
+        ],
         "vendorAccount": "8910-25"
       },
       "metadata": {
@@ -542,8 +552,13 @@
       "vendorDetail": {
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
-        "refNumber": "123456-78",
-        "refNumberType": "Supplier's unique order line reference number",
+        "referenceNumbers": [
+          {
+            "refNumber": "123456-78",
+            "refNumberType": "Vendor title number",
+            "vendorDetailsSource": "OrderLine"
+          }
+        ],
         "vendorAccount": "8910-25"
       },
       "metadata": {
@@ -633,8 +648,13 @@
       "vendorDetail": {
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
-        "refNumber": "123456-78",
-        "refNumberType": "Supplier's unique order line reference number",
+        "referenceNumbers": [
+          {
+            "refNumber": "123456-78",
+            "refNumberType": "Vendor title number",
+            "vendorDetailsSource": "OrderLine"
+          }
+        ],
         "vendorAccount": "8910-10"
       },
       "metadata": {
@@ -716,8 +736,13 @@
       "titleOrPackage": "BEST AMERICAN SCIENCE FICTION AND FANTASY.",
       "vendorDetail": {
         "instructions": "Next Volume | Listed Print Serial",
-        "refNumber": "99974828485",
-        "refNumberType": "Supplier's unique order line reference number"
+        "referenceNumbers": [
+          {
+            "refNumber": "123456-78",
+            "refNumberType": "Vendor title number",
+            "vendorDetailsSource": "OrderLine"
+          }
+        ]
       },
       "metadata": {
         "createdDate": "2019-03-18T18:56:45.333+0000",
@@ -783,8 +808,13 @@
       "titleOrPackage": "Country Madness",
       "vendorDetail": {
         "instructions": "Next Volume | Listed Print Serial",
-        "refNumber": "99974828485",
-        "refNumberType": "Supplier's unique order line reference number"
+        "referenceNumbers": [
+          {
+            "refNumber": "123456-78",
+            "refNumberType": "Vendor title number",
+            "vendorDetailsSource": "OrderLine"
+          }
+        ]
       },
       "metadata": {
         "createdDate": "2019-03-18T18:56:45.333+0000",
@@ -881,8 +911,13 @@
       "vendorDetail": {
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
-        "refNumber": "123456-78",
-        "refNumberType": "Supplier's unique order line reference number",
+        "referenceNumbers": [
+          {
+            "refNumber": "123456-78",
+            "refNumberType": "Vendor title number",
+            "vendorDetailsSource": "OrderLine"
+          }
+        ],
         "vendorAccount": "8910-25"
       },
       "metadata": {
