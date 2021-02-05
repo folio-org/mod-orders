@@ -78,7 +78,7 @@ public class BudgetRestrictionService {
     List<String> failedBudgets = new ArrayList<>();
     trsGroupedByBudget.forEach((budget, encumbrances) -> {
       if (!encumbrances.isEmpty() && budget.getAllowableEncumbrance() != null) {
-    
+
           String currency = encumbrances.get(0).getCurrency();
           Map<String, MonetaryAmount> transactionAmountsByFunds = encumbrances.stream()
                   .collect(groupingBy(Transaction::getFromFundId, sumTransactionAmounts(currency)));
@@ -88,35 +88,38 @@ public class BudgetRestrictionService {
         if (transactionAmount.isGreaterThan(remainingAmount)) {
           failedBudgets.add(budget.getId());
         }
-      
+
       }
     });
     if (!failedBudgets.isEmpty()) {
       throw new HttpException(422, FUND_CANNOT_BE_PAID.toError()
               .withAdditionalProperty(BUDGETS, failedBudgets));
     }
-   
+
   }
 
   /**
-   * Calculates remaining amount for encumbrance [remaining amount] = (allocated * allowableEncumbered) - (encumbered +
-   * awaitingPayment + expended)
+   * Calculates remaining amount for encumbrance
+   * [remaining amount] = (allocated + netTransfers) * allowableEncumbered - (encumbered + awaitingPayment + expended)
    *
    * @param budget processed budget
    * @return remaining amount for encumbrance
    */
 
-  private Money getBudgetRemainingAmountForEncumbrance(Budget budget, CurrencyUnit systemCurrency) {
+  Money getBudgetRemainingAmountForEncumbrance(Budget budget, CurrencyUnit systemCurrency) {
     Money allocated = Money.of(budget.getAllocated(), systemCurrency);
     // get allowableEncumbered converted from percentage value
     BigDecimal allowableEncumbered = BigDecimal.valueOf(budget.getAllowableEncumbrance())
       .movePointLeft(2);
 
+    Money netTransfers = Money.of(budget.getNetTransfers(), systemCurrency);
     Money encumbered = Money.of(budget.getEncumbered(), systemCurrency);
     Money awaitingPayment = Money.of(budget.getAwaitingPayment(), systemCurrency);
-    Money expenditures = Money.of(budget.getExpenditures(), systemCurrency);
+    Money expended = Money.of(budget.getExpenditures(), systemCurrency);
 
-    return allocated.multiply(allowableEncumbered)
-      .subtract(encumbered.add(awaitingPayment.add(expenditures)));
+    Money totalFunding = allocated.add(netTransfers);
+    Money unavailable = encumbered.add(awaitingPayment).add(expended);
+
+    return totalFunding.multiply(allowableEncumbered).subtract(unavailable);
   }
 }
