@@ -131,6 +131,7 @@ import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.LedgerCollection;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.acq.model.tag.Tag;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
@@ -2071,6 +2072,8 @@ public class MockServer {
         return Prefix.class;
       case SUFFIXES:
         return Suffix.class;
+      case TAGS:
+        return Tag.class;
     }
 
     fail("The sub-object is unknown");

@@ -240,9 +240,13 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private CompletionStage<Void> createTagsIfMissing(CompositePurchaseOrder compPO) {
     Set<String> tagLabels = compPO.getCompositePoLines().stream()
+      .filter(line -> Objects.nonNull(line.getTags()))
       .flatMap(line -> line.getTags().getTagList().stream())
       .collect(Collectors.toSet());
 
+    if (tagLabels.isEmpty()) {
+      return CompletableFuture.completedFuture(null);
+    }
     return tagService.createTagsIfMissing(tagLabels, getRequestContext());
   }
 
