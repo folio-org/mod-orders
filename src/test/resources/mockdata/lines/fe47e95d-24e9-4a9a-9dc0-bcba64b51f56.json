@@ -91,8 +91,13 @@
   "vendorDetail": {
     "instructions": "ABCDEFG",
     "noteFromVendor": "ABCDEFGHIKJKLMNOP",
-    "refNumber": "123456-78",
-    "refNumberType": "Supplier's unique order line reference number",
+    "referenceNumbers": [
+      {
+        "refNumber": "123456-78",
+        "refNumberType": "Vendor title number",
+        "vendorDetailsSource": "OrderLine"
+      }
+    ],
     "vendorAccount": "8910-25"
   },
   "metadata": {
