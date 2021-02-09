@@ -4,6 +4,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.service.PrefixService;
 import org.folio.service.ReasonForClosureService;
 import org.folio.service.SuffixService;
+import org.folio.service.TagService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.exchange.FinanceExchangeRateService;
@@ -227,5 +228,10 @@ public class ApplicationConfig {
   @Bean
   OrderInvoiceRelationService orderInvoiceRelationService (RestClient orderInvoiceRelationRestClient) {
     return new OrderInvoiceRelationService(orderInvoiceRelationRestClient);
+  }
+
+  @Bean
+  TagService tagService (RestClient restClient) {
+    return new TagService(restClient);
   }
 }

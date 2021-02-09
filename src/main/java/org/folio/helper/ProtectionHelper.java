@@ -19,6 +19,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -118,7 +119,7 @@ public class ProtectionHelper extends AbstractHelper {
    * @return list of unit ids associated with user.
    */
   private CompletableFuture<Void> verifyUserIsMemberOfOrdersUnits(List<String> unitIdsAssignedToOrder) {
-    String query = String.format("userId==%s AND %s", getCurrentUserId(), convertIdsToCqlQuery(unitIdsAssignedToOrder, ACQUISITIONS_UNIT_ID, true));
+    String query = String.format("userId==%s AND %s", getCurrentUserId(), HelperUtils.convertFieldListToCqlQuery(unitIdsAssignedToOrder, ACQUISITIONS_UNIT_ID, true));
     return acquisitionsUnitsHelper.getAcquisitionsUnitsMemberships(query, 0, 0)
       .thenAccept(unit -> {
         if (unit.getTotalRecords() == 0) {
