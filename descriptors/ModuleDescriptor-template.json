@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "10.7",
+      "version": "11.0",
       "handlers": [
         {
           "methods": [
@@ -132,7 +132,7 @@
     },
     {
       "id": "order-lines",
-      "version": "1.6",
+      "version": "2.0",
       "handlers": [
         {
           "methods": [
@@ -782,7 +782,7 @@
     },
     {
       "id": "orders-storage.po-lines",
-      "version": "9.4"
+      "version": "10.0"
     },
     {
       "id": "orders-storage.order-templates",
@@ -890,6 +890,10 @@
     },
     {
       "id": "finance.ledger-rollovers-errors",
+      "version": "1.0"
+    },
+    {
+      "id": "tags",
       "version": "1.0"
     }
   ],
@@ -1424,7 +1428,9 @@
         "acquisitions-units-storage.units.collection.get",
         "acquisitions-units-storage.memberships.collection.get",
         "inventory-storage.identifier-types.collection.get",
-        "isbn-utils.convert-to-13.get"
+        "isbn-utils.convert-to-13.get",
+        "tags.collection.get",
+        "tags.item.post"
       ],
       "visible": false
     }

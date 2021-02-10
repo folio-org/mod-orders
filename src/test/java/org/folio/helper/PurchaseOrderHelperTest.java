@@ -47,6 +47,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.TagService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.finance.EncumbranceService;
@@ -219,6 +220,11 @@ public class PurchaseOrderHelperTest {
     @Bean
     public OrderInvoiceRelationService orderInvoiceRelationService() {
       return mock(OrderInvoiceRelationService.class);
+    }
+
+    @Bean
+    TagService tagService() {
+      return mock(TagService.class);
     }
 
     @Bean

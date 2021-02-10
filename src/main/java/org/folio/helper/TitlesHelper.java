@@ -111,7 +111,7 @@ public class TitlesHelper extends AbstractHelper {
     return collectResultsOnSuccess(StreamEx
       .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ)
       // Transform piece id's to CQL query
-      .map(ids -> HelperUtils.convertIdsToCqlQuery(ids, "poLineId", true))
+      .map(ids -> HelperUtils.convertFieldListToCqlQuery(ids, "poLineId", true))
       // Send get request for each CQL query
       .map(this::getTitlesByQuery)
       .toList())

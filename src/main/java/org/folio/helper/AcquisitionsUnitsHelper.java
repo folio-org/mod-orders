@@ -17,6 +17,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
@@ -95,7 +96,7 @@ public class AcquisitionsUnitsHelper extends AbstractHelper {
         return NO_ACQ_UNIT_ASSIGNED_CQL;
       }
 
-      return String.format("%s or (%s)", convertIdsToCqlQuery(ids, ACQUISITIONS_UNIT_IDS, false), NO_ACQ_UNIT_ASSIGNED_CQL);
+      return String.format("%s or (%s)", HelperUtils.convertFieldListToCqlQuery(ids, ACQUISITIONS_UNIT_IDS, false), NO_ACQ_UNIT_ASSIGNED_CQL);
     });
   }
 
