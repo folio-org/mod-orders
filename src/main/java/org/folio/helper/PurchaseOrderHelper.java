@@ -56,9 +56,6 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -74,8 +71,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import javax.money.convert.ConversionQuery;
-import one.util.streamex.StreamEx;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -116,6 +114,11 @@ import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderReEncumberService;
 import org.javamoney.moneta.Money;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import one.util.streamex.StreamEx;
 
 public class PurchaseOrderHelper extends AbstractHelper {
 
@@ -231,14 +234,27 @@ public class PurchaseOrderHelper extends AbstractHelper {
         .thenCompose(ok -> checkOrderApprovalPermissions(compPO))
         .thenCompose(ok -> setPoNumberIfMissing(compPO)
         .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber()))
-        .thenCompose(v -> createTagsIfMissing(compPO))
+        .thenCompose(v -> processPoLineTags(compPO))
         .thenCompose(v -> createPOandPOLines(compPO))
         .thenCompose(this::populateOrderSummary))
         .thenCompose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder.getId(), compOrder.getWorkflowStatus(), getRequestContext())
                 .thenApply(v -> compOrder));
   }
 
-  private CompletionStage<Void> createTagsIfMissing(CompositePurchaseOrder compPO) {
+  private CompletionStage<Void> processPoLineTags(CompositePurchaseOrder compPO) {
+    // MODORDERS-470 - new tags are all lower-case and no spaces
+    for (CompositePoLine line : compPO.getCompositePoLines()) {
+      if (line.getTags() != null) {
+        var processedTagList = line.getTags()
+          .getTagList()
+          .stream()
+          .map(tag -> StringUtils.deleteWhitespace(tag).toLowerCase())
+          .collect(toList());
+
+        line.getTags().setTagList(processedTagList);
+        }
+      }
+
     Set<String> tagLabels = compPO.getCompositePoLines().stream()
       .filter(line -> Objects.nonNull(line.getTags()))
       .flatMap(line -> line.getTags().getTagList().stream())

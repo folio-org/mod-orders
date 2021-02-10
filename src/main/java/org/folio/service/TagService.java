@@ -29,11 +29,7 @@ public class TagService {
   }
 
   public CompletableFuture<Void> createTagsIfMissing(Set<String> tagLabels, RequestContext requestContext) {
-    // MODORDERS-470 - new tags are all lower-case and no spaces
-    List<String> tagList = tagLabels.stream()
-      .map(tag -> StringUtils.deleteWhitespace(tag).toLowerCase())
-      .collect(Collectors.toList());
-
+    List<String> tagList = new ArrayList<>(tagLabels);
     String query = HelperUtils.convertFieldListToCqlQuery(tagList, "label", true);
 
     return getTags(query, 0, Integer.MAX_VALUE, requestContext)
