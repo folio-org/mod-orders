@@ -138,7 +138,9 @@
       "source": "EDI",
       "tags": {
         "tagList": [
-          "imPortant  _Tag"
+          "imPortant  _Tag",
+          "   ",
+          ""
         ]
       },
       "titleOrPackage": "Kayak Fishing in the Northern Gulf Coast",
