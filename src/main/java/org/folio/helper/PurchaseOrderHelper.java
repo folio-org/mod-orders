@@ -248,12 +248,13 @@ public class PurchaseOrderHelper extends AbstractHelper {
         var processedTagList = line.getTags()
           .getTagList()
           .stream()
+          .filter(StringUtils::isNotBlank)
           .map(tag -> StringUtils.deleteWhitespace(tag).toLowerCase())
           .collect(toList());
 
         line.getTags().setTagList(processedTagList);
-        }
       }
+    }
 
     Set<String> tagLabels = compPO.getCompositePoLines().stream()
       .filter(line -> Objects.nonNull(line.getTags()))
