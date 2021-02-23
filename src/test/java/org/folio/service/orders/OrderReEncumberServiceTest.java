@@ -10,15 +10,9 @@ import static org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress.
 import static org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress.RolloverStatus.NOT_STARTED;
 import static org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress.RolloverStatus.SUCCESS;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -42,6 +36,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+
+import javax.money.convert.ConversionQuery;
+import javax.money.convert.ConversionQueryBuilder;
 
 import org.folio.models.ReEncumbranceHolder;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -79,8 +76,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
-import javax.money.convert.ConversionQuery;
-import javax.money.convert.ConversionQueryBuilder;
 
 public class OrderReEncumberServiceTest {
 
@@ -658,6 +653,7 @@ public class OrderReEncumberServiceTest {
                 .setBaseCurrency("EUR").setTermCurrency("USD").set(ExchangeRateProviderResolver.RATE_KEY, exchangeRate).build();
         ConversionQuery conversionFyToPoLineQuery = ConversionQueryBuilder.of()
                 .setBaseCurrency("USD").setTermCurrency("EUR").set(ExchangeRateProviderResolver.RATE_KEY, exchangeRate).build();
+
         ReEncumbranceHolder holder1 = new ReEncumbranceHolder()
                 .withPurchaseOrder(compPO)
                 .withRollover(rollover)

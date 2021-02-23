@@ -12,7 +12,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import javax.money.MonetaryAmount;
-import javax.money.MonetaryOperator;
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRateProvider;
@@ -42,7 +41,6 @@ import org.folio.service.finance.LedgerService;
 import org.folio.service.finance.RolloverRetrieveService;
 import org.folio.service.finance.TransactionService;
 import org.javamoney.moneta.Money;
-import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.json.JsonObject;
 
