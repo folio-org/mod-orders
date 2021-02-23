@@ -44,6 +44,10 @@ jobs:
       - run: echo "<html><body><pre>" > ci/lintRamlCop.html
       - run: python3 folio-tools/lint-raml/lint_raml_cop.py -l info --validate-only >>ci/lintRamlCop.html
       - run: echo "</pre><body></html>" >> ci/lintRamlCop.html
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ci-raml-lint
+          path: ci/lintRamlCop.html
       - run: rm -rf ci && rm -rf folio-tools
   Maven-Deploy:
     runs-on: ubuntu-latest
