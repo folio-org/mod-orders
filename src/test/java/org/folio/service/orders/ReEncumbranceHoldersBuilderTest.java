@@ -11,6 +11,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isOneOf;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -29,6 +30,7 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
+import javax.money.convert.CurrencyConversion;
 
 import org.folio.models.ReEncumbranceHolder;
 import org.folio.rest.acq.model.finance.Budget;
@@ -398,21 +400,37 @@ public class ReEncumbranceHoldersBuilderTest {
   void shouldPopulateReEncumbranceHoldersWithConversionWhenWhenHoldersContainsCurrentFiscalYear() {
 
     FiscalYear fiscalYear = new FiscalYear().withCurrency("USD");
-    CompositePoLine line1 = new CompositePoLine().withCost(new Cost().withCurrency("GBP"));
+    CompositePoLine line1 = new CompositePoLine().withCost(new Cost().withCurrency("EUR"));
     CompositePoLine line2 = new CompositePoLine().withCost(new Cost().withCurrency("EUR"));
+    double exchangeEurToUsdRate = 1.1d;
+    double exchangeUsdToEurRate = 0.909d;
 
     ReEncumbranceHolder holder1 = new ReEncumbranceHolder().withCurrentFiscalYear(fiscalYear).withPoLine(line1);
     ReEncumbranceHolder holder2 = new ReEncumbranceHolder().withCurrentFiscalYear(fiscalYear).withPoLine(line2);
 
+    ConversionQuery conversionPoLineToFyQuery = ConversionQueryBuilder.of()
+      .setBaseCurrency("EUR").setTermCurrency("USD").set(ExchangeRateProviderResolver.RATE_KEY, exchangeEurToUsdRate).build();
+    ConversionQuery conversionFyToPoLineQuery = ConversionQueryBuilder.of()
+      .setBaseCurrency("USD").setTermCurrency("EUR").set(ExchangeRateProviderResolver.RATE_KEY, exchangeUsdToEurRate).build();
+
+    CurrencyConversion poLineToFyConversion = exchangeRateProvider.getCurrencyConversion(conversionPoLineToFyQuery);
+    CurrencyConversion poFyToPoLineConversion = exchangeRateProvider.getCurrencyConversion(conversionFyToPoLineQuery);
+
     List<ReEncumbranceHolder> holders = Arrays.asList(holder1, holder2);
     when(exchangeRateProviderResolver.resolve(any(), any())).thenReturn(exchangeRateProvider);
-    when(exchangeRateProvider.getCurrencyConversion(any(ConversionQuery.class))).thenReturn(currencyConversion);
+    when(exchangeRateProviderResolver.resolve(conversionPoLineToFyQuery, requestContext)).thenReturn(exchangeRateProvider);
+    when(exchangeRateProviderResolver.resolve(conversionFyToPoLineQuery, requestContext)).thenReturn(exchangeRateProvider);
+    when(exchangeRateProvider.getCurrencyConversion(conversionPoLineToFyQuery)).thenReturn(poLineToFyConversion);
+    when(exchangeRateProvider.getCurrencyConversion(conversionFyToPoLineQuery)).thenReturn(poFyToPoLineConversion);
+
     when(requestContext.getContext()).thenReturn(Vertx.vertx().getOrCreateContext());
 
     List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withConversions(holders, requestContext).join();
 
-    assertThat(resultHolders, everyItem(hasProperty("poLineToFyConversion", is(currencyConversion))));
-
+    assertEquals(resultHolders.get(0).getPoLineToFyConversion().getCurrency(), poLineToFyConversion.getCurrency());
+    assertEquals(resultHolders.get(1).getPoLineToFyConversion().getCurrency(), poLineToFyConversion.getCurrency());
+    assertEquals(resultHolders.get(0).getFyToPoLineConversion().getCurrency(), poFyToPoLineConversion.getCurrency());
+    assertEquals(resultHolders.get(1).getFyToPoLineConversion().getCurrency(), poFyToPoLineConversion.getCurrency());
   }
 
   @Test
