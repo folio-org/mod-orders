@@ -7,7 +7,7 @@ on:
   push:
     branches: [ FOLIO-2913 ]
 jobs:
-  set-up:
+  build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -22,12 +22,27 @@ jobs:
     - run: echo "FOLIO registry is $folioRegistry"
       env:
         folioRegistry:  https://repository.folio.org/repository/maven-snapshots/
-    - run: mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout
-    - run: mvn help:evaluate -Dexpression=project.version -q -DforceStdout
+    - run: echo "module_name=$(mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout)" >> $GITHUB_ENV
+    - run: echo "module_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
     - run: echo "project name is ${{ github.REPOSITORY }}"
     - run: git rev-parse HEAD
     - run: git config remote.origin.url
     - run: java --version
+    - run: echo "Starting MvnDeploy stage..."
+    - run: mvn dependency:list | { grep -i snapshot || true; }
+    - run: >
+        mvn clean org.jacoco:jacoco-maven-plugin:prepare-agent install 
+        org.jacoco:jacoco-maven-plugin:report
+    - run: docker build --pull=true --no-cache=true -t ${{ env.module_name }}:${{ env.module_version }} .
+    - run: >
+        if test -f "$MOD_DESCRIPTOR"; then
+          echo "ModuleDescriptor.json found!!!"
+          mv $MOD_DESCRIPTOR $MOD_DESCRIPTOR.orig
+        else
+          echo "ModuleDescriptor.json not found.."
+        fi
+      env:
+          MOD_DESCRIPTOR: target/ModuleDescriptor.json
   RAML-lint:
     runs-on: ubuntu-latest
     steps:
@@ -49,45 +64,7 @@ jobs:
           name: ci-raml-lint
           path: ci/lintRamlCop.html
       - run: rm -rf ci && rm -rf folio-tools
-  Maven-Deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.REF }}
-          submodules: recursive
-      - uses: actions/setup-java@v1
-        with:
-          java-version: '11'
-      - run: echo "Starting MvnDeploy stage..."
-      - run: mvn dependency:list | { grep -i snapshot || true; }
-      - run: >
-          mvn clean org.jacoco:jacoco-maven-plugin:prepare-agent install 
-          org.jacoco:jacoco-maven-plugin:report
-      - run: >
-          if test -f "$MOD_DESCRIPTOR"; then
-            echo "ModuleDescriptor.json found!!!"
-            mv $MOD_DESCRIPTOR $MOD_DESCRIPTOR.orig
-          else
-            echo "ModuleDescriptor.json not found.."
-          fi
-        env:
-          MOD_DESCRIPTOR: target/ModuleDescriptor.json
-  Docker-jobs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.REF }}
-      #- if: ${{ github.REF }} == 'master'
-      - run: echo "module_version=$( mvn help:evaluate -Dexpression=project.version -q -DforceStdout )" >> $GITHUB_ENV
-      - run: |
-         echo "Entering docker build job"
-         docker build --pull=true --no-cache=true -t $module_name:${{ env.module_version }} .
-        env:
-           module_name: mod-orders
-      - run: echo "Job done!!!"
-      - run: echo ${{ env.version }}
+      
 
         
 
