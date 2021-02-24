@@ -73,5 +73,20 @@ jobs:
           fi
         env:
           MOD_DESCRIPTOR: target/ModuleDescriptor.json
+  Docker-jobs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.REF }}
+      #- if: ${{ github.REF }} == 'master'
+      - run: |
+         echo "Entering docker build job"
+         echo "version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
+         docker build --pull=true --no-cache=true -t ${{ github.REF }}:${{ env.version }} .
+      - run: echo "Job done!!!"
+      - run: echo ${env.version}
+
+        
 
   
