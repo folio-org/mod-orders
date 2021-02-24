@@ -80,9 +80,9 @@ jobs:
         with:
           ref: ${{ github.REF }}
       #- if: ${{ github.REF }} == 'master'
+      - run: echo "module_version=$( mvn help:evaluate -Dexpression=project.version -q -DforceStdout )" >> $GITHUB_ENV
       - run: |
          echo "Entering docker build job"
-         echo "module_version=$( mvn help:evaluate -Dexpression=project.version -q -DforceStdout )" >> $GITHUB_ENV
          docker build --pull=true --no-cache=true -t $module_name:${{ env.module_version }} .
         env:
            module_name: mod-orders
