@@ -83,9 +83,9 @@ jobs:
       - run: |
          echo "Entering docker build job"
          echo "version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
-         docker build --pull=true --no-cache=true -t $module_name:${{ env.version }} .
-        env:
-          module_name: mod-orders
+        #  docker build --pull=true --no-cache=true -t $module_name:${{ env.version }} .
+        # env:
+        #   module_name: mod-orders
       - run: echo "Job done!!!"
       - run: echo ${env.version}
 
