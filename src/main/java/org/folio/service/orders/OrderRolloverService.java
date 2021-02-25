@@ -33,6 +33,7 @@ import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
+import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
@@ -147,22 +148,33 @@ public class OrderRolloverService {
       PoLine poLine = holder.getPoLine();
       var currEncumbranceFundIdMap = holder.getEncumbrances().stream().collect(groupingBy(Transaction::getFromFundId));
       if (!MapUtils.isEmpty(currEncumbranceFundIdMap)) {
-        updatePoLineCost(holder, poLine);
-        updateFundDistribution(poLine, currEncumbranceFundIdMap);
+        updatePoLineCostWithFundDistribution(holder, poLine, currEncumbranceFundIdMap);
       }
     });
     return poLineEncumbrancesHolders.stream().map(PoLineEncumbrancesHolder::getPoLine).collect(toList());
   }
 
-  private void updatePoLineCost(PoLineEncumbrancesHolder holder, PoLine poLine) {
+  private void updatePoLineCostWithFundDistribution(PoLineEncumbrancesHolder holder, PoLine poLine,
+    Map<String, List<Transaction>> currEncumbranceFundIdMap) {
     BigDecimal totalCurrEncumbranceInitialAmount = calculateTotalInitialAmountEncumbered(holder.getEncumbrances());
+    Double poLineEstimatedPriceBeforeRollover = poLine.getCost().getPoLineEstimatedPrice();
+    Double poLineEstimatedPriceAfterRollover = totalCurrEncumbranceInitialAmount.doubleValue();
+
     Double fyroAdjustmentAmount = calculateFYROAdjustmentAmount(holder, totalCurrEncumbranceInitialAmount).getNumber().doubleValue();
     poLine.getCost().setFyroAdjustmentAmount(fyroAdjustmentAmount);
-    poLine.getCost().setPoLineEstimatedPrice(totalCurrEncumbranceInitialAmount.doubleValue());
+    poLine.getCost().setPoLineEstimatedPrice(poLineEstimatedPriceAfterRollover);
+
+    updateFundDistribution(poLine, currEncumbranceFundIdMap, poLineEstimatedPriceBeforeRollover, poLineEstimatedPriceAfterRollover);
   }
 
-  private void updateFundDistribution(PoLine poLine, Map<String, List<Transaction>> currEncumbranceFundIdMap) {
+  private void updateFundDistribution(PoLine poLine, Map<String, List<Transaction>> currEncumbranceFundIdMap,
+    Double poLineEstimatedPriceBeforeRollover, Double poLineEstimatedPriceAfterRollover) {
     poLine.getFundDistribution().forEach(fundDistr -> {
+      if (fundDistr.getDistributionType().equals(DistributionType.AMOUNT)) {
+        MonetaryAmount fdAmount = Money.of(fundDistr.getValue(), poLine.getCost().getCurrency());
+        MonetaryAmount newFdAmount = fdAmount.divide(poLineEstimatedPriceBeforeRollover).multiply(poLineEstimatedPriceAfterRollover);
+        fundDistr.setValue(newFdAmount.getNumber().doubleValue());
+      }
       var currEncumbrances = currEncumbranceFundIdMap.getOrDefault(fundDistr.getFundId(), Collections.emptyList());
       currEncumbrances.forEach(encumbr -> {
         if (encumbr.getExpenseClassId() != null && fundDistr.getExpenseClassId() != null) {
@@ -212,7 +224,7 @@ public class OrderRolloverService {
   private CompletableFuture<List<Transaction>> getEncumbrancesForRollover(List<String> orderIds, LedgerFiscalYearRollover ledgerFYRollover,
                                                                           RequestContext requestContext) {
     String query = buildQueryEncumbrancesForRollover(orderIds, ledgerFYRollover);
-    return transactionService.getTransactionsByPoLinesIds(query, 0, Integer.MAX_VALUE, requestContext)
+    return transactionService.getTransactions(query, 0, Integer.MAX_VALUE, requestContext)
                                 .thenApply(TransactionCollection::getTransactions);
   }
 
@@ -229,7 +241,7 @@ public class OrderRolloverService {
 
   private String buildQuery(List<String> orderIds, String queryTemplate, String delimiter) {
     return orderIds.stream()
-                   .map(orderId -> String.format(queryTemplate, orderId))
+            .map(orderId -> String.format(queryTemplate, orderId))
                    .collect(Collectors.joining(delimiter));
   }
 

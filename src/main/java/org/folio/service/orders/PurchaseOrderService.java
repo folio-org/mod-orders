@@ -1,5 +1,8 @@
 package org.folio.service.orders;
 
+import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.folio.rest.core.RestClient;
@@ -7,8 +10,6 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
-
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 public class PurchaseOrderService {
 
@@ -32,4 +33,17 @@ public class PurchaseOrderService {
             .withOffset(offset);
     return restClient.get(requestEntry, requestContext, PurchaseOrderCollection.class);
   }
+
+  public CompletableFuture<List<PurchaseOrder>> getPurchaseOrderByPoLineIds(List<String> ids, RequestContext requestContext) {
+    String query = convertIdsToCqlQuery(ids, "poLineId.sourcePoLineId");
+
+    RequestEntry requestEntry = new RequestEntry(ENDPOINT)
+      .withQuery(query)
+      .withLimit(Integer.MAX_VALUE)
+      .withOffset(0);
+
+    return restClient.get(requestEntry, requestContext, PurchaseOrderCollection.class)
+      .thenApply(PurchaseOrderCollection::getPurchaseOrders);
+  }
+
 }

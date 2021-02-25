@@ -51,6 +51,8 @@ import java.util.stream.Collectors;
 import javax.money.CurrencyUnit;
 import javax.money.Monetary;
 import javax.money.MonetaryAmount;
+import javax.money.convert.ConversionQuery;
+import javax.money.convert.ConversionQueryBuilder;
 import javax.ws.rs.Path;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -80,6 +82,7 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.parser.JsonPathParser;
+import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
@@ -107,7 +110,7 @@ public class HelperUtils {
 
   public static final String DEFAULT_POLINE_LIMIT = "1";
   public static final String REASON_COMPLETE = "Complete";
-  private static final String MAX_POLINE_LIMIT = "500";
+  private static final String MAX_POLINE_LIMIT = "999";
   public static final String OKAPI_URL = "x-okapi-url";
   private static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
   public static final String LANG = "lang";
@@ -695,11 +698,11 @@ public class HelperUtils {
    * @return String representing CQL query to get records by id's
    */
   public static String convertIdsToCqlQuery(Collection<String> ids, String idField) {
-    return convertIdsToCqlQuery(ids, idField, true);
+    return convertFieldListToCqlQuery(ids, idField, true);
   }
 
   public static String convertIdsToCqlQuery(Collection<String> ids) {
-    return convertIdsToCqlQuery(ids, ID, true);
+    return convertFieldListToCqlQuery(ids, ID, true);
   }
 
   /**
@@ -709,7 +712,7 @@ public class HelperUtils {
    * @param strictMatch indicates whether strict match mode (i.e. ==) should be used or not (i.e. =)
    * @return String representing CQL query to get records by some property values
    */
-  public static String convertIdsToCqlQuery(Collection<String> values, String fieldName, boolean strictMatch) {
+  public static String convertFieldListToCqlQuery(Collection<String> values, String fieldName, boolean strictMatch) {
     String prefix = fieldName + (strictMatch ? "==(" : "=(");
     return StreamEx.of(values).joining(" or ", prefix, ")");
   }
@@ -1084,5 +1087,19 @@ public class HelperUtils {
 
   public static boolean isNotFound(Throwable t) {
     return t instanceof HttpException && ((HttpException) t).getCode() == 404;
+  }
+
+  public static ConversionQuery getConversionQuery(Double exchangeRate, String fromCurrency, String toCurrency) {
+    ConversionQuery conversionQuery;
+    if (exchangeRate != null) {
+      conversionQuery = ConversionQueryBuilder.of().setBaseCurrency(fromCurrency)
+        .setTermCurrency(toCurrency)
+        .set(ExchangeRateProviderResolver.RATE_KEY, exchangeRate)
+        .build();
+    } else {
+      conversionQuery = ConversionQueryBuilder.of().setBaseCurrency(fromCurrency)
+        .setTermCurrency(toCurrency).build();
+    }
+    return conversionQuery;
   }
 }

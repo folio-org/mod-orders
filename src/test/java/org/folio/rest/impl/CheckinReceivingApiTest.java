@@ -113,6 +113,7 @@ public class CheckinReceivingApiTest {
   private static final String HOLDING_PERMANENT_LOCATION_ID = "permanentLocationId";
   private static final String ITEM_STATUS_NAME = "name";
   private static final String ITEM_STATUS = "status";
+  private static final String COMPOSITE_POLINE_ONGOING_ID = "6e2b169a-ebeb-4c3c-a2f2-6233ff9c59ae";
 
   private static boolean runningOnOwn;
 
@@ -298,6 +299,48 @@ public class CheckinReceivingApiTest {
     // Verify message is sent via event bus
     verifyCheckinOrderStatusUpdateEvent(1);
   }
+
+  @Test
+  void testReceiveOngoingOrder() {
+    logger.info("=== Test POST Receive - Ongoing PO Lines");
+
+    CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(9).mapTo(CompositePoLine.class);
+    MockServer.addMockTitles(Collections.singletonList(poLines));
+
+    ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-physical-ongoing.json").mapTo(ReceivingCollection.class);
+    receivingRq.getToBeReceived().get(0).setPoLineId(COMPOSITE_POLINE_ONGOING_ID);
+
+    ReceivingResults results = verifyPostResponse(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
+
+    assertThat(results.getTotalRecords(), equalTo(receivingRq.getTotalRecords()));
+
+    Map<String, Set<String>> pieceIdsByPol = verifyReceivingSuccessRs(results);
+
+    List<JsonObject> pieceSearches = getPieceSearches();
+    List<JsonObject> pieceUpdates = getPieceUpdates();
+    List<JsonObject> polSearches = getPoLineSearches();
+    List<JsonObject> polUpdates = getPoLineUpdates();
+
+    assertThat(pieceSearches, not(nullValue()));
+    assertThat(pieceUpdates, not(nullValue()));
+
+    assertThat(polSearches, not(nullValue()));
+
+    int expectedSearchRqQty = Math.floorDiv(receivingRq.getTotalRecords(), AbstractHelper.MAX_IDS_FOR_GET_RQ) + 1;
+
+    // The piece searches should be made 1 time: 1st time to get all required piece records
+    assertThat(pieceSearches, hasSize(expectedSearchRqQty));
+    assertThat(pieceUpdates, hasSize(receivingRq.getTotalRecords()));
+    assertThat(polSearches, hasSize(pieceIdsByPol.size()));
+
+    // check no status updates were performed
+    assertThat(polUpdates, nullValue());
+
+    // Verify no status updated for ongoing order
+    verifyOrderStatusUpdateEvent(0);
+  }
+
 
   @Test
   void testPostCheckInLocationId() {

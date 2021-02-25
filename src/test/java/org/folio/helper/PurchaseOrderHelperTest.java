@@ -47,6 +47,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.TagService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.finance.EncumbranceService;
@@ -70,12 +71,13 @@ import io.vertx.core.Context;
 public class PurchaseOrderHelperTest {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";
   public static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
-  public static final String TWO_ENCUMBRANCE_PATH = BASE_MOCK_DATA_PATH + "encumbrances/two_pending_encumbrances.json";
 
   @Autowired
   private EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
   @Mock
   private OpenToPendingEncumbranceStrategy openToPendingEncumbranceStrategy;
+  @Mock
+  private RestClient restClient;
 
   private  Map<String, String> okapiHeadersMock;
 
@@ -220,6 +222,15 @@ public class PurchaseOrderHelperTest {
       return mock(OrderInvoiceRelationService.class);
     }
 
+    @Bean
+    TagService tagService() {
+      return mock(TagService.class);
+    }
+
+    @Bean
+    public RestClient restClient() {
+      return mock(RestClient.class);
+    }
   }
 
 }

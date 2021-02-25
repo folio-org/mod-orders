@@ -22,7 +22,6 @@ import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.HelperUtils.isHoldingUpdateRequiredForEresource;
 import static org.folio.orders.utils.HelperUtils.isHoldingUpdateRequiredForPhysical;
-import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -42,7 +41,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.acq.model.Piece;
@@ -64,7 +62,6 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.vertx.core.Context;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.EntryStream;
 import one.util.streamex.StreamEx;
@@ -82,8 +79,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   final ProtectionHelper protectionHelper;
   private List<PoLine> poLineList;
 
-  CheckinReceivePiecesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx,
-      String lang) {
+  CheckinReceivePiecesHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
     processedHoldingsParams = new HashSet<>();
     processedHoldings = new HashMap<>();
@@ -416,64 +412,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
           });
   }
 
-  /**
-   * Stores updated piece records with receiving/check-in details into storage.
-   *
-   * @param piecesGroupedByPoLine
-   *          map with PO line id as key and list of corresponding pieces as
-   *          value
-   * @return map passed as a parameter
-   */
-  protected CompletableFuture<Map<String, List<Piece>>> updatePoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine) {
-    List<String> poLineIdsForUpdatedPieces = getPoLineIdsForUpdatedPieces(piecesGroupedByPoLine);
-    // Once all PO Lines are retrieved from storage check if receipt status
-    // requires update and persist in storage
-    return getPoLines(poLineIdsForUpdatedPieces)
-      .thenCompose(poLines -> {
-        // Calculate expected status for each PO Line and update with new one if
-        // required
-        List<CompletableFuture<String>> futures = new ArrayList<>();
-        for (PoLine poLine : poLines) {
-          List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
-          futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces)
-                .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, okapiHeaders, logger)));
-        }
-
-        return collectResultsOnSuccess(futures)
-          .thenAccept(updatedPoLines -> {
-            logger.debug("{} out of {} PO Line(s) updated with new status", updatedPoLines.size(), piecesGroupedByPoLine.size());
-
-            // Send event to check order status for successfully processed PO Lines
-            updateOrderStatus(StreamEx
-              .of(poLines)
-              // Leave only successfully updated PO Lines
-              .filter(line -> updatedPoLines.contains(line.getId()))
-              .toList());
-          });
-      })
-      .thenApply(ok -> piecesGroupedByPoLine);
-  }
-
-  private void updateOrderStatus(List<PoLine> poLines) {
-    if (!poLines.isEmpty()) {
-      logger.debug("Sending event to verify order status");
-
-      // Collect order ids which should be processed
-      List<JsonObject> poIds = StreamEx
-        .of(poLines)
-        .map(PoLine::getPurchaseOrderId)
-        .distinct()
-        .map(orderId -> new JsonObject().put(ORDER_ID, orderId))
-        .toList();
-
-      JsonObject messageContent = new JsonObject();
-      messageContent.put(OKAPI_HEADERS, okapiHeaders);
-      messageContent.put(EVENT_PAYLOAD, new JsonArray(poIds));
-      sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, messageContent);
-
-      logger.debug("Event to verify order status - sent");
-    }
-  }
 
   protected List<String> getPoLineIdsForUpdatedPieces(Map<String, List<Piece>> piecesGroupedByPoLine) {
     return EntryStream

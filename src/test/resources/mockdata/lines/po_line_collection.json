@@ -97,8 +97,13 @@
       "vendorDetail": {
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
-        "refNumber": "123456-78",
-        "refNumberType": "Supplier's unique order line reference number",
+        "referenceNumbers": [
+          {
+            "refNumber": "123456-78",
+            "refNumberType": "Vendor title number",
+            "vendorDetailsSource": "OrderLine"
+          }
+        ],
         "vendorAccount": "8910-10"
       },
       "metadata": {
@@ -210,8 +215,13 @@
       "vendorDetail": {
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
-        "refNumber": "123456-78",
-        "refNumberType": "Supplier's unique order line reference number",
+        "referenceNumbers": [
+          {
+            "refNumber": "123456-78",
+            "refNumberType": "Vendor title number",
+            "vendorDetailsSource": "OrderLine"
+          }
+        ],
         "vendorAccount": "8910-25"
       },
       "metadata": {
@@ -542,8 +552,13 @@
       "vendorDetail": {
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
-        "refNumber": "123456-78",
-        "refNumberType": "Supplier's unique order line reference number",
+        "referenceNumbers": [
+          {
+            "refNumber": "123456-78",
+            "refNumberType": "Vendor title number",
+            "vendorDetailsSource": "OrderLine"
+          }
+        ],
         "vendorAccount": "8910-25"
       },
       "metadata": {
@@ -633,8 +648,13 @@
       "vendorDetail": {
         "instructions": "ABCDEFG",
         "noteFromVendor": "ABCDEFGHIKJKLMNOP",
-        "refNumber": "123456-78",
-        "refNumberType": "Supplier's unique order line reference number",
+        "referenceNumbers": [
+          {
+            "refNumber": "123456-78",
+            "refNumberType": "Vendor title number",
+            "vendorDetailsSource": "OrderLine"
+          }
+        ],
         "vendorAccount": "8910-10"
       },
       "metadata": {
@@ -716,8 +736,13 @@
       "titleOrPackage": "BEST AMERICAN SCIENCE FICTION AND FANTASY.",
       "vendorDetail": {
         "instructions": "Next Volume | Listed Print Serial",
-        "refNumber": "99974828485",
-        "refNumberType": "Supplier's unique order line reference number"
+        "referenceNumbers": [
+          {
+            "refNumber": "123456-78",
+            "refNumberType": "Vendor title number",
+            "vendorDetailsSource": "OrderLine"
+          }
+        ]
       },
       "metadata": {
         "createdDate": "2019-03-18T18:56:45.333+0000",
@@ -783,8 +808,13 @@
       "titleOrPackage": "Country Madness",
       "vendorDetail": {
         "instructions": "Next Volume | Listed Print Serial",
-        "refNumber": "99974828485",
-        "refNumberType": "Supplier's unique order line reference number"
+        "referenceNumbers": [
+          {
+            "refNumber": "123456-78",
+            "refNumberType": "Vendor title number",
+            "vendorDetailsSource": "OrderLine"
+          }
+        ]
       },
       "metadata": {
         "createdDate": "2019-03-18T18:56:45.333+0000",
@@ -792,7 +822,110 @@
         "updatedDate": "2019-03-18T18:56:45.477+0000",
         "updatedByUserId": "a564c58b-fe32-5729-ab90-12df37840a76"
       }
+    },
+    {
+      "id": "6e2b169a-ebeb-4c3c-a2f2-6233ff9c59ae",
+      "acquisitionMethod": "Purchase At Vendor System",
+      "alerts": [],
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
+      "claims": [],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "Ed Mashburn",
+          "contributorNameTypeId": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+        }
+      ],
+      "cost": {
+        "currency": "USD",
+        "listUnitPrice": 24.99,
+        "quantityPhysical": 1
+      },
+      "description": "ABCDEFGH",
+      "details": {
+        "productIds": [
+          {
+            "productId": "9780764354113",
+            "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422"
+          }
+        ],
+        "receivingNote": "ABCDEFGHIJKL",
+        "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+        "subscriptionInterval": 824,
+        "subscriptionTo": "2020-10-09T00:00:00.000Z"
+      },
+      "donor": "ABCDEFGHIJKLM",
+      "fundDistribution": [
+        {
+          "code": "HIST",
+          "fundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3",
+          "distributionType": "percentage",
+          "value": 80.0
+        }
+      ],
+      "locations": [
+        {
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "quantity": 1,
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
+        },
+        {
+          "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
+          "quantity": 2,
+          "quantityElectronic": 0,
+          "quantityPhysical": 2
+        }
+      ],
+      "orderFormat": "Physical Resource",
+      "paymentStatus": "Ongoing",
+      "physical": {
+        "createInventory": "Instance, Holding, Item",
+        "expectedReceiptDate": "2018-10-05T00:00:00.000Z",
+        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8",
+        "receiptDue": "2018-10-10T00:00:00.000Z",
+        "volumes": [
+          "vol. 1"
+        ]
+      },
+      "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
+      "poLineNumber": "1EFC97C6B7-1",
+      "publicationDate": "2017",
+      "publisher": "Schiffer Publishing",
+      "purchaseOrderId": "95d29d04-34b1-4fe0-a15e-1cd129143692",
+      "receiptDate": "2018-10-09T00:00:00.000+0000",
+      "receiptStatus": "Ongoing",
+      "reportingCodes": [],
+      "requester": "Leo Bulero",
+      "rush": true,
+      "selector": "ABCD",
+      "tags": {
+        "tagList": [
+          "important"
+        ]
+      },
+      "titleOrPackage": "Kayak Fishing in the Northern Gulf Coast",
+      "vendorDetail": {
+        "instructions": "ABCDEFG",
+        "noteFromVendor": "ABCDEFGHIKJKLMNOP",
+        "referenceNumbers": [
+          {
+            "refNumber": "123456-78",
+            "refNumberType": "Vendor title number",
+            "vendorDetailsSource": "OrderLine"
+          }
+        ],
+        "vendorAccount": "8910-25"
+      },
+      "metadata": {
+        "createdByUserId": "28d10cfc-d137-11e8-a8d5-f2801f1b9fd1",
+        "createdDate": "2014-07-06T00:00:00.000"
+      }
     }
+
   ],
-  "totalRecords": 8
+  "totalRecords": 9
 }

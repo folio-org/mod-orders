@@ -234,13 +234,15 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     // Once all PO Lines are retrieved from storage check if receipt status
     // requires update and persist in storage
     return getPoLines(poLineIdsForUpdatedPieces).thenCompose(poLines -> {
-      // Calculate expected status for each PO Line and update with new one if
-      // required
+      // Calculate expected status for each PO Line and update with new one if required
+      // Skip status update if PO line status is Ongoing
       List<CompletableFuture<String>> futures = new ArrayList<>();
       for (PoLine poLine : poLines) {
-        List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
-        futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces)
-          .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, okapiHeaders, logger)));
+        if (!poLine.getPaymentStatus().equals(PoLine.PaymentStatus.ONGOING)) {
+          List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
+          futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces)
+            .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, okapiHeaders, logger)));
+        }
       }
 
       return collectResultsOnSuccess(futures).thenAccept(updatedPoLines -> {

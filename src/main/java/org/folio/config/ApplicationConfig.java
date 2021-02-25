@@ -4,10 +4,12 @@ import org.folio.rest.core.RestClient;
 import org.folio.service.PrefixService;
 import org.folio.service.ReasonForClosureService;
 import org.folio.service.SuffixService;
+import org.folio.service.TagService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.exchange.FinanceExchangeRateService;
 import org.folio.service.finance.BudgetExpenseClassService;
+import org.folio.service.finance.BudgetRestrictionService;
 import org.folio.service.finance.BudgetService;
 import org.folio.service.finance.EncumbranceService;
 import org.folio.service.finance.EncumbranceWorkflowStrategy;
@@ -30,6 +32,7 @@ import org.folio.service.orders.OrderReEncumberService;
 import org.folio.service.orders.OrderRolloverService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.ReEncumbranceHoldersBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -102,14 +105,18 @@ public class ApplicationConfig {
   }
 
   @Bean
+  BudgetRestrictionService budgetRestrictionService(BudgetService budgetService, LedgerService ledgerService) {
+    return new BudgetRestrictionService(budgetService, ledgerService);
+  }
+
+  @Bean
   EncumbranceService encumbranceService(TransactionService transactionService, TransactionSummariesService transactionSummariesService,
                                         ExchangeRateProviderResolver exchangeRateProviderResolver,
                                         FundService fundService,
-                                        LedgerService ledgerService,
-                                        BudgetService budgetService,
+                                        BudgetRestrictionService budgetRestrictionService,
                                         FiscalYearService fiscalYearService,
                                         ConfigurationEntriesService configurationEntriesService) {
-    return new EncumbranceService(transactionService, transactionSummariesService, exchangeRateProviderResolver, fundService, ledgerService, budgetService, fiscalYearService, configurationEntriesService);
+    return new EncumbranceService(transactionService, transactionSummariesService, exchangeRateProviderResolver, fundService, budgetRestrictionService, fiscalYearService, configurationEntriesService);
   }
 
   @Bean
@@ -153,12 +160,39 @@ public class ApplicationConfig {
   }
 
   @Bean
+  ReEncumbranceHoldersBuilder reEncumbranceHoldersBuilder(BudgetService budgetService,
+                                                          LedgerService ledgerService,
+                                                          FundService fundService,
+                                                          ExchangeRateProviderResolver exchangeRateProviderResolver,
+                                                          FiscalYearService fiscalYearService,
+                                                          RolloverRetrieveService rolloverRetrieveService,
+                                                          TransactionService transactionService) {
+    return new ReEncumbranceHoldersBuilder(budgetService,
+            ledgerService,
+            fundService,
+            exchangeRateProviderResolver,
+            fiscalYearService,
+            rolloverRetrieveService,
+            transactionService);
+  }
+
+  @Bean
   OrderReEncumberService orderReEncumberService(CompositePurchaseOrderService compositePurchaseOrderService,
-                                                FundService fundService,
+                                                ReEncumbranceHoldersBuilder reEncumbranceHoldersBuilder,
                                                 RolloverErrorService rolloverErrorService,
                                                 RolloverRetrieveService rolloverRetrieveService,
-                                                FiscalYearService fiscalYearService) {
-    return new OrderReEncumberService(compositePurchaseOrderService, fundService, rolloverErrorService, rolloverRetrieveService, fiscalYearService);
+                                                PurchaseOrderLineService purchaseOrderLineService,
+                                                TransactionService transactionService,
+                                                TransactionSummariesService transactionSummaryService,
+                                                BudgetRestrictionService budgetRestrictionService) {
+    return new OrderReEncumberService(compositePurchaseOrderService,
+            reEncumbranceHoldersBuilder,
+            rolloverErrorService,
+            rolloverRetrieveService,
+            purchaseOrderLineService,
+            transactionService,
+            transactionSummaryService,
+            budgetRestrictionService);
   }
 
   @Bean
@@ -194,5 +228,10 @@ public class ApplicationConfig {
   @Bean
   OrderInvoiceRelationService orderInvoiceRelationService (RestClient orderInvoiceRelationRestClient) {
     return new OrderInvoiceRelationService(orderInvoiceRelationRestClient);
+  }
+
+  @Bean
+  TagService tagService (RestClient restClient) {
+    return new TagService(restClient);
   }
 }

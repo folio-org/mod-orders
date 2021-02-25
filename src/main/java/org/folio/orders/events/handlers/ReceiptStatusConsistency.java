@@ -68,10 +68,13 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
 
       String lang = messageFromEventBus.getString(LANG);
       // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
-      getPoLineById(poLineIdUpdate, lang, httpClient, okapiHeaders, logger).thenAccept(poLineJson -> {
+      getPoLineById(poLineIdUpdate, lang, httpClient, okapiHeaders, logger)
+        .thenAccept(poLineJson -> {
         PoLine poLine = poLineJson.mapTo(PoLine.class);
-
-        calculatePoLineReceiptStatus(poLine, listOfPieces)
+          if (poLine.getReceiptStatus().equals(PoLine.ReceiptStatus.ONGOING)) {
+            return;
+          }
+          calculatePoLineReceiptStatus(poLine, listOfPieces)
           .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, okapiHeaders, logger))
           .thenAccept(updatedPoLineId -> {
             if (updatedPoLineId != null) {
