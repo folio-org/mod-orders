@@ -34,6 +34,15 @@ jobs:
         mvn clean org.jacoco:jacoco-maven-plugin:prepare-agent install 
         org.jacoco:jacoco-maven-plugin:report
     - run: docker build --pull=true --no-cache=true -t ${{ env.module_name }}:${{ env.module_version }} .
+    - if: ${{ github.REF }} == 'master'
+      run: |
+        echo "Publishing Docker images"
+        docker tag ${{ env.module_name }}:${{ env.module_version }} $dockerRepo/${{ env.module_name }}:${{ env.module_version }}
+        docker tag ${{ env.module_name }}:${{ env.module_version }} $dockerRepo/${{ env.module_name }}:latest
+        docker push $dockerRepo/${{ env.module_name }}:${{ env.module_version }}
+        docker push $dockerRepo/${{ env.module_name }}:latest
+      env:
+        dockerRepo: folioci
     - run: >
         if test -f "$MOD_DESCRIPTOR"; then
           echo "ModuleDescriptor.json found!!!"
