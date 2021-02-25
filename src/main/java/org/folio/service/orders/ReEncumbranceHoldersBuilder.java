@@ -286,7 +286,6 @@ public class ReEncumbranceHoldersBuilder {
       .ifPresent(holder::withToFYEncumbrance));
   }
 
-  //Взять POLine и если у fundDistribution амаунт то просто просетать, то пересчитать процент от poLineEstimatedPrice
   private void buildToFyEncumbrance(ReEncumbranceHolder holder) {
     Optional.ofNullable(holder.getEncumbranceRollover())
       .ifPresent(encumbranceRollover -> {
