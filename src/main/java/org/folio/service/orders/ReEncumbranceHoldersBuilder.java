@@ -1,9 +1,11 @@
 package org.folio.service.orders;
 
+import static java.math.MathContext.DECIMAL64;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -198,10 +200,13 @@ public class ReEncumbranceHoldersBuilder {
         ConversionQuery poLineToFYConversionQuery = HelperUtils.getConversionQuery(exchangeRate, poLineCurrency, fyCurrency.get());
         ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(poLineToFYConversionQuery, requestContext);
         CurrencyConversion poLineToFYConversion = exchangeRateProvider.getCurrencyConversion(poLineToFYConversionQuery);
+        exchangeRate = poLineToFYConversion.getExchangeRate(Money.of(0d, poLineCurrency)).getFactor().doubleValue();
 
-        ConversionQuery fyToPoLineConversionQuery = HelperUtils.getConversionQuery(exchangeRate, fyCurrency.get(), poLineCurrency);
-        CurrencyConversion fyToPoLineconversion = exchangeRateProvider.getCurrencyConversion(fyToPoLineConversionQuery);
-        holders.forEach(holder -> holder.withPoLineToFyConversion(poLineToFYConversion).withFyToPoLineConversion(fyToPoLineconversion));
+        double reverseRate = BigDecimal.ONE.divide(BigDecimal.valueOf(exchangeRate), DECIMAL64).doubleValue();
+
+        ConversionQuery fyToPoLineConversionQuery = HelperUtils.getConversionQuery(reverseRate, fyCurrency.get(), poLineCurrency);
+        CurrencyConversion fyToPoLineConversion = exchangeRateProvider.getCurrencyConversion(fyToPoLineConversionQuery);
+        holders.forEach(holder -> holder.withPoLineToFyConversion(poLineToFYConversion).withFyToPoLineConversion(fyToPoLineConversion));
       });
       return reEncumbranceHolders;
     });
