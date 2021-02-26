@@ -1,9 +1,11 @@
 package org.folio.service.orders;
 
+import static java.math.MathContext.DECIMAL64;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -12,7 +14,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import javax.money.MonetaryAmount;
-import javax.money.MonetaryOperator;
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRateProvider;
@@ -32,6 +33,7 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
+import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.finance.BudgetService;
@@ -41,7 +43,6 @@ import org.folio.service.finance.LedgerService;
 import org.folio.service.finance.RolloverRetrieveService;
 import org.folio.service.finance.TransactionService;
 import org.javamoney.moneta.Money;
-import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.json.JsonObject;
 
@@ -58,8 +59,8 @@ public class ReEncumbranceHoldersBuilder {
   private final TransactionService transactionService;
 
   public ReEncumbranceHoldersBuilder(BudgetService budgetService, LedgerService ledgerService, FundService fundService,
-      ExchangeRateProviderResolver exchangeRateProviderResolver, FiscalYearService fiscalYearService,
-      RolloverRetrieveService rolloverRetrieveService, TransactionService transactionService) {
+                                     ExchangeRateProviderResolver exchangeRateProviderResolver, FiscalYearService fiscalYearService,
+                                     RolloverRetrieveService rolloverRetrieveService, TransactionService transactionService) {
     this.budgetService = budgetService;
     this.ledgerService = ledgerService;
     this.fundService = fundService;
@@ -175,8 +176,8 @@ public class ReEncumbranceHoldersBuilder {
       .thenApply(rollovers -> withRollovers(rollovers, holders));
   }
 
-  public CompletableFuture<List<ReEncumbranceHolder>> withConversion(List<ReEncumbranceHolder> reEncumbranceHolders,
-      RequestContext requestContext) {
+  public CompletableFuture<List<ReEncumbranceHolder>> withConversions(List<ReEncumbranceHolder> reEncumbranceHolders,
+                                                                      RequestContext requestContext) {
     Optional<String> fyCurrency = reEncumbranceHolders.stream()
             .map(ReEncumbranceHolder::getCurrentFiscalYear)
             .filter(Objects::nonNull)
@@ -188,9 +189,7 @@ public class ReEncumbranceHoldersBuilder {
     return AsyncUtil.executeBlocking(requestContext.getContext(), false, () -> {
 
       Map<String, List<ReEncumbranceHolder>> currencyHoldersMap = reEncumbranceHolders.stream()
-        .collect(groupingBy(reEncumbranceHolder -> reEncumbranceHolder.getPoLine()
-          .getCost()
-          .getCurrency()));
+        .collect(groupingBy(reEncumbranceHolder -> reEncumbranceHolder.getPoLine().getCost().getCurrency()));
       currencyHoldersMap.forEach((poLineCurrency, holders) -> {
         Double exchangeRate = holders.stream()
                 .map(ReEncumbranceHolder::getPoLine)
@@ -198,23 +197,38 @@ public class ReEncumbranceHoldersBuilder {
                 .map(Cost::getExchangeRate)
                 .filter(Objects::nonNull)
                 .findFirst().orElse(null);
-        ConversionQuery conversionQuery = HelperUtils.getConversionQuery(exchangeRate, poLineCurrency, fyCurrency.get());
-        ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
-        CurrencyConversion conversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
-        holders.forEach(holder -> holder.withPoLineToFyConversion(conversion));
+        ConversionQuery poLineToFYConversionQuery = HelperUtils.getConversionQuery(exchangeRate, poLineCurrency, fyCurrency.get());
+        ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(poLineToFYConversionQuery, requestContext);
+        CurrencyConversion poLineToFYConversion = exchangeRateProvider.getCurrencyConversion(poLineToFYConversionQuery);
+        exchangeRate = poLineToFYConversion.getExchangeRate(Money.of(0d, poLineCurrency)).getFactor().doubleValue();
+
+        double reverseRate = BigDecimal.ONE.divide(BigDecimal.valueOf(exchangeRate), DECIMAL64).doubleValue();
+
+        ConversionQuery fyToPoLineConversionQuery = HelperUtils.getConversionQuery(reverseRate, fyCurrency.get(), poLineCurrency);
+        CurrencyConversion fyToPoLineConversion = exchangeRateProvider.getCurrencyConversion(fyToPoLineConversionQuery);
+        holders.forEach(holder -> holder.withPoLineToFyConversion(poLineToFYConversion).withFyToPoLineConversion(fyToPoLineConversion));
       });
       return reEncumbranceHolders;
     });
 
   }
 
-  public CompletableFuture<List<ReEncumbranceHolder>> withEncumbrances(List<ReEncumbranceHolder> holders,
-      RequestContext requestContext) {
+  public CompletableFuture<List<ReEncumbranceHolder>> withFromEncumbrances(List<ReEncumbranceHolder> holders,
+                                                                           RequestContext requestContext) {
     return holders.stream()
       .filter(reEncumbranceHolder -> Objects.nonNull(reEncumbranceHolder.getRollover()))
       .findFirst()
-      .map(reEncumbranceHolder -> withFromTransactions(holders, requestContext)
-        .thenCompose(h -> withToTransactions(holders, requestContext)))
+      .map(reEncumbranceHolder -> withFromTransactions(holders, requestContext))
+      .orElseGet(() -> CompletableFuture.completedFuture(holders));
+
+  }
+
+  public CompletableFuture<List<ReEncumbranceHolder>> withToEncumbrances(List<ReEncumbranceHolder> holders,
+                                                                         RequestContext requestContext) {
+    return holders.stream()
+      .filter(reEncumbranceHolder -> Objects.nonNull(reEncumbranceHolder.getRollover()))
+      .findFirst()
+      .map(reEncumbranceHolder -> withToTransactions(holders, requestContext))
       .orElseGet(() -> CompletableFuture.completedFuture(holders));
 
   }
@@ -276,28 +290,25 @@ public class ReEncumbranceHoldersBuilder {
     Optional.ofNullable(holder.getEncumbranceRollover())
       .ifPresent(encumbranceRollover -> {
         Transaction fromEncumbrance = holder.getFromFYEncumbrance();
-        Transaction toEncumbrance = JsonObject.mapFrom(fromEncumbrance)
-          .mapTo(Transaction.class)
-                .withFiscalYearId(holder.getRollover().getToFiscalYearId())
-          .withId(null);
+        Transaction toEncumbrance = JsonObject.mapFrom(fromEncumbrance).mapTo(Transaction.class)
+                                              .withFiscalYearId(holder.getRollover().getToFiscalYearId())
+                                              .withId(null);
         toEncumbrance.getEncumbrance()
           .withStatus(Encumbrance.Status.UNRELEASED)
           .withAmountAwaitingPayment(0d)
           .withAmountExpended(0d);
 
-        MonetaryOperator percentOperator = MonetaryOperators.percent(encumbranceRollover.getIncreaseBy());
         MonetaryAmount amount;
-        if (encumbranceRollover.getBasedOn() == EncumbranceRollover.BasedOn.REMAINING) {
-          amount = Money.of(fromEncumbrance.getAmount(), fromEncumbrance.getCurrency());
+        FundDistribution fundDistr = holder.getFundDistribution();
+        if (fundDistr.getDistributionType() == FundDistribution.DistributionType.AMOUNT) {
+          amount = Money.of(fundDistr.getValue(), holder.getPoLine().getCost().getCurrency());
         } else {
-          amount = Money.of(fromEncumbrance.getEncumbrance()
-            .getAmountExpended(), fromEncumbrance.getCurrency());
+          MonetaryAmount poLineEstimatedPrice = HelperUtils.calculateEstimatedPrice(holder.getPoLine().getCost());
+          amount = poLineEstimatedPrice.multiply(fundDistr.getValue()).divide(100);
         }
-        amount = amount.add(amount.with(percentOperator));
-        toEncumbrance.setAmount(amount.getNumber()
-          .doubleValue());
-        toEncumbrance.getEncumbrance()
-          .setInitialAmountEncumbered(toEncumbrance.getAmount());
+        amount = amount.with(holder.getPoLineToFyConversion());
+        toEncumbrance.setAmount(amount.getNumber().doubleValue());
+        toEncumbrance.getEncumbrance().setInitialAmountEncumbered(toEncumbrance.getAmount());
         holder.withToFYEncumbrance(toEncumbrance);
       });
   }
@@ -308,9 +319,7 @@ public class ReEncumbranceHoldersBuilder {
       .filter(holder -> Objects.nonNull(holder.getRollover()))
       .findFirst()
       .map(holder -> String.format(GET_ORDER_TRANSACTIONS_QUERY_TEMPLATE, holder.getRollover()
-        .getFromFiscalYearId(),
-          holder.getPurchaseOrder()
-            .getId()))
+        .getFromFiscalYearId(), holder.getPurchaseOrder().getId()))
       .map(fromQuery -> transactionService.getTransactions(fromQuery, 0, Integer.MAX_VALUE, requestContext)
         .thenApply(TransactionCollection::getTransactions)
         .thenApply(transactions -> {
