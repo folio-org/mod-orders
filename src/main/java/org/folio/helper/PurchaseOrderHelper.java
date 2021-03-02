@@ -14,7 +14,6 @@ import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_UNOPEN_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
@@ -788,7 +787,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private CompletableFuture<Void> validatePoLineLimit(CompositePurchaseOrder compPO) {
     if (CollectionUtils.isNotEmpty(compPO.getCompositePoLines())) {
-       return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext())
+       return getTenantConfiguration()
         .thenAccept(config -> {
           int limit = getPoLineLimit(config);
           if (compPO.getCompositePoLines().size() > limit) {
@@ -833,7 +832,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @param compPO composite purchase order for checking permissions
    */
   private CompletableFuture<Void> checkOrderApprovalPermissions(CompositePurchaseOrder compPO) {
-    return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext()).thenAccept(config -> {
+    return getTenantConfiguration().thenAccept(config -> {
       boolean isApprovalRequired = isApprovalRequiredConfiguration(config);
       if (isApprovalRequired && compPO.getApproved().equals(Boolean.TRUE)) {
         if (isUserNotHaveApprovePermission()) {
@@ -863,7 +862,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @param compPO composite purchase order
    */
   private CompletableFuture<Void> checkOrderApprovalRequired(CompositePurchaseOrder compPO) {
-    return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext()).thenAccept(config -> {
+    return getTenantConfiguration().thenAccept(config -> {
       boolean isApprovalRequired = isApprovalRequiredConfiguration(config);
       if (isApprovalRequired && !compPO.getApproved().equals(Boolean.TRUE)) {
         throw new HttpException(400, APPROVAL_REQUIRED_TO_OPEN);

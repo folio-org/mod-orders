@@ -966,7 +966,7 @@ public class InventoryHelper extends AbstractHelper {
    * @return tenant specific value or system default one
    */
   private CompletableFuture<String> getEntryTypeValue(String entryType) {
-    return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext())
+    return getTenantConfiguration()
       .thenApply(configs -> {
         switch (entryType) {
           case INSTANCE_STATUSES:
