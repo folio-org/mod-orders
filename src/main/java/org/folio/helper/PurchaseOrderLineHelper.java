@@ -68,6 +68,7 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
@@ -470,7 +471,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private void updateOrderStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
-    CompletableFuture.supplyAsync(() -> lineFromStorage.mapTo(PoLine.class))
+    FolioVertxCompletableFuture.supplyBlockingAsync(ctx, () -> lineFromStorage.mapTo(PoLine.class))
       .thenAccept(poLine -> {
         // See MODORDERS-218
         if (!StringUtils.equals(poLine.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value())

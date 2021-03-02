@@ -78,6 +78,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
+import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.ErrorCodes;
@@ -277,7 +278,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       return completedFuture(null);
     }
 
-    return CompletableFuture.runAsync(() -> verifyUserHasAssignPermission(acqUnitIds))
+    return FolioVertxCompletableFuture.runAsync(ctx, () -> verifyUserHasAssignPermission(acqUnitIds))
       .thenCompose(ok -> protectionHelper.verifyIfUnitsAreActive(acqUnitIds))
       .thenCompose(ok -> protectionHelper.isOperationRestricted(acqUnitIds, ProtectedOperationType.CREATE));
   }
@@ -379,7 +380,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     if (isEmpty(compPO.getCompositePoLines())) {
       future = fetchOrderLinesByOrderId(compPO.getId());
     } else {
-      future = CompletableFuture.supplyAsync(() -> {
+      future = FolioVertxCompletableFuture.supplyBlockingAsync(ctx, () -> {
         List<PoLine> poLines = HelperUtils.convertToPoLines(compPO.getCompositePoLines());
         changeOrderStatus(purchaseOrder, poLines);
         return poLines;
@@ -1113,7 +1114,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     List<String> updatedAcqUnitIds = updatedOrder.getAcqUnitIds();
     List<String> currentAcqUnitIds = persistedOrder.getAcqUnitIds();
 
-    return CompletableFuture.runAsync(() -> verifyUserHasManagePermission(updatedAcqUnitIds, currentAcqUnitIds))
+    return FolioVertxCompletableFuture.runAsync(ctx, () -> verifyUserHasManagePermission(updatedAcqUnitIds, currentAcqUnitIds))
       // Check that all newly assigned units are active/exist
       .thenCompose(ok -> protectionHelper.verifyIfUnitsAreActive(ListUtils.subtract(updatedAcqUnitIds, currentAcqUnitIds)))
       .thenCompose(ok -> getInvolvedOperations(updatedOrder))
