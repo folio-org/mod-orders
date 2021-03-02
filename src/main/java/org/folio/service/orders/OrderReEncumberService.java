@@ -17,6 +17,8 @@ import java.util.stream.Collectors;
 
 import javax.money.Monetary;
 import javax.money.MonetaryAmount;
+import javax.money.MonetaryOperator;
+import javax.money.convert.CurrencyConversion;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -33,6 +35,8 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.EncumbranceRollover;
+import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReportingCode;
@@ -42,6 +46,7 @@ import org.folio.service.finance.RolloverRetrieveService;
 import org.folio.service.finance.TransactionService;
 import org.folio.service.finance.TransactionSummariesService;
 import org.javamoney.moneta.Money;
+import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.json.JsonObject;
 
@@ -113,10 +118,11 @@ public class OrderReEncumberService {
       .thenApply(reEncumbranceHoldersBuilder::withEncumbranceRollover)
       .thenCompose(holders -> checkRolloverHappensForAllLedgers(holders, requestContext))
       .thenCompose(holders -> reEncumbranceHoldersBuilder.withBudgets(holders, requestContext))
-      .thenCompose(holders -> reEncumbranceHoldersBuilder.withConversion(holders, requestContext))
+      .thenCompose(holders -> reEncumbranceHoldersBuilder.withConversions(holders, requestContext))
       .thenApply(this::filterNeedReEncumbranceHolders)
-      .thenCompose(holders -> reEncumbranceHoldersBuilder.withEncumbrances(holders, requestContext))
+      .thenCompose(holders -> reEncumbranceHoldersBuilder.withFromEncumbrances(holders, requestContext))
       .thenApply(this::adjustPoLinesCost)
+      .thenCompose(holders -> reEncumbranceHoldersBuilder.withToEncumbrances(holders, requestContext))
       .thenApply(this::verifyBudgets)
       .thenCompose(holders -> createEncumbrances(holders, requestContext))
       .thenApply(this::updateLinkToEncumbrances)
@@ -234,31 +240,41 @@ public class OrderReEncumberService {
     Map<CompositePoLine, List<ReEncumbranceHolder>> poLineHoldersMap = reEncumbranceHolders.stream()
       .collect(groupingBy(ReEncumbranceHolder::getPoLine));
       poLineHoldersMap.forEach(this::adjustPoLineCost);
-
     return reEncumbranceHolders;
-
   }
 
   private void adjustPoLineCost(CompositePoLine poLine, List<ReEncumbranceHolder> holders) {
-    holders.stream()
-            .map(ReEncumbranceHolder::getPoLineToFyConversion)
-            .filter(Objects::nonNull)
-            .findFirst()
-            .ifPresent(conversion -> {
-              MonetaryAmount encumbranceTotalAmount = holders
-                      .stream()
-                      .map(ReEncumbranceHolder::getToFYEncumbrance)
-                      .map(transaction -> Money.of(transaction.getAmount(), transaction.getCurrency()))
-                      .reduce(Money::add)
-                      .orElseGet(() -> Money.zero(Monetary.getCurrency(poLine
-                              .getCost()
-                              .getCurrency())));
-              MonetaryAmount poLineEstimatedPrice = HelperUtils.calculateEstimatedPrice(poLine
-                      .getCost()).with(conversion);
-              poLine.getCost().setFyroAdjustmentAmount(encumbranceTotalAmount.subtract(poLineEstimatedPrice).getNumber().doubleValue());
-            });
-  }
+    MonetaryAmount poLineEstimatedPriceAfterRollover = Money.zero(Monetary.getCurrency(poLine.getCost().getCurrency()));
+    for (ReEncumbranceHolder holder : holders) {
+      if (holder.getEncumbranceRollover() != null && holder.getPoLineToFyConversion() != null) {
+        CurrencyConversion fyToPoLineConversion = holder.getFyToPoLineConversion();
+        Transaction fromEncumbrance = holder.getFromFYEncumbrance();
+        EncumbranceRollover encumbranceRollover = holder.getEncumbranceRollover();
+        MonetaryOperator percentOperator = MonetaryOperators.percent(encumbranceRollover.getIncreaseBy());
+        MonetaryAmount amount;
+        if (encumbranceRollover.getBasedOn() == EncumbranceRollover.BasedOn.REMAINING) {
+          amount = Money.of(fromEncumbrance.getAmount(), fromEncumbrance.getCurrency());
+        } else {
+          amount = Money.of(fromEncumbrance.getEncumbrance().getAmountExpended(), fromEncumbrance.getCurrency());
+        }
+        amount = amount.add(amount.with(percentOperator)).with(fyToPoLineConversion);
+        poLineEstimatedPriceAfterRollover = poLineEstimatedPriceAfterRollover.add(amount);
+      }
+    }
+    MonetaryAmount poLineEstimatedPriceBeforeRollover = HelperUtils.calculateEstimatedPrice(poLine.getCost());
+    poLine.getCost().setFyroAdjustmentAmount(poLineEstimatedPriceAfterRollover.subtract(poLineEstimatedPriceBeforeRollover).getNumber().doubleValue());
 
+    for (ReEncumbranceHolder holder : holders) {
+      FundDistribution fundDistr = holder.getFundDistribution();
+      MonetaryAmount newFundAmount;
+      if (fundDistr.getDistributionType().equals(FundDistribution.DistributionType.AMOUNT)) {
+        MonetaryAmount fdAmount = Money.of(fundDistr.getValue(), poLine.getCost().getCurrency());
+        newFundAmount = fdAmount.divide(poLineEstimatedPriceBeforeRollover.getNumber().doubleValue())
+                                .multiply(poLineEstimatedPriceAfterRollover.getNumber().doubleValue());
+        fundDistr.setValue(newFundAmount.getNumber().doubleValue());
+      }
+    }
+  }
 
   private CompletableFuture<List<ReEncumbranceHolder>> createEncumbrances(List<ReEncumbranceHolder> holders,
       RequestContext requestContext) {
@@ -282,5 +298,5 @@ public class OrderReEncumberService {
       .orElseGet(() -> CompletableFuture.completedFuture(holders));
 
   }
-  
+
 }

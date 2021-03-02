@@ -17,9 +17,11 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -27,7 +29,11 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import javax.money.Monetary;
+import javax.money.MonetaryAmount;
 import javax.money.convert.ConversionQuery;
+import javax.money.convert.CurrencyConversion;
+import javax.money.convert.ExchangeRate;
 
 import org.folio.models.ReEncumbranceHolder;
 import org.folio.rest.acq.model.finance.Budget;
@@ -46,14 +52,15 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.Ongoing;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
-import org.folio.service.exchange.FinanceApiExchangeRateProvider;
 import org.folio.service.exchange.ManualCurrencyConversion;
+import org.folio.service.exchange.ManualExchangeRateProvider;
 import org.folio.service.finance.BudgetService;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
 import org.folio.service.finance.RolloverRetrieveService;
 import org.folio.service.finance.TransactionService;
+import org.javamoney.moneta.spi.DefaultNumberValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -80,7 +87,7 @@ public class ReEncumbranceHoldersBuilderTest {
   @Mock
   private ExchangeRateProviderResolver exchangeRateProviderResolver;
   @Mock
-  private FinanceApiExchangeRateProvider exchangeRateProvider;
+  private ManualExchangeRateProvider exchangeRateProvider;
   @Mock
   private ManualCurrencyConversion currencyConversion;
   @Mock
@@ -396,21 +403,33 @@ public class ReEncumbranceHoldersBuilderTest {
   void shouldPopulateReEncumbranceHoldersWithConversionWhenWhenHoldersContainsCurrentFiscalYear() {
 
     FiscalYear fiscalYear = new FiscalYear().withCurrency("USD");
-    CompositePoLine line1 = new CompositePoLine().withCost(new Cost().withCurrency("GBP"));
+    CompositePoLine line1 = new CompositePoLine().withCost(new Cost().withCurrency("EUR"));
     CompositePoLine line2 = new CompositePoLine().withCost(new Cost().withCurrency("EUR"));
+    double exchangeEurToUsdRate = 1.1d;
 
     ReEncumbranceHolder holder1 = new ReEncumbranceHolder().withCurrentFiscalYear(fiscalYear).withPoLine(line1);
     ReEncumbranceHolder holder2 = new ReEncumbranceHolder().withCurrentFiscalYear(fiscalYear).withPoLine(line2);
 
+    CurrencyConversion poLineToFyConversion = mock(ManualCurrencyConversion.class, withSettings().name("poLineToFyConversion"));
+    CurrencyConversion poFyToPoLineConversion = mock(ManualCurrencyConversion.class, withSettings().name("poFyToPoLineConversion"));
+    ExchangeRate exchangeRate = mock(ExchangeRate.class);
+
     List<ReEncumbranceHolder> holders = Arrays.asList(holder1, holder2);
     when(exchangeRateProviderResolver.resolve(any(), any())).thenReturn(exchangeRateProvider);
-    when(exchangeRateProvider.getCurrencyConversion(any(ConversionQuery.class))).thenReturn(currencyConversion);
+    when(exchangeRateProvider.getCurrencyConversion(any(ConversionQuery.class))).thenReturn(poLineToFyConversion, poFyToPoLineConversion);
+
+    when(exchangeRate.getFactor()).thenReturn(new DefaultNumberValue(exchangeEurToUsdRate));
+    when(poLineToFyConversion.getCurrency()).thenReturn(Monetary.getCurrency("EUR"));
+    when(poLineToFyConversion.getExchangeRate(any())).thenReturn(exchangeRate);
+    when(poFyToPoLineConversion.getCurrency()).thenReturn(Monetary.getCurrency("USD"));
     when(requestContext.getContext()).thenReturn(Vertx.vertx().getOrCreateContext());
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withConversion(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withConversions(holders, requestContext).join();
 
-    assertThat(resultHolders, everyItem(hasProperty("poLineToFyConversion", is(currencyConversion))));
-
+    assertEquals(resultHolders.get(0).getPoLineToFyConversion().getCurrency(), poLineToFyConversion.getCurrency());
+    assertEquals(resultHolders.get(1).getPoLineToFyConversion().getCurrency(), poLineToFyConversion.getCurrency());
+    assertEquals(resultHolders.get(0).getFyToPoLineConversion().getCurrency(), poFyToPoLineConversion.getCurrency());
+    assertEquals(resultHolders.get(1).getFyToPoLineConversion().getCurrency(), poFyToPoLineConversion.getCurrency());
   }
 
   @Test
@@ -418,7 +437,7 @@ public class ReEncumbranceHoldersBuilderTest {
 
     List<ReEncumbranceHolder> holders = Collections.emptyList();
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withConversion(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withConversions(holders, requestContext).join();
 
     assertThat(resultHolders, is(empty()));
     verify(exchangeRateProviderResolver, never()).resolve(any(), any());
@@ -430,7 +449,7 @@ public class ReEncumbranceHoldersBuilderTest {
 
     List<ReEncumbranceHolder> holders = Arrays.asList(new ReEncumbranceHolder(), new ReEncumbranceHolder());
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withConversion(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withConversions(holders, requestContext).join();
 
     assertEquals(resultHolders, holders);
     verify(exchangeRateProviderResolver, never()).resolve(any(), any());
@@ -572,7 +591,7 @@ public class ReEncumbranceHoldersBuilderTest {
   }
 
   @Test
-  void shouldPopulateReEncumbranceHoldersWithToAndFromFyEncumbrances() {
+  void shouldPopulateReEncumbranceHoldersWithFromFyEncumbrances() {
     String fromFyId = UUID.randomUUID().toString();
     String toFyId = UUID.randomUUID().toString();
     String orderId = UUID.randomUUID().toString();
@@ -648,22 +667,15 @@ public class ReEncumbranceHoldersBuilderTest {
     when(transactionService.getTransactions(contains(fromFyId), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.completedFuture(fromTransactionCollection));
     when(transactionService.getTransactions(contains(toFyId), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.completedFuture(toTransactionCollection));
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withEncumbrances(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withFromEncumbrances(holders, requestContext).join();
 
-    assertThat(resultHolders, hasItem(allOf(hasProperty("fromFYEncumbrance", is(fromEncumbrance1)), hasProperty("toFYEncumbrance", is(toEncumbrance1)))));
-    assertThat(resultHolders, hasItem(allOf(hasProperty("fromFYEncumbrance", is(fromEncumbrance2)),
-            hasProperty("toFYEncumbrance", allOf(
-                    hasProperty("id", nullValue()),
-                    hasProperty("currency", is(fromEncumbrance2.getCurrency())),
-                    hasProperty("fromFundId", is(fromEncumbrance2.getFromFundId())),
-                    hasProperty("amount", is(110d)),
-                    hasProperty("fiscalYearId", is(toFyId))
-            )))));
+    assertThat(resultHolders, hasItem(allOf(hasProperty("fromFYEncumbrance", is(fromEncumbrance1)))));
+    assertThat(resultHolders, hasItem(allOf(hasProperty("fromFYEncumbrance", is(fromEncumbrance2)))));
 
   }
 
   @Test
-  void shouldPopulateReEncumbranceHoldersWithToAndFromFyEncumbrancesWhenBasedOnExpended() {
+  void shouldPopulateReEncumbranceHoldersWithFromFyEncumbrancesWhenBasedOnExpended() {
     String fromFyId = UUID.randomUUID().toString();
     String toFyId = UUID.randomUUID().toString();
     String orderId = UUID.randomUUID().toString();
@@ -736,30 +748,126 @@ public class ReEncumbranceHoldersBuilderTest {
     when(transactionService.getTransactions(contains(fromFyId), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.completedFuture(fromTransactionCollection));
     when(transactionService.getTransactions(contains(toFyId), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.completedFuture(toTransactionCollection));
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withEncumbrances(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withFromEncumbrances(holders, requestContext).join();
 
-    assertThat(resultHolders, hasItem(allOf(hasProperty("fromFYEncumbrance", is(fromEncumbrance1)), hasProperty("toFYEncumbrance", allOf(
-            hasProperty("id", nullValue()),
-            hasProperty("currency", is(fromEncumbrance1.getCurrency())),
-            hasProperty("fromFundId", is(fromEncumbrance1.getFromFundId())),
-            hasProperty("amount", is(20d)),
-            hasProperty("fiscalYearId", is(toFyId))
-    )))));
+    assertThat(resultHolders, hasItem(allOf(hasProperty("fromFYEncumbrance", is(fromEncumbrance1)))));
 
-    assertThat(resultHolders, hasItem(allOf(hasProperty("fromFYEncumbrance", is(fromEncumbrance2)),
-            hasProperty("toFYEncumbrance", allOf(
-                    hasProperty("id", nullValue()),
-                    hasProperty("currency", is(fromEncumbrance2.getCurrency())),
-                    hasProperty("fromFundId", is(fromEncumbrance2.getFromFundId())),
-                    hasProperty("amount", is(10d)),
-                    hasProperty("fiscalYearId", is(toFyId))
-            )))));
-
-
-
+    assertThat(resultHolders, hasItem(allOf(hasProperty("fromFYEncumbrance", is(fromEncumbrance2)))));
   }
 
 
+  @Test
+  void shouldPopulateReEncumbranceHoldersWithToFyEncumbrancesWhenBasedOnExpended() {
+    String fromFyId = UUID.randomUUID().toString();
+    String toFyId = UUID.randomUUID().toString();
+    String orderId = UUID.randomUUID().toString();
+    String fund1Id = UUID.randomUUID().toString();
+    String fund2Id = UUID.randomUUID().toString();
+    double exchangeEurToUsdRate = 1.1d;
+    double exchangeUsdToEurRate = 0.909d;
 
+    EncumbranceRollover encumbranceRollover = new EncumbranceRollover()
+                  .withBasedOn(EncumbranceRollover.BasedOn.EXPENDED)
+                  .withOrderType(EncumbranceRollover.OrderType.ONE_TIME)
+                  .withIncreaseBy(10d);
 
+    LedgerFiscalYearRollover rollover = new LedgerFiscalYearRollover()
+            .withFromFiscalYearId(fromFyId)
+            .withToFiscalYearId(toFyId)
+            .withEncumbrancesRollover(Collections.singletonList(encumbranceRollover));
+
+    CompositePurchaseOrder compPO = new CompositePurchaseOrder().withId(orderId).withOrderType(CompositePurchaseOrder.OrderType.ONE_TIME);
+    Cost cost1 = new Cost().withListUnitPrice(120d).withQuantityPhysical(1)
+      .withExchangeRate(exchangeEurToUsdRate).withCurrency("EUR").withPoLineEstimatedPrice(120d).withFyroAdjustmentAmount(-35.3d);
+
+    Transaction fromEncumbrance1 = new Transaction().withEncumbrance(new Encumbrance()
+              .withSourcePurchaseOrderId(orderId)
+              .withInitialAmountEncumbered(60d)
+              .withAmountExpended(40d))
+              .withAmount(20d)
+              .withFiscalYearId(fromFyId)
+              .withFromFundId(fund1Id)
+              .withId(UUID.randomUUID().toString())
+              .withCurrency("USD");
+
+    Transaction fromEncumbrance2 = new Transaction().withEncumbrance(new Encumbrance()
+              .withSourcePurchaseOrderId(orderId)
+              .withInitialAmountEncumbered(60d)
+              .withAmountExpended(30d))
+              .withAmount(30d)
+              .withFiscalYearId(fromFyId)
+              .withFromFundId(fund2Id)
+              .withId(UUID.randomUUID().toString())
+              .withCurrency("USD");
+
+    FundDistribution fundDistribution1 = new FundDistribution()
+      .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+      .withValue(50d)
+      .withEncumbrance(fromEncumbrance1.getId())
+      .withFundId(fund1Id);
+
+    FundDistribution fundDistribution2 = new FundDistribution()
+      .withDistributionType(FundDistribution.DistributionType.AMOUNT)
+      .withValue(42.35d)
+      .withEncumbrance(fromEncumbrance2.getId())
+      .withFundId(fund2Id);
+
+    CompositePoLine line1 = new CompositePoLine().withId(UUID.randomUUID().toString())
+      .withCost(cost1)
+      .withFundDistribution(List.of(fundDistribution1, fundDistribution2));
+
+    ManualCurrencyConversion poLineToFyConversion = mock(ManualCurrencyConversion.class, withSettings().name("poLineToFyConversion"));
+    ManualCurrencyConversion poFyToPoLineConversion = mock(ManualCurrencyConversion.class, withSettings().name("poFyToPoLineConversion"));
+
+    TransactionCollection toTransactionCollection = new TransactionCollection().withTransactions(Collections.emptyList()).withTotalRecords(0);
+
+    ReEncumbranceHolder holder1 = new ReEncumbranceHolder()
+            .withPurchaseOrder(compPO)
+            .withRollover(rollover)
+            .withPoLine(line1)
+            .withFundDistribution(fundDistribution1)
+            .withEncumbranceRollover(encumbranceRollover)
+            .withFromFYEncumbrance(fromEncumbrance1)
+            .withPoLineToFyConversion(poLineToFyConversion)
+            .withFyToPoLineConversion(poFyToPoLineConversion);
+    ReEncumbranceHolder holder2 = new ReEncumbranceHolder()
+            .withPurchaseOrder(compPO)
+            .withRollover(rollover)
+            .withPoLine(line1)
+            .withFundDistribution(fundDistribution2)
+            .withEncumbranceRollover(encumbranceRollover)
+            .withFromFYEncumbrance(fromEncumbrance2)
+            .withPoLineToFyConversion(poLineToFyConversion)
+            .withFyToPoLineConversion(poFyToPoLineConversion);
+
+    List<ReEncumbranceHolder> holders = Arrays.asList(holder1, holder2);
+
+    when(transactionService.getTransactions(contains(toFyId), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.completedFuture(toTransactionCollection));
+
+    when(poLineToFyConversion.with(any())).thenReturn(poLineToFyConversion);
+    when(poLineToFyConversion.apply(any(MonetaryAmount.class))).thenAnswer(invocation -> {
+      MonetaryAmount amount = invocation.getArgument(0);
+      return amount.multiply(exchangeEurToUsdRate);
+    } );
+    when(poFyToPoLineConversion.getCurrency()).thenReturn(Monetary.getCurrency("USD"));
+    when(exchangeRateProviderResolver.resolve(any(), any())).thenReturn(exchangeRateProvider);
+
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withToEncumbrances(holders, requestContext).join();
+
+    assertThat(resultHolders, hasItem(allOf(hasProperty("toFYEncumbrance", allOf(
+            hasProperty("id", nullValue()),
+            hasProperty("currency", is(fromEncumbrance1.getCurrency())),
+            hasProperty("fromFundId", is(fromEncumbrance1.getFromFundId())),
+            hasProperty("amount", is(46.585d)),
+            hasProperty("fiscalYearId", is(toFyId))
+    )))));
+
+    assertThat(resultHolders, hasItem(allOf(hasProperty("toFYEncumbrance", allOf(
+                    hasProperty("id", nullValue()),
+                    hasProperty("currency", is(fromEncumbrance2.getCurrency())),
+                    hasProperty("fromFundId", is(fromEncumbrance2.getFromFundId())),
+                    hasProperty("amount", is(46.585d)),
+                    hasProperty("fiscalYearId", is(toFyId))
+            )))));
+  }
 }
