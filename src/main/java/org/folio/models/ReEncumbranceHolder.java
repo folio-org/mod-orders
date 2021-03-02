@@ -27,6 +27,7 @@ public class ReEncumbranceHolder {
     private Transaction toFYEncumbrance;
     private FiscalYear currentFiscalYear;
     private CurrencyConversion poLineToFyConversion;
+    private CurrencyConversion fyToPoLineConversion;
 
 
     public CompositePurchaseOrder getPurchaseOrder() {
@@ -144,5 +145,14 @@ public class ReEncumbranceHolder {
     public ReEncumbranceHolder withEncumbranceRollover(EncumbranceRollover encumbranceRollover) {
         this.encumbranceRollover = encumbranceRollover;
         return this;
+    }
+
+    public ReEncumbranceHolder withFyToPoLineConversion(CurrencyConversion fyToPoLineConversion) {
+        this.fyToPoLineConversion = fyToPoLineConversion;
+        return this;
+    }
+
+    public CurrencyConversion getFyToPoLineConversion() {
+        return fyToPoLineConversion;
     }
 }
