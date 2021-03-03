@@ -119,6 +119,8 @@ public class InventoryHelper extends AbstractHelper {
 
   private static final Map<String, String> INVENTORY_LOOKUP_ENDPOINTS;
 
+  private CompletableFuture<String> cachedIsbnIdFuture;
+
   static {
     Map<String, String> apis = new HashMap<>();
     apis.put(CONTRIBUTOR_NAME_TYPES, "/contributor-name-types?limit=%s&query=%s&lang=%s");
@@ -776,10 +778,17 @@ public class InventoryHelper extends AbstractHelper {
       });
   }
 
-  public CompletableFuture<String> getProductTypeUUID(String identifierType) {
-    String endpoint = String.format("/identifier-types?limit=1&query=name==%s&lang=%s", identifierType, lang);
-    return handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
-      .thenCompose(identifierTypes -> completedFuture(extractId(getFirstObjectFromResponse(identifierTypes, IDENTIFIER_TYPES))));
+  public CompletableFuture<String> getProductTypeUuidByIsbn(String identifierType) {
+    // return id of already retrieved identifier type
+    if (cachedIsbnIdFuture == null) {
+      String endpoint = String.format("/identifier-types?limit=1&query=name==%s&lang=%s", identifierType, lang);
+      cachedIsbnIdFuture = handleGetRequest(endpoint, httpClient, ctx, okapiHeaders, logger)
+        .thenCompose(identifierTypes -> {
+          String identifierTypeId = extractId(getFirstObjectFromResponse(identifierTypes, IDENTIFIER_TYPES));
+          return completedFuture(identifierTypeId);
+        });
+    }
+    return this.cachedIsbnIdFuture;
   }
 
   public CompletableFuture<String> convertToISBN13(String isbn) {

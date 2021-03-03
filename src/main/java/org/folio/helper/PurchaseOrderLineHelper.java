@@ -1161,7 +1161,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
 
   public CompletableFuture<Void> validateAndNormalizeISBN(CompositePoLine compPOL) {
     if (HelperUtils.isProductIdsExist(compPOL)) {
-      return inventoryHelper.getProductTypeUUID(ISBN)
+      return inventoryHelper.getProductTypeUuidByIsbn(ISBN)
         .thenCompose(id -> validateIsbnValues(compPOL, id)
           .thenAccept(aVoid -> removeISBNDuplicates(compPOL, id)));
     }
