@@ -142,6 +142,7 @@ public class InventoryManager {
   private RestClient restClient;
   private ConfigurationEntriesService configurationEntriesService;
   private PieceStorageService pieceStorageService;
+  private CompletableFuture<String> cachedIsbnIdFuture;
 
   public InventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
                           PieceStorageService pieceStorageService) {
@@ -883,16 +884,31 @@ public class InventoryManager {
       });
   }
 
+  /**
+   * Retrieve unique product identifier matching product's ISBN
+   * @param identifierType - product identifier type
+   * @param requestContext - Vertex request context
+   * @return unique product identifier
+   */
   public CompletableFuture<String> getProductTypeUuidByIsbn(String identifierType, RequestContext requestContext) {
-    // return id of already retrieved identifier type
+
+    //  Calculate for the first time id for identifier type and put it into the "cache"
+    if (cachedIsbnIdFuture == null) {
       String endpoint = String.format("/identifier-types?limit=1&query=name==%s", identifierType);
       Map<String, String> okapiHeaders = requestContext.getHeaders();
-      return handleGetRequest(endpoint, restClient.getHttpClient(okapiHeaders), okapiHeaders, logger)
+
+      cachedIsbnIdFuture = handleGetRequest(endpoint, restClient.getHttpClient(okapiHeaders), okapiHeaders, logger)
         .thenCompose(identifierTypes -> {
           String identifierTypeId = extractId(getFirstObjectFromResponse(identifierTypes, IDENTIFIER_TYPES));
+
           return completedFuture(identifierTypeId);
-        });
+      });
+    }
+
+    //  Return id for already retrieved identifier type
+    return this.cachedIsbnIdFuture;
   }
+
 
   public CompletableFuture<String> convertToISBN13(String isbn, RequestContext requestContext) {
     String convertEndpoint = String.format("/isbn/convertTo13?isbn=%s", isbn);
