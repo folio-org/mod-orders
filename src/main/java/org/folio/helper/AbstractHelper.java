@@ -71,7 +71,7 @@ public abstract class AbstractHelper {
   protected Map<String, String> okapiHeaders;
   protected final Context ctx;
   protected final String lang;
-  private JsonObject tenantConfiguration;
+  protected CompletableFuture<JsonObject> cachedTenantConfigurationFuture;
 
   public AbstractHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     setDefaultHeaders(httpClient);
@@ -313,15 +313,10 @@ public abstract class AbstractHelper {
   }
 
   public CompletableFuture<JsonObject> getTenantConfiguration() {
-    if (this.tenantConfiguration != null) {
-      return CompletableFuture.completedFuture(this.tenantConfiguration);
-    } else {
-      return loadConfiguration(okapiHeaders, ctx, logger, lang)
-        .thenApply(config -> {
-          this.tenantConfiguration = config;
-          return config;
-        });
+    if (this.cachedTenantConfigurationFuture == null) {
+      this.cachedTenantConfigurationFuture = loadConfiguration(okapiHeaders, ctx, logger, lang);
     }
+    return this.cachedTenantConfigurationFuture;
   }
 
   protected void sendEvent(MessageAddress messageAddress, JsonObject data) {
