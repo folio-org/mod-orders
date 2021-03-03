@@ -12,7 +12,6 @@ import static org.folio.orders.utils.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_LOAN_TYPE;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
@@ -59,6 +58,8 @@ import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
+import org.folio.service.configuration.ConfigurationEntriesService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.google.common.collect.ImmutableList;
 
@@ -67,8 +68,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
-import org.folio.service.configuration.ConfigurationEntriesService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 public class InventoryHelper extends AbstractHelper {
 
@@ -133,6 +132,8 @@ public class InventoryHelper extends AbstractHelper {
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
   private static final String GET_PIECES_BY_QUERY = resourcesPath(PIECES) + SEARCH_PARAMS;
   public static final String EFFECTIVE_LOCATION = "effectiveLocation";
+
+  private CompletableFuture<String> cachedIsbnIdFuture;
 
   @Autowired
   private ConfigurationEntriesService configurationEntriesService;
@@ -403,7 +404,7 @@ public class InventoryHelper extends AbstractHelper {
     JsonObject prevHolding;
     prevHolding = holdings.getJsonArray(HOLDINGS_RECORDS).stream()
       .filter(item -> ((JsonObject) item).getString(HOLDING_PERMANENT_LOCATION_ID).equals(locationId))
-      .map(item -> (JsonObject)item)
+      .map(JsonObject.class::cast)
       .findAny()
       .orElseThrow(() -> new CompletionException(new InventoryException(String.format("No records for location '%s' can be found", locationId))));
     return prevHolding;
@@ -782,7 +783,7 @@ public class InventoryHelper extends AbstractHelper {
   private List<JsonObject> extractEntities(JsonObject entries, String key) {
     return Optional.ofNullable(entries.getJsonArray(key))
       .map(objects -> objects.stream()
-        .map(entry -> (JsonObject) entry)
+        .map(JsonObject.class::cast)
         .collect(toList()))
       .orElseGet(Collections::emptyList);
   }
@@ -924,7 +925,7 @@ public class InventoryHelper extends AbstractHelper {
   public JsonObject getFirstObjectFromResponse(JsonObject response, String propertyName) {
     return Optional.ofNullable(response.getJsonArray(propertyName))
       .flatMap(items -> items.stream().findFirst())
-      .map(item -> (JsonObject) item)
+      .map(JsonObject.class::cast)
       .orElseThrow(() -> new CompletionException(new InventoryException(String.format("No records of '%s' can be found", propertyName))));
   }
 
@@ -981,10 +982,16 @@ public class InventoryHelper extends AbstractHelper {
       });
   }
 
-  public CompletableFuture<String> getProductTypeUUID(String identifierType) {
-    String endpoint = String.format("/identifier-types?limit=1&query=name==%s&lang=%s", identifierType, lang);
-    return handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
-      .thenCompose(identifierTypes -> completedFuture(extractId(getFirstObjectFromResponse(identifierTypes, IDENTIFIER_TYPES))));
+  public CompletableFuture<String> getProductTypeUuidByIsbn(String identifierType) {
+    // return id of already retrieved identifier type
+    if (cachedIsbnIdFuture == null) {
+      String endpoint = String.format("/identifier-types?limit=1&query=name==%s&lang=%s", identifierType, lang);
+      cachedIsbnIdFuture = handleGetRequest(endpoint, httpClient, okapiHeaders, logger).thenCompose(identifierTypes -> {
+        String identifierTypeId = extractId(getFirstObjectFromResponse(identifierTypes, IDENTIFIER_TYPES));
+        return completedFuture(identifierTypeId);
+      });
+    }
+    return this.cachedIsbnIdFuture;
   }
 
   public CompletableFuture<String> convertToISBN13(String isbn) {

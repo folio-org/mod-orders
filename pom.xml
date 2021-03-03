@@ -55,7 +55,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <mod-configuration-client.version>5.5.0</mod-configuration-client.version>
-    <sonar.exclusions>**/models/**.java</sonar.exclusions>
+    <sonar.exclusions>**/models/**.java, **/completablefuture/FolioVertxCompletableFuture.java</sonar.exclusions>
     <sonar.test.exclusions>**/*Test.java</sonar.test.exclusions>
     <spring.version>5.2.11.RELEASE</spring.version>
     <vertx.version>4.0.0</vertx.version>

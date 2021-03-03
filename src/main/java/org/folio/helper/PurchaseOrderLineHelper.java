@@ -624,7 +624,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       return completedFuture(false);
     }
 
-    return allOf(validatePoLineLimit(compPOL),validateAndNormalizeISBN(compPOL))
+    return allOf(validatePoLineLimit(compPOL), validateAndNormalizeISBN(compPOL))
       .thenApply(v -> getErrors().isEmpty());
   }
 
@@ -1113,7 +1113,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
 
   public CompletableFuture<Void> validateAndNormalizeISBN(CompositePoLine compPOL) {
     if (HelperUtils.isProductIdsExist(compPOL)) {
-      return inventoryHelper.getProductTypeUUID(ISBN)
+      return inventoryHelper.getProductTypeUuidByIsbn(ISBN)
         .thenCompose(id -> validateIsbnValues(compPOL, id)
           .thenAccept(aVoid -> removeISBNDuplicates(compPOL, id)));
     }
