@@ -27,7 +27,7 @@ public class RestClient {
 
     private static final Logger logger = LogManager.getLogger();
     private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
-    private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {} : {}";
+    private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
 
 
     public <T> CompletableFuture<T> getById(String baseEndpoint, String id, RequestContext requestContext, Class<T> responseType) {
@@ -116,22 +116,22 @@ public class RestClient {
         setDefaultHeaders(client);
 
         try {
-            client.request(HttpMethod.DELETE, endpoint, requestContext.getHeaders())
-                    .thenAccept(HelperUtils::verifyResponse)
-                    .thenAccept(aVoid -> {
-                        client.closeClient();
-                        future.complete(null);
-                    })
-                    .exceptionally(t -> {
-                        client.closeClient();
-                        logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, HttpMethod.DELETE, endpoint);
-                        future.completeExceptionally(t.getCause());
-                        return null;
-                    });
+          client.request(HttpMethod.DELETE, endpoint, requestContext.getHeaders())
+            .thenAccept(HelperUtils::verifyResponse)
+            .thenAccept(aVoid -> {
+              client.closeClient();
+              future.complete(null);
+            })
+            .exceptionally(t -> {
+              client.closeClient();
+              logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpoint, requestContext), t);
+              future.completeExceptionally(t.getCause());
+              return null;
+            });
         } catch (Exception e) {
-            client.closeClient();
-            logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, e, HttpMethod.DELETE, endpoint);
-            future.completeExceptionally(e);
+          client.closeClient();
+          logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpoint, requestContext), e);
+          future.completeExceptionally(e);
         }
 
         return future;
@@ -164,14 +164,14 @@ public class RestClient {
                     })
                     .exceptionally(t -> {
                         client.closeClient();
-                        logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, HttpMethod.GET, endpoint);
+                        logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.GET, endpoint, requestContext), t);
                         future.completeExceptionally(t.getCause());
                         return null;
                     });
         } catch (Exception e) {
-            logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, e, HttpMethod.GET, requestEntry.getBaseEndpoint());
-            client.closeClient();
-            future.completeExceptionally(e);
+          logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.GET, requestEntry.getBaseEndpoint(), requestContext), e);
+          client.closeClient();
+          future.completeExceptionally(e);
         }
         return future;
     }

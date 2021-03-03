@@ -11,7 +11,6 @@ import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_CREATED;
 import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_DELETED;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
@@ -68,6 +67,7 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
@@ -280,7 +280,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     CompletableFuture<JsonObject> future = new CompletableFuture<>();
 
     if (isCreateInventoryNull(compPOL)) {
-      configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext())
+      getTenantConfiguration()
         .thenApply(config -> {
           if (StringUtils.isNotEmpty(config.getString(CREATE_INVENTORY))) {
             return future.complete(new JsonObject(config.getString(CREATE_INVENTORY)));
@@ -470,7 +470,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   }
 
   private void updateOrderStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
-    CompletableFuture.supplyAsync(() -> lineFromStorage.mapTo(PoLine.class))
+    FolioVertxCompletableFuture.supplyBlockingAsync(ctx, () -> lineFromStorage.mapTo(PoLine.class))
       .thenAccept(poLine -> {
         // See MODORDERS-218
         if (!StringUtils.equals(poLine.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value())
@@ -624,13 +624,13 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       return completedFuture(false);
     }
 
-    return allOf(validatePoLineLimit(compPOL),validateAndNormalizeISBN(compPOL))
+    return allOf(validatePoLineLimit(compPOL), validateAndNormalizeISBN(compPOL))
       .thenApply(v -> getErrors().isEmpty());
   }
 
   private CompletableFuture<Boolean> validatePoLineLimit(CompositePoLine compPOL) {
     String query = PURCHASE_ORDER_ID + "==" + compPOL.getPurchaseOrderId();
-    return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext())
+    return getTenantConfiguration()
       .thenCombine(getPoLines(0, 0, query), (config, poLines) -> {
         boolean isValid = poLines.getTotalRecords() < getPoLineLimit(config);
         if (!isValid) {
@@ -1113,7 +1113,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
 
   public CompletableFuture<Void> validateAndNormalizeISBN(CompositePoLine compPOL) {
     if (HelperUtils.isProductIdsExist(compPOL)) {
-      return inventoryHelper.getProductTypeUUID(ISBN)
+      return inventoryHelper.getProductTypeUuidByIsbn(ISBN)
         .thenCompose(id -> validateIsbnValues(compPOL, id)
           .thenAccept(aVoid -> removeISBNDuplicates(compPOL, id)));
     }

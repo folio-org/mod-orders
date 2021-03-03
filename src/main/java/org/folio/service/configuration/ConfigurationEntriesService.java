@@ -16,7 +16,7 @@ import static org.folio.orders.utils.HelperUtils.SYSTEM_CONFIG_MODULE_NAME;
 
 public class ConfigurationEntriesService {
 
-  private static final Logger LOGGER = LogManager.getLogger();
+  private static final Logger logger = LogManager.getLogger();
   private static final String ENDPOINT = "/configurations/entries";
 
   private static final String CONFIG_QUERY = "module==%s";
@@ -32,11 +32,12 @@ public class ConfigurationEntriesService {
   public CompletableFuture<JsonObject> loadConfiguration(String moduleConfig, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(String.format(CONFIG_QUERY, moduleConfig))
             .withOffset(0).withLimit(Integer.MAX_VALUE);
+    logger.info("GET request: {}", CONFIG_QUERY);
     return restClient
       .get(requestEntry, requestContext, Configs.class)
       .thenApply(configs -> {
-        if (LOGGER.isDebugEnabled()) {
-          LOGGER.debug("The response from mod-configuration: {}", JsonObject.mapFrom(configs)
+        if (logger.isDebugEnabled()) {
+          logger.debug("The response from mod-configuration: {}", JsonObject.mapFrom(configs)
             .encodePrettily());
         }
         JsonObject config = new JsonObject();

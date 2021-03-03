@@ -14,7 +14,6 @@ import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_UNOPEN_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
@@ -78,6 +77,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
+import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.ErrorCodes;
@@ -277,7 +277,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       return completedFuture(null);
     }
 
-    return CompletableFuture.runAsync(() -> verifyUserHasAssignPermission(acqUnitIds))
+    return FolioVertxCompletableFuture.runAsync(ctx, () -> verifyUserHasAssignPermission(acqUnitIds))
       .thenCompose(ok -> protectionHelper.verifyIfUnitsAreActive(acqUnitIds))
       .thenCompose(ok -> protectionHelper.isOperationRestricted(acqUnitIds, ProtectedOperationType.CREATE));
   }
@@ -379,7 +379,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     if (isEmpty(compPO.getCompositePoLines())) {
       future = fetchOrderLinesByOrderId(compPO.getId());
     } else {
-      future = CompletableFuture.supplyAsync(() -> {
+      future = FolioVertxCompletableFuture.supplyBlockingAsync(ctx, () -> {
         List<PoLine> poLines = HelperUtils.convertToPoLines(compPO.getCompositePoLines());
         changeOrderStatus(purchaseOrder, poLines);
         return poLines;
@@ -787,7 +787,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private CompletableFuture<Void> validatePoLineLimit(CompositePurchaseOrder compPO) {
     if (CollectionUtils.isNotEmpty(compPO.getCompositePoLines())) {
-       return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext())
+       return getTenantConfiguration()
         .thenAccept(config -> {
           int limit = getPoLineLimit(config);
           if (compPO.getCompositePoLines().size() > limit) {
@@ -832,7 +832,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @param compPO composite purchase order for checking permissions
    */
   private CompletableFuture<Void> checkOrderApprovalPermissions(CompositePurchaseOrder compPO) {
-    return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext()).thenAccept(config -> {
+    return getTenantConfiguration().thenAccept(config -> {
       boolean isApprovalRequired = isApprovalRequiredConfiguration(config);
       if (isApprovalRequired && compPO.getApproved().equals(Boolean.TRUE)) {
         if (isUserNotHaveApprovePermission()) {
@@ -862,7 +862,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @param compPO composite purchase order
    */
   private CompletableFuture<Void> checkOrderApprovalRequired(CompositePurchaseOrder compPO) {
-    return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext()).thenAccept(config -> {
+    return getTenantConfiguration().thenAccept(config -> {
       boolean isApprovalRequired = isApprovalRequiredConfiguration(config);
       if (isApprovalRequired && !compPO.getApproved().equals(Boolean.TRUE)) {
         throw new HttpException(400, APPROVAL_REQUIRED_TO_OPEN);
@@ -1113,7 +1113,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     List<String> updatedAcqUnitIds = updatedOrder.getAcqUnitIds();
     List<String> currentAcqUnitIds = persistedOrder.getAcqUnitIds();
 
-    return CompletableFuture.runAsync(() -> verifyUserHasManagePermission(updatedAcqUnitIds, currentAcqUnitIds))
+    return FolioVertxCompletableFuture.runAsync(ctx, () -> verifyUserHasManagePermission(updatedAcqUnitIds, currentAcqUnitIds))
       // Check that all newly assigned units are active/exist
       .thenCompose(ok -> protectionHelper.verifyIfUnitsAreActive(ListUtils.subtract(updatedAcqUnitIds, currentAcqUnitIds)))
       .thenCompose(ok -> getInvolvedOperations(updatedOrder))
