@@ -40,6 +40,7 @@ import java.util.concurrent.CompletionException;
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
 
+import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.models.ReEncumbranceHolder;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.Budget;
@@ -63,11 +64,11 @@ import org.folio.rest.jaxrs.model.LedgerFiscalYearRolloverCollection;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.exchange.ManualExchangeRateProvider;
-import org.folio.service.finance.BudgetRestrictionService;
-import org.folio.service.finance.RolloverErrorService;
-import org.folio.service.finance.RolloverRetrieveService;
-import org.folio.service.finance.TransactionService;
-import org.folio.service.finance.TransactionSummariesService;
+import org.folio.service.finance.budget.BudgetRestrictionService;
+import org.folio.service.finance.rollover.RolloverErrorService;
+import org.folio.service.finance.rollover.RolloverRetrieveService;
+import org.folio.service.finance.transaction.TransactionService;
+import org.folio.service.finance.transaction.TransactionSummariesService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.AdditionalMatchers;
@@ -182,19 +183,19 @@ public class OrderReEncumberServiceTest {
         doReturn(completedFuture(holders)).when(spyReEncumbranceHoldersBuilder).withRollovers(any(), any());
         doReturn(completedFuture(progresses)).when(rolloverRetrieveService).getRolloversProgress(anyString(), any());
         doReturn(completedFuture(ledgerFiscalYearRolloverErrors)).when(rolloverErrorService).getLedgerFyRolloverErrors(any(), any());
-
-        CompositePurchaseOrder compOrder = orderReEncumberService.populateNeedReEncumberFlag(order, requestContext).join();
+        CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
+        CompositePurchaseOrder compOrder = orderReEncumberService.populate(holder, requestContext).join().getOrder();
         assertTrue(compOrder.getNeedReEncumber());
 
         // LedgerFiscalYearRolloverErrorCollection is empty. Expected "needReEncumber" = false
         doReturn(completedFuture(new LedgerFiscalYearRolloverErrorCollection()))
                 .when(rolloverErrorService).getLedgerFyRolloverErrors(any(), any());
-        compOrder = orderReEncumberService.populateNeedReEncumberFlag(order, requestContext).join();
+        compOrder = orderReEncumberService.populate(holder, requestContext).join().getOrder();
         assertFalse(compOrder.getNeedReEncumber());
 
         // LedgerFyRollover not exists. Expected "needReEncumber" = false
         doReturn(completedFuture(new LedgerFiscalYearRolloverCollection())).when(rolloverRetrieveService).getLedgerFyRollovers(anyString(), anyString(), any());
-        compOrder = orderReEncumberService.populateNeedReEncumberFlag(order, requestContext).join();
+        compOrder = orderReEncumberService.populate(holder, requestContext).join().getOrder();
         assertFalse(compOrder.getNeedReEncumber());
 
     }

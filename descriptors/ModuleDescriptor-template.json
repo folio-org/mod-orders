@@ -54,6 +54,8 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "finance.exchange-rate.item.get",
+            "finance.transactions.collection.get",
+            "finance.funds.item.get",
             "finance.funds.collection.get",
             "finance.ledgers.current-fiscal-year.item.get",
             "finance.ledger-rollovers.collection.get",

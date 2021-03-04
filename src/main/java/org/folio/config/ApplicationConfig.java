@@ -8,24 +8,26 @@ import org.folio.service.TagService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.exchange.FinanceExchangeRateService;
-import org.folio.service.finance.BudgetExpenseClassService;
-import org.folio.service.finance.BudgetRestrictionService;
-import org.folio.service.finance.BudgetService;
-import org.folio.service.finance.EncumbranceService;
-import org.folio.service.finance.EncumbranceWorkflowStrategy;
-import org.folio.service.finance.EncumbranceWorkflowStrategyFactory;
-import org.folio.service.finance.ExpenseClassService;
-import org.folio.service.finance.ExpenseClassValidationService;
+import org.folio.service.finance.expenceclass.BudgetExpenseClassService;
+import org.folio.service.finance.budget.BudgetRestrictionService;
+import org.folio.service.finance.budget.BudgetService;
+import org.folio.service.finance.transaction.EncumbranceService;
+import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
+import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
+import org.folio.service.finance.expenceclass.ExpenseClassService;
+import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
-import org.folio.service.finance.OpenToCloseEncumbranceStrategy;
-import org.folio.service.finance.OpenToPendingEncumbranceStrategy;
-import org.folio.service.finance.PendingToOpenEncumbranceStrategy;
-import org.folio.service.finance.RolloverErrorService;
-import org.folio.service.finance.RolloverRetrieveService;
-import org.folio.service.finance.TransactionService;
-import org.folio.service.finance.TransactionSummariesService;
+import org.folio.service.finance.transaction.OpenToCloseEncumbranceStrategy;
+import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
+import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategy;
+import org.folio.service.finance.rollover.RolloverErrorService;
+import org.folio.service.finance.rollover.RolloverRetrieveService;
+import org.folio.service.finance.transaction.TransactionService;
+import org.folio.service.finance.transaction.TransactionSummariesService;
+import org.folio.service.orders.CombinedPopulateService;
+import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.CompositePurchaseOrderService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderReEncumberService;
@@ -33,6 +35,7 @@ import org.folio.service.orders.OrderRolloverService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
 import org.folio.service.orders.ReEncumbranceHoldersBuilder;
+import org.folio.service.orders.TotalEncumberedPopulateService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -130,8 +133,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  FiscalYearService fiscalYearService(RestClient restClient) {
-    return new FiscalYearService(restClient);
+  FiscalYearService fiscalYearService(RestClient restClient, FundService fundService) {
+    return new FiscalYearService(restClient, fundService);
   }
 
   @Bean
@@ -226,12 +229,27 @@ public class ApplicationConfig {
   }
 
   @Bean
-  OrderInvoiceRelationService orderInvoiceRelationService (RestClient orderInvoiceRelationRestClient) {
+  OrderInvoiceRelationService orderInvoiceRelationService(RestClient orderInvoiceRelationRestClient) {
     return new OrderInvoiceRelationService(orderInvoiceRelationRestClient);
   }
 
   @Bean
-  TagService tagService (RestClient restClient) {
+  TagService tagService(RestClient restClient) {
     return new TagService(restClient);
+  }
+
+  @Bean
+  CompositeOrderDynamicDataPopulateService totalEncumberedPopulateService(TransactionService transactionService) {
+    return new TotalEncumberedPopulateService(transactionService);
+  }
+
+  @Bean
+  CompositeOrderDynamicDataPopulateService totalExpendedPopulateService(TransactionService transactionService) {
+    return new TotalEncumberedPopulateService(transactionService);
+  }
+
+  @Bean
+  CompositeOrderDynamicDataPopulateService combinedPopulateService(FiscalYearService fiscalYearService, Set<CompositeOrderDynamicDataPopulateService> populateServices) {
+    return new CombinedPopulateService(fiscalYearService, populateServices);
   }
 }

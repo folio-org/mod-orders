@@ -2,9 +2,6 @@ package org.folio.orders.events.handlers;
 
 import static org.folio.TestConfig.X_OKAPI_URL;
 import static org.folio.TestConfig.clearServiceInteractions;
-import static org.folio.TestConfig.getFirstContextFromVertx;
-import static org.folio.TestConfig.getVertx;
-import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
 import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
@@ -36,7 +33,6 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -53,10 +49,9 @@ import org.folio.ApiTestSuite;
 import org.folio.config.ApplicationConfig;
 import org.folio.helper.CheckinHelper;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.impl.EventBusContextConfiguration;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus;
-import org.folio.service.finance.EncumbranceService;
+import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -74,7 +69,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.mockito.Mockito;
 
 @ExtendWith(VertxExtension.class)
 public class CheckInOrderStatusChangeChangeHandlerTest {

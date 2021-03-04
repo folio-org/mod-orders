@@ -19,7 +19,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.service.finance.EncumbranceService;
+import org.folio.service.finance.transaction.EncumbranceService;
 
 import io.vertx.core.Context;
 import io.vertx.core.Handler;

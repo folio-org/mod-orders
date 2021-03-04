@@ -20,10 +20,12 @@ public class FiscalYearService {
   private static final String ENDPOINT = "/finance/ledgers/{id}/current-fiscal-year";
   
   private final RestClient restClient;
+  private final FundService fundService;
 
 
-  public FiscalYearService(RestClient restClient) {
+  public FiscalYearService(RestClient restClient, FundService fundService) {
     this.restClient = restClient;
+    this.fundService = fundService;
   }
 
   public CompletableFuture<FiscalYear> getCurrentFiscalYear(String ledgerId, RequestContext requestContext) {
@@ -40,6 +42,11 @@ public class FiscalYearService {
         throw new CompletionException(cause);
       });
   }
+
+    public CompletableFuture<FiscalYear> getCurrentFiscalYearByFundId(String fundId, RequestContext requestContext) {
+        return fundService.retrieveFundById(fundId, requestContext)
+                .thenCompose(fund -> getCurrentFiscalYear(fund.getLedgerId(), requestContext));
+    }
 
   private boolean isFiscalYearNotFound(Throwable t) {
     return t instanceof HttpException && ((HttpException) t).getCode() == 404;

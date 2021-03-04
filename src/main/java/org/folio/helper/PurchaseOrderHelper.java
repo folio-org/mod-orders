@@ -78,6 +78,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
+import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.ErrorCodes;
@@ -105,13 +106,13 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.TagService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
-import org.folio.service.finance.EncumbranceService;
-import org.folio.service.finance.EncumbranceWorkflowStrategy;
-import org.folio.service.finance.EncumbranceWorkflowStrategyFactory;
-import org.folio.service.finance.ExpenseClassValidationService;
 import org.folio.service.finance.WorkflowStatusName;
+import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
+import org.folio.service.finance.transaction.EncumbranceService;
+import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
+import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
+import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.OrderInvoiceRelationService;
-import org.folio.service.orders.OrderReEncumberService;
 import org.javamoney.moneta.Money;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -142,7 +143,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   @Autowired
   private EncumbranceService encumbranceService;
   @Autowired
-  private OrderReEncumberService orderReEncumberService;
+  private CompositeOrderDynamicDataPopulateService combinedPopulateService;
   @Autowired
   private ExpenseClassValidationService expenseClassValidationService;
   @Autowired
@@ -540,7 +541,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
   public CompletableFuture<CompositePurchaseOrder> getCompositeOrder(String id) {
 
     CompletableFuture<CompositePurchaseOrder> future = new CompletableFuture<>();
-
     getPurchaseOrderById(id, lang, httpClient, okapiHeaders, logger)
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
       .thenAccept(compPO -> protectionHelper.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.READ)
@@ -548,7 +548,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
           .thenCompose(this::fetchNonPackageTitles)
           .thenAccept(linesIdTitles -> populateInstanceId(linesIdTitles, compPO.getCompositePoLines()))
           .thenCompose(v -> populateOrderSummary(compPO))
-          .thenCompose(po -> orderReEncumberService.populateNeedReEncumberFlag(po, getRequestContext()))
+          .thenCompose(po -> combinedPopulateService.populate(new CompositeOrderRetrieveHolder(po), getRequestContext()))
+          .thenApply(CompositeOrderRetrieveHolder::getOrder)
           .thenAccept(future::complete)
           .exceptionally(t -> {
             logger.error("Failed to get lines for order with id={}", id, t.getCause());
