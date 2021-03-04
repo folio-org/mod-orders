@@ -28,8 +28,6 @@ public class TotalEncumberedPopulateServiceTest {
 
   @InjectMocks
   private TotalEncumberedPopulateService populateService;
-  @Mock
-  private TransactionService transactionService;
 
   @Mock
   private RequestContext requestContext;
@@ -48,10 +46,7 @@ public class TotalEncumberedPopulateServiceTest {
 
     Transaction encumbrance1 = new Transaction().withAmount(13.11d).withCurrency("USD");
     Transaction encumbrance2 = new Transaction().withAmount(13.43d).withCurrency("USD");
-
-    List<Transaction> encumbrances = List.of(encumbrance1, encumbrance2);
-    when(transactionService.getTransactions(anyString(), anyInt(), anyInt(), any()))
-      .thenReturn(CompletableFuture.completedFuture(new TransactionCollection().withTransactions(encumbrances)));
+    holder.withCurrentEncumbrances(List.of(encumbrance1, encumbrance2));
 
     CompositeOrderRetrieveHolder resultHolder = populateService.populate(holder, requestContext)
       .join();
@@ -79,10 +74,6 @@ public class TotalEncumberedPopulateServiceTest {
             .toString());
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order)
             .withFiscalYear(new FiscalYear().withId(UUID.randomUUID().toString()));
-
-    List<Transaction> encumbrances = Collections.emptyList();
-    when(transactionService.getTransactions(anyString(), anyInt(), anyInt(), any()))
-            .thenReturn(CompletableFuture.completedFuture(new TransactionCollection().withTransactions(encumbrances)));
 
     CompositeOrderRetrieveHolder resultHolder = populateService.populate(holder, requestContext).join();
 

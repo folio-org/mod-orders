@@ -2,8 +2,8 @@ package org.folio.service.orders;
 
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.service.finance.transaction.TransactionService;
 
 import java.util.List;
@@ -29,11 +29,9 @@ public class TotalExpendedPopulateService implements CompositeOrderDynamicDataPo
     }
 
     private CompletableFuture<CompositeOrderRetrieveHolder> withTotalExpended(CompositeOrderRetrieveHolder holder, RequestContext requestContext) {
-        List<String> encumbranceIds = holder.getOrder().getCompositePoLines().stream()
-                .flatMap(poLine -> poLine.getFundDistribution().stream())
-                .map(FundDistribution::getEncumbrance)
+        List<String> encumbranceIds = holder.getCurrentEncumbrances().stream()
+                .map(Transaction::getId)
                 .collect(toList());
-
         return transactionService.getCurrentPaymentsByEncumbranceIds(encumbranceIds, holder.getFiscalYearId(), requestContext)
                 .thenApply(transactions -> holder.withTotalExpended(HelperUtils.getTransactionsTotal(transactions)));
     }

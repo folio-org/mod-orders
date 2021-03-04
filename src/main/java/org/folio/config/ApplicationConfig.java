@@ -26,8 +26,9 @@ import org.folio.service.finance.rollover.RolloverErrorService;
 import org.folio.service.finance.rollover.RolloverRetrieveService;
 import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.finance.transaction.TransactionSummariesService;
-import org.folio.service.orders.CombinedPopulateService;
+import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
+import org.folio.service.orders.CompositeOrderRetrieveHolderBuilder;
 import org.folio.service.orders.CompositePurchaseOrderService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderReEncumberService;
@@ -36,6 +37,7 @@ import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
 import org.folio.service.orders.ReEncumbranceHoldersBuilder;
 import org.folio.service.orders.TotalEncumberedPopulateService;
+import org.folio.service.orders.TotalExpendedPopulateService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -239,17 +241,23 @@ public class ApplicationConfig {
   }
 
   @Bean
-  CompositeOrderDynamicDataPopulateService totalEncumberedPopulateService(TransactionService transactionService) {
-    return new TotalEncumberedPopulateService(transactionService);
+  CompositeOrderDynamicDataPopulateService totalEncumberedPopulateService() {
+    return new TotalEncumberedPopulateService();
   }
 
   @Bean
   CompositeOrderDynamicDataPopulateService totalExpendedPopulateService(TransactionService transactionService) {
-    return new TotalEncumberedPopulateService(transactionService);
+    return new TotalExpendedPopulateService(transactionService);
   }
 
   @Bean
-  CompositeOrderDynamicDataPopulateService combinedPopulateService(FiscalYearService fiscalYearService, Set<CompositeOrderDynamicDataPopulateService> populateServices) {
-    return new CombinedPopulateService(fiscalYearService, populateServices);
+  CompositeOrderRetrieveHolderBuilder compositeOrderRetrieveHolderBuilder(FiscalYearService fiscalYearService, TransactionService transactionService) {
+    return new CompositeOrderRetrieveHolderBuilder(fiscalYearService, transactionService);
+  }
+
+  @Bean
+  CompositeOrderDynamicDataPopulateService combinedPopulateService(CompositeOrderRetrieveHolderBuilder compositeOrderRetrieveHolderBuilder,
+                                                                   Set<CompositeOrderDynamicDataPopulateService> populateServices) {
+    return new CombinedOrderDataPopulateService(compositeOrderRetrieveHolderBuilder, populateServices);
   }
 }

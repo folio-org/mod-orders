@@ -94,8 +94,8 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
           .anyMatch(holder -> Objects.isNull(holder.getFund()))) {
           return CompletableFuture.completedFuture(orderRetrieveHolder.withNeedReEncumber(true));
         }
-        return reEncumbranceHoldersBuilder.withCurrentFiscalYear(holderList, requestContext)
-          .thenCompose(holders -> reEncumbranceHoldersBuilder.withRollovers(holders, requestContext))
+        reEncumbranceHolders.forEach(holder -> holder.withCurrentFiscalYear(orderRetrieveHolder.getFiscalYear()));
+        return reEncumbranceHoldersBuilder.withRollovers(reEncumbranceHolders, requestContext)
           .thenCompose(holders -> getLedgersIdsRolloverNotCompleted(holders, requestContext).thenCompose(ledgerIds -> {
             if (isRolloversPartiallyCompleted(holders, ledgerIds)) {
               return CompletableFuture.completedFuture(orderRetrieveHolder.withNeedReEncumber(true));

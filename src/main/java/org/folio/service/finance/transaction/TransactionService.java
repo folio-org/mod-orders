@@ -63,7 +63,7 @@ public class TransactionService {
   }
 
   private CompletableFuture<List<Transaction>> getPaymentsChunksByEncumbranceIds(Collection<String> ids, String fiscalYearId, RequestContext requestContext) {
-    String query = String.format("transactionType==(Payment OR Credit) AND fiscalYEarId==%s AND %s", fiscalYearId, convertIdsToCqlQuery(ids, "paymentEncumbranceId"));
+    String query = String.format("transactionType==(Payment OR Credit) AND fiscalYearId==%s AND %s", fiscalYearId, convertIdsToCqlQuery(ids, "paymentEncumbranceId"));
     return getTransactionsChunksByIds(query, requestContext);
   }
 

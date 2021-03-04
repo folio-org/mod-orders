@@ -123,7 +123,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
       return getPiecesQuantityByPoLineAndStatus(ReceivingStatus.EXPECTED, pieces)
         .thenCompose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, pieces))
         .exceptionally(e -> {
-          logger.error("The expected receipt status for PO Line '{}' cannot be calculated {}", poLine.getId(), e);
+          logger.error("The expected receipt status for PO Line '{}' cannot be calculated", poLine.getId(), e);
           return null;
         });
     }

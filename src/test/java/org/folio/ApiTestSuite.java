@@ -40,7 +40,8 @@ import org.folio.service.finance.transaction.EncumbranceServiceTest;
 import org.folio.service.finance.FundServiceTest;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.TransactionServiceTest;
-import org.folio.service.orders.CombinedPopulateServiceTest;
+import org.folio.service.orders.CombinedOrderDataPopulateServiceTest;
+import org.folio.service.orders.CompositeOrderRetrieveHolderBuilderTest;
 import org.folio.service.orders.OrderReEncumberServiceTest;
 import org.folio.service.orders.OrderRolloverServiceTest;
 import org.folio.service.orders.PurchaseOrderLineServiceTest;
@@ -229,6 +230,10 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class CombinedPopulateServiceTestNested extends CombinedPopulateServiceTest {
+  class CombinedOrderDataPopulateServiceTestNested extends CombinedOrderDataPopulateServiceTest {
+  }
+
+  @Nested
+  class CompositeOrderRetrieveHolderBuilderTestNested extends CompositeOrderRetrieveHolderBuilderTest {
   }
 }

@@ -15,9 +15,7 @@ import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.service.finance.transaction.TransactionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,22 +40,20 @@ public class TotalExpendedPopulateServiceTest {
 
   @Test
   void shouldPopulateTotalEncumberedFieldWithSumOfEncumbrancesAmount() {
-    FundDistribution fundDistribution1 = new FundDistribution().withEncumbrance(UUID.randomUUID().toString());
-    FundDistribution fundDistribution2 = new FundDistribution().withEncumbrance(UUID.randomUUID().toString());
-    CompositePoLine poLine = new CompositePoLine().withFundDistribution(List.of(fundDistribution1, fundDistribution2));
-    CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID()
-      .toString()).withCompositePoLines(Collections.singletonList(poLine));
+    Transaction transaction1 = new Transaction().withId(UUID.randomUUID().toString());
+    Transaction transaction2 = new Transaction().withId(UUID.randomUUID().toString());
+    CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order)
             .withFiscalYear(new FiscalYear().withId(UUID.randomUUID().toString()));
 
     Transaction payment = new Transaction()
             .withTransactionType(Transaction.TransactionType.PAYMENT)
-            .withPaymentEncumbranceId(fundDistribution1.getEncumbrance())
+            .withPaymentEncumbranceId(transaction1.getId())
             .withAmount(14.11d)
             .withCurrency("USD");
     Transaction credit = new Transaction()
             .withTransactionType(Transaction.TransactionType.CREDIT)
-            .withPaymentEncumbranceId(fundDistribution2.getEncumbrance())
+            .withPaymentEncumbranceId(transaction2.getId())
             .withAmount(13.43d)
             .withCurrency("USD");
 
@@ -86,13 +82,10 @@ public class TotalExpendedPopulateServiceTest {
 
   @Test
   void shouldPopulateTotalEncumberedFieldWithZeroWhenTransactionsNotFound() {
-    FundDistribution fundDistribution1 = new FundDistribution().withEncumbrance(UUID.randomUUID().toString());
-    FundDistribution fundDistribution2 = new FundDistribution().withEncumbrance(UUID.randomUUID().toString());
-    CompositePoLine poLine = new CompositePoLine().withFundDistribution(List.of(fundDistribution1, fundDistribution2));
-    CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID()
-            .toString()).withCompositePoLines(Collections.singletonList(poLine));
+    CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order)
             .withFiscalYear(new FiscalYear().withId(UUID.randomUUID().toString()));
+    holder.withCurrentEncumbrances(List.of(new Transaction().withId(UUID.randomUUID().toString()), new Transaction().withId(UUID.randomUUID().toString())));
 
     List<Transaction> payments = Collections.emptyList();
     when(transactionService.getCurrentPaymentsByEncumbranceIds(anyList(), anyString(), any()))
