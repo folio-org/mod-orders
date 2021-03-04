@@ -12,6 +12,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
@@ -118,7 +119,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
             });
         } else {
           logger.error("Validation error. Failed to update purchase order with id={}", orderId);
-          return CompletableFuture.runAsync(() -> asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422))));
+          return FolioVertxCompletableFuture.runAsync(vertxContext, () -> asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422))));
         }
       })
       .exceptionally(t -> {

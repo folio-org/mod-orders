@@ -1,0 +1,77 @@
+# This workflow will build a Java project with Maven
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
+
+name: Java CI with Maven
+
+on:
+  push:
+    branches: [ master, FOLIO-2913 ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        ref: ${{ github.REF }}
+    - uses: actions/setup-java@v1
+      with:
+        java-version: '11'
+    - run: echo "FOLIO registry is $folioRegistry"
+      env:
+        folioRegistry:  https://repository.folio.org/repository/maven-snapshots/
+    - run: echo "module_name=$(mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout)" >> $GITHUB_ENV
+    - run: echo "module_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
+    - run: echo "project name is ${{ github.REPOSITORY }}"
+    - run: git rev-parse HEAD
+    - run: git config remote.origin.url
+    - run: java --version
+    - run: echo "Starting MvnDeploy stage..."
+    - run: mvn dependency:list | { grep -i snapshot || true; }
+    - run: >
+        mvn clean org.jacoco:jacoco-maven-plugin:prepare-agent install 
+        org.jacoco:jacoco-maven-plugin:report
+    - run: docker build --pull=true --no-cache=true -t ${{ env.module_name }}:${{ env.module_version }} .
+    # - if: github.REF == 'master'
+    #   run: |
+    #     echo "Publishing Docker images"
+    #     docker tag ${{ env.module_name }}:${{ env.module_version }} $dockerRepo/${{ env.module_name }}:${{ env.module_version }}
+    #     docker tag ${{ env.module_name }}:${{ env.module_version }} $dockerRepo/${{ env.module_name }}:latest
+    #     docker push $dockerRepo/${{ env.module_name }}:${{ env.module_version }}
+    #     docker push $dockerRepo/${{ env.module_name }}:latest
+    #   env:
+    #     dockerRepo: folioci
+    # - run: >
+    #     if test -f "$MOD_DESCRIPTOR"; then
+    #       echo "ModuleDescriptor.json found!!!"
+    #       mv $MOD_DESCRIPTOR $MOD_DESCRIPTOR.orig
+    #     else
+    #       echo "ModuleDescriptor.json not found.."
+    #     fi
+    #   env:
+    #       MOD_DESCRIPTOR: target/ModuleDescriptor.json
+  RAML-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.REF }}
+          submodules: recursive
+      - run: echo "Assesing RAML and running raml-cop..."
+      - run: git clone $FOLIO_TOOLS
+        env:
+          FOLIO_TOOLS: https://github.com/folio-org/folio-tools.git
+      - run: cd folio-tools/lint-raml && yarn install && pip3 install -r requirements.txt
+      - run: mkdir -p ci
+      - run: echo "<html><body><pre>" > ci/lintRamlCop.html
+      - run: python3 folio-tools/lint-raml/lint_raml_cop.py -l info --validate-only >>ci/lintRamlCop.html
+      - run: echo "</pre><body></html>" >> ci/lintRamlCop.html
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ci-raml-lint
+          path: ci/lintRamlCop.html
+      - run: rm -rf ci && rm -rf folio-tools
+      
+
+        
+
+  

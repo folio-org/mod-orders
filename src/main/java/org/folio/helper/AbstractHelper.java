@@ -8,6 +8,7 @@ import static javax.ws.rs.core.Response.Status.CREATED;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.HelperUtils.LANG;
+import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.convertToJson;
 import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
@@ -68,7 +69,7 @@ public abstract class AbstractHelper {
   protected Map<String, String> okapiHeaders;
   protected final Context ctx;
   protected final String lang;
-
+  protected CompletableFuture<JsonObject> cachedTenantConfigurationFuture;
 
   @Autowired
   private ConfigurationEntriesService configurationEntriesService;
@@ -340,5 +341,11 @@ public abstract class AbstractHelper {
       .send(messageAddress.address, data, deliveryOptions);
   }
 
+  public CompletableFuture<JsonObject> getTenantConfiguration() {
+    if (this.cachedTenantConfigurationFuture == null) {
+      this.cachedTenantConfigurationFuture = configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, getRequestContext());
+    }
+    return this.cachedTenantConfigurationFuture;
+  }
 
 }
