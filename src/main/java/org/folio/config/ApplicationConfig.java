@@ -31,6 +31,7 @@ import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilder;
 import org.folio.service.orders.CompositePurchaseOrderService;
 import org.folio.service.orders.OrderInvoiceRelationService;
+import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderReEncumberService;
 import org.folio.service.orders.OrderRolloverService;
 import org.folio.service.orders.PurchaseOrderLineService;
@@ -242,6 +243,12 @@ public class ApplicationConfig {
   @Bean
   CompositeOrderDynamicDataPopulateService totalExpendedPopulateService(TransactionService transactionService) {
     return new TransactionsTotalFieldsPopulateService(transactionService);
+  }
+
+  @Bean
+  CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService(ConfigurationEntriesService configurationEntriesService,
+                                                                            ExchangeRateProviderResolver exchangeRateProviderResolver) {
+    return new OrderLinesSummaryPopulateService(configurationEntriesService, exchangeRateProviderResolver);
   }
 
   @Bean

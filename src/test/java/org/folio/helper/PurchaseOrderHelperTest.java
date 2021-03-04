@@ -54,7 +54,10 @@ import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
+import org.folio.service.orders.CombinedOrderDataPopulateService;
+import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.OrderInvoiceRelationService;
+import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderReEncumberService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -213,11 +216,6 @@ public class PurchaseOrderHelperTest {
     }
 
     @Bean
-    public ExchangeRateProviderResolver exchangeRateProviderResolver() {
-      return mock(ExchangeRateProviderResolver.class);
-    }
-
-    @Bean
     public OrderInvoiceRelationService orderInvoiceRelationService() {
       return mock(OrderInvoiceRelationService.class);
     }
@@ -230,6 +228,16 @@ public class PurchaseOrderHelperTest {
     @Bean
     public RestClient restClient() {
       return mock(RestClient.class);
+    }
+
+    @Bean
+    CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService() {
+      return mock(OrderLinesSummaryPopulateService.class);
+    }
+
+    @Bean
+    CompositeOrderDynamicDataPopulateService combinedPopulateService() {
+      return mock(CombinedOrderDataPopulateService.class);
     }
   }
 
