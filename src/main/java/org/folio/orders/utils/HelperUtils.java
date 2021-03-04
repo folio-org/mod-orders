@@ -44,6 +44,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.function.Function;
+import java.util.function.ToDoubleFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -1071,14 +1073,5 @@ public class HelperUtils {
     return conversionQuery;
   }
 
-  public static double getTransactionsTotal(List<Transaction> transactions) {
-    return transactions.stream()
-            .map(transaction -> {
-              Money amount = Money.of(transaction.getAmount(), transaction.getCurrency());
-              return transaction.getTransactionType() == Transaction.TransactionType.CREDIT ? amount.negate() : amount;
-            })
-            .reduce(Money::add)
-            .map(totalEncumbered -> totalEncumbered.with(MonetaryOperators.rounding()).getNumber().doubleValue())
-            .orElse(0d);
-  }
+
 }

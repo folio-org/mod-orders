@@ -36,8 +36,7 @@ import org.folio.service.orders.OrderRolloverService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
 import org.folio.service.orders.ReEncumbranceHoldersBuilder;
-import org.folio.service.orders.TotalEncumberedPopulateService;
-import org.folio.service.orders.TotalExpendedPopulateService;
+import org.folio.service.orders.TransactionsTotalFieldsPopulateService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -241,18 +240,13 @@ public class ApplicationConfig {
   }
 
   @Bean
-  CompositeOrderDynamicDataPopulateService totalEncumberedPopulateService() {
-    return new TotalEncumberedPopulateService();
-  }
-
-  @Bean
   CompositeOrderDynamicDataPopulateService totalExpendedPopulateService(TransactionService transactionService) {
-    return new TotalExpendedPopulateService(transactionService);
+    return new TransactionsTotalFieldsPopulateService(transactionService);
   }
 
   @Bean
-  CompositeOrderRetrieveHolderBuilder compositeOrderRetrieveHolderBuilder(FiscalYearService fiscalYearService, TransactionService transactionService) {
-    return new CompositeOrderRetrieveHolderBuilder(fiscalYearService, transactionService);
+  CompositeOrderRetrieveHolderBuilder compositeOrderRetrieveHolderBuilder(FiscalYearService fiscalYearService) {
+    return new CompositeOrderRetrieveHolderBuilder(fiscalYearService);
   }
 
   @Bean

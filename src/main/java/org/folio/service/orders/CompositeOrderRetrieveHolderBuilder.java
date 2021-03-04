@@ -14,11 +14,9 @@ import java.util.concurrent.CompletionException;
 
 public class CompositeOrderRetrieveHolderBuilder {
     private final FiscalYearService fiscalYearService;
-    private final TransactionService transactionService;
 
-    public CompositeOrderRetrieveHolderBuilder(FiscalYearService fiscalYearService, TransactionService transactionService) {
+    public CompositeOrderRetrieveHolderBuilder(FiscalYearService fiscalYearService) {
         this.fiscalYearService = fiscalYearService;
-        this.transactionService = transactionService;
     }
 
     public CompletableFuture<CompositeOrderRetrieveHolder> withCurrentFiscalYear(CompositeOrderRetrieveHolder holder, RequestContext requestContext) {
@@ -36,11 +34,4 @@ public class CompositeOrderRetrieveHolderBuilder {
                 .orElseGet(() -> CompletableFuture.completedFuture(holder));
     }
 
-    public CompletableFuture<CompositeOrderRetrieveHolder> withCurrentEncumbranceIds(CompositeOrderRetrieveHolder holder, RequestContext requestContext) {
-        String query = String.format("transactionType==Encumbrance AND encumbrance.sourcePurchaseOrderId==%s AND fiscalYearId==%s",
-                holder.getOrderId(), holder.getFiscalYearId());
-        return transactionService.getTransactions(query, 0, Integer.MAX_VALUE, requestContext)
-                .thenApply(TransactionCollection::getTransactions)
-                .thenApply(holder::withCurrentEncumbrances);
-    }
 }

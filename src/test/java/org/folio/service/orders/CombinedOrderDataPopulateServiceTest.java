@@ -55,14 +55,12 @@ public class CombinedOrderDataPopulateServiceTest {
 
     when(holderBuilder.withCurrentFiscalYear(any(), any()))
       .thenReturn(CompletableFuture.completedFuture(holder));
-    when(holderBuilder.withCurrentEncumbranceIds(any(), any()))
-            .thenReturn(CompletableFuture.completedFuture(holder));
+
 
     populateService.populate(holder, requestContext).join();
 
     InOrder inOrder = inOrder(holderBuilder, populateServices);
     inOrder.verify(holderBuilder).withCurrentFiscalYear(any(), any());
-    inOrder.verify(holderBuilder).withCurrentEncumbranceIds(any(), any());
     inOrder.verify(populateServices).stream();
 
   }

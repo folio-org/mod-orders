@@ -1,17 +1,13 @@
 package org.folio.models;
 
-import org.folio.rest.acq.model.finance.FiscalYear;
-import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
+
+import org.folio.rest.acq.model.finance.FiscalYear;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 
 public class CompositeOrderRetrieveHolder {
     private CompositePurchaseOrder order;
     private FiscalYear fiscalYear;
-    private List<Transaction> currentEncumbrances = new ArrayList<>();
 
     public CompositeOrderRetrieveHolder(CompositePurchaseOrder order) {
         this.order = order;
@@ -53,12 +49,4 @@ public class CompositeOrderRetrieveHolder {
         return this;
     }
 
-    public List<Transaction> getCurrentEncumbrances() {
-        return currentEncumbrances;
-    }
-
-    public CompositeOrderRetrieveHolder withCurrentEncumbrances(List<Transaction> currentEncumbrances) {
-        this.currentEncumbrances = currentEncumbrances;
-        return this;
-    }
 }

@@ -48,22 +48,9 @@ public class TransactionService {
                 .collect(Collectors.toList()));
   }
 
-  public CompletableFuture<List<Transaction>> getCurrentPaymentsByEncumbranceIds(List<String> trIds, String fiscalYearId, RequestContext requestContext) {
-    return collectResultsOnSuccess(
-            ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ).map(ids -> getPaymentsChunksByEncumbranceIds(ids, fiscalYearId, requestContext))
-                    .toList()).thenApply(
-            lists -> lists.stream()
-                    .flatMap(Collection::stream)
-                    .collect(Collectors.toList()));
-  }
 
   private CompletableFuture<List<Transaction>> getTransactionsChunksByPoLineIds(Collection<String> ids, RequestContext requestContext) {
     String query = convertIdsToCqlQuery(ids, "encumbrance.sourcePoLineId");
-    return getTransactionsChunksByIds(query, requestContext);
-  }
-
-  private CompletableFuture<List<Transaction>> getPaymentsChunksByEncumbranceIds(Collection<String> ids, String fiscalYearId, RequestContext requestContext) {
-    String query = String.format("transactionType==(Payment OR Credit) AND fiscalYearId==%s AND %s", fiscalYearId, convertIdsToCqlQuery(ids, "paymentEncumbranceId"));
     return getTransactionsChunksByIds(query, requestContext);
   }
 

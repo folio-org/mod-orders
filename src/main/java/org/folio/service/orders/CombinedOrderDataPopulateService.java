@@ -21,7 +21,6 @@ public class CombinedOrderDataPopulateService implements CompositeOrderDynamicDa
   public CompletableFuture<CompositeOrderRetrieveHolder> populate(CompositeOrderRetrieveHolder retrieveHolder,
       RequestContext requestContext) {
     return holderBuilder.withCurrentFiscalYear(retrieveHolder, requestContext)
-      .thenCompose(holder -> holderBuilder.withCurrentEncumbranceIds(holder, requestContext))
       .thenCompose(holder -> populateAllDynamicData(holder, requestContext));
   }
 

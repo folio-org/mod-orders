@@ -47,8 +47,7 @@ import org.folio.service.orders.OrderRolloverServiceTest;
 import org.folio.service.orders.PurchaseOrderLineServiceTest;
 import org.folio.service.orders.PurchaseOrderServiceTest;
 import org.folio.service.orders.ReEncumbranceHoldersBuilderTest;
-import org.folio.service.orders.TotalEncumberedPopulateServiceTest;
-import org.folio.service.orders.TotalExpendedPopulateServiceTest;
+import org.folio.service.orders.TransactionsTotalFieldsPopulateServiceTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
@@ -222,11 +221,7 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class TotalEncumberedPopulateServiceTestNested extends TotalEncumberedPopulateServiceTest {
-  }
-
-  @Nested
-  class TotalExpendedPopulateServiceTestNested extends TotalExpendedPopulateServiceTest {
+  class TransactionsTotalFieldsPopulateServiceTestNested extends TransactionsTotalFieldsPopulateServiceTest {
   }
 
   @Nested
