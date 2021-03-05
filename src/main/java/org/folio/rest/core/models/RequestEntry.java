@@ -1,5 +1,7 @@
 package org.folio.rest.core.models;
 
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -8,9 +10,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.glassfish.jersey.uri.UriTemplate;
-import scala.Int;
-
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
 
 public class RequestEntry {
 

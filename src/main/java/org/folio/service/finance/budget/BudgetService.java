@@ -1,4 +1,4 @@
-package org.folio.service.finance;
+package org.folio.service.finance.budget;
 
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;

@@ -1,4 +1,6 @@
-package org.folio.service.finance;
+package org.folio.service.finance.transaction;
+
+import org.folio.service.finance.WorkflowStatusName;
 
 import java.util.EnumMap;
 import java.util.Map;

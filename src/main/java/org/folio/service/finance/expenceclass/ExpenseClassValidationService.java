@@ -1,4 +1,4 @@
-package org.folio.service.finance;
+package org.folio.service.finance.expenceclass;
 
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.stream.Collectors.toList;
@@ -6,8 +6,8 @@ import static java.util.stream.Collectors.toMap;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_EXPENSE_CLASS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.INACTIVE_EXPENSE_CLASS;
 import static org.folio.orders.utils.HelperUtils.ID;
-import static org.folio.service.finance.EncumbranceService.EXPENSE_CLASS_NAME;
-import static org.folio.service.finance.EncumbranceService.FUND_CODE;
+import static org.folio.service.finance.transaction.EncumbranceService.EXPENSE_CLASS_NAME;
+import static org.folio.service.finance.transaction.EncumbranceService.FUND_CODE;
 
 import java.util.ArrayList;
 import java.util.List;

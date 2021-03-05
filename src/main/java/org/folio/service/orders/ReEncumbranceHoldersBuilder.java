@@ -36,12 +36,12 @@ import org.folio.rest.jaxrs.model.EncumbranceRollover;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
-import org.folio.service.finance.BudgetService;
+import org.folio.service.finance.budget.BudgetService;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
-import org.folio.service.finance.RolloverRetrieveService;
-import org.folio.service.finance.TransactionService;
+import org.folio.service.finance.rollover.RolloverRetrieveService;
+import org.folio.service.finance.transaction.TransactionService;
 import org.javamoney.moneta.Money;
 
 import io.vertx.core.json.JsonObject;

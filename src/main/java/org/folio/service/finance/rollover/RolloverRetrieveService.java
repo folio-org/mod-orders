@@ -1,4 +1,4 @@
-package org.folio.service.finance;
+package org.folio.service.finance.rollover;
 
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgressCollection;
@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.service.finance.EncumbranceService.AND;
+import static org.folio.service.finance.transaction.EncumbranceService.AND;
 
 public class RolloverRetrieveService {
 

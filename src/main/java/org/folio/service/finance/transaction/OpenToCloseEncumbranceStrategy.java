@@ -1,8 +1,9 @@
-package org.folio.service.finance;
+package org.folio.service.finance.transaction;
 
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.service.finance.WorkflowStatusName;
 
 import java.util.concurrent.CompletableFuture;
 

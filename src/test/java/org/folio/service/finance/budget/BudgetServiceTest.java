@@ -1,4 +1,4 @@
-package org.folio.service.finance;
+package org.folio.service.finance.budget;
 
 import org.folio.rest.acq.model.finance.Budget;
 import org.junit.jupiter.api.Test;

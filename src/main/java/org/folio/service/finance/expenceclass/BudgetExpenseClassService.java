@@ -1,4 +1,4 @@
-package org.folio.service.finance;
+package org.folio.service.finance.expenceclass;
 
 import org.folio.rest.acq.model.finance.BudgetExpenseClassCollection;
 import org.folio.rest.core.RestClient;

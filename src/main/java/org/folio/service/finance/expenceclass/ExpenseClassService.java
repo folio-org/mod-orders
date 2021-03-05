@@ -1,4 +1,4 @@
-package org.folio.service.finance;
+package org.folio.service.finance.expenceclass;
 
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 

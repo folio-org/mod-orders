@@ -1,4 +1,4 @@
-package org.folio.service.finance;
+package org.folio.service.finance.transaction;
 
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
@@ -41,15 +41,20 @@ public class TransactionService {
 
   public CompletableFuture<List<Transaction>> getTransactionsByPoLinesIds(List<String> trIds, RequestContext requestContext) {
     return collectResultsOnSuccess(
-        ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ).map(ids -> getTransactionsChunksByIds(ids, requestContext))
+        ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ).map(ids -> getTransactionsChunksByPoLineIds(ids, requestContext))
           .toList()).thenApply(
               lists -> lists.stream()
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList()));
   }
 
-  private CompletableFuture<List<Transaction>> getTransactionsChunksByIds(Collection<String> ids, RequestContext requestContext) {
+
+  private CompletableFuture<List<Transaction>> getTransactionsChunksByPoLineIds(Collection<String> ids, RequestContext requestContext) {
     String query = convertIdsToCqlQuery(ids, "encumbrance.sourcePoLineId");
+    return getTransactionsChunksByIds(query, requestContext);
+  }
+
+  private CompletableFuture<List<Transaction>> getTransactionsChunksByIds(String query, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query)
       .withOffset(0)
       .withLimit(Integer.MAX_VALUE);

@@ -23,6 +23,7 @@ import javax.money.convert.CurrencyConversion;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.models.ReEncumbranceHolder;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
@@ -34,23 +35,22 @@ import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReportingCode;
-import org.folio.service.finance.BudgetRestrictionService;
-import org.folio.service.finance.RolloverErrorService;
-import org.folio.service.finance.RolloverRetrieveService;
-import org.folio.service.finance.TransactionService;
-import org.folio.service.finance.TransactionSummariesService;
+import org.folio.service.finance.budget.BudgetRestrictionService;
+import org.folio.service.finance.rollover.RolloverErrorService;
+import org.folio.service.finance.rollover.RolloverRetrieveService;
+import org.folio.service.finance.transaction.TransactionService;
+import org.folio.service.finance.transaction.TransactionSummariesService;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.json.JsonObject;
 
-public class OrderReEncumberService {
+public class OrderReEncumberService implements CompositeOrderDynamicDataPopulateService {
 
   protected final Logger logger = LogManager.getLogger();
 
@@ -81,28 +81,28 @@ public class OrderReEncumberService {
     this.budgetRestrictionService = budgetRestrictionService;
   }
 
-  public CompletableFuture<CompositePurchaseOrder> populateNeedReEncumberFlag(CompositePurchaseOrder compPO,
-      RequestContext requestContext) {
-    compPO.setNeedReEncumber(false);
-    List<ReEncumbranceHolder> reEncumbranceHolders = reEncumbranceHoldersBuilder.buildReEncumbranceHoldersWithOrdersData(compPO);
+  public CompletableFuture<CompositeOrderRetrieveHolder> populate(CompositeOrderRetrieveHolder orderRetrieveHolder,
+                                                            RequestContext requestContext) {
+    orderRetrieveHolder.withNeedReEncumber(false);
+    List<ReEncumbranceHolder> reEncumbranceHolders = reEncumbranceHoldersBuilder.buildReEncumbranceHoldersWithOrdersData(orderRetrieveHolder.getOrder());
     if (reEncumbranceHolders.isEmpty()) {
-      return CompletableFuture.completedFuture(compPO);
+      return CompletableFuture.completedFuture(orderRetrieveHolder);
     }
     return reEncumbranceHoldersBuilder.withFunds(reEncumbranceHolders, requestContext)
       .thenCompose(holderList -> {
         if (holderList.stream()
           .anyMatch(holder -> Objects.isNull(holder.getFund()))) {
-          return CompletableFuture.completedFuture(compPO.withNeedReEncumber(true));
+          return CompletableFuture.completedFuture(orderRetrieveHolder.withNeedReEncumber(true));
         }
-        return reEncumbranceHoldersBuilder.withCurrentFiscalYear(holderList, requestContext)
-          .thenCompose(holders -> reEncumbranceHoldersBuilder.withRollovers(holders, requestContext))
+        reEncumbranceHolders.forEach(holder -> holder.withCurrentFiscalYear(orderRetrieveHolder.getFiscalYear()));
+        return reEncumbranceHoldersBuilder.withRollovers(reEncumbranceHolders, requestContext)
           .thenCompose(holders -> getLedgersIdsRolloverNotCompleted(holders, requestContext).thenCompose(ledgerIds -> {
             if (isRolloversPartiallyCompleted(holders, ledgerIds)) {
-              return CompletableFuture.completedFuture(compPO.withNeedReEncumber(true));
+              return CompletableFuture.completedFuture(orderRetrieveHolder.withNeedReEncumber(true));
             }
-            return rolloverErrorService.getLedgerFyRolloverErrors(compPO.getId(), requestContext)
+            return rolloverErrorService.getLedgerFyRolloverErrors(orderRetrieveHolder.getOrderId(), requestContext)
               .thenApply(LedgerFiscalYearRolloverErrorCollection::getLedgerFiscalYearRolloverErrors)
-              .thenApply(ledgerFyRolloverErrors -> compPO.withNeedReEncumber(!ledgerFyRolloverErrors.isEmpty()));
+              .thenApply(ledgerFyRolloverErrors -> orderRetrieveHolder.withNeedReEncumber(!ledgerFyRolloverErrors.isEmpty()));
           }));
       });
   }

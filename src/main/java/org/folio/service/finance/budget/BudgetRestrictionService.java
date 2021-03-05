@@ -1,4 +1,4 @@
-package org.folio.service.finance;
+package org.folio.service.finance.budget;
 
 import static java.util.stream.Collectors.flatMapping;
 import static java.util.stream.Collectors.groupingBy;
@@ -27,6 +27,7 @@ import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.service.finance.LedgerService;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryFunctions;
 
@@ -106,7 +107,7 @@ public class BudgetRestrictionService {
    * @return remaining amount for encumbrance
    */
 
-  Money getBudgetRemainingAmountForEncumbrance(Budget budget, CurrencyUnit systemCurrency) {
+  public Money getBudgetRemainingAmountForEncumbrance(Budget budget, CurrencyUnit systemCurrency) {
     Money allocated = Money.of(budget.getAllocated(), systemCurrency);
     // get allowableEncumbered converted from percentage value
     BigDecimal allowableEncumbered = BigDecimal.valueOf(budget.getAllowableEncumbrance())

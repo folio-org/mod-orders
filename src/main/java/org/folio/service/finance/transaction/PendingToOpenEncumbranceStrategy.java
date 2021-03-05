@@ -1,4 +1,4 @@
-package org.folio.service.finance;
+package org.folio.service.finance.transaction;
 
 import static org.folio.orders.utils.FundDistributionUtils.isFundDistributionsPresent;
 import static org.folio.orders.utils.FundDistributionUtils.validateFundDistributionTotal;
@@ -8,6 +8,7 @@ import java.util.concurrent.CompletableFuture;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.service.finance.WorkflowStatusName;
 
 public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 

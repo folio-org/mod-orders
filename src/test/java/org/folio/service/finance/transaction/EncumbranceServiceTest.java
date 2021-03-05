@@ -1,4 +1,4 @@
-package org.folio.service.finance;
+package org.folio.service.finance.transaction;
 
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -47,6 +47,12 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.finance.FiscalYearService;
+import org.folio.service.finance.FundService;
+import org.folio.service.finance.budget.BudgetRestrictionService;
+import org.folio.service.finance.transaction.EncumbranceService;
+import org.folio.service.finance.transaction.TransactionService;
+import org.folio.service.finance.transaction.TransactionSummariesService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;

@@ -36,15 +36,18 @@ import org.folio.service.PrefixServiceTest;
 import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
 import org.folio.service.exchange.ManualExchangeRateProviderTest;
-import org.folio.service.finance.EncumbranceServiceTest;
+import org.folio.service.finance.transaction.EncumbranceServiceTest;
 import org.folio.service.finance.FundServiceTest;
-import org.folio.service.finance.OpenToPendingEncumbranceStrategyTest;
-import org.folio.service.finance.TransactionServiceTest;
+import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTest;
+import org.folio.service.finance.transaction.TransactionServiceTest;
+import org.folio.service.orders.CombinedOrderDataPopulateServiceTest;
+import org.folio.service.orders.CompositeOrderRetrieveHolderBuilderTest;
 import org.folio.service.orders.OrderReEncumberServiceTest;
 import org.folio.service.orders.OrderRolloverServiceTest;
 import org.folio.service.orders.PurchaseOrderLineServiceTest;
 import org.folio.service.orders.PurchaseOrderServiceTest;
 import org.folio.service.orders.ReEncumbranceHoldersBuilderTest;
+import org.folio.service.orders.TransactionsTotalFieldsPopulateServiceTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
@@ -211,11 +214,21 @@ public class ApiTestSuite {
 
   @Nested
   class ReEncumbranceHoldersBuilderTestNested extends ReEncumbranceHoldersBuilderTest {
-
   }
 
   @Nested
   class OrderReEncumberServiceTestNested extends OrderReEncumberServiceTest {
+  }
 
+  @Nested
+  class TransactionsTotalFieldsPopulateServiceTestNested extends TransactionsTotalFieldsPopulateServiceTest {
+  }
+
+  @Nested
+  class CombinedOrderDataPopulateServiceTestNested extends CombinedOrderDataPopulateServiceTest {
+  }
+
+  @Nested
+  class CompositeOrderRetrieveHolderBuilderTestNested extends CompositeOrderRetrieveHolderBuilderTest {
   }
 }

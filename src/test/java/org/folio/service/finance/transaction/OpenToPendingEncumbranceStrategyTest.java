@@ -1,4 +1,4 @@
-package org.folio.service.finance;
+package org.folio.service.finance.transaction;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.TestUtils.getMockAsJson;
@@ -16,6 +16,9 @@ import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.service.finance.transaction.EncumbranceService;
+import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
+import org.folio.service.finance.transaction.TransactionSummariesService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;

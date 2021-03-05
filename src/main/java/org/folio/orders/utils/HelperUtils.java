@@ -44,6 +44,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.function.Function;
+import java.util.function.ToDoubleFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -65,6 +67,7 @@ import org.folio.helper.AbstractHelper;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -814,35 +817,6 @@ public class HelperUtils {
     return future;
   }
 
-  /**
-   * A common method to create a new entry in the storage based on the Json Object.
-   *
-   * @return completable future holding id of newly created entity Record or an exception if process failed
-   */
-  public static CompletableFuture<Void> handlePostWithEmptyBody(String endpoint, HttpClientInterface httpClient,
-      Map<String, String> okapiHeaders, Logger logger) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
-
-    logger.debug(CALLING_ENDPOINT_MSG, HttpMethod.POST, endpoint);
-
-    try {
-      httpClient.request(HttpMethod.POST, endpoint, okapiHeaders)
-        .thenAccept(HelperUtils::verifyResponse)
-        .thenApply(future::complete)
-        .exceptionally(t -> {
-          logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, HttpMethod.POST, endpoint);
-          future.completeExceptionally(t);
-          return null;
-        });
-    } catch (Exception e) {
-      logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, e, HttpMethod.POST, endpoint);
-      future.completeExceptionally(e);
-    }
-
-    return future;
-  }
-
-
   public static int getPoLineLimit(JsonObject config) {
     try {
       return Integer.parseInt(config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));
@@ -1028,10 +1002,6 @@ public class HelperUtils {
     return data instanceof JsonObject ? (JsonObject) data : JsonObject.mapFrom(data);
   }
 
-  public static String getEndpointWithQuery(String query, Logger logger) {
-    return isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
-  }
-
   private static void verifyNonPackageLinesHaveSingleTitle(Map<String, List<Title>> lineIdTitles) {
     if (isMultipleTitles(lineIdTitles)) {
       throw new HttpException(400, MULTIPLE_NONPACKAGE_TITLES);
@@ -1102,4 +1072,6 @@ public class HelperUtils {
     }
     return conversionQuery;
   }
+
+
 }

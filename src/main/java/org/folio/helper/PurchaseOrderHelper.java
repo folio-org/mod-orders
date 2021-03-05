@@ -25,7 +25,6 @@ import static org.folio.orders.utils.HelperUtils.deletePoLine;
 import static org.folio.orders.utils.HelperUtils.deletePoLines;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.getCompositePoLines;
-import static org.folio.orders.utils.HelperUtils.getConversionQuery;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.HelperUtils.getPoLines;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
@@ -71,13 +70,12 @@ import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.money.convert.ConversionQuery;
-
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
+import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.ErrorCodes;
@@ -103,16 +101,14 @@ import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.TagService;
-import org.folio.service.configuration.ConfigurationEntriesService;
-import org.folio.service.exchange.ExchangeRateProviderResolver;
-import org.folio.service.finance.EncumbranceService;
-import org.folio.service.finance.EncumbranceWorkflowStrategy;
-import org.folio.service.finance.EncumbranceWorkflowStrategyFactory;
-import org.folio.service.finance.ExpenseClassValidationService;
 import org.folio.service.finance.WorkflowStatusName;
+import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
+import org.folio.service.finance.transaction.EncumbranceService;
+import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
+import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
+import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.OrderInvoiceRelationService;
-import org.folio.service.orders.OrderReEncumberService;
-import org.javamoney.moneta.Money;
+import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
@@ -138,19 +134,17 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private final InventoryHelper inventoryHelper;
 
   @Autowired
-  private ExchangeRateProviderResolver exchangeRateProviderResolver;
+  private OrderLinesSummaryPopulateService orderLinesSummaryPopulateService;
   @Autowired
   private EncumbranceService encumbranceService;
   @Autowired
-  private OrderReEncumberService orderReEncumberService;
+  private CompositeOrderDynamicDataPopulateService combinedPopulateService;
   @Autowired
   private ExpenseClassValidationService expenseClassValidationService;
   @Autowired
   private EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
   @Autowired
   private OrderInvoiceRelationService orderInvoiceRelationService;
-  @Autowired
-  private ConfigurationEntriesService configurationEntriesService;
   @Autowired
   private TagService tagService;
   @Autowired
@@ -174,7 +168,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
     this.orderLineHelper = orderLineHelper;
     this.protectionHelper =  new ProtectionHelper(httpClient, okapiHeaders, ctx, lang);
     this.titlesHelper = new TitlesHelper(httpClient, okapiHeaders, ctx, lang);
-    this.exchangeRateProviderResolver = new ExchangeRateProviderResolver();
     this.inventoryHelper = new InventoryHelper(httpClient, okapiHeaders, ctx, lang);
 
   }
@@ -540,15 +533,14 @@ public class PurchaseOrderHelper extends AbstractHelper {
   public CompletableFuture<CompositePurchaseOrder> getCompositeOrder(String id) {
 
     CompletableFuture<CompositePurchaseOrder> future = new CompletableFuture<>();
-
     getPurchaseOrderById(id, lang, httpClient, okapiHeaders, logger)
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
       .thenAccept(compPO -> protectionHelper.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.READ)
         .thenAccept(ok -> updateAndGetOrderWithLines(compPO)
           .thenCompose(this::fetchNonPackageTitles)
           .thenAccept(linesIdTitles -> populateInstanceId(linesIdTitles, compPO.getCompositePoLines()))
-          .thenCompose(v -> populateOrderSummary(compPO))
-          .thenCompose(po -> orderReEncumberService.populateNeedReEncumberFlag(po, getRequestContext()))
+          .thenCompose(po -> combinedPopulateService.populate(new CompositeOrderRetrieveHolder(compPO), getRequestContext()))
+          .thenApply(CompositeOrderRetrieveHolder::getOrder)
           .thenAccept(future::complete)
           .exceptionally(t -> {
             logger.error("Failed to get lines for order with id={}", id, t.getCause());
@@ -569,44 +561,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return future;
   }
 
-  private CompletableFuture<CompositePurchaseOrder> populateOrderSummary(CompositePurchaseOrder compPO) {
-    List<CompositePoLine> compositePoLines = compPO.getCompositePoLines();
-    return calculateTotalEstimatedPrice(compositePoLines).thenApply(totalAmount -> {
-      compPO.setTotalEstimatedPrice(totalAmount);
-      compPO.setTotalItems(calculateTotalItemsQuantity(compositePoLines));
-      return compPO;
-    });
-  }
-
-  /**
-   * Calculates PO's estimated price by summing the Estimated Price of the associated PO Lines. See MODORDERS-181 for more details.
-   * At the moment assumption is that all prices could be in the different currency.
-   *
-   * @param compositePoLines list of composite PO Lines
-   * @return estimated purchase order's total price
-   */
-  public CompletableFuture<Double> calculateTotalEstimatedPrice(List<CompositePoLine> compositePoLines) {
-    return configurationEntriesService.getSystemCurrency(getRequestContext()).thenApply(toCurrency -> compositePoLines.stream()
-      .map(CompositePoLine::getCost)
-      .map(cost -> {
-        Money money = Money.of(cost.getPoLineEstimatedPrice(), cost.getCurrency());
-        if (money.getCurrency().getCurrencyCode().equals(toCurrency)) {
-          return money;
-        }
-        Double exchangeRate = cost.getExchangeRate();
-        ConversionQuery conversionQuery = getConversionQuery(exchangeRate, cost.getCurrency(), toCurrency);
-        var exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, getRequestContext());
-        var conversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
-
-        return money.with(conversion);
-      })
-      .reduce(Money.of(0, toCurrency), Money::add)
-      .getNumber()
-      .doubleValue());
-  }
-
-  private int calculateTotalItemsQuantity(List<CompositePoLine> poLines) {
-    return poLines.stream().mapToInt(HelperUtils::calculateTotalQuantity).sum();
+  private CompletableFuture<CompositePurchaseOrder> populateOrderSummary(CompositePurchaseOrder order) {
+    return orderLinesSummaryPopulateService.populate(new CompositeOrderRetrieveHolder(order), getRequestContext())
+            .thenApply(CompositeOrderRetrieveHolder::getOrder);
   }
 
   /**
@@ -637,7 +594,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .map(inventoryHelper::updateItem)
       .toArray(CompletableFuture[]::new));
   }
-
 
   private CompletableFuture<Map<String, List<Title>>> fetchNonPackageTitles(CompositePurchaseOrder compPO) {
     List<String> lineIds = getNonPackageLineIds(compPO.getCompositePoLines());

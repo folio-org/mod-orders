@@ -1,5 +1,6 @@
-package org.folio.service.finance;
+package org.folio.service.finance.budget;
 
+import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;

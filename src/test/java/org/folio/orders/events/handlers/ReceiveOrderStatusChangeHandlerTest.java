@@ -51,7 +51,7 @@ import org.folio.helper.AbstractHelper;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus;
-import org.folio.service.finance.EncumbranceService;
+import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;

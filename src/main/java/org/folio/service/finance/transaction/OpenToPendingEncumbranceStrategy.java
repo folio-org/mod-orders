@@ -1,4 +1,4 @@
-package org.folio.service.finance;
+package org.folio.service.finance.transaction;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -7,6 +7,7 @@ import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.service.finance.WorkflowStatusName;
 
 public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 

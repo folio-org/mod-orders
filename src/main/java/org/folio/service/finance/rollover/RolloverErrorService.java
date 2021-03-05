@@ -1,6 +1,6 @@
-package org.folio.service.finance;
+package org.folio.service.finance.rollover;
 
-import static org.folio.service.finance.EncumbranceService.AND;
+import static org.folio.service.finance.transaction.EncumbranceService.AND;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
