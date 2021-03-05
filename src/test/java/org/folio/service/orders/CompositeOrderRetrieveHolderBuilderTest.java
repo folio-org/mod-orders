@@ -30,59 +30,67 @@ import static org.mockito.Mockito.when;
 
 public class CompositeOrderRetrieveHolderBuilderTest {
 
+  @InjectMocks
+  private CompositeOrderRetrieveHolderBuilder holderBuilder;
+  @Mock
+  private FiscalYearService fiscalYearService;
+  @Mock
+  private RequestContext requestContext;
 
-    @InjectMocks
-    private CompositeOrderRetrieveHolderBuilder holderBuilder;
-    @Mock
-    private FiscalYearService fiscalYearService;
-    @Mock
-    private RequestContext requestContext;
+  @BeforeEach
+  public void initMocks() {
+    MockitoAnnotations.openMocks(this);
+  }
 
-    @BeforeEach
-    public void initMocks() {
-        MockitoAnnotations.openMocks(this);
-    }
+  @Test
+  void shouldNotFailWhenRetrieveFiscalYearReturns404Status() {
+    FundDistribution fundDistribution = new FundDistribution().withFundId(UUID.randomUUID()
+      .toString());
+    CompositePoLine poLine = new CompositePoLine().withFundDistribution(List.of(fundDistribution));
+    CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID()
+      .toString())
+      .withCompositePoLines(Collections.singletonList(poLine));
+    CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
+    CompletableFuture<FiscalYear> failedFuture = new CompletableFuture<>();
+    failedFuture.completeExceptionally(new HttpException(404, ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND));
+    when(fiscalYearService.getCurrentFiscalYearByFundId(anyString(), any())).thenReturn(failedFuture);
 
-    @Test
-    void shouldNotFailWhenRetrieveFiscalYearReturns404Status() {
-        FundDistribution fundDistribution = new FundDistribution().withFundId(UUID.randomUUID().toString());
-        CompositePoLine poLine = new CompositePoLine().withFundDistribution(List.of(fundDistribution));
-        CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString())
-                .withCompositePoLines(Collections.singletonList(poLine));
-        CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
-        CompletableFuture<FiscalYear> failedFuture = new CompletableFuture<>();
-        failedFuture.completeExceptionally(new HttpException(404, ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND));
-        when(fiscalYearService.getCurrentFiscalYearByFundId(anyString(), any())).thenReturn(failedFuture);
+    CompositeOrderRetrieveHolder resultHolder = holderBuilder.withCurrentFiscalYear(holder, requestContext)
+      .join();
 
-        CompositeOrderRetrieveHolder resultHolder = holderBuilder.withCurrentFiscalYear(holder, requestContext).join();
+    assertNull(resultHolder.getFiscalYear());
+  }
 
-        assertNull(resultHolder.getFiscalYear());
-    }
+  @Test
+  void shouldFailWhenWhenRetrieveFiscalYearReturnsDifferentFrom404Status() {
+    FundDistribution fundDistribution = new FundDistribution().withFundId(UUID.randomUUID()
+      .toString());
+    CompositePoLine poLine = new CompositePoLine().withFundDistribution(List.of(fundDistribution));
+    CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID()
+      .toString())
+      .withCompositePoLines(Collections.singletonList(poLine));
+    CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
+    CompletableFuture<FiscalYear> failedFuture = new CompletableFuture<>();
+    HttpException thrownException = new HttpException(500, ErrorCodes.GENERIC_ERROR_CODE);
+    failedFuture.completeExceptionally(thrownException);
+    when(fiscalYearService.getCurrentFiscalYearByFundId(anyString(), any())).thenReturn(failedFuture);
+    CompletionException exception = assertThrows(CompletionException.class,
+        () -> holderBuilder.withCurrentFiscalYear(holder, requestContext)
+          .join());
 
-    @Test
-    void shouldFailWhenWhenRetrieveFiscalYearReturnsDifferentFrom404Status() {
-        FundDistribution fundDistribution = new FundDistribution().withFundId(UUID.randomUUID().toString());
-        CompositePoLine poLine = new CompositePoLine().withFundDistribution(List.of(fundDistribution));
-        CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString())
-                .withCompositePoLines(Collections.singletonList(poLine));
-        CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
-        CompletableFuture<FiscalYear> failedFuture = new CompletableFuture<>();
-        HttpException thrownException = new HttpException(500, ErrorCodes.GENERIC_ERROR_CODE);
-        failedFuture.completeExceptionally(thrownException);
-        when(fiscalYearService.getCurrentFiscalYearByFundId(anyString(), any())).thenReturn(failedFuture);
-        CompletionException exception = assertThrows(CompletionException.class,  () -> holderBuilder.withCurrentFiscalYear(holder, requestContext).join());
+    assertEquals(thrownException, exception.getCause());
+  }
 
-        assertEquals(thrownException, exception.getCause());
-    }
+  @Test
+  void shouldNotPopulateFiscalYearWhenThereAreNoFundDistributions() {
 
-    @Test
-    void shouldNotPopulateFiscalYearWhenThereAreNoFundDistributions() {
+    CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID()
+      .toString());
+    CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
+    CompositeOrderRetrieveHolder resultHolder = holderBuilder.withCurrentFiscalYear(holder, requestContext)
+      .join();
 
-        CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
-        CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
-        CompositeOrderRetrieveHolder resultHolder = holderBuilder.withCurrentFiscalYear(holder, requestContext).join();
-
-        assertNull(resultHolder.getFiscalYear());
-    }
+    assertNull(resultHolder.getFiscalYear());
+  }
 
 }

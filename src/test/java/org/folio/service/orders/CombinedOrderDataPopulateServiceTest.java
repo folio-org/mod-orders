@@ -1,8 +1,5 @@
 package org.folio.service.orders;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.when;
@@ -55,9 +52,5 @@ public class CombinedOrderDataPopulateServiceTest {
     inOrder.verify(populateServices).stream();
 
   }
-
-
-
-
 
 }
