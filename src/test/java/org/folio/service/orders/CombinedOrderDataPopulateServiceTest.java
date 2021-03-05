@@ -25,7 +25,7 @@ public class CombinedOrderDataPopulateServiceTest {
   @Mock
   private CompositeOrderRetrieveHolderBuilder holderBuilder;
   @Mock
-  private Set<CompositeOrderDynamicDataPopulate> populateServices;
+  private Set<CompositeOrderDynamicDataPopulateService> populateServices;
 
   @Mock
   private RequestContext requestContext;

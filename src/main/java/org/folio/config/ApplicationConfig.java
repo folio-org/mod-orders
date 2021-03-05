@@ -27,7 +27,7 @@ import org.folio.service.finance.rollover.RolloverRetrieveService;
 import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.finance.transaction.TransactionSummariesService;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
-import org.folio.service.orders.CompositeOrderDynamicDataPopulate;
+import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilder;
 import org.folio.service.orders.CompositePurchaseOrderService;
 import org.folio.service.orders.OrderInvoiceRelationService;
@@ -241,13 +241,13 @@ public class ApplicationConfig {
   }
 
   @Bean
-  CompositeOrderDynamicDataPopulate totalExpendedPopulateService(TransactionService transactionService) {
+  CompositeOrderDynamicDataPopulateService totalExpendedPopulateService(TransactionService transactionService) {
     return new TransactionsTotalFieldsPopulateService(transactionService);
   }
 
   @Bean
-  CompositeOrderDynamicDataPopulate orderLinesSummaryPopulateService(ConfigurationEntriesService configurationEntriesService,
-                                                                     ExchangeRateProviderResolver exchangeRateProviderResolver) {
+  CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService(ConfigurationEntriesService configurationEntriesService,
+                                                                            ExchangeRateProviderResolver exchangeRateProviderResolver) {
     return new OrderLinesSummaryPopulateService(configurationEntriesService, exchangeRateProviderResolver);
   }
 
@@ -257,8 +257,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  CompositeOrderDynamicDataPopulate combinedPopulateService(CompositeOrderRetrieveHolderBuilder compositeOrderRetrieveHolderBuilder,
-                                                            Set<CompositeOrderDynamicDataPopulate> populateServices) {
+  CompositeOrderDynamicDataPopulateService combinedPopulateService(CompositeOrderRetrieveHolderBuilder compositeOrderRetrieveHolderBuilder,
+                                                                   Set<CompositeOrderDynamicDataPopulateService> populateServices) {
     return new CombinedOrderDataPopulateService(compositeOrderRetrieveHolderBuilder, populateServices);
   }
 }

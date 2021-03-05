@@ -6,13 +6,13 @@ import java.util.concurrent.CompletableFuture;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.rest.core.models.RequestContext;
 
-public class CombinedOrderDataPopulateService implements CompositeOrderDynamicDataPopulate {
+public class CombinedOrderDataPopulateService implements CompositeOrderDynamicDataPopulateService {
 
   private final CompositeOrderRetrieveHolderBuilder holderBuilder;
-  private final Set<CompositeOrderDynamicDataPopulate> populateServices;
+  private final Set<CompositeOrderDynamicDataPopulateService> populateServices;
 
   public CombinedOrderDataPopulateService(CompositeOrderRetrieveHolderBuilder holderBuilder,
-                                          Set<CompositeOrderDynamicDataPopulate> populateServices) {
+                                          Set<CompositeOrderDynamicDataPopulateService> populateServices) {
     this.holderBuilder = holderBuilder;
     this.populateServices = populateServices;
   }

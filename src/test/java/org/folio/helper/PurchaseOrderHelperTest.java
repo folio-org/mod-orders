@@ -54,7 +54,7 @@ import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
-import org.folio.service.orders.CompositeOrderDynamicDataPopulate;
+import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderReEncumberService;
@@ -230,12 +230,12 @@ public class PurchaseOrderHelperTest {
     }
 
     @Bean
-    CompositeOrderDynamicDataPopulate orderLinesSummaryPopulateService() {
+    CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService() {
       return mock(OrderLinesSummaryPopulateService.class);
     }
 
     @Bean
-    CompositeOrderDynamicDataPopulate combinedPopulateService() {
+    CompositeOrderDynamicDataPopulateService combinedPopulateService() {
       return mock(CombinedOrderDataPopulateService.class);
     }
   }

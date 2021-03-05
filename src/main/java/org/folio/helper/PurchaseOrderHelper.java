@@ -106,7 +106,7 @@ import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
-import org.folio.service.orders.CompositeOrderDynamicDataPopulate;
+import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -138,7 +138,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   @Autowired
   private EncumbranceService encumbranceService;
   @Autowired
-  private CompositeOrderDynamicDataPopulate combinedPopulateService;
+  private CompositeOrderDynamicDataPopulateService combinedPopulateService;
   @Autowired
   private ExpenseClassValidationService expenseClassValidationService;
   @Autowired
