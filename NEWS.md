@@ -1,5 +1,37 @@
 ## 11.2.0 - Unreleased
 
+## 11.1.3 - Released
+The primary focus of this release was to fix memory leaks upon loading large composite order
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v11.1.2...v11.1.3)
+
+### Bug Fixes
+* [MODORDERS-484](https://issues.folio.org/browse/MODORDERS-484) - Memory Leaks - concurrentHashMap and Vertx Internal timers not releasing heap memory in POST /composite-orders
+
+## 11.1.2 - Released
+The primary focus of this release was to fix Adding certain prefix and suffixes prevents user from being able to save and currency issue for totalEstimatedPrice 
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v11.1.1...v11.1.2)
+
+  ### Bug Fixes
+ * [MODORDERS-447](https://issues.folio.org/browse/MODORDERS-447) - totalEstimatedPrice field should be converted if polines in different currency
+ * [MODORDSTOR-197](https://issues.folio.org/browse/MODORDSTOR-197) - Adding certain prefix and suffixes prevents user from being able to save
+
+## 11.1.1 - Released
+The focus of this release was to fix issue with different finance data and operations
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v11.1.0...v11.1.1)
+
+### Bug Fixes
+ * [MODORDERS-448](https://issues.folio.org/browse/MODORDERS-448) Encumbrance not deleted when order/order lines are deleted
+ * [MODORDERS-447](https://issues.folio.org/browse/MODORDERS-447) totalEstimatedPrice field should be converted if polines in different currency
+ * [MODORDERS-446](https://issues.folio.org/browse/MODORDERS-446) exchange rate not applied to encumbrance after Reopen order
+ * [MODORDERS-437](https://issues.folio.org/browse/MODORDERS-437) Error must be returned in case of budget expense class mismatch
+ * [MODORDERS-436](https://issues.folio.org/browse/MODORDERS-436) exchange rate not applied to encumbrance when POL in foreign currency.
+ * [MODORDERS-435](https://issues.folio.org/browse/MODORDERS-435) unable to open order that references Funds from different ledgers
+ * [MODORDERS-430](https://issues.folio.org/browse/MODORDERS-430) Can't Unopen order - error response 2
+ * [MODORDERS-429](https://issues.folio.org/browse/MODORDERS-429) Can't Unopen order - error response
+ 
+ 
 ## 11.1.0 - Released
 The focus of this release was to migrate to JDK 11 and RMB v31.1.1. Release also contains several bug fixes for open order.  
 
