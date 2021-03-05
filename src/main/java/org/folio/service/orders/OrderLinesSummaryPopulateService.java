@@ -15,7 +15,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.folio.orders.utils.HelperUtils.getConversionQuery;
 
-public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDataPopulateService {
+public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDataPopulate {
 
     private final ConfigurationEntriesService configurationEntriesService;
     private final ExchangeRateProviderResolver exchangeRateProviderResolver;

@@ -4,25 +4,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.when;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import org.folio.models.CompositeOrderRetrieveHolder;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.ErrorCodes;
-import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.FundDistribution;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -37,7 +28,7 @@ public class CombinedOrderDataPopulateServiceTest {
   @Mock
   private CompositeOrderRetrieveHolderBuilder holderBuilder;
   @Mock
-  private Set<CompositeOrderDynamicDataPopulateService> populateServices;
+  private Set<CompositeOrderDynamicDataPopulate> populateServices;
 
   @Mock
   private RequestContext requestContext;

@@ -13,7 +13,7 @@ import org.folio.service.finance.transaction.TransactionService;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
-public class TransactionsTotalFieldsPopulateService implements CompositeOrderDynamicDataPopulateService {
+public class TransactionsTotalFieldsPopulateService implements CompositeOrderDynamicDataPopulate {
 
     private static final ToDoubleFunction<Transaction> GET_AMOUNT_EXPENDED_FUNCTION = transaction -> transaction.getEncumbrance().getAmountExpended();
     private final TransactionService transactionService;

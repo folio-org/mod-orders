@@ -50,7 +50,7 @@ import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.json.JsonObject;
 
-public class OrderReEncumberService implements CompositeOrderDynamicDataPopulateService {
+public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate {
 
   protected final Logger logger = LogManager.getLogger();
 

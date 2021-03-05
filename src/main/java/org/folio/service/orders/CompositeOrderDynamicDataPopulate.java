@@ -5,6 +5,6 @@ import java.util.concurrent.CompletableFuture;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.rest.core.models.RequestContext;
 
-public interface CompositeOrderDynamicDataPopulateService {
+public interface CompositeOrderDynamicDataPopulate {
     CompletableFuture<CompositeOrderRetrieveHolder> populate(CompositeOrderRetrieveHolder holder, RequestContext requestContext);
 }
