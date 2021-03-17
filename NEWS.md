@@ -1,4 +1,43 @@
-## 11.2.0 - Unreleased
+## 12.1.0 - Unreleased
+
+## 12.0.0 - Released
+
+The focus of this release was to update RMB, support ledger fiscal year rollover and re-encumber logic. 
+Also performance improvement was done for composite order API. 
+
+[Full Changelog](https://github.com/folio-org/mod-invoice/compare/v11.1.3...v12.0.0)
+
+### Technical tasks
+* [MODORDERS-467](https://issues.folio.org/browse/MODORDERS-467) - mod-invoice: Update RMB
+
+### Stories
+* [MODORDERS-480](https://issues.folio.org/browse/MODORDERS-480) - Create encumbrances based on fundDistribution percentage value during re-encumber
+* [MODORDERS-479](https://issues.folio.org/browse/MODORDERS-479) - Update fundDistributions during order rollover
+* [MODORDERS-471](https://issues.folio.org/browse/MODORDERS-471) - Ensure that Allowable Encumbrance and Allowable Expenditure restrictions are based on "Total Funding"
+* [MODORDERS-470](https://issues.folio.org/browse/MODORDERS-470) - Create new tags centrally when they are added from incoming POL data
+* [MODORDERS-465](https://issues.folio.org/browse/MODORDERS-465) - Implement order rollover status logic for get by id
+* [MODORDERS-464](https://issues.folio.org/browse/MODORDERS-464) - Implement rollover orders logic
+* [MODORDERS-463](https://issues.folio.org/browse/MODORDERS-463) - Change encumbrance orderStatus when workFlowStatus is changed
+* [MODORDERS-459](https://issues.folio.org/browse/MODORDERS-459) - Update POL status of "Ongoing" order to Ongoing when order is Open
+* [MODORDERS-454](https://issues.folio.org/browse/MODORDERS-454) - User should NOT be able to delete an order or order line that is related to an invoice
+* [MODORDERS-443](https://issues.folio.org/browse/MODORDERS-443) - Update logic for supporting manually exchange rate for purchase order line
+* [MODORDERS-439](https://issues.folio.org/browse/MODORDERS-439) - Implement re-encumber orders logic
+* [MODORDERS-438](https://issues.folio.org/browse/MODORDERS-438) - Define re-encumber and rollover orders business API
+* [MODORDERS-391](https://issues.folio.org/browse/MODORDERS-491) - Release all encumbrances when order is closed
+
+### Bug Fixes
+* [MODORDERS-484](https://issues.folio.org/browse/MODORDERS-484) - Memory Leaks - concurrentHashMap and Vertx Internal timers not releasing heap memory in POST /composite-orders
+* [MODORDERS-478](https://issues.folio.org/browse/MODORDERS-478) - Total encumbered for PO showing more than one year of encumbrances
+* [MODORDERS-476](https://issues.folio.org/browse/MODORDERS-476) - Investigate invoice approval error
+* [MODORDERS-472](https://issues.folio.org/browse/MODORDERS-472) - Potentially incorrect number of units/price display in order cost details
+
+## 11.1.3 - Released
+The primary focus of this release was to fix memory leaks upon loading large composite order
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v11.1.2...v11.1.3)
+
+### Bug Fixes
+* [MODORDERS-484](https://issues.folio.org/browse/MODORDERS-484) - Memory Leaks - concurrentHashMap and Vertx Internal timers not releasing heap memory in POST /composite-orders
+
 
 ## 11.1.2 - Released
 The primary focus of this release was to fix Adding certain prefix and suffixes prevents user from being able to save and currency issue for totalEstimatedPrice 
