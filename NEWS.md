@@ -5,7 +5,7 @@
 The focus of this release was to update RMB, support ledger fiscal year rollover and re-encumber logic. 
 Also performance improvement was done for composite order API. 
 
-[Full Changelog](https://github.com/folio-org/mod-invoice/compare/v11.1.3...v12.0.0)
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v11.1.3...v12.0.0)
 
 ### Technical tasks
 * [MODORDERS-467](https://issues.folio.org/browse/MODORDERS-467) - mod-invoice: Update RMB
