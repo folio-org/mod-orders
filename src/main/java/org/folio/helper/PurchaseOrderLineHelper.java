@@ -539,7 +539,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
    * @param compPOL Composite PO line to update Inventory for
    * @return CompletableFuture with void.
    */
-  public CompletableFuture<Void> updateInventory(CompositePoLine compPOL, String titleId, boolean isOpenOrderFlow) {
+  CompletableFuture<Void> updateInventory(CompositePoLine compPOL, String titleId, boolean isOpenOrderFlow) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return completedFuture(null);
     }

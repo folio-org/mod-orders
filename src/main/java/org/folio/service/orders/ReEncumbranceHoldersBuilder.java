@@ -100,8 +100,8 @@ public class ReEncumbranceHoldersBuilder {
                                                                       RequestContext requestContext) {
     List<String> ledgerIds = holders.stream()
       .map(ReEncumbranceHolder::getLedgerId)
-        .filter(Objects::nonNull)
-        .distinct()
+      .filter(Objects::nonNull)
+       .distinct()
       .collect(toList());
     if (ledgerIds.isEmpty()) {
       return CompletableFuture.completedFuture(holders);
