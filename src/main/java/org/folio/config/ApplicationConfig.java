@@ -1,6 +1,7 @@
 package org.folio.config;
 
 import org.folio.rest.core.RestClient;
+import org.folio.service.FundsDistributionService;
 import org.folio.service.PrefixService;
 import org.folio.service.ReasonForClosureService;
 import org.folio.service.SuffixService;
@@ -11,6 +12,7 @@ import org.folio.service.exchange.FinanceExchangeRateService;
 import org.folio.service.finance.expenceclass.BudgetExpenseClassService;
 import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.folio.service.finance.budget.BudgetService;
+import org.folio.service.finance.transaction.EncumbranceRelationsHoldersBuilder;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
@@ -110,18 +112,13 @@ public class ApplicationConfig {
   }
 
   @Bean
-  BudgetRestrictionService budgetRestrictionService(BudgetService budgetService, LedgerService ledgerService) {
-    return new BudgetRestrictionService(budgetService, ledgerService);
+  BudgetRestrictionService budgetRestrictionService() {
+    return new BudgetRestrictionService();
   }
 
   @Bean
-  EncumbranceService encumbranceService(TransactionService transactionService, TransactionSummariesService transactionSummariesService,
-                                        ExchangeRateProviderResolver exchangeRateProviderResolver,
-                                        FundService fundService,
-                                        BudgetRestrictionService budgetRestrictionService,
-                                        FiscalYearService fiscalYearService,
-                                        ConfigurationEntriesService configurationEntriesService) {
-    return new EncumbranceService(transactionService, transactionSummariesService, exchangeRateProviderResolver, fundService, budgetRestrictionService, fiscalYearService, configurationEntriesService);
+  EncumbranceService encumbranceService(TransactionService transactionService, TransactionSummariesService transactionSummariesService) {
+    return new EncumbranceService(transactionService, transactionSummariesService);
   }
 
   @Bean
@@ -155,13 +152,32 @@ public class ApplicationConfig {
   }
 
   @Bean
-  EncumbranceWorkflowStrategy pendingToOpenEncumbranceStrategy(EncumbranceService encumbranceService, TransactionSummariesService transactionSummariesService) {
-    return new PendingToOpenEncumbranceStrategy(encumbranceService, transactionSummariesService);
+  FundsDistributionService fundsDistributionService() {
+    return new FundsDistributionService();
+  }
+
+  @Bean EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder(EncumbranceService encumbranceService,
+                                                                              FundService fundService,
+                                                                              FiscalYearService fiscalYearService,
+                                                                              ExchangeRateProviderResolver exchangeRateProviderResolver,
+                                                                              BudgetService budgetService,
+                                                                              LedgerService ledgerService) {
+    return new EncumbranceRelationsHoldersBuilder(encumbranceService, fundService, fiscalYearService, exchangeRateProviderResolver, budgetService,
+                                                  ledgerService);
   }
 
   @Bean
-  EncumbranceWorkflowStrategy openToCloseEncumbranceStrategy(EncumbranceService encumbranceService, TransactionSummariesService transactionSummariesService) {
-    return new OpenToCloseEncumbranceStrategy(encumbranceService, transactionSummariesService);
+  EncumbranceWorkflowStrategy pendingToOpenEncumbranceStrategy(EncumbranceService encumbranceService,
+                                                               FundsDistributionService fundsDistributionService,
+                                                               BudgetRestrictionService budgetRestrictionService,
+                                                               EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
+    return new PendingToOpenEncumbranceStrategy(encumbranceService, fundsDistributionService,
+                                                budgetRestrictionService, encumbranceRelationsHoldersBuilder);
+  }
+
+  @Bean
+  EncumbranceWorkflowStrategy openToCloseEncumbranceStrategy(EncumbranceService encumbranceService) {
+    return new OpenToCloseEncumbranceStrategy(encumbranceService);
   }
 
   @Bean
@@ -171,14 +187,15 @@ public class ApplicationConfig {
                                                           ExchangeRateProviderResolver exchangeRateProviderResolver,
                                                           FiscalYearService fiscalYearService,
                                                           RolloverRetrieveService rolloverRetrieveService,
-                                                          TransactionService transactionService) {
+                                                          TransactionService transactionService,
+                                                          FundsDistributionService fundsDistributionService) {
     return new ReEncumbranceHoldersBuilder(budgetService,
-            ledgerService,
-            fundService,
-            exchangeRateProviderResolver,
-            fiscalYearService,
-            rolloverRetrieveService,
-            transactionService);
+                                           ledgerService,
+                                           fundService,
+                                           exchangeRateProviderResolver,
+                                           fiscalYearService,
+                                           rolloverRetrieveService,
+                                           transactionService, fundsDistributionService);
   }
 
   @Bean

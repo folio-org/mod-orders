@@ -17,7 +17,8 @@ import org.folio.rest.jaxrs.model.Parameter;
 
 public class FiscalYearService {
 
-  private static final String ENDPOINT = "/finance/ledgers/{id}/current-fiscal-year";
+  private static final String FISCAL_YEAR = "/finance/fiscal-years/{id}";
+  private static final String CURRENT_FISCAL_YEAR = "/finance/ledgers/{id}/current-fiscal-year";
   
   private final RestClient restClient;
   private final FundService fundService;
@@ -29,7 +30,7 @@ public class FiscalYearService {
   }
 
   public CompletableFuture<FiscalYear> getCurrentFiscalYear(String ledgerId, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(ENDPOINT).withId(ledgerId);
+    RequestEntry requestEntry = new RequestEntry(CURRENT_FISCAL_YEAR).withId(ledgerId);
     return restClient.get(requestEntry, requestContext, FiscalYear.class)
       .exceptionally(t -> {
         Throwable cause = Objects.nonNull(t.getCause()) ? t.getCause() : t;
@@ -50,5 +51,10 @@ public class FiscalYearService {
 
   private boolean isFiscalYearNotFound(Throwable t) {
     return t instanceof HttpException && ((HttpException) t).getCode() == 404;
+  }
+
+  public CompletableFuture<FiscalYear> getFiscalYearById(String fiscalYearId, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(FISCAL_YEAR).withId(fiscalYearId);
+    return restClient.get(requestEntry, requestContext, FiscalYear.class);
   }
 }

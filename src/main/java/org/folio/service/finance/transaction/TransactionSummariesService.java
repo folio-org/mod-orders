@@ -1,10 +1,14 @@
 package org.folio.service.finance.transaction;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
+import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
+import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -45,7 +49,18 @@ public class TransactionSummariesService {
         }
     }
 
-    public CompletableFuture<Void> createOrUpdateOrderTransactionSummary(String orderId, EncumbrancesProcessingHolder holder, RequestContext requestContext) {
+    public CompletableFuture<Void> createOrUpdateOrderTransactionSummary(EncumbrancesProcessingHolder holder,
+        RequestContext requestContext) {
+      Stream<String> orderIdFromCreate = holder.getEncumbrancesForCreate()
+        .stream()
+        .map(EncumbranceRelationsHolder::getOrderId);
+      Stream<String> orderIdFromStorage = holder.getEncumbrancesFromStorage()
+        .stream()
+        .map(Transaction::getEncumbrance)
+        .map(Encumbrance::getSourcePurchaseOrderId);
+      String orderId = Stream.concat(orderIdFromCreate, orderIdFromStorage)
+        .findFirst()
+        .orElse(null);
         if (CollectionUtils.isEmpty(holder.getEncumbrancesFromStorage())) {
             return createOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext)
                     .thenApply(id -> null);
