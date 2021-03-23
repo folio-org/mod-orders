@@ -8,12 +8,11 @@ import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import javax.money.Monetary;
 import javax.money.MonetaryAmount;
@@ -27,8 +26,6 @@ import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.models.ReEncumbranceHolder;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.acq.model.finance.Budget;
-import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -88,13 +85,17 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
     if (reEncumbranceHolders.isEmpty()) {
       return CompletableFuture.completedFuture(orderRetrieveHolder);
     }
-    return reEncumbranceHoldersBuilder.withFunds(reEncumbranceHolders, requestContext)
+    return reEncumbranceHoldersBuilder.withFundsData(reEncumbranceHolders, requestContext)
       .thenCompose(holderList -> {
         if (holderList.stream()
-          .anyMatch(holder -> Objects.isNull(holder.getFund()))) {
+          .anyMatch(holder -> Objects.isNull(holder.getLedgerId()))) {
           return CompletableFuture.completedFuture(orderRetrieveHolder.withNeedReEncumber(true));
         }
-        reEncumbranceHolders.forEach(holder -> holder.withCurrentFiscalYear(orderRetrieveHolder.getFiscalYear()));
+
+        Optional.ofNullable(orderRetrieveHolder.getFiscalYear())
+            .ifPresent(fiscalYear ->  reEncumbranceHolders
+                .forEach(holder -> holder.withCurrentFiscalYearId(fiscalYear.getId()).withCurrency(fiscalYear.getCurrency())));
+
         return reEncumbranceHoldersBuilder.withRollovers(reEncumbranceHolders, requestContext)
           .thenCompose(holders -> getLedgersIdsRolloverNotCompleted(holders, requestContext).thenCompose(ledgerIds -> {
             if (isRolloversPartiallyCompleted(holders, ledgerIds)) {
@@ -110,21 +111,20 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
   public CompletableFuture<Void> reEncumber(String orderId, RequestContext requestContext) {
     return compositePurchaseOrderService.getCompositeOrderById(orderId, requestContext)
       .thenApply(reEncumbranceHoldersBuilder::buildReEncumbranceHoldersWithOrdersData)
-      .thenCompose(holders -> reEncumbranceHoldersBuilder.withFunds(holders, requestContext))
+      .thenCompose(holders -> reEncumbranceHoldersBuilder.withFundsData(holders, requestContext))
       .thenApply(this::checkAllFundsFound)
-      .thenCompose(holders -> reEncumbranceHoldersBuilder.withLedgers(holders, requestContext))
-      .thenCompose(holders -> reEncumbranceHoldersBuilder.withCurrentFiscalYear(holders, requestContext))
+      .thenCompose(holders -> reEncumbranceHoldersBuilder.withLedgersData(holders, requestContext))
+      .thenCompose(holders -> reEncumbranceHoldersBuilder.withCurrentFiscalYearData(holders, requestContext))
       .thenCompose(holders -> reEncumbranceHoldersBuilder.withRollovers(holders, requestContext))
       .thenApply(reEncumbranceHoldersBuilder::withEncumbranceRollover)
       .thenCompose(holders -> checkRolloverHappensForAllLedgers(holders, requestContext))
       .thenCompose(holders -> reEncumbranceHoldersBuilder.withBudgets(holders, requestContext))
       .thenCompose(holders -> reEncumbranceHoldersBuilder.withConversions(holders, requestContext))
       .thenApply(this::filterNeedReEncumbranceHolders)
-      .thenCompose(holders -> reEncumbranceHoldersBuilder.withFromEncumbrances(holders, requestContext))
+      .thenCompose(holders -> reEncumbranceHoldersBuilder.withPreviousFyEncumbrances(holders, requestContext))
       .thenApply(this::adjustPoLinesCost)
       .thenCompose(holders -> reEncumbranceHoldersBuilder.withToEncumbrances(holders, requestContext))
-      .thenApply(this::verifyBudgets)
-      .thenCompose(holders -> createEncumbrances(holders, requestContext))
+      .thenCompose(holders -> validateAndCreateEncumbrances(holders, requestContext))
       .thenApply(this::updateLinkToEncumbrances)
       .thenCompose(holders -> deleteRolloverErrors(orderId, requestContext).thenApply(aVoid -> holders))
       .thenCompose(holders -> updatePoLines(holders, requestContext));
@@ -132,7 +132,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
 
   private List<ReEncumbranceHolder> checkAllFundsFound(List<ReEncumbranceHolder> holders) {
     List<Parameter> parameters =  holders.stream()
-            .filter(holder -> Objects.isNull(holder.getFund()))
+            .filter(holder -> Objects.isNull(holder.getLedgerId()))
             .map(ReEncumbranceHolder::getFundId)
             .map(id -> new Parameter().withValue(id).withKey("fund"))
             .collect(toList());
@@ -158,14 +158,14 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
 
   private boolean isRolloversPartiallyCompleted(List<ReEncumbranceHolder> holders, List<String> ledgerIds) {
     return !ledgerIds.isEmpty()
-            && ledgerIds.size() != holders.stream().map(ReEncumbranceHolder::getFund).map(Fund::getLedgerId).distinct().count();
+            && ledgerIds.size() != holders.stream().map(ReEncumbranceHolder::getLedgerId).filter(Objects::nonNull).distinct().count();
   }
 
   private CompletableFuture<List<String>> getLedgersIdsRolloverNotCompleted(List<ReEncumbranceHolder> holders, RequestContext requestContext) {
     List<String> ledgerIds = holders.stream()
             .filter(holder -> Objects.isNull(holder.getRollover()))
-            .map(ReEncumbranceHolder::getFund)
-            .map(Fund::getLedgerId)
+            .map(ReEncumbranceHolder::getLedgerId)
+            .filter(Objects::nonNull)
             .distinct()
             .collect(toList());
 
@@ -216,22 +216,8 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
     return purchaseOrderLineService.updateOrderLines(lines, requestContext);
   }
 
-  private List<ReEncumbranceHolder> verifyBudgets(List<ReEncumbranceHolder> holders) {
-    Map<Budget, List<Transaction>> budgetTransactionsMap = holders.stream()
-            .filter(holder -> StringUtils.isEmpty(holder.getToFYEncumbrance().getId()))
-            .filter(ReEncumbranceHolder::getRestrictEncumbrance)
-            .collect(groupingBy(ReEncumbranceHolder::getBudget,
-                    HashMap::new,
-                    Collectors.mapping(ReEncumbranceHolder::getToFYEncumbrance, toList())));
-
-    budgetRestrictionService.checkEnoughMoneyInBudgets(budgetTransactionsMap);
-
-    return holders;
-  }
-
-
   private List<ReEncumbranceHolder> updateLinkToEncumbrances(List<ReEncumbranceHolder> holders) {
-    holders.forEach(holder -> holder.getFundDistribution().setEncumbrance(holder.getToFYEncumbrance().getId()));
+    holders.forEach(holder -> holder.getFundDistribution().setEncumbrance(holder.getNewEncumbrance().getId()));
     return holders;
   }
 
@@ -248,7 +234,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
     for (ReEncumbranceHolder holder : holders) {
       if (holder.getEncumbranceRollover() != null && holder.getPoLineToFyConversion() != null) {
         CurrencyConversion fyToPoLineConversion = holder.getFyToPoLineConversion();
-        Transaction fromEncumbrance = holder.getFromFYEncumbrance();
+        Transaction fromEncumbrance = holder.getPreviousFyEncumbrance();
         EncumbranceRollover encumbranceRollover = holder.getEncumbranceRollover();
         MonetaryOperator percentOperator = MonetaryOperators.percent(encumbranceRollover.getIncreaseBy());
         MonetaryAmount amount;
@@ -276,12 +262,13 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
     }
   }
 
-  private CompletableFuture<List<ReEncumbranceHolder>> createEncumbrances(List<ReEncumbranceHolder> holders,
-      RequestContext requestContext) {
+  private CompletableFuture<List<ReEncumbranceHolder>> validateAndCreateEncumbrances(List<ReEncumbranceHolder> holders,
+                                                                                     RequestContext requestContext) {
     List<ReEncumbranceHolder> holderForCreateEncumbrances = holders.stream()
-      .filter(holder -> StringUtils.isEmpty(holder.getToFYEncumbrance().getId()))
+      .filter(holder -> StringUtils.isEmpty(holder.getNewEncumbrance().getId()))
       .collect(toList());
 
+    budgetRestrictionService.checkEncumbranceRestrictions(holderForCreateEncumbrances);
     return holders.stream()
       .findFirst()
       .map(ReEncumbranceHolder::getPurchaseOrder)
@@ -290,8 +277,8 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
         String orderId = purchaseOrder.getId();
         return transactionSummaryService.updateOrderTransactionSummary(orderId, holderForCreateEncumbrances.size(), requestContext)
           .thenCompose(aVoid -> CompletableFuture.allOf(holderForCreateEncumbrances.stream()
-            .map(holder -> transactionService.createTransaction(holder.getToFYEncumbrance(), requestContext)
-              .thenAccept(holder::withToFYEncumbrance))
+            .map(holder -> transactionService.createTransaction(holder.getNewEncumbrance(), requestContext)
+              .thenAccept(holder::withNewEncumbrance))
             .toArray(CompletableFuture[]::new)))
           .thenApply(aVoid -> holders);
       })

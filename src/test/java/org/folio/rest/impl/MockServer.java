@@ -524,6 +524,7 @@ public class MockServer {
     router.get(resourcePath(ORDER_TEMPLATES)).handler(ctx -> handleGetGenericSubObj(ctx, ORDER_TEMPLATES));
     router.get(resourcesPath(ORDER_TEMPLATES)).handler(this::handleGetOrderTemplates);
     router.get("/finance/ledgers/:id/current-fiscal-year").handler(this::handleGetCurrentFiscalYearByLedgerId);
+    router.get("/finance/fiscal-years/:id").handler(this::handleGetCurrentFiscalYearByLedgerId);
     router.get("/finance-storage/budget-expense-classes").handler(this::handleGetBudgetExpenseClass);
     router.get(resourcesPath(EXPENSE_CLASSES_URL)).handler(this::handleGetExpenseClasses);
     router.get(resourcesPath(FUNDS)).handler(this::handleGetFunds);
@@ -827,6 +828,7 @@ public class MockServer {
       fiscalYear.setId(UUID.randomUUID().toString());
       fiscalYear.setCode("test2020");
       fiscalYear.setName("test");
+      fiscalYear.setCurrency("USD");
       fiscalYear.setPeriodStart(Date.from(Instant.now().minus(365, DAYS)));
       fiscalYear.setPeriodEnd(Date.from(Instant.now().plus(365, DAYS)));
       serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(fiscalYear).encodePrettily());
