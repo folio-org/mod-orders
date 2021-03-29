@@ -1,15 +1,14 @@
 package org.folio.orders.utils;
 
+import static java.math.RoundingMode.HALF_EVEN;
+import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
+
+import java.math.BigDecimal;
+import java.util.List;
+
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.FundDistribution;
-import org.javamoney.moneta.Money;
-import org.javamoney.moneta.function.MonetaryOperators;
-
-import javax.money.MonetaryAmount;
-import java.util.List;
-
-import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
 
 public final class FundDistributionUtils {
 
@@ -22,22 +21,23 @@ public final class FundDistributionUtils {
 
         if (cPoLine.getCost().getPoLineEstimatedPrice() != null && !cPoLine.getFundDistribution().isEmpty()) {
           Double poLineEstimatedPrice = cPoLine.getCost().getPoLineEstimatedPrice();
-          String currency = cPoLine.getCost().getCurrency();
-          MonetaryAmount remainingAmount = Money.of(poLineEstimatedPrice, currency);
+          BigDecimal remainingPercent = BigDecimal.valueOf(100);
 
           for (FundDistribution fundDistribution : cPoLine.getFundDistribution()) {
-            FundDistribution.DistributionType dType = fundDistribution.getDistributionType();
-            Double value = fundDistribution.getValue();
-            MonetaryAmount amountValueMoney = Money.of(value, currency);
 
+            FundDistribution.DistributionType dType = fundDistribution.getDistributionType();
             if (dType == FundDistribution.DistributionType.PERCENTAGE) {
               // convert percent to amount
-              amountValueMoney = Money.of(poLineEstimatedPrice, currency).with(MonetaryOperators.percent(value));
+              remainingPercent = remainingPercent.subtract(BigDecimal.valueOf(fundDistribution.getValue()));
+            } else {
+              Double value = fundDistribution.getValue();
+              BigDecimal percentageValue = BigDecimal.valueOf(value)
+                  .divide(BigDecimal.valueOf(poLineEstimatedPrice), 15, HALF_EVEN)
+                  .movePointRight(2);
+              remainingPercent = remainingPercent.subtract(percentageValue);
             }
-
-            remainingAmount = remainingAmount.subtract(amountValueMoney);
           }
-          if (!remainingAmount.isZero()) {
+          if (remainingPercent.compareTo(BigDecimal.ZERO) != 0) {
             throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL);
           }
         }

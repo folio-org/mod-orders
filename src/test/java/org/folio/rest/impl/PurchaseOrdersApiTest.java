@@ -200,7 +200,6 @@ public class PurchaseOrdersApiTest {
   private static final String ORDER_WITHOUT_WORKFLOW_STATUS = "41d56e59-46db-4d5e-a1ad-a178228913e5";
   static final String ORDER_WIT_PO_LINES_FOR_SORTING =  "9a952cd0-842b-4e71-bddd-014eb128dc8e";
   static final String VALID_FUND_ID =  "fb7b70f1-b898-4924-a991-0e4b6312bb5f";
-  static final String FUND_ID_RESTRICTED =  "72330c92-087e-4cdc-a82e-acadd9332659";
   static final String FUND_ENCUMBRANCE_ERROR =  "f1654bbe-dd76-4bfe-a96a-e764141e6aac";
 
   public static final String ORDER_WITHOUT_MATERIAL_TYPES_ID =  "0cb6741d-4a00-47e5-a902-5678eb24478d";
@@ -1077,13 +1076,13 @@ public class PurchaseOrdersApiTest {
 
     assertThat(errors.getErrors(), hasSize(1));
     Error error = errors.getErrors().get(0);
-    assertThat(error.getCode(), equalTo(FUNDS_NOT_FOUND.getCode()));
+    assertThat(error.getCode(), equalTo(BUDGET_NOT_FOUND_FOR_TRANSACTION.getCode()));
     assertThat(error.getParameters().get(0).getValue(), equalTo(ID_DOES_NOT_EXIST));
     assertThat(getCreatedEncumbrances(), hasSize(0));
   }
 
   @Test
-  void testPutOrdersByIdCurrentFiscalYearNotFound() {
+  void testPutOrdersByIdCurrentActiveBudgetNotFound() {
     logger.info("=== Test Put Order By Id Current fiscal year not found ===");
     CompositePurchaseOrder reqData = getMockAsJson(PE_MIX_PATH).mapTo(CompositePurchaseOrder.class);
     MockServer.addMockTitles(reqData.getCompositePoLines());
@@ -1092,7 +1091,7 @@ public class PurchaseOrdersApiTest {
     assertThat(reqData.getCompositePoLines(), hasSize(1));
 
     CompositePoLine compositePoLine = reqData.getCompositePoLines().get(0);
-    Fund fund = new Fund().withCode("test").withName("name").withId(VALID_FUND_ID).withLedgerId(ID_DOES_NOT_EXIST);
+    Fund fund = new Fund().withCode("test").withName("name").withId(ID_DOES_NOT_EXIST);
     addMockEntry(FUNDS, fund);
     removeAllEncumbranceLinks(reqData);
     compositePoLine.getFundDistribution().forEach(fundDistribution -> fundDistribution.setFundId(fund.getId()));
@@ -1104,7 +1103,7 @@ public class PurchaseOrdersApiTest {
 
     assertThat(errors.getErrors(), hasSize(1));
     Error error = errors.getErrors().get(0);
-    assertThat(error.getCode(), equalTo(CURRENT_FISCAL_YEAR_NOT_FOUND.getCode()));
+    assertThat(error.getCode(), equalTo(BUDGET_NOT_FOUND_FOR_TRANSACTION.getCode()));
     assertThat(error.getParameters().get(0).getValue(), equalTo(ID_DOES_NOT_EXIST));
     assertThat(getCreatedEncumbrances(), hasSize(0));
   }
@@ -1956,41 +1955,6 @@ public class PurchaseOrdersApiTest {
     assertNotNull(getHoldingsSearches());
     assertNull(getItemsSearches());
     assertNull(getCreatedPieces());
-  }
-
-  @Test
-  void testPostOpenOrdersWithExtraLargeCost() throws Exception {
-    logger.info("=== Test POST Order By Id with extra large unit cost - error expected ===");
-
-    // Get Open Order
-    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
-    MockServer.addMockTitles(reqData.getCompositePoLines());
-
-    // Make sure that mock po has 2 po lines
-    assertEquals(2, reqData.getCompositePoLines().size());
-
-    // Make sure that Order moves to Open
-    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-
-    // Set extra large cost for non electronic format
-    reqData.getCompositePoLines()
-      .forEach(s -> {
-        if (s.getOrderFormat()!= OrderFormat.ELECTRONIC_RESOURCE) {
-          s.getCost().setListUnitPrice((double) Integer.MAX_VALUE);
-        }
-      });
-
-    // set restricted fund
-    reqData.getCompositePoLines().stream()
-      .flatMap(poline -> poline.getFundDistribution().stream())
-      .forEach(fd -> fd.setFundId(FUND_ID_RESTRICTED));
-
-    Errors errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
-      .toString(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_TOKEN, X_OKAPI_USER_ID), APPLICATION_JSON, 422)
-      .as(Errors.class);
-
-    assertEquals(FUND_CANNOT_BE_PAID.getCode(), errors.getErrors().get(0).getCode());
-
   }
 
   @Test

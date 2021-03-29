@@ -36,12 +36,15 @@ import org.folio.service.PrefixServiceTest;
 import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
 import org.folio.service.exchange.ManualExchangeRateProviderTest;
+import org.folio.service.finance.budget.BudgetRestrictionServiceTest;
+import org.folio.service.finance.transaction.EncumbranceRelationsHoldersBuilderTest;
 import org.folio.service.finance.transaction.EncumbranceServiceTest;
 import org.folio.service.finance.FundServiceTest;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.TransactionServiceTest;
 import org.folio.service.orders.CombinedOrderDataPopulateServiceTest;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilderTest;
+import org.folio.service.orders.FundsDistributionServiceTest;
 import org.folio.service.orders.OrderReEncumberServiceTest;
 import org.folio.service.orders.OrderRolloverServiceTest;
 import org.folio.service.orders.PurchaseOrderLineServiceTest;
@@ -230,5 +233,17 @@ public class ApiTestSuite {
 
   @Nested
   class CompositeOrderRetrieveHolderBuilderTestNested extends CompositeOrderRetrieveHolderBuilderTest {
+  }
+
+  @Nested
+  class EncumbranceRelationsHoldersBuilderTestNested extends EncumbranceRelationsHoldersBuilderTest {
+  }
+
+  @Nested
+  class FundsDistributionServiceTestNested extends FundsDistributionServiceTest {
+  }
+
+  @Nested
+  class BudgetRestrictionServiceTestNested extends BudgetRestrictionServiceTest {
   }
 }

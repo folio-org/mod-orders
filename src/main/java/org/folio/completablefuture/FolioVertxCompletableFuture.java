@@ -154,7 +154,7 @@ public class FolioVertxCompletableFuture<T> extends CompletableFuture<T> impleme
      * @param <T>      the function's return type
      * @return the new CompletableFuture
      */
-    public static <T> FolioVertxCompletableFuture<T> supplyBlockingAsync(Context context, Supplier<T> supplier) {
+    public static <T> CompletableFuture<T> supplyBlockingAsync(Context context, Supplier<T> supplier) {
         Objects.requireNonNull(supplier);
         FolioVertxCompletableFuture<T> future = new FolioVertxCompletableFuture<>(context);
         context.<T>executeBlocking(

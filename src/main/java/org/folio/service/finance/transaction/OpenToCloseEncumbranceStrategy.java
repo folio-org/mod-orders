@@ -12,11 +12,9 @@ import static org.folio.orders.utils.FundDistributionUtils.isFundDistributionsPr
 public class OpenToCloseEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
   private final EncumbranceService encumbranceService;
-  private final TransactionSummariesService transactionSummariesService;
 
-  public OpenToCloseEncumbranceStrategy(EncumbranceService encumbranceService, TransactionSummariesService transactionSummariesService) {
+  public OpenToCloseEncumbranceStrategy(EncumbranceService encumbranceService) {
     this.encumbranceService = encumbranceService;
-    this.transactionSummariesService = transactionSummariesService;
   }
 
   @Override
@@ -27,7 +25,6 @@ public class OpenToCloseEncumbranceStrategy implements EncumbranceWorkflowStrate
         .thenAccept(holder::withEncumbrancesFromStorage)
         .thenApply(v -> holder.getEncumbrancesFromStorage())
         .thenAccept(holder::withEncumbrancesForRelease)
-        .thenCompose(v -> transactionSummariesService.createOrUpdateOrderTransactionSummary(compPO.getId(), holder, requestContext))
         .thenCompose(v -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext));
     }
     return CompletableFuture.completedFuture(null);
