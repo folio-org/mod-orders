@@ -869,7 +869,7 @@
     },
     {
       "id": "circulation",
-      "version": "9.3"
+      "version": "10.0"
     },
     {
       "id": "finance-storage.budget-expense-classes",
