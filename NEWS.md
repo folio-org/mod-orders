@@ -1,5 +1,14 @@
 ## 12.1.0 - Unreleased
 
+## 12.0.1 - Released
+
+The primary focus of this release was to fix issue with splitting funds on a PO with an odd number of pennies as the cost.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.0.0...v12.0.1)
+
+### Bug fixes
+* [MODORDERS-482](https://issues.folio.org/browse/MODORDERS-482) - Cannot split funds on a PO with an odd number of pennies as the cost.
+
 ## 12.0.0 - Released
 
 The focus of this release was to update RMB, support ledger fiscal year rollover and re-encumber logic. 
