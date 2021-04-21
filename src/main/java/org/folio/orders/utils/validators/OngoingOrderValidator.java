@@ -12,6 +12,10 @@ import static org.folio.orders.utils.ErrorCodes.RENEWAL_INTERVAL_IS_NOT_SET;
  */
 public final class OngoingOrderValidator {
 
+  private OngoingOrderValidator() {
+    throw new IllegalStateException("Utility class");
+  }
+
   public static void validate(CompositePurchaseOrder compositePurchaseOrder) {
     if (compositePurchaseOrder.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING) {
       validateRenewalDate(compositePurchaseOrder);
