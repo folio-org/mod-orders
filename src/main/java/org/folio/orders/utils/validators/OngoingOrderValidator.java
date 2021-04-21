@@ -10,7 +10,7 @@ import static org.folio.orders.utils.ErrorCodes.RENEWAL_INTERVAL_IS_NOT_SET;
 /**
  * Class for composite orders validation routines
  */
-public class OrderValidator {
+public class OngoingOrderValidator {
 
   public static void validate(CompositePurchaseOrder compositePurchaseOrder) {
     if (compositePurchaseOrder.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING) {
