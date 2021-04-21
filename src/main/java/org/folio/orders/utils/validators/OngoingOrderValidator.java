@@ -10,7 +10,7 @@ import static org.folio.orders.utils.ErrorCodes.RENEWAL_INTERVAL_IS_NOT_SET;
 /**
  * Class for composite orders validation routines
  */
-public class OngoingOrderValidator {
+public final class OngoingOrderValidator {
 
   public static void validate(CompositePurchaseOrder compositePurchaseOrder) {
     if (compositePurchaseOrder.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING) {
@@ -19,13 +19,13 @@ public class OngoingOrderValidator {
     }
   }
 
-  public static void validateRenewalDate(CompositePurchaseOrder compositePurchaseOrder) {
+  private static void validateRenewalDate(CompositePurchaseOrder compositePurchaseOrder) {
     if (compositePurchaseOrder.getOngoing().getRenewalDate() == null) {
       throw new HttpException(HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt(), RENEWAL_DATE_IS_NOT_SET);
     }
   }
 
-  public static void validateRenewalInterval(CompositePurchaseOrder compositePurchaseOrder) {
+  private static void validateRenewalInterval(CompositePurchaseOrder compositePurchaseOrder) {
     if (compositePurchaseOrder.getOngoing().getInterval() == null) {
       throw new HttpException(HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt(), RENEWAL_INTERVAL_IS_NOT_SET);
     }
