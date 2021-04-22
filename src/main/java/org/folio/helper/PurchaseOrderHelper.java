@@ -84,6 +84,7 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
+import org.folio.orders.utils.validators.OngoingOrderValidator;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.core.RestClient;
@@ -577,6 +578,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     compPO.setDateOrdered(new Date());
     return expenseClassValidationService.validateExpenseClasses(compPO.getCompositePoLines(), getRequestContext())
       .thenAccept(v -> FundDistributionUtils.validateFundDistributionTotal(compPO.getCompositePoLines()))
+      .thenAccept(v -> OngoingOrderValidator.validate(compPO))
       .thenApply(v -> this.validateMaterialTypes(compPO))
       .thenCompose(this::fetchNonPackageTitles)
       .thenCompose(linesIdTitles -> {
