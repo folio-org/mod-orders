@@ -18,7 +18,7 @@ import static org.folio.TestConstants.ID;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 
-public class OngoingOrderValidatorTest {
+class OngoingOrderValidatorTest {
 
   private static final Logger LOGGER = LogManager.getLogger();
 
