@@ -58,7 +58,7 @@ public class ExpenseClassValidationService {
       .toArray(CompletableFuture[]::new));
   }
 
-  private CompletableFuture<Void> checkExpenseClassIsActiveByFundDistribution(
+  public CompletableFuture<Void> checkExpenseClassIsActiveByFundDistribution(
       Map.Entry<FundDistribution, String> expenseClassByFundId, RequestContext requestContext) {
     String query = String.format("budget.fundId==%s and budget.budgetStatus==Active", expenseClassByFundId.getKey()
       .getFundId());
