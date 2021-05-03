@@ -37,6 +37,7 @@ import org.folio.service.PrefixServiceTest;
 import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
 import org.folio.service.exchange.ManualExchangeRateProviderTest;
+import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
 import org.folio.service.finance.budget.BudgetRestrictionServiceTest;
 import org.folio.service.finance.transaction.EncumbranceRelationsHoldersBuilderTest;
 import org.folio.service.finance.transaction.EncumbranceServiceTest;
@@ -250,5 +251,9 @@ public class ApiTestSuite {
 
   @Nested
   class OngoingOrderValidatorTestNested extends OngoingOrderValidatorTest {
+  }
+
+  @Nested
+  class ExpenseClassValidationServiceTestNested extends ExpenseClassValidationServiceTest {
   }
 }
