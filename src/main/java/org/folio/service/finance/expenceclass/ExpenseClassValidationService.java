@@ -1,20 +1,5 @@
 package org.folio.service.finance.expenceclass;
 
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.rest.acq.model.finance.BudgetExpenseClass;
-import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.FundDistribution;
-import org.folio.rest.jaxrs.model.Parameter;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -23,6 +8,21 @@ import static org.folio.orders.utils.ErrorCodes.INACTIVE_EXPENSE_CLASS;
 import static org.folio.orders.utils.HelperUtils.ID;
 import static org.folio.service.finance.transaction.EncumbranceService.EXPENSE_CLASS_NAME;
 import static org.folio.service.finance.transaction.EncumbranceService.FUND_CODE;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.acq.model.finance.BudgetExpenseClass;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.Parameter;
 
 public class ExpenseClassValidationService {
 
