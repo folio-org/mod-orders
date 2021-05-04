@@ -13,7 +13,7 @@ import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITHOUT_PO_LINES;
 import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITH_PO_LINES;
 import static org.folio.helper.AbstractHelper.ORDER_ID;
 import static org.folio.helper.CheckinHelper.IS_ITEM_ORDER_CLOSED_PRESENT;
-import static org.folio.helper.InventoryHelper.ITEMS;
+import static org.folio.helper.InventoryManager.ITEMS;
 import static org.folio.TestUtils.checkVertxContextCompletion;
 import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
 import static org.folio.rest.impl.MockServer.getItemUpdates;

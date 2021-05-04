@@ -15,7 +15,7 @@ import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
-import static org.folio.service.finance.WorkflowStatusName.OPEN_TO_PENDING;
+import static org.folio.service.orders.OrderWorkflowType.OPEN_TO_PENDING;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -58,6 +58,7 @@ import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderReEncumberService;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -76,6 +77,8 @@ public class PurchaseOrderHelperTest {
 
   @Autowired
   private EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
+  @Autowired
+  private PurchaseOrderLineService purchaseOrderLineService;
   @Mock
   private OpenToPendingEncumbranceStrategy openToPendingEncumbranceStrategy;
   @Mock
@@ -137,12 +140,12 @@ public class PurchaseOrderHelperTest {
     doReturn(openToPendingEncumbranceStrategy).when(encumbranceWorkflowStrategyFactory).getStrategy(eq(OPEN_TO_PENDING));
     doReturn(completedFuture(null)).when(openToPendingEncumbranceStrategy).processEncumbrances(eq(order), any());
     doNothing().when(orderLineHelper).closeHttpClient();
-    doReturn(completedFuture(null)).when(orderLineHelper).updatePoLinesSummary(eq(order.getCompositePoLines()));
+   // doReturn(completedFuture(null)).when(orderLineHelper).updatePoLinesSummary(eq(order.getCompositePoLines()));
     //When
     serviceSpy.unOpenOrder(order).join();
     //Then
 
-    verify(orderLineHelper).updatePoLinesSummary(any());
+    verify(serviceSpy).unOpenOrderUpdatePoLinesSummary(any());
   }
 
   @Test
@@ -237,6 +240,11 @@ public class PurchaseOrderHelperTest {
     @Bean
     CompositeOrderDynamicDataPopulateService combinedPopulateService() {
       return mock(CombinedOrderDataPopulateService.class);
+    }
+
+    @Bean
+    PurchaseOrderLineService purchaseOrderLineService() {
+      return mock(PurchaseOrderLineService.class);
     }
   }
 

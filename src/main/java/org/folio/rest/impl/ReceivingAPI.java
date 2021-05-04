@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.helper.CheckinHelper;
 import org.folio.helper.ReceivingHelper;
 import org.folio.rest.annotations.Validate;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckinCollection;
 import org.folio.rest.jaxrs.model.ReceivingCollection;
 import org.folio.rest.jaxrs.resource.OrdersCheckIn;
@@ -44,7 +45,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersReceivi
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Checkin {} items", entity.getTotalRecords());
     CheckinHelper helper = new CheckinHelper(entity, okapiHeaders, vertxContext, lang);
-    helper.checkinPieces(entity)
+    helper.checkinPieces(entity, new RequestContext(vertxContext, okapiHeaders))
       .thenAccept(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }

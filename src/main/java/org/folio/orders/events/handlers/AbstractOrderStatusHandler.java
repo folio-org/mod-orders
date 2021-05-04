@@ -94,9 +94,9 @@ public abstract class AbstractOrderStatusHandler extends AbstractHelper implemen
     return AsyncUtil.executeBlocking(ctx, false, () -> changeOrderStatus(purchaseOrder, poLines))
       .thenCompose(isStatusChanged -> {
         if (Boolean.TRUE.equals(isStatusChanged)) {
-          return helper.handleFinalOrderItemsStatus(purchaseOrder, poLines, initialStatus.value())
+          return helper.handleFinalOrderItemsStatus(purchaseOrder, poLines, initialStatus.value(), helper.getRequestContext())
             .thenCompose(aVoid -> helper.updateOrderSummary(purchaseOrder))
-            .thenCompose(purchaseOrderParam -> encumbranceService.updateEncumbrancesOrderStatus(purchaseOrder.getId(), convert(purchaseOrder.getWorkflowStatus()), new RequestContext(ctx, okapiHeaders)));
+            .thenCompose(purchaseOrderParam -> encumbranceService.updateEncumbrancesOrderStatus(purchaseOrder.getId(), convert(purchaseOrder.getWorkflowStatus()), helper.getRequestContext()));
         }
         return CompletableFuture.completedFuture(null);
       });

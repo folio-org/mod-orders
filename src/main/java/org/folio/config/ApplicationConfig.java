@@ -1,5 +1,8 @@
 package org.folio.config;
 
+import org.folio.helper.InventoryManager;
+import org.folio.service.ProtectionService;
+import org.folio.service.AcquisitionsUnitsService;
 import org.folio.rest.core.RestClient;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.PrefixService;
@@ -40,6 +43,8 @@ import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
 import org.folio.service.orders.ReEncumbranceHoldersBuilder;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateService;
+import org.folio.service.pieces.PiecesService;
+import org.folio.service.titles.TitlesService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -277,5 +282,30 @@ public class ApplicationConfig {
   CompositeOrderDynamicDataPopulateService combinedPopulateService(CompositeOrderRetrieveHolderBuilder compositeOrderRetrieveHolderBuilder,
                                                                    Set<CompositeOrderDynamicDataPopulateService> populateServices) {
     return new CombinedOrderDataPopulateService(compositeOrderRetrieveHolderBuilder, populateServices);
+  }
+
+  @Bean
+  TitlesService titlesService(RestClient restClient, PurchaseOrderLineService purchaseOrderLineService) {
+    return new TitlesService(restClient, purchaseOrderLineService);
+  }
+
+  @Bean
+  AcquisitionsUnitsService acquisitionsUnitsService(RestClient restClient) {
+    return new AcquisitionsUnitsService(restClient);
+  }
+
+  @Bean
+  ProtectionService protectionHelper(AcquisitionsUnitsService acquisitionsUnitsService) {
+    return new ProtectionService(acquisitionsUnitsService);
+  }
+
+  @Bean
+  InventoryManager inventoryManager() {
+    return new InventoryManager();
+  }
+
+  @Bean
+  PiecesService piecesService() {
+    return new PiecesService();
   }
 }

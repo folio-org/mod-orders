@@ -7,7 +7,7 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
-import static org.folio.helper.AcquisitionsUnitsHelper.ACQUISITIONS_UNIT_IDS;
+import static org.folio.service.AcquisitionsUnitsService.ACQUISITIONS_UNIT_IDS;
 import static org.folio.orders.utils.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
