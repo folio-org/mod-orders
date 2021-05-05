@@ -4,6 +4,7 @@ import io.vertx.core.json.JsonObject;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Ongoing;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,14 +43,13 @@ public class OngoingOrderValidatorTest {
     compositePurchaseOrder.setOrderType(CompositePurchaseOrder.OrderType.ONGOING);
     compositePurchaseOrder.setOngoing(ongoing);
 
-    try {
-      OngoingOrderValidator.validate(compositePurchaseOrder);
-    } catch (HttpException e) {
-      assertThat(e.getError()
-        .getCode(), is("renewalDateIsNotSet"));
-      assertThat(e.getError()
-        .getMessage(), is("Renewal date is not set"));
-    }
+    HttpException httpException = Assertions.assertThrows(HttpException.class,
+        () -> OngoingOrderValidator.validate(compositePurchaseOrder));
+
+    assertThat(httpException.getError()
+      .getCode(), is("renewalDateIsNotSet"));
+    assertThat(httpException.getError()
+      .getMessage(), is("Renewal date is not set"));
   }
 
   @Test
@@ -65,14 +65,13 @@ public class OngoingOrderValidatorTest {
     compositePurchaseOrder.setOrderType(CompositePurchaseOrder.OrderType.ONGOING);
     compositePurchaseOrder.setOngoing(ongoing);
 
-    try {
-      OngoingOrderValidator.validate(compositePurchaseOrder);
-    } catch (HttpException e) {
-      assertThat(e.getError()
-        .getCode(), is("renewalIntervalIsNotSet"));
-      assertThat(e.getError()
-        .getMessage(), is("Renewal interval is not set"));
-    }
+    HttpException httpException = Assertions.assertThrows(HttpException.class,
+        () -> OngoingOrderValidator.validate(compositePurchaseOrder));
+
+    assertThat(httpException.getError()
+      .getCode(), is("renewalIntervalIsNotSet"));
+    assertThat(httpException.getError()
+      .getMessage(), is("Renewal interval is not set"));
   }
 
   @Test
