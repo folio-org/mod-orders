@@ -24,7 +24,7 @@ public final class OngoingOrderValidator {
   }
 
   private static void validateRenewalDate(CompositePurchaseOrder compositePurchaseOrder) {
-    if (compositePurchaseOrder.getOngoing().getRenewalDate() == null) {
+    if (compositePurchaseOrder.getOngoing().getRenewalDate() == null && compositePurchaseOrder.getOngoing().getIsSubscription()) {
       throw new HttpException(HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt(), RENEWAL_DATE_IS_NOT_SET);
     }
   }
