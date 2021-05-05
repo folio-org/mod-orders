@@ -17,14 +17,15 @@ public final class OngoingOrderValidator {
   }
 
   public static void validate(CompositePurchaseOrder compositePurchaseOrder) {
-    if (compositePurchaseOrder.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING) {
+    if (compositePurchaseOrder.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING
+            && compositePurchaseOrder.getOngoing().getIsSubscription()) {
       validateRenewalDate(compositePurchaseOrder);
       validateRenewalInterval(compositePurchaseOrder);
     }
   }
 
   private static void validateRenewalDate(CompositePurchaseOrder compositePurchaseOrder) {
-    if (compositePurchaseOrder.getOngoing().getRenewalDate() == null && compositePurchaseOrder.getOngoing().getIsSubscription()) {
+    if (compositePurchaseOrder.getOngoing().getRenewalDate() == null) {
       throw new HttpException(HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt(), RENEWAL_DATE_IS_NOT_SET);
     }
   }

@@ -88,9 +88,7 @@ public class OngoingOrderValidatorTest {
     compositePurchaseOrder.setOrderType(CompositePurchaseOrder.OrderType.ONGOING);
     compositePurchaseOrder.setOngoing(ongoing);
 
-    try {
-      OngoingOrderValidator.validate(compositePurchaseOrder);
-    } catch (HttpException e) {}
+    OngoingOrderValidator.validate(compositePurchaseOrder);
   }
 
   // Util method(s) :
