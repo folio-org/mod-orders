@@ -735,27 +735,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       });
   }
 
-  /**
-   * Create Piece associated with PO Line in the storage
-   *
-   * @param piece associated with PO Line
-   * @return CompletableFuture
-   */
-  private CompletableFuture<Void> createPiece(Piece piece) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
-
-    JsonObject pieceObj = mapFrom(piece);
-    createRecordInStorage(pieceObj, resourcesPath(PIECES))
-      .thenAccept(id -> future.complete(null))
-      .exceptionally(t -> {
-        logger.error("The piece record failed to be created. The request body: {}", pieceObj.encodePrettily());
-        future.completeExceptionally(t);
-        return null;
-      });
-
-    return future;
-  }
-
   private CompletionStage<JsonObject> updatePoLineSubObjects(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
     JsonObject updatedLineJson = mapFrom(compOrderLine);
     logger.debug("Updating PO line sub-objects...");
@@ -852,7 +831,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
    */
   private CompletableFuture<JsonObject> getPoLineByIdAndValidate(String orderId, String lineId) {
     return purchaseOrderLineService.getOrderLineById(lineId, getRequestContext())
-      .thenApply(line -> JsonObject.mapFrom(line))
+      .thenApply(JsonObject::mapFrom)
       .thenApply(line -> {
         logger.debug("Validating if the retrieved PO line corresponds to PO");
         validateOrderId(orderId, line);
