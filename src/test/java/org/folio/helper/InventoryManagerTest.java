@@ -2,7 +2,9 @@ package org.folio.helper;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
+import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.clearVertxContext;
 import static org.folio.TestConfig.getFirstContextFromVertx;
 import static org.folio.TestConfig.getVertx;
 import static org.folio.TestConfig.initSpringContext;
@@ -18,6 +20,7 @@ import static org.folio.helper.InventoryManager.ITEMS;
 import static org.folio.helper.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
+import static org.folio.rest.impl.MockServer.HOLDINGS_OLD_NEW_PATH;
 import static org.folio.rest.impl.MockServer.ITEMS_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.PurchaseOrderLinesApiTest.COMP_PO_LINES_MOCK_DATA_PATH;
@@ -32,11 +35,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -52,7 +58,9 @@ import org.folio.ApiTestSuite;
 import org.folio.config.ApplicationConfig;
 import org.folio.models.PoLineUpdateHolder;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
@@ -62,18 +70,24 @@ import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.configuration.ConfigurationEntriesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 
 import io.vertx.core.Context;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class InventoryManagerTest {
-  public static final String TENANT_ID = "ordertest";
   public static final String HOLDING_INSTANCE_ID = "5294d737-a04b-4158-857a-3f3c555bcc60";
   public static final String OLD_LOCATION_ID = "758258bc-ecc1-41b8-abca-f7b610822fff";
   public static final String NEW_LOCATION_ID = "fcd64ce1-6995-48f0-840e-89ffa2288371";
@@ -84,23 +98,39 @@ public class InventoryManagerTest {
   private static final String TILES_PATH = BASE_MOCK_DATA_PATH + "titles/";
   private static final String COMPOSITE_LINES_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
 
+  @Autowired
+  private InventoryManager inventoryManager;
+  @Autowired
+  private RestClient restClient;
+  @Autowired
+  private ConfigurationEntriesService configurationEntriesService;
+
   private Context ctxMock;
   private Map<String, String> okapiHeadersMock;
-  private HttpClientInterface httpClient;
   private RequestContext requestContext;
   private static boolean runningOnOwn;
 
   @BeforeAll
-  static void before() throws InterruptedException, ExecutionException, TimeoutException {
+  public static void before() throws InterruptedException, ExecutionException, TimeoutException {
     if (isVerticleNotDeployed()) {
       ApiTestSuite.before();
       runningOnOwn = true;
     }
-    initSpringContext(ApplicationConfig.class);
+    initSpringContext(InventoryManagerTest.ContextConfiguration.class);
+  }
+
+  @AfterAll
+  public static void after() {
+    clearVertxContext();
+    if (runningOnOwn) {
+      ApiTestSuite.after();
+    }
   }
 
   @BeforeEach
   void beforeEach() {
+    MockitoAnnotations.openMocks(this);
+    autowireDependencies(this);
     ctxMock = getFirstContextFromVertx(getVertx());
     okapiHeadersMock = new HashMap<>();
     okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
@@ -108,80 +138,68 @@ public class InventoryManagerTest {
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
-    httpClient = HttpClientFactory.getHttpClient(okapiURL, X_OKAPI_TENANT.getValue());
     requestContext = new RequestContext(ctxMock, okapiHeadersMock);
   }
 
   @AfterEach
-  void afterEach() {
+  void resetMocks() {
     clearServiceInteractions();
+    reset(inventoryManager);
   }
-
-  @AfterAll
-  static void after() {
-    if (runningOnOwn) {
-      ApiTestSuite.after();
-    }
-  }
-
 
   @Test
   void testShouldUpdateAllItemOneByOneIfProvidedListNonEmpty() {
     //given
-    InventoryManager inventoryManager = spy(new InventoryManager());
-    doReturn(completedFuture(null)).when(inventoryManager).updateItem(any(), eq(requestContext));
-    //When
+    doReturn(completedFuture(null)).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
     JsonObject item1 = new JsonObject().put("id", UUID.randomUUID().toString());
     JsonObject item2 = new JsonObject().put("id", UUID.randomUUID().toString());
     List<JsonObject> items = Arrays.asList(item1, item2);
+    //When
     inventoryManager.updateItemRecords(items, requestContext).join();
     //Then
-    verify(inventoryManager, times(1)).updateItem(item1, requestContext);
-    verify(inventoryManager, times(1)).updateItem(item2, requestContext);
+    verify(restClient, times(1)).put(any(RequestEntry.class), eq(item1), eq(requestContext));
+    verify(restClient, times(1)).put(any(RequestEntry.class), eq(item2), eq(requestContext));
   }
 
   @Test
   void testShouldNotUpdateItemIfProvidedListEmpty() {
     //given
-    InventoryManager inventoryManager = spy(new InventoryManager());
-    doReturn(completedFuture(null)).when(inventoryManager).updateItem(any(), eq(requestContext));
+    doReturn(completedFuture(null)).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
     //When
     inventoryManager.updateItemRecords(Collections.emptyList(), requestContext).join();
     //Then
-    verify(inventoryManager, times(0)).updateItem(any(), eq(requestContext));
+    verify(restClient, times(0)).put(any(RequestEntry.class),any(JsonObject.class), eq(requestContext));
   }
 
   @Test
   void testShouldDeleteAllItemOneByOneIfProvidedListNonEmpty() {
     //given
-    InventoryManager inventoryManager = spy(new InventoryManager());
-    doReturn(completedFuture(null)).when(inventoryManager).deleteItem(any(), eq(requestContext));
-    //When
     String itemId1 = UUID.randomUUID().toString();
     String itemId2 = UUID.randomUUID().toString();
     List<String> items = Arrays.asList(itemId1, itemId2);
+
+    doReturn(completedFuture(null)).when(restClient).delete(any(RequestEntry.class), eq(requestContext));
+    //When
     inventoryManager.deleteItems(items, requestContext).join();
     //Then
-    verify(inventoryManager, times(1)).deleteItem(itemId1, requestContext);
-    verify(inventoryManager, times(1)).deleteItem(itemId2, requestContext);
+    verify(restClient, times(2)).delete(any(RequestEntry.class), eq(requestContext));
   }
 
   @Test
   void testShouldNotDeleteItemIfProvidedListEmpty() {
     //given
-    InventoryManager inventoryManager = spy(new InventoryManager());
-    doReturn(completedFuture(null)).when(inventoryManager).deleteItem(any(), eq(requestContext));
+    doReturn(completedFuture(null)).when(restClient).delete(any(RequestEntry.class), eq(requestContext));
     //When
     inventoryManager.deleteItems(Collections.emptyList(), requestContext).join();
     //Then
-    verify(inventoryManager, times(0)).updateItem(any(), eq(requestContext));
+    verify(restClient, times(0)).delete(any(RequestEntry.class), eq(requestContext));
   }
 
   @Test
-  void testShouldUpdateHoldingsRecordIfOldAndNewLocationProvided() {
+  void testShouldUpdateHoldingsRecordIfOldAndNewLocationProvided() throws IOException {
     //given
-    InventoryManager inventoryManager = spy(new InventoryManager());
-    doReturn(completedFuture(null)).when(inventoryManager).deleteItem(any(), eq(requestContext));
+    JsonObject holdings = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+    doReturn(completedFuture(holdings)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
     //When
     PoLineUpdateHolder holder = new PoLineUpdateHolder().withInstanceId(HOLDING_INSTANCE_ID)
                                         .withOldLocationId(OLD_LOCATION_ID)
@@ -192,25 +210,28 @@ public class InventoryManagerTest {
   }
 
   @Test
-  void testShouldCreateNewHoldingsRecordIfOnlyOldLocationProvided() {
+  void testShouldCreateNewHoldingsRecordIfOnlyOldLocationProvided() throws IOException {
     //given
-    InventoryManager inventoryManager = spy(new InventoryManager());
-    doReturn(completedFuture(null)).when(inventoryManager).deleteItem(any(), eq(requestContext));
+    List holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
+      .map(o -> ((JsonObject) o))
+      .filter(holding -> holding.getString("permanentLocationId").equals(OLD_LOCATION_ID))
+      .collect(toList());
+    JsonObject holdings = new JsonObject().put("holdingsRecords", new JsonArray(holdingsList));
+    doReturn(completedFuture(holdings)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
     //When
     PoLineUpdateHolder holder = new PoLineUpdateHolder().withInstanceId(HOLDING_INSTANCE_ID)
                                                         .withOldLocationId(OLD_LOCATION_ID)
                                                         .withNewLocationId(NON_EXISTED_NEW_HOLDING_ID);
     inventoryManager.updateHoldingsRecord(holder, requestContext).join();
     //Then
-    verify(inventoryManager, times(1)).getOrCreateHoldingsRecord(HOLDING_INSTANCE_ID, NON_EXISTED_NEW_HOLDING_ID, requestContext);
     assertThat(holder.getNewLocationId(), equalTo(NON_EXISTED_NEW_HOLDING_ID));
   }
 
   @Test
   void testShouldThrowExceptionIfHoldingWithOldLocationIsNotExist() {
     //given
-    InventoryManager inventoryManager = spy(new InventoryManager());
-    doReturn(completedFuture(null)).when(inventoryManager).deleteItem(any(), eq(requestContext));
+    JsonObject holdings = new JsonObject().put("holdingsRecords", new JsonArray());
+    doReturn(completedFuture(holdings)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
     //When
     PoLineUpdateHolder holder = new PoLineUpdateHolder().withInstanceId(HOLDING_INSTANCE_ID)
       .withOldLocationId(UUID.randomUUID().toString())
@@ -234,10 +255,7 @@ public class InventoryManagerTest {
     reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
     reqData.setCheckinItems(true);
 
-    //given
-    InventoryManager inventoryManager = spy(new InventoryManager());
     //When
-
     Location line = new Location().withLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
     List<Piece> pieces = inventoryManager.handleItemRecords(reqData, OLD_HOLDING_ID, Collections.singletonList(line), requestContext).join();
 
@@ -245,13 +263,16 @@ public class InventoryManagerTest {
   }
 
   @Test
-  void testShouldNotUpdateHolderIfReturnMoreThen2Record() {
+  void testShouldNotUpdateHolderIfReturnMoreThen2Record() throws IOException {
     //given
-    InventoryManager inventoryManager = spy(new InventoryManager());
-    doReturn(completedFuture(null)).when(inventoryManager).deleteItem(any(), eq(requestContext));
-    //When
     PoLineUpdateHolder holder = new PoLineUpdateHolder().withInstanceId(HOLDING_INSTANCE_ID_2_HOLDING)
       .withOldLocationId(OLD_LOCATION_ID);
+    List holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream().collect(toList());
+    List doubleList = new ArrayList(holdingsList);
+    doubleList.addAll(holdingsList);
+    JsonObject holdings = new JsonObject().put("holdingsRecords", new JsonArray(doubleList));
+    doReturn(completedFuture(holdings)).when(restClient).getAsJsonObject(any(), eq(requestContext));
+    //When
     inventoryManager.updateHoldingsRecord(holder, requestContext).join();
     //Then
     verify(inventoryManager, times(0)).getOrCreateHoldingsRecord(HOLDING_INSTANCE_ID_2_HOLDING, OLD_LOCATION_ID, requestContext);
@@ -269,9 +290,6 @@ public class InventoryManagerTest {
     reqData.getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE);
     reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
     reqData.setCheckinItems(true);
-
-    //given
-    InventoryManager inventoryManager = spy(new InventoryManager());
     //When
 
     Location line = new Location().withLocationId(NEW_LOCATION_ID);
@@ -300,8 +318,6 @@ public class InventoryManagerTest {
     storagePoLineCom.getLocations().get(0).setQuantityPhysical(1);
     storagePoLineCom.getLocations().get(0).setQuantity(1);
     storagePoLineCom.getCost().setQuantityPhysical(1);
-    //given
-    InventoryManager inventoryManager = spy(new InventoryManager());
     //When
     PoLineUpdateHolder poLineUpdateHolder = new PoLineUpdateHolder().withNewLocationId(NEW_LOCATION_ID);
     List<Piece> pieces = inventoryManager.handleItemRecords(reqData, poLineUpdateHolder, requestContext).join();
@@ -348,10 +364,10 @@ public class InventoryManagerTest {
     existedPieces.getPieces().get(0).setFormat(Piece.Format.PHYSICAL);
     existedPieces.getPieces().get(0).setPoLineId(poLineId);
     //given
-    InventoryManager inventoryManager = spy(new InventoryManager());
     doReturn(completedFuture(existedPieces)).when(inventoryManager).getExpectedPiecesByLineId(poLineId, requestContext);
     doReturn(completedFuture(needUpdateItems)).when(inventoryManager).getItemRecordsByIds(Collections.singletonList(itemId), requestContext);
     doReturn(completedFuture(null)).when(inventoryManager).updateItemRecords(any(), eq(requestContext));
+    doReturn(completedFuture(null)).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
     //When
     PoLineUpdateHolder poLineUpdateHolder = new PoLineUpdateHolder().withOldLocationId(oldLocationId).withNewLocationId(locationId);
     List<Piece> pieces = inventoryManager.handleItemRecords(reqData, poLineUpdateHolder, requestContext).join();
@@ -372,7 +388,6 @@ public class InventoryManagerTest {
     JsonObject statuseJSON = new JsonObject("{\"instanceTypes\":\"30fffe0e-e985-4144-b2e2-1e8179bdb41f\"" +
       ",\"instanceStatuses\":\"daf2681c-25af-4202-a3fa-e58fdf806183\"}");
     //When
-    InventoryManager inventoryManager = spy(new InventoryManager());
     inventoryManager.buildInstanceRecordJsonObject(title, statuseJSON);
     //Then
     verify(title).getContributors();
@@ -394,7 +409,6 @@ public class InventoryManagerTest {
     JsonObject statuseJSON = new JsonObject("{\"instanceTypes\":\"30fffe0e-e985-4144-b2e2-1e8179bdb41f\"" +
       ",\"instanceStatuses\":\"daf2681c-25af-4202-a3fa-e58fdf806183\"}");
     //When
-    InventoryManager inventoryManager = spy(new InventoryManager());
     inventoryManager.buildInstanceRecordJsonObject(title, statuseJSON);
     //Then
     verify(title).getContributors();
@@ -416,7 +430,6 @@ public class InventoryManagerTest {
     JsonObject statuseJSON = new JsonObject("{\"instanceTypes\":\"30fffe0e-e985-4144-b2e2-1e8179bdb41f\"" +
       ",\"instanceStatuses\":\"daf2681c-25af-4202-a3fa-e58fdf806183\"}");
     //When
-    InventoryManager inventoryManager = spy(new InventoryManager());
     inventoryManager.buildInstanceRecordJsonObject(title, statuseJSON);
     //Then
     verify(title).getContributors();
@@ -438,12 +451,32 @@ public class InventoryManagerTest {
     JsonObject statuseJSON = new JsonObject("{\"instanceTypes\":\"30fffe0e-e985-4144-b2e2-1e8179bdb41f\"" +
       ",\"instanceStatuses\":\"daf2681c-25af-4202-a3fa-e58fdf806183\"}");
     //When
-    InventoryManager inventoryManager = spy(new InventoryManager());
     inventoryManager.buildInstanceRecordJsonObject(title, statuseJSON);
     //Then
     verify(title).getContributors();
     verify(title, times(1)).getPublishedDate();
     verify(title, times(2)).getPublisher();
     verify(title).getProductIds();
+  }
+
+  /**
+   * Define unit test specific beans to override actual ones
+   */
+  static class ContextConfiguration {
+    @Bean
+    public ConfigurationEntriesService configurationEntriesService() {
+      return mock(ConfigurationEntriesService.class);
+    }
+
+
+    @Bean
+    public RestClient restClient() {
+      return mock(RestClient.class);
+    }
+
+    @Bean
+    public InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService) {
+      return spy(new InventoryManager(restClient, configurationEntriesService));
+    }
   }
 }

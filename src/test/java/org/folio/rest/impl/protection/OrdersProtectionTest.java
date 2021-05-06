@@ -113,11 +113,24 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
   @ParameterizedTest
   @ValueSource(strings = {
     "CREATE",
+  })
+  void testCreateOperationWithAllowedUnits(ProtectedOperations operation) {
+    logger.info("=== Test corresponding order has units allowed operation - expecting of call only to Units API ===");
+
+    final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_ID);
+    CompositePurchaseOrder order = operation == CREATE ? getMinimalContentCompositePurchaseOrder().withAcqUnitIds(new ArrayList<>(NOT_PROTECTED_UNITS)) : prepareOrder(NOT_PROTECTED_UNITS);
+    operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(order), headers, operation.getContentType(), operation.getCode());
+
+    validateNumberOfRequests(2, 0);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {
     "UPDATE",
     "DELETE",
     "READ"
   })
-  void testOperationWithAllowedUnits(ProtectedOperations operation) {
+  void testUpdateOperationsWithAllowedUnits(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units allowed operation - expecting of call only to Units API ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_ID);
@@ -127,14 +140,28 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     validateNumberOfRequests(1, 0);
   }
 
+
   @ParameterizedTest
   @ValueSource(strings = {
-    "CREATE",
+    "CREATE"
+  })
+  void testCreateWithRestrictedUnitsAndAllowedUser(ProtectedOperations operation) {
+    logger.info("=== Test corresponding order has units, units protect operation, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
+
+    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER);
+    CompositePurchaseOrder order = operation == CREATE ? getMinimalContentCompositePurchaseOrder().withAcqUnitIds(new ArrayList<>(PROTECTED_UNITS)) : prepareOrder(PROTECTED_UNITS);
+    operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(order), headers, operation.getContentType(), operation.getCode());
+
+    validateNumberOfRequests(2, 1);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {
     "UPDATE",
     "DELETE",
     "READ"
   })
-  void testWithRestrictedUnitsAndAllowedUser(ProtectedOperations operation) {
+  void testUpdateWithRestrictedUnitsAndAllowedUser(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units, units protect operation, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
 
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER);
@@ -147,11 +174,27 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
   @ParameterizedTest
   @ValueSource(strings = {
     "CREATE",
+  })
+  void testCreateWithProtectedUnitsAndForbiddenUser(ProtectedOperations operation) {
+    logger.info("=== Test corresponding order has units, units protect operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");
+
+    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER);
+    Errors errors = operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(prepareOrder(PROTECTED_UNITS)),
+      headers, APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt()).as(Errors.class);
+
+    assertThat(errors.getErrors(), hasSize(1));
+    assertThat(errors.getErrors().get(0).getCode(), equalTo(USER_HAS_NO_PERMISSIONS.getCode()));
+
+    validateNumberOfRequests(2, 1);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {
     "UPDATE",
     "DELETE",
     "READ"
   })
-  void testWithProtectedUnitsAndForbiddenUser(ProtectedOperations operation) {
+  void testUpdateWithProtectedUnitsAndForbiddenUser(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units, units protect operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");
 
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER);

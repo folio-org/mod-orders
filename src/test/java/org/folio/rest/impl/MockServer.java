@@ -137,6 +137,7 @@ import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -1791,11 +1792,14 @@ public class MockServer {
     try {
       // Attempt to find PO in mock server memory
       JsonObject po = getMockEntry(PURCHASE_ORDER, id).orElse(null);
-
       // If previous step has no result then attempt to find PO in stubs
       if (po == null) {
         if (MIN_PO_ID.equals(id)) {
-          serverResponse(ctx, 200, APPLICATION_JSON, encodePrettily(getMinimalContentCompositePurchaseOrder()));
+          CompositePurchaseOrder compPO = getMinimalContentCompositePurchaseOrder();
+          compPO.setCompositePoLines(null);
+          compPO.setTotalItems(null);
+          compPO.setTotalEstimatedPrice(null);
+          serverResponse(ctx, 200, APPLICATION_JSON, encodePrettily(compPO));
           return;
         }
 
@@ -1807,7 +1811,8 @@ public class MockServer {
         }
         po = new JsonObject(getMockData(filePath));
         po.remove(COMPOSITE_PO_LINES);
-
+        po.remove("totalEstimatedPrice");
+        po.remove("totalItems");
         // Validate the content against schema
         org.folio.rest.acq.model.PurchaseOrder order = po.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
         order.setId(id);
@@ -1816,6 +1821,9 @@ public class MockServer {
       if (po.getString("orderType") == null) {
         po.put("orderType", org.folio.rest.acq.model.PurchaseOrder.OrderType.ONE_TIME.value());
       }
+      po.remove(COMPOSITE_PO_LINES);
+      po.remove("totalEstimatedPrice");
+      po.remove("totalItems");
       addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
       serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
     } catch (IOException e) {
@@ -1845,6 +1853,10 @@ public class MockServer {
             .collect(Collectors.toList()))
         .withTotalRecords(orderCollection.getPurchaseOrders().size());
       po = JsonObject.mapFrom(orderCollection);
+      po.remove(COMPOSITE_PO_LINES);
+      po.remove("totalEstimatedPrice");
+      po.remove("totalItems");
+
       addServerRqRsData(HttpMethod.GET, orderType, po);
     } else {
       if (query.contains(BAD_QUERY)) {
@@ -1881,7 +1893,7 @@ public class MockServer {
     body.put(ID, id);
     org.folio.rest.acq.model.PurchaseOrder po = body.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
     addServerRqRsData(HttpMethod.POST, PURCHASE_ORDER, body);
-
+    addServerRqRsData(HttpMethod.SEARCH, PURCHASE_ORDER, body);
     ctx.response()
       .setStatusCode(201)
       .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
@@ -2108,6 +2120,7 @@ public class MockServer {
     }
 
     addServerRqRsData(HttpMethod.POST, PO_LINES, body);
+    addServerRqRsData(HttpMethod.SEARCH, PO_LINES, body);
   }
 
   private void handleGetPoNumber(RoutingContext ctx) {

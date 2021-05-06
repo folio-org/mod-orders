@@ -1,17 +1,17 @@
 package org.folio.service.orders;
 
 import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.completablefuture.FolioVertxCompletableFuture;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.ErrorCodes;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -20,10 +20,7 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ReportingCode;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.service.pieces.PiecesService;
 
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 
 public class PurchaseOrderLineService {
@@ -54,8 +51,11 @@ public class PurchaseOrderLineService {
   }
 
   public CompletableFuture<Void> updateOrderLines(List<PoLine> orderLines, RequestContext requestContext) {
-    return CompletableFuture.allOf(orderLines.stream()
-      .map(poLine -> updateOrderLine(poLine, requestContext))
+    return FolioVertxCompletableFuture.allOf(requestContext.getContext(), orderLines.stream()
+      .map(poLine -> updateOrderLine(poLine, requestContext)
+                    .exceptionally(t -> {
+                      throw new HttpException(400, ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
+                    }))
       .toArray(CompletableFuture[]::new));
   }
 

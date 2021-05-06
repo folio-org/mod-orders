@@ -47,6 +47,8 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.AcquisitionsUnitsService;
+import org.folio.service.ProtectionService;
 import org.folio.service.TagService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.finance.transaction.EncumbranceService;
@@ -59,6 +61,7 @@ import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderReEncumberService;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -85,8 +88,8 @@ public class PurchaseOrderHelperTest {
   private RestClient restClient;
 
   private  Map<String, String> okapiHeadersMock;
-
   private Context ctxMock;
+  private RequestContext requestContext;
 
   private HttpClientInterface httpClient;
   private static boolean runningOnOwn;
@@ -120,6 +123,7 @@ public class PurchaseOrderHelperTest {
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
     httpClient = HttpClientFactory.getHttpClient(okapiURL, X_OKAPI_TENANT.getValue());
+    requestContext = new RequestContext(ctxMock, okapiHeadersMock);
   }
 
   @AfterEach
@@ -140,12 +144,12 @@ public class PurchaseOrderHelperTest {
     doReturn(openToPendingEncumbranceStrategy).when(encumbranceWorkflowStrategyFactory).getStrategy(eq(OPEN_TO_PENDING));
     doReturn(completedFuture(null)).when(openToPendingEncumbranceStrategy).processEncumbrances(eq(order), any());
     doNothing().when(orderLineHelper).closeHttpClient();
-   // doReturn(completedFuture(null)).when(orderLineHelper).updatePoLinesSummary(eq(order.getCompositePoLines()));
+    doReturn(completedFuture(null)).when(purchaseOrderLineService).updateOrderLine(any(), eq(requestContext));
     //When
-    serviceSpy.unOpenOrder(order).join();
+    serviceSpy.unOpenOrder(order, requestContext).join();
     //Then
 
-    verify(serviceSpy).unOpenOrderUpdatePoLinesSummary(any());
+    verify(serviceSpy).unOpenOrderUpdatePoLinesSummary(any(), eq(requestContext));
   }
 
   @Test
@@ -162,7 +166,7 @@ public class PurchaseOrderHelperTest {
 
     doNothing().when(orderLineHelper).closeHttpClient();
     //When
-    CompletableFuture<Void> act = serviceSpy.unOpenOrder(order);
+    CompletableFuture<Void> act = serviceSpy.unOpenOrder(order, requestContext);
     //Then
     assertTrue(act.isCompletedExceptionally());
   }
@@ -245,6 +249,26 @@ public class PurchaseOrderHelperTest {
     @Bean
     PurchaseOrderLineService purchaseOrderLineService() {
       return mock(PurchaseOrderLineService.class);
+    }
+
+    @Bean
+    public TitlesService titlesService() {
+      return mock(TitlesService.class);
+    }
+
+    @Bean
+    public AcquisitionsUnitsService acquisitionsUnitsService() {
+      return mock(AcquisitionsUnitsService.class);
+    }
+
+    @Bean
+    public ProtectionService protectionService() {
+      return mock(ProtectionService.class);
+    }
+
+    @Bean
+    public InventoryManager inventoryManager() {
+      return mock(InventoryManager.class);
     }
   }
 

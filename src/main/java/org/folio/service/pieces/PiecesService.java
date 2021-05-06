@@ -6,9 +6,7 @@ import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.summingInt;
 import static java.util.stream.Collectors.toList;
-import static org.folio.helper.AbstractHelper.OKAPI_HEADERS;
 import static org.folio.orders.utils.HelperUtils.ID;
-import static org.folio.orders.utils.HelperUtils.LANG;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantityWithoutLocation;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
@@ -16,11 +14,9 @@ import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -55,9 +51,7 @@ import org.folio.service.ProtectionService;
 import org.folio.service.orders.CompositePurchaseOrderService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.titles.TitlesService;
-import org.springframework.beans.factory.annotation.Autowired;
 
-import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 
@@ -67,18 +61,27 @@ public class PiecesService {
   private static final String ENDPOINT = resourcesPath(PIECES);
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
 
-  @Autowired
-  private TitlesService titlesService;
-  @Autowired
-  private ProtectionService protectionService;
-  @Autowired
-  private CompositePurchaseOrderService compositePurchaseOrderService;
-  @Autowired
-  private PurchaseOrderLineService purchaseOrderLineService;
-  @Autowired
-  private InventoryManager inventoryManager;
-  @Autowired
-  private RestClient restClient;
+  private final TitlesService titlesService;
+  private final ProtectionService protectionService;
+  private final CompositePurchaseOrderService compositePurchaseOrderService;
+  private final PurchaseOrderLineService purchaseOrderLineService;
+  private final InventoryManager inventoryManager;
+  private final RestClient restClient;
+  private final PieceChangeReceiptStatusPublisher receiptStatusPublisher;
+
+  public PiecesService(RestClient restClient, TitlesService titlesService, ProtectionService protectionService,
+                       CompositePurchaseOrderService compositePurchaseOrderService,
+                       PurchaseOrderLineService purchaseOrderLineService,
+                       InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
+
+    this.titlesService = titlesService;
+    this.protectionService = protectionService;
+    this.compositePurchaseOrderService = compositePurchaseOrderService;
+    this.purchaseOrderLineService = purchaseOrderLineService;
+    this.inventoryManager = inventoryManager;
+    this.restClient = restClient;
+    this.receiptStatusPublisher = receiptStatusPublisher;
+  }
 
   public CompletableFuture<Piece> createPiece(Piece piece, RequestContext requestContext) {
      logger.info("createPiece start");
@@ -171,7 +174,7 @@ public class PiecesService {
               return inventoryManager.deleteItem(piece.getItemId(), requestContext)
                 .exceptionally(t -> {
                   // Skip error processing if item has already deleted
-                  if (t.getCause() instanceof HttpException && ((HttpException) t.getCause()).getCode() == 404) {
+                  if (t instanceof HttpException && ((HttpException) t).getCode() == 404) {
                     return null;
                   } else {
                     throw new CompletionException(t);
@@ -477,30 +480,10 @@ public class PiecesService {
       .collect(groupingBy(Piece::getLocationId, groupingBy(Piece::getFormat, summingInt(q -> 1))));
   }
 
-  private void sendEvent(MessageAddress messageAddress, JsonObject data, RequestContext requestContext) {
-    DeliveryOptions deliveryOptions = new DeliveryOptions();
-
-    // Add okapi headers
-    Map<String, String> okapiHeaders = requestContext.getHeaders();
-    if (okapiHeaders != null) {
-      okapiHeaders.forEach(deliveryOptions::addHeader);
-    } else {
-      Map<String, String> okapiHeadersMap = new HashMap<>();
-      JsonObject okapiHeadersObject = data.getJsonObject(OKAPI_HEADERS);
-      okapiHeadersMap.put(OKAPI_URL, okapiHeadersObject.getString(OKAPI_URL));
-    }
-
-    data.put(LANG, "en");
-
-    requestContext.getContext().owner()
-      .eventBus()
-      .send(messageAddress.address, data, deliveryOptions);
-  }
-
   private void receiptConsistencyPiecePoLine(JsonObject jsonObj, RequestContext requestContext) {
     logger.debug("Sending event to verify receipt status");
 
-    sendEvent(MessageAddress.RECEIPT_STATUS, jsonObj, requestContext);
+    receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, jsonObj, requestContext);
 
     logger.debug("Event to verify receipt status - sent");
   }

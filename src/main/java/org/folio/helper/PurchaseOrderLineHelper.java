@@ -374,8 +374,8 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   public CompletableFuture<CompositePoLine> getCompositePoLine(String polineId, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(polineId, requestContext)
       .thenCompose(line -> getCompositePurchaseOrder(line.getPurchaseOrderId())
-        .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.READ, getRequestContext()))
-        .thenCompose(ok -> purchaseOrderLineService.getCompositePoLinesById(line.getId(), requestContext)));
+        .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.READ, requestContext))
+        .thenCompose(ok -> populateCompositeLine(line)));
   }
 
   public CompletableFuture<Void> deleteLine(String lineId, RequestContext requestContext) {
@@ -408,10 +408,10 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
             updateEstimatedPrice(compOrderLine);
 
             return checkLocationsAndPiecesConsistency(compOrderLine, lineFromStorage.mapTo(PoLine.class), compOrder, requestContext)
-              .thenCompose(vVoid -> protectionService.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE, getRequestContext())
+              .thenCompose(vVoid -> protectionService.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE, requestContext)
                 .thenCompose(v -> validateAndNormalizeISBN(compOrderLine, requestContext))
                 .thenCompose(v -> validateAccessProviders(compOrderLine))
-                .thenCompose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine), getRequestContext()))
+                .thenCompose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine), requestContext))
                 .thenCompose(v -> processOpenedPoLine(compOrder, compOrderLine, lineFromStorage))
                 .thenApply(v -> lineFromStorage));
           }))
@@ -556,7 +556,8 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       });
   }
 
-  CompletableFuture<Void> updateInventory(CompositePoLine compPOL, PoLine storagePoLine, String titleId, boolean isOpenOrderFlow, RequestContext requestContext) {
+  CompletableFuture<Void> updateInventory(CompositePoLine compPOL, PoLine storagePoLine, String titleId, boolean isOpenOrderFlow,
+                                          RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return completedFuture(null);
     }
@@ -565,7 +566,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       if (isReceiptNotRequired(compPOL.getReceiptStatus())) {
         return completedFuture(null);
       }
-      return piecesService.createPieces(compPOL, titleId, Collections.emptyList(), isOpenOrderFlow, getRequestContext()).thenRun(
+      return piecesService.createPieces(compPOL, titleId, Collections.emptyList(), isOpenOrderFlow, requestContext).thenRun(
         () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId()));
     }
 
@@ -652,6 +653,11 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
         SequenceNumber sequenceNumber = sequenceNumberJson.mapTo(SequenceNumber.class);
         return buildPoLineNumber(compOrder.getPoNumber(), sequenceNumber.getSequenceNumber());
       });
+  }
+
+  private CompletionStage<CompositePoLine> populateCompositeLine(PoLine poline) {
+    return HelperUtils.operateOnPoLine(HttpMethod.GET, JsonObject.mapFrom(poline), httpClient, okapiHeaders, logger)
+      .thenCompose(this::getLineWithInstanceId);
   }
 
   private CompletableFuture<Title> getTitleForPoLine(CompositePoLine line) {

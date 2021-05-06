@@ -68,7 +68,6 @@ import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.configuration.ConfigurationEntriesService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import com.google.common.collect.ImmutableList;
 
@@ -129,7 +128,7 @@ public class InventoryManager {
   private static final String TENANT_SPECIFIC_KEY_FORMAT = "%s.%s.%s";
   private static final String LOOKUP_ITEM_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
   private static final String CREATE_ITEM_STOR_ENDPOINT = "/item-storage/items";
-  public static final String  UPDATE_ITEM_BY_ID_ENDPOINT = "/inventory/items/{id}";
+  public static final String  ITEM_BY_ID_ENDPOINT = "/inventory/items/{id}";
   private static final String HOLDINGS_LOOKUP_QUERY = "instanceId==%s and permanentLocationId==%s";
   public static final String ID = "id";
   public static final String TOTAL_RECORDS = "totalRecords";
@@ -140,12 +139,13 @@ public class InventoryManager {
   private static final String GET_PIECES_BY_QUERY = resourcesPath(PIECES) + SEARCH_PARAMS_WITHOUT_LANG;
   public static final String EFFECTIVE_LOCATION = "effectiveLocation";
 
-  private CompletableFuture<String> cachedIsbnIdFuture;
-
-  @Autowired
   private ConfigurationEntriesService configurationEntriesService;
-  @Autowired
   private RestClient restClient;
+
+  public InventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService) {
+    this.restClient = restClient;
+    this.configurationEntriesService = configurationEntriesService;
+  }
 
   static {
     INVENTORY_LOOKUP_ENDPOINTS = Map.of(
@@ -299,7 +299,7 @@ public class InventoryManager {
   }
 
   public CompletableFuture<Void> updateItem(JsonObject item, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(UPDATE_ITEM_BY_ID_ENDPOINT).withId(item.getString(ID));
+    RequestEntry requestEntry = new RequestEntry(ITEM_BY_ID_ENDPOINT).withId(item.getString(ID));
     return restClient.put(requestEntry, item, requestContext);
   }
 
@@ -319,7 +319,7 @@ public class InventoryManager {
   }
 
   public CompletableFuture<Void> deleteItem(String id, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(UPDATE_ITEM_BY_ID_ENDPOINT).withId(id);
+    RequestEntry requestEntry = new RequestEntry(ITEM_BY_ID_ENDPOINT).withId(id);
     return restClient.delete(requestEntry, requestContext);
   }
 
@@ -1057,20 +1057,17 @@ public class InventoryManager {
 
   public CompletableFuture<String> getProductTypeUuidByIsbn(String identifierType, RequestContext requestContext) {
     // return id of already retrieved identifier type
-    if (cachedIsbnIdFuture == null) {
-      String endpoint = String.format("/identifier-types?limit=1&query=name==%s&lang=%s", identifierType);
+      String endpoint = String.format("/identifier-types?limit=1&query=name==%s", identifierType);
       Map<String, String> okapiHeaders = requestContext.getHeaders();
-      cachedIsbnIdFuture = handleGetRequest(endpoint, restClient.getHttpClient(okapiHeaders), okapiHeaders, logger)
+      return handleGetRequest(endpoint, restClient.getHttpClient(okapiHeaders), okapiHeaders, logger)
         .thenCompose(identifierTypes -> {
           String identifierTypeId = extractId(getFirstObjectFromResponse(identifierTypes, IDENTIFIER_TYPES));
           return completedFuture(identifierTypeId);
         });
-    }
-    return this.cachedIsbnIdFuture;
   }
 
   public CompletableFuture<String> convertToISBN13(String isbn, RequestContext requestContext) {
-    String convertEndpoint = String.format("/isbn/convertTo13?isbn=%s&lang=%s", isbn);
+    String convertEndpoint = String.format("/isbn/convertTo13?isbn=%s", isbn);
     Map<String, String> okapiHeaders = requestContext.getHeaders();
     return handleGetRequest(convertEndpoint, restClient.getHttpClient(okapiHeaders), okapiHeaders, logger)
       .thenApply(json -> json.getString("isbn"))

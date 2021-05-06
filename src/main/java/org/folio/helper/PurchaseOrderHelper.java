@@ -228,14 +228,14 @@ public class PurchaseOrderHelper extends AbstractHelper {
    */
   public CompletableFuture<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO, RequestContext requestContext) {
 
-    return validateAcqUnitsOnCreate(compPO.getAcqUnitIds())
+    return validateAcqUnitsOnCreate(compPO.getAcqUnitIds(), requestContext)
         .thenCompose(ok -> checkOrderApprovalPermissions(compPO))
         .thenCompose(ok -> setPoNumberIfMissing(compPO)
         .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber()))
         .thenCompose(v -> processPoLineTags(compPO))
         .thenCompose(v -> createPOandPOLines(compPO, requestContext))
         .thenCompose(this::populateOrderSummary))
-        .thenCompose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder.getId(), compOrder.getWorkflowStatus(), getRequestContext())
+        .thenCompose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder.getId(), compOrder.getWorkflowStatus(), requestContext)
                 .thenApply(v -> compOrder));
   }
 
@@ -270,14 +270,14 @@ public class PurchaseOrderHelper extends AbstractHelper {
    * @return completable future completed successfully if all checks pass or exceptionally in case of error/restriction
    *         caused by acquisitions units
    */
-  private CompletableFuture<Void> validateAcqUnitsOnCreate(List<String> acqUnitIds) {
+  private CompletableFuture<Void> validateAcqUnitsOnCreate(List<String> acqUnitIds, RequestContext requestContext) {
     if (acqUnitIds.isEmpty()) {
       return completedFuture(null);
     }
 
     return FolioVertxCompletableFuture.runAsync(ctx, () -> verifyUserHasAssignPermission(acqUnitIds))
-      .thenCompose(ok -> protectionService.verifyIfUnitsAreActive(acqUnitIds, getRequestContext()))
-      .thenCompose(ok -> protectionService.isOperationRestricted(acqUnitIds, ProtectedOperationType.CREATE, getRequestContext()));
+      .thenCompose(ok -> protectionService.verifyIfUnitsAreActive(acqUnitIds, requestContext))
+      .thenCompose(ok -> protectionService.isOperationRestricted(acqUnitIds, ProtectedOperationType.CREATE, requestContext));
   }
 
   /**
@@ -302,7 +302,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           .thenCompose(ok -> {
             if (isTransitionToPending(poFromStorage, compPO)) {
               checkOrderUnopenPermissions();
-              return unOpenOrder(compPO);
+              return unOpenOrder(compPO, requestContext);
             }
             return CompletableFuture.completedFuture(null);
           })
@@ -719,13 +719,13 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return validateOrder(compPO, requestContext);
   }
 
-  public CompletableFuture<Void> unOpenOrder(CompositePurchaseOrder compPO) {
+  public CompletableFuture<Void> unOpenOrder(CompositePurchaseOrder compPO, RequestContext requestContext) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     updateAndGetOrderWithLines(compPO)
       .thenApply(aVoid -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.OPEN_TO_PENDING))
       .thenCompose(strategy -> strategy.processEncumbrances(compPO, getRequestContext()))
       .thenAccept(ok -> orderLineHelper.makePoLinesPending(compPO.getCompositePoLines()))
-      .thenCompose(ok -> unOpenOrderUpdatePoLinesSummary(compPO.getCompositePoLines()))
+      .thenCompose(ok -> unOpenOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext))
       .thenAccept(v-> future.complete(null))
       .exceptionally(t -> {
         future.completeExceptionally(t);
@@ -734,10 +734,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return future;
   }
 
-  public CompletableFuture<Void> unOpenOrderUpdatePoLinesSummary(List<CompositePoLine> compositePoLines) {
+  public CompletableFuture<Void> unOpenOrderUpdatePoLinesSummary(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
     return CompletableFuture.allOf( compositePoLines.stream()
       .map(HelperUtils::convertToPoLine)
-      .map(line -> purchaseOrderLineService.updateOrderLine(line, getRequestContext()))
+      .map(line -> purchaseOrderLineService.updateOrderLine(line, requestContext))
       .toArray(CompletableFuture[]::new));
   }
 

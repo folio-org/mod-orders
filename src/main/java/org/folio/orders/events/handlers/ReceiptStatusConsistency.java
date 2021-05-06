@@ -1,7 +1,6 @@
 package org.folio.orders.events.handlers;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.orders.utils.HelperUtils.LANG;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
@@ -42,12 +41,12 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
   private static final int LIMIT = Integer.MAX_VALUE;
   private static final String PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId==%s&limit=%s";
 
-  @Autowired
   private PurchaseOrderLineService purchaseOrderLineService;
 
   @Autowired
-  public ReceiptStatusConsistency(Vertx vertx) {
+  public ReceiptStatusConsistency(Vertx vertx, PurchaseOrderLineService purchaseOrderLineService) {
     super(vertx.getOrCreateContext());
+    this.purchaseOrderLineService = purchaseOrderLineService;
   }
 
   @Override
@@ -70,7 +69,6 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     getPieces(query, httpClient, okapiHeaders, logger).thenAccept(piecesCollection -> {
       List<org.folio.rest.acq.model.Piece> listOfPieces = piecesCollection.getPieces();
 
-      String lang = messageFromEventBus.getString(LANG);
       // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
       purchaseOrderLineService.getOrderLineById(poLineIdUpdate, new RequestContext(ctx, okapiHeaders))
         .thenAccept(poLine -> {
@@ -166,10 +164,10 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
         }
         future.complete(jsonPieces.mapTo(PieceCollection.class));
       })
-        .exceptionally(t -> {
-          future.completeExceptionally(t);
-          return null;
-        });
+      .exceptionally(t -> {
+        future.completeExceptionally(t);
+        return null;
+      });
     } catch (Exception e) {
       future.completeExceptionally(e);
     }
