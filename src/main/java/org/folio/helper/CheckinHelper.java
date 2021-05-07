@@ -20,10 +20,11 @@ import java.util.concurrent.CompletionStage;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.rest.acq.model.Piece;
-import org.folio.rest.acq.model.Piece.ReceivingStatus;
+
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
 import org.folio.rest.jaxrs.model.ReceivingResult;
@@ -60,21 +61,21 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     }
   }
 
-  public CompletableFuture<ReceivingResults> checkinPieces(CheckinCollection checkinCollection) {
+  public CompletableFuture<ReceivingResults> checkinPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
     return getPoLines(new ArrayList<>(checkinPieces.keySet()))
       .thenCompose(poLines -> removeForbiddenEntities(poLines, checkinPieces))
-      .thenCompose(vVoid -> processCheckInPieces(checkinCollection));
+      .thenCompose(vVoid -> processCheckInPieces(checkinCollection, requestContext));
   }
 
-  private CompletionStage<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection) {
+  private CompletionStage<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
     Map<String, Map<String, String>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnCheckin(checkinCollection);
 
     // 1. Get piece records from storage
-    return retrievePieceRecords(checkinPieces)
+    return retrievePieceRecords(checkinPieces, requestContext)
       // 2. Filter locationId
       .thenCompose(this::filterMissingLocations)
       // 3. Update items in the Inventory if required
-      .thenCompose(pieces -> updateInventoryItems(pieceLocationsGroupedByPoLine, pieces))
+      .thenCompose(pieces -> updateInventoryItems(pieceLocationsGroupedByPoLine, pieces, requestContext))
       // 4. Update piece records with checkIn details which do not have
       // associated item
       .thenApply(this::updatePieceRecordsWithoutItems)
@@ -153,20 +154,19 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
   @Override
   boolean isRevertToOnOrder(Piece piece) {
-    return piece.getReceivingStatus() == ReceivingStatus.RECEIVED
-      && inventoryHelper
-      .isOnOrderPieceStatus(piecesByLineId.get(piece.getPoLineId()).get(piece.getId()));
+    return piece.getReceivingStatus() == Piece.ReceivingStatus.RECEIVED
+      && inventoryManager.isOnOrderPieceStatus(piecesByLineId.get(piece.getPoLineId()).get(piece.getId()));
   }
 
   @Override
-  CompletableFuture<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece) {
+  CompletableFuture<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
 
     CheckInPiece checkinPiece = piecesByLineId.get(piece.getPoLineId())
       .get(piece.getId());
-    return inventoryHelper
+    return inventoryManager
       // Update item records with check-in information and send updates to
       // Inventory
-      .checkinItem(item, checkinPiece)
+      .checkinItem(item, checkinPiece, requestContext)
       // Update Piece record object with check-in details if item updated
       // successfully
       .thenApply(v -> {
@@ -197,12 +197,12 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     }
 
     // Piece record might be received or rolled-back to Expected
-    if (inventoryHelper.isOnOrderPieceStatus(checkinPiece)) {
+    if (inventoryManager.isOnOrderPieceStatus(checkinPiece)) {
       piece.setReceivedDate(null);
-      piece.setReceivingStatus(ReceivingStatus.EXPECTED);
+      piece.setReceivingStatus(Piece.ReceivingStatus.EXPECTED);
     } else {
       piece.setReceivedDate(new Date());
-      piece.setReceivingStatus(ReceivingStatus.RECEIVED);
+      piece.setReceivingStatus(Piece.ReceivingStatus.RECEIVED);
     }
   }
 
