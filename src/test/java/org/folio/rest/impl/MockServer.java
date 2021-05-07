@@ -39,15 +39,15 @@ import static org.folio.TestConstants.PROTECTED_READ_ONLY_TENANT;
 import static org.folio.TestConstants.X_ECHO_STATUS;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
-import static org.folio.helper.InventoryHelper.ITEMS;
-import static org.folio.helper.InventoryHelper.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
-import static org.folio.helper.InventoryHelper.REQUESTS;
-import static org.folio.helper.InventoryHelperTest.HOLDING_INSTANCE_ID_2_HOLDING;
-import static org.folio.helper.InventoryHelperTest.NEW_LOCATION_ID;
-import static org.folio.helper.InventoryHelperTest.NON_EXISTED_NEW_HOLDING_ID;
-import static org.folio.helper.InventoryHelperTest.OLD_LOCATION_ID;
-import static org.folio.helper.InventoryHelperTest.ONLY_NEW_HOLDING_EXIST_ID;
-import static org.folio.helper.ProtectionHelper.ACQUISITIONS_UNIT_ID;
+import static org.folio.service.inventory.InventoryManager.ITEMS;
+import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
+import static org.folio.service.inventory.InventoryManager.REQUESTS;
+import static org.folio.helper.InventoryManagerTest.HOLDING_INSTANCE_ID_2_HOLDING;
+import static org.folio.helper.InventoryManagerTest.NEW_LOCATION_ID;
+import static org.folio.helper.InventoryManagerTest.NON_EXISTED_NEW_HOLDING_ID;
+import static org.folio.helper.InventoryManagerTest.OLD_LOCATION_ID;
+import static org.folio.helper.InventoryManagerTest.ONLY_NEW_HOLDING_EXIST_ID;
+import static org.folio.service.ProtectionService.ACQUISITIONS_UNIT_ID;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
@@ -137,6 +137,7 @@ import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -197,8 +198,8 @@ public class MockServer {
   public static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "po_line_collection.json";
   private static final String IDENTIFIER_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
   private static final String ITEM_REQUESTS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemRequests/";
-  static final String ACQUISITIONS_UNITS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/units.json";
-  static final String ACQUISITIONS_MEMBERSHIPS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/memberships.json";
+  public static final String ACQUISITIONS_UNITS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/units.json";
+  public static final String ACQUISITIONS_MEMBERSHIPS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/memberships.json";
   static final String ORDER_TEMPLATES_COLLECTION = ORDER_TEMPLATES_MOCK_DATA_PATH + "/orderTemplates.json";
   private static final String FUNDS_PATH = BASE_MOCK_DATA_PATH + "funds/funds.json";
   private static final String TITLES_PATH = BASE_MOCK_DATA_PATH + "titles/titles.json";
@@ -1791,11 +1792,14 @@ public class MockServer {
     try {
       // Attempt to find PO in mock server memory
       JsonObject po = getMockEntry(PURCHASE_ORDER, id).orElse(null);
-
       // If previous step has no result then attempt to find PO in stubs
       if (po == null) {
         if (MIN_PO_ID.equals(id)) {
-          serverResponse(ctx, 200, APPLICATION_JSON, encodePrettily(getMinimalContentCompositePurchaseOrder()));
+          CompositePurchaseOrder compPO = getMinimalContentCompositePurchaseOrder();
+          compPO.setCompositePoLines(null);
+          compPO.setTotalItems(null);
+          compPO.setTotalEstimatedPrice(null);
+          serverResponse(ctx, 200, APPLICATION_JSON, encodePrettily(compPO));
           return;
         }
 
@@ -1807,7 +1811,8 @@ public class MockServer {
         }
         po = new JsonObject(getMockData(filePath));
         po.remove(COMPOSITE_PO_LINES);
-
+        po.remove("totalEstimatedPrice");
+        po.remove("totalItems");
         // Validate the content against schema
         org.folio.rest.acq.model.PurchaseOrder order = po.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
         order.setId(id);
@@ -1816,6 +1821,9 @@ public class MockServer {
       if (po.getString("orderType") == null) {
         po.put("orderType", org.folio.rest.acq.model.PurchaseOrder.OrderType.ONE_TIME.value());
       }
+      po.remove(COMPOSITE_PO_LINES);
+      po.remove("totalEstimatedPrice");
+      po.remove("totalItems");
       addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
       serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
     } catch (IOException e) {
@@ -1845,6 +1853,10 @@ public class MockServer {
             .collect(Collectors.toList()))
         .withTotalRecords(orderCollection.getPurchaseOrders().size());
       po = JsonObject.mapFrom(orderCollection);
+      po.remove(COMPOSITE_PO_LINES);
+      po.remove("totalEstimatedPrice");
+      po.remove("totalItems");
+
       addServerRqRsData(HttpMethod.GET, orderType, po);
     } else {
       if (query.contains(BAD_QUERY)) {
@@ -1881,7 +1893,7 @@ public class MockServer {
     body.put(ID, id);
     org.folio.rest.acq.model.PurchaseOrder po = body.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
     addServerRqRsData(HttpMethod.POST, PURCHASE_ORDER, body);
-
+    addServerRqRsData(HttpMethod.SEARCH, PURCHASE_ORDER, body);
     ctx.response()
       .setStatusCode(201)
       .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
@@ -2108,6 +2120,7 @@ public class MockServer {
     }
 
     addServerRqRsData(HttpMethod.POST, PO_LINES, body);
+    addServerRqRsData(HttpMethod.SEARCH, PO_LINES, body);
   }
 
   private void handleGetPoNumber(RoutingContext ctx) {

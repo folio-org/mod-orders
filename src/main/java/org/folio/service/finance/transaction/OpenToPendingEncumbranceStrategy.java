@@ -7,7 +7,7 @@ import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.service.finance.WorkflowStatusName;
+import org.folio.service.orders.OrderWorkflowType;
 
 public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
@@ -39,7 +39,7 @@ public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStra
     }
 
     @Override
-    public WorkflowStatusName getStrategyName() {
-        return WorkflowStatusName.OPEN_TO_PENDING;
+    public OrderWorkflowType getStrategyName() {
+        return OrderWorkflowType.OPEN_TO_PENDING;
     }
 }
