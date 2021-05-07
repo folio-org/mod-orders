@@ -35,11 +35,7 @@
             "orders.item.approve"
           ],
           "modulePermissions": [
-            "modperms.orders.item.post",
-            "orders-storage.po-lines.item.get",
-            "orders-storage.purchase-orders.item.get",
-            "orders-storage.alerts.item.get",
-            "orders-storage.reporting-codes.item.get"
+            "modperms.orders.item.post"
           ]
         },
         {
@@ -83,11 +79,7 @@
             "orders.item.unopen"
           ],
           "modulePermissions": [
-            "modperms.orders.item.put",
-            "orders-storage.po-lines.item.get",
-            "orders-storage.purchase-orders.item.get",
-            "orders-storage.alerts.item.get",
-            "orders-storage.reporting-codes.item.get"
+            "modperms.orders.item.put"
           ]
         },
         {
@@ -1336,6 +1328,7 @@
         "orders-storage.purchase-orders.item.put",
         "orders-storage.purchase-orders.item.get",
         "orders-storage.po-lines.collection.get",
+        "orders-storage.po-lines.item.get",
         "orders-storage.po-lines.item.post",
         "orders-storage.po-lines.item.put",
         "orders-storage.po-lines.item.delete",
@@ -1413,6 +1406,10 @@
         "orders-storage.reporting-codes.item.put",
         "orders-storage.titles.collection.get",
         "orders-storage.titles.item.put",
+        "orders-storage.po-lines.item.get",
+        "orders-storage.purchase-orders.item.get",
+        "orders-storage.alerts.item.get",
+        "orders-storage.reporting-codes.item.get",
         "configuration.entries.collection.get",
         "finance.encumbrances.item.post",
         "finance.encumbrances.item.put",
