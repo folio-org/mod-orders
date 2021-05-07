@@ -17,7 +17,8 @@ public final class OngoingOrderValidator {
   }
 
   public static void validate(CompositePurchaseOrder compositePurchaseOrder) {
-    if (compositePurchaseOrder.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING) {
+    if (compositePurchaseOrder.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING
+            && Boolean.TRUE.equals(compositePurchaseOrder.getOngoing().getIsSubscription())) {
       validateRenewalDate(compositePurchaseOrder);
       validateRenewalInterval(compositePurchaseOrder);
     }
