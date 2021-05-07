@@ -1,8 +1,7 @@
 package org.folio.service.orders;
 
 import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -12,15 +11,15 @@ import org.apache.logging.log4j.Logger;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
-import org.folio.rest.jaxrs.model.ReportingCode;
 
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 
 public class PurchaseOrderLineService {
@@ -37,7 +36,7 @@ public class PurchaseOrderLineService {
   public CompletableFuture<List<PoLine>> getOrderLines(String query, int offset, int limit, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query).withOffset(offset).withLimit(limit);
     return restClient.get(requestEntry, requestContext, PoLineCollection.class)
-      .thenApply(PoLineCollection::getPoLines);
+                     .thenApply(PoLineCollection::getPoLines);
   }
 
   public CompletableFuture<PoLine> getOrderLineById(String orderLineId, RequestContext requestContext) {
@@ -59,23 +58,30 @@ public class PurchaseOrderLineService {
       .toArray(CompletableFuture[]::new));
   }
 
+
   public CompletableFuture<List<CompositePoLine>> getCompositePoLinesByOrderId(String orderId, RequestContext requestContext) {
-    return getOrderLines("purchaseOrderId==" + orderId, 0, Integer.MAX_VALUE, requestContext)
-                .thenApply(poLines -> poLines.stream().map(this::toCompositePoLine).collect(toList()));
+    CompletableFuture<List<CompositePoLine>> future = new CompletableFuture<>();
+
+    getOrderLines("purchaseOrderId==" + orderId, 0, Integer.MAX_VALUE, requestContext)
+      .thenAccept(jsonLines ->
+        collectResultsOnSuccess(jsonLines.stream().map(line -> operateOnPoLine(HttpMethod.GET, line, requestContext)).collect(toList()))
+          .thenAccept(future::complete)
+          .exceptionally(t -> {
+            future.completeExceptionally(t.getCause());
+            return null;
+          })
+      )
+      .exceptionally(t -> {
+        logger.error("Exception gathering poLine data:", t);
+        future.completeExceptionally(t);
+        return null;
+      });
+    return future;
   }
 
-  public CompletableFuture<CompositePoLine> getCompositePoLinesById(String lineId, RequestContext requestContext) {
-    return getOrderLineById(lineId, requestContext).thenApply(this::toCompositePoLine);
-  }
-
-
-  private CompositePoLine toCompositePoLine(PoLine poLine) {
-    List<Alert> alerts = poLine.getAlerts().stream().map(alertId -> new Alert().withId(alertId)).collect(toList());
-    List<ReportingCode> reportingCodes = poLine.getReportingCodes().stream().map(codeId -> new ReportingCode().withId(codeId)).collect(toList());
-    JsonObject jsonLine = JsonObject.mapFrom(poLine);
-    jsonLine.remove(ALERTS);
-    jsonLine.remove(REPORTING_CODES);
-    return jsonLine.mapTo(CompositePoLine.class).withAlerts(alerts).withReportingCodes(reportingCodes);
+  public CompletableFuture<CompositePoLine> operateOnPoLine(HttpMethod operation, PoLine line, RequestContext requestContext) {
+    return HelperUtils.operateOnPoLine(operation, JsonObject.mapFrom(line),
+        restClient.getHttpClient(requestContext.getHeaders()), requestContext.getHeaders(), logger);
   }
 }
 

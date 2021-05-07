@@ -86,10 +86,8 @@ public class PiecesService {
   public CompletableFuture<Piece> createPiece(Piece piece, RequestContext requestContext) {
      logger.info("createPiece start");
       return getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
-        .thenCompose(order -> {
-          return protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
-            .thenApply(v -> order);
-        })
+        .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
+                                               .thenApply(v -> order))
         .thenCompose(order -> updateInventory(order.getCompositePoLines().get(0), piece, requestContext))
         .thenCompose(v -> {
           RequestEntry requestEntry = new RequestEntry(ENDPOINT);
@@ -206,7 +204,7 @@ public class PiecesService {
         Throwable cause = t.getCause();
         // The case when specified order does not exist
         if (cause instanceof HttpException && ((HttpException) cause).getCode() == Response.Status.NOT_FOUND.getStatusCode()) {
-          throw new HttpException(422, ErrorCodes.ORDER_NOT_FOUND);
+          throw new HttpException(404, ErrorCodes.ORDER_NOT_FOUND);
         }
         throw t instanceof CompletionException ? (CompletionException) t : new CompletionException(cause);
       });

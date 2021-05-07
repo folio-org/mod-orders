@@ -1134,12 +1134,12 @@ public class InventoryManager {
 
     return allOf(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
       .thenApply(v -> buildInstanceRecordJsonObject(title, lookupObj))
-      .thenCompose(instanceJson -> saveInstance(instanceJson, requestContext));
+      .thenCompose(instanceJson -> createInstance(instanceJson, requestContext));
   }
 
-  public CompletableFuture<String> saveInstance(JsonObject instanceRecJson, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(INSTANCES).withId(instanceRecJson.getString(ID));
-    return restClient.put(requestEntry, instanceRecJson, requestContext).thenApply(v -> instanceRecJson.getString(ID));
+  public CompletableFuture<String> createInstance(JsonObject instanceRecJson, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES));
+    return restClient.post(requestEntry, instanceRecJson, PostResponseType.UUID,  String.class, requestContext);
   }
 
 }
