@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.fail;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
 import static org.folio.TestUtils.getMockData;
-import static org.folio.helper.InventoryManager.*;
+import static org.folio.service.inventory.InventoryManager.*;
 import static org.folio.orders.utils.HelperUtils.CONFIGS;
 import static org.folio.orders.utils.HelperUtils.CONFIG_NAME;
 import static org.folio.orders.utils.HelperUtils.CONFIG_VALUE;

@@ -1,4 +1,4 @@
-package org.folio.helper;
+package org.folio.service.inventory;
 
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.allOf;
@@ -115,12 +115,12 @@ public class InventoryManager {
   public static final String REQUESTS = "requests";
 
   // mod-configuration: config names and default values
-  static final String CONFIG_NAME_INSTANCE_TYPE_CODE = "inventory-instanceTypeCode";
-  static final String CONFIG_NAME_INSTANCE_STATUS_CODE = "inventory-instanceStatusCode";
-  static final String CONFIG_NAME_LOAN_TYPE_NAME = "inventory-loanTypeName";
-  static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
-  static final String DEFAULT_INSTANCE_STATUS_CODE = "temp";
-  static final String DEFAULT_LOAN_TYPE_NAME = "Can circulate";
+  public static final String CONFIG_NAME_INSTANCE_TYPE_CODE = "inventory-instanceTypeCode";
+  public static final String CONFIG_NAME_INSTANCE_STATUS_CODE = "inventory-instanceStatusCode";
+  public static final String CONFIG_NAME_LOAN_TYPE_NAME = "inventory-loanTypeName";
+  public static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
+  public static final String DEFAULT_INSTANCE_STATUS_CODE = "temp";
+  public static final String DEFAULT_LOAN_TYPE_NAME = "Can circulate";
 
   private static final String HOLDINGS_RECORDS = "holdingsRecords";
   private static final String INSTANCES = "instances";

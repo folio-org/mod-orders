@@ -1,6 +1,6 @@
 package org.folio.config;
 
-import org.folio.helper.InventoryManager;
+import org.folio.service.inventory.InventoryManager;
 import org.folio.service.ProtectionService;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.rest.core.RestClient;
