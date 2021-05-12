@@ -80,11 +80,11 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
     // First validate content of the PO and proceed only if all is okay
     helper
-      .validateOrder(compPO)
+      .validateOrder(compPO, new RequestContext(vertxContext, okapiHeaders))
       .thenCompose(isValid -> {
         if (Boolean.TRUE.equals(isValid)) {
           logger.info("Creating PO and POLines...");
-          return helper.createPurchaseOrder(compPO)
+          return helper.createPurchaseOrder(compPO, new RequestContext(vertxContext, okapiHeaders))
             .thenAccept(withIds -> {
               logger.info("Successfully Placed Order: {}", JsonObject.mapFrom(withIds).encodePrettily());
               asyncResultHandler.handle(succeededFuture(helper
@@ -105,11 +105,12 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
     populateOrderId(orderId, compPO);
 
     PurchaseOrderHelper helper = new PurchaseOrderHelper(okapiHeaders, vertxContext, lang);
-    helper.validateExistingOrder(orderId, compPO)
+    RequestContext requestContext = helper.getRequestContext();
+    helper.validateExistingOrder(orderId, compPO, requestContext)
       .thenCompose(isValid -> {
         logger.info("Order is valid: {}", isValid);
         if (Boolean.TRUE.equals(isValid)) {
-          return helper.updateOrder(compPO)
+          return helper.updateOrder(compPO, requestContext)
             .thenAccept(v -> {
               if (logger.isInfoEnabled()) {
                 logger.info("Successfully Updated Order: {}", JsonObject.mapFrom(compPO).encodePrettily());

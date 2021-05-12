@@ -17,6 +17,7 @@ import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.rest.annotations.Validate;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -54,7 +55,7 @@ public class CompositePoLineAPI implements OrdersOrderLines {
 
     // The validation of the PO Line content and its order state is done in
     // scope of the 'createPoLine' method logic
-    helper.createPoLine(poLine)
+    helper.createPoLine(poLine, new RequestContext(vertxContext, okapiHeaders))
       .thenAccept(pol -> {
         if (helper.getErrors()
           .isEmpty()) {
@@ -78,7 +79,7 @@ public class CompositePoLineAPI implements OrdersOrderLines {
     logger.info("Started Invocation of POLine Request with id = {}", lineId);
     PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
 
-    helper.getCompositePoLine(lineId)
+    helper.getCompositePoLine(lineId, helper.getRequestContext())
       .thenAccept(poLine -> {
         if (logger.isInfoEnabled()) {
           logger.info("Received PO Line Response: {}", JsonObject.mapFrom(poLine)
@@ -95,7 +96,7 @@ public class CompositePoLineAPI implements OrdersOrderLines {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     PurchaseOrderLineHelper helper = new PurchaseOrderLineHelper(okapiHeaders, vertxContext, lang);
-    helper.deleteLine(lineId)
+    helper.deleteLine(lineId, helper.getRequestContext())
       .thenAccept(v -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
@@ -129,7 +130,7 @@ public class CompositePoLineAPI implements OrdersOrderLines {
           asyncResultHandler.handle(succeededFuture(response));
           return;
         }
-        helper.updateOrderLine(poLine)
+        helper.updateOrderLine(poLine, new RequestContext(vertxContext, okapiHeaders))
           .thenAccept(v -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
           .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
       })

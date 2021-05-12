@@ -2,12 +2,9 @@ package org.folio.orders.events.handlers;
 
 import static org.folio.TestConfig.X_OKAPI_URL;
 import static org.folio.TestConfig.clearServiceInteractions;
-import static org.folio.TestConfig.getFirstContextFromVertx;
-import static org.folio.TestConfig.getVertx;
-import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
-import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.checkVertxContextCompletion;
+import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
 import static org.folio.rest.impl.MockServer.PO_LINES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
@@ -18,7 +15,6 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 import java.util.concurrent.ExecutionException;
@@ -34,15 +30,17 @@ import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.acq.model.PoLine;
 import org.folio.rest.acq.model.PoLine.ReceiptStatus;
-import org.folio.rest.impl.EventBusContextConfiguration;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
@@ -53,7 +51,6 @@ import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.mockito.Mockito;
 
 @ExtendWith(VertxExtension.class)
 public class ReceiptStatusConsistencyTest {
@@ -65,10 +62,11 @@ public class ReceiptStatusConsistencyTest {
   private static final String POLINE_UUID_TIED_TO_PIECE = "d471d766-8dbb-4609-999a-02681dea6c22";
   private static final String POLINE_UUID_TIED_TO_PIECE_PARTIALLY_RECEIVED = "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56";
   private static final String POLINE_UUID_TIED_TO_PIECE_FULLY_RECEIVED = "2f443dbe-b3f6-417a-a4ec-db2623920b4a";
-
   private static Vertx vertx;
-
   private static boolean runningOnOwn;
+
+  @Autowired
+  private PurchaseOrderLineService purchaseOrderLineService;
 
   @BeforeAll
   static void before() throws InterruptedException, ExecutionException, TimeoutException {
@@ -78,9 +76,13 @@ public class ReceiptStatusConsistencyTest {
     }
 
     vertx = Vertx.vertx();
-
     SpringContextUtil.init(vertx, vertx.getOrCreateContext(), ApplicationConfig.class);
-    vertx.eventBus().consumer(TEST_ADDRESS, new ReceiptStatusConsistency(vertx));
+  }
+
+  @BeforeEach
+  void setUp() {
+    SpringContextUtil.autowireDependencies(this, vertx.getOrCreateContext());
+    vertx.eventBus().consumer(TEST_ADDRESS, new ReceiptStatusConsistency(vertx, purchaseOrderLineService));
   }
 
   @AfterEach

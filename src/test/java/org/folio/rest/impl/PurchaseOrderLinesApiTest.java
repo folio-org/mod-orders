@@ -1293,8 +1293,9 @@ public class PurchaseOrderLinesApiTest {
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
     reqData.getEresource().setCreateInventory(INSTANCE_HOLDING_ITEM);
     reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
-
+    String pieceId = UUID.randomUUID().toString();
     addMockEntry(PIECES, new Piece()
+      .withId(pieceId)
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
@@ -1321,6 +1322,7 @@ public class PurchaseOrderLinesApiTest {
     int expQtyElectronic = 3;
     IntStream.range(0, 2).forEach(i -> {
       addMockEntry(PIECES, new Piece()
+        .withId(UUID.randomUUID().toString())
         .withFormat(Piece.Format.ELECTRONIC)
         .withPoLineId(reqData.getId())
         .withLocationId(reqData.getLocations().get(0).getLocationId()));
@@ -1335,10 +1337,10 @@ public class PurchaseOrderLinesApiTest {
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
 
-    assertEquals(expQtyElectronic, getRqRsEntries(HttpMethod.PUT, PIECES).size(), "Location matched");
-    assertEquals(reqData.getLocations().get(0).getLocationId(), getRqRsEntries(HttpMethod.PUT, PIECES).get(0).getString("locationId"), "Location matched");
-    assertEquals(poLineId, getRqRsEntries(HttpMethod.PUT, PIECES).get(0).getString("poLineId"), "Line id matched");
-    assertEquals("Expected", getRqRsEntries(HttpMethod.PUT, PIECES).get(0).getString("receivingStatus"), "Expected status");
+    assertEquals(expQtyElectronic, getRqRsEntries(HttpMethod.POST, PIECES).size(), "Location matched");
+    assertEquals(reqData.getLocations().get(0).getLocationId(), getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("locationId"), "Location matched");
+    assertEquals(poLineId, getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("poLineId"), "Line id matched");
+    assertEquals("Expected", getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("receivingStatus"), "Expected status");
   }
 
   @Test

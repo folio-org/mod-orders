@@ -5,6 +5,7 @@ import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 
@@ -13,7 +14,6 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.tools.client.Response;
-import org.folio.service.finance.transaction.TransactionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -26,10 +26,8 @@ public class TransactionServiceTest {
   private TransactionService transactionService;
   @Mock
   private RestClient restClient;
-
   @Mock
   private RequestContext requestContext;
-
 
   @BeforeEach
   public void initMocks(){
@@ -39,17 +37,16 @@ public class TransactionServiceTest {
   @Test
   void testShouldInvokeUpdateTransaction() throws Exception {
     //given
-
     Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
 
     Response response = new Response();
     response.setCode(204);
-    doReturn(completedFuture(response)).when(restClient).put(any(), any(), any());
+    doReturn(completedFuture(response)).when(restClient).put(any(RequestEntry.class), eq(encumbrance), eq(requestContext));
     //When
     transactionService.updateTransaction(encumbrance, requestContext).get();
     //Then
     ArgumentCaptor<RequestEntry> argumentCaptor = ArgumentCaptor.forClass(RequestEntry.class);
-    verify(restClient).put(argumentCaptor.capture(), any(), any());
+    verify(restClient).put(argumentCaptor.capture(), eq(encumbrance), eq(requestContext));
     RequestEntry requestEntry = argumentCaptor.getValue();
 
     assertEquals(encumbrance.getId(), requestEntry.getPathParams().get("id"));
