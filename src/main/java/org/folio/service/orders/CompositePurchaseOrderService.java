@@ -37,7 +37,7 @@ public class CompositePurchaseOrderService {
     private CompositePoLine toCompositePoLine(PoLine poLine) {
         List<Alert> alerts = poLine.getAlerts().stream().map(alertId -> new Alert().withId(alertId)).collect(toList());
         List<ReportingCode> reportingCodes = poLine.getReportingCodes().stream().map(codeId -> new ReportingCode().withId(codeId)).collect(toList());
-        JsonObject jsonLine = JsonObject.mapFrom(poLine);
+        var jsonLine = JsonObject.mapFrom(poLine);
         jsonLine.remove(ALERTS);
         jsonLine.remove(REPORTING_CODES);
         return jsonLine.mapTo(CompositePoLine.class).withAlerts(alerts).withReportingCodes(reportingCodes);
