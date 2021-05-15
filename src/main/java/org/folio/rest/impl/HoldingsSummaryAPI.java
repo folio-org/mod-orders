@@ -10,8 +10,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.resource.OrdersHoldings;
-import org.folio.service.inventory.HoldingsSummaryService;
+import org.folio.rest.jaxrs.resource.OrdersHoldingsSummary;
+import org.folio.service.orders.HoldingsSummaryService;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -21,7 +21,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
-public class HoldingsSummaryAPI extends BaseApi implements OrdersHoldings {
+public class HoldingsSummaryAPI extends BaseApi implements OrdersHoldingsSummary {
 
   private static final Logger logger = LogManager.getLogger();
 
@@ -34,7 +34,7 @@ public class HoldingsSummaryAPI extends BaseApi implements OrdersHoldings {
 
   @Override
   @Validate
-  public void getOrdersHoldingsById(String holdingId, String lang, Map<String, String> okapiHeaders,
+  public void getOrdersHoldingsSummaryById(String holdingId, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     var requestContext = new RequestContext(vertxContext, okapiHeaders);
