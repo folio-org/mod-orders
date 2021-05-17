@@ -44,7 +44,7 @@
     <module_name>mod-orders</module_name>
     <http.port>8081</http.port>
     <jsonschema_paths>
-      acq-models/common/schemas,acq-models/mod-orders/schemas,acq-models/mod-orders-storage/schemas,acq-models/acquisitions-unit/schemas,raml-util/schemas
+      acq-models/common/schemas,acq-models/mod-orders/schemas,acq-models/mod-orders-storage/schemas,acq-models/acquisitions-unit/schemas,acq-models/mod-invoice-storage/schemas,raml-util/schemas
     </jsonschema_paths>
     <generated_sources_dir>${project.build.directory}/generated-sources</generated_sources_dir>
     <jsonschema2pojo_output_dir>${generated_sources_dir}/jsonschema2pojo</jsonschema2pojo_output_dir>
@@ -294,6 +294,16 @@
             <configuration>
               <sourceDirectory>${basedir}/ramls/acq-models/mod-finance/schemas</sourceDirectory>
               <targetPackage>org.folio.rest.acq.model.finance</targetPackage>
+            </configuration>
+          </execution>
+          <execution>
+            <id>invoice-storage</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <sourceDirectory>${basedir}/ramls/acq-models/mod-invoice-storage/schemas</sourceDirectory>
+              <targetPackage>org.folio.rest.acq.model.invoice</targetPackage>
             </configuration>
           </execution>
           <execution>

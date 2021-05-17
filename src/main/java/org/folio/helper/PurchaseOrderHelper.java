@@ -12,6 +12,7 @@ import static org.folio.orders.utils.ErrorCodes.MISSING_ONGOING;
 import static org.folio.orders.utils.ErrorCodes.ONGOING_NOT_ALLOWED;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS;
+import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_REOPEN_PERMISSIONS;
 import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_UNOPEN_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
@@ -39,6 +40,7 @@ import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToApp
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToClosed;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToOpen;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToPending;
+import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToReopen;
 import static org.folio.orders.utils.POProtectedFields.getFieldNames;
 import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder;
 import static org.folio.orders.utils.ProtectedOperationType.CREATE;
@@ -121,6 +123,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private static final String PERMISSION_ORDER_APPROVE = "orders.item.approve";
   private static final String PERMISSION_ORDER_UNOPEN = "orders.item.unopen";
+  private static final String PERMISSION_ORDER_REOPEN = "orders.item.reopen";
   private static final String SEARCH_ORDERS_BY_LINES_DATA = resourcesPath(SEARCH_ORDERS) + SEARCH_PARAMS;
   public static final String GET_PURCHASE_ORDERS = resourcesPath(PURCHASE_ORDER) + SEARCH_PARAMS;
   public static final String EMPTY_ARRAY = "[]";
@@ -319,6 +322,13 @@ public class PurchaseOrderHelper extends AbstractHelper {
               return CompletableFuture.completedFuture(null);
             }
           })
+          .thenCompose(ok -> {
+            if (isTransitionToReopen(poFromStorage, compPO)) {
+              checkOrderReopenPermissions();
+              return reopenOrder(compPO);
+            }
+            return CompletableFuture.completedFuture(null);
+          })
           .thenCompose(v -> updatePoLines(poFromStorage, compPO))
           .thenCompose(v -> {
             if (isTransitionToOpen) {
@@ -334,7 +344,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private CompletionStage<Void> closeOrder(CompositePurchaseOrder compPO) {
     return fetchCompositePoLines(compPO).thenCompose(lines -> {
-      EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(WorkflowStatusName.OPEN_TO_CLOSE);
+      EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(WorkflowStatusName.OPEN_TO_CLOSED);
       CompositePurchaseOrder cloneCompPO = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
       return strategy.processEncumbrances(cloneCompPO.withCompositePoLines(lines), getRequestContext());
     });
@@ -364,6 +374,14 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .withLimit(poLineIds.size());
     return restClient.get(requestEntry, requestContext, PieceCollection.class)
                      .thenApply(PieceCollection::getPieces);
+  }
+
+  private CompletionStage<Void> reopenOrder(CompositePurchaseOrder compPO) {
+    return fetchCompositePoLines(compPO).thenCompose(lines -> {
+      EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(WorkflowStatusName.CLOSED_TO_OPEN);
+      CompositePurchaseOrder cloneCompPO = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
+      return strategy.processEncumbrances(cloneCompPO.withCompositePoLines(lines), getRequestContext());
+    });
   }
 
   public CompletableFuture<Void> handleFinalOrderStatus(CompositePurchaseOrder compPO, String initialOrdersStatus) {
@@ -808,6 +826,12 @@ public class PurchaseOrderHelper extends AbstractHelper {
     }
   }
 
+  private void checkOrderReopenPermissions() {
+    if (isUserNotHaveReopenPermission()) {
+      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_REOPEN_PERMISSIONS);
+    }
+  }
+
   private boolean isApprovalRequiredConfiguration(JsonObject config) {
     return Optional.ofNullable(config.getString("approvals"))
       .map(approval -> new JsonObject(approval).getBoolean("isApprovalRequired"))
@@ -1128,6 +1152,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private boolean isUserNotHaveUnopenPermission() {
     return !getProvidedPermissions().contains(PERMISSION_ORDER_UNOPEN);
+  }
+
+  private boolean isUserNotHaveReopenPermission() {
+    return !getProvidedPermissions().contains(PERMISSION_ORDER_REOPEN);
   }
 
   private CompositePurchaseOrder validateMaterialTypes(CompositePurchaseOrder purchaseOrder){

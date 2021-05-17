@@ -74,7 +74,8 @@
           "permissionsDesired": [
             "orders.acquisitions-units-assignments.manage",
             "orders.item.approve",
-            "orders.item.unopen"
+            "orders.item.unopen",
+            "orders.item.reopen"
           ],
           "modulePermissions": [
             "modperms.orders.item.put"
@@ -898,6 +899,12 @@
     {
       "id": "tags",
       "version": "1.0"
+    }
+  ],
+  "optional": [
+    {
+      "id": "invoice",
+      "version": "7.0"
     }
   ],
   "permissionSets": [
