@@ -1,11 +1,11 @@
 #%RAML 1.0
 title: "Titles"
-baseUri: http://github.com/org/folio/mod-orders-storage
+baseUri: http://github.com/org/folio/mod-orders
 version: v1.0
 
 documentation:
-  - title: Titles
-    content: <b>CRUD API to manage Titles.</b>
+  - title: Holding summaries
+    content: <b>CRUD API to manage Holding summaries.</b>
 
 types:
     holding_summary: !include acq-models/mod-orders/schemas/holding_summary.json
@@ -24,7 +24,7 @@ resourceTypes:
 
 /orders/holdings-summary:
   /{id}:
-    description: Get and Delete a specific batch voucher. Update operation is not allowed
+    description: Get summary by holding id
     type:
       item-collection-get:
         schema: holding_summary_collection
