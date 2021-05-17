@@ -11,10 +11,10 @@ import static org.folio.TestConstants.PO_ID_OPEN_STATUS;
 import static org.folio.TestConstants.PO_ID_OPEN_TO_BE_CLOSED;
 import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITHOUT_PO_LINES;
 import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITH_PO_LINES;
+import static org.folio.TestUtils.checkVertxContextCompletion;
 import static org.folio.helper.AbstractHelper.ORDER_ID;
 import static org.folio.helper.CheckinHelper.IS_ITEM_ORDER_CLOSED_PRESENT;
-import static org.folio.helper.InventoryHelper.ITEMS;
-import static org.folio.TestUtils.checkVertxContextCompletion;
+import static org.folio.service.inventory.InventoryManager.ITEMS;
 import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
 import static org.folio.rest.impl.MockServer.getItemUpdates;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
@@ -30,12 +30,8 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -52,12 +48,15 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus;
 import org.folio.service.finance.transaction.EncumbranceService;
+import org.folio.service.orders.PurchaseOrderService;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
@@ -75,9 +74,13 @@ public class ReceiveOrderStatusChangeHandlerTest {
   private static final Logger logger = LogManager.getLogger();
 
   private static final String PO_ID_OPEN_TO_BE_CLOSED_500_ON_UPDATE = "bad500cc-cccc-500c-accc-cccccccccccc";
-
   private static Vertx vertx;
   private static boolean runningOnOwn;
+
+  @Autowired
+  private EncumbranceService encumbranceService;
+  @Autowired
+  private PurchaseOrderService purchaseOrderService;
 
   @BeforeAll
   static void before() throws InterruptedException, ExecutionException, TimeoutException {
@@ -85,12 +88,14 @@ public class ReceiveOrderStatusChangeHandlerTest {
       ApiTestSuite.before();
       runningOnOwn = true;
     }
-
     vertx = Vertx.vertx();
     SpringContextUtil.init(vertx, vertx.getOrCreateContext(), ApplicationConfig.class);
-    EncumbranceService encumbranceService = mock(EncumbranceService.class);
-    doReturn(CompletableFuture.completedFuture(null)).when(encumbranceService).updateEncumbrancesOrderStatus(any(), any(), any());
-    vertx.eventBus().consumer(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address, new ReceiveOrderStatusChangeHandler(vertx, encumbranceService));
+  }
+
+  @BeforeEach
+  void initMocks(){
+    SpringContextUtil.autowireDependencies(this, vertx.getOrCreateContext());
+    vertx.eventBus().consumer(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address, new ReceiveOrderStatusChangeHandler(vertx, encumbranceService, purchaseOrderService));
   }
 
   @AfterEach
@@ -281,4 +286,5 @@ public class ReceiveOrderStatusChangeHandlerTest {
 
     vertx.eventBus().request(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address, data, deliveryOptions, replyHandler);
   }
+
 }

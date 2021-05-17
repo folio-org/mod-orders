@@ -179,7 +179,7 @@ public abstract class AbstractHelper {
       }
       httpClient
         .request(HttpMethod.POST, recordData.toBuffer(), endpoint, okapiHeaders)
-        .thenApply(this::verifyAndExtractRecordId)
+        .thenApply(HelperUtils::verifyAndExtractRecordId)
         .thenAccept(id -> {
           future.complete(id);
           logger.debug("'POST {}' request successfully processed. Record with '{}' id has been created", endpoint, id);
@@ -228,21 +228,6 @@ public abstract class AbstractHelper {
     }
 
     return future;
-  }
-
-  private String verifyAndExtractRecordId(org.folio.rest.tools.client.Response response) {
-    logger.debug("Validating received response");
-
-    JsonObject body = verifyAndExtractBody(response);
-
-    String id;
-    if (body != null && !body.isEmpty() && body.containsKey(ID)) {
-      id = body.getString(ID);
-    } else {
-      String location = response.getHeaders().get(LOCATION);
-      id = location.substring(location.lastIndexOf('/') + 1);
-    }
-    return id;
   }
 
   protected String getCurrentUserId() {

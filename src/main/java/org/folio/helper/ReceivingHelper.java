@@ -22,8 +22,8 @@ import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.rest.acq.model.Piece;
-import org.folio.rest.acq.model.Piece.ReceivingStatus;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
 import org.folio.rest.jaxrs.model.ReceivedItem;
@@ -32,6 +32,8 @@ import org.folio.rest.jaxrs.model.ReceivingHistoryCollection;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeReceived;
+import org.folio.service.AcquisitionsUnitsService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
@@ -46,6 +48,8 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
    * Map with PO line id as a key and value is map with piece id as a key and {@link ReceivedItem} as a value
    */
   private final Map<String, Map<String, ReceivedItem>> receivingItems;
+  @Autowired
+  private AcquisitionsUnitsService acquisitionsUnitsService;
 
   public ReceivingHelper(ReceivingCollection receivingCollection, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
@@ -70,17 +74,17 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   public CompletableFuture<ReceivingResults> receiveItems(ReceivingCollection receivingCollection) {
     return getPoLines(new ArrayList<>(receivingItems.keySet()))
       .thenCompose(poLines -> removeForbiddenEntities(poLines, receivingItems))
-      .thenCompose(vVoid -> processReceiveItems(receivingCollection));
+      .thenCompose(vVoid -> processReceiveItems(receivingCollection, getRequestContext()));
   }
 
-  private CompletableFuture<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection) {
+  private CompletableFuture<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
     Map<String, Map<String, String>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnReceiving(receivingCollection);
     // 1. Get piece records from storage
-    return this.retrievePieceRecords(receivingItems)
+    return this.retrievePieceRecords(receivingItems, requestContext)
       // 2. Filter locationId
       .thenCompose(this::filterMissingLocations)
       // 3. Update items in the Inventory if required
-      .thenCompose(pieces -> updateInventoryItems(pieceLocationsGroupedByPoLine, pieces))
+      .thenCompose(pieces -> updateInventoryItems(pieceLocationsGroupedByPoLine, pieces, requestContext))
       // 4. Update piece records with receiving details which do not have associated item
       .thenApply(this::updatePieceRecordsWithoutItems)
       // 5. Update received piece records in the storage
@@ -169,8 +173,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     CompletableFuture<ReceivingHistoryCollection> future = new CompletableFuture<>();
 
     try {
-      AcquisitionsUnitsHelper acqUnitsHelper = new AcquisitionsUnitsHelper(httpClient, okapiHeaders, ctx, lang);
-      acqUnitsHelper.buildAcqUnitsCqlExprToSearchRecords()
+      acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(getRequestContext())
         .thenCompose(acqUnitsCqlExpr -> {
           String cql = StringUtils.isEmpty(query) ? acqUnitsCqlExpr : combineCqlExpressions("and", acqUnitsCqlExpr, query);
           String endpoint = String.format(GET_RECEIVING_HISTORY_BY_QUERY, limit, offset, buildQuery(cql, logger), lang);
@@ -238,19 +241,20 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
   @Override
   boolean isRevertToOnOrder(Piece piece) {
-    return piece.getReceivingStatus() == ReceivingStatus.RECEIVED
-        && inventoryHelper
+    return piece.getReceivingStatus() == Piece.ReceivingStatus.RECEIVED
+        && inventoryManager
           .isOnOrderItemStatus(piecesByLineId.get(piece.getPoLineId()).get(piece.getId()));
   }
 
+
   @Override
-  CompletableFuture<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece) {
+  CompletableFuture<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
     ReceivedItem receivedItem = piecesByLineId.get(piece.getPoLineId())
       .get(piece.getId());
-    return inventoryHelper
+    return inventoryManager
       // Update item records with receiving information and send updates to
       // Inventory
-      .receiveItem(item, receivedItem)
+      .receiveItem(item, receivedItem, requestContext)
       // Update Piece record object with receiving details if item updated
       // successfully
       .thenApply(v -> {
@@ -297,12 +301,12 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     }
 
     // Piece record might be received or rolled-back to Expected
-    if (inventoryHelper.isOnOrderItemStatus(receivedItem)) {
+    if (inventoryManager.isOnOrderItemStatus(receivedItem)) {
       piece.setReceivedDate(null);
-      piece.setReceivingStatus(ReceivingStatus.EXPECTED);
+      piece.setReceivingStatus(Piece.ReceivingStatus.EXPECTED);
     } else {
       piece.setReceivedDate(new Date());
-      piece.setReceivingStatus(ReceivingStatus.RECEIVED);
+      piece.setReceivingStatus(Piece.ReceivingStatus.RECEIVED);
     }
   }
 
