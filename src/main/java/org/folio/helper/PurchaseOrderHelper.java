@@ -348,11 +348,13 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private CompletableFuture<Void> checkLocationsAndPiecesConsistency(List<CompositePoLine> poLines, RequestContext requestContext) {
     logger.info("checkLocationsAndPiecesConsistency start");
-    List<CompositePoLine> linesWithId = poLines.stream().filter(compositePoLine -> StringUtils.isNotEmpty(compositePoLine.getId())).collect(Collectors.toList());
-    List<String> lineIds = linesWithId.stream().map(CompositePoLine::getId).collect(toList());
+    List<CompositePoLine> linesWithIdWithoutManualPieceReceived = poLines.stream().filter(
+      compositePoLine -> StringUtils.isNotEmpty(compositePoLine.getId()) && Boolean.FALSE.equals(compositePoLine.getCheckinItems()))
+      .collect(Collectors.toList());
+    List<String> lineIds = linesWithIdWithoutManualPieceReceived.stream().map(CompositePoLine::getId).collect(toList());
     return getPiecesByLineIdsByChunks(lineIds, requestContext)
                   .thenApply(pieces -> new PieceCollection().withPieces(pieces).withTotalRecords(pieces.size()))
-                  .thenAccept(pieces -> verifyLocationsAndPiecesConsistency(linesWithId, pieces));
+                  .thenAccept(pieces -> verifyLocationsAndPiecesConsistency(linesWithIdWithoutManualPieceReceived, pieces));
   }
 
   public CompletableFuture<List<Piece>> getPiecesByLineIdsByChunks(List<String> lineIds, RequestContext requestContext) {
