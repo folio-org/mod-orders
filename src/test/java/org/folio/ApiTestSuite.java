@@ -21,6 +21,7 @@ import org.folio.rest.core.RestClientTest;
 import org.folio.rest.impl.AcquisitionsMembershipsTest;
 import org.folio.rest.impl.AcquisitionsUnitsTest;
 import org.folio.rest.impl.CheckinReceivingApiTest;
+import org.folio.rest.impl.HoldingsSummaryAPITest;
 import org.folio.rest.impl.OrderTemplateTest;
 import org.folio.rest.impl.PieceApiTest;
 import org.folio.rest.impl.PoNumberApiTest;
@@ -43,6 +44,7 @@ import org.folio.service.finance.transaction.EncumbranceServiceTest;
 import org.folio.service.finance.FundServiceTest;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.TransactionServiceTest;
+import org.folio.service.inventory.HoldingsSummaryServiceTest;
 import org.folio.service.orders.CombinedOrderDataPopulateServiceTest;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilderTest;
 import org.folio.service.orders.FundsDistributionServiceTest;
@@ -251,4 +253,14 @@ public class ApiTestSuite {
   @Nested
   class OngoingOrderValidatorTestNested extends OngoingOrderValidatorTest {
   }
+
+  @Nested
+  class HoldingsSummaryAPITestNested extends HoldingsSummaryAPITest {
+  }
+
+  @Nested
+  class HoldingsSummaryServiceTestNested extends HoldingsSummaryServiceTest {
+  }
+
+
 }

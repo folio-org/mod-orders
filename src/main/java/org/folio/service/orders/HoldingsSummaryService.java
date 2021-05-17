@@ -4,7 +4,6 @@ import static java.util.stream.Collectors.toMap;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -14,42 +13,42 @@ import org.folio.rest.jaxrs.model.HoldingSummaryCollection;
 import org.folio.rest.jaxrs.model.OrderCloseReason;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.json.JsonObject;
 
 public class HoldingsSummaryService {
 
-
-  @Autowired
   private PurchaseOrderService purchaseOrderService;
-  @Autowired
+
   private PurchaseOrderLineService purchaseOrderLineService;
 
-  public HoldingsSummaryService(PurchaseOrderService purchaseOrderService) {
+  public HoldingsSummaryService(PurchaseOrderService purchaseOrderService,PurchaseOrderLineService purchaseOrderLineService) {
     this.purchaseOrderService = purchaseOrderService;
+    this.purchaseOrderLineService = purchaseOrderLineService;
   }
 
-  public CompletionStage<HoldingSummaryCollection> getHoldingsSummary(String holdingId, RequestContext requestContext) {
+  public CompletableFuture<HoldingSummaryCollection> getHoldingsSummary(String holdingId, RequestContext requestContext) {
     var query = String.format("locations.holdingId==%s", holdingId);
     return purchaseOrderLineService.getOrderLines(query, 0, Integer.MAX_VALUE, requestContext)
       .thenCompose(lines -> {
-        var lineIds = lines.stream()
-          .map(PoLine::getId)
+        var purchaseOrderIds = lines.stream()
+          .map(PoLine::getPurchaseOrderId)
           .collect(Collectors.toList());
-
-        return purchaseOrderService.getPurchaseOrdersByPoLineIds(lineIds, requestContext)
+        if (lines.isEmpty()){
+          return CompletableFuture.completedFuture((new HoldingSummaryCollection().withTotalRecords(0)));
+        } else
+        return purchaseOrderService.getPurchaseOrdersByIds(purchaseOrderIds, requestContext)
           .thenCompose(orders -> buildHoldingSummaries(orders, lines))
           .thenApply(hs -> new HoldingSummaryCollection().withHoldingSummaries(hs).withTotalRecords(hs.size()));
       });
   }
 
-  private CompletionStage<List<HoldingSummary>> buildHoldingSummaries(List<PurchaseOrder> orders, List<PoLine> lines) {
+  private CompletableFuture<List<HoldingSummary>> buildHoldingSummaries(List<PurchaseOrder> orders, List<PoLine> lines) {
     var ordersById = orders.stream()
       .collect(toMap(PurchaseOrder::getId, Function.identity()));
 
     var holdingSummaryElement = lines.stream()
-      .map(poLine -> buildHoldingSummaryElement(poLine, ordersById.get(poLine.getId())))
+      .map(poLine -> buildHoldingSummaryElement(poLine, ordersById.get(poLine.getPurchaseOrderId())))
       .collect(Collectors.toList());
 
     return CompletableFuture.completedFuture(holdingSummaryElement);
@@ -59,8 +58,12 @@ public class HoldingsSummaryService {
     return new HoldingSummary().withPoLineId(poLine.getId())
       .withPoLineNumber(poLine.getPoLineNumber())
       .withOrderStatus(HoldingSummary.OrderStatus.fromValue(purchaseOrder.getWorkflowStatus().value()))
-      .withOrderCloseReason(JsonObject.mapFrom(purchaseOrder.getCloseReason()).mapTo(OrderCloseReason.class))
+      .withOrderCloseReason(mapCloseReason(purchaseOrder))
       .withOrderType(HoldingSummary.OrderType.fromValue(purchaseOrder.getOrderType().toString()))
       .withPolReceiptStatus(HoldingSummary.PolReceiptStatus.fromValue(poLine.getReceiptStatus().toString()));
+  }
+
+  private OrderCloseReason mapCloseReason(PurchaseOrder purchaseOrder) {
+    return purchaseOrder.getCloseReason() != null ? JsonObject.mapFrom(purchaseOrder.getCloseReason()).mapTo(OrderCloseReason.class) : null;
   }
 }
