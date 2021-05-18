@@ -931,7 +931,6 @@ public class PurchaseOrdersApiTest {
     assertEquals(1, instancesSearches.size());
     //setting just one location in the above step
     assertEquals(1, holdingsSearches.size());
-    assertEquals(1, itemsSearches.size());
 
     verifyInventoryInteraction(resp, 1);
     verifyCalculatedData(resp);
@@ -988,7 +987,6 @@ public class PurchaseOrdersApiTest {
 
     assertEquals(1, instancesSearches.size());
     assertEquals(1, holdingsSearches.size());
-    assertEquals(1, itemsSearches.size());
 
     verifyInventoryInteraction(resp, 1);
     verifyCalculatedData(resp);
@@ -1853,7 +1851,12 @@ public class PurchaseOrdersApiTest {
       .withQuantityElectronic(2)
       .withQuantityPhysical(2));
 
-    addMockEntry(PURCHASE_ORDER, reqData);
+    JsonObject storJson = JsonObject.mapFrom(reqData);
+    storJson.remove(COMPOSITE_PO_LINES);
+    storJson.remove("totalEstimatedPrice");
+    storJson.remove("totalItems");
+    PurchaseOrder purchaseOrder = JsonObject.mapFrom(storJson).mapTo(PurchaseOrder.class);
+    addMockEntry(PURCHASE_ORDER, purchaseOrder);
     addMockEntry(PO_LINES, line);
     createMockTitle(line);
 
@@ -3455,7 +3458,7 @@ public class PurchaseOrdersApiTest {
     reqData.setVendor(ACTIVE_VENDOR_ID);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
     assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.PENDING));
-
+    MockServer.serverRqRs.clear();
     CompositePurchaseOrder respData = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
         .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, APPROVAL_PERMISSIONS_HEADER),
       APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
@@ -3576,15 +3579,15 @@ public class PurchaseOrdersApiTest {
     Header errorHeader = new Header(OKAPI_HEADER_TENANT, FUND_CANNOT_BE_PAID_TENANT);
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(errorHeader, X_OKAPI_USER_ID), APPLICATION_JSON, 422);
-
+    MockServer.serverRqRs.clear();
     errorHeader = new Header(OKAPI_HEADER_TENANT, BUDGET_IS_INACTIVE_TENANT);
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(errorHeader, X_OKAPI_USER_ID), APPLICATION_JSON, 422);
-
+    MockServer.serverRqRs.clear();
     errorHeader = new Header(OKAPI_HEADER_TENANT, LEDGER_NOT_FOUND_FOR_TRANSACTION_TENANT);
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(errorHeader, X_OKAPI_USER_ID), APPLICATION_JSON, 422);
-
+    MockServer.serverRqRs.clear();
     errorHeader = new Header(OKAPI_HEADER_TENANT, BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT);
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(errorHeader, X_OKAPI_USER_ID), APPLICATION_JSON, 422);

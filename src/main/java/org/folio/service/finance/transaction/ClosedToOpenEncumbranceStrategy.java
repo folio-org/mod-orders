@@ -9,8 +9,8 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.FundsDistributionService;
-import org.folio.service.finance.WorkflowStatusName;
 import org.folio.service.finance.budget.BudgetRestrictionService;
+import org.folio.service.orders.OrderWorkflowType;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -81,7 +81,7 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
   }
 
   @Override
-  public WorkflowStatusName getStrategyName() {
-    return WorkflowStatusName.CLOSED_TO_OPEN;
+  public OrderWorkflowType getStrategyName() {
+    return OrderWorkflowType.CLOSED_TO_OPEN;
   }
 }

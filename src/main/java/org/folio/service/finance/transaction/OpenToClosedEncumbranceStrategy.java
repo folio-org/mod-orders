@@ -3,7 +3,7 @@ package org.folio.service.finance.transaction;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.service.finance.WorkflowStatusName;
+import org.folio.service.orders.OrderWorkflowType;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -32,7 +32,7 @@ public class OpenToClosedEncumbranceStrategy implements EncumbranceWorkflowStrat
   }
 
   @Override
-  public WorkflowStatusName getStrategyName() {
-    return WorkflowStatusName.OPEN_TO_CLOSED;
+  public OrderWorkflowType getStrategyName() {
+    return OrderWorkflowType.OPEN_TO_CLOSED;
   }
 }

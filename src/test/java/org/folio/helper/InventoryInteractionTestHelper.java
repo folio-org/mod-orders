@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.fail;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
 import static org.folio.TestUtils.getMockData;
-import static org.folio.helper.InventoryHelper.*;
+import static org.folio.service.inventory.InventoryManager.*;
 import static org.folio.orders.utils.HelperUtils.CONFIGS;
 import static org.folio.orders.utils.HelperUtils.CONFIG_NAME;
 import static org.folio.orders.utils.HelperUtils.CONFIG_VALUE;
@@ -59,11 +59,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.acq.model.Piece;
+
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReceivedItem;
 
@@ -327,7 +328,7 @@ public class InventoryInteractionTestHelper {
   }
 
   private static void verifyItemsCreated(Header tenant, List<JsonObject> inventoryItems, CompositePoLine pol) {
-    Map<Piece.PieceFormat, Integer> expectedItemsPerResourceType = HelperUtils.calculatePiecesWithItemIdQuantity(pol,
+    Map<Piece.Format, Integer> expectedItemsPerResourceType = HelperUtils.calculatePiecesWithItemIdQuantity(pol,
       pol.getLocations());
 
     Map<String, List<JsonObject>> itemsByMaterial = inventoryItems.stream()
@@ -338,7 +339,7 @@ public class InventoryInteractionTestHelper {
       if (quantity < 1) {
         return;
       }
-      if (resourceType.equals(Piece.PieceFormat.ELECTRONIC)) {
+      if (resourceType.equals(Piece.Format.ELECTRONIC)) {
         assertThat(quantity, is(itemsByMaterial.get(pol.getEresource().getMaterialType()).size()));
         itemsByMaterial.get(pol.getEresource().getMaterialType())
           .forEach(item -> verifyItemRecordRequest(tenant, item, pol.getEresource().getMaterialType()));

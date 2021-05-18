@@ -8,8 +8,7 @@ import static org.folio.TestConfig.startMockServer;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import org.folio.helper.InventoryHelperTest;
-import org.folio.helper.PiecesHelperTest;
+import org.folio.helper.InventoryManagerTest;
 import org.folio.helper.PurchaseOrderHelperTest;
 import org.folio.helper.PurchaseOrderLineHelperTest;
 import org.folio.orders.events.handlers.CheckInOrderStatusChangeChangeHandlerTest;
@@ -18,8 +17,6 @@ import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
 import org.folio.orders.utils.HelperUtilsTest;
 import org.folio.orders.utils.validators.OngoingOrderValidatorTest;
 import org.folio.rest.core.RestClientTest;
-import org.folio.rest.impl.AcquisitionsMembershipsTest;
-import org.folio.rest.impl.AcquisitionsUnitsTest;
 import org.folio.rest.impl.CheckinReceivingApiTest;
 import org.folio.rest.impl.OrderTemplateTest;
 import org.folio.rest.impl.PieceApiTest;
@@ -37,13 +34,14 @@ import org.folio.service.PrefixServiceTest;
 import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
 import org.folio.service.exchange.ManualExchangeRateProviderTest;
+import org.folio.service.finance.FundServiceTest;
 import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
 import org.folio.service.finance.budget.BudgetRestrictionServiceTest;
 import org.folio.service.finance.transaction.EncumbranceRelationsHoldersBuilderTest;
 import org.folio.service.finance.transaction.EncumbranceServiceTest;
-import org.folio.service.finance.FundServiceTest;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.TransactionServiceTest;
+import org.folio.service.orders.AcquisitionsUnitsServiceTest;
 import org.folio.service.orders.CombinedOrderDataPopulateServiceTest;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilderTest;
 import org.folio.service.orders.FundsDistributionServiceTest;
@@ -53,12 +51,12 @@ import org.folio.service.orders.PurchaseOrderLineServiceTest;
 import org.folio.service.orders.PurchaseOrderServiceTest;
 import org.folio.service.orders.ReEncumbranceHoldersBuilderTest;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateServiceTest;
+import org.folio.service.pieces.PiecesServiceTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
-
 
 @RunWith(JUnitPlatform.class)
 public class ApiTestSuite {
@@ -76,11 +74,7 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class AcquisitionsUnitsTestNested extends AcquisitionsUnitsTest {
-  }
-
-  @Nested
-  class AcquisitionsMembershipsTestNested extends AcquisitionsMembershipsTest {
+  class AcquisitionsUnitsServiceTestNested extends AcquisitionsUnitsServiceTest {
   }
 
   @Nested
@@ -162,7 +156,7 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class PiecesHelperTestNested extends PiecesHelperTest {
+  class PiecesServiceTestNested extends PiecesServiceTest {
   }
 
   @Nested
@@ -194,7 +188,7 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class InventoryHelperTestNested extends InventoryHelperTest {
+  class InventoryManagerTestNested extends InventoryManagerTest {
   }
 
   @Nested

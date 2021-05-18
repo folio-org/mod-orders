@@ -1,8 +1,6 @@
 package org.folio.orders.events.handlers;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.orders.utils.HelperUtils.LANG;
-import static org.folio.orders.utils.HelperUtils.getPoLineById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
@@ -22,9 +20,11 @@ import org.folio.orders.utils.AsyncUtil;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -41,9 +41,12 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
   private static final int LIMIT = Integer.MAX_VALUE;
   private static final String PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId==%s&limit=%s";
 
+  private PurchaseOrderLineService purchaseOrderLineService;
+
   @Autowired
-  public ReceiptStatusConsistency(Vertx vertx) {
+  public ReceiptStatusConsistency(Vertx vertx, PurchaseOrderLineService purchaseOrderLineService) {
     super(vertx.getOrCreateContext());
+    this.purchaseOrderLineService = purchaseOrderLineService;
   }
 
   @Override
@@ -66,11 +69,9 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     getPieces(query, httpClient, okapiHeaders, logger).thenAccept(piecesCollection -> {
       List<org.folio.rest.acq.model.Piece> listOfPieces = piecesCollection.getPieces();
 
-      String lang = messageFromEventBus.getString(LANG);
       // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
-      getPoLineById(poLineIdUpdate, lang, httpClient, okapiHeaders, logger)
-        .thenAccept(poLineJson -> {
-        PoLine poLine = poLineJson.mapTo(PoLine.class);
+      purchaseOrderLineService.getOrderLineById(poLineIdUpdate, new RequestContext(ctx, okapiHeaders))
+        .thenAccept(poLine -> {
           if (poLine.getReceiptStatus().equals(PoLine.ReceiptStatus.ONGOING)) {
             return;
           }
@@ -163,10 +164,10 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
         }
         future.complete(jsonPieces.mapTo(PieceCollection.class));
       })
-        .exceptionally(t -> {
-          future.completeExceptionally(t);
-          return null;
-        });
+      .exceptionally(t -> {
+        future.completeExceptionally(t);
+        return null;
+      });
     } catch (Exception e) {
       future.completeExceptionally(e);
     }
