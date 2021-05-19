@@ -56,7 +56,6 @@ import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHI
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
@@ -71,7 +70,6 @@ import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ORDER_ID_WITH_PO_LINES;
 import static org.folio.rest.impl.MockServer.PO_NUMBER_ERROR_X_OKAPI_TENANT;
 import static org.folio.rest.impl.MockServer.addMockEntry;
-import static org.folio.rest.impl.MockServer.getOrderLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getQueryParams;
 import static org.folio.rest.impl.MockServer.getRqRsEntries;
@@ -883,7 +881,6 @@ public class PurchaseOrderLinesApiTest {
 
     assertEquals(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE, resp.getId());
     assertEquals(1, getPoLineSearches().size());
-    assertNull(getOrderLineSearches());
     assertThat(getTitlesSearches(), hasSize(1));
   }
 
@@ -901,7 +898,6 @@ public class PurchaseOrderLinesApiTest {
 
     assertEquals(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE, resp.getId());
     assertThat(getPoLineSearches(), hasSize(1));
-    assertNull(getOrderLineSearches());
     assertThat(getTitlesSearches(), hasSize(1));
   }
 
@@ -922,7 +918,6 @@ public class PurchaseOrderLinesApiTest {
 
     assertEquals(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE, resp.getId());
     assertThat(getPoLineSearches(), hasSize(1));
-    assertNull(getOrderLineSearches());
     assertThat(getTitlesSearches(), hasSize(1));
     assertThat(instanceId, is(resp.getInstanceId()));
   }
@@ -945,7 +940,6 @@ public class PurchaseOrderLinesApiTest {
 
     assertEquals(polineId, resp.getId());
     assertThat(getPoLineSearches(), hasSize(1));
-    assertNull(getOrderLineSearches());
     assertThat(getTitlesSearches(), nullValue());
     assertThat(resp.getInstanceId(), nullValue());
   }
@@ -995,7 +989,6 @@ public class PurchaseOrderLinesApiTest {
 
     verifySuccessGet(LINES_PATH, PoLineCollection.class, PROTECTED_READ_ONLY_TENANT);
 
-    assertThat(getOrderLineSearches(), nullValue());
     assertThat(getPoLineSearches(), hasSize(1));
 
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
@@ -1017,13 +1010,12 @@ public class PurchaseOrderLinesApiTest {
     final PoLineCollection poLineCollection = verifySuccessGet(endpointQuery, PoLineCollection.class, PROTECTED_READ_ONLY_TENANT);
 
     assertThat(poLineCollection.getTotalRecords(), is(2));
-    assertThat(getOrderLineSearches(), hasSize(1));
-    assertThat(getPoLineSearches(), nullValue());
+    assertThat(getPoLineSearches(), hasSize(1));
 
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
 
-    List<String> queryParams = getQueryParams(ORDER_LINES);
+    List<String> queryParams = getQueryParams(PO_LINES);
     assertThat(queryParams, hasSize(1));
     String queryToStorage = queryParams.get(0);
     assertThat(queryToStorage, containsString("(" + cql + ")"));

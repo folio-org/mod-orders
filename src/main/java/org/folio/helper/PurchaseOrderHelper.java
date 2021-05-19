@@ -210,7 +210,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<String> buildGetOrdersPath(int limit, int offset, String query) {
-    return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(getRequestContext())
+    return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(getRequestContext(), StringUtils.EMPTY)
       .thenApply(acqUnitsCqlExpr -> {
         if (StringUtils.isEmpty(query)) {
           String queryParam = buildQuery(acqUnitsCqlExpr, logger);

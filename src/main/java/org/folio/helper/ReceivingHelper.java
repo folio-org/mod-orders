@@ -173,7 +173,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     CompletableFuture<ReceivingHistoryCollection> future = new CompletableFuture<>();
 
     try {
-      acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(getRequestContext())
+      acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(getRequestContext(), StringUtils.EMPTY)
         .thenCompose(acqUnitsCqlExpr -> {
           String cql = StringUtils.isEmpty(query) ? acqUnitsCqlExpr : combineCqlExpressions("and", acqUnitsCqlExpr, query);
           String endpoint = String.format(GET_RECEIVING_HISTORY_BY_QUERY, limit, offset, buildQuery(cql, logger), lang);

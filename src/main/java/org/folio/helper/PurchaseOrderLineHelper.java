@@ -28,7 +28,6 @@ import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
@@ -112,7 +111,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   private static final String ISBN = "ISBN";
   private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
   private static final String GET_PO_LINES_BY_QUERY = resourcesPath(PO_LINES) + SEARCH_PARAMS;
-  private static final String GET_ORDER_LINES_BY_QUERY = resourcesPath(ORDER_LINES) + SEARCH_PARAMS;
   private static final String PO_LINE_NUMBER_ENDPOINT = resourcesPath(PO_LINE_NUMBER) + "?" + PURCHASE_ORDER_ID + "=";
   private static final Pattern PO_LINE_NUMBER_PATTERN = Pattern.compile("([a-zA-Z0-9]{1,22}-)([0-9]{1,3})");
   private static final String CREATE_INVENTORY = "createInventory";
@@ -199,12 +197,13 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
    * @return Completable future which holds {@link PoLineCollection} on success or an exception on any error
    */
   public CompletableFuture<PoLineCollection> getOrderLines(int limit, int offset, String query) {
-    return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(getRequestContext()).thenCompose(acqUnitsCqlExpr -> {
-      if (isEmpty(query)) {
-        return getPoLines(limit, offset, acqUnitsCqlExpr);
-      }
-      return getPoLines(limit, offset, combineCqlExpressions("and", acqUnitsCqlExpr, query), GET_ORDER_LINES_BY_QUERY);
-    });
+    return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(getRequestContext(), "purchaseOrder.")
+      .thenCompose(acqUnitsCqlExpr -> {
+        if (isEmpty(query)) {
+          return getPoLines(limit, offset, acqUnitsCqlExpr);
+        }
+        return getPoLines(limit, offset, combineCqlExpressions("and", acqUnitsCqlExpr, query), GET_PO_LINES_BY_QUERY);
+      });
   }
 
   /**
