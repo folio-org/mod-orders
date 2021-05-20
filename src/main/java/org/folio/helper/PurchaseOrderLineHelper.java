@@ -987,7 +987,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
 
   private CompletableFuture<Void> checkLocationsAndPiecesConsistency(CompositePoLine poLine, PoLine lineFromStorage, CompositePurchaseOrder order,
                                                                      RequestContext requestContext) {
-      if (isLocationsAndPiecesConsistencyNeedToBeVerified(poLine, order)) {
+    if (isOpenOrderLocationsAndPiecesConsistencyNeedToBeVerified(poLine, order)) {
       return inventoryManager.getExpectedPiecesByLineId(poLine.getId(), requestContext)
         .thenCompose(existingExpectedPieces -> verifyLocationAndPieceConsistency(Collections.singletonList(poLine), existingExpectedPieces))
         .thenCompose(errorCode -> {
@@ -1047,8 +1047,10 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     return future;
   }
 
-  private boolean isLocationsAndPiecesConsistencyNeedToBeVerified(CompositePoLine poLine, CompositePurchaseOrder order) {
-    return order.getWorkflowStatus() == OPEN && Boolean.FALSE.equals(poLine.getCheckinItems())
+  private boolean isOpenOrderLocationsAndPiecesConsistencyNeedToBeVerified(CompositePoLine poLine, CompositePurchaseOrder order) {
+    //TODO: We are going to block update quantity for OPEN order and when "Manually add pieces for receiving" = False
+    //All other logic will be updated in scope of https://issues.folio.org/browse/MODORDERS-511
+    return order.getWorkflowStatus() == OPEN && Boolean.TRUE.equals(poLine.getCheckinItems())
       && poLine.getReceiptStatus() != ReceiptStatus.RECEIPT_NOT_REQUIRED && Boolean.FALSE.equals(poLine.getIsPackage());
   }
 }
