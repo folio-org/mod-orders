@@ -31,6 +31,7 @@ import org.folio.service.finance.rollover.RolloverErrorService;
 import org.folio.service.finance.rollover.RolloverRetrieveService;
 import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.finance.transaction.TransactionSummariesService;
+import org.folio.service.orders.HoldingsSummaryService;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilder;
@@ -261,6 +262,12 @@ public class ApplicationConfig {
   @Bean
   TagService tagService(RestClient restClient) {
     return new TagService(restClient);
+  }
+
+  @Bean
+  HoldingsSummaryService holdingsSummaryService(PurchaseOrderService purchaseOrderService,
+      PurchaseOrderLineService purchaseOrderLineService) {
+    return new HoldingsSummaryService(purchaseOrderService, purchaseOrderLineService);
   }
 
   @Bean
