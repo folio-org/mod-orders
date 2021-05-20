@@ -187,6 +187,7 @@ public class InventoryManager {
           getOrCreateHoldingsRecord(compPOL.getInstanceId(), locationId, requestContext)
             .thenCompose(holdingId -> {
                 // Items are not going to be created when create inventory is "Instance, Holding"
+                addHoldingId(polLocations, holdingId);
                 if (isItemsUpdateRequired) {
                   return handleItemRecords(compPOL, holdingId, polLocations, requestContext);
                 } else {
@@ -1140,6 +1141,12 @@ public class InventoryManager {
   public CompletableFuture<String> createInstance(JsonObject instanceRecJson, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES));
     return restClient.post(requestEntry, instanceRecJson, PostResponseType.UUID,  String.class, requestContext);
+  }
+
+  private void addHoldingId(List<Location> polLocations, String holdingId) {
+    polLocations.forEach(location -> {
+      location.setHoldingId(holdingId);
+    });
   }
 
 }

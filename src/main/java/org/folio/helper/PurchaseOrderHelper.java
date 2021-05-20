@@ -606,9 +606,20 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   public CompletableFuture<Void> openOrderUpdatePoLinesSummary(List<CompositePoLine> compositePoLines) {
     return CompletableFuture.allOf( compositePoLines.stream()
+      .map(this::openOrderRemoveLocationId)
       .map(this::openOrderConvertToPoLine)
       .map(line -> purchaseOrderLineService.updateOrderLine(line, getRequestContext()))
       .toArray(CompletableFuture[]::new));
+  }
+
+  private CompositePoLine openOrderRemoveLocationId(CompositePoLine compositePoLine) {
+    compositePoLine.getLocations().forEach(location ->
+    {
+      if (location.getHoldingId() != null) {
+        location.setLocationId(null);
+      }
+    });
+    return compositePoLine;
   }
 
   public PoLine openOrderConvertToPoLine(CompositePoLine compPoLine) {

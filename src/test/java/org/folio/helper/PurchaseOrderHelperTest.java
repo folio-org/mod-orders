@@ -62,6 +62,7 @@ import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderReEncumberService;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.pieces.PiecesService;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -270,6 +271,11 @@ public class PurchaseOrderHelperTest {
     @Bean
     public InventoryManager inventoryManager() {
       return mock(InventoryManager.class);
+    }
+
+    @Bean
+    public PiecesService piecesService() {
+      return mock(PiecesService.class);
     }
   }
 

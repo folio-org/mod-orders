@@ -867,13 +867,14 @@ public class MockServer {
   private void handlePostHoldingRecord(RoutingContext ctx) {
     logger.info("handlePostHoldingsRecord got: " + ctx.getBodyAsString());
     JsonObject body = ctx.getBodyAsJson();
-    addServerRqRsData(HttpMethod.POST, HOLDINGS_RECORD, body);
 
     // the case when item creation is expected to fail for particular holding
     String id = body.getString(HOLDING_PERMANENT_LOCATION_ID).equals(ID_FOR_INTERNAL_SERVER_ERROR)
       ? ID_FOR_INTERNAL_SERVER_ERROR
       : UUID.randomUUID().toString();
 
+    body.put(ID, id);
+    addServerRqRsData(HttpMethod.POST, HOLDINGS_RECORD, body);
     ctx.response()
       .setStatusCode(201)
       .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
