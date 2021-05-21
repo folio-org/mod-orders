@@ -2,7 +2,7 @@ stages:
 - name: Build
   steps:
   - runScriptConfig:
-      image: maven:3-openjdk-11
+      image: maven:3.6.3-openjdk-11
       shellScript: mvn package -DskipTests
 - name: Build Docker with DIND
   steps:
@@ -20,8 +20,8 @@ stages:
       answers:
         image.repository: docker.dev.folio.org/mod-orders
         image.tag: thunderjet-latest
-        postJob.enabled: true
-      targetNamespace: thunderjet
+        postJob.enabled: "true"
       name: mod-orders
+      targetNamespace: thunderjet
 timeout: 60
 notification: {}
