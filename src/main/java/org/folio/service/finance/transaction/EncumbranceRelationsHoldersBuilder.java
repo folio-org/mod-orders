@@ -105,6 +105,13 @@ public class EncumbranceRelationsHoldersBuilder {
 
   }
 
+  public List<EncumbranceRelationsHolder> withKnownTransactions(
+      List<EncumbranceRelationsHolder> encumbranceHolders,
+      List<Transaction> transactions) {
+    mapHoldersToTransactions(encumbranceHolders, transactions);
+    return withToBeReleasedHolders(encumbranceHolders, transactions);
+  }
+
   public CompletableFuture<List<EncumbranceRelationsHolder>> withBudgets(List<EncumbranceRelationsHolder> encumbranceHolders,
       RequestContext requestContext) {
     List<String> fundIds = encumbranceHolders.stream()
@@ -175,8 +182,6 @@ public class EncumbranceRelationsHoldersBuilder {
           return encumbranceHolders;
         }))
         .orElseGet(() -> CompletableFuture.completedFuture(encumbranceHolders));
-    
-
   }
 
   private List<EncumbranceRelationsHolder> populateLedgerIds(List<Fund> funds,

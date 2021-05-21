@@ -1,5 +1,5 @@
-package org.folio.service.orders;
+package org.folio.service.finance;
 
-public enum OrderWorkflowType {
+public enum WorkflowStatusName {
     OPEN_TO_PENDING, PENDING_TO_OPEN, OPEN_TO_CLOSED, CLOSED_TO_OPEN
 }
