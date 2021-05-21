@@ -28,7 +28,7 @@ public class HoldingsSummaryService {
   }
 
   public CompletableFuture<HoldingSummaryCollection> getHoldingsSummary(String holdingId, RequestContext requestContext) {
-    var query = String.format("locations.holdingId==%s", holdingId);
+    var query = String.format("?query=locations.holdingId==%s", holdingId);
     return purchaseOrderLineService.getOrderLines(query, 0, Integer.MAX_VALUE, requestContext)
       .thenCompose(lines -> {
         var purchaseOrderIds = lines.stream()
