@@ -1,12 +1,8 @@
 package org.folio.service.orders;
 
-import static java.util.stream.Collectors.toMap;
-
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
+import io.vertx.core.json.JsonObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.HoldingSummary;
 import org.folio.rest.jaxrs.model.HoldingSummaryCollection;
@@ -14,7 +10,12 @@ import org.folio.rest.jaxrs.model.OrderCloseReason;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 
-import io.vertx.core.json.JsonObject;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toMap;
 
 public class HoldingsSummaryService {
 
@@ -22,24 +23,25 @@ public class HoldingsSummaryService {
 
   private PurchaseOrderLineService purchaseOrderLineService;
 
-  public HoldingsSummaryService(PurchaseOrderService purchaseOrderService,PurchaseOrderLineService purchaseOrderLineService) {
+  public HoldingsSummaryService(PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService) {
     this.purchaseOrderService = purchaseOrderService;
     this.purchaseOrderLineService = purchaseOrderLineService;
   }
 
   public CompletableFuture<HoldingSummaryCollection> getHoldingsSummary(String holdingId, RequestContext requestContext) {
-    var query = String.format("?query=locations.holdingId==%s", holdingId);
+    var query = String.format("?query=locations=\"holdingId\" : \"%s\"", holdingId);
     return purchaseOrderLineService.getOrderLines(query, 0, Integer.MAX_VALUE, requestContext)
       .thenCompose(lines -> {
         var purchaseOrderIds = lines.stream()
           .map(PoLine::getPurchaseOrderId)
           .collect(Collectors.toList());
-        if (lines.isEmpty()){
+        if (lines.isEmpty()) {
           return CompletableFuture.completedFuture((new HoldingSummaryCollection().withTotalRecords(0)));
-        } else
-        return purchaseOrderService.getPurchaseOrdersByIds(purchaseOrderIds, requestContext)
-          .thenCompose(orders -> buildHoldingSummaries(orders, lines))
-          .thenApply(hs -> new HoldingSummaryCollection().withHoldingSummaries(hs).withTotalRecords(hs.size()));
+        } else {
+          return purchaseOrderService.getPurchaseOrdersByIds(purchaseOrderIds, requestContext)
+            .thenCompose(orders -> buildHoldingSummaries(orders, lines))
+            .thenApply(hs -> new HoldingSummaryCollection().withHoldingSummaries(hs).withTotalRecords(hs.size()));
+        }
       });
   }
 

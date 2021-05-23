@@ -299,12 +299,7 @@ public class HelperUtils {
    * @return URL encoded string
    */
   public static String encodeQuery(String query, Logger logger) {
-    try {
-      return URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
-    } catch (UnsupportedEncodingException e) {
-      logger.error("Error happened while attempting to encode {}", query, e);
-      throw new CompletionException(e);
-    }
+    return URLEncoder.encode(query, StandardCharsets.UTF_8);
   }
 
   public static String buildQuery(String query, Logger logger) {
