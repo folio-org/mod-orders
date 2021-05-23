@@ -24,6 +24,10 @@ resourceTypes:
 
 /orders/holdings-summary:
   /{id}:
+    uriParameters:
+        id:
+          description: The UUID of a holding
+          type: UUID
     description: Get summary by holding id
     type:
       item-collection-get:
