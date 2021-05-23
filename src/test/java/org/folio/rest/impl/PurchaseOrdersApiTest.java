@@ -41,7 +41,6 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIPT_STATUS;
-import static org.folio.orders.utils.ResourcePathResolver.SEARCH_ORDERS;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
@@ -2524,7 +2523,6 @@ public class PurchaseOrdersApiTest {
     final PurchaseOrderCollection purchaseOrders = verifySuccessGet(COMPOSITE_ORDERS_PATH, PurchaseOrderCollection.class, PROTECTED_READ_ONLY_TENANT);
 
     assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET), hasSize(1));
-    assertThat(MockServer.serverRqRs.get(SEARCH_ORDERS, HttpMethod.GET), nullValue());
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
     assertThat(purchaseOrders.getTotalRecords(), is(3));
@@ -2542,13 +2540,12 @@ public class PurchaseOrdersApiTest {
     String endpointQuery = String.format("%s?query=%s%s", COMPOSITE_ORDERS_PATH, queryValue, sortBy);
     final PurchaseOrderCollection purchaseOrders = verifySuccessGet(endpointQuery, PurchaseOrderCollection.class, PROTECTED_READ_ONLY_TENANT);
 
-    assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET), nullValue());
-    assertThat(MockServer.serverRqRs.get(SEARCH_ORDERS, HttpMethod.GET), hasSize(1));
+    assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET), hasSize(1));
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
     assertThat(purchaseOrders.getTotalRecords(), is(1));
 
-    List<String> queryParams = getQueryParams(SEARCH_ORDERS);
+    List<String> queryParams = getQueryParams(PURCHASE_ORDER);
     assertThat(queryParams, hasSize(1));
     String queryToStorage = queryParams.get(0);
     assertThat(queryToStorage, containsString("(" + queryValue + ")"));
@@ -2565,7 +2562,6 @@ public class PurchaseOrdersApiTest {
     verifyGet(COMPOSITE_ORDERS_PATH, headers, APPLICATION_JSON, 200);
 
     assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET), hasSize(1));
-    assertThat(MockServer.serverRqRs.get(SEARCH_ORDERS, HttpMethod.GET), nullValue());
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
 

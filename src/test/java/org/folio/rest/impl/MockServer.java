@@ -489,7 +489,6 @@ public class MockServer {
 
     router.get(resourcePath(PURCHASE_ORDER)).handler(this::handleGetPurchaseOrderById);
     router.get(resourcesPath(PURCHASE_ORDER)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, PURCHASE_ORDER));
-    router.get(resourcesPath(SEARCH_ORDERS)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, SEARCH_ORDERS));
     router.get("/instance-types").handler(this::handleGetInstanceType);
     router.get("/instance-statuses").handler(this::handleGetInstanceStatus);
     router.get("/inventory/instances").handler(this::handleGetInstanceRecord);
