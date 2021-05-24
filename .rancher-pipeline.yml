@@ -9,7 +9,7 @@ stages:
   - publishImageConfig:
       dockerfilePath: ./Dockerfile
       buildContext: .
-      tag: docker.dev.folio.org/mod-orders:thunderjet-460
+      tag: docker.dev.folio.org/mod-orders:thunderjet-latest
       pushRemote: true
       registry: docker.dev.folio.org
 - name: Deploy
@@ -19,7 +19,7 @@ stages:
       version: 0.1.32
       answers:
         image.repository: docker.dev.folio.org/mod-orders
-        image.tag: thunderjet-460
+        image.tag: thunderjet-latest
         postJob.enabled: "true"
       name: mod-orders
       targetNamespace: thunderjet
