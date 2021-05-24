@@ -22,10 +22,15 @@ public class OpenToClosedEncumbranceStrategy implements EncumbranceWorkflowStrat
     EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
     if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
       return encumbranceService.getOrderEncumbrances(compPO.getId(), requestContext)
-        .thenAccept(holder::withEncumbrancesFromStorage)
-        .thenApply(v -> holder.getEncumbrancesFromStorage())
-        .thenAccept(holder::withEncumbrancesForRelease)
-        .thenCompose(v -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext));
+        .thenCompose(transactions -> {
+          if (transactions.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+          } else {
+            holder.withEncumbrancesFromStorage(transactions);
+            holder.withEncumbrancesForRelease(holder.getEncumbrancesFromStorage());
+            return encumbranceService.createOrUpdateEncumbrances(holder, requestContext);
+          }
+        });
     }
     return CompletableFuture.completedFuture(null);
 
