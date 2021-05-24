@@ -62,7 +62,8 @@ public class HoldingsSummaryService {
       .withOrderStatus(HoldingSummary.OrderStatus.fromValue(purchaseOrder.getWorkflowStatus().value()))
       .withOrderCloseReason(mapCloseReason(purchaseOrder))
       .withOrderType(HoldingSummary.OrderType.fromValue(purchaseOrder.getOrderType().toString()))
-      .withPolReceiptStatus(HoldingSummary.PolReceiptStatus.fromValue(poLine.getReceiptStatus().toString()));
+      .withPolReceiptStatus(HoldingSummary.PolReceiptStatus.fromValue(poLine.getReceiptStatus().toString()))
+      .withOrderSentDate(purchaseOrder.getDateOrdered());
   }
 
   private OrderCloseReason mapCloseReason(PurchaseOrder purchaseOrder) {
