@@ -130,6 +130,7 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.POProtectedFields;
 import org.folio.rest.acq.model.Ongoing;
+import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
@@ -154,17 +155,13 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.service.exchange.FinanceExchangeRateService;
 import org.hamcrest.beans.HasPropertyWithValue;
 import org.hamcrest.core.Every;
 import org.hamcrest.core.Is;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
 import io.restassured.http.Header;
 import io.restassured.http.Headers;
@@ -226,6 +223,7 @@ public class PurchaseOrdersApiTest {
   public static final Header ALL_DESIRED_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(AcqDesiredPermissions.getValues()).encode());
   public static final Header APPROVAL_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(Collections.singletonList("orders.item.approve")).encode());
   public static final Header UNOPEN_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(Collections.singletonList("orders.item.unopen")).encode());
+  public static final Header REOPEN_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(Collections.singletonList("orders.item.reopen")).encode());
   static final String ITEMS_NOT_FOUND = UUID.randomUUID().toString();
   private static final String ITEM_MATERIAL_TYPE_ID = "materialTypeId";
   private static final String ITEMS = "items";
@@ -240,9 +238,6 @@ public class PurchaseOrdersApiTest {
   private static final String EXISTING_PO_NUMBER = "oldPoNumber";
   public static final String TENANT_ID = "ordertest";
   public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, TENANT_ID);
-
-  @Mock
-  private FinanceExchangeRateService financeExchangeRateService;
 
   private static boolean runningOnOwn;
 
@@ -265,11 +260,6 @@ public class PurchaseOrdersApiTest {
     if (runningOnOwn) {
       ApiTestSuite.after();
     }
-  }
-
-  @BeforeEach
-  void initMocks(){
-    MockitoAnnotations.openMocks(this);
   }
 
   @Test
@@ -2914,7 +2904,8 @@ public class PurchaseOrdersApiTest {
     reqData.setReEncumber(false);
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()),
-      JsonObject.mapFrom(reqData), EMPTY, 204);
+      JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, REOPEN_PERMISSIONS_HEADER), EMPTY, 204);
 
     PurchaseOrder purchaseOrder = getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class);
     assertThat(purchaseOrder.getWorkflowStatus(), is(PurchaseOrder.WorkflowStatus.OPEN));
@@ -3399,6 +3390,27 @@ public class PurchaseOrdersApiTest {
   }
 
   @Test
+  void testPutOrderHonorsUserReopenPermissions() {
+    logger.info("===  Test case when reopen permission is required and user does not have required permission===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_CLOSED_STATUS).mapTo(CompositePurchaseOrder.class);
+    reqData.setVendor(ACTIVE_VENDOR_ID);
+    List<CompositePoLine> poLines = reqData.getCompositePoLines();
+    poLines.forEach(line -> line.getEresource().setAccessProvider(ACTIVE_VENDOR_ID));
+    assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.CLOSED));
+    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
+
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 403).as(Errors.class);
+
+    assertEquals(ErrorCodes.USER_HAS_NO_REOPEN_PERMISSIONS.getCode(), errors.getErrors().get(0).getCode());
+
+    // set unopen permission header
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, REOPEN_PERMISSIONS_HEADER), "", 204);
+  }
+
+  @Test
   void testPostOrderToFailOnNonApprovedOrder() {
     logger.info("===  Test case when approval is required to open order and order not approved ===");
 
@@ -3702,6 +3714,30 @@ public class PurchaseOrdersApiTest {
       .getErrors();
 
     assertThat(errors.get(0).getMessage(), equalTo(MISSING_MATERIAL_TYPE.getDescription()));
+  }
+
+  @Test
+  void testReopenOrderUnreleasesEncumbrancesUnlessInvoiceLineHasReleaseEncumbrance() {
+    logger.info("=== Check encumbrances are unreleased when an order is reopened, except for po lines having a linked invoice line with releaseEncumbrance = true ===");
+
+    String poId = "477f9ca8-b295-11eb-8529-0242ac130003";
+    String poLineId1 = "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1";
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, poId).mapTo(CompositePurchaseOrder.class);
+    assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.CLOSED));
+    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
+
+    // NOTE: permissions are checked in another test
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, REOPEN_PERMISSIONS_HEADER), "", 204);
+
+    // check the order has been reopened, the first encumbrance has been unreleased but not the second one
+    PurchaseOrder po = getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class);
+    assertThat(po.getWorkflowStatus(), is(PurchaseOrder.WorkflowStatus.OPEN));
+    List<Transaction> updatedTransactions = MockServer.getUpdatedTransactions();
+    assertThat(updatedTransactions.size(), equalTo(1));
+    Transaction updatedEncumbrance1 = updatedTransactions.get(0);
+    assertThat(updatedEncumbrance1.getEncumbrance().getSourcePoLineId(), equalTo(poLineId1));
+    assertThat(updatedEncumbrance1.getEncumbrance().getStatus(), equalTo(Encumbrance.Status.UNRELEASED));
   }
 
   private CompositePurchaseOrder prepareCompositeOrderOpenRequest(CompositePurchaseOrder po) {

@@ -119,18 +119,9 @@ import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.acq.model.Title;
 import org.folio.rest.acq.model.TitleCollection;
-import org.folio.rest.acq.model.finance.Budget;
-import org.folio.rest.acq.model.finance.BudgetCollection;
-import org.folio.rest.acq.model.finance.BudgetExpenseClassCollection;
-import org.folio.rest.acq.model.finance.ExchangeRate;
-import org.folio.rest.acq.model.finance.ExpenseClassCollection;
-import org.folio.rest.acq.model.finance.FiscalYear;
-import org.folio.rest.acq.model.finance.Fund;
-import org.folio.rest.acq.model.finance.FundCollection;
-import org.folio.rest.acq.model.finance.Ledger;
-import org.folio.rest.acq.model.finance.LedgerCollection;
-import org.folio.rest.acq.model.finance.OrderTransactionSummary;
-import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.acq.model.finance.*;
+import org.folio.rest.acq.model.invoice.InvoiceLine;
+import org.folio.rest.acq.model.invoice.InvoiceLineCollection;
 import org.folio.rest.acq.model.tag.Tag;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
@@ -548,6 +539,7 @@ public class MockServer {
     router.get(resourcesPath(LEDGER_FY_ROLLOVER_ERRORS)).handler(this::handleGetFyRolloverErrors);
     router.get(resourcesPath(ORDER_INVOICE_RELATIONSHIP)).handler(this::handleGetOrderInvoiceRelationship);
     router.get(resourcesPath(TAGS)).handler(ctx -> handleGetGenericSubObj(ctx, TAGS));
+    router.get("/invoice/invoice-lines").handler(this::handleGetInvoiceLines);
 
     router.put(resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
     router.put(resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
@@ -2042,19 +2034,28 @@ public class MockServer {
   }
 
   private void handleTransactionGetEntry(RoutingContext ctx) {
-
     try {
       String query = ctx.request().params().get("query");
-
       String body;
       if (query.contains("encumbrance.sourcePoLineId==bb66b269-76ed-4616-8da9-730d9b817247")) {
         body = getMockData(ENCUMBRANCE_FOR_TAGS_PATH);
+      } else if (query.contains("encumbrance.sourcePoLineId == 50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1")) {
+        // for testReopenOrderUnreleasesEncumbrancesUnlessInvoiceLineHasReleaseEncumbrance
+        Transaction transaction1 = new Transaction()
+          .withId(UUID.randomUUID().toString())
+          .withFromFundId("fb7b70f1-b898-4924-a991-0e4b6312bb5f")
+          .withEncumbrance(new Encumbrance()
+            .withSourcePurchaseOrderId("477f9ca8-b295-11eb-8529-0242ac130003")
+            .withSourcePoLineId("50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1")
+            .withStatus(Encumbrance.Status.RELEASED));
+        List<Transaction> transactions = List.of(transaction1);
+        TransactionCollection transactionCollection = new TransactionCollection().withTransactions(transactions).withTotalRecords(1);
+        body = JsonObject.mapFrom(transactionCollection).encodePrettily();
       } else {
         body = getMockData(ENCUMBRANCE_PATH);
       }
       serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
       addServerRqRsData(HttpMethod.GET, TRANSACTIONS_ENDPOINT, new JsonObject(body));
-
     } catch(IOException e) {
       logger.error("handleTransactionGetEntry error", e);
     }
@@ -2459,4 +2460,27 @@ public class MockServer {
 
   }
 
+  private void handleGetInvoiceLines(RoutingContext ctx) {
+    // for testReopenOrderUnreleasesEncumbrancesUnlessInvoiceLineHasReleaseEncumbrance
+    String query = ctx.request().params().get("query");
+
+    String poLineId1 = "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1";
+    String poLineId2 = "4d3d5eb0-b32a-11eb-8529-0242ac130003";
+    InvoiceLineCollection invoiceLineCollection;
+    if (query.equals("poLineId == " + poLineId1 + " and releaseEncumbrance == true")) {
+      invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(Collections.emptyList()).withTotalRecords(0);
+    } else if (query.equals("poLineId == " + poLineId2 + " and releaseEncumbrance == true")) {
+      InvoiceLine invoiceLine = new InvoiceLine()
+        .withId(UUID.randomUUID().toString())
+        .withPoLineId(poLineId2)
+        .withReleaseEncumbrance(true);
+      invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
+    } else {
+      serverResponse(ctx, HttpStatus.HTTP_NOT_FOUND.toInt(), APPLICATION_JSON, "invoice not found");
+      return;
+    }
+    JsonObject jo = JsonObject.mapFrom(invoiceLineCollection);
+    serverResponse(ctx, 200, APPLICATION_JSON, jo.encodePrettily());
+    addServerRqRsData(HttpMethod.GET, "invoiceLines", jo);
+  }
 }
