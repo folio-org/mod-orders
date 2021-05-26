@@ -72,6 +72,7 @@ public enum ErrorCodes {
   SUFFIX_IS_USED("suffixIsUsed", "The suffix cannot be deleted as it is used by one or more orders"),
   PIECES_TO_BE_DELETED("piecesNeedToBeDeleted", "Pieces need to be deleted"),
   PIECES_TO_BE_CREATED("piecesNeedToBeCreated", "Pieces need to be created"),
+  LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN("locationCannotBeModifiedAfterOpen", "Please use the receiving App to update pieces and locations"),
   REQUEST_FOUND("thereAreRequestsOnItem", "There are requests on item"),
   BUDGET_EXPENSE_CLASS_NOT_FOUND("budgetExpenseClassNotFound", "Budget expense class not found"),
   INACTIVE_EXPENSE_CLASS("inactiveExpenseClass", "Expense class is Inactive"),
