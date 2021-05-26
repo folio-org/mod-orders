@@ -655,17 +655,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       .thenCompose(this::getLineWithInstanceId);
   }
 
-  private CompletableFuture<Title> getTitleForPoLine(CompositePoLine line) {
-    return titlesService.getTitles(1, 0, QUERY_BY_PO_LINE_ID + line.getId(), getRequestContext())
-      .thenCompose(titleCollection -> {
-        List<Title> titles = titleCollection.getTitles();
-        if (!titles.isEmpty()) {
-          return CompletableFuture.completedFuture(titles.get(0));
-        }
-        throw new HttpException(422, ErrorCodes.TITLE_NOT_FOUND);
-      });
-  }
-
   private CompletableFuture<CompositePoLine> getLineWithInstanceId(CompositePoLine line) {
      if (!Boolean.TRUE.equals(line.getIsPackage())) {
        return titlesService.getTitles(1, 0, QUERY_BY_PO_LINE_ID + line.getId(), getRequestContext())
