@@ -31,8 +31,11 @@ import static org.folio.TestConstants.PO_LINE_ID_FOR_SUCCESS_CASE;
 import static org.folio.TestConstants.PO_LINE_NUMBER_VALUE;
 import static org.folio.TestConstants.PROTECTED_READ_ONLY_TENANT;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
+import static org.folio.TestUtils.validatePoLineCreationErrorForNonPendingOrder;
+import static org.folio.TestUtils.verifyLocationQuantity;
 import static org.folio.orders.utils.ErrorCodes.COST_ADDITIONAL_COST_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_DISCOUNT_INVALID;
 import static org.folio.orders.utils.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
@@ -41,12 +44,12 @@ import static org.folio.orders.utils.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH
 import static org.folio.orders.utils.ErrorCodes.INACTIVE_EXPENSE_CLASS;
 import static org.folio.orders.utils.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
 import static org.folio.orders.utils.ErrorCodes.ISBN_NOT_VALID;
+import static org.folio.orders.utils.ErrorCodes.LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.orders.utils.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ErrorCodes.ORDER_CLOSED;
 import static org.folio.orders.utils.ErrorCodes.ORDER_OPEN;
 import static org.folio.orders.utils.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
-import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_DELETED;
 import static org.folio.orders.utils.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
 import static org.folio.orders.utils.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
@@ -64,9 +67,6 @@ import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_STORAGE_ENDPOINT;
-import static org.folio.TestUtils.getMinimalContentCompositePoLine;
-import static org.folio.TestUtils.validatePoLineCreationErrorForNonPendingOrder;
-import static org.folio.TestUtils.verifyLocationQuantity;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ORDER_ID_WITH_PO_LINES;
 import static org.folio.rest.impl.MockServer.PO_NUMBER_ERROR_X_OKAPI_TENANT;
@@ -98,6 +98,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.restassured.response.Response;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -108,8 +111,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -138,12 +139,7 @@ import org.folio.rest.jaxrs.model.Tags;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-
-import io.restassured.response.Response;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonObject;
 
 public class PurchaseOrderLinesApiTest {
 
@@ -598,8 +594,7 @@ public class PurchaseOrderLinesApiTest {
   }
 
   @Test
-  @Disabled
-  void testPutOrderLineByIdPiecesWillBeCreated() {
+  void testPutOrderLineByIdPiecesWillNotBeCreated() {
     logger.info("=== Test PUT Order Line By Id - Pieces will be created ===");
 
     String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
@@ -623,48 +618,10 @@ public class PurchaseOrderLinesApiTest {
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
 
     Map<String, List<JsonObject>> mockServerData = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertThat(mockServerData.get(PIECES), hasSize(3));
+    assertThat(mockServerData.get(PIECES), nullValue());
 
     mockServerData = MockServer.serverRqRs.column(HttpMethod.POST);
-    assertThat(mockServerData.get(PIECES), hasSize(1));
-  }
-
-  @Test
-  @Disabled
-  void testPutOrderLineByIdPiecesNeedToBeDeleted() {
-    logger.info("=== Test PUT Order Line By Id - Pieces need to be deleted ===");
-
-    String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
-    CompositePoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
-
-    body.setCheckinItems(false);
-    body.setIsPackage(false);
-    body.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
-    body.setReportingCodes(null);
-    MockServer.addMockEntry(PO_LINES, body);
-    MockServer.addMockEntry(PURCHASE_ORDER, new CompositePurchaseOrder()
-      .withId(ID_FOR_PRINT_MONOGRAPH_ORDER)
-      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
-    String url = String.format(LINE_BY_ID_PATH, lineId);
-
-    // Adding number of pieces more then poLine.location.quantity
-    for (int i = 0; i < 2; i++) {
-      MockServer.addMockEntry(PIECES, new Piece()
-        .withPoLineId(body.getId())
-        .withLocationId(body.getLocations().get(0).getLocationId()));
-    }
-
-    Errors errors = verifyPut(url, JsonObject.mapFrom(body), "", 422).as(Errors.class);
-    assertThat(errors.getErrors().get(0).getCode(), equalTo(PIECES_TO_BE_DELETED.getCode()));
-
-    Map<String, List<JsonObject>> retrieves = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, retrieves.size());
-    assertThat(retrieves, hasKey(PIECES));
-    assertThat(retrieves, hasKey(PO_LINES));
-    assertThat(retrieves, hasKey(PURCHASE_ORDER));
-
-    Map<String, List<JsonObject>> updates = MockServer.serverRqRs.column(HttpMethod.PUT);
-    assertEquals(0, updates.size());
+    assertThat(mockServerData.get(PIECES), nullValue());
   }
 
   @Test
@@ -1286,7 +1243,6 @@ public class PurchaseOrderLinesApiTest {
   }
 
   @Test
-  @Disabled
   void testUpdatePolineForOpenedOrderWithChangingOnlyLocation() {
     logger.info("=== Test update poline for opened order with changed location ===");
 
@@ -1297,9 +1253,8 @@ public class PurchaseOrderLinesApiTest {
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
     reqData.getEresource().setCreateInventory(INSTANCE_HOLDING_ITEM);
     reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
-    String pieceId = UUID.randomUUID().toString();
+
     addMockEntry(PIECES, new Piece()
-      .withId(pieceId)
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
@@ -1308,44 +1263,75 @@ public class PurchaseOrderLinesApiTest {
     String newLocationId = "fcd64ce1-6995-48f0-840e-89ffa2288371";
     reqData.getLocations().get(0).setLocationId(newLocationId);
 
-    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+    Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 400).as(Errors.class);
 
-    assertEquals(newLocationId, getRqRsEntries(HttpMethod.PUT, PIECES).get(0).getString("locationId"), "Location updated");
+    assertThat(response.getErrors(), hasSize(1));
+    List<String> errorCodes = response.getErrors()
+      .stream()
+      .map(Error::getCode)
+      .collect(Collectors.toList());
+
+    assertThat(errorCodes, containsInAnyOrder(LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN.getCode()));
   }
 
   @Test
-  @Disabled
-  void testUpdatePolineForOpenedOrderWithUpdatingInventoryAndCreateNewPieces() {
+  void testUpdatePolineForOpenedOrderWithChangingQuantity() {
+    logger.info("=== Test update poline for opened order with changed quantity ===");
+
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
     reqData.setId(poLineId);
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
     reqData.getEresource().setCreateInventory(INSTANCE_HOLDING_ITEM);
+    reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
 
-    int expQtyElectronic = 3;
-    IntStream.range(0, 2).forEach(i -> {
-      addMockEntry(PIECES, new Piece()
-        .withId(UUID.randomUUID().toString())
-        .withFormat(Piece.Format.ELECTRONIC)
-        .withPoLineId(reqData.getId())
-        .withLocationId(reqData.getLocations().get(0).getLocationId()));
-    });
-
-    reqData.getLocations().get(0).setQuantityElectronic(expQtyElectronic);
-    reqData.getLocations().get(0).setQuantity(expQtyElectronic);
-    reqData.getCost().setQuantityElectronic(expQtyElectronic);
+    addMockEntry(PIECES, new Piece()
+      .withPoLineId(reqData.getId())
+      .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
     addMockEntry(PO_LINES, reqData);
 
+    reqData.getLocations().get(0).setQuantityElectronic(3);
+    reqData.getCost().setQuantityElectronic(3);
+
+    Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 400).as(Errors.class);
+
+    assertThat(response.getErrors(), hasSize(1));
+    List<String> errorCodes = response.getErrors()
+      .stream()
+      .map(Error::getCode)
+      .collect(Collectors.toList());
+
+    assertThat(errorCodes, containsInAnyOrder(LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN.getCode()));
+  }
+
+  @Test
+  void testUpdatePolineForOpenedOrderWithChangingQuantityAndCheckinItems() {
+    logger.info("=== Test update poline for opened order with changed quantity and checkin items ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
+    reqData.setId(poLineId);
+    reqData.setCheckinItems(true);
+    reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
+    reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
+    reqData.getEresource().setCreateInventory(INSTANCE_HOLDING_ITEM);
+    reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
+
+    addMockEntry(PIECES, new Piece()
+      .withPoLineId(reqData.getId())
+      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+
+    addMockEntry(PO_LINES, reqData);
+
+    reqData.getLocations().get(0).setQuantityElectronic(3);
+    reqData.getCost().setQuantityElectronic(3);
+
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
-
-    assertEquals(expQtyElectronic, getRqRsEntries(HttpMethod.POST, PIECES).size(), "Location matched");
-    assertEquals(reqData.getLocations().get(0).getLocationId(), getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("locationId"), "Location matched");
-    assertEquals(poLineId, getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("poLineId"), "Line id matched");
-    assertEquals("Expected", getRqRsEntries(HttpMethod.POST, PIECES).get(0).getString("receivingStatus"), "Expected status");
   }
 
   @Test
@@ -1368,8 +1354,16 @@ public class PurchaseOrderLinesApiTest {
     reqData.getLocations().get(0).setQuantityElectronic(expQtyElectronic);
     reqData.getLocations().get(0).setQuantity(expQtyElectronic);
     reqData.getCost().setQuantityElectronic(expQtyElectronic);
-    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+    Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 400).as(Errors.class);
+
+    assertThat(response.getErrors(), hasSize(1));
+    List<String> errorCodes = response.getErrors()
+      .stream()
+      .map(Error::getCode)
+      .collect(Collectors.toList());
+
+    assertThat(errorCodes, containsInAnyOrder(LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN.getCode()));
 
     assertEquals(0, getRqRsEntries(HttpMethod.POST, TITLES).size(), "Items should not created");
     assertEquals(0, getRqRsEntries(HttpMethod.PUT, TITLES).size(), "Items should not updated");
@@ -1395,9 +1389,16 @@ public class PurchaseOrderLinesApiTest {
     String newLocationId = "fcd64ce1-6995-48f0-840e-89ffa2288371";
     reqData.getLocations().get(0).setLocationId(newLocationId);
 
-    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+    Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 400).as(Errors.class);
 
+    assertThat(response.getErrors(), hasSize(1));
+    List<String> errorCodes = response.getErrors()
+      .stream()
+      .map(Error::getCode)
+      .collect(Collectors.toList());
+
+    assertThat(errorCodes, containsInAnyOrder(LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN.getCode()));
     assertEquals(0, getRqRsEntries(HttpMethod.PUT, TITLES).size(), "Items should not updated");
   }
 
