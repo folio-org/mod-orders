@@ -752,7 +752,7 @@
           "methods": [
             "GET"
           ],
-          "pathPattern": "/orders/holdings-summary/{id}",
+          "pathPattern": "/orders/holding-summary/{id}",
           "permissionsRequired": [
             "orders.holding-summary.collection.get"
           ],

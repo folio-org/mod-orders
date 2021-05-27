@@ -23,7 +23,7 @@ resourceTypes:
     item-collection-get: !include raml-util/rtypes/item-collection-get-with-json-response.raml
     get-only: !include raml-util/rtypes/get-only-with-json-response.raml
 
-/orders/holdings-summary:
+/orders/holding-summary:
   /{id}:
     uriParameters:
         id:
@@ -33,4 +33,4 @@ resourceTypes:
       get-only:
         schema: holding_summary_collection
         exampleCollection: !include acq-models/mod-orders/examples/holding_summary_collection.sample
-
+        is: [validate]
