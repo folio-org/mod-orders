@@ -12,12 +12,14 @@ public class EncumbrancesProcessingHolder {
   private List<Transaction> encumbrancesForRelease;
   private List<EncumbranceRelationsHolder> encumbrancesForCreate;
   private List<EncumbranceRelationsHolder> encumbrancesForUpdate;
+  private List<Transaction> encumbrancesForUnrelease;
 
   public EncumbrancesProcessingHolder() {
     this.encumbrancesFromStorage = new ArrayList<>();
     this.encumbrancesForCreate = new ArrayList<>();
     this.encumbrancesForUpdate = new ArrayList<>();
     this.encumbrancesForRelease = new ArrayList<>();
+    this.encumbrancesForUnrelease = new ArrayList<>();
   }
 
   public EncumbrancesProcessingHolder addEncumbrancesForCreate(EncumbranceRelationsHolder encumbranceForCreate) {
@@ -55,6 +57,11 @@ public class EncumbrancesProcessingHolder {
     return this;
   }
 
+  public EncumbrancesProcessingHolder withEncumbrancesForUnrelease(List<Transaction> encumbrancesForUnrelease) {
+    this.encumbrancesForUnrelease = new ArrayList<>(encumbrancesForUnrelease);
+    return this;
+  }
+
   public List<EncumbranceRelationsHolder> getEncumbrancesForCreate() {
     return encumbrancesForCreate;
   }
@@ -67,8 +74,12 @@ public class EncumbrancesProcessingHolder {
     return encumbrancesForRelease;
   }
 
+  public List<Transaction> getEncumbrancesForUnrelease() {
+    return encumbrancesForUnrelease;
+  }
+
   public int getAllEncumbrancesQuantity(){
-      return encumbrancesForCreate.size() + encumbrancesForRelease.size() + encumbrancesForUpdate.size();
+      return encumbrancesForCreate.size() + encumbrancesForRelease.size() + encumbrancesForUnrelease.size() + encumbrancesForUpdate.size();
   }
 
   public List<Transaction> getEncumbrancesFromStorage() {

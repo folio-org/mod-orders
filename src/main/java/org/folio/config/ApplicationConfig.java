@@ -15,22 +15,24 @@ import org.folio.service.exchange.FinanceExchangeRateService;
 import org.folio.service.finance.expenceclass.BudgetExpenseClassService;
 import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.folio.service.finance.budget.BudgetService;
-import org.folio.service.finance.transaction.EncumbranceRelationsHoldersBuilder;
-import org.folio.service.finance.transaction.EncumbranceService;
-import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
-import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.expenceclass.ExpenseClassService;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
-import org.folio.service.finance.transaction.OpenToCloseEncumbranceStrategy;
-import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
-import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategy;
 import org.folio.service.finance.rollover.RolloverErrorService;
 import org.folio.service.finance.rollover.RolloverRetrieveService;
+import org.folio.service.finance.transaction.ClosedToOpenEncumbranceStrategy;
+import org.folio.service.finance.transaction.EncumbranceRelationsHoldersBuilder;
+import org.folio.service.finance.transaction.EncumbranceService;
+import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
+import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
+import org.folio.service.finance.transaction.OpenToClosedEncumbranceStrategy;
+import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
+import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategy;
 import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.finance.transaction.TransactionSummariesService;
+import org.folio.service.invoice.InvoiceService;
 import org.folio.service.orders.HoldingsSummaryService;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
@@ -124,8 +126,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  EncumbranceService encumbranceService(TransactionService transactionService, TransactionSummariesService transactionSummariesService) {
-    return new EncumbranceService(transactionService, transactionSummariesService);
+  EncumbranceService encumbranceService(TransactionService transactionService, TransactionSummariesService transactionSummariesService, InvoiceService invoiceService) {
+    return new EncumbranceService(transactionService, transactionSummariesService, invoiceService);
   }
 
   @Bean
@@ -163,6 +165,11 @@ public class ApplicationConfig {
     return new FundsDistributionService();
   }
 
+  @Bean
+  InvoiceService invoiceService(RestClient restClient) {
+    return new InvoiceService(restClient);
+  }
+
   @Bean EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder(EncumbranceService encumbranceService,
                                                                               FundService fundService,
                                                                               FiscalYearService fiscalYearService,
@@ -183,8 +190,17 @@ public class ApplicationConfig {
   }
 
   @Bean
-  EncumbranceWorkflowStrategy openToCloseEncumbranceStrategy(EncumbranceService encumbranceService) {
-    return new OpenToCloseEncumbranceStrategy(encumbranceService);
+  EncumbranceWorkflowStrategy openToClosedEncumbranceStrategy(EncumbranceService encumbranceService) {
+    return new OpenToClosedEncumbranceStrategy(encumbranceService);
+  }
+
+  @Bean
+  EncumbranceWorkflowStrategy closedToOpenEncumbranceStrategy(EncumbranceService encumbranceService,
+      FundsDistributionService fundsDistributionService,
+      BudgetRestrictionService budgetRestrictionService,
+      EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
+    return new ClosedToOpenEncumbranceStrategy(encumbranceService, fundsDistributionService,
+      budgetRestrictionService, encumbranceRelationsHoldersBuilder);
   }
 
   @Bean
