@@ -1,0 +1,90 @@
+{
+  "id": "477f9ca8-b295-11eb-8529-0242ac130003",
+  "approved": true,
+  "poNumber": "S60402",
+  "orderType": "One-Time",
+  "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "workflowStatus": "Closed",
+  "compositePoLines": [
+    {
+      "id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
+      "purchaseOrderId": "477f9ca8-b295-11eb-8529-0242ac130003",
+      "acquisitionMethod": "Purchase",
+      "collection": true,
+      "cost": {
+        "currency": "USD",
+        "listUnitPriceElectronic": 10.00,
+        "quantityElectronic": 1
+      },
+      "eresource": {
+        "activationDue": 0,
+        "createInventory": "Instance",
+        "expectedActivation": "2019-01-01T00:00:00.000Z",
+        "userLimit": 0,
+        "accessProvider": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
+      },
+      "fundDistribution": [
+        {
+          "code": "ENDOW-SUBN",
+          "fundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
+          "distributionType": "percentage",
+          "value": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08008"
+        }
+      ],
+      "locations": [
+        {
+          "locationId": "758258bc-ecc1-41b8-abca-f7b610822ffd",
+          "quantity": 1,
+          "quantityElectronic": 1,
+          "quantityPhysical": 0
+        }
+      ],
+      "orderFormat": "Electronic Resource",
+      "rush": false,
+      "source": "User",
+      "titleOrPackage": "American Chemical Society Web Editions"
+    },
+    {
+      "id": "4d3d5eb0-b32a-11eb-8529-0242ac130003",
+      "purchaseOrderId": "477f9ca8-b295-11eb-8529-0242ac130003",
+      "acquisitionMethod": "Purchase",
+      "collection": true,
+      "cost": {
+        "currency": "USD",
+        "listUnitPriceElectronic": 10.00,
+        "quantityElectronic": 1
+      },
+      "eresource": {
+        "activationDue": 0,
+        "createInventory": "Instance",
+        "expectedActivation": "2019-01-01T00:00:00.000Z",
+        "userLimit": 0,
+        "accessProvider": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
+      },
+      "fundDistribution": [
+        {
+          "code": "EUROHIST",
+          "fundId": "e9285a1c-1dfc-4380-868c-e74073003f43",
+          "distributionType": "percentage",
+          "value": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08003"
+        }
+      ],
+      "locations": [
+        {
+          "locationId": "758258bc-ecc1-41b8-abca-f7b610822ffd",
+          "quantity": 1,
+          "quantityElectronic": 1,
+          "quantityPhysical": 0
+        }
+      ],
+      "orderFormat": "Electronic Resource",
+      "rush": false,
+      "source": "User",
+      "titleOrPackage": "Taxes, tributes and tributary lands in the making of Scandinavian kingdoms in the Middle Ages"
+    }
+  ]
+}

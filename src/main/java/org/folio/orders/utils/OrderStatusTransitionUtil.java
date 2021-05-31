@@ -38,4 +38,8 @@ public final class OrderStatusTransitionUtil {
   public static boolean isTransitionToClosed(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO) {
     return poFromStorage.getWorkflowStatus() == OPEN && compPO.getWorkflowStatus() == CLOSED;
   }
+
+  public static boolean isTransitionToReopen(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO) {
+    return poFromStorage.getWorkflowStatus() == CLOSED && compPO.getWorkflowStatus() == OPEN;
+  }
 }

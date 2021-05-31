@@ -9,11 +9,11 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.folio.orders.utils.FundDistributionUtils.isFundDistributionsPresent;
 
-public class OpenToCloseEncumbranceStrategy implements EncumbranceWorkflowStrategy {
+public class OpenToClosedEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
   private final EncumbranceService encumbranceService;
 
-  public OpenToCloseEncumbranceStrategy(EncumbranceService encumbranceService) {
+  public OpenToClosedEncumbranceStrategy(EncumbranceService encumbranceService) {
     this.encumbranceService = encumbranceService;
   }
 
@@ -33,6 +33,6 @@ public class OpenToCloseEncumbranceStrategy implements EncumbranceWorkflowStrate
 
   @Override
   public OrderWorkflowType getStrategyName() {
-    return OrderWorkflowType.OPEN_TO_CLOSE;
+    return OrderWorkflowType.OPEN_TO_CLOSED;
   }
 }
