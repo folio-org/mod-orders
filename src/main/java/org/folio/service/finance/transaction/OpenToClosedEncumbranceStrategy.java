@@ -9,11 +9,11 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.folio.orders.utils.FundDistributionUtils.isFundDistributionsPresent;
 
-public class OpenToCloseEncumbranceStrategy implements EncumbranceWorkflowStrategy {
+public class OpenToClosedEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
   private final EncumbranceService encumbranceService;
 
-  public OpenToCloseEncumbranceStrategy(EncumbranceService encumbranceService) {
+  public OpenToClosedEncumbranceStrategy(EncumbranceService encumbranceService) {
     this.encumbranceService = encumbranceService;
   }
 
@@ -22,10 +22,15 @@ public class OpenToCloseEncumbranceStrategy implements EncumbranceWorkflowStrate
     EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
     if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
       return encumbranceService.getOrderEncumbrances(compPO.getId(), requestContext)
-        .thenAccept(holder::withEncumbrancesFromStorage)
-        .thenApply(v -> holder.getEncumbrancesFromStorage())
-        .thenAccept(holder::withEncumbrancesForRelease)
-        .thenCompose(v -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext));
+        .thenCompose(transactions -> {
+          if (transactions.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+          } else {
+            holder.withEncumbrancesFromStorage(transactions);
+            holder.withEncumbrancesForRelease(holder.getEncumbrancesFromStorage());
+            return encumbranceService.createOrUpdateEncumbrances(holder, requestContext);
+          }
+        });
     }
     return CompletableFuture.completedFuture(null);
 
@@ -33,6 +38,6 @@ public class OpenToCloseEncumbranceStrategy implements EncumbranceWorkflowStrate
 
   @Override
   public OrderWorkflowType getStrategyName() {
-    return OrderWorkflowType.OPEN_TO_CLOSE;
+    return OrderWorkflowType.OPEN_TO_CLOSED;
   }
 }
