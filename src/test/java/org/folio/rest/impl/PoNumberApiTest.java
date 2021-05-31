@@ -105,10 +105,4 @@ public class PoNumberApiTest {
     verifyGet(GET_PO_NUMBER_PATH, prepareHeaders(X_OKAPI_URL, PO_NUMBER_ERROR_X_OKAPI_TENANT), APPLICATION_JSON, 500);
   }
 
-  @Test
-  void testGetPoNumberError2() {
-    logger.info("=== Test Get PO Number (generate poNumber) - fail ===");
-
-    verifyGet("/orders/holdings-summary/" + UUID.randomUUID(), prepareHeaders(X_OKAPI_URL, PO_NUMBER_ERROR_X_OKAPI_TENANT), APPLICATION_JSON, 500);
-  }
 }
