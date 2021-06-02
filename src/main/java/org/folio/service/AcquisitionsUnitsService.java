@@ -87,12 +87,12 @@ public class AcquisitionsUnitsService {
       .thenCompose(unit -> updateAcquisitionsUnit(unit, requestContext));
   }
 
-  public CompletableFuture<String> buildAcqUnitsCqlExprToSearchRecords(RequestContext requestContext) {
+  public CompletableFuture<String> buildAcqUnitsCqlExprToSearchRecords(RequestContext requestContext, String tableAlias) {
     return getAcqUnitIdsForSearch(requestContext).thenApply(ids -> {
       if (ids.isEmpty()) {
         return NO_ACQ_UNIT_ASSIGNED_CQL;
       }
-      return String.format("%s or (%s)", HelperUtils.convertFieldListToCqlQuery(ids, ACQUISITIONS_UNIT_IDS, false), NO_ACQ_UNIT_ASSIGNED_CQL);
+      return String.format("%s or (%s)", HelperUtils.convertFieldListToCqlQuery(ids, tableAlias + ACQUISITIONS_UNIT_IDS, false), NO_ACQ_UNIT_ASSIGNED_CQL);
     });
   }
 

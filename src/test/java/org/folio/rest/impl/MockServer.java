@@ -347,10 +347,6 @@ public class MockServer {
     return serverRqRs.get(PIECES, HttpMethod.GET);
   }
 
-  static List<JsonObject> getOrderLineSearches() {
-    return serverRqRs.get(ORDER_LINES, HttpMethod.GET);
-  }
-
   static List<JsonObject> getTitlesSearches() {
     return serverRqRs.get(TITLES, HttpMethod.GET);
   }
@@ -484,7 +480,6 @@ public class MockServer {
 
     router.get(resourcePath(PURCHASE_ORDER)).handler(this::handleGetPurchaseOrderById);
     router.get(resourcesPath(PURCHASE_ORDER)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, PURCHASE_ORDER));
-    router.get(resourcesPath(SEARCH_ORDERS)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, SEARCH_ORDERS));
     router.get("/instance-types").handler(this::handleGetInstanceType);
     router.get("/instance-statuses").handler(this::handleGetInstanceStatus);
     router.get("/inventory/instances").handler(this::handleGetInstanceRecord);
@@ -507,7 +502,6 @@ public class MockServer {
     router.get(resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
     router.get(resourcesPath(PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
     router.get("/contributor-name-types").handler(this::handleGetContributorNameTypes);
-    router.get(resourcesPath(ORDER_LINES)).handler(ctx -> handleGetPoLines(ctx, ORDER_LINES));
     router.get(resourcesPath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnits);
     router.get(resourcePath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnit);
     router.get(resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(this::handleGetAcquisitionsMemberships);
