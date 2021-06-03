@@ -13,7 +13,6 @@ public enum POLineProtectedFields {
   DONOR("donor"),
   DETAILS_PRODUCT_IDS("details.productIds"),
   DETAILS_SUBSCRIPTION_INTERVAL("details.subscriptionInterval"),
-  DETAILS_SUBSCRIPTION_TO_DATE("details.subscriptionTo"),
   ERESOURCE_CREATE_INVENTORY("eresource.createInventory"),
   ERESOURCE_TRIAL("eresource.trial"),
   ERESOURCE_LICENSE("eresource.license"),
@@ -30,8 +29,7 @@ public enum POLineProtectedFields {
   SOURCE("source"),
   SELECTOR("selector"),
   TITLE_OR_PACKAGE("titleOrPackage"),
-  VENDORDETAIL_INSTRUCTION_TO_VENDOR("vendorDetail.instructions"),
-  VENDORDETAIL_VENDOR_ACCOUNT("vendorDetail.vendorAccount");
+  VENDORDETAIL_INSTRUCTION_TO_VENDOR("vendorDetail.instructions");
 
 
   POLineProtectedFields(String field) {
