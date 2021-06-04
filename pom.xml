@@ -51,14 +51,14 @@
     <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
     <ramlfiles_util_path>${ramlfiles_path}/raml-util</ramlfiles_util_path>
     <ramlfiles_acq_models_path>${ramlfiles_path}/acq-models</ramlfiles_acq_models_path>
-    <raml-module-builder.version>32.0.1</raml-module-builder.version>
+    <raml-module-builder.version>33.0.0</raml-module-builder.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <mod-configuration-client.version>5.5.0</mod-configuration-client.version>
     <sonar.exclusions>**/models/**.java, **/completablefuture/FolioVertxCompletableFuture.java</sonar.exclusions>
     <sonar.test.exclusions>**/*Test.java</sonar.test.exclusions>
     <spring.version>5.2.11.RELEASE</spring.version>
-    <vertx.version>4.0.0</vertx.version>
+    <vertx.version>4.1.0.CR1</vertx.version>
     <argLine />
   </properties>
 
@@ -69,6 +69,14 @@
       <url>https://repository.folio.org/repository/maven-folio</url>
     </repository>
   </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>folio-nexus</id>
+      <name>FOLIO Maven repository</name>
+      <url>https://repository.folio.org/repository/maven-folio</url>
+    </pluginRepository>
+  </pluginRepositories>
 
   <distributionManagement>
     <repository>
@@ -112,6 +120,16 @@
       <groupId>org.folio</groupId>
       <artifactId>folio-di-support</artifactId>
       <version>1.2.0</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
+      <version>2.6</version>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <version>3.19.0</version>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -195,6 +213,22 @@
       </resource>
     </resources>
     <plugins>
+      <plugin>
+        <groupId>org.folio</groupId>
+        <artifactId>domain-models-maven-plugin</artifactId>
+        <version>${raml-module-builder.version}</version>
+        <executions>
+          <execution>
+            <id>generate_interfaces</id>
+            <goals>
+              <goal>java</goal>
+            </goals>
+            <configuration>
+              <generateInterfaces>true</generateInterfaces>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.8.1</version>
@@ -325,35 +359,6 @@
         <version>3.0.0</version>
         <executions>
           <execution>
-            <id>generate_interfaces</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>java</goal>
-            </goals>
-            <configuration>
-              <mainClass>org.folio.rest.tools.GenerateRunner</mainClass>
-              <cleanupDaemonThreads>false</cleanupDaemonThreads>
-              <systemProperties>
-                <systemProperty>
-                  <key>project.basedir</key>
-                  <value>${basedir}</value>
-                </systemProperty>
-                <systemProperty>
-                  <key>raml_files</key>
-                  <value>${ramlfiles_path}</value>
-                </systemProperty>
-                <systemProperty>
-                  <key>schema_paths</key>
-                  <value>${jsonschema_paths}</value>
-                </systemProperty>
-                <systemProperty>
-                  <key>jsonschema2pojo.config.includeHashcodeAndEquals</key>
-                  <value>true</value>
-                </systemProperty>
-              </systemProperties>
-            </configuration>
-          </execution>
-          <execution>
             <id>git submodule update</id>
             <phase>initialize</phase>
             <goals>
@@ -381,7 +386,7 @@
           <complianceLevel>11</complianceLevel>
           <XaddSerialVersionUID>true</XaddSerialVersionUID>
           <showWeaveInfo>true</showWeaveInfo>
-          <forceAjcCompile>true</forceAjcCompile>
+          <aspectDirectory>src/main/java/org/folio/rest/annotations</aspectDirectory>
           <aspectLibraries>
             <aspectLibrary>
               <groupId>org.folio</groupId>
@@ -411,6 +416,7 @@
       </plugin>
 
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
         <version>3.2.0</version>
         <executions>
@@ -565,6 +571,10 @@
                 <property>
                   <name>log4j.configurationFile</name>
                   <value>${project.baseUri}src/main/resources/log4j2.properties</value>
+                </property>
+                <property>
+                  <name>jsonschema2pojo.config.includeHashcodeAndEquals</name>
+                  <value>true</value>
                 </property>
               </properties>
             </configuration>
