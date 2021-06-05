@@ -9,8 +9,6 @@ import static org.folio.rest.RestConstants.OKAPI_URL;
 
 import java.util.Map;
 
-import javax.validation.constraints.Pattern;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
 
 import org.folio.rest.annotations.Validate;

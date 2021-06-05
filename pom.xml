@@ -224,7 +224,8 @@
               <goal>java</goal>
             </goals>
             <configuration>
-              <generateInterfaces>true</generateInterfaces>
+              <schemaPaths>${jsonschema_paths}</schemaPaths>
+              <ramlDirs>${ramlfiles_path}</ramlDirs>
             </configuration>
           </execution>
         </executions>
@@ -386,6 +387,7 @@
           <complianceLevel>11</complianceLevel>
           <XaddSerialVersionUID>true</XaddSerialVersionUID>
           <showWeaveInfo>true</showWeaveInfo>
+          <forceAjcCompile>true</forceAjcCompile>
           <aspectDirectory>src/main/java/org/folio/rest/annotations</aspectDirectory>
           <aspectLibraries>
             <aspectLibrary>

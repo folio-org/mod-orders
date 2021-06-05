@@ -1,6 +1,6 @@
 #%RAML 1.0
 title: "Titles"
-baseUri: http://github.com/org/folio/mod-orders-storage
+baseUri: https://github.com/folio-org/mod-orders
 version: v1.0
 
 documentation:
@@ -18,7 +18,6 @@ traits:
     pageable:  !include raml-util/traits/pageable.raml
     searchable: !include raml-util/traits/searchable.raml
     language: !include raml-util/traits/language.raml
-    validatea: !include raml-util/traits/validation.raml
 
 resourceTypes:
     collection: !include raml-util/rtypes/collection.raml
