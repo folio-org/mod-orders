@@ -47,6 +47,7 @@ import static org.folio.rest.jaxrs.model.ProcessingStatus.Type.SUCCESS;
 import static org.folio.rest.jaxrs.model.ReceivedItem.ItemStatus.ON_ORDER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -201,7 +202,7 @@ public class CheckinReceivingApiTest {
     ReceivingResult receivingResult = results.getReceivingResults().get(0);
 
     for (ReceivingItemResult receivingItemResult : receivingResult.getReceivingItemResults()) {
-      assertThat(receivingItemResult.getPieceId(), not(isEmptyString()));
+      assertThat(receivingItemResult.getPieceId(), not(is(emptyString())));
       assertThat(receivingItemResult.getProcessingStatus(), not(nullValue()));
       assertThat(receivingItemResult.getProcessingStatus().getType(), is(SUCCESS));
       assertThat(receivingItemResult.getProcessingStatus().getError(), nullValue());
@@ -451,10 +452,10 @@ public class CheckinReceivingApiTest {
     assertThat(polUpdates, hasSize(pieceIdsByPol.size()));
 
     itemUpdates.forEach(item -> {
-      assertThat(item.getString(ITEM_BARCODE), not(isEmptyString()));
+      assertThat(item.getString(ITEM_BARCODE), not(is(emptyString())));
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
       assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.IN_PROCESS.value()));
-      assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), not(isEmptyString()));
+      assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), not(is(emptyString())));
     });
     polUpdates.forEach(pol -> {
       PoLine poLine = pol.mapTo(PoLine.class);
@@ -582,13 +583,13 @@ public class CheckinReceivingApiTest {
 
     ReceivingResult receivingResult = results.getReceivingResults().get(0);
 
-    assertThat(receivingResult.getPoLineId(), not(isEmptyString()));
+    assertThat(receivingResult.getPoLineId(), not(is(emptyString())));
     assertThat(receivingResult.getProcessedSuccessfully(), is(5));
     assertThat(receivingResult.getProcessedWithError(), is(5));
 
     Set<String> errorCodes = new HashSet<>();
     for (ReceivingItemResult receivingItemResult : receivingResult.getReceivingItemResults()) {
-      assertThat(receivingItemResult.getPieceId(), not(isEmptyString()));
+      assertThat(receivingItemResult.getPieceId(), not(is(emptyString())));
       assertThat(receivingItemResult.getProcessingStatus(), not(nullValue()));
       if (receivingItemResult.getProcessingStatus().getType() == SUCCESS) {
         assertThat(receivingItemResult.getProcessingStatus().getError(), nullValue());
@@ -692,12 +693,12 @@ public class CheckinReceivingApiTest {
     assertThat(results.getReceivingResults(), hasSize(1));
 
     ReceivingResult receivingResult = results.getReceivingResults().get(0);
-    assertThat(receivingResult.getPoLineId(), not(isEmptyString()));
+    assertThat(receivingResult.getPoLineId(), not(is(emptyString())));
     assertThat(receivingResult.getProcessedSuccessfully(), is(0));
     assertThat(receivingResult.getProcessedWithError(), is(1));
 
     for (ReceivingItemResult receivingItemResult : receivingResult.getReceivingItemResults()) {
-      assertThat(receivingItemResult.getPieceId(), not(isEmptyString()));
+      assertThat(receivingItemResult.getPieceId(), not(is(emptyString())));
       assertThat(receivingItemResult.getProcessingStatus(), not(nullValue()));
       assertThat(receivingItemResult.getProcessingStatus().getType(), is(ProcessingStatus.Type.FAILURE));
       assertThat(receivingItemResult.getProcessingStatus().getError().getCode(), is(PIECE_NOT_RETRIEVED.getCode()));
@@ -731,12 +732,12 @@ public class CheckinReceivingApiTest {
     assertThat(results.getReceivingResults(), hasSize(1));
 
     ReceivingResult receivingResult = results.getReceivingResults().get(0);
-    assertThat(receivingResult.getPoLineId(), not(isEmptyString()));
+    assertThat(receivingResult.getPoLineId(), not(is(emptyString())));
     assertThat(receivingResult.getProcessedSuccessfully(), is(0));
     assertThat(receivingResult.getProcessedWithError(), is(1));
 
     for (ReceivingItemResult receivingItemResult : receivingResult.getReceivingItemResults()) {
-      assertThat(receivingItemResult.getPieceId(), not(isEmptyString()));
+      assertThat(receivingItemResult.getPieceId(), not(is(emptyString())));
       assertThat(receivingItemResult.getProcessingStatus(), not(nullValue()));
       assertThat(receivingItemResult.getProcessingStatus().getType(), is(ProcessingStatus.Type.FAILURE));
       assertThat(receivingItemResult.getProcessingStatus().getError().getCode(), is(ITEM_NOT_RETRIEVED.getCode()));
@@ -891,12 +892,12 @@ public class CheckinReceivingApiTest {
   private Map<String, Set<String>> verifyReceivingSuccessRs(ReceivingResults results) {
     Map<String, Set<String>> pieceIdsByPol = new HashMap<>();
     for (ReceivingResult receivingResult : results.getReceivingResults()) {
-      assertThat(receivingResult.getPoLineId(), not(isEmptyString()));
+      assertThat(receivingResult.getPoLineId(), not(is(emptyString())));
       assertThat(receivingResult.getProcessedSuccessfully(), is(receivingResult.getReceivingItemResults().size()));
       assertThat(receivingResult.getProcessedWithError(), is(0));
 
       for (ReceivingItemResult receivingItemResult : receivingResult.getReceivingItemResults()) {
-        assertThat(receivingItemResult.getPieceId(), not(isEmptyString()));
+        assertThat(receivingItemResult.getPieceId(), not(is(emptyString())));
         assertThat(receivingItemResult.getProcessingStatus(), not(nullValue()));
         assertThat(receivingItemResult.getProcessingStatus().getType(), is(SUCCESS));
         assertThat(receivingItemResult.getProcessingStatus().getError(), nullValue());
