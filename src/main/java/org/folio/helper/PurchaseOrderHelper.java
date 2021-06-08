@@ -1021,7 +1021,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
     compPO.setTotalEncumbered(null);
     compPO.setTotalExpended(null);
     compPO.setNeedReEncumber(null);
-    compPO.setDateOrdered(null);
 
     JsonObject purchaseOrder = JsonObject.mapFrom(compPO);
     purchaseOrder.remove(COMPOSITE_PO_LINES);
