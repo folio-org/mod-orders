@@ -1018,6 +1018,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
     // Remove dynamically calculated data
     compPO.setTotalEstimatedPrice(null);
     compPO.setTotalItems(null);
+    compPO.setTotalEncumbered(null);
+    compPO.setTotalExpended(null);
+    compPO.setNeedReEncumber(null);
+    compPO.setDateOrdered(null);
 
     JsonObject purchaseOrder = JsonObject.mapFrom(compPO);
     purchaseOrder.remove(COMPOSITE_PO_LINES);
