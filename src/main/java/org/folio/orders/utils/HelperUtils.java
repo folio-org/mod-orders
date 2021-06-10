@@ -961,7 +961,7 @@ public class HelperUtils {
    * @param poLineById Map po line id -> composite po line
    */
   public static void verifyTitles(Map<String, List<Title>> lineIdTitles, Map<String, CompositePoLine> poLineById) {
-    verifyAllTitlesExist(lineIdTitles);
+    verifyAllTitlesExist(lineIdTitles, poLineById);
     verifyNonPackageLinesHaveSingleTitle(lineIdTitles, poLineById);
   }
 
@@ -977,10 +977,9 @@ public class HelperUtils {
     }
   }
 
-  public static void verifyAllTitlesExist(Map<String, List<Title>> titles) {
-    if (titles.keySet().stream().anyMatch(lineId -> titles.get(lineId).size() < 1)) {
+  public static void verifyAllTitlesExist(Map<String, List<Title>> titles, Map<String, CompositePoLine> poLineById) {
+    if (titles.size() < poLineById.size())
       throw new HttpException(400, TITLE_NOT_FOUND);
-    }
   }
 
   public static void verifyLocationsAndPiecesConsistency(List<CompositePoLine> poLines, PieceCollection pieces) {

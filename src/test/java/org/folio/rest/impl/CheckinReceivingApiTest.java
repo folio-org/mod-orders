@@ -16,11 +16,13 @@ import static org.folio.orders.events.handlers.HandlersTestHelper.verifyOrderSta
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.orders.utils.ErrorCodes.LOC_NOT_PROVIDED;
+import static org.folio.orders.utils.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
 import static org.folio.orders.utils.ErrorCodes.PIECE_ALREADY_RECEIVED;
 import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_FOUND;
 import static org.folio.orders.utils.ErrorCodes.PIECE_NOT_RETRIEVED;
 import static org.folio.orders.utils.ErrorCodes.PIECE_POL_MISMATCH;
 import static org.folio.orders.utils.ErrorCodes.PIECE_UPDATE_FAILED;
+import static org.folio.orders.utils.ErrorCodes.TITLE_NOT_FOUND;
 import static org.folio.orders.utils.HelperUtils.isHoldingUpdateRequiredForEresource;
 import static org.folio.orders.utils.HelperUtils.isHoldingUpdateRequiredForPhysical;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
@@ -71,6 +73,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
+import io.restassured.response.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
@@ -78,23 +81,8 @@ import org.folio.HttpStatus;
 import org.folio.config.ApplicationConfig;
 import org.folio.helper.AbstractHelper;
 import org.folio.rest.acq.model.PieceCollection;
-import org.folio.rest.jaxrs.model.CheckInPiece;
-import org.folio.rest.jaxrs.model.CheckinCollection;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Physical;
-import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PoLineCollection;
-import org.folio.rest.jaxrs.model.ProcessingStatus;
-import org.folio.rest.jaxrs.model.ReceivedItem;
-import org.folio.rest.jaxrs.model.ReceivingCollection;
-import org.folio.rest.jaxrs.model.ReceivingItemResult;
-import org.folio.rest.jaxrs.model.ReceivingResult;
-import org.folio.rest.jaxrs.model.ReceivingResults;
-import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -562,7 +550,7 @@ public class CheckinReceivingApiTest {
 
     List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
     toBeCheckedInList.add(new ToBeCheckedIn()
-      .withCheckedIn(1)
+      .withCheckedIn(2)
       .withPoLineId(poLine.getId())
       .withCheckInPieces(Arrays.asList(new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.ON_ORDER),
         new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.ON_ORDER))));
@@ -577,6 +565,102 @@ public class CheckinReceivingApiTest {
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(locationForElectronic);
 
     checkResultWithErrors(request, 0);
+  }
+
+  @Test
+  void testPostCheckinMultipleTitlesError() {
+    logger.info("=== Test POST check-in multiple titles error for non-packages ===");
+
+    CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder();
+    CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId());
+    poLine.setOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
+    poLine.setEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM));
+    poLine.setPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM));
+
+    String locationForPhysical = UUID.randomUUID().toString();
+    String locationForElectronic = UUID.randomUUID().toString();
+
+    String titleIdForPhysical = UUID.randomUUID().toString();
+    MockServer.addMockTitleWithId(poLine, titleIdForPhysical);
+    String titleIdForElectronic = UUID.randomUUID().toString();
+    MockServer.addMockTitleWithId(poLine, titleIdForElectronic);
+
+    Piece physicalPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.PHYSICAL)
+      .withLocationId(locationForPhysical)
+      .withId(UUID.randomUUID().toString())
+      .withTitleId(titleIdForPhysical)
+      .withItemId(UUID.randomUUID().toString());
+    Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC)
+      .withId(UUID.randomUUID().toString())
+      .withTitleId(titleIdForElectronic)
+      .withItemId(UUID.randomUUID().toString());
+
+    addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    addMockEntry(PO_LINES, poLine);
+    addMockEntry(PIECES, physicalPiece);
+    addMockEntry(PIECES, electronicPiece);
+
+    List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
+    toBeCheckedInList.add(new ToBeCheckedIn()
+      .withCheckedIn(2)
+      .withPoLineId(poLine.getId())
+      .withCheckInPieces(Arrays.asList(new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.ON_ORDER),
+        new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.ON_ORDER))));
+
+    CheckinCollection request = new CheckinCollection()
+      .withToBeCheckedIn(toBeCheckedInList)
+      .withTotalRecords(2);
+
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setId(physicalPiece.getId());
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(locationForPhysical);
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setId(electronicPiece.getId());
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(locationForElectronic);
+
+    Response response = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(request).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_BAD_REQUEST.toInt());
+    assertThat(response.as(Errors.class).getErrors().get(0).getMessage(), is(MULTIPLE_NONPACKAGE_TITLES.getDescription()));
+  }
+
+  @Test
+  void testPostCheckinTitleNotFoundError() {
+    logger.info("=== Test POST check-in title not found error ===");
+
+    CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder();
+    CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId());
+    poLine.setIsPackage(true);
+    poLine.setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
+    poLine.setEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM));
+
+    String locationForElectronic = UUID.randomUUID().toString();
+
+    Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC)
+      .withId(UUID.randomUUID().toString())
+      .withTitleId(UUID.randomUUID().toString())
+      .withItemId(UUID.randomUUID().toString());
+
+    addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    addMockEntry(PO_LINES, poLine);
+    addMockEntry(PIECES, electronicPiece);
+
+    List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
+    toBeCheckedInList.add(new ToBeCheckedIn()
+      .withCheckedIn(1)
+      .withPoLineId(poLine.getId())
+      .withCheckInPieces(Collections.singletonList(new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.ON_ORDER))));
+
+    CheckinCollection request = new CheckinCollection()
+      .withToBeCheckedIn(toBeCheckedInList)
+      .withTotalRecords(1);
+
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setId(electronicPiece.getId());
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(locationForElectronic);
+
+    Response response = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(request).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_BAD_REQUEST.toInt());
+    assertThat(response.as(Errors.class).getErrors().get(0).getMessage(), is(TITLE_NOT_FOUND.getDescription()));
   }
 
   @Test
