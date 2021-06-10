@@ -90,7 +90,6 @@ public class OrderRolloverService {
                       .thenCombine(configurationService.getSystemCurrency(requestContext),
                                       (orderIds, systemCurrency) -> Pair.of(systemCurrency, orderIds))
                       .thenCompose(pair -> rolloverOrderLinesByChunks(pair.getKey(), pair.getValue(), ledgerFYRollover, requestContext))
-                      .thenApply(poLines -> poLines)
                       .thenCompose(poLines -> purchaseOrderLineService.updateOrderLines(poLines, requestContext))
                       .thenAccept(v -> logger.debug("Order Rollover : All order processed"));
   }
