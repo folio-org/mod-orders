@@ -95,8 +95,10 @@ public class ApplicationConfig {
 
   @Bean
   OrderRolloverService rolloverOrderService(FundService fundService, PurchaseOrderService purchaseOrderService,
-                                            PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService) {
-    return new OrderRolloverService(fundService, purchaseOrderService, purchaseOrderLineService, transactionService);
+                                            PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService,
+                                            ConfigurationEntriesService configurationEntriesService, ExchangeRateProviderResolver exchangeRateProviderResolver) {
+    return new OrderRolloverService(fundService, purchaseOrderService, purchaseOrderLineService, transactionService,
+                                    configurationEntriesService, exchangeRateProviderResolver);
   }
 
   @Bean

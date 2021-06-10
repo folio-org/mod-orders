@@ -28,6 +28,7 @@ import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
+import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -1023,7 +1024,7 @@ public class HelperUtils {
     if (exchangeRate != null) {
       conversionQuery = ConversionQueryBuilder.of().setBaseCurrency(fromCurrency)
         .setTermCurrency(toCurrency)
-        .set(ExchangeRateProviderResolver.RATE_KEY, exchangeRate)
+        .set(RATE_KEY, exchangeRate)
         .build();
     } else {
       conversionQuery = ConversionQueryBuilder.of().setBaseCurrency(fromCurrency)
@@ -1044,5 +1045,15 @@ public class HelperUtils {
       id = location.substring(location.lastIndexOf('/') + 1);
     }
     return id;
+  }
+
+  public static ConversionQuery buildConversionQuery(PoLine poLine, String systemCurrency) {
+    Cost cost = poLine.getCost();
+    if (cost.getExchangeRate() != null){
+      return ConversionQueryBuilder.of().setBaseCurrency(cost.getCurrency())
+        .setTermCurrency(systemCurrency)
+        .set(RATE_KEY, cost.getExchangeRate()).build();
+    }
+    return ConversionQueryBuilder.of().setBaseCurrency(cost.getCurrency()).setTermCurrency(systemCurrency).build();
   }
 }
