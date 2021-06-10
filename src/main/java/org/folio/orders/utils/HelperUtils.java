@@ -64,7 +64,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
 import org.folio.helper.AbstractHelper;
 import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -956,28 +955,30 @@ public class HelperUtils {
     return clazz.getAnnotation(Path.class).value();
   }
 
-  public static boolean isMultipleTitles(Map<String, List<Title>> titles) {
-    return titles.entrySet().stream().anyMatch(stringListEntry -> stringListEntry.getValue().size() != 1);
-  }
-
-  public static Map<String, List<Title>> verifyNonPackageTitles(Map<String, List<Title>> lineIdTitles, List<String> poLineIds) {
-    verifyAllNonPackageTitlesExist(lineIdTitles, poLineIds);
-    verifyNonPackageLinesHaveSingleTitle(lineIdTitles);
-    return lineIdTitles;
+  /**
+   * Check the number of titles per po line.
+   * @param lineIdTitles Map po line id -> list of titles
+   * @param poLineById Map po line id -> composite po line
+   */
+  public static void verifyTitles(Map<String, List<Title>> lineIdTitles, Map<String, CompositePoLine> poLineById) {
+    verifyAllTitlesExist(lineIdTitles);
+    verifyNonPackageLinesHaveSingleTitle(lineIdTitles, poLineById);
   }
 
   public static JsonObject convertToJson(Object data) {
     return data instanceof JsonObject ? (JsonObject) data : JsonObject.mapFrom(data);
   }
 
-  private static void verifyNonPackageLinesHaveSingleTitle(Map<String, List<Title>> lineIdTitles) {
-    if (isMultipleTitles(lineIdTitles)) {
+  private static void verifyNonPackageLinesHaveSingleTitle(Map<String, List<Title>> titles,
+      Map<String, CompositePoLine> poLineById) {
+    if (titles.keySet().stream().anyMatch(lineId -> titles.get(lineId).size() > 1 &&
+        !poLineById.get(lineId).getIsPackage())) {
       throw new HttpException(400, MULTIPLE_NONPACKAGE_TITLES);
     }
   }
 
-  public static void verifyAllNonPackageTitlesExist(Map<String, List<Title>> lineIdTitles, List<String> poLineIds) {
-    if (lineIdTitles.size() < poLineIds.size()) {
+  public static void verifyAllTitlesExist(Map<String, List<Title>> titles) {
+    if (titles.keySet().stream().anyMatch(lineId -> titles.get(lineId).size() < 1)) {
       throw new HttpException(400, TITLE_NOT_FOUND);
     }
   }

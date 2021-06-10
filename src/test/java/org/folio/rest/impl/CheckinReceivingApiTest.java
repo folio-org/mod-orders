@@ -51,7 +51,6 @@ import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.isEmptyString;
 import static org.hamcrest.Matchers.isIn;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
@@ -482,22 +481,25 @@ public class CheckinReceivingApiTest {
     String locationForPhysical = UUID.randomUUID().toString();
     String locationForElectronic = UUID.randomUUID().toString();
 
+    String titleId = UUID.randomUUID().toString();
+    MockServer.addMockTitleWithId(poLine, titleId);
+
     Piece physicalPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.PHYSICAL)
       .withLocationId(locationForPhysical)
       .withId(UUID.randomUUID().toString())
+      .withTitleId(titleId)
       .withItemId(UUID.randomUUID().toString());
     Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC)
       .withId(UUID.randomUUID().toString())
+      .withTitleId(titleId)
       .withItemId(UUID.randomUUID().toString());
 
     addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
     addMockEntry(PO_LINES, poLine);
     addMockEntry(PIECES, physicalPiece);
     addMockEntry(PIECES, electronicPiece);
-
-    MockServer.addMockTitles(Collections.singletonList(poLine));
 
     List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
     toBeCheckedInList.add(new ToBeCheckedIn()
@@ -520,6 +522,61 @@ public class CheckinReceivingApiTest {
 
     assertThat(getCreatedHoldings().get(0).getString(HOLDING_PERMANENT_LOCATION_ID), is(locationForPhysical));
 
+  }
+
+  @Test
+  void testPostCheckinForPackagePOL() {
+    logger.info("=== Test POST check-in - Package POL ===");
+
+    CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder();
+    CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId());
+    poLine.setIsPackage(true);
+    poLine.setOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
+    poLine.setEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM));
+    poLine.setPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM));
+
+    String locationForPhysical = UUID.randomUUID().toString();
+    String locationForElectronic = UUID.randomUUID().toString();
+
+    String titleIdForPhysical = UUID.randomUUID().toString();
+    MockServer.addMockTitleWithId(poLine, titleIdForPhysical);
+    String titleIdForElectronic = UUID.randomUUID().toString();
+    MockServer.addMockTitleWithId(poLine, titleIdForElectronic);
+
+    Piece physicalPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.PHYSICAL)
+      .withLocationId(locationForPhysical)
+      .withId(UUID.randomUUID().toString())
+      .withTitleId(titleIdForPhysical)
+      .withItemId(UUID.randomUUID().toString());
+    Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC)
+      .withId(UUID.randomUUID().toString())
+      .withTitleId(titleIdForElectronic)
+      .withItemId(UUID.randomUUID().toString());
+
+    addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    addMockEntry(PO_LINES, poLine);
+    addMockEntry(PIECES, physicalPiece);
+    addMockEntry(PIECES, electronicPiece);
+
+    List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
+    toBeCheckedInList.add(new ToBeCheckedIn()
+      .withCheckedIn(1)
+      .withPoLineId(poLine.getId())
+      .withCheckInPieces(Arrays.asList(new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.ON_ORDER),
+        new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.ON_ORDER))));
+
+    CheckinCollection request = new CheckinCollection()
+      .withToBeCheckedIn(toBeCheckedInList)
+      .withTotalRecords(2);
+
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setId(physicalPiece.getId());
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(locationForPhysical);
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setId(electronicPiece.getId());
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(locationForElectronic);
+
+    checkResultWithErrors(request, 0);
   }
 
   @Test
