@@ -736,11 +736,13 @@
             "orders.rollover.item.post"
           ],
           "modulePermissions": [
+            "configuration.entries.collection.get",
             "finance-storage.funds.collection.get",
+            "finance.transactions.collection.get",
+            "finance.exchange-rate.item.get",
             "orders-storage.purchase-orders.collection.get",
             "orders-storage.po-lines.collection.get",
-            "orders-storage.po-lines.item.put",
-            "finance.transactions.collection.get"
+            "orders-storage.po-lines.item.put"
           ]
         }
       ]
