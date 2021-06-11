@@ -253,6 +253,12 @@ public class MockServer {
       .forEach(line -> addMockEntry(TITLES, getTitle(line)));
   }
 
+  public static void addMockTitleWithId(CompositePoLine poLine, String titleId) {
+    org.folio.rest.jaxrs.model.Title newTitle = getTitle(poLine);
+    newTitle.setId(titleId);
+    addMockEntry(TITLES, newTitle);
+  }
+
   public void start() throws InterruptedException, ExecutionException, TimeoutException {
     // Setup Mock Server...
     HttpServer server = vertx.createHttpServer();
@@ -1670,6 +1676,16 @@ public class MockServer {
               List<String> pieceIds = extractIdsFromQuery(query);
               pieces.getPieces()
                 .removeIf(piece -> !pieceIds.contains(piece.getId()));
+              // fix consistency with titles: the piece's title id should be the same as one of the titles ids
+              // returned for the piece's po line
+              pieces.getPieces().forEach(piece -> {
+                String poLineId = piece.getPoLineId();
+                List<Title> titlesForPoLine = getTitlesByPoLineIds(List.of(poLineId))
+                  .mapTo(TitleCollection.class).getTitles();
+                if (titlesForPoLine.size() > 0 && titlesForPoLine.stream()
+                    .noneMatch(title -> title.getId().equals(piece.getTitleId())))
+                  piece.setTitleId(titlesForPoLine.get(0).getId());
+              });
           } else {
             pieces = new PieceCollection();
           }
