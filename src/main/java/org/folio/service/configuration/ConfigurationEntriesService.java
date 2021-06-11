@@ -1,21 +1,18 @@
 package org.folio.service.configuration;
 
+import static org.folio.orders.utils.HelperUtils.SYSTEM_CONFIG_MODULE_NAME;
+
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.ErrorCodes;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Configs;
 
 import io.vertx.core.json.JsonObject;
-
-import static org.folio.orders.utils.HelperUtils.SYSTEM_CONFIG_MODULE_NAME;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 public class ConfigurationEntriesService {
 

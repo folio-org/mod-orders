@@ -5,9 +5,12 @@ import java.util.List;
 
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.PoLine;
+import javax.money.convert.ConversionContext;
+import javax.money.convert.CurrencyConversion;
 
 public class PoLineEncumbrancesHolder {
   private final PoLine poLine;
+  private CurrencyConversion currencyConversion;
   private List<Transaction> encumbrances;
 
   public PoLineEncumbrancesHolder(PoLine poLine) {
@@ -25,11 +28,21 @@ public class PoLineEncumbrancesHolder {
     return this;
   }
 
+  public PoLineEncumbrancesHolder withCurrencyConversion(CurrencyConversion currencyConversion) {
+    this.currencyConversion = currencyConversion;
+    return this;
+  }
+
+
   public PoLine getPoLine() {
     return this.poLine;
   }
 
   public List<Transaction> getEncumbrances() {
     return this.encumbrances;
+  }
+
+  public CurrencyConversion getCurrencyConversion() {
+    return currencyConversion;
   }
 }

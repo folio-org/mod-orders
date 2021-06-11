@@ -990,4 +990,14 @@ public class HelperUtils {
         poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING);
       }
   }
+
+  public static ConversionQuery buildConversionQuery(PoLine poLine, String systemCurrency) {
+    Cost cost = poLine.getCost();
+    if (cost.getExchangeRate() != null){
+      return ConversionQueryBuilder.of().setBaseCurrency(cost.getCurrency())
+        .setTermCurrency(systemCurrency)
+        .set(RATE_KEY, cost.getExchangeRate()).build();
+    }
+    return ConversionQueryBuilder.of().setBaseCurrency(cost.getCurrency()).setTermCurrency(systemCurrency).build();
+  }
 }
