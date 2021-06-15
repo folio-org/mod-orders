@@ -239,7 +239,7 @@ public class PiecesService {
         .thenCompose(title -> titlesService.updateTitle(title, requestContext).thenApply(json -> title))
         .thenCompose(title -> handleHoldingsRecord(compPOL, piece.getLocationId(), title.getInstanceId(), requestContext))
         .thenCompose(holdingId -> createItemRecord(compPOL, holdingId, requestContext))
-        .thenApply(piece::withItemId);
+        .thenApply(itemId -> itemId != null ? piece.withItemId(itemId) : piece);
     }
     else
     {
