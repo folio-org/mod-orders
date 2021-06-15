@@ -255,7 +255,7 @@ public class PiecesHelper extends AbstractHelper {
         .thenCompose(title -> titlesHelper.updateTitle(title).thenApply(json -> title))
         .thenCompose(title -> handleHoldingsRecord(compPOL, piece.getLocationId(), title.getInstanceId()))
         .thenCompose(holdingId -> createItemRecord(compPOL, holdingId))
-        .thenApply(piece::withItemId);
+        .thenApply(itemId -> itemId != null ? piece.withItemId(itemId) : piece);
     }
     else
     {
