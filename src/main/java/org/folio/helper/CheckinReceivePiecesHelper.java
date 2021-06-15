@@ -667,7 +667,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
   private CompletableFuture<Map<String, List<Piece>>> processItemsUpdate(
       Map<String, Map<String, String>> pieceLocationsGroupedByPoLine, Map<String, List<Piece>> piecesGroupedByPoLine,
-      List<JsonObject> items, PoLineAndTitleById poLinesAndPiecesById, RequestContext requestContext) {
+      List<JsonObject> items, PoLineAndTitleById poLinesAndTitlesById, RequestContext requestContext) {
     List<CompletableFuture<Boolean>> futuresForItemsUpdates = new ArrayList<>();
     Map<String, Piece> piecesWithItems = collectPiecesWithItemId(piecesGroupedByPoLine);
 
@@ -680,10 +680,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       String itemId = item.getString(ID);
       Piece piece = piecesWithItems.get(itemId);
 
-      CompositePoLine poLine = poLinesAndPiecesById.poLineById.get(piece.getPoLineId());
+      CompositePoLine poLine = poLinesAndTitlesById.poLineById.get(piece.getPoLineId());
       if (poLine == null)
         continue;
-      Title title = poLinesAndPiecesById.titleById.get(piece.getTitleId());
+      Title title = poLinesAndTitlesById.titleById.get(piece.getTitleId());
       if (title == null)
         continue;
 
@@ -706,18 +706,18 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   }
 
   private CompletableFuture<Void> processHoldingsUpdate(Map<String, Map<String, String>> pieceLocationsGroupedByPoLine,
-      Map<String, List<Piece>> piecesGroupedByPoLine, PoLineAndTitleById poLinesAndPiecesById, RequestContext requestContext) {
+      Map<String, List<Piece>> piecesGroupedByPoLine, PoLineAndTitleById poLinesAndTitlesById, RequestContext requestContext) {
     List<CompletableFuture<Boolean>> futuresForHoldingsUpdates = new ArrayList<>();
     StreamEx.ofValues(piecesGroupedByPoLine)
       .flatMap(List::stream)
       .forEach(piece -> {
-        CompositePoLine poLine = poLinesAndPiecesById.poLineById.get(piece.getPoLineId());
+        CompositePoLine poLine = poLinesAndTitlesById.poLineById.get(piece.getPoLineId());
         if (poLine == null) {
           logger.error("POLine associated with piece '{}' cannot be found", piece.getId());
           addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
           return;
         }
-        Title title = poLinesAndPiecesById.titleById.get(piece.getTitleId());
+        Title title = poLinesAndTitlesById.titleById.get(piece.getTitleId());
         if (title == null) {
           logger.error("Piece with id {} : title with id {} was not found within the po line titles.",
             piece.getId(), piece.getTitleId());
