@@ -30,6 +30,7 @@ import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,6 +39,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -219,23 +221,12 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     }
   }
 
-  private CompositePoLine searchPoLineById(List<CompositePoLine> poLines, Piece piece) {
-    for (CompositePoLine poline : poLines) {
-      if (poline.getId().equals(piece.getPoLineId())) {
-        return poline;
-      }
-    }
-    logger.error("POLine associated with piece '{}' cannot be found", piece.getId());
-    addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
-    return null;
-  }
+  private CompletableFuture<Boolean> createHoldingsForChangedLocations(Piece piece, String instanceId, String receivedPieceLocationId) {
+    if (ifHoldingNotProcessed(receivedPieceLocationId, instanceId) && !isRevertToOnOrder(piece)) {
 
-  private CompletableFuture<Boolean> createHoldingsForChangedLocations(Piece piece, CompositePoLine poLine, String receivedPieceLocationId) {
-    if (ifHoldingNotProcessed(receivedPieceLocationId, poLine.getInstanceId()) && !isRevertToOnOrder(piece)) {
-
-      return inventoryHelper.getOrCreateHoldingsRecord(poLine.getInstanceId(), receivedPieceLocationId)
+      return inventoryHelper.getOrCreateHoldingsRecord(instanceId, receivedPieceLocationId)
         .thenCompose(holdingId -> {
-          processedHoldings.put(receivedPieceLocationId + poLine.getInstanceId(), holdingId);
+          processedHoldings.put(receivedPieceLocationId + instanceId, holdingId);
           return completedFuture(true);
         })
         .exceptionally(t -> {
@@ -447,26 +438,37 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     }
   }
 
-  public CompletableFuture<List<CompositePoLine>> getCompositePoLines(List<String> poLineIds) {
+  /**
+   * Retrieves the PO lines and associated titles.
+   * Also checks all po lines have at least one title, and not more for non-packages.
+   * @param poLineIds List of po lines ids
+   * @return An object with 2 maps: poLineById (with composite po lines) and titleById
+   */
+  private CompletableFuture<PoLineAndTitleById> getPoLineAndTitleById(List<String> poLineIds) {
     return getPoLines(poLineIds)
       .thenCompose(poLines -> {
-        List<String> ids = poLines.stream().filter(poLine -> !poLine.getIsPackage()).map(PoLine::getId).collect(Collectors.toList());
+        List<String> ids = poLines.stream().map(PoLine::getId).collect(Collectors.toList());
         return new TitlesHelper(httpClient, okapiHeaders, ctx, lang).getTitlesByPoLineIds(ids)
-          .thenApply(lineIdTitles -> HelperUtils.verifyNonPackageTitles(lineIdTitles, ids))
-          .thenApply(titles -> populateInstanceId(poLines, titles));
+          .thenApply(titles -> {
+            List<CompositePoLine> compositePoLines = poLines.stream()
+              .map(this::convertToCompositePoLine).collect(Collectors.toList());
+            Map<String, CompositePoLine> poLineById = compositePoLines.stream()
+              .collect(Collectors.toMap(CompositePoLine::getId, Function.identity()));
+            HelperUtils.verifyTitles(titles, poLineById);
+            PoLineAndTitleById result = new PoLineAndTitleById();
+            result.poLineById = poLineById;
+            result.titleById = titles.values().stream().flatMap(Collection::stream)
+              .collect(Collectors.toMap(Title::getId, Function.identity()));
+            return result;
+          });
       });
   }
 
-  private List<CompositePoLine> populateInstanceId(List<PoLine> poLines, Map<String, List<Title>> titles) {
-    return poLines.stream().map(poLine -> convertToCompositePoLine(poLine, titles)).collect(Collectors.toList());
-  }
-
-  protected CompositePoLine convertToCompositePoLine(PoLine poLine, Map<String, List<Title>> titles) {
+  private CompositePoLine convertToCompositePoLine(PoLine poLine) {
     poLine.setAlerts(null);
     poLine.setReportingCodes(null);
     JsonObject jsonLine = JsonObject.mapFrom(poLine);
-    Title title = titles.get(poLine.getId()).get(0);
-    return jsonLine.mapTo(CompositePoLine.class).withInstanceId(title.getInstanceId()).withTitleOrPackage(title.getTitle());
+    return jsonLine.mapTo(CompositePoLine.class);
   }
 
   private CompletableFuture<List<PoLine>> getPoLinesByQuery(String query) {
@@ -646,15 +648,15 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     Map<String, Piece> piecesWithItems = collectPiecesWithItemId(piecesGroupedByPoLine);
     List<String> poLineIds = new ArrayList<>(piecesGroupedByPoLine.keySet());
 
-    return getCompositePoLines(poLineIds)
-      .thenCompose(poLines -> processHoldingsUpdate(pieceLocationsGroupedByPoLine, piecesGroupedByPoLine, poLines)
+    return getPoLineAndTitleById(poLineIds)
+      .thenCompose(poLineAndTitleById -> processHoldingsUpdate(pieceLocationsGroupedByPoLine, piecesGroupedByPoLine, poLineAndTitleById)
         .thenCompose(v -> getItemRecords(piecesWithItems))
-        .thenCompose(items -> processItemsUpdate(pieceLocationsGroupedByPoLine, piecesGroupedByPoLine, items, poLines)));
+        .thenCompose(items -> processItemsUpdate(pieceLocationsGroupedByPoLine, piecesGroupedByPoLine, items, poLineAndTitleById)));
   }
 
   private CompletableFuture<Map<String, List<Piece>>> processItemsUpdate(
       Map<String, Map<String, String>> pieceLocationsGroupedByPoLine, Map<String, List<Piece>> piecesGroupedByPoLine,
-      List<JsonObject> items, List<CompositePoLine> poLines) {
+      List<JsonObject> items, PoLineAndTitleById poLinesAndTitlesById) {
     List<CompletableFuture<Boolean>> futuresForItemsUpdates = new ArrayList<>();
     Map<String, Piece> piecesWithItems = collectPiecesWithItemId(piecesGroupedByPoLine);
 
@@ -667,14 +669,17 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       String itemId = item.getString(ID);
       Piece piece = piecesWithItems.get(itemId);
 
-      CompositePoLine poLine = searchPoLineById(poLines, piece);
+      CompositePoLine poLine = poLinesAndTitlesById.poLineById.get(piece.getPoLineId());
       if (poLine == null)
+        continue;
+      Title title = poLinesAndTitlesById.titleById.get(piece.getTitleId());
+      if (title == null)
         continue;
 
       String pieceLocation = pieceLocationsGroupedByPoLine.get(poLine.getId())
         .get(piece.getId());
       if (holdingUpdateOnCheckinReceiveRequired(piece, pieceLocation, poLine) && !isRevertToOnOrder(piece)) {
-        String holdingId = processedHoldings.get(pieceLocation + poLine.getInstanceId());
+        String holdingId = processedHoldings.get(pieceLocation + title.getInstanceId());
         item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
       }
       futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece));
@@ -691,16 +696,28 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   }
 
   private CompletableFuture<Void> processHoldingsUpdate(Map<String, Map<String, String>> pieceLocationsGroupedByPoLine,
-      Map<String, List<Piece>> piecesGroupedByPoLine, List<CompositePoLine> poLines) {
+      Map<String, List<Piece>> piecesGroupedByPoLine, PoLineAndTitleById poLinesAndTitlesById) {
     List<CompletableFuture<Boolean>> futuresForHoldingsUpdates = new ArrayList<>();
     StreamEx.ofValues(piecesGroupedByPoLine)
       .flatMap(List::stream)
       .forEach(piece -> {
-        CompositePoLine poLine = searchPoLineById(poLines, piece);
+        CompositePoLine poLine = poLinesAndTitlesById.poLineById.get(piece.getPoLineId());
+        if (poLine == null) {
+          logger.error("POLine associated with piece '{}' cannot be found", piece.getId());
+          addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
+          return;
+        }
+        Title title = poLinesAndTitlesById.titleById.get(piece.getTitleId());
+        if (title == null) {
+          logger.error("Piece with id {} : title with id {} was not found within the po line titles.",
+            piece.getId(), piece.getTitleId());
+          addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
+          return;
+        }
         String receivedPieceLocationId = pieceLocationsGroupedByPoLine.get(poLine.getId()).get(piece.getId());
 
         if (holdingUpdateOnCheckinReceiveRequired(piece, receivedPieceLocationId, poLine)) {
-          futuresForHoldingsUpdates.add(createHoldingsForChangedLocations(piece, poLine, receivedPieceLocationId));
+          futuresForHoldingsUpdates.add(createHoldingsForChangedLocations(piece, title.getInstanceId(), receivedPieceLocationId));
         }
       });
 
@@ -740,4 +757,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       return CompletableFuture.completedFuture(null);
     }
   }
+
+  private static class PoLineAndTitleById {
+    Map<String, CompositePoLine> poLineById;
+    Map<String, Title> titleById;
+  }
+
 }

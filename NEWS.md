@@ -1,5 +1,14 @@
 ## 12.1.0 - Unreleased
 
+## 12.0.2 Released
+
+Resolves a bug preventing to receive pieces for package order lines.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.0.1...v12.0.2)
+
+### Bug fixes
+* [MODORDERS-519](https://issues.folio.org/browse/MODORDERS-519) - CANNOT receive pieces against package POL
+
 ## 12.0.1 - Released
 
 The primary focus of this release was to fix issue with splitting funds on a PO with an odd number of pennies as the cost.
