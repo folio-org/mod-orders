@@ -1,5 +1,14 @@
 ## 12.1.0 - Unreleased
 
+## 12.0.3 Released
+
+Resolves a bug preventing to close an order when all encumbrances are already released.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.0.2...v12.0.3)
+
+### Bug fixes
+* [MODORDERS-513](https://issues.folio.org/browse/MODORDERS-513) - Closing an order fails when all encumbrances are already released
+
 ## 12.0.2 Released
 
 Resolves a bug preventing to receive pieces for package order lines.
