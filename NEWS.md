@@ -1,4 +1,31 @@
-## 12.1.0 - Unreleased
+## 12.2.0 - Unreleased
+
+## 12.1.0 - Released
+
+This released focused on business logic updates for open orders. RMB version updated up to v33.0.0. Search and filtering speed increased after migrating to cross-index approach 
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.0.3...v12.1.0)
+
+### Stories
+* [MODORDERS-520](https://issues.folio.org/browse/MODORDERS-520) - Remove protection from subscriptionTo and vendorAccount for Open order
+* [MODORDERS-516](https://issues.folio.org/browse/MODORDERS-516) - Consider exchange rate when updating rollover adjustment amount in POL
+* [MODORDERS-512](https://issues.folio.org/browse/MODORDERS-512) - Update circulation interface dependency to support v11
+* [MODORDERS-511](https://issues.folio.org/browse/MODORDERS-511) - Do not allow changing the quantity or location of the POL, if the order already opened
+* [MODORDERS-504](https://issues.folio.org/browse/MODORDERS-504) - Add GET PO lines cross index search support
+* [MODORDERS-503](https://issues.folio.org/browse/MODORDERS-503) - Add GET orders cross index search support
+* [MODORDERS-486](https://issues.folio.org/browse/MODORDERS-486) - mod-orders: Update RMB
+* [MODORDERS-474](https://issues.folio.org/browse/MODORDERS-474) - Unrelease encumbrances when order is reopen
+* [MODORDERS-224](https://issues.folio.org/browse/MODORDERS-224) - Validate that renewals is present in ongoing orders
+
+
+### Bug Fixes
+* [MODORDERS-519](https://issues.folio.org/browse/MODORDERS-519) - CANNOT receive pieces against package POL
+* [MODORDERS-513](https://issues.folio.org/browse/MODORDERS-513) - Closing an order fails when all encumbrances already released
+* [MODORDERS-502](https://issues.folio.org/browse/MODORDERS-502) - When reopening order system forces user to delete pieces and items
+* [MODORDERS-499](https://issues.folio.org/browse/MODORDERS-499) - Renewals validation prevents opening of ongoing orders
+* [MODORDERS-496](https://issues.folio.org/browse/MODORDERS-496) - Unable to open order with 2 POLs that have different currencies
+* [MODORDERS-482](https://issues.folio.org/browse/MODORDERS-482) - Cannot split funds on a PO with an odd number of pennies as the cost
+
 
 ## 12.0.0 - Released
 
