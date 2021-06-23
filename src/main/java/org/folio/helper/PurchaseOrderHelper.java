@@ -758,6 +758,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenCompose(strategy -> strategy.processEncumbrances(compPO, getRequestContext()))
       .thenAccept(ok -> orderLineHelper.makePoLinesPending(compPO.getCompositePoLines()))
       .thenCompose(ok -> unOpenOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext))
+      .thenCompose(ok -> unOpenProcessInventory(compPO.getCompositePoLines(), requestContext))
       .thenAccept(v-> future.complete(null))
       .exceptionally(t -> {
         future.completeExceptionally(t);
@@ -766,8 +767,23 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return future;
   }
 
+  private CompletableFuture<Void> unOpenProcessInventory(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
+    return FolioVertxCompletableFuture.allOf(requestContext.getContext(), compositePoLines.stream()
+              .map(line -> processInventory(line, requestContext))
+              .toArray(CompletableFuture[]::new));
+  }
+
+  private CompletableFuture<Void> processInventory(CompositePoLine compPOL, RequestContext requestContext) {
+    if (HelperUtils.isItemsUpdateRequired(compPOL)) {
+      return inventoryManager.getExpectedPiecesByLineId(compPOL.getId(), requestContext)
+                             .thenAccept(pieceCollection -> logger.info("Expected pieces"));
+    }
+    return CompletableFuture.completedFuture(null);
+  }
+
+
   public CompletableFuture<Void> unOpenOrderUpdatePoLinesSummary(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
-    return CompletableFuture.allOf( compositePoLines.stream()
+    return FolioVertxCompletableFuture.allOf(requestContext.getContext(), compositePoLines.stream()
       .map(HelperUtils::convertToPoLine)
       .map(line -> purchaseOrderLineService.updateOrderLine(line, requestContext))
       .toArray(CompletableFuture[]::new));
