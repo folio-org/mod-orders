@@ -152,7 +152,7 @@ public class PiecesService {
     return restClient.put(requestEntry, piece, requestContext);
   }
 
-  public CompletableFuture<Void> deletePiece(String pieceId, RequestContext requestContext) {
+  public CompletableFuture<Void> deletePieceWithItem(String pieceId, RequestContext requestContext) {
     return getPieceById(pieceId, requestContext)
       .thenCompose(piece -> getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
         .thenCompose(purchaseOrder -> protectionService.isOperationRestricted(purchaseOrder.getAcqUnitIds(), DELETE, requestContext)

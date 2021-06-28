@@ -63,7 +63,7 @@ import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
-public class PiecesServiceTest {
+public class PieceServiceTest {
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   private static final String COMPOSITE_LINES_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private static final String PIECE_PATH = BASE_MOCK_DATA_PATH + "pieces/";
@@ -73,7 +73,7 @@ public class PiecesServiceTest {
   private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
 
   @Autowired
-  private PiecesService piecesService;
+  private PieceService piecesService;
   @Autowired
   private ProtectionService protectionService;
   @Autowired
@@ -106,7 +106,7 @@ public class PiecesServiceTest {
       ApiTestSuite.before();
       runningOnOwn = true;
     }
-    initSpringContext(PiecesServiceTest.ContextConfiguration.class);
+    initSpringContext(PieceServiceTest.ContextConfiguration.class);
   }
 
   @AfterAll
@@ -177,7 +177,7 @@ public class PiecesServiceTest {
     //given
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     title.setInstanceId(null);
-    PiecesService piecesService = mock(PiecesService.class, CALLS_REAL_METHODS);
+    PieceService piecesService = mock(PieceService.class, CALLS_REAL_METHODS);
     doReturn(completedFuture(UUID.randomUUID().toString())).when(piecesService).getOrCreateInstanceRecord(any(Title.class), eq(requestContext));
     //When
     piecesService.handleInstanceRecord(title, requestContext).get();
@@ -411,10 +411,10 @@ public class PiecesServiceTest {
     }
 
     @Bean
-    PiecesService piecesService(RestClient restClient, TitlesService titlesService, ProtectionService protectionService,
-                                CompositePurchaseOrderService compositePurchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
-                                InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
-      return spy(new PiecesService(restClient, titlesService, protectionService, compositePurchaseOrderService, purchaseOrderLineService,
+    PieceService piecesService(RestClient restClient, TitlesService titlesService, ProtectionService protectionService,
+                               CompositePurchaseOrderService compositePurchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
+                               InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
+      return spy(new PieceService(restClient, titlesService, protectionService, compositePurchaseOrderService, purchaseOrderLineService,
                                     inventoryManager, receiptStatusPublisher));
     }
   }

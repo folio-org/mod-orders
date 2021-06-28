@@ -1,6 +1,7 @@
 package org.folio.helper;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
@@ -55,6 +56,9 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
+import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
+import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
+import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -118,6 +122,7 @@ import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.pieces.PiecesService;
 import org.folio.service.titles.TitlesService;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -167,6 +172,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private ProtectionService protectionService;
   @Autowired
   private InventoryManager inventoryManager;
+  @Autowired
+  private PiecesService piecesService;
 
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -305,7 +312,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           })
           .thenCompose(ok -> {
             if (isTransitionToPending(poFromStorage, compPO)) {
-              checkOrderUnopenPermissions();
+             // checkOrderUnopenPermissions();
               return unOpenOrder(compPO, requestContext);
             }
             return CompletableFuture.completedFuture(null);
@@ -769,16 +776,73 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private CompletableFuture<Void> unOpenProcessInventory(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
     return FolioVertxCompletableFuture.allOf(requestContext.getContext(), compositePoLines.stream()
-              .map(line -> processInventory(line, requestContext))
+              .map(line -> unOpenProcessInventory(line, requestContext))
               .toArray(CompletableFuture[]::new));
   }
 
-  private CompletableFuture<Void> processInventory(CompositePoLine compPOL, RequestContext requestContext) {
+  private CompletableFuture<Void> unOpenProcessInventory(CompositePoLine compPOL, RequestContext rqContext) {
     if (HelperUtils.isItemsUpdateRequired(compPOL)) {
-      return inventoryManager.getExpectedPiecesByLineId(compPOL.getId(), requestContext)
-                             .thenAccept(pieceCollection -> logger.info("Expected pieces"));
+      return inventoryManager.getExpectedPiecesByLineId(compPOL.getId(), rqContext)
+                      .thenCompose(pieceCollection -> {
+                         if (isNotEmpty(pieceCollection.getPieces())) {
+                           List<String> itemIds = pieceCollection.getPieces().stream().map(Piece::getItemId).collect(toList());
+                           return inventoryManager.getItemRecordsByIds(itemIds, rqContext)
+                                                  .thenApply(items -> getItemsByStatus(items, "On Order"))
+                                                  .thenCompose(onOrderItems -> unOpenRemovePiecesAndItems(onOrderItems, pieceCollection.getPieces(), rqContext))
+                                                  .thenCompose(deletedItems -> unOpenDeleteHoldings(deletedItems, rqContext))
+                                            //      .thenAccept(deletedHoldingIds -> unOpenUpdateLocations(onOrderItems, deletedHoldingIds))
+                                                  .thenAccept(v -> logger.info("Processed"));
+                         }
+                         return completedFuture(null);
+                      });
     }
-    return CompletableFuture.completedFuture(null);
+    return completedFuture(null);
+  }
+
+  private CompletionStage<Object> unOpenDeleteHoldings(List<JsonObject> deletedItems, RequestContext rqContext) {
+    List<CompletableFuture<String>> deletedHoldingIds = new ArrayList<>(deletedItems.size());
+    deletedItems.forEach(deletedItem -> {
+      String holdingId = deletedItem.getString(ITEM_HOLDINGS_RECORD_ID);
+      if (holdingId != null) {
+        deletedHoldingIds.add(inventoryManager.getItemsByHoldingId(deletedItem.getString(ITEM_HOLDINGS_RECORD_ID), rqContext)
+                                              .thenCompose(items -> {
+                                                 if (items.size() > 0) {
+                                                   return inventoryManager.deleteHolding(holdingId, rqContext).thenApply(v -> holdingId);
+                                                 }
+                                                 return CompletableFuture.completedFuture(null);
+                                              }));
+      }
+    });
+    return collectResultsOnSuccess(deletedHoldingIds)
+              .thenApply(resultDeletedHoldingIds -> resultDeletedHoldingIds.stream().filter(Objects::nonNull).collect(toList()))
+              .thenApply(resultDeletedHoldingIds -> {
+                String deletedIds = resultDeletedHoldingIds.stream().collect(Collectors.joining(","));
+                logger.debug("Holdings were removed : " + deletedIds);
+                return resultDeletedHoldingIds;
+              });
+  }
+
+  private CompletionStage<List<JsonObject>> unOpenRemovePiecesAndItems(List<JsonObject> onOrderItems, List<Piece> pieces, RequestContext rqContext) {
+    List<CompletableFuture<JsonObject>> deletedItems = new ArrayList<>(onOrderItems.size());
+    Map<String, List<Piece>> itemIdVsPiece = pieces.stream().collect(groupingBy(Piece::getItemId));
+    onOrderItems.stream().forEach(onOrderItem -> {
+      List<Piece> itemPieces = itemIdVsPiece.get(onOrderItem.getString(ID));
+      if (CollectionUtils.isNotEmpty(itemPieces)) {
+        itemPieces.forEach(piece -> deletedItems.add(piecesService.deletePieceWithItem(piece.getId(), rqContext)
+                                                                         .thenApply(v -> onOrderItem)));
+      }
+    });
+    return collectResultsOnSuccess(deletedItems).thenApply(resultDeletedItems -> {
+      String deletedIds = resultDeletedItems.stream().map(item -> item.getString(ID)).collect(Collectors.joining(","));
+      logger.debug("Item were removed : " + deletedIds);
+      return resultDeletedItems;
+    });
+  }
+
+  private List<JsonObject> getItemsByStatus(List<JsonObject> items, String status) {
+   return items.stream()
+         .filter(item -> status.equals(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME)))
+         .collect(toList());
   }
 
 

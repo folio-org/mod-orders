@@ -53,7 +53,7 @@ import org.folio.service.orders.PurchaseOrderLineServiceTest;
 import org.folio.service.orders.PurchaseOrderServiceTest;
 import org.folio.service.orders.ReEncumbranceHoldersBuilderTest;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateServiceTest;
-import org.folio.service.pieces.PiecesServiceTest;
+import org.folio.service.pieces.PieceServiceTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
@@ -158,7 +158,7 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class PiecesServiceTestNested extends PiecesServiceTest {
+  class PieceServiceTestNested extends PieceServiceTest {
   }
 
   @Nested

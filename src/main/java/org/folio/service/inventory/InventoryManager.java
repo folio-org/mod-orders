@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -127,7 +128,7 @@ public class InventoryManager {
 
   private static final String TENANT_SPECIFIC_KEY_FORMAT = "%s.%s.%s";
   private static final String LOOKUP_ITEM_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
-  private static final String CREATE_ITEM_STOR_ENDPOINT = "/item-storage/items";
+  private static final String ITEM_STOR_ENDPOINT = "/item-storage/items";
   public static final String  ITEM_BY_ID_ENDPOINT = "/inventory/items/{id}";
   private static final String HOLDINGS_LOOKUP_QUERY = "instanceId==%s and permanentLocationId==%s";
   public static final String ID = "id";
@@ -829,7 +830,7 @@ public class InventoryManager {
   private CompletableFuture<List<JsonObject>> searchStorageExistingItems(String poLineId, String holdingId, int expectedQuantity,
                                                                          RequestContext requestContext) {
     String query = String.format(LOOKUP_ITEM_QUERY, poLineId, holdingId);
-    RequestEntry requestEntry = new RequestEntry(CREATE_ITEM_STOR_ENDPOINT).withQuery(query).withOffset(0).withLimit(expectedQuantity);
+    RequestEntry requestEntry = new RequestEntry(ITEM_STOR_ENDPOINT).withQuery(query).withOffset(0).withLimit(expectedQuantity);
     return restClient.getAsJsonObject(requestEntry, requestContext)
                      .thenApply(itemsCollection -> {
                         List<JsonObject> items = extractEntities(itemsCollection, ITEMS);
@@ -838,6 +839,16 @@ public class InventoryManager {
                      });
   }
 
+  public CompletableFuture<List<JsonObject>> getItemsByHoldingId(String holdingId, RequestContext requestContext) {
+    String query = String.format("holdingsRecordId==%s", holdingId);
+    RequestEntry requestEntry = new RequestEntry(ITEM_STOR_ENDPOINT).withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
+    return restClient.getAsJsonObject(requestEntry, requestContext)
+      .thenApply(itemsCollection -> {
+        List<JsonObject> items = extractEntities(itemsCollection, ITEMS);
+        logger.debug("{} existing items found for holding with '{}' id", items.size(), holdingId);
+        return items;
+      });
+  }
   /**
    * Validates if the json object contains entries and returns entries as list of JsonObject elements
    * @param entries {@link JsonObject} representing item storage response
@@ -916,7 +927,7 @@ public class InventoryManager {
    */
   private CompletableFuture<String> createItemInInventory(JsonObject itemData, RequestContext requestContext) {
     CompletableFuture<String> future = new CompletableFuture<>();
-    RequestEntry requestEntry = new RequestEntry(CREATE_ITEM_STOR_ENDPOINT).withQueryParameter(LANG, "en");
+    RequestEntry requestEntry = new RequestEntry(ITEM_STOR_ENDPOINT).withQueryParameter(LANG, "en");
     logger.info("Trying to create Item in inventory");
     restClient.post(requestEntry, itemData, PostResponseType.UUID, String.class, requestContext)
                      .thenApply(future::complete)
@@ -1149,4 +1160,8 @@ public class InventoryManager {
     });
   }
 
+  public CompletionStage<Void> deleteHolding(String holdingId, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS)).withId(holdingId);
+    return restClient.delete(requestEntry, requestContext);
+  }
 }
