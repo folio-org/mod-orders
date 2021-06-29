@@ -73,7 +73,7 @@ public class PieceServiceTest {
   private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
 
   @Autowired
-  private PieceService piecesService;
+  private PiecesService piecesService;
   @Autowired
   private ProtectionService protectionService;
   @Autowired
@@ -177,7 +177,7 @@ public class PieceServiceTest {
     //given
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     title.setInstanceId(null);
-    PieceService piecesService = mock(PieceService.class, CALLS_REAL_METHODS);
+    PiecesService piecesService = mock(PiecesService.class, CALLS_REAL_METHODS);
     doReturn(completedFuture(UUID.randomUUID().toString())).when(piecesService).getOrCreateInstanceRecord(any(Title.class), eq(requestContext));
     //When
     piecesService.handleInstanceRecord(title, requestContext).get();
@@ -411,10 +411,10 @@ public class PieceServiceTest {
     }
 
     @Bean
-    PieceService piecesService(RestClient restClient, TitlesService titlesService, ProtectionService protectionService,
+    PiecesService piecesService(RestClient restClient, TitlesService titlesService, ProtectionService protectionService,
                                CompositePurchaseOrderService compositePurchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
                                InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
-      return spy(new PieceService(restClient, titlesService, protectionService, compositePurchaseOrderService, purchaseOrderLineService,
+      return spy(new PiecesService(restClient, titlesService, protectionService, compositePurchaseOrderService, purchaseOrderLineService,
                                     inventoryManager, receiptStatusPublisher));
     }
   }

@@ -47,7 +47,7 @@ import org.folio.service.orders.PurchaseOrderService;
 import org.folio.service.orders.ReEncumbranceHoldersBuilder;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateService;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
-import org.folio.service.pieces.PieceService;
+import org.folio.service.pieces.PiecesService;
 import org.folio.service.titles.TitlesService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -334,9 +334,9 @@ public class ApplicationConfig {
   }
 
   @Bean
-  PieceService piecesService(RestClient restClient, TitlesService titlesService, ProtectionService protectionService,
-                             CompositePurchaseOrderService compositePurchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
-                             InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
-    return new PieceService(restClient, titlesService, protectionService, compositePurchaseOrderService, purchaseOrderLineService, inventoryManager, receiptStatusPublisher);
+  PiecesService piecesService(RestClient restClient, TitlesService titlesService, ProtectionService protectionService,
+                              CompositePurchaseOrderService compositePurchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
+                              InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
+    return new PiecesService(restClient, titlesService, protectionService, compositePurchaseOrderService, purchaseOrderLineService, inventoryManager, receiptStatusPublisher);
   }
 }

@@ -787,7 +787,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
                          if (isNotEmpty(pieceCollection.getPieces())) {
                            List<String> itemIds = pieceCollection.getPieces().stream().map(Piece::getItemId).collect(toList());
                            return inventoryManager.getItemRecordsByIds(itemIds, rqContext)
-                                                  .thenApply(items -> getItemsByStatus(items, "On Order"))
+                                                  .thenApply(items -> getItemsByStatus(items, "On order"))
                                                   .thenCompose(onOrderItems -> unOpenRemovePiecesAndItems(onOrderItems, pieceCollection.getPieces(), rqContext))
                                                   .thenCompose(deletedItems -> unOpenDeleteHoldings(deletedItems, rqContext))
                                             //      .thenAccept(deletedHoldingIds -> unOpenUpdateLocations(onOrderItems, deletedHoldingIds))
@@ -804,9 +804,9 @@ public class PurchaseOrderHelper extends AbstractHelper {
     deletedItems.forEach(deletedItem -> {
       String holdingId = deletedItem.getString(ITEM_HOLDINGS_RECORD_ID);
       if (holdingId != null) {
-        deletedHoldingIds.add(inventoryManager.getItemsByHoldingId(deletedItem.getString(ITEM_HOLDINGS_RECORD_ID), rqContext)
+        deletedHoldingIds.add(inventoryManager.getItemsByHoldingId(holdingId, rqContext)
                                               .thenCompose(items -> {
-                                                 if (items.size() > 0) {
+                                                 if (items.isEmpty()) {
                                                    return inventoryManager.deleteHolding(holdingId, rqContext).thenApply(v -> holdingId);
                                                  }
                                                  return CompletableFuture.completedFuture(null);
@@ -825,7 +825,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private CompletionStage<List<JsonObject>> unOpenRemovePiecesAndItems(List<JsonObject> onOrderItems, List<Piece> pieces, RequestContext rqContext) {
     List<CompletableFuture<JsonObject>> deletedItems = new ArrayList<>(onOrderItems.size());
     Map<String, List<Piece>> itemIdVsPiece = pieces.stream().collect(groupingBy(Piece::getItemId));
-    onOrderItems.stream().forEach(onOrderItem -> {
+    onOrderItems.forEach(onOrderItem -> {
       List<Piece> itemPieces = itemIdVsPiece.get(onOrderItem.getString(ID));
       if (CollectionUtils.isNotEmpty(itemPieces)) {
         itemPieces.forEach(piece -> deletedItems.add(piecesService.deletePieceWithItem(piece.getId(), rqContext)
@@ -841,7 +841,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private List<JsonObject> getItemsByStatus(List<JsonObject> items, String status) {
    return items.stream()
-         .filter(item -> status.equals(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME)))
+         .filter(item -> status.equalsIgnoreCase(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME)))
          .collect(toList());
   }
 
