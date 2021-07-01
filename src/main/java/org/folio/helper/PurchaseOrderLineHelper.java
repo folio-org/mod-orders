@@ -922,6 +922,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
 
   private void checkLocationCanBeModified(CompositePoLine poLine, PoLine lineFromStorage, CompositePurchaseOrder order) {
     boolean isOrderOpenAndNoNeedToManualAddPiecesForCreationAndLocationModified = order.getWorkflowStatus() == OPEN
+      && !poLine.getSource().equals(CompositePoLine.Source.EBSCONET)
       && Boolean.FALSE.equals(poLine.getCheckinItems())
       && !isEqualCollection(poLine.getLocations(), lineFromStorage.getLocations());
 
