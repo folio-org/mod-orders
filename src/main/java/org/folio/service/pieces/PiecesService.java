@@ -9,8 +9,8 @@ import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.ID;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantityWithoutLocation;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.groupLocationsById;
-import static org.folio.orders.utils.HelperUtils.isItemsUpdateRequired;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -30,12 +30,12 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.service.inventory.InventoryManager;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -48,6 +48,7 @@ import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.ProtectionService;
+import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.CompositePurchaseOrderService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.titles.TitlesService;
@@ -152,20 +153,17 @@ public class PiecesService {
     return restClient.put(requestEntry, piece, requestContext);
   }
 
-  public CompletableFuture<Void> deletePieceWithItem(String pieceId, RequestContext requestContext) {
+  public CompletableFuture<Void> deletePieceWithItem(String pieceId, boolean skipDeleteRestriction, RequestContext requestContext) {
     return getPieceById(pieceId, requestContext)
       .thenCompose(piece -> getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
-        .thenCompose(purchaseOrder -> protectionService.isOperationRestricted(purchaseOrder.getAcqUnitIds(), DELETE, requestContext)
+        .thenCompose(purchaseOrder -> isOperationRestricted(purchaseOrder, DELETE, skipDeleteRestriction, requestContext)
           .thenCompose(vVoid -> inventoryManager.getNumberOfRequestsByItemId(piece.getItemId(), requestContext))
           .thenAccept(numOfRequests -> {
             if (numOfRequests > 0) {
               throw new HttpException(422, ErrorCodes.REQUEST_FOUND.toError());
             }
           })
-          .thenCompose(aVoid -> {
-            RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(pieceId);
-            return restClient.delete(requestEntry, requestContext);
-          })
+          .thenCompose(aVoid -> deletePiece(pieceId, requestContext))
           .thenCompose(aVoid -> {
             if (StringUtils.isNotEmpty(piece.getItemId())) {
               // Attempt to delete item
@@ -186,19 +184,37 @@ public class PiecesService {
       );
   }
 
+  public CompletableFuture<Void> deletePiece(String pieceId, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(pieceId);
+    return restClient.delete(requestEntry, requestContext);
+  }
+
+  public CompletableFuture<Void> deletePiecesByIds(List<String> pieceIds, RequestContext rqContext) {
+    List<CompletableFuture<Void>> deletedItems = new ArrayList<>(pieceIds.size());
+    pieceIds.forEach(pieceId -> deletedItems.add(deletePiece(pieceId, rqContext)));
+    return collectResultsOnSuccess(deletedItems)
+              .thenAccept(v -> {
+                if (logger.isDebugEnabled()) {
+                  String deletedIds = String.join(",", pieceIds);
+                  logger.debug("Pieces were removed : " + deletedIds);
+                }
+              });
+  }
+
+
   public CompletableFuture<CompositePurchaseOrder> getOrderByPoLineId(String poLineId, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
       .thenCompose(poLine -> compositePurchaseOrderService.getCompositeOrderById(poLine.getPurchaseOrderId(), requestContext));
   }
 
   private CompletableFuture<CompositePurchaseOrder> getCompositeOrderByPoLineId(String poLineId, RequestContext requestContext) {
-    logger.info("getCompositeOrderByPoLineId start");
+    logger.debug("getCompositeOrderByPoLineId start");
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
                                   .thenCompose(poLine -> getCompositePurchaseOrder(poLine.getPurchaseOrderId(), requestContext));
   }
 
   public CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId, RequestContext requestContext) {
-    logger.info("getCompositePurchaseOrder start");
+    logger.debug("getCompositePurchaseOrder start");
     return compositePurchaseOrderService.getCompositeOrderById(purchaseOrderId, requestContext)
       .exceptionally(t -> {
         Throwable cause = t.getCause();
@@ -262,7 +278,7 @@ public class PiecesService {
   public CompletableFuture<String> handleHoldingsRecord(final CompositePoLine compPOL, String locationId, String instanceId,
                                                         RequestContext requestContext) {
     try {
-      if (HelperUtils.isHoldingsUpdateRequired(compPOL.getEresource(), compPOL.getPhysical())) {
+      if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL.getEresource(), compPOL.getPhysical())) {
         return inventoryManager.getOrCreateHoldingsRecord(instanceId, locationId, requestContext);
       } else {
         return CompletableFuture.completedFuture(null);
@@ -282,7 +298,7 @@ public class PiecesService {
     logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, holdingId);
     CompletableFuture<String> itemFuture = new CompletableFuture<>();
     try {
-      if (isItemsUpdateRequired(compPOL)) {
+      if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
         if (compPOL.getOrderFormat() == ELECTRONIC_RESOURCE) {
            inventoryManager.createMissingElectronicItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
                           .thenApply(idS -> itemFuture.complete(idS.get(0)))
@@ -484,5 +500,13 @@ public class PiecesService {
     receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, jsonObj, requestContext);
 
     logger.debug("Event to verify receipt status - sent");
+  }
+
+  private CompletableFuture<Void> isOperationRestricted(CompositePurchaseOrder purchaseOrder, ProtectedOperationType operationType,
+                                                        boolean skipDeleteRestriction, RequestContext rqContext) {
+    if (skipDeleteRestriction) {
+      return CompletableFuture.completedFuture(null);
+    }
+    return protectionService.isOperationRestricted(purchaseOrder.getAcqUnitIds(), operationType, rqContext);
   }
 }

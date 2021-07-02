@@ -54,6 +54,7 @@ import org.folio.service.orders.PurchaseOrderServiceTest;
 import org.folio.service.orders.ReEncumbranceHoldersBuilderTest;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateServiceTest;
 import org.folio.service.pieces.PieceServiceTest;
+import org.folio.utils.PoLineCommonUtilTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
@@ -257,9 +258,12 @@ public class ApiTestSuite {
   class HoldingsSummaryServiceTestNested extends HoldingsSummaryServiceTest {
   }
 
-
-
   @Nested
   class ExpenseClassValidationServiceTestNested extends ExpenseClassValidationServiceTest {
+  }
+
+  @Nested
+  class PoLineCommonUtilTestNested extends PoLineCommonUtilTest {
+
   }
 }

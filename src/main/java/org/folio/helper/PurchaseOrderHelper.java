@@ -1,7 +1,6 @@
 package org.folio.helper;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
@@ -56,9 +55,6 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
-import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
-import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
-import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -88,6 +84,7 @@ import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.FundDistributionUtils;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
 import org.folio.orders.utils.validators.OngoingOrderValidator;
@@ -122,6 +119,7 @@ import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.orders.flows.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.pieces.PiecesService;
 import org.folio.service.titles.TitlesService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -129,7 +127,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import one.util.streamex.StreamEx;
 
 public class PurchaseOrderHelper extends AbstractHelper {
 
@@ -174,6 +171,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private InventoryManager inventoryManager;
   @Autowired
   private PiecesService piecesService;
+  @Autowired
+  private UnOpenCompositeOrderManager unOpenCompositeOrderManager;
 
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -313,7 +312,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           .thenCompose(ok -> {
             if (isTransitionToPending(poFromStorage, compPO)) {
              // checkOrderUnopenPermissions();
-              return unOpenOrder(compPO, requestContext);
+              return unOpenCompositeOrderManager.process(compPO, requestContext);
             }
             return CompletableFuture.completedFuture(null);
           })
@@ -439,25 +438,11 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return items;
   }
 
-  private CompletableFuture<List<JsonObject>> getItemsByStatus(List<PoLine> compositePoLines, String itemStatus, RequestContext requestContext) {
-    logger.info("org.folio.helper.PurchaseOrderHelper.getItemsByStatus start");
-    List<String> lineIds = compositePoLines.stream().map(PoLine::getId).collect(toList());
-    // Split all id's by maximum number of id's for get query
-    List<CompletableFuture<List<JsonObject>>> futures = StreamEx
-      .ofSubLists(lineIds, MAX_IDS_FOR_GET_RQ)
-      // Get item records from Inventory storage
-      .map(ids -> {
-        String query = String.format("status.name==%s and %s", itemStatus, HelperUtils.convertFieldListToCqlQuery(ids, InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, true));
-        return inventoryManager.getItemRecordsByQuery(query, requestContext);
-      })
-      .toList();
-
-    return collectResultsOnSuccess(futures)
-      .thenApply(lists -> StreamEx.of(lists).toFlatList(jsonObjects -> jsonObjects));
-  }
-
   private CompletableFuture<Void> updateItemsStatusInInventory(List<PoLine> poLines, String currentStatus, String newStatus, RequestContext requestContext) {
-    return getItemsByStatus(poLines, currentStatus, requestContext)
+    if (CollectionUtils.isEmpty(poLines)) {
+      return CompletableFuture.completedFuture(null);
+    }
+    return inventoryManager.getItemsByStatus(poLines.stream().map(PoLine::getId).collect(toList()), currentStatus, requestContext)
       .thenApply(items -> updateStatusName(items, newStatus))
       .thenCompose(this::updateItemsInInventory);
   }
@@ -758,101 +743,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return validateOrder(compPO, requestContext);
   }
 
-  public CompletableFuture<Void> unOpenOrder(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
-    updateAndGetOrderWithLines(compPO)
-      .thenApply(aVoid -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.OPEN_TO_PENDING))
-      .thenCompose(strategy -> strategy.processEncumbrances(compPO, getRequestContext()))
-      .thenAccept(ok -> orderLineHelper.makePoLinesPending(compPO.getCompositePoLines()))
-      .thenCompose(ok -> unOpenOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext))
-      .thenCompose(ok -> unOpenProcessInventory(compPO.getCompositePoLines(), requestContext))
-      .thenAccept(v-> future.complete(null))
-      .exceptionally(t -> {
-        future.completeExceptionally(t);
-        return null;
-      });
-    return future;
-  }
-
-  private CompletableFuture<Void> unOpenProcessInventory(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
-    return FolioVertxCompletableFuture.allOf(requestContext.getContext(), compositePoLines.stream()
-              .map(line -> unOpenProcessInventory(line, requestContext))
-              .toArray(CompletableFuture[]::new));
-  }
-
-  private CompletableFuture<Void> unOpenProcessInventory(CompositePoLine compPOL, RequestContext rqContext) {
-    if (HelperUtils.isItemsUpdateRequired(compPOL)) {
-      return inventoryManager.getExpectedPiecesByLineId(compPOL.getId(), rqContext)
-                      .thenCompose(pieceCollection -> {
-                         if (isNotEmpty(pieceCollection.getPieces())) {
-                           List<String> itemIds = pieceCollection.getPieces().stream().map(Piece::getItemId).collect(toList());
-                           return inventoryManager.getItemRecordsByIds(itemIds, rqContext)
-                                                  .thenApply(items -> getItemsByStatus(items, "On order"))
-                                                  .thenCompose(onOrderItems -> unOpenRemovePiecesAndItems(onOrderItems, pieceCollection.getPieces(), rqContext))
-                                                  .thenCompose(deletedItems -> unOpenDeleteHoldings(deletedItems, rqContext))
-                                            //      .thenAccept(deletedHoldingIds -> unOpenUpdateLocations(onOrderItems, deletedHoldingIds))
-                                                  .thenAccept(v -> logger.info("Processed"));
-                         }
-                         return completedFuture(null);
-                      });
-    }
-    return completedFuture(null);
-  }
-
-  private CompletionStage<Object> unOpenDeleteHoldings(List<JsonObject> deletedItems, RequestContext rqContext) {
-    List<CompletableFuture<String>> deletedHoldingIds = new ArrayList<>(deletedItems.size());
-    deletedItems.forEach(deletedItem -> {
-      String holdingId = deletedItem.getString(ITEM_HOLDINGS_RECORD_ID);
-      if (holdingId != null) {
-        deletedHoldingIds.add(inventoryManager.getItemsByHoldingId(holdingId, rqContext)
-                                              .thenCompose(items -> {
-                                                 if (items.isEmpty()) {
-                                                   return inventoryManager.deleteHolding(holdingId, rqContext).thenApply(v -> holdingId);
-                                                 }
-                                                 return CompletableFuture.completedFuture(null);
-                                              }));
-      }
-    });
-    return collectResultsOnSuccess(deletedHoldingIds)
-              .thenApply(resultDeletedHoldingIds -> resultDeletedHoldingIds.stream().filter(Objects::nonNull).collect(toList()))
-              .thenApply(resultDeletedHoldingIds -> {
-                String deletedIds = resultDeletedHoldingIds.stream().collect(Collectors.joining(","));
-                logger.debug("Holdings were removed : " + deletedIds);
-                return resultDeletedHoldingIds;
-              });
-  }
-
-  private CompletionStage<List<JsonObject>> unOpenRemovePiecesAndItems(List<JsonObject> onOrderItems, List<Piece> pieces, RequestContext rqContext) {
-    List<CompletableFuture<JsonObject>> deletedItems = new ArrayList<>(onOrderItems.size());
-    Map<String, List<Piece>> itemIdVsPiece = pieces.stream().collect(groupingBy(Piece::getItemId));
-    onOrderItems.forEach(onOrderItem -> {
-      List<Piece> itemPieces = itemIdVsPiece.get(onOrderItem.getString(ID));
-      if (CollectionUtils.isNotEmpty(itemPieces)) {
-        itemPieces.forEach(piece -> deletedItems.add(piecesService.deletePieceWithItem(piece.getId(), rqContext)
-                                                                         .thenApply(v -> onOrderItem)));
-      }
-    });
-    return collectResultsOnSuccess(deletedItems).thenApply(resultDeletedItems -> {
-      String deletedIds = resultDeletedItems.stream().map(item -> item.getString(ID)).collect(Collectors.joining(","));
-      logger.debug("Item were removed : " + deletedIds);
-      return resultDeletedItems;
-    });
-  }
-
-  private List<JsonObject> getItemsByStatus(List<JsonObject> items, String status) {
-   return items.stream()
-         .filter(item -> status.equalsIgnoreCase(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME)))
-         .collect(toList());
-  }
-
-
-  public CompletableFuture<Void> unOpenOrderUpdatePoLinesSummary(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
-    return FolioVertxCompletableFuture.allOf(requestContext.getContext(), compositePoLines.stream()
-      .map(HelperUtils::convertToPoLine)
-      .map(line -> purchaseOrderLineService.updateOrderLine(line, requestContext))
-      .toArray(CompletableFuture[]::new));
-  }
-
   @Override
   protected Errors getProcessingErrors() {
     addProcessingErrors(orderLineHelper.getErrors());
@@ -995,7 +885,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
       return  purchaseOrderLineService.getCompositePoLinesByOrderId(compPO.getId(), getRequestContext())
         .thenApply(poLines -> {
-          orderLineHelper.sortPoLinesByPoLineNumber(poLines);
+          PoLineCommonUtil.sortPoLinesByPoLineNumber(poLines);
           return poLines;
         });
     } else {
@@ -1007,7 +897,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
       return purchaseOrderLineService.getCompositePoLinesByOrderId(compPO.getId(), getRequestContext())
         .thenApply(poLines -> {
-          orderLineHelper.sortPoLinesByPoLineNumber(poLines);
+          PoLineCommonUtil.sortPoLinesByPoLineNumber(poLines);
           return compPO.withCompositePoLines(poLines);
         })
         .thenApply(v -> compPO);

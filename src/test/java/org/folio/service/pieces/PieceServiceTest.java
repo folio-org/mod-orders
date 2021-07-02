@@ -412,8 +412,8 @@ public class PieceServiceTest {
 
     @Bean
     PiecesService piecesService(RestClient restClient, TitlesService titlesService, ProtectionService protectionService,
-                               CompositePurchaseOrderService compositePurchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
-                               InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
+                                CompositePurchaseOrderService compositePurchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
+                                InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
       return spy(new PiecesService(restClient, titlesService, protectionService, compositePurchaseOrderService, purchaseOrderLineService,
                                     inventoryManager, receiptStatusPublisher));
     }
