@@ -311,7 +311,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           })
           .thenCompose(ok -> {
             if (isTransitionToPending(poFromStorage, compPO)) {
-             // checkOrderUnopenPermissions();
+              checkOrderUnopenPermissions();
               return unOpenCompositeOrderManager.process(compPO, requestContext);
             }
             return CompletableFuture.completedFuture(null);
