@@ -144,30 +144,6 @@ public class InventoryManagerTest {
   }
 
   @Test
-  void testShouldUpdateAllItemOneByOneIfProvidedListNonEmpty() {
-    //given
-    doReturn(completedFuture(null)).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
-    JsonObject item1 = new JsonObject().put("id", UUID.randomUUID().toString());
-    JsonObject item2 = new JsonObject().put("id", UUID.randomUUID().toString());
-    List<JsonObject> items = Arrays.asList(item1, item2);
-    //When
-    inventoryManager.updateItemRecords(items, requestContext).join();
-    //Then
-    verify(restClient, times(1)).put(any(RequestEntry.class), eq(item1), eq(requestContext));
-    verify(restClient, times(1)).put(any(RequestEntry.class), eq(item2), eq(requestContext));
-  }
-
-  @Test
-  void testShouldNotUpdateItemIfProvidedListEmpty() {
-    //given
-    doReturn(completedFuture(null)).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
-    //When
-    inventoryManager.updateItemRecords(Collections.emptyList(), requestContext).join();
-    //Then
-    verify(restClient, times(0)).put(any(RequestEntry.class),any(JsonObject.class), eq(requestContext));
-  }
-
-  @Test
   void testShouldDeleteAllItemOneByOneIfProvidedListNonEmpty() {
     //given
     String itemId1 = UUID.randomUUID().toString();
@@ -362,7 +338,6 @@ public class InventoryManagerTest {
     //given
     doReturn(completedFuture(existedPieces)).when(inventoryManager).getExpectedPiecesByLineId(poLineId, requestContext);
     doReturn(completedFuture(needUpdateItems)).when(inventoryManager).getItemRecordsByIds(Collections.singletonList(itemId), requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).updateItemRecords(any(), eq(requestContext));
     doReturn(completedFuture(null)).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
     //When
     PoLineUpdateHolder poLineUpdateHolder = new PoLineUpdateHolder().withOldLocationId(oldLocationId).withNewLocationId(locationId);
