@@ -1,45 +1,6 @@
-package org.folio.helper;
-
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.TestConfig.autowireDependencies;
-import static org.folio.TestConfig.clearServiceInteractions;
-import static org.folio.TestConfig.clearVertxContext;
-import static org.folio.TestConfig.getFirstContextFromVertx;
-import static org.folio.TestConfig.getVertx;
-import static org.folio.TestConfig.initSpringContext;
-import static org.folio.TestConfig.isVerticleNotDeployed;
-import static org.folio.TestConfig.mockPort;
-import static org.folio.TestConstants.X_OKAPI_TOKEN;
-import static org.folio.TestConstants.X_OKAPI_USER_ID;
-import static org.folio.TestUtils.getMockAsJson;
-import static org.folio.rest.RestConstants.OKAPI_URL;
-import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.CALLS_REAL_METHODS;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
+package org.folio.service.orders.flows.unopen;
 
 import org.folio.ApiTestSuite;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.ErrorCodes;
-import org.folio.rest.acq.model.OrderInvoiceRelationship;
-import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.tools.client.HttpClientFactory;
@@ -48,9 +9,9 @@ import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
 import org.folio.service.TagService;
 import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
-import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
@@ -65,15 +26,39 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
-
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import io.vertx.core.Context;
+import static org.folio.TestConfig.autowireDependencies;
+import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.clearVertxContext;
+import static org.folio.TestConfig.getFirstContextFromVertx;
+import static org.folio.TestConfig.getVertx;
+import static org.folio.TestConfig.initSpringContext;
+import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConfig.mockPort;
+import static org.folio.TestConstants.X_OKAPI_TOKEN;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.rest.RestConstants.OKAPI_URL;
+import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
-public class PurchaseOrderHelperTest {
+public class UnOpenCompositeOrderManagerTest {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";
   public static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
 
@@ -86,7 +71,7 @@ public class PurchaseOrderHelperTest {
   @Mock
   private RestClient restClient;
 
-  private  Map<String, String> okapiHeadersMock;
+  private Map<String, String> okapiHeadersMock;
   private Context ctxMock;
   private RequestContext requestContext;
 
@@ -99,7 +84,7 @@ public class PurchaseOrderHelperTest {
       ApiTestSuite.before();
       runningOnOwn = true;
     }
-    initSpringContext(PurchaseOrderHelperTest.ContextConfiguration.class);
+    initSpringContext(UnOpenCompositeOrderManagerTest.ContextConfiguration.class);
   }
 
   @AfterAll
@@ -131,25 +116,44 @@ public class PurchaseOrderHelperTest {
     reset(encumbranceWorkflowStrategyFactory);
   }
 
-  @Test
-  void testDeleteOrderLinkedToInvoiceWithError() {
-    // given
-    RestClient restClient = mock(RestClient.class, CALLS_REAL_METHODS);
-    OrderInvoiceRelationService orderInvoiceRelationService = spy(new OrderInvoiceRelationService(restClient));
-
-    // for returning non empty collection
-    OrderInvoiceRelationshipCollection oirCollection = new OrderInvoiceRelationshipCollection()
-            .withOrderInvoiceRelationships(Collections.singletonList(new OrderInvoiceRelationship()))
-            .withTotalRecords(1);
-
-    doReturn(completedFuture(oirCollection)).when(restClient).get(any(), any(), any());
-
-    CompletableFuture<Void> future = orderInvoiceRelationService.checkOrderInvoiceRelationship(ORDER_ID, new RequestContext(ctxMock, okapiHeadersMock));
-    CompletionException exception = assertThrows(CompletionException.class, future::join);
-    HttpException httpException = (HttpException) exception.getCause();
-    assertEquals(ErrorCodes.ORDER_RELATES_TO_INVOICE.getDescription(), httpException.getMessage());
-
-  }
+//  @Test
+//  void testShouldSetEncumbrancesToPending() {
+//    //given
+//    PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
+//    UnOpenCompositeOrderManager serviceSpy = spy(
+//      new UnOpenCompositeOrderManager(piece, "en", orderLineHelper));
+//    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+//
+//    doReturn(completedFuture(order)).when(serviceSpy).updateAndGetOrderWithLines(any(CompositePurchaseOrder.class));
+//    doReturn(openToPendingEncumbranceStrategy).when(encumbranceWorkflowStrategyFactory).getStrategy(eq(OPEN_TO_PENDING));
+//    doReturn(completedFuture(null)).when(openToPendingEncumbranceStrategy).processEncumbrances(eq(order), any());
+//    doNothing().when(orderLineHelper).closeHttpClient();
+//    doReturn(completedFuture(null)).when(purchaseOrderLineService).updateOrderLine(any(), eq(requestContext));
+//    //When
+//    serviceSpy.unOpenOrder(order, requestContext).join();
+//    //Then
+//
+//    verify(serviceSpy).unOpenOrderUpdatePoLinesSummary(any(), eq(requestContext));
+//  }
+//
+//  @Test
+//  void testShouldEndExceptionallyAndCloseConnection() {
+//    //given
+//    PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
+//
+//    UnOpenCompositeOrderManager serviceSpy = spy(new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en", orderLineHelper));
+//    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+//
+//    doReturn(completedFuture(order)).when(serviceSpy).updateAndGetOrderWithLines(any(CompositePurchaseOrder.class));
+//    doReturn(openToPendingEncumbranceStrategy).when(encumbranceWorkflowStrategyFactory).getStrategy(any());
+//    doReturn(completedFuture(null)).when(openToPendingEncumbranceStrategy).processEncumbrances(any(), any());
+//
+//    doNothing().when(orderLineHelper).closeHttpClient();
+//    //When
+//    CompletableFuture<Void> act = serviceSpy.unOpenOrder(order, requestContext);
+//    //Then
+//    assertTrue(act.isCompletedExceptionally());
+//  }
 
   /**
    * Define unit test specific beans to override actual ones
@@ -236,5 +240,4 @@ public class PurchaseOrderHelperTest {
       return mock(PiecesService.class);
     }
   }
-
 }

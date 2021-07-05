@@ -16,7 +16,6 @@ import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantityWithoutL
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.HelperUtils.getElectronicCostQuantity;
 import static org.folio.orders.utils.HelperUtils.getPhysicalCostQuantity;
-import static org.folio.orders.utils.HelperUtils.isHoldingCreationRequiredForLocation;
 import static org.folio.rest.impl.MockServer.CONFIG_MOCK_PATH;
 import static org.folio.rest.impl.MockServer.INSTANCE_STATUSES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.INSTANCE_TYPES_MOCK_DATA_PATH;
@@ -61,6 +60,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
 
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
@@ -213,7 +213,7 @@ public class InventoryInteractionTestHelper {
     int totalForAllPoLines = 0;
     for (CompositePoLine poLine : compositePoLines) {
       List<Location> locations = poLine.getLocations().stream()
-        .filter(location -> isHoldingCreationRequiredForLocation(poLine, location) && !Objects.equals(location.getLocationId(), ID_FOR_INTERNAL_SERVER_ERROR))
+        .filter(location -> PoLineCommonUtil.isHoldingCreationRequiredForLocation(poLine, location) && !Objects.equals(location.getLocationId(), ID_FOR_INTERNAL_SERVER_ERROR))
         .collect(Collectors.toList());
 
       // Prepare data first
@@ -292,7 +292,7 @@ public class InventoryInteractionTestHelper {
           .filter(json -> json.getString("instanceId").equals(poLine.getInstanceId()))
           .collect(groupingBy(json -> json.getString(HOLDING_PERMANENT_LOCATION_ID)));
       List<Location> locations = poLine.getLocations().stream()
-        .filter(location -> isHoldingCreationRequiredForLocation(poLine, location) && !Objects.equals(location.getLocationId(), ID_FOR_INTERNAL_SERVER_ERROR))
+        .filter(location -> PoLineCommonUtil.isHoldingCreationRequiredForLocation(poLine, location) && !Objects.equals(location.getLocationId(), ID_FOR_INTERNAL_SERVER_ERROR))
         .collect(Collectors.toList());
 
       // Prepare data first

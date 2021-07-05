@@ -3,7 +3,6 @@ package org.folio.helper;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.groupingBy;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.helper.PurchaseOrderHelper.GET_PURCHASE_ORDERS;
 import static org.folio.orders.utils.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.orders.utils.ErrorCodes.ITEM_UPDATE_FAILED;
@@ -20,14 +19,13 @@ import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
-import static org.folio.orders.utils.HelperUtils.isHoldingUpdateRequiredForEresource;
-import static org.folio.orders.utils.HelperUtils.isHoldingUpdateRequiredForPhysical;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
+import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,6 +40,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -265,9 +264,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   private boolean holdingUpdateOnCheckinReceiveRequired(Piece piece, String locationId, CompositePoLine poLine) {
     boolean isHoldingUpdateRequired;
     if (piece.getFormat() == Piece.Format.ELECTRONIC) {
-      isHoldingUpdateRequired = isHoldingUpdateRequiredForEresource(poLine.getEresource());
+      isHoldingUpdateRequired = PoLineCommonUtil.isHoldingUpdateRequiredForEresource(poLine.getEresource());
     } else {
-      isHoldingUpdateRequired = isHoldingUpdateRequiredForPhysical(poLine.getPhysical());
+      isHoldingUpdateRequired = PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(poLine.getPhysical());
     }
     return isHoldingUpdateRequired
       && StringUtils.isNotEmpty(locationId);

@@ -63,7 +63,7 @@ import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
-public class PiecesServiceTest {
+public class PieceServiceTest {
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   private static final String COMPOSITE_LINES_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private static final String PIECE_PATH = BASE_MOCK_DATA_PATH + "pieces/";
@@ -106,7 +106,7 @@ public class PiecesServiceTest {
       ApiTestSuite.before();
       runningOnOwn = true;
     }
-    initSpringContext(PiecesServiceTest.ContextConfiguration.class);
+    initSpringContext(PieceServiceTest.ContextConfiguration.class);
   }
 
   @AfterAll
