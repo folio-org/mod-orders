@@ -26,7 +26,6 @@ public enum POLineProtectedFields {
   PUBLISHER("publisher"),
   REQUESTER("requester"),
   RUSH("rush"),
-  SOURCE("source"),
   SELECTOR("selector"),
   TITLE_OR_PACKAGE("titleOrPackage"),
   VENDORDETAIL_INSTRUCTION_TO_VENDOR("vendorDetail.instructions");

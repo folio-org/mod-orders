@@ -26,6 +26,7 @@ import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
+import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -955,7 +956,7 @@ public class HelperUtils {
     if (exchangeRate != null) {
       conversionQuery = ConversionQueryBuilder.of().setBaseCurrency(fromCurrency)
         .setTermCurrency(toCurrency)
-        .set(ExchangeRateProviderResolver.RATE_KEY, exchangeRate)
+        .set(RATE_KEY, exchangeRate)
         .build();
     } else {
       conversionQuery = ConversionQueryBuilder.of().setBaseCurrency(fromCurrency)
