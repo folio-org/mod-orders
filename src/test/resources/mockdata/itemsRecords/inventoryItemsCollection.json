@@ -2,6 +2,7 @@
   "items": [
     {
       "id": "522a501a-56b5-48d9-b28a-3a8f02482d97",
+      "_version": 6,
       "status": {
         "name": "On order"
       },
@@ -40,6 +41,7 @@
     },
     {
       "id": "98eba19f-11c6-4a45-b4c0-0b9f30148f22",
+      "_version": 6,
       "status": {
         "name": "On order"
       },
@@ -78,6 +80,7 @@
     },
     {
       "id": "d3505286-ffbf-408d-96ec-b0c3a6b8bca8",
+      "_version": 2,
       "status": {
         "name": "On order"
       },
@@ -116,6 +119,7 @@
     },
     {
       "id": "5a8b32b3-3e11-4af9-b652-c8eeb1c2b8b8",
+      "_version": 3,
       "status": {
         "name": "On order"
       },
@@ -154,6 +158,7 @@
     },
     {
       "id": "a146dc53-be76-4431-8fce-f1c27e323ed2",
+      "_version": 9,
       "status": {
         "name": "On order"
       },
@@ -192,6 +197,7 @@
     },
     {
       "id": "984e32d0-b46c-4612-b44c-6c8349ff5717",
+      "_version": 10,
       "status": {
         "name": "On order"
       },
@@ -230,6 +236,7 @@
     },
     {
       "id": "5d3d815a-0e51-4632-8f99-a2929df4eb01",
+      "_version": 11,
       "status": {
         "name": "On order"
       },
@@ -268,6 +275,7 @@
     },
     {
       "id": "690e058d-48b3-449b-8a91-de95efc5960f",
+      "_version": 12,
       "status": {
         "name": "On order"
       },
@@ -306,6 +314,7 @@
     },
     {
       "id": "07f91e36-b22b-4114-aa8c-73cfaf4f1871",
+      "_version": 13,
       "status": {
         "name": "On order"
       },
