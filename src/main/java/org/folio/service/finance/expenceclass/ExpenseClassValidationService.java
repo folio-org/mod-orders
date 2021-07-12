@@ -49,6 +49,7 @@ public class ExpenseClassValidationService {
       .flatMap(poLine -> poLine.getFundDistribution()
         .stream())
       .filter(fundDistribution -> Objects.nonNull(fundDistribution.getExpenseClassId()))
+      .distinct()
       .collect(toMap(Function.identity(), FundDistribution::getExpenseClassId));
 
     return allOf(expenseClassesByFundId.entrySet()
