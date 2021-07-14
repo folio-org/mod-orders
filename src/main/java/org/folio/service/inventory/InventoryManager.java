@@ -307,17 +307,6 @@ public class InventoryManager {
     return updateItem(item, requestContext).thenApply(v -> item.getString(ID));
   }
 
-  /**
-   * Wait for item creation requests completion and filter failed items if any
-   * @param itemRecords item record to be created
-   * @return completable future with list of item id's
-   */
-  public CompletableFuture<List<String>> updateItemRecords(List<JsonObject> itemRecords, RequestContext requestContext) {
-    List<CompletableFuture<String>> futures = new ArrayList<>(itemRecords.size());
-    itemRecords.forEach(itemRecord -> futures.add(updateItem(itemRecord, requestContext).thenApply(v -> itemRecord.getString(ID))));
-    return collectResultsOnSuccess(futures);
-  }
-
   public CompletableFuture<Void> deleteItem(String id, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ITEM_BY_ID_ENDPOINT).withId(id);
     return restClient.delete(requestEntry, requestContext);
