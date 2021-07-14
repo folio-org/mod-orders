@@ -1,4 +1,13 @@
 ## 12.1.0 - Unreleased
+## 12.0.4 Released
+
+Resolves a bug preventing opening multiline PO with same expense class on each POL
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.0.3...v12.0.4)
+
+### Bug fixes
+* [MODORDERS-526](https://issues.folio.org/browse/MODORDERS-526) - Cannot open multiline PO with same expense class on each POL
+
 
 ## 12.0.3 Released
 
