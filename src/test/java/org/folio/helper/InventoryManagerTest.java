@@ -26,7 +26,7 @@ import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.PurchaseOrderLinesApiTest.COMP_PO_LINES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING;
-import static org.folio.service.pieces.PiecesServiceTest.LINE_ID;
+import static org.folio.service.pieces.PieceServiceTest.LINE_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -70,6 +70,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.inventory.InventoryManager;
+import org.folio.service.pieces.PieceRetrieveService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -100,6 +101,8 @@ public class InventoryManagerTest {
   private RestClient restClient;
   @Autowired
   private ConfigurationEntriesService configurationEntriesService;
+  @Autowired
+  private PieceRetrieveService pieceRetrieveService;
 
   private Context ctxMock;
   private Map<String, String> okapiHeadersMock;
@@ -141,6 +144,30 @@ public class InventoryManagerTest {
   void resetMocks() {
     clearServiceInteractions();
     reset(inventoryManager);
+  }
+
+  @Test
+  void testShouldUpdateAllItemOneByOneIfProvidedListNonEmpty() {
+    //given
+    doReturn(completedFuture(null)).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+    JsonObject item1 = new JsonObject().put("id", UUID.randomUUID().toString());
+    JsonObject item2 = new JsonObject().put("id", UUID.randomUUID().toString());
+    List<JsonObject> items = Arrays.asList(item1, item2);
+    //When
+    inventoryManager.updateItemRecords(items, requestContext).join();
+    //Then
+    verify(restClient, times(1)).put(any(RequestEntry.class), eq(item1), eq(requestContext));
+    verify(restClient, times(1)).put(any(RequestEntry.class), eq(item2), eq(requestContext));
+  }
+
+  @Test
+  void testShouldNotUpdateItemIfProvidedListEmpty() {
+    //given
+    doReturn(completedFuture(null)).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+    //When
+    inventoryManager.updateItemRecords(Collections.emptyList(), requestContext).join();
+    //Then
+    verify(restClient, times(0)).put(any(RequestEntry.class),any(JsonObject.class), eq(requestContext));
   }
 
   @Test
@@ -336,8 +363,9 @@ public class InventoryManagerTest {
     existedPieces.getPieces().get(0).setFormat(Piece.Format.PHYSICAL);
     existedPieces.getPieces().get(0).setPoLineId(poLineId);
     //given
-    doReturn(completedFuture(existedPieces)).when(inventoryManager).getExpectedPiecesByLineId(poLineId, requestContext);
+    doReturn(completedFuture(existedPieces)).when(pieceRetrieveService).getExpectedPiecesByLineId(poLineId, requestContext);
     doReturn(completedFuture(needUpdateItems)).when(inventoryManager).getItemRecordsByIds(Collections.singletonList(itemId), requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).updateItemRecords(any(), eq(requestContext));
     doReturn(completedFuture(null)).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
     //When
     PoLineUpdateHolder poLineUpdateHolder = new PoLineUpdateHolder().withOldLocationId(oldLocationId).withNewLocationId(locationId);
@@ -439,6 +467,10 @@ public class InventoryManagerTest {
       return mock(ConfigurationEntriesService.class);
     }
 
+    @Bean
+    public PieceRetrieveService pieceRetrieveService() {
+      return mock(PieceRetrieveService.class);
+    }
 
     @Bean
     public RestClient restClient() {
@@ -446,8 +478,9 @@ public class InventoryManagerTest {
     }
 
     @Bean
-    public InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService) {
-      return spy(new InventoryManager(restClient, configurationEntriesService));
+    public InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
+                                             PieceRetrieveService pieceRetrieveService) {
+      return spy(new InventoryManager(restClient, configurationEntriesService, pieceRetrieveService));
     }
   }
 }

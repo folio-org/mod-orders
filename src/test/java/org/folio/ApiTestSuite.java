@@ -18,6 +18,7 @@ import org.folio.orders.utils.HelperUtilsTest;
 import org.folio.orders.utils.validators.OngoingOrderValidatorTest;
 import org.folio.rest.core.RestClientTest;
 import org.folio.rest.impl.CheckinReceivingApiTest;
+import org.folio.rest.impl.HoldingsSummaryAPITest;
 import org.folio.rest.impl.OrderTemplateTest;
 import org.folio.rest.impl.PieceApiTest;
 import org.folio.rest.impl.PoNumberApiTest;
@@ -42,6 +43,7 @@ import org.folio.service.finance.transaction.EncumbranceServiceTest;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.TransactionServiceTest;
 import org.folio.service.orders.AcquisitionsUnitsServiceTest;
+import org.folio.service.inventory.HoldingsSummaryServiceTest;
 import org.folio.service.orders.CombinedOrderDataPopulateServiceTest;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilderTest;
 import org.folio.service.orders.FundsDistributionServiceTest;
@@ -51,7 +53,8 @@ import org.folio.service.orders.PurchaseOrderLineServiceTest;
 import org.folio.service.orders.PurchaseOrderServiceTest;
 import org.folio.service.orders.ReEncumbranceHoldersBuilderTest;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateServiceTest;
-import org.folio.service.pieces.PiecesServiceTest;
+import org.folio.service.pieces.PieceServiceTest;
+import org.folio.utils.PoLineCommonUtilTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
@@ -156,7 +159,7 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class PiecesServiceTestNested extends PiecesServiceTest {
+  class PieceServiceTestNested extends PieceServiceTest {
   }
 
   @Nested
@@ -248,6 +251,19 @@ public class ApiTestSuite {
   }
 
   @Nested
+  class HoldingsSummaryAPITestNested extends HoldingsSummaryAPITest {
+  }
+
+  @Nested
+  class HoldingsSummaryServiceTestNested extends HoldingsSummaryServiceTest {
+  }
+
+  @Nested
   class ExpenseClassValidationServiceTestNested extends ExpenseClassValidationServiceTest {
+  }
+
+  @Nested
+  class PoLineCommonUtilTestNested extends PoLineCommonUtilTest {
+
   }
 }

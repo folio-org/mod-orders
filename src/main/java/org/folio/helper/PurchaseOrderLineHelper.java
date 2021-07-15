@@ -18,10 +18,11 @@ import static org.folio.orders.utils.HelperUtils.deletePoLine;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
+import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.inventoryUpdateNotRequired;
 import static org.folio.orders.utils.HelperUtils.operateOnObject;
 import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
+import static org.folio.orders.utils.PoLineCommonUtil.DASH_SEPARATOR;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
@@ -58,13 +59,13 @@ import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
-import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
@@ -92,6 +93,7 @@ import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.pieces.PieceRetrieveService;
 import org.folio.service.pieces.PiecesService;
 import org.folio.service.titles.TitlesService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -112,7 +114,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   private static final String ERESOURCE = "eresource";
   private static final String PHYSICAL = "physical";
   private static final String OTHER = "other";
-  private static final String DASH_SEPARATOR = "-";
   public static final String QUERY_BY_PO_LINE_ID = "poLineId==";
 
   @Autowired
@@ -137,6 +138,8 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   private ProtectionService protectionService;
   @Autowired
   private PurchaseOrderLineService purchaseOrderLineService;
+  @Autowired
+  private PieceRetrieveService pieceRetrieveService;
 
   public PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -222,17 +225,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
           return completedFuture(null);
         }
       });
-  }
-
-  public void makePoLinesPending(List<CompositePoLine> compositePoLines) {
-    compositePoLines.forEach(poLine -> {
-      if (poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.AWAITING_PAYMENT) {
-        poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
-      }
-      if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.AWAITING_RECEIPT) {
-        poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING);
-      }
-    });
   }
 
   private CompositePurchaseOrder validateOrderState(CompositePurchaseOrder po) {
@@ -530,9 +522,9 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return completedFuture(null);
     }
-    if (inventoryUpdateNotRequired(compPOL)) {
+    if (PoLineCommonUtil.inventoryUpdateNotRequired(compPOL)) {
       // don't create pieces, if no inventory updates and receiving not required
-      if (isReceiptNotRequired(compPOL.getReceiptStatus())) {
+      if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
         return completedFuture(null);
       }
       return piecesService.createPieces(compPOL, titleId, Collections.emptyList(), true, requestContext).thenRun(
@@ -542,41 +534,12 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     return inventoryManager.handleInstanceRecord(compPOL, requestContext)
       .thenCompose(compPOLWithInstanceId -> inventoryManager.handleHoldingsAndItemsRecords(compPOLWithInstanceId, requestContext))
       .thenCompose(piecesWithItemId -> {
-        if (isReceiptNotRequired(compPOL.getReceiptStatus())) {
+        if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
           return completedFuture(null);
         }
         //create pieces only if receiving is required
         return piecesService.createPieces(compPOL, titleId, piecesWithItemId, true, requestContext);
       });
-  }
-
-  CompletableFuture<Void> updateInventory(CompositePoLine compPOL, PoLine storagePoLine, String titleId, boolean isOpenOrderFlow,
-                                          RequestContext requestContext) {
-    if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
-      return completedFuture(null);
-    }
-    if (inventoryUpdateNotRequired(compPOL)) {
-      // don't create pieces, if no inventory updates and receiving not required
-      if (isReceiptNotRequired(compPOL.getReceiptStatus())) {
-        return completedFuture(null);
-      }
-      return piecesService.createPieces(compPOL, titleId, Collections.emptyList(), isOpenOrderFlow, requestContext).thenRun(
-        () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId()));
-    }
-
-    return inventoryManager.handleInstanceRecord(compPOL, requestContext)
-      .thenCompose(compPoLineWithInstanceId -> inventoryManager.handleHoldingsAndItemsRecords(compPoLineWithInstanceId, storagePoLine, requestContext))
-      .thenCompose(piecesWithItemId -> {
-        if (isReceiptNotRequired(compPOL.getReceiptStatus())) {
-          return completedFuture(null);
-        }
-        //create pieces only if receiving is required
-        return updatePoLinePieces(compPOL, titleId, piecesWithItemId, isOpenOrderFlow, requestContext);
-      });
-  }
-
-  private boolean isReceiptNotRequired(ReceiptStatus receiptStatus) {
-    return receiptStatus == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
   }
 
   String buildNewPoLineNumber(PoLine poLineFromStorage, String poNumber) {
@@ -587,10 +550,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     }
     logger.error("PO Line - {} has invalid or missing number.", poLineFromStorage.getId());
     return oldPoLineNumber;
-  }
-
-  void sortPoLinesByPoLineNumber(List<CompositePoLine> poLines) {
-    poLines.sort(this::comparePoLinesByPoLineNumber);
   }
 
   /**
@@ -700,7 +659,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
       return completedFuture(null);
     }
-    return inventoryManager.getExpectedPiecesByLineId(compPOL.getId(), requestContext)
+    return pieceRetrieveService.getExpectedPiecesByLineId(compPOL.getId(), requestContext)
       .thenApply(PieceCollection::getPieces)
       .thenCompose(existingPieces -> {
           List<CompletableFuture<Void>> pieceProcessFutures = new ArrayList<>(needProcessExpectedPieces.size());
@@ -903,12 +862,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       }
     }
     return completedFuture(null);
-  }
-
-  private int comparePoLinesByPoLineNumber(CompositePoLine poLine1, CompositePoLine poLine2) {
-    String poLineNumberSuffix1 = poLine1.getPoLineNumber().split(DASH_SEPARATOR)[1];
-    String poLineNumberSuffix2 = poLine2.getPoLineNumber().split(DASH_SEPARATOR)[1];
-    return Integer.parseInt(poLineNumberSuffix1) - Integer.parseInt(poLineNumberSuffix2);
   }
 
   public CompletableFuture<Void> validateAndNormalizeISBN(CompositePoLine compPOL, RequestContext requestContext) {
