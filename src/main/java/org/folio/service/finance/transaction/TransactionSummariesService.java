@@ -17,6 +17,7 @@ public class TransactionSummariesService {
 
     private static final String ENDPOINT = "/finance/order-transaction-summaries";
     private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
+    private static final String BY_ID_GET_ENDPOINT = "/finance-storage/order-transaction-summaries/{id}";
 
     private final RestClient restClient;
 
@@ -33,7 +34,7 @@ public class TransactionSummariesService {
     }
 
     public CompletableFuture<OrderTransactionSummary> getOrderTransactionSummary(String orderId, RequestContext requestContext) {
-        RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(orderId);
+        RequestEntry requestEntry = new RequestEntry(BY_ID_GET_ENDPOINT).withId(orderId);
         return restClient.get(requestEntry, requestContext, OrderTransactionSummary.class);
     }
 
@@ -61,16 +62,18 @@ public class TransactionSummariesService {
       String orderId = Stream.concat(orderIdFromCreate, orderIdFromStorage)
         .findFirst()
         .orElse(null);
-        if (CollectionUtils.isEmpty(holder.getEncumbrancesFromStorage())) {
+      return getOrderTransactionSummary(orderId, requestContext)
+        .exceptionally(t -> null)
+        .thenCompose(currentSummary -> {
+          if (CollectionUtils.isEmpty(holder.getEncumbrancesFromStorage()) && currentSummary == null) {
             return createOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext)
-                    .thenApply(id -> null);
-        }
-        else if (holder.getAllEncumbrancesQuantity() == 0) {
+              .thenApply(summary -> null);
+          } else if (holder.getAllEncumbrancesQuantity() == 0) {
             return CompletableFuture.completedFuture(null);
-        }
-        else {
+          } else {
             return updateOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext);
-        }
+          }
+        });
     }
 
 }
