@@ -2,6 +2,7 @@
   "holdingsRecords": [
     {
       "id": "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61",
+      "_version": 2,
       "hrid": "ho00000001",
       "formerIds": [],
       "instanceId": "7fbd5d84-62d1-44c6-9c45-6cb173998bbd",

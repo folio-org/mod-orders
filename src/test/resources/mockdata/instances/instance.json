@@ -3,6 +3,7 @@
     {
       "@context": "http://localhost:9130/inventory/instances/context",
       "id": "7fbd5d84-62d1-44c6-9c45-6cb173998bbd",
+      "_version": 3,
       "hrid": "in000005",
       "source": "MARC",
       "title": "Bridget Jones's Baby: the diaries",
