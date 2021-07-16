@@ -35,7 +35,7 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.inventory.InventoryManager;
-import org.folio.service.inventory.ItemStatus;
+import org.folio.models.ItemStatus;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceRetrieveService;
