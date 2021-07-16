@@ -8,7 +8,6 @@ import static org.folio.TestConfig.startMockServer;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import org.folio.helper.InventoryManagerTest;
 import org.folio.helper.PurchaseOrderHelperTest;
 import org.folio.helper.PurchaseOrderLineHelperTest;
 import org.folio.orders.events.handlers.CheckInOrderStatusChangeChangeHandlerTest;
@@ -38,6 +37,7 @@ import org.folio.service.exchange.ManualExchangeRateProviderTest;
 import org.folio.service.finance.FundServiceTest;
 import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
 import org.folio.service.finance.budget.BudgetRestrictionServiceTest;
+import org.folio.service.finance.inventory.InventoryManagerTest;
 import org.folio.service.finance.transaction.EncumbranceRelationsHoldersBuilderTest;
 import org.folio.service.finance.transaction.EncumbranceServiceTest;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTest;
