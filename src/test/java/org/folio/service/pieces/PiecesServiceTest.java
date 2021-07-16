@@ -35,6 +35,7 @@ import java.util.concurrent.TimeoutException;
 
 import io.vertx.core.Context;
 import org.folio.ApiTestSuite;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.ProtectedOperationType;
@@ -84,6 +85,8 @@ public class PiecesServiceTest {
   private CompositePurchaseOrderService compositePurchaseOrderService;
   @Autowired
   private PieceChangeReceiptStatusPublisher receiptStatusPublisher;
+  @Autowired
+  private RestClient restClientMock;
 
   @Mock
   private Map<String, String> okapiHeadersMock;
@@ -120,6 +123,25 @@ public class PiecesServiceTest {
   @AfterEach
   void resetMocks() {
     clearServiceInteractions();
+  }
+
+  @Test
+  void testPiecesShouldBeReturnedByQuery() {
+    String pieceId = UUID.randomUUID()
+      .toString();
+    List<Piece> pieces = Collections.singletonList(new Piece().withId(pieceId));
+
+    PieceCollection pieceCollection = new PieceCollection().withPieces(pieces)
+      .withTotalRecords(1);
+
+    when(restClientMock.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(pieceCollection));
+
+    String expectedQuery = String.format("id==%s", pieceId);
+    PieceCollection retrievedPieces = piecesService.getPieces(Integer.MAX_VALUE, 0, expectedQuery, requestContext)
+      .join();
+
+    verify(restClientMock).get(any(), eq(requestContext), eq(PieceCollection.class));
+    assertEquals(pieceCollection, retrievedPieces);
   }
 
   @Test
