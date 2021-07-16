@@ -15,6 +15,7 @@ import static org.folio.orders.utils.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_STATUS;
 import static org.folio.orders.utils.ErrorCodes.MISSING_INSTANCE_TYPE;
 import static org.folio.orders.utils.ErrorCodes.MISSING_LOAN_TYPE;
+import static org.folio.orders.utils.ErrorCodes.PARTIALLY_RETURNED_COLLECTION;
 import static org.folio.orders.utils.HelperUtils.LANG;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
@@ -1250,7 +1251,7 @@ public class InventoryManager {
             .noneMatch(holding -> holding.getString(ID).equals(id)))
             .map(id -> new Parameter().withValue(id).withKey("holdings"))
           .collect(Collectors.toList());
-        throw new HttpException(404, FUNDS_NOT_FOUND.toError().withParameters(parameters));
+        throw new HttpException(404, PARTIALLY_RETURNED_COLLECTION.toError().withParameters(parameters));
       });
   }
 }

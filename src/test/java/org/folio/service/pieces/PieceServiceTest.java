@@ -35,6 +35,7 @@ import java.util.concurrent.TimeoutException;
 
 import io.vertx.core.Context;
 import org.folio.ApiTestSuite;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.ProtectedOperationType;
@@ -84,6 +85,8 @@ public class PieceServiceTest {
   private CompositePurchaseOrderService compositePurchaseOrderService;
   @Autowired
   private PieceChangeReceiptStatusPublisher receiptStatusPublisher;
+  @Autowired
+  private RestClient restClient;
 
   @Mock
   private Map<String, String> okapiHeadersMock;
@@ -359,6 +362,15 @@ public class PieceServiceTest {
     verify(receiptStatusPublisher, times(1)).sendEvent(eq(MessageAddress.RECEIPT_STATUS), any(JsonObject.class), eq(requestContext));
   }
 
+  @Test
+  void testShouldDeleteItems() {
+    //given
+    doReturn(completedFuture(null)).when(restClient).delete(any(RequestEntry.class), eq(requestContext));
+   //When
+    piecesService.deletePiecesByIds(List.of(UUID.randomUUID().toString()), requestContext).join();
+    //Then
+    verify(restClient, times(1)).delete(any(RequestEntry.class), eq(requestContext));
+  }
 
   private Piece createPiece(CompositePoLine line, Title title) {
     return new Piece().withId(UUID.randomUUID().toString())
