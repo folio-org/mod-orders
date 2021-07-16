@@ -1,0 +1,25 @@
+{
+  "id": "c27e60f9-6361-44c1-976e-0c4821a33a7d",
+  "approved": false,
+  "manualPo": true,
+  "notes": [
+    "Cataloging record service"
+  ],
+  "orderType": "Ongoing",
+  "poNumber": "81",
+  "reEncumber": true,
+  "ongoing": {
+    "interval": 365,
+    "isSubscription": true,
+    "manualRenewal": true,
+    "renewalDate": "2019-04-09T00:00:00.000Z",
+    "reviewPeriod": 30
+  },
+  "tags" : {
+    "tagList" : [
+      "important"
+    ]
+  },
+  "vendor": "7cb37802-dc8b-4383-bca5-90e937b51b94",
+  "workflowStatus": "Pending"
+}

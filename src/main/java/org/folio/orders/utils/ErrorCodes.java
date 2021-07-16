@@ -82,7 +82,9 @@ public enum ErrorCodes {
   ORDER_RELATES_TO_INVOICE("orderRelatesToInvoice", "This order or order line is linked to Invoice number(s) and can not be deleted"),
   ROLLOVER_NOT_COMPLETED("rolloverNotCompleted", "Rollover has not been completed for some ledgers related to this order"),
   RENEWAL_INTERVAL_IS_NOT_SET("renewalIntervalIsNotSet", "Renewal interval is not set"),
-  RENEWAL_DATE_IS_NOT_SET("renewalDateIsNotSet", "Renewal date is not set");
+  RENEWAL_DATE_IS_NOT_SET("renewalDateIsNotSet", "Renewal date is not set"),
+  PARTIALLY_RETURNED_COLLECTION("partiallyReturnedCollection", "The number of returned entities is not equal to the number of requested");
+
 
   private final String code;
   private final String description;

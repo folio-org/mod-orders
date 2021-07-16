@@ -1,9 +1,11 @@
 package org.folio.helper;
 
+import static java.util.stream.Collectors.groupingBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
 import static org.folio.TestUtils.getMockData;
+import static org.folio.orders.utils.HelperUtils.groupLocationsById;
 import static org.folio.service.inventory.InventoryManager.*;
 import static org.folio.orders.utils.HelperUtils.CONFIGS;
 import static org.folio.orders.utils.HelperUtils.CONFIG_NAME;
@@ -14,8 +16,6 @@ import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantityWithoutL
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.HelperUtils.getElectronicCostQuantity;
 import static org.folio.orders.utils.HelperUtils.getPhysicalCostQuantity;
-import static org.folio.orders.utils.HelperUtils.groupLocationsById;
-import static org.folio.orders.utils.HelperUtils.isHoldingCreationRequiredForLocation;
 import static org.folio.rest.impl.MockServer.CONFIG_MOCK_PATH;
 import static org.folio.rest.impl.MockServer.INSTANCE_STATUSES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.INSTANCE_TYPES_MOCK_DATA_PATH;
@@ -60,6 +60,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
 
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
@@ -121,7 +122,7 @@ public class InventoryInteractionTestHelper {
       verifyInstanceCreated(tenant, createdInstances, pol);
       verifyHoldingsCreated(createdHoldings, pol);
       verifyItemsCreated(tenant, items, pol);
-      verifyPiecesCreated(items, reqData.getCompositePoLines(), createdPieces);
+      verifyOpenOrderPiecesCreated(items, reqData.getCompositePoLines(), createdPieces);
     }
   }
 
@@ -212,7 +213,7 @@ public class InventoryInteractionTestHelper {
     int totalForAllPoLines = 0;
     for (CompositePoLine poLine : compositePoLines) {
       List<Location> locations = poLine.getLocations().stream()
-        .filter(location -> isHoldingCreationRequiredForLocation(poLine, location) && !Objects.equals(location.getLocationId(), ID_FOR_INTERNAL_SERVER_ERROR))
+        .filter(location -> PoLineCommonUtil.isHoldingCreationRequiredForLocation(poLine, location) && !Objects.equals(location.getLocationId(), ID_FOR_INTERNAL_SERVER_ERROR))
         .collect(Collectors.toList());
 
       // Prepare data first
@@ -273,6 +274,89 @@ public class InventoryInteractionTestHelper {
     assertThat(pieceJsons, hasSize(totalForAllPoLines));
   }
 
+  public static void verifyOpenOrderPiecesCreated(List<JsonObject> inventoryItems, List<CompositePoLine> compositePoLines, List<JsonObject> pieceJsons) {
+    // Collect all item id's
+    List<String> itemIds = inventoryItems.stream()
+      .map(item -> item.getString(ID))
+      .collect(Collectors.toList());
+    List<Piece> pieces = pieceJsons
+      .stream()
+      .map(pieceObj -> pieceObj.mapTo(Piece.class))
+      .collect(Collectors.toList());
+
+    // Verify quantity of created pieces
+    int totalForAllPoLines = 0;
+    for (CompositePoLine poLine : compositePoLines) {
+      Map<String, List<JsonObject>> createdHoldingsByLocationId =
+        getCreatedHoldings().stream()
+          .filter(json -> json.getString("instanceId").equals(poLine.getInstanceId()))
+          .collect(groupingBy(json -> json.getString(HOLDING_PERMANENT_LOCATION_ID)));
+      List<Location> locations = poLine.getLocations().stream()
+        .filter(location -> PoLineCommonUtil.isHoldingCreationRequiredForLocation(poLine, location) && !Objects.equals(location.getLocationId(), ID_FOR_INTERNAL_SERVER_ERROR))
+        .collect(Collectors.toList());
+
+      // Prepare data first
+
+      // Calculated quantities
+      int expectedElQty = 0;
+      int expectedPhysQty = 0;
+      int expectedOthQty = 0;
+      if (poLine.getCheckinItems() == null || !poLine.getCheckinItems()) {
+        if (poLine.getOrderFormat() == CompositePoLine.OrderFormat.OTHER) {
+          expectedOthQty += getPhysicalCostQuantity(poLine);//calculatePiecesQuantity(Piece.Format.OTHER, locations);
+        } else {
+          expectedPhysQty += getPhysicalCostQuantity(poLine);//calculatePiecesQuantity(Piece.Format.PHYSICAL, locations);
+        }
+        expectedElQty = getElectronicCostQuantity(poLine);//calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations);
+      }
+
+      int expectedWithItemQty = calculateExpectedQuantityOfPiecesWithoutItemCreation(poLine, locations);
+      int expectedWithoutItemQty = calculateInventoryItemsQuantity(poLine, locations);
+      int expectedWithoutLocation = calculatePiecesQuantityWithoutLocation(poLine).values().stream().mapToInt(Integer::intValue).sum();
+
+
+      // Prepare pieces for PO Line
+      List<Piece> poLinePieces = pieces
+        .stream()
+        .filter(piece -> piece.getPoLineId().equals(poLine.getId()))
+        .collect(Collectors.toList());
+
+
+      Map<String, Long> piecesByLocationIdQuantity =
+        poLinePieces.stream()
+            .filter(piece -> Objects.nonNull(piece.getLocationId()))
+            .collect(groupingBy(Piece::getLocationId, Collectors.counting()));
+
+      int expectedTotal = expectedWithItemQty + expectedWithoutItemQty + expectedWithoutLocation;
+      // Make sure that quantities by piece type and by item presence are the same
+      assertThat(expectedPhysQty + expectedElQty + expectedOthQty, is(expectedTotal));
+
+      assertThat(poLinePieces, hasSize(expectedTotal));
+
+      // Verify each piece individually
+      poLinePieces.forEach(piece -> {
+          // Check if itemId in inventoryItems match itemId in piece record
+          if (poLine.getCheckinItems() != null && Boolean.FALSE.equals(poLine.getCheckinItems())) {
+            if (piece.getLocationId() != null) {
+              String pieceLocationId = piece.getLocationId();
+              List<JsonObject> createdHoldingsForLocation = createdHoldingsByLocationId.get(pieceLocationId);
+              assertNotNull(createdHoldingsForLocation);
+          }
+          }
+        assertThat(piece.getReceivingStatus(), equalTo(Piece.ReceivingStatus.EXPECTED));
+        if (piece.getItemId() != null) {
+          assertThat(itemIds, hasItem(piece.getItemId()));
+        }
+        assertThat(piece.getFormat(), notNullValue());
+      });
+
+      totalForAllPoLines += expectedTotal;
+    }
+
+    // Make sure that none of pieces missed
+    assertThat(pieceJsons, hasSize(totalForAllPoLines));
+  }
+
   public static void verifyInventoryNonInteraction() {
     // Searches
     List<JsonObject> instancesSearches = getInstancesSearches();
@@ -303,6 +387,22 @@ public class InventoryInteractionTestHelper {
     assertNull(updatedOrders);
   }
 
+  public static void verifyHoldingsCreated(int expectedQty, List<JsonObject> holdings, CompositePoLine pol) {
+    Map<String, List<Location>> groupedLocationsByHoldingId = pol.getLocations()
+      .stream()
+      .filter(location -> Objects.nonNull(location.getHoldingId()))
+      .collect(Collectors.groupingBy(Location::getHoldingId));
+
+    long actualQty = 0;
+    for (JsonObject holding : holdings) {
+      if (groupedLocationsByHoldingId.containsKey(holding.getString(ID))
+        && StringUtils.equals(pol.getInstanceId(), holding.getString(HOLDING_INSTANCE_ID))) {
+        actualQty++;
+      }
+    }
+    assertEquals(expectedQty, actualQty, "Quantity of holdings does not match to expected");
+  }
+
   private static void verifyHoldingsCreated(List<JsonObject> holdings, CompositePoLine pol) {
     Map<String, List<Location>> groupedLocations = groupLocationsById(pol);
 
@@ -327,7 +427,7 @@ public class InventoryInteractionTestHelper {
     }
   }
 
-  private static void verifyItemsCreated(Header tenant, List<JsonObject> inventoryItems, CompositePoLine pol) {
+  public static void verifyItemsCreated(Header tenant, List<JsonObject> inventoryItems, CompositePoLine pol) {
     Map<Piece.Format, Integer> expectedItemsPerResourceType = HelperUtils.calculatePiecesWithItemIdQuantity(pol,
       pol.getLocations());
 
@@ -359,6 +459,40 @@ public class InventoryInteractionTestHelper {
     int expectedQuantity = calculateInventoryItemsQuantity(pol);
     if (expectedQuantity != actualQuantity) {
       fail(String.format("Actual items quantity is %d but expected %d", actualQuantity, expectedQuantity));
+    }
+  }
+
+  public static void verifyItemsCreated(Header tenant, int expItemQtq, List<JsonObject> inventoryItems, CompositePoLine pol) {
+    Map<Piece.Format, Integer> expectedItemsPerResourceType = HelperUtils.calculatePiecesWithItemIdQuantity(pol,
+      pol.getLocations());
+
+    Map<String, List<JsonObject>> itemsByMaterial = inventoryItems.stream()
+      .filter(item -> pol.getId().equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER)))
+      .collect(Collectors.groupingBy(item -> item.getString(ITEM_MATERIAL_TYPE_ID)));
+
+    expectedItemsPerResourceType.forEach((resourceType, quantity) -> {
+      if (quantity < 1) {
+        return;
+      }
+      if (resourceType.equals(Piece.Format.ELECTRONIC)) {
+        assertThat(quantity, is(itemsByMaterial.get(pol.getEresource().getMaterialType()).size()));
+        itemsByMaterial.get(pol.getEresource().getMaterialType())
+          .forEach(item -> verifyItemRecordRequest(tenant, item, pol.getEresource().getMaterialType()));
+      } else {
+        assertThat(quantity, is(itemsByMaterial.get(pol.getPhysical().getMaterialType()).size()));
+        itemsByMaterial.get(pol.getPhysical().getMaterialType())
+          .forEach(item -> verifyItemRecordRequest(tenant, item, pol.getPhysical().getMaterialType()));
+
+      }
+    });
+
+    long actualQuantity = itemsByMaterial.values()
+      .stream()
+      .mapToInt(List::size)
+      .sum();
+
+    if (expItemQtq != actualQuantity) {
+      fail(String.format("Actual items quantity is %d but expected %d", actualQuantity, expItemQtq));
     }
   }
 

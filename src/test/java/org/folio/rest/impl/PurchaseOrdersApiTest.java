@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
@@ -22,9 +23,12 @@ import static org.folio.TestUtils.getMockData;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoCreation;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
 import static org.folio.helper.InventoryInteractionTestHelper.joinExistingAndNewItems;
+import static org.folio.helper.InventoryInteractionTestHelper.verifyHoldingsCreated;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyInstanceLinksForUpdatedOrder;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyInventoryInteraction;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyInventoryNonInteraction;
+import static org.folio.helper.InventoryInteractionTestHelper.verifyItemsCreated;
+import static org.folio.helper.InventoryInteractionTestHelper.verifyOpenOrderPiecesCreated;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyPiecesCreated;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyPiecesQuantityForSuccessCase;
 import static org.folio.helper.PurchaseOrderHelper.OKAPI_HEADER_PERMISSIONS;
@@ -106,6 +110,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -729,7 +734,26 @@ public class PurchaseOrdersApiTest {
     // Check that search for existing instances was done not for all PO lines
     assertEquals(polCount - 1, instancesSearches.size());
 
-    verifyInventoryInteraction(resp, polCount);
+    CompositePoLine respLine1 = resp.getCompositePoLines().get(0);
+    CompositePoLine respLine2 = resp.getCompositePoLines().get(1);
+    List<JsonObject> createdInstances = getCreatedInstances();
+    assertEquals(2, createdInstances.size(), "Quantity of created instance must be equal of line, if create inventory include instance");
+    assertNotNull("Line must be connected to instance, if create inventory include instance", respLine1.getInstanceId());
+    assertNotNull("Line must be connected to instance, if create inventory include instance", respLine2.getInstanceId());
+
+    List<JsonObject> createdHoldings = getCreatedHoldings();
+    assertEquals(5, createdHoldings.size(), "Quantity of created holding must be depended of quantity in the locations and create inventory include holding");
+    verifyHoldingsCreated(3, createdHoldings, respLine1);
+    verifyHoldingsCreated(2, createdHoldings, respLine2);
+
+    // All existing and created items
+    List<JsonObject> items = joinExistingAndNewItems();
+    verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 11, items, respLine1);
+    verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 3, items, respLine2);
+
+    List<JsonObject> createdPieces = getCreatedPieces();
+    verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces);
+
     verifyEncumbrancesOnPoCreation(reqData, resp);
     assertThat(getExistingOrderSummaries(), hasSize(1));
     verifyCalculatedData(resp);
@@ -793,7 +817,22 @@ public class PurchaseOrdersApiTest {
     assertNotNull(instancesSearches);
     assertEquals(polCount, instancesSearches.size());
 
-    verifyInventoryInteraction(resp, polCount);
+    CompositePoLine respLine1 = resp.getCompositePoLines().get(0);
+    List<JsonObject> createdInstances = getCreatedInstances();
+    assertEquals(1, createdInstances.size(), "Quantity of created instance must be equal of line, if create inventory include instance");
+    assertNotNull("Line must be connected to instance, if create inventory include instance", respLine1.getInstanceId());
+
+    List<JsonObject> createdHoldings = getCreatedHoldings();
+    assertEquals(1, createdHoldings.size(), "Quantity of created holding must be depended of quantity in the locations and create inventory include holding");
+    verifyHoldingsCreated(1, createdHoldings, respLine1);
+
+    // All existing and created items
+    List<JsonObject> items = joinExistingAndNewItems();
+    verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 1, items, respLine1);
+
+    List<JsonObject> createdPieces = getCreatedPieces();
+    verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces);
+
     verifyEncumbrancesOnPoCreation(reqData, resp);
     assertThat(getExistingOrderSummaries(), hasSize(1));
     verifyCalculatedData(resp);
@@ -931,7 +970,26 @@ public class PurchaseOrdersApiTest {
     //setting just one location in the above step
     assertEquals(1, holdingsSearches.size());
 
-    verifyInventoryInteraction(resp, 1);
+    CompositePoLine respLine1 = resp.getCompositePoLines().get(0);
+    CompositePoLine respLine2 = resp.getCompositePoLines().get(1);
+    List<JsonObject> createdInstances = getCreatedInstances();
+    assertEquals(1, createdInstances.size(), "Quantity of created instance must be equal of line, if create inventory include instance");
+    assertNotNull("Line must be connected to instance, if create inventory include instance", respLine1.getInstanceId());
+    assertNotNull("Line must be connected to instance, if create inventory include instance", respLine2.getInstanceId());
+
+    List<JsonObject> createdHoldings = getCreatedHoldings();
+    assertEquals(1, createdHoldings.size(), "Quantity of created instance must be depended of quantity in the locations and create inventory include holding");
+    verifyHoldingsCreated(1, createdHoldings, respLine1);
+    verifyHoldingsCreated(0, createdHoldings, respLine2);
+
+    // All existing and created items
+    List<JsonObject> items = joinExistingAndNewItems();
+    verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 4, items, respLine1);
+    verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 0, items, respLine2);
+
+    List<JsonObject> createdPieces = getCreatedPieces();
+    verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces);
+
     verifyCalculatedData(resp);
   }
 
@@ -987,7 +1045,26 @@ public class PurchaseOrdersApiTest {
     assertEquals(1, instancesSearches.size());
     assertEquals(1, holdingsSearches.size());
 
-    verifyInventoryInteraction(resp, 1);
+    CompositePoLine respLine1 = resp.getCompositePoLines().get(0);
+    CompositePoLine respLine2 = resp.getCompositePoLines().get(1);
+    List<JsonObject> createdInstances = getCreatedInstances();
+    assertEquals(1, createdInstances.size(), "Quantity of created instance must be equal of line, if create inventory include instance");
+    assertNotNull("Line must be connected to instance, if create inventory include instance", respLine1.getInstanceId());
+    assertNotNull("Line must be connected to instance, if create inventory include instance", respLine2.getInstanceId());
+
+    List<JsonObject> createdHoldings = getCreatedHoldings();
+    assertEquals(1, createdHoldings.size(), "Quantity of created holding must be depended of quantity in the locations and create inventory include holding");
+    verifyHoldingsCreated(1, createdHoldings, respLine1);
+    verifyHoldingsCreated(0, createdHoldings, respLine2);
+
+    // All existing and created items
+    List<JsonObject> items = joinExistingAndNewItems();
+    verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 4, items, respLine1);
+    verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 0, items, respLine2);
+
+    List<JsonObject> createdPieces = getCreatedPieces();
+    verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces);
+
     verifyCalculatedData(resp);
   }
 
@@ -1027,6 +1104,19 @@ public class PurchaseOrdersApiTest {
     preparePiecesForCompositePo(reqData);
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
+    List<JsonObject> respOrder =  MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT);
+    CompositePurchaseOrder compPo = respOrder.get(0).mapTo(CompositePurchaseOrder.class);
+    List<JsonObject> respLines =  MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
+
+    CompositePoLine respLine1 = respLines.stream()
+      .filter(line -> line.getString(ID).equals(compositePoLine.getId()))
+      .peek(line -> line.remove("reportingCodes"))
+      .map(line -> line.mapTo(CompositePoLine.class))
+      .filter(line -> line.getLocations().stream().filter(loc -> Objects.nonNull(loc.getHoldingId())).findFirst().isPresent())
+      .distinct().findAny().get();
+
+    compPo.setCompositePoLines(List.of(respLine1));
+
     List<JsonObject> createdPieces = getCreatedPieces();
     List<JsonObject> createdItems = getCreatedItems();
     assertThat(createdItems, notNullValue());
@@ -1035,10 +1125,10 @@ public class PurchaseOrdersApiTest {
     int piecesSize = createdPieces.size();
     logger.debug("------------------- piecesSize, itemSize --------------------\n" + piecesSize + " " + createdItems.size());
     // Verify total number of pieces created should be equal to total quantity
-    assertEquals(calculateTotalQuantity(compositePoLine), piecesSize);
+    assertEquals(calculateTotalQuantity(respLine1), piecesSize);
 
-    verifyPiecesCreated(createdItems, reqData.getCompositePoLines(), createdPieces);
-    verifyEncumbrancesOnPoUpdate(reqData);
+    verifyOpenOrderPiecesCreated(createdItems, compPo.getCompositePoLines(), createdPieces);
+    verifyEncumbrancesOnPoUpdate(compPo);
     assertThat(getExistingOrderSummaries(), hasSize(2));
   }
 
@@ -1152,14 +1242,36 @@ public class PurchaseOrdersApiTest {
     assertThat(reqData.getCompositePoLines(), hasSize(2));
     MockServer.addMockTitles(reqData.getCompositePoLines());
 
-    reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
+    CompositePoLine line1 = reqData.getCompositePoLines().get(0);
+    CompositePoLine line2 = reqData.getCompositePoLines().get(1);
+    line2.getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     preparePiecesForCompositePo(reqData);
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
+
+    List<JsonObject> respOrder =  MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET);
+    CompositePurchaseOrder compPo = respOrder.get(0).mapTo(CompositePurchaseOrder.class);
+    List<JsonObject> respLines =  MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
+
+    CompositePoLine respLine1 = respLines.stream()
+      .filter(line -> line.getString(ID).equals(line1.getId()))
+      .peek(line -> line.remove("reportingCodes"))
+      .map(line -> line.mapTo(CompositePoLine.class))
+      .filter(line -> Objects.nonNull(line.getLocations().get(0).getHoldingId()))
+      .distinct().findAny().get();
+
+    CompositePoLine respLine2 = respLines.stream()
+      .filter(line -> line.getString(ID).equals(line2.getId()))
+      .peek(line -> line.remove("reportingCodes"))
+      .map(line -> line.mapTo(CompositePoLine.class))
+      .findAny().get();
+
+    compPo.setCompositePoLines(List.of(respLine1, respLine2));
+
     List<JsonObject> items = joinExistingAndNewItems();
     List<JsonObject> createdPieces = getCreatedPieces();
-    verifyPiecesQuantityForSuccessCase(reqData.getCompositePoLines(), createdPieces);
-    verifyPiecesCreated(items, reqData.getCompositePoLines(), createdPieces);
+    verifyPiecesQuantityForSuccessCase(compPo.getCompositePoLines(), createdPieces);
+    verifyOpenOrderPiecesCreated(items, compPo.getCompositePoLines(), createdPieces);
   }
 
   @Test
@@ -1782,8 +1894,13 @@ public class PurchaseOrdersApiTest {
 
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     // MODORDERS-178 guarantee electronic resource for the second PO Line but set "create items" to NONE
-    reqData.getCompositePoLines().get(1).setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
-    reqData.getCompositePoLines().get(1).getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
+    CompositePoLine line1 = reqData.getCompositePoLines().get(0);
+    CompositePoLine line2 = reqData.getCompositePoLines().get(1);
+
+    line1.setPurchaseOrderId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    line2.setPurchaseOrderId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    line2.setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
+    line2.getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
     reqData.getCompositePoLines().forEach(s -> s.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING));
     reqData.getCompositePoLines().forEach(s -> s.setPaymentStatus(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED));
 
@@ -1791,14 +1908,47 @@ public class PurchaseOrdersApiTest {
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
+    List<JsonObject> respOrder =  MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT);
+    CompositePurchaseOrder compPo = respOrder.get(0).mapTo(CompositePurchaseOrder.class);
+    List<JsonObject> respLines =  MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
+
+    CompositePoLine respLine1 = respLines.stream()
+      .filter(line -> line.getString(ID).equals(line1.getId()))
+      .peek(line -> line.remove("reportingCodes"))
+      .map(line -> line.mapTo(CompositePoLine.class))
+      .filter(line -> Objects.nonNull(line.getLocations().get(0).getHoldingId()))
+      .distinct().findAny().get();
+
+    CompositePoLine respLine2 = respLines.stream()
+      .filter(line -> line.getString(ID).equals(line2.getId()))
+      .peek(line -> line.remove("reportingCodes"))
+      .map(line -> line.mapTo(CompositePoLine.class))
+      .findAny().get();
+
+    compPo.setCompositePoLines(List.of(respLine1, respLine2));
+
     int polCount = reqData.getCompositePoLines().size();
 
-    System.out.println(MockServer.serverRqRs);
+    List<JsonObject> createdInstances = getCreatedInstances();
+    assertEquals(1, createdInstances.size(), "Quantity of created instance must be equal of line, if create inventory include instance");
+    assertNotNull("Line must be connected to instance, if create inventory include instance", respLine1.getInstanceId());
+    assertNull(respLine2.getInstanceId());
 
-    verifyInstanceLinksForUpdatedOrder(reqData);
-    verifyInventoryInteraction(reqData, polCount - 1);
-    verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), reqData.getCompositePoLines().size());
-    verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED.value(), reqData.getCompositePoLines().size());
+    List<JsonObject> createdHoldings = getCreatedHoldings();
+    assertEquals(3, createdHoldings.size(), "Quantity of created instance must be depended of quantity in the locations and create inventory include holding");
+    verifyHoldingsCreated(3, createdHoldings, respLine1);
+    verifyHoldingsCreated(0, createdHoldings, respLine2);
+
+    // All existing and created items
+    List<JsonObject> items = joinExistingAndNewItems();
+    verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 4, items, respLine1);
+    verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 0, items, respLine2);
+
+    List<JsonObject> createdPieces = getCreatedPieces();
+    verifyOpenOrderPiecesCreated(items, compPo.getCompositePoLines(), createdPieces);
+
+    verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), compPo.getCompositePoLines().size());
+    verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED.value(), compPo.getCompositePoLines().size());
   }
 
   @Test
@@ -2089,7 +2239,22 @@ public class PurchaseOrdersApiTest {
     assertNotNull(getInstancesSearches());
     assertNotNull(getHoldingsSearches());
     assertNotNull(getItemsSearches());
-    verifyInventoryInteraction(resp, 1);
+
+    CompositePoLine respLine1 = resp.getCompositePoLines().get(0);
+    List<JsonObject> createdInstances = getCreatedInstances();
+    assertEquals(1, createdInstances.size(), "Quantity of created instance must be equal of line, if create inventory include instance");
+    assertNotNull("Line must be connected to instance, if create inventory include instance", respLine1.getInstanceId());
+
+    List<JsonObject> createdHoldings = getCreatedHoldings();
+    assertEquals(1, createdHoldings.size(), "Quantity of created instance must be depended of quantity in the locations and create inventory include holding");
+    verifyHoldingsCreated(1, createdHoldings, respLine1);
+
+    // All existing and created items
+    List<JsonObject> items = joinExistingAndNewItems();
+    verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 2, items, respLine1);
+
+    List<JsonObject> createdPieces = getCreatedPieces();
+    verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces);
 
     assertNotNull(getCreatedPieces());
   }
@@ -2115,7 +2280,21 @@ public class PurchaseOrdersApiTest {
     assertNotNull(getItemsSearches());
 
     // MODORDERS-239/240/241: default values will be used when config is empty
-    verifyInventoryInteraction(EMPTY_CONFIG_X_OKAPI_TENANT, resp, 1);
+    CompositePoLine respLine1 = resp.getCompositePoLines().get(0);
+    List<JsonObject> createdInstances = getCreatedInstances();
+    assertEquals(1, createdInstances.size(), "Quantity of created instance must be equal of line, if create inventory include instance");
+    assertNotNull("Line must be connected to instance, if create inventory include instance", respLine1.getInstanceId());
+
+    List<JsonObject> createdHoldings = getCreatedHoldings();
+    assertEquals(1, createdHoldings.size(), "Quantity of created instance must be depended of quantity in the locations and create inventory include holding");
+    verifyHoldingsCreated(1, createdHoldings, respLine1);
+
+    // All existing and created items
+    List<JsonObject> items = joinExistingAndNewItems();
+    verifyItemsCreated(EMPTY_CONFIG_X_OKAPI_TENANT, 1, items, respLine1);
+
+    List<JsonObject> createdPieces = getCreatedPieces();
+    verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces);
 
     assertNotNull(getCreatedPieces());
   }
@@ -2133,16 +2312,54 @@ public class PurchaseOrdersApiTest {
 
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     // MODORDERS-183 Set the second POLine checkinItems true
-    reqData.getCompositePoLines().get(1).setCheckinItems(true);
+    CompositePoLine line1 = reqData.getCompositePoLines().get(0);
+    CompositePoLine line2 = reqData.getCompositePoLines().get(1);
+    line2.setCheckinItems(true);
     reqData.getCompositePoLines().forEach(s -> s.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING));
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
-    int polCount = reqData.getCompositePoLines().size();
-    verifyInstanceLinksForUpdatedOrder(reqData);
-    verifyInventoryInteraction(reqData, polCount);
-    verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), reqData.getCompositePoLines().size());
-    verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
+    List<JsonObject> respOrder =  MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET);
+    CompositePurchaseOrder compPo = respOrder.get(0).mapTo(CompositePurchaseOrder.class);
+    List<JsonObject> respLines =  MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
+
+    CompositePoLine respLine1 = respLines.stream()
+      .filter(line -> line.getString(ID).equals(line1.getId()))
+      .peek(line -> line.remove("reportingCodes"))
+      .map(line -> line.mapTo(CompositePoLine.class))
+      .filter(line -> Objects.nonNull(line.getLocations().get(0).getHoldingId()))
+      .distinct().findAny().get();
+
+    CompositePoLine respLine2 = respLines.stream()
+      .filter(line -> line.getString(ID).equals(line2.getId()))
+      .peek(line -> line.remove("reportingCodes"))
+      .map(line -> line.mapTo(CompositePoLine.class))
+      .filter(line -> Objects.nonNull(line.getLocations().get(0).getHoldingId()))
+      .findAny().get();
+
+    compPo.setCompositePoLines(List.of(respLine1, respLine2));
+
+    int polCount = compPo.getCompositePoLines().size();
+    List<JsonObject> createdInstances = getCreatedInstances();
+    assertEquals(2, createdInstances.size(), "Quantity of created instance must be equal of line, if create inventory include instance");
+    assertNotNull("Line must be connected to instance, if create inventory include instance", respLine1.getInstanceId());
+    assertNotNull("Line must be connected to instance, if create inventory include instance", respLine2.getInstanceId());
+
+    List<JsonObject> createdHoldings = getCreatedHoldings();
+    assertEquals(5, createdHoldings.size(), "Quantity of created instance must be depended of quantity in the locations and create inventory include holding");
+    verifyHoldingsCreated(3, createdHoldings, respLine1);
+    verifyHoldingsCreated(2, createdHoldings, respLine2);
+
+    // All existing and created items
+    List<JsonObject> items = joinExistingAndNewItems();
+    verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 4, items, respLine1);
+    verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 0, items, respLine2);
+
+    List<JsonObject> createdPieces = getCreatedPieces();
+    verifyOpenOrderPiecesCreated(items, compPo.getCompositePoLines(), createdPieces);
+
+    verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), compPo.getCompositePoLines().size());
+    verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), compPo.getCompositePoLines().size());
   }
 
   @Test
@@ -2273,6 +2490,8 @@ public class PurchaseOrdersApiTest {
     }
 
     // Set location ids to one which emulates item creation failure
+    CompositePoLine line1 = reqData.getCompositePoLines().get(0);
+    CompositePoLine line2 = reqData.getCompositePoLines().get(1);
     reqData.getCompositePoLines().get(1).getLocations().forEach(location -> location.withLocationId(ID_FOR_INTERNAL_SERVER_ERROR));
 
     reqData.getCompositePoLines().get(1).getLocations().get(0).setLocationId(UUID.randomUUID().toString());
@@ -2285,6 +2504,24 @@ public class PurchaseOrdersApiTest {
 
     // Server Error expected as a result because not all items created
     verifyPut(path, JsonObject.mapFrom(reqData), APPLICATION_JSON, 500);
+
+    List<JsonObject> respOrder =  MockServer.serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET);
+    CompositePurchaseOrder compPo = respOrder.get(0).mapTo(CompositePurchaseOrder.class);
+    List<JsonObject> respLines =  MockServer.serverRqRs.get(PO_LINES, HttpMethod.PUT);
+
+    CompositePoLine respLine1 = respLines.stream()
+      .filter(line -> line.getString(ID).equals(line1.getId()))
+      .peek(line -> line.remove("reportingCodes"))
+      .map(line -> line.mapTo(CompositePoLine.class))
+      .distinct().findAny().get();
+
+    CompositePoLine respLine2 = respLines.stream()
+      .filter(line -> line.getString(ID).equals(line2.getId()))
+      .peek(line -> line.remove("reportingCodes"))
+      .map(line -> line.mapTo(CompositePoLine.class))
+      .findAny().get();
+
+    compPo.setCompositePoLines(List.of(respLine1, respLine2));
 
     // Check that search of the existing instances and items was done for each PO line
     List<JsonObject> instancesSearches = getInstancesSearches();
@@ -2307,12 +2544,12 @@ public class PurchaseOrdersApiTest {
     verifyInstanceLinksNotCreatedForPoLine();
 
     // Verify pieces were created
-    assertEquals(calculateTotalQuantity(reqData.getCompositePoLines().get(0))
-      + calculateTotalQuantity(reqData.getCompositePoLines().get(1)) - 1, createdPieces.size());
+    assertEquals(calculateTotalQuantity(compPo.getCompositePoLines().get(0))
+      + calculateTotalQuantity(compPo.getCompositePoLines().get(1)) - 1, createdPieces.size());
 
     // Effectively remove non-processed locations with ID_FOR_INTERNAL_SERVER_ERROR to exclude them from
     // created pieces verification
-    reqData.getCompositePoLines().forEach(poLine -> poLine.getLocations().removeIf(l -> {
+    compPo.getCompositePoLines().forEach(poLine -> poLine.getLocations().removeIf(l -> {
       if (l.getLocationId().equals(ID_FOR_INTERNAL_SERVER_ERROR)) {
         if (poLine.getCost().getQuantityElectronic() != null) {
           poLine.getCost().setQuantityElectronic(poLine.getCost().getQuantityElectronic() - l.getQuantityElectronic());
@@ -2326,7 +2563,7 @@ public class PurchaseOrdersApiTest {
       }
     }));
 
-    verifyPiecesCreated(items, reqData.getCompositePoLines(), createdPieces);
+    verifyPiecesCreated(items, compPo.getCompositePoLines(), createdPieces);
   }
 
   private void verifyInstanceLinksNotCreatedForPoLine() {
@@ -3206,8 +3443,7 @@ public class PurchaseOrdersApiTest {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     MockServer.addMockTitles(reqData.getCompositePoLines());
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    reqData.getCompositePoLines()
-      .remove(1);
+    reqData.getCompositePoLines().remove(1);
     assertThat(reqData.getCompositePoLines(), hasSize(1));
 
     reqData.getCompositePoLines().get(0).getContributors().clear();
@@ -3217,10 +3453,22 @@ public class PurchaseOrdersApiTest {
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
       .encodePrettily(), headers, APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
+    int polCount = resp.getCompositePoLines().size();
+    CompositePoLine respLine1 = resp.getCompositePoLines().get(0);
+    List<JsonObject> createdInstances = getCreatedInstances();
+    assertEquals(1, createdInstances.size(), "Quantity of created instance must be equal of line, if create inventory include instance");
+    assertNotNull("Line must be connected to instance, if create inventory include instance", respLine1.getInstanceId());
 
-    assertThat(getContributorNameTypesSearches(), nullValue());
-    verifyInventoryInteraction(resp, 1);
+    List<JsonObject> createdHoldings = getCreatedHoldings();
+    assertEquals(3, createdHoldings.size(), "Quantity of created instance must be depended of quantity in the locations and create inventory include holding");
+    verifyHoldingsCreated(3, createdHoldings, respLine1);
 
+    // All existing and created items
+    List<JsonObject> items = joinExistingAndNewItems();
+    verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 4, items, respLine1);
+
+    List<JsonObject> createdPieces = getCreatedPieces();
+    verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces);
   }
 
 

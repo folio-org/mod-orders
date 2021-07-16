@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
 
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -103,4 +104,5 @@ public class PoNumberApiTest {
 
     verifyGet(GET_PO_NUMBER_PATH, prepareHeaders(X_OKAPI_URL, PO_NUMBER_ERROR_X_OKAPI_TENANT), APPLICATION_JSON, 500);
   }
+
 }

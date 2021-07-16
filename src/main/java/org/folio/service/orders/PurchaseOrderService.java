@@ -34,8 +34,8 @@ public class PurchaseOrderService {
     return restClient.get(requestEntry, requestContext, PurchaseOrderCollection.class);
   }
 
-  public CompletableFuture<List<PurchaseOrder>> getPurchaseOrderByPoLineIds(List<String> ids, RequestContext requestContext) {
-    String query = convertIdsToCqlQuery(ids, "poLineId.sourcePoLineId");
+  public CompletableFuture<List<PurchaseOrder>> getPurchaseOrdersByIds(List<String> ids, RequestContext requestContext) {
+    String query = convertIdsToCqlQuery(ids, "id");
 
     RequestEntry requestEntry = new RequestEntry(ENDPOINT)
       .withQuery(query)

@@ -21,9 +21,17 @@
   },
   "compositePoLines": [
     {
-      "id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
+      "id": "2bafc9e1-9dd3-4ede-9f23-c4a03f8bb2d5",
       "source": "User",
-      "purchaseOrderId": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB4bb"
+      "purchaseOrderId": "c79b0bcc-DcAD-1E4E-Abb7-DbFcaD5BB4bb",
+      "locations": [
+        {
+          "locationId": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
+          "quantity": 1,
+          "quantityElectronic": 1,
+          "quantityPhysical": 0
+        }
+      ]
     }
   ]
 }

@@ -96,7 +96,7 @@ public class PieceApiTest {
 
     Piece postPieceRq = pieceJsonReqData.mapTo(Piece.class);
     // To skip unit's permission validation
-    postPieceRq.setPoLineId("0009662b-8b80-4001-b704-ca10971f175d");
+    postPieceRq.setPoLineId("2bafc9e1-9dd3-4ede-9f23-c4a03f8bb2d5");
 
     // Positive cases
     // Piece id is null initially
@@ -126,7 +126,7 @@ public class PieceApiTest {
 
     Piece postPieceRq = pieceJsonReqData.mapTo(Piece.class);
     // To skip unit's permission validation
-    postPieceRq.setPoLineId("0009662b-8b80-4001-b704-ca10971f175d");
+    postPieceRq.setPoLineId("2bafc9e1-9dd3-4ede-9f23-c4a03f8bb2d5");
     postPieceRq.setReceiptDate(null);
 
     Piece piece = verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(),

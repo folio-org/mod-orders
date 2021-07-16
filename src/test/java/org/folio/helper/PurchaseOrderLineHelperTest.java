@@ -48,39 +48,4 @@ public class PurchaseOrderLineHelperTest {
     }
   }
 
-  @Test
-  void testShouldMakePOLAsPendingIfPaymentAndReceiptStatusesEqualToAwaiting() {
-    //given
-    PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
-    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    order.getCompositePoLines().forEach(line -> {
-      line.setPaymentStatus(CompositePoLine.PaymentStatus.AWAITING_PAYMENT);
-      line.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
-    });
-    //When
-    orderLineHelper.makePoLinesPending(order.getCompositePoLines());
-    //Then
-    order.getCompositePoLines().forEach(line -> {
-      assertEquals(CompositePoLine.PaymentStatus.PENDING, line.getPaymentStatus());
-      assertEquals(CompositePoLine.ReceiptStatus.PENDING, line.getReceiptStatus());
-    });
-  }
-
-  @Test
-  void testShouldSkipMakePOLAsPendingIfPaymentAndReceiptStatusesNotEqualToAwaiting() {
-    //given
-    PurchaseOrderLineHelper orderLineHelper = mock(PurchaseOrderLineHelper.class, CALLS_REAL_METHODS);
-    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    order.getCompositePoLines().forEach(line -> {
-      line.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
-      line.setReceiptStatus(CompositePoLine.ReceiptStatus.FULLY_RECEIVED);
-    });
-    //When
-    orderLineHelper.makePoLinesPending(order.getCompositePoLines());
-    //Then
-    order.getCompositePoLines().forEach(line -> {
-      assertEquals(CompositePoLine.PaymentStatus.FULLY_PAID, line.getPaymentStatus());
-      assertEquals(CompositePoLine.ReceiptStatus.FULLY_RECEIVED, line.getReceiptStatus());
-    });
-  }
 }
