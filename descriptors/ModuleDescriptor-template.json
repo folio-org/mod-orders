@@ -1039,6 +1039,18 @@
       "description": "Delete an existing piece"
     },
     {
+      "permissionName" : "orders.pieces.all",
+      "displayName" : "All piece permissions",
+      "description" : "All permissions for the pieces",
+      "subPermissions" : [
+        "orders.pieces.collection.get",
+        "orders.pieces.item.post",
+        "orders.pieces.item.get",
+        "orders.pieces.item.put",
+        "orders.pieces.item.delete"
+      ]
+    },
+    {
       "permissionName" : "orders.order-templates.collection.get",
       "displayName" : "Orders - Get template collection",
       "description" : "Get a collection of order templates"
@@ -1341,11 +1353,7 @@
         "orders.receiving.collection.post",
         "orders.check-in.collection.post",
         "orders.receiving-history.collection.get",
-        "orders.pieces.collection.get",
-        "orders.pieces.item.post",
-        "orders.pieces.item.get",
-        "orders.pieces.item.put",
-        "orders.pieces.item.delete",
+        "orders.pieces.all",
         "orders.acquisitions-units-assignments.all",
         "orders.order-templates.all",
         "orders.titles.all",
