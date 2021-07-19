@@ -1,11 +1,15 @@
 package org.folio.service.finance.transaction;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Stream;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
+import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -20,6 +24,7 @@ public class TransactionSummariesService {
     private static final String BY_ID_GET_ENDPOINT = "/finance-storage/order-transaction-summaries/{id}";
 
     private final RestClient restClient;
+    private static final Logger log = LogManager.getLogger(TransactionSummariesService.class);
 
     public TransactionSummariesService(RestClient restClient) {
         this.restClient = restClient;
@@ -63,7 +68,12 @@ public class TransactionSummariesService {
         .findFirst()
         .orElse(null);
       return getOrderTransactionSummary(orderId, requestContext)
-        .exceptionally(t -> null)
+        .exceptionally(t -> {
+          if (t instanceof HttpException && ((HttpException)t).getCode() == 404) {
+            return null;
+          }
+          throw new CompletionException(t);
+        })
         .thenCompose(currentSummary -> {
           if (CollectionUtils.isEmpty(holder.getEncumbrancesFromStorage()) && currentSummary == null) {
             return createOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext)
