@@ -1,4 +1,4 @@
-package org.folio.helper;
+package org.folio.service.finance.inventory;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
@@ -11,13 +11,11 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConfig.mockPort;
 import static org.folio.TestConstants.ACTIVE_ACCESS_PROVIDER_B;
-import static org.folio.TestConstants.ID;
 import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
-import static org.folio.service.inventory.InventoryManager.ITEMS;
-import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
+import static org.folio.orders.utils.ErrorCodes.PARTIALLY_RETURNED_COLLECTION;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.HOLDINGS_OLD_NEW_PATH;
@@ -26,7 +24,11 @@ import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.PurchaseOrderLinesApiTest.COMP_PO_LINES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING;
-import static org.folio.service.pieces.PiecesServiceTest.LINE_ID;
+import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
+import static org.folio.service.inventory.InventoryManager.ID;
+import static org.folio.service.inventory.InventoryManager.ITEMS;
+import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
+import static org.folio.service.pieces.PieceServiceTest.LINE_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,7 +38,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -55,6 +56,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import org.folio.ApiTestSuite;
+import org.folio.TestConstants;
 import org.folio.models.PoLineUpdateHolder;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.core.RestClient;
@@ -68,8 +70,12 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.rest.tools.client.HttpClientFactory;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.inventory.InventoryManager;
+import org.folio.service.pieces.PieceRetrieveService;
+import org.hamcrest.core.IsInstanceOf;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -84,6 +90,8 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class InventoryManagerTest {
+  private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";
+  public static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
   public static final String HOLDING_INSTANCE_ID = "5294d737-a04b-4158-857a-3f3c555bcc60";
   public static final String OLD_LOCATION_ID = "758258bc-ecc1-41b8-abca-f7b610822fff";
   public static final String NEW_LOCATION_ID = "fcd64ce1-6995-48f0-840e-89ffa2288371";
@@ -95,15 +103,20 @@ public class InventoryManagerTest {
   private static final String COMPOSITE_LINES_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
 
   @Autowired
-  private InventoryManager inventoryManager;
+  InventoryManager inventoryManager;
   @Autowired
   private RestClient restClient;
   @Autowired
+  private PieceRetrieveService pieceRetrieveService;
+  @Autowired
   private ConfigurationEntriesService configurationEntriesService;
 
-  private Context ctxMock;
+
   private Map<String, String> okapiHeadersMock;
+  private Context ctxMock;
   private RequestContext requestContext;
+
+  private HttpClientInterface httpClient;
   private static boolean runningOnOwn;
 
   @BeforeAll
@@ -134,13 +147,104 @@ public class InventoryManagerTest {
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
+    httpClient = HttpClientFactory.getHttpClient(okapiURL, X_OKAPI_TENANT.getValue());
     requestContext = new RequestContext(ctxMock, okapiHeadersMock);
   }
 
   @AfterEach
   void resetMocks() {
     clearServiceInteractions();
-    reset(inventoryManager);
+  }
+
+  @Test
+  void shouldReturnHoldingsByIdsIfTheyExist() throws IOException, ExecutionException, InterruptedException {
+    JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+    List<JsonObject> holdings = holdingsCollection.getJsonArray("holdingsRecords").stream()
+       .map(o -> ((JsonObject) o))
+       .collect(toList());
+
+    List<String> holdingIds = holdings.stream().map(holding ->  holding.getString(ID)).collect(toList());
+
+    doReturn(completedFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+    List<JsonObject> actHoldings = inventoryManager.getHoldingsByIds(holdingIds, requestContext).get();
+    assertThat(actHoldings.size(), equalTo(holdings.size()));
+    verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+  }
+
+  @Test
+  void shouldTrowExceptionHoldingsByIdsIfNotAllOfThemExist() throws IOException, ExecutionException, InterruptedException {
+    JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+    List<JsonObject> holdings = holdingsCollection.getJsonArray("holdingsRecords").stream()
+      .map(o -> ((JsonObject) o))
+      .collect(toList());
+
+    List<String> holdingIds = holdings.stream().map(holding ->  holding.getString(ID)).collect(toList());
+    holdingIds.add(UUID.randomUUID().toString());
+    doReturn(completedFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+    CompletableFuture<List<JsonObject>> resultFuture = inventoryManager.getHoldingsByIds(holdingIds, requestContext);
+
+    ExecutionException executionException = assertThrows(ExecutionException.class, resultFuture::get);
+
+    assertThat(executionException.getCause(), IsInstanceOf.instanceOf(HttpException.class));
+
+    HttpException httpException = (HttpException) executionException.getCause();
+    assertEquals(404, httpException.getCode());
+    assertEquals(PARTIALLY_RETURNED_COLLECTION.toError().getCode(), httpException.getError().getCode());
+  }
+
+  @Test
+  void shouldReturnHoldingsByInstanceIdAndLocationIdsIfTheyExist() throws IOException, ExecutionException, InterruptedException {
+    String instanceId = UUID.randomUUID().toString();
+    JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+    List<JsonObject> holdings = holdingsCollection.getJsonArray("holdingsRecords").stream()
+      .map(o -> ((JsonObject) o))
+      .collect(toList());
+
+    List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
+
+    doReturn(completedFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+    List<JsonObject> actHoldings = inventoryManager.getHoldingRecords(instanceId, locationIds, requestContext).get();
+    assertThat(actHoldings.size(), equalTo(holdings.size()));
+    verify(restClient, times(2)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+  }
+
+  @Test
+  void shouldReturnHoldingsByInstanceIdAndLocationIdIfTheyExist() throws IOException, ExecutionException, InterruptedException {
+    String instanceId = UUID.randomUUID().toString();
+    JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+    List<JsonObject> holdings = holdingsCollection.getJsonArray("holdingsRecords").stream()
+      .map(o -> ((JsonObject) o))
+      .collect(toList());
+
+    List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
+
+    doReturn(completedFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+    JsonObject actHoldings = inventoryManager.getFirstHoldingRecord(instanceId, locationIds.get(0), requestContext).get();
+    verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+  }
+
+  @Test
+  void testShouldUpdateAllItemOneByOneIfProvidedListNonEmpty() {
+    //given
+    doReturn(completedFuture(null)).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+    JsonObject item1 = new JsonObject().put("id", UUID.randomUUID().toString());
+    JsonObject item2 = new JsonObject().put("id", UUID.randomUUID().toString());
+    List<JsonObject> items = Arrays.asList(item1, item2);
+    //When
+    inventoryManager.updateItemRecords(items, requestContext).join();
+    //Then
+    verify(restClient, times(1)).put(any(RequestEntry.class), eq(item1), eq(requestContext));
+    verify(restClient, times(1)).put(any(RequestEntry.class), eq(item2), eq(requestContext));
+  }
+
+  @Test
+  void testShouldNotUpdateItemIfProvidedListEmpty() {
+    //given
+    doReturn(completedFuture(null)).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+    //When
+    inventoryManager.updateItemRecords(Collections.emptyList(), requestContext).join();
+    //Then
+    verify(restClient, times(0)).put(any(RequestEntry.class),any(JsonObject.class), eq(requestContext));
   }
 
   @Test
@@ -174,8 +278,8 @@ public class InventoryManagerTest {
     doReturn(completedFuture(holdings)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
     //When
     PoLineUpdateHolder holder = new PoLineUpdateHolder().withInstanceId(HOLDING_INSTANCE_ID)
-                                        .withOldLocationId(OLD_LOCATION_ID)
-                                        .withNewLocationId(NEW_LOCATION_ID);
+      .withOldLocationId(OLD_LOCATION_ID)
+      .withNewLocationId(NEW_LOCATION_ID);
     inventoryManager.updateHoldingsRecord(holder, requestContext).join();
     //Then
     assertThat(holder.getOldHoldingId(), equalTo(OLD_HOLDING_ID));
@@ -192,8 +296,8 @@ public class InventoryManagerTest {
     doReturn(completedFuture(holdings)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
     //When
     PoLineUpdateHolder holder = new PoLineUpdateHolder().withInstanceId(HOLDING_INSTANCE_ID)
-                                                        .withOldLocationId(OLD_LOCATION_ID)
-                                                        .withNewLocationId(NON_EXISTED_NEW_HOLDING_ID);
+      .withOldLocationId(OLD_LOCATION_ID)
+      .withNewLocationId(NON_EXISTED_NEW_HOLDING_ID);
     inventoryManager.updateHoldingsRecord(holder, requestContext).join();
     //Then
     assertThat(holder.getNewLocationId(), equalTo(NON_EXISTED_NEW_HOLDING_ID));
@@ -325,10 +429,10 @@ public class InventoryManagerTest {
 
     JsonObject items = new JsonObject(getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
     List<JsonObject> needUpdateItems = items.getJsonArray(ITEMS).stream()
-                                  .map(o -> ((JsonObject) o))
-                                  .filter(item -> item.getString(ID).equals(itemId))
-                                  .map(item -> item.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId))
-                                  .collect(toList());;
+      .map(o -> ((JsonObject) o))
+      .filter(item -> item.getString(TestConstants.ID).equals(itemId))
+      .map(item -> item.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId))
+      .collect(toList());;
 
     String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", poLineId);
     PieceCollection existedPieces = new JsonObject(getMockData(path)).mapTo(PieceCollection.class);
@@ -336,8 +440,9 @@ public class InventoryManagerTest {
     existedPieces.getPieces().get(0).setFormat(Piece.Format.PHYSICAL);
     existedPieces.getPieces().get(0).setPoLineId(poLineId);
     //given
-    doReturn(completedFuture(existedPieces)).when(inventoryManager).getExpectedPiecesByLineId(poLineId, requestContext);
+    doReturn(completedFuture(existedPieces)).when(pieceRetrieveService).getExpectedPiecesByLineId(poLineId, requestContext);
     doReturn(completedFuture(needUpdateItems)).when(inventoryManager).getItemRecordsByIds(Collections.singletonList(itemId), requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).updateItemRecords(any(), eq(requestContext));
     doReturn(completedFuture(null)).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
     //When
     PoLineUpdateHolder poLineUpdateHolder = new PoLineUpdateHolder().withOldLocationId(oldLocationId).withNewLocationId(locationId);
@@ -439,6 +544,10 @@ public class InventoryManagerTest {
       return mock(ConfigurationEntriesService.class);
     }
 
+    @Bean
+    public PieceRetrieveService pieceRetrieveService() {
+      return mock(PieceRetrieveService.class);
+    }
 
     @Bean
     public RestClient restClient() {
@@ -446,8 +555,9 @@ public class InventoryManagerTest {
     }
 
     @Bean
-    public InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService) {
-      return spy(new InventoryManager(restClient, configurationEntriesService));
+    public InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
+                                             PieceRetrieveService pieceRetrieveService) {
+      return spy(new InventoryManager(restClient, configurationEntriesService, pieceRetrieveService));
     }
   }
 }

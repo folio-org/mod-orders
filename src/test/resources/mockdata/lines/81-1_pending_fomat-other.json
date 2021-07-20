@@ -1,0 +1,92 @@
+{
+  "id": "556abc25-ebbf-3fb2-b478-1bfaff0af4dc",
+  "acquisitionMethod": "Purchase",
+  "agreementId": "09c6ed1b-3984-4d9a-8f9b-e1200b68b61c",
+  "alerts": [],
+  "cancellationRestriction": false,
+  "cancellationRestrictionNote": "",
+  "checkinItems": false,
+  "claims": [
+    {
+      "claimed": false,
+      "grace": 0
+    }
+  ],
+  "collection": false,
+  "cost": {
+    "additionalCost": 0,
+    "currency": "USD",
+    "discount": 0,
+    "discountType": "percentage",
+    "listUnitPrice": 0.00,
+    "listUnitPriceElectronic": 0.00,
+    "poLineEstimatedPrice": 0.00,
+    "quantityElectronic": 0,
+    "quantityPhysical": 2
+  },
+  "description": "",
+  "details": {
+    "productIds": [
+      {
+        "productId": "0747-0088",
+        "productIdType": "913300b2-03ed-469a-8179-c1092c991227"
+      }
+    ],
+    "receivingNote": "",
+    "subscriptionFrom": null,
+    "subscriptionInterval": 0,
+    "subscriptionTo": null
+  },
+  "donor": "",
+  "edition": "First edition",
+  "fundDistribution": [
+    {
+      "code": "UNIV-SUBN",
+      "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08014",
+      "fundId": "4428a37c-8bae-4f0d-865d-970d83d5ad55",
+      "distributionType": "percentage",
+      "value": 100.0
+    }
+  ],
+  "locations": [
+    {
+      "locationId": "758258bc-ecc1-41b8-abca-f7b610822ffd",
+      "quantity": 2,
+      "quantityElectronic": 0,
+      "quantityPhysical": 2
+    }
+  ],
+  "orderFormat": "Other",
+  "paymentStatus": "Pending",
+  "physical": {
+    "materialSupplier": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
+    "materialType": "dd0bf600-dbd9-44ab-9ff2-e2a61a6539f1",
+    "receiptDue": null,
+    "volumes": [
+      "vol. 1"
+    ]
+  },
+  "poLineDescription": "",
+  "poLineNumber": "81-1",
+  "publicationDate": "1915",
+  "publisher": "American Bar Association",
+  "purchaseOrderId": "c27e60f9-6361-44c1-976e-0c4821a33a7d",
+  "receiptDate": null,
+  "receiptStatus": "Pending",
+  "reportingCodes": [],
+  "requester": "",
+  "rush": false,
+  "selector": "",
+  "source": "User",
+  "tags": {
+    "tagList": [
+       "CatalogingRecords"
+     ]
+  },
+  "titleOrPackage": "ABA Journal",
+  "vendorDetail": {
+    "instructions": "",
+    "noteFromVendor": "",
+    "vendorAccount": ""
+  }
+}

@@ -39,14 +39,15 @@ import static org.folio.TestConstants.PROTECTED_READ_ONLY_TENANT;
 import static org.folio.TestConstants.X_ECHO_STATUS;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
+import static org.folio.service.finance.inventory.InventoryManagerTest.HOLDING_INSTANCE_ID_2_HOLDING;
+import static org.folio.service.finance.inventory.InventoryManagerTest.NEW_LOCATION_ID;
+import static org.folio.service.finance.inventory.InventoryManagerTest.NON_EXISTED_NEW_HOLDING_ID;
+import static org.folio.service.finance.inventory.InventoryManagerTest.OLD_LOCATION_ID;
+import static org.folio.service.finance.inventory.InventoryManagerTest.ONLY_NEW_HOLDING_EXIST_ID;
 import static org.folio.service.inventory.InventoryManager.ITEMS;
 import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.folio.service.inventory.InventoryManager.REQUESTS;
-import static org.folio.helper.InventoryManagerTest.HOLDING_INSTANCE_ID_2_HOLDING;
-import static org.folio.helper.InventoryManagerTest.NEW_LOCATION_ID;
-import static org.folio.helper.InventoryManagerTest.NON_EXISTED_NEW_HOLDING_ID;
-import static org.folio.helper.InventoryManagerTest.OLD_LOCATION_ID;
-import static org.folio.helper.InventoryManagerTest.ONLY_NEW_HOLDING_EXIST_ID;
+
 import static org.folio.service.ProtectionService.ACQUISITIONS_UNIT_ID;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
@@ -859,13 +860,14 @@ public class MockServer {
   private void handlePostHoldingRecord(RoutingContext ctx) {
     logger.info("handlePostHoldingsRecord got: " + ctx.getBodyAsString());
     JsonObject body = ctx.getBodyAsJson();
-    addServerRqRsData(HttpMethod.POST, HOLDINGS_RECORD, body);
 
     // the case when item creation is expected to fail for particular holding
     String id = body.getString(HOLDING_PERMANENT_LOCATION_ID).equals(ID_FOR_INTERNAL_SERVER_ERROR)
       ? ID_FOR_INTERNAL_SERVER_ERROR
       : UUID.randomUUID().toString();
 
+    body.put(ID, id);
+    addServerRqRsData(HttpMethod.POST, HOLDINGS_RECORD, body);
     ctx.response()
       .setStatusCode(201)
       .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
