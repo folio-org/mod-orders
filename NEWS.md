@@ -1,5 +1,17 @@
 ## 12.2.0 - Unreleased
 
+## 12.1.1 - Released
+
+This released focused on allowing update open polines if it is initiated by EBSCONET
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.1.0...v12.1.1)
+
+### Stories
+* [MODORDERS-521](https://issues.folio.org/browse/MODORDERS-521) - Allow updating quantity and location for Open order if it is initiated by EBSCONET
+
+### Bug Fixes
+* [MODORDERS-532](https://issues.folio.org/browse/MODORDERS-532) - Cannot open multiline PO with same expense class on each POL
+
 ## 12.1.0 - Released
 
 This released focused on business logic updates for open orders. RMB version updated up to v33.0.0. Search and filtering speed increased after migrating to cross-index approach 
