@@ -143,6 +143,13 @@ public class PiecesService {
     return future;
   }
 
+  public CompletableFuture<PieceCollection> getPieces(int limit, int offset, String query, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query)
+      .withOffset(offset)
+      .withLimit(limit);
+    return restClient.get(requestEntry, requestContext, PieceCollection.class);
+  }
+
   public CompletableFuture<Piece> getPieceById(String pieceId, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(pieceId);
     return restClient.get(requestEntry, requestContext, Piece.class);

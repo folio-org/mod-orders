@@ -385,6 +385,14 @@
       "version": "2.0",
       "handlers": [
         {
+          "methods": ["GET"],
+          "pathPattern": "/orders/pieces",
+          "permissionsRequired": ["orders.pieces.collection.get"],
+          "modulePermissions": [
+            "orders-storage.pieces.collection.get"
+          ]
+        },
+        {
           "methods": ["POST"],
           "pathPattern": "/orders/pieces",
           "permissionsRequired": ["orders.pieces.item.post"],
@@ -410,6 +418,14 @@
             "orders-storage.alerts.item.get",
             "orders-storage.reporting-codes.item.get",
             "configuration.entries.collection.get"
+          ]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/orders/pieces/{id}",
+          "permissionsRequired": ["orders.pieces.item.get"],
+          "modulePermissions": [
+            "orders-storage.pieces.item.get"
           ]
         },
         {
@@ -1017,9 +1033,19 @@
       "description": "Get receiving history matching the provided criteria"
     },
     {
+      "permissionName": "orders.pieces.collection.get",
+      "displayName": "Orders - Get pieces",
+      "description": "Get order pieces"
+    },
+    {
       "permissionName": "orders.pieces.item.post",
       "displayName": "Orders - Piece",
       "description": "Create piece record"
+    },
+    {
+      "permissionName": "orders.pieces.item.get",
+      "displayName": "Orders - Get piece",
+      "description": "Get order piece by id"
     },
     {
       "permissionName": "orders.pieces.item.put",
@@ -1030,6 +1056,18 @@
       "permissionName": "orders.pieces.item.delete",
       "displayName": "orders - delete an existing piece record",
       "description": "Delete an existing piece"
+    },
+    {
+      "permissionName" : "orders.pieces.all",
+      "displayName" : "All piece permissions",
+      "description" : "All permissions for the pieces",
+      "subPermissions" : [
+        "orders.pieces.collection.get",
+        "orders.pieces.item.post",
+        "orders.pieces.item.get",
+        "orders.pieces.item.put",
+        "orders.pieces.item.delete"
+      ]
     },
     {
       "permissionName" : "orders.order-templates.collection.get",
@@ -1339,9 +1377,7 @@
         "orders.receiving.collection.post",
         "orders.check-in.collection.post",
         "orders.receiving-history.collection.get",
-        "orders.pieces.item.post",
-        "orders.pieces.item.put",
-        "orders.pieces.item.delete",
+        "orders.pieces.all",
         "orders.acquisitions-units-assignments.all",
         "orders.order-templates.all",
         "orders.titles.all",
