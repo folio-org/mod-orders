@@ -96,7 +96,7 @@ public abstract class AbstractOrderStatusHandler extends AbstractHelper implemen
         if (Boolean.TRUE.equals(isStatusChanged)) {
           return helper.handleFinalOrderItemsStatus(purchaseOrder, poLines, initialStatus.value())
             .thenCompose(aVoid -> helper.updateOrderSummary(purchaseOrder))
-            .thenCompose(purchaseOrderParam -> encumbranceService.updateEncumbrancesOrderStatus(purchaseOrder.getId(), convert(purchaseOrder.getWorkflowStatus()), new RequestContext(ctx, okapiHeaders)));
+            .thenCompose(purchaseOrderParam -> encumbranceService.updateEncumbrancesOrderStatus(convert(purchaseOrder), new RequestContext(ctx, okapiHeaders)));
         }
         return CompletableFuture.completedFuture(null);
       });
@@ -108,8 +108,8 @@ public abstract class AbstractOrderStatusHandler extends AbstractHelper implemen
     return body.getJsonArray(rootElement);
   }
 
-  protected CompositePurchaseOrder.WorkflowStatus convert(PurchaseOrder.WorkflowStatus workflowStatus) {
-    return CompositePurchaseOrder.WorkflowStatus.fromValue(workflowStatus.value());
+  protected CompositePurchaseOrder convert(PurchaseOrder po) {
+    return JsonObject.mapFrom(po).mapTo(CompositePurchaseOrder.class);
   }
 
   protected abstract boolean isOrdersStatusChangeSkip(PurchaseOrder purchaseOrder, JsonObject ordersPayload);

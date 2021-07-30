@@ -70,13 +70,13 @@ public class EncumbranceService {
     );
   }
 
-  public CompletionStage<Void> updateEncumbrancesOrderStatus(String orderId, CompositePurchaseOrder.WorkflowStatus orderStatus, RequestContext requestContext) {
-    return getOrderEncumbrances(orderId, requestContext)
+  public CompletionStage<Void> updateEncumbrancesOrderStatus(CompositePurchaseOrder compPo, RequestContext requestContext) {
+    return getOrderEncumbrances(compPo.getId(), requestContext)
             .thenCompose(encumbrs -> {
-              if (isEncumbrancesOrderStatusUpdateNeeded(orderStatus, encumbrs)) {
-                return transactionSummariesService.updateOrderTransactionSummary(orderId, encumbrs.size(), requestContext)
+              if (isEncumbrancesOrderStatusUpdateNeeded(compPo.getWorkflowStatus(), encumbrs)) {
+                return transactionSummariesService.updateOrderTransactionSummary(compPo.getId(), encumbrs.size(), requestContext)
                         .thenApply(v -> {
-                          syncEncumbrancesOrderStatus(orderStatus, encumbrs);
+                          syncEncumbrancesOrderStatus(compPo.getWorkflowStatus(), encumbrs);
                           return encumbrs;
                         })
                         .thenCompose(transactions -> transactionService.updateTransactions(transactions, requestContext));
