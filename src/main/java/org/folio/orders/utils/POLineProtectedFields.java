@@ -23,7 +23,6 @@ public enum POLineProtectedFields {
   PHYSICAL_VOLUMES("physical.volumes"),
   PHYSICAL_MATERIAL_TYPE("physical.materialType"),
   PUBLICATION_DATE("publicationDate"),
-  PUBLISHER("publisher"),
   REQUESTER("requester"),
   RUSH("rush"),
   SELECTOR("selector"),
