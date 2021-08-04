@@ -157,8 +157,11 @@ public class ApplicationConfig {
   }
 
   @Bean
-  EncumbranceWorkflowStrategy openToPendingEncumbranceStrategy(EncumbranceService encumbranceService, TransactionSummariesService transactionSummariesService) {
-    return new OpenToPendingEncumbranceStrategy(encumbranceService, transactionSummariesService);
+  EncumbranceWorkflowStrategy openToPendingEncumbranceStrategy(EncumbranceService encumbranceService,
+      TransactionSummariesService transactionSummariesService,
+      EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
+    return new OpenToPendingEncumbranceStrategy(encumbranceService, transactionSummariesService,
+        encumbranceRelationsHoldersBuilder);
   }
 
   @Bean
