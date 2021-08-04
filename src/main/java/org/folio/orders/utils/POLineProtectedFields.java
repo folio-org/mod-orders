@@ -22,7 +22,6 @@ public enum POLineProtectedFields {
   PHYSICAL_CREATE_INVENTORY("physical.createInventory"),
   PHYSICAL_VOLUMES("physical.volumes"),
   PHYSICAL_MATERIAL_TYPE("physical.materialType"),
-  PUBLICATION_DATE("publicationDate"),
   REQUESTER("requester"),
   RUSH("rush"),
   SELECTOR("selector"),
