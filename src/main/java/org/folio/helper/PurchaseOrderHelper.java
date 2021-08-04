@@ -381,7 +381,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     String query = convertIdsToCqlQuery(poLineIds, "poLineId");
     RequestEntry requestEntry = new RequestEntry(resourcesPath(PIECES)).withQuery(query)
       .withOffset(0)
-      .withLimit(poLineIds.size());
+      .withLimit(Integer.MAX_VALUE);
     return restClient.get(requestEntry, requestContext, PieceCollection.class)
                      .thenApply(PieceCollection::getPieces);
   }
