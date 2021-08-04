@@ -73,7 +73,7 @@ public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStra
       .thenApply(ehList -> ehList.stream().collect(groupingBy(EncumbranceRelationsHolder::getCurrentFiscalYearId,
       mapping(EncumbranceRelationsHolder::getPoLine, toList()))))
       .thenCompose(poLinesByCurrentFy -> getEncumbrancesByPoLinesFromCurrentFy(poLinesByCurrentFy, requestContext))
-      .thenApply(pols -> pols.stream().flatMap(Collection::stream).collect(Collectors.toList()));
+      .thenApply(trs -> trs.stream().flatMap(Collection::stream).collect(Collectors.toList()));
   }
 
   public CompletableFuture<List<List<Transaction>>> getEncumbrancesByPoLinesFromCurrentFy(
