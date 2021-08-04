@@ -89,7 +89,7 @@ public class ReceiveOrderStatusChangeHandlerTest {
     vertx = Vertx.vertx();
     SpringContextUtil.init(vertx, vertx.getOrCreateContext(), ApplicationConfig.class);
     EncumbranceService encumbranceService = mock(EncumbranceService.class);
-    doReturn(CompletableFuture.completedFuture(null)).when(encumbranceService).updateEncumbrancesOrderStatus(any(), any(), any());
+    doReturn(CompletableFuture.completedFuture(null)).when(encumbranceService).updateEncumbrancesOrderStatus(any(), any());
     vertx.eventBus().consumer(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address, new ReceiveOrderStatusChangeHandler(vertx, encumbranceService));
   }
 

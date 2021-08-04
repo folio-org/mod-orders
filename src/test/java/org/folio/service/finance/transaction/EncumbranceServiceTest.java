@@ -105,14 +105,13 @@ public class EncumbranceServiceTest {
   @Test
   void shouldReleaseEncumbrancesBeforeDeletionWhenDeleteOrderEncumbrances() {
     //Given
-
-    String orderId = UUID.randomUUID().toString();
+    var compOrder = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
     Transaction encumbrance = new Transaction()
             .withId(UUID.randomUUID().toString())
-            .withEncumbrance(new Encumbrance().withSourcePurchaseOrderId(orderId));
+            .withEncumbrance(new Encumbrance().withSourcePurchaseOrderId(compOrder.getId()));
     Transaction encumbrance2 = new Transaction()
             .withId(UUID.randomUUID().toString())
-            .withEncumbrance(new Encumbrance().withSourcePurchaseOrderId(orderId));
+            .withEncumbrance(new Encumbrance().withSourcePurchaseOrderId(compOrder.getId()));
     List<Transaction> transactions = new ArrayList<>();
     transactions.add(encumbrance);
     transactions.add(encumbrance2);
@@ -122,11 +121,11 @@ public class EncumbranceServiceTest {
     doReturn(CompletableFuture.completedFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(anyString(), anyInt(), any());
     doReturn(CompletableFuture.completedFuture(null)).when(transactionService).deleteTransactions(any(), eq(requestContextMock));
     //When
-    encumbranceService.deleteOrderEncumbrances(orderId, requestContextMock).join();
+    encumbranceService.deleteOrderEncumbrances(compOrder.getId(), requestContextMock).join();
 
     //Then
     InOrder inOrder = inOrder(transactionSummariesService, transactionService);
-    inOrder.verify(transactionSummariesService).updateOrderTransactionSummary(eq(orderId), eq(2), eq(requestContextMock));
+    inOrder.verify(transactionSummariesService).updateOrderTransactionSummary(eq(compOrder.getId()), eq(2), eq(requestContextMock));
     inOrder.verify(transactionService).updateTransactions(any(), eq(requestContextMock));
     inOrder.verify(transactionService).deleteTransactions(any(), eq(requestContextMock));
 

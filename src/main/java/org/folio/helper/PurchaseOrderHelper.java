@@ -230,7 +230,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
         .thenCompose(v -> processPoLineTags(compPO))
         .thenCompose(v -> createPOandPOLines(compPO))
         .thenCompose(this::populateOrderSummary))
-        .thenCompose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder.getId(), compOrder.getWorkflowStatus(), getRequestContext())
+        .thenCompose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder, getRequestContext())
                 .thenApply(v -> compOrder));
   }
 
@@ -327,7 +327,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
             }
           })
           .thenCompose(ok -> handleFinalOrderStatus(compPO, poFromStorage.getWorkflowStatus().value()))
-          .thenCompose(v -> encumbranceService.updateEncumbrancesOrderStatus(compPO.getId(), compPO.getWorkflowStatus(), getRequestContext()));
+          .thenCompose(v -> encumbranceService.updateEncumbrancesOrderStatus(compPO, getRequestContext()));
       });
   }
 
@@ -488,7 +488,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
         CompositePurchaseOrder compPo = convertToCompositePurchaseOrder(purchaseOrder);
         protectionHelper.isOperationRestricted(compPo.getAcqUnitIds(), DELETE)
           .thenCompose(v -> orderInvoiceRelationService.checkOrderInvoiceRelationship(id, new RequestContext(ctx, okapiHeaders)))
-          .thenAccept(aVoid -> encumbranceService.deleteOrderEncumbrances(id, getRequestContext())
+          .thenAccept(aVoid -> encumbranceService.deleteOrderEncumbrances(compPo.getId(), getRequestContext())
             .thenCompose(v -> deletePoLines(id, lang, httpClient, okapiHeaders, logger))
             .thenRun(() -> {
               logger.info("Successfully deleted poLines, proceeding with purchase order");

@@ -88,7 +88,7 @@ public class CheckInOrderStatusChangeChangeHandlerTest {
 
     SpringContextUtil.init(vertx, vertx.getOrCreateContext(), ApplicationConfig.class);
     EncumbranceService encumbranceService = mock(EncumbranceService.class);
-    doReturn(CompletableFuture.completedFuture(null)).when(encumbranceService).updateEncumbrancesOrderStatus(any(), any(), any());
+    doReturn(CompletableFuture.completedFuture(null)).when(encumbranceService).updateEncumbrancesOrderStatus(any(), any());
     vertx.eventBus().consumer(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address, new CheckInOrderStatusChangeChangeHandler(vertx, encumbranceService));
   }
 
