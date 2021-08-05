@@ -1,11 +1,13 @@
 package org.folio.service.finance.transaction;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Stream;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
+import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -61,16 +63,25 @@ public class TransactionSummariesService {
       String orderId = Stream.concat(orderIdFromCreate, orderIdFromStorage)
         .findFirst()
         .orElse(null);
-        if (CollectionUtils.isEmpty(holder.getEncumbrancesFromStorage())) {
-            return createOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext)
-                    .thenApply(id -> null);
-        }
-        else if (holder.getAllEncumbrancesQuantity() == 0) {
-            return CompletableFuture.completedFuture(null);
-        }
-        else {
-            return updateOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext);
-        }
+
+      // update or create summary if not exists
+      if (CollectionUtils.isEmpty(holder.getEncumbrancesFromStorage())) {
+        return updateOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext)
+          .handle((ok, error) -> {
+            if (error == null) {
+              return CompletableFuture.completedFuture(null);
+            } else if (error instanceof HttpException && ((HttpException) error).getCode() == 404) {
+              return createOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext);
+            } else {
+              throw new CompletionException(error);
+            }
+          })
+          .thenApply(id -> null);
+      } else if (holder.getAllEncumbrancesQuantity() == 0) {
+        return CompletableFuture.completedFuture(null);
+      } else {
+        return updateOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext);
+      }
     }
 
 }
