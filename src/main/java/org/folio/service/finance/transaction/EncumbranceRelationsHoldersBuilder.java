@@ -112,7 +112,9 @@ public class EncumbranceRelationsHoldersBuilder {
       .filter(Objects::nonNull)
       .distinct()
       .collect(toList());
-
+    if (fundIds.isEmpty()) {
+      return CompletableFuture.completedFuture(encumbranceHolders);
+    }
     return budgetService.getBudgets(fundIds, requestContext)
       .thenApply(budgets -> mapHoldersToBudgets(budgets, encumbranceHolders));
   }
@@ -124,6 +126,11 @@ public class EncumbranceRelationsHoldersBuilder {
       .filter(Objects::nonNull)
       .distinct()
       .collect(toList());
+
+    if (fundIds.isEmpty()) {
+      return CompletableFuture.completedFuture(encumbranceHolders);
+    }
+
     return fundService.getAllFunds(fundIds, requestContext)
       .thenApply(funds -> populateLedgerIds(funds, encumbranceHolders))
       .thenCompose(holders -> {
@@ -175,7 +182,7 @@ public class EncumbranceRelationsHoldersBuilder {
           return encumbranceHolders;
         }))
         .orElseGet(() -> CompletableFuture.completedFuture(encumbranceHolders));
-    
+
 
   }
 
