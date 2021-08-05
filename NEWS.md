@@ -1,4 +1,16 @@
 ## 12.1.0 - Unreleased
+
+## 12.0.5 Released
+
+The primary focus of this release was to fix reopen and unopen order flows
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.0.4...v12.0.5)
+
+### Bug fixes
+* [MODORDERS-542](https://issues.folio.org/browse/MODORDERS-542) - Unopen fails after a rollover for an order created in the previous year
+* [MODORDERS-502](https://issues.folio.org/browse/MODORDERS-502) - When reopening order system forces user to delete pieces and items
+
+
 ## 12.0.4 Released
 
 Resolves a bug preventing opening multiline PO with same expense class on each POL
