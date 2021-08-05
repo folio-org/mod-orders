@@ -245,7 +245,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
         .thenCompose(v -> processPoLineTags(compPO))
         .thenCompose(v -> createPOandPOLines(compPO, requestContext))
         .thenCompose(this::populateOrderSummary))
-        .thenCompose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder.getId(), compOrder.getWorkflowStatus(), requestContext)
+        .thenCompose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder, requestContext)
                 .thenApply(v -> compOrder));
   }
 
@@ -350,7 +350,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
             }
           })
           .thenCompose(ok -> handleFinalOrderStatus(compPO, poFromStorage.getWorkflowStatus().value(), requestContext))
-          .thenCompose(v -> encumbranceService.updateEncumbrancesOrderStatus(compPO.getId(), compPO.getWorkflowStatus(), getRequestContext()));
+          .thenCompose(v -> encumbranceService.updateEncumbrancesOrderStatus(compPO, getRequestContext()));
       });
   }
 

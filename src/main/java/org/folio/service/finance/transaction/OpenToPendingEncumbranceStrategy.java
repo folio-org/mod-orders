@@ -1,27 +1,41 @@
 package org.folio.service.finance.transaction;
 
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
+import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.orders.OrderWorkflowType;
 
 public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
-    private final EncumbranceService encumbranceService;
-    private final TransactionSummariesService transactionSummariesService;
+  private final EncumbranceService encumbranceService;
+  private final TransactionSummariesService transactionSummariesService;
+  private final EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
 
-    public OpenToPendingEncumbranceStrategy(EncumbranceService encumbranceService, TransactionSummariesService transactionSummariesService) {
-        this.encumbranceService = encumbranceService;
-        this.transactionSummariesService = transactionSummariesService;
-    }
+  public OpenToPendingEncumbranceStrategy(EncumbranceService encumbranceService,
+      TransactionSummariesService transactionSummariesService,
+      EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
+    this.encumbranceService = encumbranceService;
+    this.transactionSummariesService = transactionSummariesService;
+    this.encumbranceRelationsHoldersBuilder = encumbranceRelationsHoldersBuilder;
+  }
 
     @Override
     public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, RequestContext requestContext) {
-        return encumbranceService.getOrderEncumbrances(compPO.getId(), requestContext)
+      return getOrderEncumbrances(compPO, requestContext)
                 .thenApply(this::makeEncumbrancesPending)
                 .thenCompose(transactions -> transactionSummariesService.updateOrderTransactionSummary(compPO.getId(), transactions.size(), requestContext)
                     .thenApply(vVoid -> transactions))
@@ -38,8 +52,34 @@ public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStra
         return encumbrances;
     }
 
-    @Override
-    public OrderWorkflowType getStrategyName() {
-        return OrderWorkflowType.OPEN_TO_PENDING;
-    }
+  @Override
+  public OrderWorkflowType getStrategyName() {
+    return OrderWorkflowType.OPEN_TO_PENDING;
+  }
+
+  public CompletableFuture<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(CompositePurchaseOrder compPO,
+      RequestContext requestContext) {
+    List<EncumbranceRelationsHolder> encumbranceRelationsHolders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
+    return encumbranceRelationsHoldersBuilder.withBudgets(encumbranceRelationsHolders, requestContext)
+      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContext))
+      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContext))
+      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withConversion(holders, requestContext))
+      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, requestContext));
+  }
+
+  public CompletableFuture<List<Transaction>> getOrderEncumbrances(CompositePurchaseOrder compPo, RequestContext requestContext) {
+    return prepareEncumbranceRelationsHolder(compPo, requestContext)
+      .thenApply(ehList -> ehList.stream().collect(groupingBy(EncumbranceRelationsHolder::getCurrentFiscalYearId,
+      mapping(EncumbranceRelationsHolder::getPoLine, toList()))))
+      .thenCompose(poLinesByCurrentFy -> getEncumbrancesByPoLinesFromCurrentFy(poLinesByCurrentFy, requestContext))
+      .thenApply(trs -> trs.stream().flatMap(Collection::stream).collect(Collectors.toList()));
+  }
+
+  public CompletableFuture<List<List<Transaction>>> getEncumbrancesByPoLinesFromCurrentFy(
+    Map<String, List<CompositePoLine>> polinesByFy, RequestContext requestContext) {
+    return collectResultsOnSuccess(polinesByFy.entrySet()
+      .stream()
+      .map(entry -> encumbranceService.getCurrentPoLinesEncumbrances(entry.getValue(), entry.getKey(), requestContext))
+      .collect(toList()));
+  }
 }
