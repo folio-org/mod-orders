@@ -1,5 +1,18 @@
 ## 12.2.0 - Unreleased
 
+## 12.1.2 - Released
+
+This released focused on fixing open/unopen orders flow
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.1.1...v12.1.2)
+
+### Bug Fixes
+* [MODORDERS-548](https://issues.folio.org/browse/MODORDERS-548) - Publisher could not be updated by EBSCONET
+* [MODORDERS-547](https://issues.folio.org/browse/MODORDERS-547) - Delete piece modal no longer appears for NON manually add piece
+* [MODORDERS-545](https://issues.folio.org/browse/MODORDERS-545) - Transaction log not updated when deleting a POL
+* [MODORDERS-544](https://issues.folio.org/browse/MODORDERS-544) - Unopen fails after a rollover for an order created in the previous year
+
+
 ## 12.1.1 - Released
 
 This released focused on allowing update open polines if it is initiated by EBSCONET
