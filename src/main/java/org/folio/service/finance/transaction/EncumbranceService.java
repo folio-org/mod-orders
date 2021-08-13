@@ -18,6 +18,7 @@ import javax.money.MonetaryAmount;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.HttpStatus;
+import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -63,12 +64,9 @@ public class EncumbranceService {
   }
 
   public CompletableFuture<Void> createEncumbrances(List<EncumbranceRelationsHolder> relationsHolders, RequestContext requestContext) {
-    return CompletableFuture.allOf(relationsHolders.stream()
+    return FolioVertxCompletableFuture.allOf(requestContext.getContext(), relationsHolders.stream()
             .map(holder -> transactionService.createTransaction(holder.getNewEncumbrance(), requestContext)
-                    .thenAccept(transaction -> {
-                      FundDistribution fundDistribution = holder.getFundDistribution();
-                      fundDistribution.setEncumbrance(transaction.getId());
-                    })
+                    .thenAccept(transaction -> holder.getFundDistribution().setEncumbrance(transaction.getId()))
                     .exceptionally(fail -> {
                       checkCustomTransactionError(fail);
                       throw new CompletionException(fail);
