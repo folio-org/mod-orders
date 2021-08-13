@@ -357,27 +357,6 @@ public class InventoryManagerTest {
   }
 
   @Test
-  void testHandleHoldingsAndItemsRecordsIsNotRequired() {
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
-    String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
-    reqData.setId(poLineId);
-    reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
-    reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
-    reqData.getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE);
-    reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
-    reqData.setCheckinItems(true);
-    //When
-
-    Location line = new Location().withLocationId(NEW_LOCATION_ID);
-    PoLine storageData = JsonObject.mapFrom(reqData).mapTo(PoLine.class);
-    storageData.setLocations(Collections.singletonList(line));
-    List<Piece> pieces = inventoryManager.handleHoldingsAndItemsRecords(reqData, storageData, requestContext).join();
-
-    assertEquals(0, pieces.size());
-  }
-
-
-  @Test
   void testShouldNotHandleItemRecordsIfCheckinItemsIsTrueInUpdatePoLIneTime() {
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";

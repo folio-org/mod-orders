@@ -282,11 +282,11 @@ public class PiecesService {
   /**
    * Return id of created  Holding
    */
-  public CompletableFuture<String> handleHoldingsRecord(final CompositePoLine compPOL, String locationId, String instanceId,
+  public CompletableFuture<String> handleHoldingsRecord(final CompositePoLine compPOL, Location location, String instanceId,
                                                         RequestContext requestContext) {
     try {
       if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL.getEresource(), compPOL.getPhysical())) {
-        return inventoryManager.getOrCreateHoldingsRecord(instanceId, locationId, requestContext);
+        return inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext);
       } else {
         return CompletableFuture.completedFuture(null);
       }

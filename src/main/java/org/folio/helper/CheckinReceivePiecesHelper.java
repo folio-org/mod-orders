@@ -230,7 +230,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     }
   }
 
-  private CompletableFuture<Boolean> createHoldingsForChangedLocations(Piece piece, String instanceId, String receivedPieceLocationId,
+  private CompletableFuture<Boolean> createHoldingsForChangedLocations(Piece piece, String instanceId, String receivedPieceLocation,
                                                                        RequestContext requestContext) {
     if (ifHoldingNotProcessed(receivedPieceLocationId, instanceId) && !isRevertToOnOrder(piece)) {
 
