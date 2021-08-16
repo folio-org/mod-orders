@@ -244,7 +244,8 @@ public class PiecesService {
       return titlesService.getTitleById(piece.getTitleId(), requestContext)
         .thenCompose(title -> handleInstanceRecord(title, requestContext))
         .thenCompose(title -> titlesService.updateTitle(title, requestContext).thenApply(json -> title))
-        .thenCompose(title -> handleHoldingsRecord(compPOL, piece.getLocationId(), title.getInstanceId(), requestContext))
+        .thenCompose(title -> handleHoldingsRecord(compPOL, new Location().withLocationId(piece.getLocationId())
+                                                      , title.getInstanceId(), requestContext))
         .thenCompose(holdingId -> createItemRecord(compPOL, holdingId, requestContext))
         .thenApply(itemId -> itemId != null ? piece.withItemId(itemId) : piece);
     }

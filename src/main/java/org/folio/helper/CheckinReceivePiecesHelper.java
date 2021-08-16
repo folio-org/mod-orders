@@ -49,6 +49,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
@@ -230,11 +231,11 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
     }
   }
 
-  private CompletableFuture<Boolean> createHoldingsForChangedLocations(Piece piece, String instanceId, String receivedPieceLocation,
+  private CompletableFuture<Boolean> createHoldingsForChangedLocations(Piece piece, String instanceId, String receivedPieceLocationId,
                                                                        RequestContext requestContext) {
     if (ifHoldingNotProcessed(receivedPieceLocationId, instanceId) && !isRevertToOnOrder(piece)) {
-
-      return inventoryManager.getOrCreateHoldingsRecord(instanceId, receivedPieceLocationId, requestContext)
+      Location location = new Location().withLocationId(receivedPieceLocationId);
+      return inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext)
         .thenCompose(holdingId -> {
           processedHoldings.put(receivedPieceLocationId + instanceId, holdingId);
           return completedFuture(true);

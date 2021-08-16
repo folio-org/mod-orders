@@ -69,7 +69,8 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
   private CompletionStage<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
     Map<String, Map<String, String>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnCheckin(checkinCollection);
-
+    //Should be used in next stories MODORDERS-535
+    //Map<String, Map<String, String>> pieceHoldingsGroupedByPoLine = groupHoldingsByPoLineIdOnCheckin(checkinCollection);
     // 1. Get piece records from storage
     return retrievePieceRecords(checkinPieces, requestContext)
       // 2. Filter locationId
@@ -101,6 +102,21 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
         )
       );
     }
+
+  private Map<String, Map<String, String>> groupHoldingsByPoLineIdOnCheckin(CheckinCollection checkinCollection) {
+    return StreamEx
+      .of(checkinCollection.getToBeCheckedIn())
+      .groupingBy(ToBeCheckedIn::getPoLineId,
+        mapping(ToBeCheckedIn::getCheckInPieces,
+          collectingAndThen(toList(),
+            lists -> StreamEx.of(lists)
+              .flatMap(List::stream)
+              .filter(checkInPiece -> checkInPiece.getHoldingId() != null)
+              .toMap(CheckInPiece::getId, CheckInPiece::getHoldingId)
+          )
+        )
+      );
+  }
 
   private ReceivingResults prepareResponseBody(CheckinCollection checkinCollection,
                                                Map<String, List<Piece>> piecesGroupedByPoLine) {

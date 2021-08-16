@@ -35,6 +35,7 @@ import java.util.concurrent.TimeoutException;
 
 import io.vertx.core.Context;
 import org.folio.ApiTestSuite;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.orders.events.handlers.MessageAddress;
@@ -150,13 +151,13 @@ public class PiecesServiceTest {
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-
-    when(inventoryManager.getOrCreateHoldingsRecord(anyString(), anyString(), eq(requestContext))).thenReturn(completedFuture(HOLDING_ID));
+    Location location = new Location().withLocationId(piece.getLocationId());
+    when(inventoryManager.getOrCreateHoldingsRecord(anyString(), any(Location.class), eq(requestContext))).thenReturn(completedFuture(HOLDING_ID));
     //When
-    CompletableFuture<String> result = piecesService.handleHoldingsRecord(line, piece.getLocationId(), title.getInstanceId(), requestContext);
+    CompletableFuture<String> result = piecesService.handleHoldingsRecord(line, location, title.getInstanceId(), requestContext);
     String actHoldingId = result.get();
     //Then
-    verify(inventoryManager).getOrCreateHoldingsRecord(eq(title.getInstanceId()), eq(piece.getLocationId()), eq(requestContext));
+    verify(inventoryManager).getOrCreateHoldingsRecord(eq(title.getInstanceId()), eq(location), eq(requestContext));
     assertEquals(HOLDING_ID, actHoldingId);
   }
 
@@ -166,7 +167,8 @@ public class PiecesServiceTest {
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     //When
-    CompletableFuture<String> result = piecesService.handleHoldingsRecord(null, piece.getLocationId(), title.getInstanceId(), requestContext);
+    Location location = new Location().withLocationId(piece.getLocationId());
+    CompletableFuture<String> result = piecesService.handleHoldingsRecord(null, location, title.getInstanceId(), requestContext);
     //Then
     assertTrue(result.isCompletedExceptionally());
   }
@@ -181,16 +183,16 @@ public class PiecesServiceTest {
 
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-
+    Location location = new Location().withLocationId(piece.getLocationId());
     doReturn(completedFuture(HOLDING_ID))
-      .when(inventoryManager).getOrCreateHoldingsRecord(anyString(), anyString(), eq(requestContext));
+      .when(inventoryManager).getOrCreateHoldingsRecord(anyString(), any(Location.class), eq(requestContext));
     //When
     CompletableFuture<String> result =
-      piecesService.handleHoldingsRecord(line, piece.getLocationId(), title.getInstanceId(), requestContext);
+      piecesService.handleHoldingsRecord(line, location, title.getInstanceId(), requestContext);
 
     //Then
     String holdingId = result.get();
-    verify(inventoryManager,never()).getOrCreateHoldingsRecord(title.getInstanceId(), piece.getLocationId(), requestContext);
+    verify(inventoryManager,never()).getOrCreateHoldingsRecord(title.getInstanceId(), location, requestContext);
     assertNull(holdingId);
   }
 
@@ -316,14 +318,14 @@ public class PiecesServiceTest {
     Piece piece = createPiece(line, title);
     String itemId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
-
+    Location location = new Location().withLocationId(piece.getLocationId());
     doReturn(completedFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
     doReturn(completedFuture(null)).when(titlesService).updateTitle(title, requestContext);
 
     doReturn(completedFuture(title.withInstanceId(UUID.randomUUID().toString())))
       .when(piecesService).handleInstanceRecord(any(Title.class), eq(requestContext));
     doReturn(completedFuture(holdingId))
-      .when(piecesService).handleHoldingsRecord(any(CompositePoLine.class), eq(piece.getLocationId()), eq(title.getInstanceId()), eq(requestContext));
+      .when(piecesService).handleHoldingsRecord(any(CompositePoLine.class), eq(location), eq(title.getInstanceId()), eq(requestContext));
     doReturn(completedFuture(itemId)).when(piecesService).createItemRecord(any(CompositePoLine.class), eq(holdingId), eq(requestContext));
 
     doReturn(completedFuture(itemId)).when(inventoryManager).createInstanceRecord(eq(title), eq(requestContext));

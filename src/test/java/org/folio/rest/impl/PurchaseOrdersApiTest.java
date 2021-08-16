@@ -968,7 +968,7 @@ public class PurchaseOrdersApiTest {
 
     assertEquals(1, instancesSearches.size());
     //setting just one location in the above step
-    assertEquals(1, holdingsSearches.size());
+    assertEquals(3, holdingsSearches.size());
 
     CompositePoLine respLine1 = resp.getCompositePoLines().get(0);
     CompositePoLine respLine2 = resp.getCompositePoLines().get(1);
@@ -1043,7 +1043,7 @@ public class PurchaseOrdersApiTest {
     assertNotNull(itemsSearches);
 
     assertEquals(1, instancesSearches.size());
-    assertEquals(1, holdingsSearches.size());
+    assertEquals(3, holdingsSearches.size());
 
     CompositePoLine respLine1 = resp.getCompositePoLines().get(0);
     CompositePoLine respLine2 = resp.getCompositePoLines().get(1);

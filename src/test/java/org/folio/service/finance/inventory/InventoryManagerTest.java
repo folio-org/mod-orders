@@ -271,54 +271,6 @@ public class InventoryManagerTest {
     verify(restClient, times(0)).delete(any(RequestEntry.class), eq(requestContext));
   }
 
-  @Test
-  void testShouldUpdateHoldingsRecordIfOldAndNewLocationProvided() throws IOException {
-    //given
-    JsonObject holdings = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
-    doReturn(completedFuture(holdings)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-    //When
-    PoLineUpdateHolder holder = new PoLineUpdateHolder().withInstanceId(HOLDING_INSTANCE_ID)
-      .withOldLocationId(OLD_LOCATION_ID)
-      .withNewLocationId(NEW_LOCATION_ID);
-    inventoryManager.updateHoldingsRecord(holder, requestContext).join();
-    //Then
-    assertThat(holder.getOldHoldingId(), equalTo(OLD_HOLDING_ID));
-  }
-
-  @Test
-  void testShouldCreateNewHoldingsRecordIfOnlyOldLocationProvided() throws IOException {
-    //given
-    List holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
-      .map(o -> ((JsonObject) o))
-      .filter(holding -> holding.getString("permanentLocationId").equals(OLD_LOCATION_ID))
-      .collect(toList());
-    JsonObject holdings = new JsonObject().put("holdingsRecords", new JsonArray(holdingsList));
-    doReturn(completedFuture(holdings)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-    //When
-    PoLineUpdateHolder holder = new PoLineUpdateHolder().withInstanceId(HOLDING_INSTANCE_ID)
-      .withOldLocationId(OLD_LOCATION_ID)
-      .withNewLocationId(NON_EXISTED_NEW_HOLDING_ID);
-    inventoryManager.updateHoldingsRecord(holder, requestContext).join();
-    //Then
-    assertThat(holder.getNewLocationId(), equalTo(NON_EXISTED_NEW_HOLDING_ID));
-  }
-
-  @Test
-  void testShouldThrowExceptionIfHoldingWithOldLocationIsNotExist() {
-    //given
-    JsonObject holdings = new JsonObject().put("holdingsRecords", new JsonArray());
-    doReturn(completedFuture(holdings)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-    //When
-    PoLineUpdateHolder holder = new PoLineUpdateHolder().withInstanceId(HOLDING_INSTANCE_ID)
-      .withOldLocationId(UUID.randomUUID().toString())
-      .withNewLocationId(NON_EXISTED_NEW_HOLDING_ID);
-    CompletableFuture<Void> result = inventoryManager.updateHoldingsRecord(holder, requestContext);
-    //Then
-    CompletionException expectedException = assertThrows(CompletionException.class, result::join);
-
-    HttpException httpException = (HttpException) expectedException.getCause();
-    assertEquals(400, httpException.getCode());
-  }
 
   @Test
   void testShouldNotHandleItemRecordsIfCheckinItemsIsTrue() {
@@ -336,24 +288,6 @@ public class InventoryManagerTest {
     List<Piece> pieces = inventoryManager.handleItemRecords(reqData, OLD_HOLDING_ID, Collections.singletonList(line), requestContext).join();
 
     assertEquals(0, pieces.size());
-  }
-
-  @Test
-  void testShouldNotUpdateHolderIfReturnMoreThen2Record() throws IOException {
-    //given
-    PoLineUpdateHolder holder = new PoLineUpdateHolder().withInstanceId(HOLDING_INSTANCE_ID_2_HOLDING)
-      .withOldLocationId(OLD_LOCATION_ID);
-    List holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream().collect(toList());
-    List doubleList = new ArrayList(holdingsList);
-    doubleList.addAll(holdingsList);
-    JsonObject holdings = new JsonObject().put("holdingsRecords", new JsonArray(doubleList));
-    doReturn(completedFuture(holdings)).when(restClient).getAsJsonObject(any(), eq(requestContext));
-    //When
-    inventoryManager.updateHoldingsRecord(holder, requestContext).join();
-    //Then
-    verify(inventoryManager, times(0)).getOrCreateHoldingsRecord(HOLDING_INSTANCE_ID_2_HOLDING, OLD_LOCATION_ID, requestContext);
-    assertNull(holder.getNewLocationId());
-    assertThat(holder.getOldLocationId(), equalTo(OLD_LOCATION_ID));
   }
 
   @Test
