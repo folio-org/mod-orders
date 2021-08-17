@@ -1,5 +1,15 @@
 ## 12.2.0 - Unreleased
 
+## 12.1.3 (Juniper) - Released
+
+This released focused on fixing encumbrances processing
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.1.2...v12.1.3)
+
+### Bug Fixes
+* [MODORDERS-553](https://issues.folio.org/browse/MODORDERS-553) - Invoice will not approve with diff Fund from POL
+
+
 ## 12.1.2 - Released
 
 This released focused on fixing open/unopen orders flow
