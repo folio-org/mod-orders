@@ -7,7 +7,8 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.folio.orders.utils.ErrorCodes.HOLDINGS_BY_INSTANCE_AND_LOCATION_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.HOLDINGS_ID_AND_LOCATION_ID_IS_NULL_ERROR;
 import static org.folio.orders.utils.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.orders.utils.ErrorCodes.ITEM_CREATION_FAILED;
 import static org.folio.orders.utils.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
@@ -24,10 +25,11 @@ import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.RestConstants.BAD_REQUEST;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.NOT_FOUND;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -196,7 +198,7 @@ public class InventoryManager {
                   // Items are not going to be created when create inventory is "Instance, Holding"
                   addHoldingId(List.of(location), holdingId);
                   if (isItemsUpdateRequired) {
-                    return handleItemRecords(compPOL, holdingId, List.of(location), requestContext);
+                    return handleItemRecords(compPOL, holdingId, location, requestContext);
                   } else {
                     return completedFuture(Collections.emptyList());
                   }
@@ -334,8 +336,26 @@ public class InventoryManager {
   }
 
   public CompletableFuture<String> getOrCreateHoldingsRecord(String instanceId, Location location, RequestContext requestContext) {
+    if (location.getHoldingId() == null && location.getLocationId() == null) {
+      String msg = HOLDINGS_ID_AND_LOCATION_ID_IS_NULL_ERROR.getDescription();
+      Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
+      throw new CompletionException(new HttpException(BAD_REQUEST, error));
+    }
     if (location.getHoldingId() != null) {
-      return CompletableFuture.completedFuture(location.getHoldingId());
+      String holdingId = location.getHoldingId();
+      RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
+                                          .withId(holdingId);
+      return restClient.getAsJsonObject(requestEntry, requestContext)
+        .thenApply(holding -> extractId(holding))
+        .exceptionally(throwable -> {
+          if (throwable.getCause() instanceof HttpException && ((HttpException) throwable.getCause()).getCode() == 404) {
+            String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
+            Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
+            throw new CompletionException(new HttpException(NOT_FOUND, error));
+          } else {
+            throw new CompletionException(throwable.getCause());
+          }
+        });
     } else {
       String locationId = location.getLocationId();
       String query = String.format(HOLDINGS_LOOKUP_QUERY, instanceId, locationId);
@@ -408,12 +428,12 @@ public class InventoryManager {
    *
    * @param compPOL   PO line to retrieve/create Item Records for
    * @param holdingId holding uuid from the inventory
-   * @param locations list of locations holdingId is associated with
+   * @param location list of location holdingId is associated with
    * @return future with list of piece objects
    */
-  public CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, String holdingId, List<Location> locations,
+  public CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, String holdingId, Location location,
                                                           RequestContext requestContext) {
-    Map<Piece.Format, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, locations);
+    Map<Piece.Format, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, List.of(location));
     int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
     String polId = compPOL.getId();
 
@@ -425,7 +445,6 @@ public class InventoryManager {
     // Search for already existing items
     return searchStorageExistingItems(compPOL.getId(), holdingId, piecesWithItemsQty, requestContext)
       .thenCompose(existingItems -> {
-          String locationId = locations.get(0).getLocationId();
           List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.Format.values().length);
           piecesWithItemsQuantities.forEach((pieceFormat, expectedQuantity) -> {
             // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
@@ -445,12 +464,8 @@ public class InventoryManager {
               pieces.add(newItems.thenApply(createdItemIds -> {
                 List<String> itemIds = ListUtils.union(createdItemIds, items);
                 logger.info(BUILDING_PIECE_MESSAGE, itemIds.size(), pieceFormat, polId);
-                return StreamEx.of(itemIds)
-                  .map(itemId -> new Piece().withFormat(pieceFormat)
-                    .withItemId(itemId)
-                    .withPoLineId(polId)
-                    .withLocationId(locationId))
-                  .toList();
+                return StreamEx.of(itemIds).map(itemId -> openOrderBuildPiece(polId, itemId, pieceFormat, location))
+                               .toList();
               }));
             }
           });
@@ -465,6 +480,19 @@ public class InventoryManager {
       );
   }
 
+  private Piece openOrderBuildPiece(String polId, String itemId, Piece.Format pieceFormat, Location location) {
+    if (location.getHoldingId() != null) {
+      return new Piece().withFormat(pieceFormat)
+          .withItemId(itemId)
+          .withPoLineId(polId)
+          .withHoldingId(location.getHoldingId());
+    } else {
+      return new Piece().withFormat(pieceFormat)
+          .withItemId(itemId)
+          .withPoLineId(polId)
+          .withLocationId(location.getLocationId());
+    }
+  }
 
   /**
    * Handles Inventory items for passed list of locations. Items are either retrieved from Inventory or new ones are created

@@ -284,8 +284,8 @@ public class InventoryManagerTest {
     reqData.setCheckinItems(true);
 
     //When
-    Location line = new Location().withLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
-    List<Piece> pieces = inventoryManager.handleItemRecords(reqData, OLD_HOLDING_ID, Collections.singletonList(line), requestContext).join();
+    Location location = new Location().withLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
+    List<Piece> pieces = inventoryManager.handleItemRecords(reqData, OLD_HOLDING_ID, location, requestContext).join();
 
     assertEquals(0, pieces.size());
   }

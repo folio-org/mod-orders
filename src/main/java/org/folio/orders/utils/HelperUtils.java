@@ -600,22 +600,6 @@ public class HelperUtils {
   }
 
   /**
-   * Group all PO Line's locations for which the holding should be created by location identifier
-   * @param compPOL PO line with locations to group
-   * @return map of grouped locations where key is location id and value is list of locations with the same id
-   */
-  public static Map<String, List<Location>> groupLocationsById(CompositePoLine compPOL) {
-    if (CollectionUtils.isEmpty(compPOL.getLocations())) {
-      return Collections.emptyMap();
-    }
-
-    return compPOL.getLocations()
-                  .stream()
-                  .filter(location -> PoLineCommonUtil.isHoldingCreationRequiredForLocation(compPOL, location))
-                  .collect(Collectors.groupingBy(Location::getLocationId));
-  }
-
-  /**
    * Wait for all requests completion and collect all resulting objects. In case any failed, complete resulting future with the exception
    * @param futures list of futures and each produces resulting object on completion
    * @param <T> resulting type

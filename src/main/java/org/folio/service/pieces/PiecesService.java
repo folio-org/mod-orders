@@ -10,7 +10,8 @@ import static org.folio.orders.utils.HelperUtils.ID;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantityWithoutLocation;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.groupLocationsById;
+import static org.folio.orders.utils.PoLineCommonUtil.groupLocationsByHoldingId;
+import static org.folio.orders.utils.PoLineCommonUtil.groupLocationsByLocationId;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -244,8 +245,14 @@ public class PiecesService {
       return titlesService.getTitleById(piece.getTitleId(), requestContext)
         .thenCompose(title -> handleInstanceRecord(title, requestContext))
         .thenCompose(title -> titlesService.updateTitle(title, requestContext).thenApply(json -> title))
-        .thenCompose(title -> handleHoldingsRecord(compPOL, new Location().withLocationId(piece.getLocationId())
-                                                      , title.getInstanceId(), requestContext))
+        .thenCompose(title ->
+        {
+          if (piece.getHoldingId() != null) {
+            return completedFuture(piece.getHoldingId());
+          }
+          return handleHoldingsRecord(compPOL, new Location().withLocationId(piece.getLocationId())
+            , title.getInstanceId(), requestContext);
+        })
         .thenCompose(holdingId -> createItemRecord(compPOL, holdingId, requestContext))
         .thenApply(itemId -> itemId != null ? piece.withItemId(itemId) : piece);
     }
@@ -345,18 +352,29 @@ public class PiecesService {
       .thenCompose(existingPieces -> {
         List<Piece> piecesToCreate;
         List<Piece> piecesWithLocationToProcess = createPiecesByLocationId(compPOL, expectedPiecesWithItem, existingPieces);
+        List<Piece> piecesWithHoldingToProcess = createPiecesByHoldingId(compPOL, expectedPiecesWithItem, existingPieces);
+
         List<Piece> onlyLocationChangedPieces = getPiecesWithChangedLocation(compPOL, piecesWithLocationToProcess, existingPieces);
         if ((onlyLocationChangedPieces.size() == piecesWithLocationToProcess.size()) && !isOpenOrderFlow) {
           return allOf(onlyLocationChangedPieces.stream()
                     .map(piece -> updatePieceRecord(piece, requestContext)).toArray(CompletableFuture[]::new));
         } else {
           piecesToCreate = new ArrayList<>(piecesWithLocationToProcess);
+          piecesToCreate.addAll(piecesWithHoldingToProcess);
         }
         piecesToCreate.addAll(createPiecesWithoutLocationId(compPOL, existingPieces));
         piecesToCreate.forEach(piece -> piece.setTitleId(titleId));
         logger.info("Trying to create pieces");
-        return allOf(piecesToCreate.stream()
-                  .map(piece -> createPiece(piece, requestContext)).toArray(CompletableFuture[]::new));
+        List<CompletableFuture<Piece>> piecesToCreateFutures = new ArrayList<>();
+        piecesToCreate.forEach(piece ->
+          piecesToCreateFutures.add(createPiece(piece, requestContext))
+        );
+        return collectResultsOnSuccess(piecesToCreateFutures)
+                .thenAccept(result -> logger.info("Number of created pieces: " + result.size()))
+                .exceptionally(th -> {
+                  logger.error("Piece creation error");
+                  return null;
+                });
       })
       .thenAccept(v -> validateItemsCreation(compPOL, createdItemsQuantity));
   }
@@ -364,12 +382,26 @@ public class PiecesService {
   private List<Piece> createPiecesByLocationId(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem, List<Piece> existingPieces) {
     List<Piece> piecesToCreate = new ArrayList<>();
     // For each location collect pieces that need to be created.
-    groupLocationsById(compPOL)
+    groupLocationsByLocationId(compPOL)
       .forEach((existingPieceLocationId, existingPieceLocations) -> {
         List<Piece> filteredExistingPieces = filterByLocationId(existingPieces, existingPieceLocationId);
-        List<Piece> createdPiecesWithItem = processPiecesWithItem(expectedPiecesWithItem, filteredExistingPieces, existingPieceLocationId);
+        List<Piece> createdPiecesWithItem = processPiecesWithLocationAndItem(expectedPiecesWithItem, filteredExistingPieces, existingPieceLocationId);
         piecesToCreate.addAll(createdPiecesWithItem);
-        List<Piece> piecesWithoutItem = processPiecesWithoutItem(compPOL, filteredExistingPieces, existingPieceLocationId, existingPieceLocations);
+        List<Piece> piecesWithoutItem = processPiecesWithoutItemAndLocationId(compPOL, filteredExistingPieces, existingPieceLocationId, existingPieceLocations);
+        piecesToCreate.addAll(piecesWithoutItem);
+      });
+    return piecesToCreate;
+  }
+
+  private List<Piece> createPiecesByHoldingId(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem, List<Piece> existingPieces) {
+    List<Piece> piecesToCreate = new ArrayList<>();
+    // For each location collect pieces that need to be created.
+    groupLocationsByHoldingId(compPOL)
+      .forEach((existingPieceHoldingId, existingPieceLocations) -> {
+        List<Piece> filteredExistingPieces = filterByHoldingId(existingPieces, existingPieceHoldingId);
+        List<Piece> createdPiecesWithItem = processPiecesWithHoldingAndItem(expectedPiecesWithItem, filteredExistingPieces, existingPieceHoldingId);
+        piecesToCreate.addAll(createdPiecesWithItem);
+        List<Piece> piecesWithoutItem = processPiecesWithoutItemAndHoldingId(compPOL, filteredExistingPieces, existingPieceHoldingId, existingPieceLocations);
         piecesToCreate.addAll(piecesWithoutItem);
       });
     return piecesToCreate;
@@ -433,7 +465,7 @@ public class PiecesService {
     return piecesToCreate;
   }
 
-  private List<Piece> processPiecesWithoutItem(CompositePoLine compPOL, List<Piece> existedPieces, String existingPieceLocationId, List<Location> existingPieceLocations) {
+  private List<Piece> processPiecesWithoutItemAndLocationId(CompositePoLine compPOL, List<Piece> existedPieces, String existingPieceLocationId, List<Location> existingPieceLocations) {
     List<Piece> piecesToCreate = new ArrayList<>();
     Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = HelperUtils.calculatePiecesWithoutItemIdQuantity(compPOL, existingPieceLocations);
     Map<Piece.Format, Integer> existedQuantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existedPieces);
@@ -448,8 +480,28 @@ public class PiecesService {
     return piecesToCreate;
   }
 
-  private List<Piece> processPiecesWithItem(List<Piece> piecesWithItem, List<Piece> existedPieces, String existingPieceLocationId) {
+  private List<Piece> processPiecesWithoutItemAndHoldingId(CompositePoLine compPOL, List<Piece> existedPieces, String existingPieceHoldingId, List<Location> existingPieceLocations) {
+    List<Piece> piecesToCreate = new ArrayList<>();
+    Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = HelperUtils.calculatePiecesWithoutItemIdQuantity(compPOL, existingPieceLocations);
+    Map<Piece.Format, Integer> existedQuantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existedPieces);
+    expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
+      int remainingPiecesQuantity = expectedQty - existedQuantityWithoutItem.getOrDefault(format, 0);
+      if (remainingPiecesQuantity > 0) {
+        for (int i = 0; i < remainingPiecesQuantity; i++) {
+          piecesToCreate.add(new Piece().withFormat(format).withHoldingId(existingPieceHoldingId).withPoLineId(compPOL.getId()));
+        }
+      }
+    });
+    return piecesToCreate;
+  }
+
+  private List<Piece> processPiecesWithLocationAndItem(List<Piece> piecesWithItem, List<Piece> existedPieces, String existingPieceLocationId) {
     List<Piece> expectedPiecesWithItem = filterByLocationId(piecesWithItem, existingPieceLocationId);
+    return collectMissingPiecesWithItem(expectedPiecesWithItem, existedPieces);
+  }
+
+  private List<Piece> processPiecesWithHoldingAndItem(List<Piece> piecesWithItem, List<Piece> existedPieces, String existingPieceLocationId) {
+    List<Piece> expectedPiecesWithItem = filterByHoldingId(piecesWithItem, existingPieceLocationId);
     return collectMissingPiecesWithItem(expectedPiecesWithItem, existedPieces);
   }
 
@@ -477,6 +529,12 @@ public class PiecesService {
   private List<Piece> filterByLocationId(List<Piece> pieces, String locationId) {
     return pieces.stream()
       .filter(piece -> locationId.equals(piece.getLocationId()))
+      .collect(Collectors.toList());
+  }
+
+  private List<Piece> filterByHoldingId(List<Piece> pieces, String holdingId) {
+    return pieces.stream()
+      .filter(piece -> holdingId.equals(piece.getHoldingId()))
       .collect(Collectors.toList());
   }
 
