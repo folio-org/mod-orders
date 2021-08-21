@@ -23,7 +23,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
-public class PiecesAPI  extends BaseApi implements OrdersPieces {
+public class PiecesAPI extends BaseApi implements OrdersPieces {
 
   private static final Logger logger = LogManager.getLogger();
 
@@ -32,6 +32,14 @@ public class PiecesAPI  extends BaseApi implements OrdersPieces {
 
   public PiecesAPI() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
+  }
+
+  @Override
+  public void getOrdersPieces(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    piecesService.getPieces(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
+      .thenAccept(pieces -> asyncResultHandler.handle(succeededFuture(buildOkResponse(pieces))))
+      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
@@ -46,6 +54,14 @@ public class PiecesAPI  extends BaseApi implements OrdersPieces {
         asyncResultHandler.handle(succeededFuture(buildCreatedResponse(piece)));
       })
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+  }
+
+  @Override
+  public void getOrdersPiecesById(String id, String lang, Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    piecesService.getPieceById(id, new RequestContext(vertxContext, okapiHeaders))
+      .thenAccept(piece -> asyncResultHandler.handle(succeededFuture(buildOkResponse(piece))))
+      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
@@ -65,7 +81,7 @@ public class PiecesAPI  extends BaseApi implements OrdersPieces {
   @Validate
   public void deleteOrdersPiecesById(String pieceId, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    piecesService.deletePiece(pieceId, new RequestContext(vertxContext, okapiHeaders))
+    piecesService.deletePieceWithItem(pieceId, false, new RequestContext(vertxContext, okapiHeaders))
       .thenAccept(ok -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
   }

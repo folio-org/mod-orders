@@ -6,6 +6,7 @@ import java.util.stream.Stream;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
+import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -16,6 +17,7 @@ import org.folio.rest.core.models.RequestEntry;
 public class TransactionSummariesService {
 
     private static final String ENDPOINT = "/finance/order-transaction-summaries";
+    private static final String GET_BY_ID_STORAGE_ENDPOINT = "/finance-storage/order-transaction-summaries/{id}";
     private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
 
     private final RestClient restClient;
@@ -33,7 +35,7 @@ public class TransactionSummariesService {
     }
 
     public CompletableFuture<OrderTransactionSummary> getOrderTransactionSummary(String orderId, RequestContext requestContext) {
-        RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(orderId);
+        RequestEntry requestEntry = new RequestEntry(GET_BY_ID_STORAGE_ENDPOINT).withId(orderId);
         return restClient.get(requestEntry, requestContext, OrderTransactionSummary.class);
     }
 
@@ -51,6 +53,8 @@ public class TransactionSummariesService {
 
     public CompletableFuture<Void> createOrUpdateOrderTransactionSummary(EncumbrancesProcessingHolder holder,
         RequestContext requestContext) {
+      CompletableFuture<Void> future = new CompletableFuture<>();
+
       Stream<String> orderIdFromCreate = holder.getEncumbrancesForCreate()
         .stream()
         .map(EncumbranceRelationsHolder::getOrderId);
@@ -61,16 +65,41 @@ public class TransactionSummariesService {
       String orderId = Stream.concat(orderIdFromCreate, orderIdFromStorage)
         .findFirst()
         .orElse(null);
-        if (CollectionUtils.isEmpty(holder.getEncumbrancesFromStorage())) {
-            return createOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext)
-                    .thenApply(id -> null);
-        }
-        else if (holder.getAllEncumbrancesQuantity() == 0) {
-            return CompletableFuture.completedFuture(null);
-        }
-        else {
-            return updateOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext);
-        }
+
+      // update or create summary if not exists
+      if (CollectionUtils.isEmpty(holder.getEncumbrancesFromStorage())) {
+        getOrderTransactionSummary(orderId, requestContext).handle((ok, error) -> {
+          if (error == null) {
+            updateOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext)
+              .thenAccept(a -> future.complete(null))
+              .exceptionally(t -> {
+                future.completeExceptionally(t);
+                return null;
+              });
+          } else if (error instanceof HttpException && ((HttpException) error).getCode() == 404) {
+            createOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext)
+              .thenAccept(a -> future.complete(null))
+              .exceptionally(t -> {
+                future.completeExceptionally(t);
+                return null;
+              });
+          } else {
+            future.completeExceptionally(error);
+          }
+          return null;
+        });
+
+      } else if (holder.getAllEncumbrancesQuantity() == 0) {
+        future.complete(null);
+      } else {
+        updateOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext)
+          .thenAccept(a -> future.complete(null))
+          .exceptionally(t -> {
+            future.completeExceptionally(t);
+            return null;
+          });
+      }
+      return future;
     }
 
 }

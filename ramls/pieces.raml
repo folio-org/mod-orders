@@ -17,23 +17,27 @@ types:
     pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
 
 traits:
+  pageable: !include raml-util/traits/pageable.raml
+  searchable: !include raml-util/traits/searchable.raml
   language: !include raml-util/traits/language.raml
   validate: !include raml-util/traits/validation.raml
 
 resourceTypes:
   collection: !include rtypes/collection-with-json-response.raml
-  post-with-201: !include rtypes/post-json-201.raml
+  collection-item: !include rtypes/item-collection-with-json-response.raml
 
 /orders/pieces:
   displayName: Pieces
   description: Create piece record
   type:
-    post-with-201:
-      requestSchema: piece
-      responseSchema: piece
-      requestExample: !include acq-models/mod-orders-storage/examples/piece_post.sample
-      responseExample: !include acq-models/mod-orders-storage/examples/piece_get.sample
+    collection:
+      exampleCollection: !include acq-models/mod-orders-storage/examples/piece_collection.sample
+      exampleItem: !include acq-models/mod-orders-storage/examples/piece_get.sample
+      schemaCollection: piece-collection
+      schemaItem: piece
   is: [validate]
+  get:
+    is: [pageable, searchable: {description: "using CQL (indexes for piece records)", example: "format==\"Physical\""} ]
   post:
     description: Create piece record
   /{id}:
@@ -41,7 +45,13 @@ resourceTypes:
       id:
         description: The UUID of a piece record
         type: UUID
+    type:
+      collection-item:
+        exampleItem: !include acq-models/mod-orders-storage/examples/piece_get.sample
+        schema: piece
     is: [validate, language]
+    get:
+      description: Return a piece record with given {id}
     put:
       description: Update a piece record with given {id}
       body:

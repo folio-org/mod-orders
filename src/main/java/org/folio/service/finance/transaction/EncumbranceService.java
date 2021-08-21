@@ -18,6 +18,7 @@ import javax.money.MonetaryAmount;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.HttpStatus;
+import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -34,7 +35,7 @@ import org.folio.service.invoice.InvoiceService;
 import org.javamoney.moneta.function.MonetaryOperators;
 
 public class EncumbranceService {
-
+//String a = "{ \"orderType\": \"ListedPrintMonograph\", \"mappings\": [ { \"field\": \"ACQUISITION_METHOD\", \"dataSource\": { \"default\": \"Purchase At Vendor System\" } }, { \"field\": \"APPROVED\", \"dataSource\": { \"default\": \"true\", \"translation\": \"toBoolean\", \"translateDefault\": true } }, { \"field\": \"CLAIMED\", \"dataSource\": { \"default\": \"true\", \"translation\": \"toBoolean\", \"translateDefault\": true } }, { \"field\": \"COLLECTION\", \"dataSource\": { \"default\": \"false\", \"translation\": \"toBoolean\", \"translateDefault\": true } }, { \"field\": \"CONTRIBUTOR\", \"dataSource\": { \"from\": \"//datafield[@tag='100']/*\", \"combinator\": \"concat\" } }, { \"field\": \"CONTRIBUTOR_NAME_TYPE\", \"dataSource\": { \"default\": \"Personal name\", \"translation\": \"lookupContributorNameTypeId\", \"translateDefault\": true } }, { \"field\": \"CURRENCY\", \"dataSource\": { \"from\": \"//ListPrice/Currency\", \"default\": \"USD\" } }, { \"field\": \"DATE_ORDERED\", \"dataSource\": { \"from\": \"//OrderPlaced\", \"translation\": \"toDate\" } }, { \"field\": \"EXPENSE_CLASS\", \"dataSource\": { \"from\": \"//LocalData[Description='LocalData4']/Value\", \"translation\": \"lookupExpenseClassId\" } }, { \"field\": \"FUND_ID\", \"dataSource\": { \"from\": \"//FundCode\", \"translation\": \"lookupFundId\" } }, { \"field\": \"FUND_CODE\", \"dataSource\": { \"from\": \"//FundCode\" } }, { \"field\": \"FUND_PERCENTAGE\", \"dataSource\": { \"default\": \"100\", \"translation\": \"toDouble\", \"translateDefault\": true } }, { \"field\": \"VENDOR_INSTRUCTIONS\", \"dataSource\": { \"from\": \"//OrderNotes\", \"default\" : \"N/A\" } }, { \"field\": \"LIST_UNIT_PRICE\", \"dataSource\": { \"from\": \"//ListPrice/Amount\", \"default\": \"0\", \"translation\": \"toDouble\", \"translateDefault\": true } }, { \"field\": \"LOCATION\", \"dataSource\": { \"from\": \"//Location\", \"default\": \"*\", \"translation\": \"lookupLocationId\", \"translateDefault\": true } }, { \"field\": \"MANUAL_PO\", \"dataSource\": { \"default\": \"false\", \"translation\": \"toBoolean\", \"translateDefault\": true } }, { \"field\": \"MATERIAL_TYPE\", \"dataSource\": { \"from\": \"//LocalData[Description='LocalData1']/Value\", \"default\" : \"unspecified\", \"translation\": \"lookupMaterialTypeId\", \"translateDefault\": true } }, { \"field\": \"ORDER_TYPE\", \"dataSource\": { \"default\": \"One-Time\" } }, { \"field\": \"PO_LINE_ORDER_FORMAT\", \"dataSource\": { \"default\": \"Physical Resource\" } }, { \"field\": \"PO_LINE_PAYMENT_STATUS\", \"dataSource\": { \"default\": \"Awaiting Payment\" } }, { \"field\": \"PO_LINE_RECEIPT_STATUS\", \"dataSource\": { \"default\": \"Awaiting Receipt\" } }, { \"field\": \"PRODUCT_ID\", \"dataSource\": { \"from\": \"//datafield[@tag='020']/subfield[@code='a']\", \"translation\": \"truncateISBNQualifier\" } }, { \"field\": \"PRODUCT_ID_TYPE\", \"dataSource\": { \"default\": \"ISBN\", \"translation\": \"lookupProductIdType\", \"translateDefault\": true } }, { \"field\": \"PRODUCT_QUALIFIER\", \"dataSource\": { \"from\": \"//datafield[@tag='020']/subfield[@code='q']\", \"defaultMapping\": { \"dataSource\": { \"from\": \"//datafield[@tag='020']/subfield[@code='a']\", \"translation\": \"separateISBNQualifier\" } } } }, { \"field\": \"PUBLICATION_DATE\", \"dataSource\": { \"from\": \"//datafield[@tag='260']/subfield[@code='c']\" } }, { \"field\": \"PUBLISHER\", \"dataSource\": { \"from\": \"//datafield[@tag='260']/subfield[@code='b']\" } }, { \"field\": \"QUANTITY_PHYSICAL\", \"dataSource\": { \"from\": \"//Quantity\", \"default\": \"1\", \"translation\": \"toInteger\" } }, { \"field\": \"RECEIVING_NOTE\", \"dataSource\": { \"from\": \"//LocalData[Description='LocalData2']/Value\" } }, { \"field\": \"REQUESTER\", \"dataSource\": { \"from\": \"//LocalData[Description='LocalData3']/Value\" } }, { \"field\": \"SOURCE\", \"dataSource\": { \"default\": \"API\" } }, { \"field\": \"TITLE\", \"dataSource\": { \"from\": \"//datafield[@tag='245']/*\", \"combinator\": \"concat\" } }, { \"field\": \"VENDOR\", \"dataSource\": { \"default\": \"GOBI\", \"translation\": \"lookupOrganization\", \"translateDefault\": true } }, { \"field\": \"VENDOR_ACCOUNT\", \"dataSource\": { \"from\": \"//SubAccount\", \"default\": \"0\" } }, { \"field\": \"VENDOR_REF_NO\", \"dataSource\": { \"from\": \"//YBPOrderKey\" } }, { \"field\": \"VENDOR_REF_NO_TYPE\", \"dataSource\": { \"default\": \"Vendor order reference number\" } }, { \"field\": \"WORKFLOW_STATUS\", \"dataSource\": { \"default\": \"Open\" } } ] }"
   private static final String ENCUMBRANCE_CRITERIA = "transactionType==Encumbrance";
   public static final String AND = " and ";
   public static final String FUND_CODE = "fundCode";
@@ -63,12 +64,9 @@ public class EncumbranceService {
   }
 
   public CompletableFuture<Void> createEncumbrances(List<EncumbranceRelationsHolder> relationsHolders, RequestContext requestContext) {
-    return CompletableFuture.allOf(relationsHolders.stream()
+    return FolioVertxCompletableFuture.allOf(requestContext.getContext(), relationsHolders.stream()
             .map(holder -> transactionService.createTransaction(holder.getNewEncumbrance(), requestContext)
-                    .thenAccept(transaction -> {
-                      FundDistribution fundDistribution = holder.getFundDistribution();
-                      fundDistribution.setEncumbrance(transaction.getId());
-                    })
+                    .thenAccept(transaction -> holder.getFundDistribution().setEncumbrance(transaction.getId()))
                     .exceptionally(fail -> {
                       checkCustomTransactionError(fail);
                       throw new CompletionException(fail);
@@ -78,13 +76,13 @@ public class EncumbranceService {
     );
   }
 
-  public CompletionStage<Void> updateEncumbrancesOrderStatus(String orderId, CompositePurchaseOrder.WorkflowStatus orderStatus, RequestContext requestContext) {
-    return getOrderEncumbrances(orderId, requestContext)
+  public CompletionStage<Void> updateEncumbrancesOrderStatus(CompositePurchaseOrder compPo, RequestContext requestContext) {
+    return getOrderEncumbrances(compPo.getId(), requestContext)
             .thenCompose(encumbrs -> {
-              if (isEncumbrancesOrderStatusUpdateNeeded(orderStatus, encumbrs)) {
-                return transactionSummariesService.updateOrderTransactionSummary(orderId, encumbrs.size(), requestContext)
+              if (isEncumbrancesOrderStatusUpdateNeeded(compPo.getWorkflowStatus(), encumbrs)) {
+                return transactionSummariesService.updateOrderTransactionSummary(compPo.getId(), encumbrs.size(), requestContext)
                         .thenApply(v -> {
-                          syncEncumbrancesOrderStatus(orderStatus, encumbrs);
+                          syncEncumbrancesOrderStatus(compPo.getWorkflowStatus(), encumbrs);
                           return encumbrs;
                         })
                         .thenCompose(transactions -> transactionService.updateTransactions(transactions, requestContext));

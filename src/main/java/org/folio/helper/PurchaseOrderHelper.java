@@ -82,6 +82,7 @@ import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.FundDistributionUtils;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
 import org.folio.orders.utils.validators.OngoingOrderValidator;
@@ -116,13 +117,14 @@ import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.orders.flows.unopen.UnOpenCompositeOrderManager;
+import org.folio.service.pieces.PiecesService;
 import org.folio.service.titles.TitlesService;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import one.util.streamex.StreamEx;
 
 public class PurchaseOrderHelper extends AbstractHelper {
 
@@ -167,6 +169,10 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private ProtectionService protectionService;
   @Autowired
   private InventoryManager inventoryManager;
+  @Autowired
+  private PiecesService piecesService;
+  @Autowired
+  private UnOpenCompositeOrderManager unOpenCompositeOrderManager;
 
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -239,7 +245,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
         .thenCompose(v -> processPoLineTags(compPO))
         .thenCompose(v -> createPOandPOLines(compPO, requestContext))
         .thenCompose(this::populateOrderSummary))
-        .thenCompose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder.getId(), compOrder.getWorkflowStatus(), requestContext)
+        .thenCompose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder, requestContext)
                 .thenApply(v -> compOrder));
   }
 
@@ -306,7 +312,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           .thenCompose(ok -> {
             if (isTransitionToPending(poFromStorage, compPO)) {
               checkOrderUnopenPermissions();
-              return unOpenOrder(compPO, requestContext);
+              return unOpenCompositeOrderManager.process(compPO, requestContext);
             }
             return CompletableFuture.completedFuture(null);
           })
@@ -344,7 +350,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
             }
           })
           .thenCompose(ok -> handleFinalOrderStatus(compPO, poFromStorage.getWorkflowStatus().value(), requestContext))
-          .thenCompose(v -> encumbranceService.updateEncumbrancesOrderStatus(compPO.getId(), compPO.getWorkflowStatus(), getRequestContext()));
+          .thenCompose(v -> encumbranceService.updateEncumbrancesOrderStatus(compPO, getRequestContext()));
       });
   }
 
@@ -381,7 +387,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     String query = convertIdsToCqlQuery(poLineIds, "poLineId");
     RequestEntry requestEntry = new RequestEntry(resourcesPath(PIECES)).withQuery(query)
       .withOffset(0)
-      .withLimit(poLineIds.size());
+      .withLimit(Integer.MAX_VALUE);
     return restClient.get(requestEntry, requestContext, PieceCollection.class)
                      .thenApply(PieceCollection::getPieces);
   }
@@ -432,25 +438,11 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return items;
   }
 
-  private CompletableFuture<List<JsonObject>> getItemsByStatus(List<PoLine> compositePoLines, String itemStatus, RequestContext requestContext) {
-    logger.info("org.folio.helper.PurchaseOrderHelper.getItemsByStatus start");
-    List<String> lineIds = compositePoLines.stream().map(PoLine::getId).collect(toList());
-    // Split all id's by maximum number of id's for get query
-    List<CompletableFuture<List<JsonObject>>> futures = StreamEx
-      .ofSubLists(lineIds, MAX_IDS_FOR_GET_RQ)
-      // Get item records from Inventory storage
-      .map(ids -> {
-        String query = String.format("status.name==%s and %s", itemStatus, HelperUtils.convertFieldListToCqlQuery(ids, InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, true));
-        return inventoryManager.getItemRecordsByQuery(query, requestContext);
-      })
-      .toList();
-
-    return collectResultsOnSuccess(futures)
-      .thenApply(lists -> StreamEx.of(lists).toFlatList(jsonObjects -> jsonObjects));
-  }
-
   private CompletableFuture<Void> updateItemsStatusInInventory(List<PoLine> poLines, String currentStatus, String newStatus, RequestContext requestContext) {
-    return getItemsByStatus(poLines, currentStatus, requestContext)
+    if (CollectionUtils.isEmpty(poLines)) {
+      return CompletableFuture.completedFuture(null);
+    }
+    return inventoryManager.getItemsByStatus(poLines.stream().map(PoLine::getId).collect(toList()), currentStatus, requestContext)
       .thenApply(items -> updateStatusName(items, newStatus))
       .thenCompose(this::updateItemsInInventory);
   }
@@ -624,9 +616,20 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   public CompletableFuture<Void> openOrderUpdatePoLinesSummary(List<CompositePoLine> compositePoLines) {
     return CompletableFuture.allOf( compositePoLines.stream()
+      .map(this::openOrderRemoveLocationId)
       .map(this::openOrderConvertToPoLine)
       .map(line -> purchaseOrderLineService.updateOrderLine(line, getRequestContext()))
       .toArray(CompletableFuture[]::new));
+  }
+
+  private CompositePoLine openOrderRemoveLocationId(CompositePoLine compositePoLine) {
+    compositePoLine.getLocations().forEach(location ->
+    {
+      if (location.getHoldingId() != null) {
+        location.setLocationId(null);
+      }
+    });
+    return compositePoLine;
   }
 
   public PoLine openOrderConvertToPoLine(CompositePoLine compPoLine) {
@@ -738,28 +741,6 @@ public class PurchaseOrderHelper extends AbstractHelper {
     }
 
     return validateOrder(compPO, requestContext);
-  }
-
-  public CompletableFuture<Void> unOpenOrder(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
-    updateAndGetOrderWithLines(compPO)
-      .thenApply(aVoid -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.OPEN_TO_PENDING))
-      .thenCompose(strategy -> strategy.processEncumbrances(compPO, getRequestContext()))
-      .thenAccept(ok -> orderLineHelper.makePoLinesPending(compPO.getCompositePoLines()))
-      .thenCompose(ok -> unOpenOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext))
-      .thenAccept(v-> future.complete(null))
-      .exceptionally(t -> {
-        future.completeExceptionally(t);
-        return null;
-      });
-    return future;
-  }
-
-  public CompletableFuture<Void> unOpenOrderUpdatePoLinesSummary(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
-    return CompletableFuture.allOf( compositePoLines.stream()
-      .map(HelperUtils::convertToPoLine)
-      .map(line -> purchaseOrderLineService.updateOrderLine(line, requestContext))
-      .toArray(CompletableFuture[]::new));
   }
 
   @Override
@@ -904,7 +885,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
       return  purchaseOrderLineService.getCompositePoLinesByOrderId(compPO.getId(), getRequestContext())
         .thenApply(poLines -> {
-          orderLineHelper.sortPoLinesByPoLineNumber(poLines);
+          PoLineCommonUtil.sortPoLinesByPoLineNumber(poLines);
           return poLines;
         });
     } else {
@@ -916,7 +897,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
       return purchaseOrderLineService.getCompositePoLinesByOrderId(compPO.getId(), getRequestContext())
         .thenApply(poLines -> {
-          orderLineHelper.sortPoLinesByPoLineNumber(poLines);
+          PoLineCommonUtil.sortPoLinesByPoLineNumber(poLines);
           return compPO.withCompositePoLines(poLines);
         })
         .thenApply(v -> compPO);

@@ -33,6 +33,7 @@ import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategy;
 import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.finance.transaction.TransactionSummariesService;
 import org.folio.service.invoice.InvoiceService;
+import org.folio.service.orders.HoldingsSummaryService;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilder;
@@ -45,7 +46,9 @@ import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
 import org.folio.service.orders.ReEncumbranceHoldersBuilder;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateService;
+import org.folio.service.orders.flows.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
+import org.folio.service.pieces.PieceRetrieveService;
 import org.folio.service.pieces.PiecesService;
 import org.folio.service.titles.TitlesService;
 import org.springframework.context.annotation.Bean;
@@ -157,8 +160,11 @@ public class ApplicationConfig {
   }
 
   @Bean
-  EncumbranceWorkflowStrategy openToPendingEncumbranceStrategy(EncumbranceService encumbranceService, TransactionSummariesService transactionSummariesService) {
-    return new OpenToPendingEncumbranceStrategy(encumbranceService, transactionSummariesService);
+  EncumbranceWorkflowStrategy openToPendingEncumbranceStrategy(EncumbranceService encumbranceService,
+      TransactionSummariesService transactionSummariesService,
+      EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
+    return new OpenToPendingEncumbranceStrategy(encumbranceService, transactionSummariesService,
+        encumbranceRelationsHoldersBuilder);
   }
 
   @Bean
@@ -282,6 +288,12 @@ public class ApplicationConfig {
   }
 
   @Bean
+  HoldingsSummaryService holdingsSummaryService(PurchaseOrderService purchaseOrderService,
+      PurchaseOrderLineService purchaseOrderLineService) {
+    return new HoldingsSummaryService(purchaseOrderService, purchaseOrderLineService);
+  }
+
+  @Bean
   CompositeOrderDynamicDataPopulateService totalExpendedPopulateService(TransactionService transactionService) {
     return new TransactionsTotalFieldsPopulateService(transactionService);
   }
@@ -319,8 +331,9 @@ public class ApplicationConfig {
   }
 
   @Bean
-  InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService) {
-    return new InventoryManager(restClient, configurationEntriesService);
+  InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
+                                    PieceRetrieveService pieceRetrieveService) {
+    return new InventoryManager(restClient, configurationEntriesService, pieceRetrieveService);
   }
 
   @Bean
@@ -333,5 +346,19 @@ public class ApplicationConfig {
                               CompositePurchaseOrderService compositePurchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
                               InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
     return new PiecesService(restClient, titlesService, protectionService, compositePurchaseOrderService, purchaseOrderLineService, inventoryManager, receiptStatusPublisher);
+  }
+
+  @Bean
+  UnOpenCompositeOrderManager unOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
+                                                          EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
+                                                          InventoryManager inventoryManager, PiecesService piecesService,
+                                                          PieceRetrieveService pieceRetrieveService) {
+    return new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory,
+                                            inventoryManager, piecesService, pieceRetrieveService);
+  }
+
+  @Bean
+  PieceRetrieveService pieceRetrieveService(RestClient restClient) {
+    return new PieceRetrieveService(restClient);
   }
 }

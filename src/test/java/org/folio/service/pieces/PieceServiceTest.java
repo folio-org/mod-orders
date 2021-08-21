@@ -35,7 +35,7 @@ import java.util.concurrent.TimeoutException;
 
 import io.vertx.core.Context;
 import org.folio.ApiTestSuite;
-import org.folio.rest.jaxrs.model.PieceCollection;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.ProtectedOperationType;
@@ -64,7 +64,7 @@ import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
-public class PiecesServiceTest {
+public class PieceServiceTest {
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   private static final String COMPOSITE_LINES_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   private static final String PIECE_PATH = BASE_MOCK_DATA_PATH + "pieces/";
@@ -86,7 +86,7 @@ public class PiecesServiceTest {
   @Autowired
   private PieceChangeReceiptStatusPublisher receiptStatusPublisher;
   @Autowired
-  private RestClient restClientMock;
+  private RestClient restClient;
 
   @Mock
   private Map<String, String> okapiHeadersMock;
@@ -109,7 +109,7 @@ public class PiecesServiceTest {
       ApiTestSuite.before();
       runningOnOwn = true;
     }
-    initSpringContext(PiecesServiceTest.ContextConfiguration.class);
+    initSpringContext(PieceServiceTest.ContextConfiguration.class);
   }
 
   @AfterAll
@@ -123,25 +123,6 @@ public class PiecesServiceTest {
   @AfterEach
   void resetMocks() {
     clearServiceInteractions();
-  }
-
-  @Test
-  void testPiecesShouldBeReturnedByQuery() {
-    String pieceId = UUID.randomUUID()
-      .toString();
-    List<Piece> pieces = Collections.singletonList(new Piece().withId(pieceId));
-
-    PieceCollection pieceCollection = new PieceCollection().withPieces(pieces)
-      .withTotalRecords(1);
-
-    when(restClientMock.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(pieceCollection));
-
-    String expectedQuery = String.format("id==%s", pieceId);
-    PieceCollection retrievedPieces = piecesService.getPieces(Integer.MAX_VALUE, 0, expectedQuery, requestContext)
-      .join();
-
-    verify(restClientMock).get(any(), eq(requestContext), eq(PieceCollection.class));
-    assertEquals(pieceCollection, retrievedPieces);
   }
 
   @Test
@@ -381,6 +362,15 @@ public class PiecesServiceTest {
     verify(receiptStatusPublisher, times(1)).sendEvent(eq(MessageAddress.RECEIPT_STATUS), any(JsonObject.class), eq(requestContext));
   }
 
+  @Test
+  void testShouldDeleteItems() {
+    //given
+    doReturn(completedFuture(null)).when(restClient).delete(any(RequestEntry.class), eq(requestContext));
+   //When
+    piecesService.deletePiecesByIds(List.of(UUID.randomUUID().toString()), requestContext).join();
+    //Then
+    verify(restClient, times(1)).delete(any(RequestEntry.class), eq(requestContext));
+  }
 
   private Piece createPiece(CompositePoLine line, Title title) {
     return new Piece().withId(UUID.randomUUID().toString())

@@ -56,4 +56,23 @@ public class PurchaseOrderServiceTest {
     assertEquals(purchaseOrderCollection, actOrders);
   }
 
+  @Test
+  void successRetrievePurchaseOrdersByIds() {
+    String orderId = UUID.randomUUID().toString();
+    List<PurchaseOrder> purchaseOrders = Collections.singletonList(new PurchaseOrder()
+      .withId(orderId));
+
+    PurchaseOrderCollection purchaseOrderCollection = new PurchaseOrderCollection()
+      .withPurchaseOrders(purchaseOrders)
+      .withTotalRecords(1);
+
+    when(restClientMock.get(any(), any(), any()))
+      .thenReturn(CompletableFuture.completedFuture(purchaseOrderCollection));
+
+    List<PurchaseOrder> actOrders = purchaseOrderService.getPurchaseOrdersByIds(List.of(orderId), requestContext).join();
+
+    verify(restClientMock).get(any(), eq(requestContext), eq(PurchaseOrderCollection.class));
+    assertEquals(purchaseOrderCollection.getPurchaseOrders(), actOrders);
+  }
+
 }
