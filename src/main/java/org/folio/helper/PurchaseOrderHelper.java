@@ -53,7 +53,6 @@ import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -69,11 +68,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
+import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
+import org.folio.completablefuture.CompletableFutureRepeater;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -438,13 +438,26 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return items;
   }
 
-  private CompletableFuture<Void> updateItemsStatusInInventory(List<PoLine> poLines, String currentStatus, String newStatus, RequestContext requestContext) {
+  private CompletableFuture<Void> updateItemsStatusInInventory(List<PoLine> poLines,
+      String currentStatus, String newStatus, RequestContext requestContext) {
+
     if (CollectionUtils.isEmpty(poLines)) {
       return CompletableFuture.completedFuture(null);
     }
-    return inventoryManager.getItemsByStatus(poLines.stream().map(PoLine::getId).collect(toList()), currentStatus, requestContext)
-      .thenApply(items -> updateStatusName(items, newStatus))
-      .thenCompose(this::updateItemsInInventory);
+    List<String> poLineIds = poLines.stream().map(PoLine::getId).collect(toList());
+    return CompletableFuture.allOf(
+        StreamEx.ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ)
+        .map(chunk -> CompletableFutureRepeater.repeat(MAX_REPEAT_ON_FAILURE,
+            () -> updateItemsStatus(chunk, currentStatus, newStatus, requestContext)))
+        .toArray(CompletableFuture[]::new));
+  }
+
+  private CompletableFuture<Void> updateItemsStatus(List<String> poLineIds,
+      String currentStatus, String newStatus, RequestContext requestContext) {
+
+    return inventoryManager.getItemsByStatus(poLineIds, currentStatus, requestContext)
+        .thenApply(items -> updateStatusName(items, newStatus))
+        .thenCompose(this::updateItemsInInventory);
   }
 
   private CompletableFuture<Set<ProtectedOperationType>> getInvolvedOperations(CompositePurchaseOrder compPO) {

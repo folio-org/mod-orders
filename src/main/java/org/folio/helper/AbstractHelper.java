@@ -10,7 +10,6 @@ import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.orders.utils.HelperUtils.LANG;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.convertToJson;
-import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 
@@ -55,6 +54,7 @@ public abstract class AbstractHelper {
   public static final String LOCALE_SETTINGS = "localeSettings";
   public static final String CURRENCY_USD = "USD";
   public static final int MAX_IDS_FOR_GET_RQ = 15;
+  public static final int MAX_REPEAT_ON_FAILURE = 5;
   public static final String SEARCH_PARAMS = "?limit=%s&offset=%s%s&lang=%s";
   public static final String EXCEPTION_CALLING_ENDPOINT_WITH_BODY_MSG = "{} {} {} request failed. Request body: {}";
   public static final String CALLING_ENDPOINT_WITH_BODY_MSG = "Sending {} {} with body: {}";
