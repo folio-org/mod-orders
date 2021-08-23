@@ -928,7 +928,7 @@ public class HelperUtils {
     return poLines.stream()
       .filter(line -> !line.getIsPackage() && line.getReceiptStatus() != CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED && !line.getCheckinItems())
       .collect(toMap(CompositePoLine::getId, poLine -> Optional
-        .of(poLine.getLocations()).orElse(new ArrayList<>()).stream().collect(toMap(Location::getLocationId, Location::getQuantity))));
+        .of(poLine.getLocations()).orElse(new ArrayList<>()).stream().distinct().collect(toMap(Location::getLocationId, Location::getQuantity))));
   }
 
   public static boolean isNotFound(Throwable t) {

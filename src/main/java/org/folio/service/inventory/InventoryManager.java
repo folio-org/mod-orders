@@ -196,9 +196,9 @@ public class InventoryManager {
             getOrCreateHoldingsRecord(compPOL.getInstanceId(), location, requestContext)
               .thenCompose(holdingId -> {
                   // Items are not going to be created when create inventory is "Instance, Holding"
-                  addHoldingId(List.of(location), holdingId);
-                  if (isItemsUpdateRequired) {
-                    return handleItemRecords(compPOL, holdingId, location, requestContext);
+                exchangeLocationIdWithHoldingId(location, holdingId);
+                if (isItemsUpdateRequired) {
+                    return handleItemRecords(compPOL, location, requestContext);
                   } else {
                     return completedFuture(Collections.emptyList());
                   }
@@ -207,10 +207,15 @@ public class InventoryManager {
         });
     }
     return collectResultsOnSuccess(itemsPerHolding)
-      .thenApply(results -> results.stream()
+      .thenApply(itemCreated -> itemCreated.stream()
         .flatMap(List::stream)
         .collect(toList())
       );
+  }
+
+  private void exchangeLocationIdWithHoldingId(Location location, String holdingId) {
+    addHoldingId(List.of(location), holdingId);
+    location.setLocationId(null);
   }
 
   /**
@@ -427,23 +432,22 @@ public class InventoryManager {
    * Returns list of {@link Piece} records with populated item id (and other info) corresponding to given PO line.
    *
    * @param compPOL   PO line to retrieve/create Item Records for
-   * @param holdingId holding uuid from the inventory
    * @param location list of location holdingId is associated with
    * @return future with list of piece objects
    */
-  public CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, String holdingId, Location location,
+  public CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, Location location,
                                                           RequestContext requestContext) {
     Map<Piece.Format, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, List.of(location));
     int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
     String polId = compPOL.getId();
 
-    logger.debug("Handling {} items for PO Line with id={} and holdings with id={}", piecesWithItemsQty, polId, holdingId);
+    logger.debug("Handling {} items for PO Line with id={} and holdings with id={}", piecesWithItemsQty, polId, location.getHoldingId());
     if (piecesWithItemsQty == 0) {
       return completedFuture(Collections.emptyList());
     }
 
     // Search for already existing items
-    return searchStorageExistingItems(compPOL.getId(), holdingId, piecesWithItemsQty, requestContext)
+    return searchStorageExistingItems(compPOL.getId(), location.getHoldingId(), piecesWithItemsQty, requestContext)
       .thenCompose(existingItems -> {
           List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.Format.values().length);
           piecesWithItemsQuantities.forEach((pieceFormat, expectedQuantity) -> {
@@ -454,10 +458,10 @@ public class InventoryManager {
               // Depending on piece format get already existing items and send requests to create missing items
               if (pieceFormat == Piece.Format.ELECTRONIC) {
                 items = getElectronicItemIds(compPOL, existingItems);
-                newItems = createMissingElectronicItems(compPOL, holdingId, expectedQuantity - items.size(), requestContext);
+                newItems = createMissingElectronicItems(compPOL, location.getHoldingId(), expectedQuantity - items.size(), requestContext);
               } else {
                 items = getPhysicalItemIds(compPOL, existingItems);
-                newItems = createMissingPhysicalItems(compPOL, holdingId, expectedQuantity - items.size(), requestContext);
+                newItems = createMissingPhysicalItems(compPOL, location.getHoldingId(), expectedQuantity - items.size(), requestContext);
               }
 
               // Build piece records once new items are created

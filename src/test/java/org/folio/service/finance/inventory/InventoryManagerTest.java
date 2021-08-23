@@ -285,7 +285,7 @@ public class InventoryManagerTest {
 
     //When
     Location location = new Location().withLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
-    List<Piece> pieces = inventoryManager.handleItemRecords(reqData, OLD_HOLDING_ID, location, requestContext).join();
+    List<Piece> pieces = inventoryManager.handleItemRecords(reqData, location, requestContext).join();
 
     assertEquals(0, pieces.size());
   }

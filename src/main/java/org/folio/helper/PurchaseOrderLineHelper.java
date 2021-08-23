@@ -645,37 +645,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     locations.forEach(location -> location.setQuantity(calculateTotalLocationQuantity(location)));
   }
 
-  /**
-   * Creates pieces that are not yet in storage
-   *
-   * @param compPOL PO line to create Pieces Records for
-   * @param needProcessExpectedPieces expected Pieces to create with created associated Items records
-   * @return void future
-   */
-  private CompletableFuture<Void> updatePoLinePieces(CompositePoLine compPOL, String titleId, List<Piece> needProcessExpectedPieces,
-                                                     boolean isOpenOrderFlow, RequestContext requestContext) {
-    // do not create pieces in case of check-in flow
-    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
-      return completedFuture(null);
-    }
-    return pieceRetrieveService.getExpectedPiecesByLineId(compPOL.getId(), requestContext)
-      .thenApply(PieceCollection::getPieces)
-      .thenCompose(existingPieces -> {
-          List<CompletableFuture<Void>> pieceProcessFutures = new ArrayList<>(needProcessExpectedPieces.size());
-          if (!needProcessExpectedPieces.isEmpty() && !existingPieces.isEmpty() && !isOpenOrderFlow) {
-            List<String> existPieceIds = existingPieces.stream().map(Piece::getId).collect(toList());
-            needProcessExpectedPieces.stream()
-                       .filter(piece -> existPieceIds.contains(piece.getId()))
-                       .forEach(piece -> pieceProcessFutures.add(piecesService.updatePieceRecord(piece, requestContext)));
-            needProcessExpectedPieces.removeIf(piece -> existPieceIds.contains(piece.getId()));
-          }
-          if (!needProcessExpectedPieces.isEmpty()) {
-            return piecesService.createPieces(compPOL, titleId, needProcessExpectedPieces,  isOpenOrderFlow, requestContext);
-          }
-          return allOf(pieceProcessFutures.toArray(new CompletableFuture[0]));
-      });
-  }
-
   private CompletionStage<JsonObject> updatePoLineSubObjects(CompositePoLine compOrderLine, JsonObject lineFromStorage) {
     JsonObject updatedLineJson = mapFrom(compOrderLine);
     logger.debug("Updating PO line sub-objects...");
