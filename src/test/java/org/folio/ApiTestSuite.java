@@ -37,7 +37,7 @@ import org.folio.service.exchange.ManualExchangeRateProviderTest;
 import org.folio.service.finance.FundServiceTest;
 import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
 import org.folio.service.finance.budget.BudgetRestrictionServiceTest;
-import org.folio.service.finance.inventory.InventoryManagerTest;
+import org.folio.service.inventory.InventoryManagerTest;
 import org.folio.service.finance.transaction.EncumbranceRelationsHoldersBuilderTest;
 import org.folio.service.finance.transaction.EncumbranceServiceTest;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTest;

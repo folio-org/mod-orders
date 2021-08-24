@@ -3,12 +3,15 @@ package org.folio.orders.utils.validators;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
+import static org.folio.orders.utils.ErrorCodes.HOLDINGS_ID_AND_LOCATION_ID_IS_NULL_ERROR;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.getElectronicCostQuantity;
 import static org.folio.orders.utils.HelperUtils.getPhysicalCostQuantity;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForEresource;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForPhysical;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
+import static org.folio.rest.RestConstants.BAD_REQUEST;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 
@@ -17,8 +20,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletionException;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -128,6 +133,13 @@ public final class CompositePoLineValidationUtil {
     if (locations.stream().anyMatch(location -> HelperUtils.calculateTotalLocationQuantity(location) == 0)) {
       errors.add(ErrorCodes.ZERO_LOCATION_QTY);
     }
+    locations.forEach( location -> {
+      if (location.getHoldingId() == null && location.getLocationId() == null) {
+        errors.add(ErrorCodes.HOLDINGS_ID_AND_LOCATION_ID_IS_NULL_ERROR);
+      } else if (location.getHoldingId() != null && location.getLocationId() != null) {
+        errors.add(ErrorCodes.MAY_BE_LINK_TO_EITHER_HOLDING_OR_LOCATION_ERROR);
+      }
+    });
     return convertErrorCodesToErrors(compPOL, errors);
   }
 

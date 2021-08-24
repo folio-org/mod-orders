@@ -8,7 +8,6 @@ import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.HOLDINGS_ID_AND_LOCATION_ID_IS_NULL_ERROR;
 import static org.folio.orders.utils.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.orders.utils.ErrorCodes.ITEM_CREATION_FAILED;
 import static org.folio.orders.utils.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
@@ -21,11 +20,12 @@ import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.HelperUtils.extractId;
+import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.RestConstants.BAD_REQUEST;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 import static org.folio.rest.RestConstants.NOT_FOUND;
 
@@ -125,9 +125,9 @@ public class InventoryManager {
   public static final String DEFAULT_INSTANCE_STATUS_CODE = "temp";
   public static final String DEFAULT_LOAN_TYPE_NAME = "Can circulate";
 
-  private static final String HOLDINGS_RECORDS = "holdingsRecords";
-  private static final String HOLDINGS_RECORDS_BY_ID_ENDPOINT = "holdingsRecordsById";
-  private static final String INSTANCES = "instances";
+  public static final String HOLDINGS_RECORDS = "holdingsRecords";
+  public static final String HOLDINGS_RECORDS_BY_ID_ENDPOINT = "holdingsRecordsById";
+  public static final String INSTANCES = "instances";
 
   private static final String TENANT_SPECIFIC_KEY_FORMAT = "%s.%s.%s";
   private static final String LOOKUP_ITEM_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
@@ -341,11 +341,6 @@ public class InventoryManager {
   }
 
   public CompletableFuture<String> getOrCreateHoldingsRecord(String instanceId, Location location, RequestContext requestContext) {
-    if (location.getHoldingId() == null && location.getLocationId() == null) {
-      String msg = HOLDINGS_ID_AND_LOCATION_ID_IS_NULL_ERROR.getDescription();
-      Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
-      throw new CompletionException(new HttpException(BAD_REQUEST, error));
-    }
     if (location.getHoldingId() != null) {
       String holdingId = location.getHoldingId();
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
@@ -590,7 +585,7 @@ public class InventoryManager {
         }
         return materialTypeId.equals(typeId);
       })
-      .map(this::extractId)
+      .map(HelperUtils::extractId)
       .collect(toList());
   }
 
@@ -863,10 +858,6 @@ public class InventoryManager {
     }
   }
 
-   public String extractId(JsonObject json) {
-    return json.getString(ID);
-  }
-
   public Integer extractTotalRecords(JsonObject json) {
     return json.getInteger(TOTAL_RECORDS);
   }
@@ -876,21 +867,6 @@ public class InventoryManager {
     return getEntryId(LOAN_TYPES, MISSING_LOAN_TYPE, requestContext)
       .thenApply(jsonObject -> jsonObject.getString(LOAN_TYPES));
   }
-
-  /**
-   * Accepts response with collection of the elements and tries to extract the first one.
-   * In case the response is incorrect or empty, the {@link CompletionException} will be thrown
-   * @param response     {@link JsonObject} representing service response which should contain array of objects
-   * @param propertyName name of the property which holds array of objects
-   * @return the first element of the array
-   */
-  public JsonObject getFirstObjectFromResponse(JsonObject response, String propertyName) {
-    return Optional.ofNullable(response.getJsonArray(propertyName))
-      .flatMap(items -> items.stream().findFirst())
-      .map(JsonObject.class::cast)
-      .orElseThrow(() -> new CompletionException(new InventoryException(String.format("No records of '%s' can be found", propertyName))));
-  }
-
 
   /**
    * Caches id's in Vert.X Context and returns it by tenantId.entryType.key.

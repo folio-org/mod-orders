@@ -325,7 +325,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       Map<String, Piece> piecesWithItems) {
     // Handle the case when for some reason some items are not found
     if (items.size() < expectedItemIds.size()) {
-      List<String> foundItemIds = StreamEx.of(items).map(inventoryManager::extractId).toList();
+      List<String> foundItemIds = StreamEx.of(items).map(HelperUtils::extractId).toList();
 
       expectedItemIds.stream()
         .filter(id -> !foundItemIds.contains(id))

@@ -62,6 +62,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
 import org.folio.helper.AbstractHelper;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -985,4 +986,23 @@ public class HelperUtils {
     }
     return ConversionQueryBuilder.of().setBaseCurrency(cost.getCurrency()).setTermCurrency(systemCurrency).build();
   }
+
+  /**
+   * Accepts response with collection of the elements and tries to extract the first one.
+   * In case the response is incorrect or empty, the {@link CompletionException} will be thrown
+   * @param response     {@link JsonObject} representing service response which should contain array of objects
+   * @param propertyName name of the property which holds array of objects
+   * @return the first element of the array
+   */
+  public static JsonObject getFirstObjectFromResponse(JsonObject response, String propertyName) {
+    return Optional.ofNullable(response.getJsonArray(propertyName))
+      .flatMap(items -> items.stream().findFirst())
+      .map(JsonObject.class::cast)
+      .orElseThrow(() -> new CompletionException(new InventoryException(String.format("No records of '%s' can be found", propertyName))));
+  }
+
+  public static String extractId(JsonObject json) {
+    return json.getString(ID);
+  }
+
 }

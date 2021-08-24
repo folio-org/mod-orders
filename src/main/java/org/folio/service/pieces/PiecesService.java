@@ -280,7 +280,7 @@ public class PiecesService {
     return inventoryManager.searchInstancesByProducts(title.getProductIds(), requestContext)
       .thenCompose(instances -> {
         if (!instances.getJsonArray(INSTANCES).isEmpty()) {
-          String instanceId = inventoryManager.getFirstObjectFromResponse(instances, INSTANCES).getString(ID);
+          String instanceId = HelperUtils.getFirstObjectFromResponse(instances, INSTANCES).getString(ID);
           return completedFuture(instanceId);
         }
         return inventoryManager.createInstanceRecord(title, requestContext);
