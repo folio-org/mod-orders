@@ -103,20 +103,20 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       );
     }
 
-  private Map<String, Map<String, String>> groupHoldingsByPoLineIdOnCheckin(CheckinCollection checkinCollection) {
-    return StreamEx
-      .of(checkinCollection.getToBeCheckedIn())
-      .groupingBy(ToBeCheckedIn::getPoLineId,
-        mapping(ToBeCheckedIn::getCheckInPieces,
-          collectingAndThen(toList(),
-            lists -> StreamEx.of(lists)
-              .flatMap(List::stream)
-              .filter(checkInPiece -> checkInPiece.getHoldingId() != null)
-              .toMap(CheckInPiece::getId, CheckInPiece::getHoldingId)
-          )
-        )
-      );
-  }
+//  private Map<String, Map<String, String>> groupHoldingsByPoLineIdOnCheckin(CheckinCollection checkinCollection) {
+//    return StreamEx
+//      .of(checkinCollection.getToBeCheckedIn())
+//      .groupingBy(ToBeCheckedIn::getPoLineId,
+//        mapping(ToBeCheckedIn::getCheckInPieces,
+//          collectingAndThen(toList(),
+//            lists -> StreamEx.of(lists)
+//              .flatMap(List::stream)
+//              .filter(checkInPiece -> checkInPiece.getHoldingId() != null)
+//              .toMap(CheckInPiece::getId, CheckInPiece::getHoldingId)
+//          )
+//        )
+//      );
+//  }
 
   private ReceivingResults prepareResponseBody(CheckinCollection checkinCollection,
                                                Map<String, List<Piece>> piecesGroupedByPoLine) {

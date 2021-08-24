@@ -14,6 +14,7 @@ import org.folio.orders.events.handlers.CheckInOrderStatusChangeChangeHandlerTes
 import org.folio.orders.events.handlers.ReceiptStatusConsistencyTest;
 import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
 import org.folio.orders.utils.HelperUtilsTest;
+import org.folio.orders.utils.validators.CompositePoLineValidationUtilTest;
 import org.folio.orders.utils.validators.OngoingOrderValidatorTest;
 import org.folio.rest.core.RestClientTest;
 import org.folio.rest.impl.CheckinReceivingApiTest;
@@ -264,6 +265,11 @@ public class ApiTestSuite {
 
   @Nested
   class PoLineCommonUtilTestNested extends PoLineCommonUtilTest {
+
+  }
+
+  @Nested
+  class CompositePoLineValidationUtilNested extends CompositePoLineValidationUtilTest {
 
   }
 }
