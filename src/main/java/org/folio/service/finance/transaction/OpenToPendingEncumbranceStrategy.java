@@ -34,8 +34,10 @@ public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStra
   }
 
     @Override
-    public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, RequestContext requestContext) {
-      return getOrderEncumbrances(compPO, requestContext)
+    public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
+        RequestContext requestContext) {
+
+      return getOrderEncumbrances(compPO, poAndLinesFromStorage, requestContext)
                 .thenApply(this::makeEncumbrancesPending)
                 .thenCompose(transactions -> transactionSummariesService.updateOrderTransactionSummary(compPO.getId(), transactions.size(), requestContext)
                     .thenApply(vVoid -> transactions))
@@ -58,17 +60,19 @@ public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStra
   }
 
   public CompletableFuture<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(CompositePurchaseOrder compPO,
-      RequestContext requestContext) {
+      CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
     List<EncumbranceRelationsHolder> encumbranceRelationsHolders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
     return encumbranceRelationsHoldersBuilder.withBudgets(encumbranceRelationsHolders, requestContext)
       .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContext))
       .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContext))
       .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withConversion(holders, requestContext))
-      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, requestContext));
+      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, poFromStorage, requestContext));
   }
 
-  public CompletableFuture<List<Transaction>> getOrderEncumbrances(CompositePurchaseOrder compPo, RequestContext requestContext) {
-    return prepareEncumbranceRelationsHolder(compPo, requestContext)
+  public CompletableFuture<List<Transaction>> getOrderEncumbrances(CompositePurchaseOrder compPo,
+      CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+
+    return prepareEncumbranceRelationsHolder(compPo, poFromStorage, requestContext)
       .thenApply(ehList -> ehList.stream().collect(groupingBy(EncumbranceRelationsHolder::getCurrentFiscalYearId,
       mapping(EncumbranceRelationsHolder::getPoLine, toList()))))
       .thenCompose(poLinesByCurrentFy -> getEncumbrancesByPoLinesFromCurrentFy(poLinesByCurrentFy, requestContext))

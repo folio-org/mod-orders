@@ -38,7 +38,9 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
   }
 
   @Override
-  public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, RequestContext requestContext) {
+  public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
+      RequestContext requestContext) {
+
     if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
       // get the encumbrances to unrelease
       return encumbranceService.getOrderEncumbrancesToUnrelease(compPO, requestContext)

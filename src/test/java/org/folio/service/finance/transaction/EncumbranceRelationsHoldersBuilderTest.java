@@ -113,7 +113,8 @@ public class EncumbranceRelationsHoldersBuilderTest {
 
     distribution1 = new FundDistribution().withFundId(UUID.randomUUID().toString())
         .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
-        .withValue(100d);
+        .withValue(100d)
+        .withEncumbrance(UUID.randomUUID().toString());
 
     line1 = new CompositePoLine().withId(UUID.randomUUID().toString())
         .withCost(new Cost().withCurrency("USD").withListUnitPrice(68d).withQuantityPhysical(1))
@@ -122,7 +123,8 @@ public class EncumbranceRelationsHoldersBuilderTest {
 
     distribution2 = new FundDistribution().withFundId(UUID.randomUUID().toString())
         .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
-        .withValue(100d);
+        .withValue(100d)
+        .withEncumbrance(UUID.randomUUID().toString());
 
     line2 = new CompositePoLine().withId(UUID.randomUUID().toString())
         .withCost(new Cost().withCurrency("USD").withListUnitPrice(34.95).withQuantityPhysical(1))
@@ -132,7 +134,8 @@ public class EncumbranceRelationsHoldersBuilderTest {
     distribution3 = new FundDistribution().withFundId(UUID.randomUUID().toString())
         .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
         .withExpenseClassId(UUID.randomUUID().toString())
-        .withValue(100d);
+        .withValue(100d)
+        .withEncumbrance(UUID.randomUUID().toString());
 
     line3 = new CompositePoLine().withId(UUID.randomUUID().toString())
         .withCost(new Cost().withCurrency("EUR").withListUnitPrice(24.99).withQuantityPhysical(1))
@@ -265,18 +268,15 @@ public class EncumbranceRelationsHoldersBuilderTest {
                              .withAmountAwaitingPayment(20d)
             );
 
-    String fiscalYearId = UUID.randomUUID().toString();
-    holder1.withCurrentFiscalYearId(fiscalYearId);
-    holder2.withCurrentFiscalYearId(fiscalYearId);
     List<EncumbranceRelationsHolder> holders = new ArrayList<>();
     holders.add(holder1);
     holders.add(holder2);
 
-    when(encumbranceService.getCurrentPoLinesEncumbrances(anyList(), anyString(), any()))
-        .thenReturn(CompletableFuture.completedFuture(singletonList(encumbranceFromStorage)));
+    when(encumbranceService.getEncumbrancesByIds(anyList(), any()))
+      .thenReturn(CompletableFuture.completedFuture(singletonList(encumbranceFromStorage)));
     //When
     List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder
-        .withExistingTransactions(holders, requestContextMock).join();
+        .withExistingTransactions(holders, order, requestContextMock).join();
     //Then
     assertThat(resultHolders, hasSize(2));
     assertEquals(encumbranceFromStorage, holder1.getOldEncumbrance());
@@ -336,11 +336,12 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder2);
     holders.add(holder3);
 
-    when(encumbranceService.getCurrentPoLinesEncumbrances(anyList(), anyString(), any()))
-        .thenReturn(CompletableFuture.completedFuture(List.of(encumbranceFromStorage1, encumbranceFromStorage2)));
+    when(encumbranceService.getEncumbrancesByIds(anyList(), any()))
+      .thenReturn(CompletableFuture.completedFuture(List.of(encumbranceFromStorage1, encumbranceFromStorage2)));
 
     //When
-    List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, requestContextMock).join();
+    List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder
+      .withExistingTransactions(holders, order, requestContextMock).join();
     //Then
     assertThat(resultHolders, hasSize(5));
     assertNull(holder1.getOldEncumbrance());

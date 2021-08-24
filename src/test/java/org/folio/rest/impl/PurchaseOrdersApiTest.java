@@ -755,7 +755,7 @@ public class PurchaseOrdersApiTest {
     verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces);
 
     verifyEncumbrancesOnPoCreation(reqData, resp);
-    assertThat(getExistingOrderSummaries(), hasSize(1));
+    assertThat(getExistingOrderSummaries(), hasSize(0));
     verifyCalculatedData(resp);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
@@ -834,7 +834,7 @@ public class PurchaseOrdersApiTest {
     verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces);
 
     verifyEncumbrancesOnPoCreation(reqData, resp);
-    assertThat(getExistingOrderSummaries(), hasSize(1));
+    assertThat(getExistingOrderSummaries(), hasSize(0));
     verifyCalculatedData(resp);
 
     // MODORDERS-459 - check status changed to ONGOING
@@ -1129,7 +1129,7 @@ public class PurchaseOrdersApiTest {
 
     verifyOpenOrderPiecesCreated(createdItems, compPo.getCompositePoLines(), createdPieces);
     verifyEncumbrancesOnPoUpdate(compPo);
-    assertThat(getExistingOrderSummaries(), hasSize(2));
+    assertThat(getExistingOrderSummaries(), hasSize(1));
   }
 
   @Test
@@ -1600,7 +1600,8 @@ public class PurchaseOrdersApiTest {
     String actual = resp.getBody().as(Errors.class).getErrors().get(0).getMessage();
     logger.info(actual);
 
-    assertEquals(id, actual);
+    assertNotNull(actual);
+    assertTrue(actual.contains(id));
   }
 
   @Test
@@ -2464,7 +2465,7 @@ public class PurchaseOrdersApiTest {
       .as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
-    assertEquals(2, errors.getErrors().size());
+    assertEquals(1, errors.getErrors().size());
     assertNull(getInstancesSearches());
     assertNull(getItemsSearches());
   }
