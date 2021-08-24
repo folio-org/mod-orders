@@ -839,7 +839,7 @@
     },
     {
       "id": "holdings-storage",
-      "version": "4.2"
+      "version": "4.2 5.0"
     },
     {
       "id": "orders-storage.po-number",
@@ -847,7 +847,7 @@
     },
     {
       "id": "inventory",
-      "version": "10.5"
+      "version": "10.5 11.0"
     },
     {
       "id": "instance-types",
@@ -859,7 +859,7 @@
     },
     {
       "id": "item-storage",
-      "version": "8.5"
+      "version": "8.5 9.0"
     },
     {
       "id": "identifier-types",
