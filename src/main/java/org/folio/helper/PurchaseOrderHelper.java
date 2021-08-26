@@ -30,7 +30,7 @@ import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
-import static org.folio.orders.utils.HelperUtils.verifyLocationsAndPiecesConsistency;
+import static org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidator.verifyLocationsAndPiecesConsistency;
 import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isOrderClosing;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isOrderReopening;

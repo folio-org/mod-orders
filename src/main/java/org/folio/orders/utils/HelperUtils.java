@@ -52,6 +52,7 @@ import javax.money.Monetary;
 import javax.money.MonetaryAmount;
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.Path;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -898,38 +899,6 @@ public class HelperUtils {
   public static void verifyAllTitlesExist(Map<String, List<Title>> titles, Map<String, CompositePoLine> poLineById) {
     if (titles.size() < poLineById.size())
       throw new HttpException(400, TITLE_NOT_FOUND);
-  }
-
-  public static void verifyLocationsAndPiecesConsistency(List<CompositePoLine> poLines, PieceCollection pieces) {
-    if (CollectionUtils.isNotEmpty(poLines)) {
-      Map<String, Map<String, Integer>> numOfLocationsByPoLineIdAndLocationId = numOfLocationsByPoLineIdAndLocationId(poLines);
-      Map<String, Map<String, Integer>> numOfPiecesByPoLineIdAndLocationId = numOfPiecesByPoLineAndLocationId(pieces);
-
-      numOfPiecesByPoLineIdAndLocationId.forEach((poLineId, numOfPiecesByLocationId) -> numOfPiecesByLocationId
-        .forEach((locationId, quantity) -> {
-          Integer numOfPieces = 0;
-          if (numOfLocationsByPoLineIdAndLocationId.get(poLineId) != null && numOfLocationsByPoLineIdAndLocationId.get(poLineId).get(locationId) != null) {
-            numOfPieces = numOfLocationsByPoLineIdAndLocationId.get(poLineId).get(locationId);
-          }
-          if (quantity > numOfPieces) {
-            throw new HttpException(422, PIECES_TO_BE_DELETED.toError());
-          }
-        }));
-    }
-  }
-
-  public static Map<String, Map<String, Integer>> numOfPiecesByPoLineAndLocationId(PieceCollection pieces) {
-    return pieces.getPieces().stream()
-      .filter(piece -> Objects.nonNull(piece.getPoLineId())
-        && Objects.nonNull(piece.getLocationId()))
-      .collect(groupingBy(Piece::getPoLineId, groupingBy(Piece::getLocationId, summingInt(q -> 1))));
-  }
-
-  public static Map<String, Map<String, Integer>> numOfLocationsByPoLineIdAndLocationId(List<CompositePoLine> poLines) {
-    return poLines.stream()
-      .filter(line -> !line.getIsPackage() && line.getReceiptStatus() != CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED && !line.getCheckinItems())
-      .collect(toMap(CompositePoLine::getId, poLine -> Optional
-        .of(poLine.getLocations()).orElse(new ArrayList<>()).stream().distinct().collect(toMap(Location::getLocationId, Location::getQuantity))));
   }
 
   public static boolean isNotFound(Throwable t) {
