@@ -19,11 +19,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
 
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
@@ -37,6 +40,7 @@ import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 
 public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
+  private static final Logger logger = LogManager.getLogger(CheckinHelper.class);
   public static final String IS_ITEM_ORDER_CLOSED_PRESENT = "isItemOrderClosedPresent";
   /**
    * Map with PO line id as a key and value is map with piece id as a key and
@@ -62,33 +66,33 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   public CompletableFuture<ReceivingResults> checkinPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
-    return getPoLines(new ArrayList<>(checkinPieces.keySet()))
+    return getPoLines(new ArrayList<>(checkinPieces.keySet()), requestContext)
       .thenCompose(poLines -> removeForbiddenEntities(poLines, checkinPieces))
       .thenCompose(vVoid -> processCheckInPieces(checkinCollection, requestContext));
   }
 
   private CompletionStage<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
-    Map<String, Map<String, String>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnCheckin(checkinCollection);
+    Map<String, Map<String, Location>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnCheckin(checkinCollection);
     //Should be used in next stories MODORDERS-535
     //Map<String, Map<String, String>> pieceHoldingsGroupedByPoLine = groupHoldingsByPoLineIdOnCheckin(checkinCollection);
     // 1. Get piece records from storage
     return retrievePieceRecords(checkinPieces, requestContext)
       // 2. Filter locationId
-      .thenCompose(this::filterMissingLocations)
+      .thenCompose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
       // 3. Update items in the Inventory if required
-      .thenCompose(pieces -> updateInventoryItems(pieceLocationsGroupedByPoLine, pieces, requestContext))
+      .thenCompose(pieces -> updateInventoryItemsAndHoldings(pieceLocationsGroupedByPoLine, pieces, requestContext))
       // 4. Update piece records with checkIn details which do not have
       // associated item
       .thenApply(this::updatePieceRecordsWithoutItems)
       // 5. Update received piece records in the storage
       .thenCompose(this::storeUpdatedPieceRecords)
       // 6. Update PO Line status
-      .thenCompose(piecesGroupedByPoLine -> updateOrderAndPoLinesStatus(piecesGroupedByPoLine, checkinCollection))
+      .thenCompose(piecesGroupedByPoLine -> updateOrderAndPoLinesStatus(piecesGroupedByPoLine, checkinCollection, requestContext))
       // 7. Return results to the client
       .thenApply(piecesGroupedByPoLine -> prepareResponseBody(checkinCollection, piecesGroupedByPoLine));
   }
 
-  private Map<String, Map<String, String>> groupLocationsByPoLineIdOnCheckin(CheckinCollection checkinCollection) {
+  private Map<String, Map<String, Location>> groupLocationsByPoLineIdOnCheckin(CheckinCollection checkinCollection) {
     return StreamEx
       .of(checkinCollection.getToBeCheckedIn())
       .groupingBy(ToBeCheckedIn::getPoLineId,
@@ -96,27 +100,13 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
           collectingAndThen(toList(),
             lists -> StreamEx.of(lists)
               .flatMap(List::stream)
-              .filter(checkInPiece -> checkInPiece.getLocationId() != null)
-              .toMap(CheckInPiece::getId, CheckInPiece::getLocationId)
+              .toMap(CheckInPiece::getId, checkInPiece  ->
+                new Location().withHoldingId(checkInPiece.getHoldingId()).withLocationId(checkInPiece.getLocationId())
+              )
           )
         )
       );
     }
-
-//  private Map<String, Map<String, String>> groupHoldingsByPoLineIdOnCheckin(CheckinCollection checkinCollection) {
-//    return StreamEx
-//      .of(checkinCollection.getToBeCheckedIn())
-//      .groupingBy(ToBeCheckedIn::getPoLineId,
-//        mapping(ToBeCheckedIn::getCheckInPieces,
-//          collectingAndThen(toList(),
-//            lists -> StreamEx.of(lists)
-//              .flatMap(List::stream)
-//              .filter(checkInPiece -> checkInPiece.getHoldingId() != null)
-//              .toMap(CheckInPiece::getId, CheckInPiece::getHoldingId)
-//          )
-//        )
-//      );
-//  }
 
   private ReceivingResults prepareResponseBody(CheckinCollection checkinCollection,
                                                Map<String, List<Piece>> piecesGroupedByPoLine) {
@@ -169,13 +159,13 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   @Override
-  boolean isRevertToOnOrder(Piece piece) {
+  protected boolean isRevertToOnOrder(Piece piece) {
     return piece.getReceivingStatus() == Piece.ReceivingStatus.RECEIVED
       && inventoryManager.isOnOrderPieceStatus(piecesByLineId.get(piece.getPoLineId()).get(piece.getId()));
   }
 
   @Override
-  CompletableFuture<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
+  protected CompletableFuture<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
 
     CheckInPiece checkinPiece = piecesByLineId.get(piece.getPoLineId())
       .get(piece.getId());
@@ -211,7 +201,9 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     if (StringUtils.isNotEmpty(checkinPiece.getLocationId())) {
       piece.setLocationId(checkinPiece.getLocationId());
     }
-
+    if (StringUtils.isNotEmpty(checkinPiece.getHoldingId())) {
+      piece.setHoldingId(checkinPiece.getHoldingId());
+    }
     // Piece record might be received or rolled-back to Expected
     if (inventoryManager.isOnOrderPieceStatus(checkinPiece)) {
       piece.setReceivedDate(null);
@@ -223,7 +215,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   @Override
-  Map<String, List<Piece>> updatePieceRecordsWithoutItems(Map<String, List<Piece>> piecesGroupedByPoLine) {
+  protected Map<String, List<Piece>> updatePieceRecordsWithoutItems(Map<String, List<Piece>> piecesGroupedByPoLine) {
     StreamEx.ofValues(piecesGroupedByPoLine)
       .flatMap(List::stream)
       .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
@@ -245,11 +237,11 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   private CompletableFuture<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine,
-      CheckinCollection checkinCollection) {
+                            CheckinCollection checkinCollection, RequestContext requestContext) {
     List<String> poLineIdsForUpdatedPieces = getPoLineIdsForUpdatedPieces(piecesGroupedByPoLine);
     // Once all PO Lines are retrieved from storage check if receipt status
     // requires update and persist in storage
-    return getPoLines(poLineIdsForUpdatedPieces).thenCompose(poLines -> {
+    return getPoLines(poLineIdsForUpdatedPieces, requestContext).thenCompose(poLines -> {
       // Calculate expected status for each PO Line and update with new one if required
       // Skip status update if PO line status is Ongoing
       List<CompletableFuture<String>> futures = new ArrayList<>();
@@ -312,8 +304,12 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   @Override
-  String getLocationId(Piece piece) {
+  protected String getLocationId(Piece piece) {
     return checkinPieces.get(piece.getPoLineId()).get(piece.getId()).getLocationId();
   }
 
+  @Override
+  protected String getHoldingId(Piece piece) {
+    return checkinPieces.get(piece.getPoLineId()).get(piece.getId()).getHoldingId();
+  }
 }

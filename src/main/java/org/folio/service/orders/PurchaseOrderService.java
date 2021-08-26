@@ -1,10 +1,17 @@
 package org.folio.service.orders;
 
+import static java.util.stream.Collectors.toList;
+import static one.util.streamex.StreamEx.ofSubLists;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import org.folio.rest.acq.model.finance.Ledger;
+import org.folio.rest.acq.model.finance.LedgerCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -33,17 +40,23 @@ public class PurchaseOrderService {
             .withOffset(offset);
     return restClient.get(requestEntry, requestContext, PurchaseOrderCollection.class);
   }
+  public CompletableFuture<List<PurchaseOrder>> getPurchaseOrdersByIds(List<String> orderIds, RequestContext requestContext) {
 
-  public CompletableFuture<List<PurchaseOrder>> getPurchaseOrdersByIds(List<String> ids, RequestContext requestContext) {
-    String query = convertIdsToCqlQuery(ids, "id");
+    return collectResultsOnSuccess(ofSubLists(orderIds, MAX_IDS_FOR_GET_RQ)
+      .map(ids -> getOrdersChunk(ids, requestContext)).toList())
+      .thenApply(lists -> lists.stream()
+        .flatMap(Collection::stream)
+        .collect(toList()));
+  }
 
+  private CompletableFuture<List<PurchaseOrder>> getOrdersChunk(List<String> orderIds, RequestContext requestContext) {
+
+    String query = convertIdsToCqlQuery(orderIds);
     RequestEntry requestEntry = new RequestEntry(ENDPOINT)
       .withQuery(query)
-      .withLimit(Integer.MAX_VALUE)
-      .withOffset(0);
-
+      .withOffset(0)
+      .withLimit(MAX_IDS_FOR_GET_RQ);
     return restClient.get(requestEntry, requestContext, PurchaseOrderCollection.class)
       .thenApply(PurchaseOrderCollection::getPurchaseOrders);
   }
-
 }

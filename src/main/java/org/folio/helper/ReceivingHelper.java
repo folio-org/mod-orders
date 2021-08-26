@@ -21,8 +21,11 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
@@ -41,7 +44,7 @@ import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 
 public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
-
+  private static final Logger logger = LogManager.getLogger(ReceivingHelper.class);
   private static final String GET_RECEIVING_HISTORY_BY_QUERY = resourcesPath(RECEIVING_HISTORY) + SEARCH_PARAMS;
 
   /**
@@ -71,26 +74,26 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     receivingItems = null;
   }
 
-  public CompletableFuture<ReceivingResults> receiveItems(ReceivingCollection receivingCollection) {
-    return getPoLines(new ArrayList<>(receivingItems.keySet()))
+  public CompletableFuture<ReceivingResults> receiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
+    return getPoLines(new ArrayList<>(receivingItems.keySet()), requestContext)
       .thenCompose(poLines -> removeForbiddenEntities(poLines, receivingItems))
       .thenCompose(vVoid -> processReceiveItems(receivingCollection, getRequestContext()));
   }
 
   private CompletableFuture<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
-    Map<String, Map<String, String>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnReceiving(receivingCollection);
+    Map<String, Map<String, Location>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnReceiving(receivingCollection);
     // 1. Get piece records from storage
     return this.retrievePieceRecords(receivingItems, requestContext)
       // 2. Filter locationId
-      .thenCompose(this::filterMissingLocations)
+      .thenCompose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
       // 3. Update items in the Inventory if required
-      .thenCompose(pieces -> updateInventoryItems(pieceLocationsGroupedByPoLine, pieces, requestContext))
+      .thenCompose(pieces -> updateInventoryItemsAndHoldings(pieceLocationsGroupedByPoLine, pieces, requestContext))
       // 4. Update piece records with receiving details which do not have associated item
       .thenApply(this::updatePieceRecordsWithoutItems)
       // 5. Update received piece records in the storage
       .thenCompose(this::storeUpdatedPieceRecords)
       // 6. Update PO Line status
-      .thenCompose(this::updatePoLinesStatus)
+      .thenCompose(piecesByPoLineIds -> updatePoLinesStatus(piecesByPoLineIds, requestContext))
       // 7. Return results to the client
       .thenApply(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
   }
@@ -103,14 +106,14 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
    *          value
    * @return map passed as a parameter
    */
-  protected CompletableFuture<Map<String, List<Piece>>> updatePoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine) {
+  protected CompletableFuture<Map<String, List<Piece>>> updatePoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
     if (piecesGroupedByPoLine.isEmpty()) {
       return CompletableFuture.completedFuture(piecesGroupedByPoLine);
     } else {
       List<String> poLineIdsForUpdatedPieces = getPoLineIdsForUpdatedPieces(piecesGroupedByPoLine);
       // Once all PO Lines are retrieved from storage check if receipt status
       // requires update and persist in storage
-      return getPoLines(poLineIdsForUpdatedPieces).thenCompose(poLines -> {
+      return getPoLines(poLineIdsForUpdatedPieces, requestContext).thenCompose(poLines -> {
         // Calculate expected status for each PO Line and update with new one if required
         // Skip status update if PO line status is Ongoing
         List<CompletableFuture<String>> futures = new ArrayList<>();
@@ -157,7 +160,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     }
   }
 
-  private Map<String, Map<String, String>> groupLocationsByPoLineIdOnReceiving(ReceivingCollection receivingCollection) {
+  private Map<String, Map<String, Location>> groupLocationsByPoLineIdOnReceiving(ReceivingCollection receivingCollection) {
     return StreamEx
       .of(receivingCollection.getToBeReceived())
       .groupingBy(ToBeReceived::getPoLineId,
@@ -165,8 +168,9 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
           collectingAndThen(toList(),
             lists -> StreamEx.of(lists)
               .flatMap(List::stream)
-              .filter(receivedItem -> receivedItem.getLocationId() != null)
-              .toMap(ReceivedItem::getPieceId, ReceivedItem::getLocationId))));
+              .toMap(ReceivedItem::getPieceId, checkInPiece  ->
+                new Location().withHoldingId(checkInPiece.getHoldingId()).withLocationId(checkInPiece.getLocationId())
+              ))));
   }
 
   public CompletableFuture<ReceivingHistoryCollection> getReceivingHistory(int limit, int offset, String query) {
@@ -240,7 +244,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   }
 
   @Override
-  boolean isRevertToOnOrder(Piece piece) {
+  protected boolean isRevertToOnOrder(Piece piece) {
     return piece.getReceivingStatus() == Piece.ReceivingStatus.RECEIVED
         && inventoryManager
           .isOnOrderItemStatus(piecesByLineId.get(piece.getPoLineId()).get(piece.getId()));
@@ -248,7 +252,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
 
   @Override
-  CompletableFuture<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
+  protected CompletableFuture<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
     ReceivedItem receivedItem = piecesByLineId.get(piece.getPoLineId())
       .get(piece.getId());
     return inventoryManager
@@ -270,7 +274,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   }
 
   @Override
-  Map<String, List<Piece>> updatePieceRecordsWithoutItems(Map<String, List<Piece>> piecesGroupedByPoLine) {
+  protected Map<String, List<Piece>> updatePieceRecordsWithoutItems(Map<String, List<Piece>> piecesGroupedByPoLine) {
     StreamEx.ofValues(piecesGroupedByPoLine)
       .flatMap(List::stream)
       .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
@@ -299,7 +303,9 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     if (StringUtils.isNotEmpty(receivedItem.getLocationId())) {
       piece.setLocationId(receivedItem.getLocationId());
     }
-
+    if (StringUtils.isNotEmpty(receivedItem.getHoldingId())) {
+      piece.setHoldingId(receivedItem.getHoldingId());
+    }
     // Piece record might be received or rolled-back to Expected
     if (inventoryManager.isOnOrderItemStatus(receivedItem)) {
       piece.setReceivedDate(null);
@@ -311,8 +317,12 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   }
 
   @Override
-  String getLocationId(Piece piece) {
+  protected String getLocationId(Piece piece) {
     return receivingItems.get(piece.getPoLineId()).get(piece.getId()).getLocationId();
   }
 
+  @Override
+  protected String getHoldingId(Piece piece) {
+    return receivingItems.get(piece.getPoLineId()).get(piece.getId()).getHoldingId();
+  }
 }
