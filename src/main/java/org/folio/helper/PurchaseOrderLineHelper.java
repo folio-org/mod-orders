@@ -31,6 +31,7 @@ import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.orders.utils.validators.CompositePoLineValidationUtil.validatePoLine;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.CLOSED;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
@@ -387,6 +388,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   public CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine, RequestContext requestContext) {
     return getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId())
         .thenCompose(lineFromStorage -> getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId())
+          .thenApply(compOrder -> addLineToCompOrder(compOrder, lineFromStorage))
           .thenCompose(compOrder -> {
             validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage, compOrder);
             updateLocationsQuantity(compOrderLine.getLocations());
@@ -397,7 +399,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
                 .thenCompose(v -> validateAndNormalizeISBN(compOrderLine, requestContext))
                 .thenCompose(v -> validateAccessProviders(compOrderLine))
                 .thenCompose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine), requestContext))
-                .thenCompose(v -> processOpenedPoLine(compOrder, compOrderLine, lineFromStorage))
+                .thenCompose(v -> processPoLineEncumbrances(compOrder, compOrderLine, lineFromStorage))
                 .thenApply(v -> lineFromStorage);
           }))
         .thenCompose(lineFromStorage -> {
@@ -410,13 +412,26 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
 
   }
 
-  private CompletableFuture<Void> processOpenedPoLine(CompositePurchaseOrder compOrder, CompositePoLine compositePoLine,
+  private CompositePurchaseOrder addLineToCompOrder(CompositePurchaseOrder compOrder, JsonObject lineFromStorage) {
+    PoLine poLine = lineFromStorage.mapTo(PoLine.class);
+    poLine.setAlerts(null);
+    poLine.setReportingCodes(null);
+    CompositePoLine compPoLine = JsonObject.mapFrom(poLine).mapTo(CompositePoLine.class);
+    compOrder.getCompositePoLines().add(compPoLine);
+    return compOrder;
+  }
+
+  private CompletableFuture<Void> processPoLineEncumbrances(CompositePurchaseOrder compOrder, CompositePoLine compositePoLine,
       JsonObject lineFromStorage) {
     PoLine storagePoLine = lineFromStorage.mapTo(PoLine.class);
 
     if (isEncumbranceUpdateNeeded(compOrder, compositePoLine, storagePoLine)) {
-      EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN);
-      return strategy.processEncumbrances(compOrder.withCompositePoLines(Collections.singletonList(compositePoLine)), getRequestContext());
+      OrderWorkflowType workflowType = compOrder.getWorkflowStatus() == PENDING ?
+        OrderWorkflowType.PENDING_TO_PENDING : OrderWorkflowType.PENDING_TO_OPEN;
+      EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(workflowType);
+      CompositePurchaseOrder poFromStorage = JsonObject.mapFrom(compOrder).mapTo(CompositePurchaseOrder.class);
+      return strategy.processEncumbrances(compOrder.withCompositePoLines(Collections.singletonList(compositePoLine)),
+        poFromStorage, getRequestContext());
     }
     return completedFuture(null);
   }
@@ -425,7 +440,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     List<FundDistribution> requestFundDistros = compositePoLine.getFundDistribution();
     List<FundDistribution> storageFundDistros = storagePoLine.getFundDistribution();
 
-    if (compOrder.getWorkflowStatus() != OPEN || (requestFundDistros.size() + storageFundDistros.size()) == 0 ) {
+    if (compOrder.getWorkflowStatus() == CLOSED || (requestFundDistros.size() + storageFundDistros.size()) == 0 ) {
       return false;
     }
 

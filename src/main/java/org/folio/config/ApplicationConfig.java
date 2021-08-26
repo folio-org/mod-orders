@@ -1,5 +1,6 @@
 package org.folio.config;
 
+import org.folio.service.finance.transaction.PendingToPendingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.ProtectionService;
 import org.folio.service.AcquisitionsUnitsService;
@@ -208,6 +209,12 @@ public class ApplicationConfig {
       EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
     return new ClosedToOpenEncumbranceStrategy(encumbranceService, fundsDistributionService,
       budgetRestrictionService, encumbranceRelationsHoldersBuilder);
+  }
+
+  @Bean
+  EncumbranceWorkflowStrategy pendingToPendingEncumbranceStrategy(EncumbranceService encumbranceService,
+      EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
+    return new PendingToPendingEncumbranceStrategy(encumbranceService,  encumbranceRelationsHoldersBuilder);
   }
 
   @Bean

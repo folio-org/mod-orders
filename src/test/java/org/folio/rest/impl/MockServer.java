@@ -200,6 +200,8 @@ public class MockServer {
   public static final String ENCUMBRANCE_PATH = BASE_MOCK_DATA_PATH + "encumbrances/valid_encumbrances.json";
   public static final String ENCUMBRANCE_FOR_TAGS_PATH = BASE_MOCK_DATA_PATH + "encumbrances/encumbrance_for_tags_inheritance.json";
   public static final String HOLDINGS_OLD_NEW_PATH = BASE_MOCK_DATA_PATH + "holdingsRecords/holdingRecords-old-new.json";
+  public static final String LISTED_PRINT_MONOGRAPH_ENCUMBRANCES_PATH = BASE_MOCK_DATA_PATH +
+    "encumbrances/encumbrance_for_print_monograph.json";
 
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";
@@ -568,12 +570,12 @@ public class MockServer {
     router.delete(resourcePath(ACQUISITIONS_UNITS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_UNITS));
     router.delete(resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
     router.delete(resourcePath(ORDER_TEMPLATES)).handler(ctx -> handleDeleteGenericSubObj(ctx, ORDER_TEMPLATES));
+    router.delete(resourcePath(ENCUMBRANCES)).handler(ctx -> handleDeleteGenericSubObj(ctx, ENCUMBRANCES));
     router.delete(resourcePath(TITLES)).handler(ctx -> handleDeleteGenericSubObj(ctx, TITLES));
     router.delete(resourcePath(REASONS_FOR_CLOSURE)).handler(ctx -> handleDeleteGenericSubObj(ctx, REASONS_FOR_CLOSURE));
     router.delete(resourcePath(PREFIXES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PREFIXES));
     router.delete(resourcePath(SUFFIXES)).handler(ctx -> handleDeleteGenericSubObj(ctx, SUFFIXES));
     router.delete("/inventory/items/:id").handler(ctx -> handleDeleteGenericSubObj(ctx, ITEM_RECORDS));
-    router.delete(resourcePath(TRANSACTIONS_STORAGE_ENDPOINT)).handler(ctx -> handleDeleteGenericSubObj(ctx, TRANSACTIONS_STORAGE_ENDPOINT));
 
     router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
     return router;
@@ -2049,8 +2051,10 @@ public class MockServer {
     try {
       String query = ctx.request().params().get("query");
       String body;
-      if (query.contains("encumbrance.sourcePoLineId==bb66b269-76ed-4616-8da9-730d9b817247")) {
+      if (query.equals("id==(1e42ac94-8fba-4245-aa99-35af60108588)")) {
         body = getMockData(ENCUMBRANCE_FOR_TAGS_PATH);
+      } else if (query.equals("id==(eb506834-6c70-4239-8d1a-6414a5b08015 or eb506834-6c70-4239-8d1a-6414a5b08ac3 or 0466cb77-0344-43c6-85eb-0a64aa2934e5)")) {
+        body = getMockData(LISTED_PRINT_MONOGRAPH_ENCUMBRANCES_PATH);
       } else if (query.contains("encumbrance.sourcePoLineId == 50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1")) {
         // for testReopenOrderUnreleasesEncumbrancesUnlessInvoiceLineHasReleaseEncumbrance
         Transaction transaction1 = new Transaction()

@@ -58,6 +58,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.helper.AbstractHelper;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
+import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -113,7 +114,7 @@ public class HelperUtils {
   private static final String GET_PURCHASE_ORDER_BYID = resourceByIdPath(PURCHASE_ORDER) + URL_WITH_LANG_PARAM;
   private static final String GET_PURCHASE_ORDER_BYPONUMBER_QUERY = resourcesPath(PURCHASE_ORDER) + "?query=poNumber==%s&" + LANG + "=%s";
 
-  private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {} {}";
+  private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
   private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
   private static final String PROTECTED_AND_MODIFIED_FIELDS = "protectedAndModifiedFields";
   public static final String WORKFLOW_STATUS = "workflowStatus";
@@ -273,13 +274,11 @@ public class HelperUtils {
           }
         })
         .exceptionally(t -> {
-          logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, operation, url);
-          future.completeExceptionally(t);
+          handleEndpointException(operation, url, t, future, logger);
           return null;
         });
     } catch (Exception e) {
-      logger.error("Exception performing http request {} {} {}", e, operation, url);
-      future.completeExceptionally(e);
+      handleEndpointException(operation, url, e, future, logger);
     }
 
     return future;
@@ -656,13 +655,11 @@ public class HelperUtils {
           future.complete(body);
         })
         .exceptionally(t -> {
-          logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, HttpMethod.GET, endpoint);
-          future.completeExceptionally(t);
+          handleEndpointException(HttpMethod.GET, endpoint, t, future, logger);
           return null;
         });
     } catch (Exception e) {
-      logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, e, HttpMethod.GET, endpoint);
-      future.completeExceptionally(e);
+      handleEndpointException(HttpMethod.GET, endpoint, e, future, logger);
     }
     return future;
   }
@@ -721,13 +718,11 @@ public class HelperUtils {
         .thenAccept(HelperUtils::verifyResponse)
         .thenApply(future::complete)
         .exceptionally(t -> {
-          logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, HttpMethod.DELETE, endpoint);
-          future.completeExceptionally(t);
+          handleEndpointException(HttpMethod.DELETE, endpoint, t, future, logger);
           return null;
         });
     } catch (Exception e) {
-      logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, e, HttpMethod.DELETE, endpoint);
-      future.completeExceptionally(e);
+      handleEndpointException(HttpMethod.DELETE, endpoint, e, future, logger);
     }
 
     return future;
@@ -967,4 +962,13 @@ public class HelperUtils {
     return json.getString(ID);
   }
 
+  private static void handleEndpointException(HttpMethod operation, String endpoint, Throwable t,
+      CompletableFuture<?> future, Logger logger) {
+
+    Throwable cause = t instanceof CompletionException ? t.getCause() : t;
+    int code = cause instanceof HttpException ? ((HttpException)cause).getCode() : 500;
+    String message = String.format(EXCEPTION_CALLING_ENDPOINT_MSG, operation, endpoint, cause.getMessage());
+    logger.error(message, t);
+    future.completeExceptionally(new HttpException(code, message));
+  }
 }
