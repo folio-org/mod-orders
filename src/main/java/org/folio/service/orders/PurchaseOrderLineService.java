@@ -1,21 +1,27 @@
 package org.folio.service.orders;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 
@@ -83,5 +89,31 @@ public class PurchaseOrderLineService {
     return HelperUtils.operateOnPoLine(operation, JsonObject.mapFrom(line),
         restClient.getHttpClient(requestContext.getHeaders()), requestContext.getHeaders(), logger);
   }
+
+  /**
+   * Does nothing if the order already has lines.
+   * Otherwise, populates the order with its lines from storage, without fetching alerts and reporting codes.
+   */
+  public CompletableFuture<CompositePurchaseOrder> populateOrderLines(CompositePurchaseOrder compPO, RequestContext requestContext) {
+    if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
+      return getCompositePoLinesByOrderId(compPO.getId(), requestContext)
+        .thenApply(poLines -> {
+          PoLineCommonUtil.sortPoLinesByPoLineNumber(poLines);
+          return compPO.withCompositePoLines(poLines);
+        })
+        .thenApply(v -> compPO)
+        .exceptionally(t -> {
+          Parameter idParam = new Parameter().withKey("orderId").withValue(compPO.getId());
+          Parameter causeParam = new Parameter().withKey("cause").withValue(t.getCause().getMessage());
+          HttpException ex = new HttpException(500, ErrorCodes.ERROR_RETRIEVING_PO_LINES.toError()
+            .withParameters(List.of(idParam, causeParam)));
+          logger.error(ex.getMessage(), t);
+          throw new CompletionException(ex);
+        });
+    } else {
+      return completedFuture(compPO);
+    }
+  }
+
 }
 

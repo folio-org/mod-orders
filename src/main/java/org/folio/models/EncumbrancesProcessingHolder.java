@@ -11,12 +11,14 @@ public class EncumbrancesProcessingHolder {
   private List<Transaction> encumbrancesFromStorage;
   private List<Transaction> encumbrancesForRelease;
   private List<EncumbranceRelationsHolder> encumbrancesForCreate;
+  private List<Transaction> encumbrancesForDelete;
   private List<EncumbranceRelationsHolder> encumbrancesForUpdate;
   private List<Transaction> encumbrancesForUnrelease;
 
   public EncumbrancesProcessingHolder() {
     this.encumbrancesFromStorage = new ArrayList<>();
     this.encumbrancesForCreate = new ArrayList<>();
+    this.encumbrancesForDelete = new ArrayList<>();
     this.encumbrancesForUpdate = new ArrayList<>();
     this.encumbrancesForRelease = new ArrayList<>();
     this.encumbrancesForUnrelease = new ArrayList<>();
@@ -39,6 +41,11 @@ public class EncumbrancesProcessingHolder {
 
   public EncumbrancesProcessingHolder withEncumbrancesForCreate(List<EncumbranceRelationsHolder> encumbrancesForCreate) {
     this.encumbrancesForCreate = new ArrayList<>(encumbrancesForCreate);
+    return this;
+  }
+
+  public EncumbrancesProcessingHolder withEncumbrancesForDelete(List<Transaction> encumbrancesForDelete) {
+    this.encumbrancesForDelete = new ArrayList<>(encumbrancesForDelete);
     return this;
   }
 
@@ -66,6 +73,10 @@ public class EncumbrancesProcessingHolder {
     return encumbrancesForCreate;
   }
 
+  public List<Transaction> getEncumbrancesForDelete() {
+    return encumbrancesForDelete;
+  }
+
   public List<EncumbranceRelationsHolder> getEncumbrancesForUpdate() {
     return encumbrancesForUpdate;
   }
@@ -79,7 +90,8 @@ public class EncumbrancesProcessingHolder {
   }
 
   public int getAllEncumbrancesQuantity(){
-      return encumbrancesForCreate.size() + encumbrancesForRelease.size() + encumbrancesForUnrelease.size() + encumbrancesForUpdate.size();
+      return encumbrancesForCreate.size() + encumbrancesForDelete.size() + encumbrancesForUpdate.size() +
+        encumbrancesForRelease.size() +encumbrancesForUnrelease.size();
   }
 
   public List<Transaction> getEncumbrancesFromStorage() {

@@ -8,6 +8,7 @@ import org.folio.service.orders.OrderWorkflowType;
 
 public interface EncumbranceWorkflowStrategy {
 
-    CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, RequestContext requestContext);
+    CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
+      RequestContext requestContext);
     OrderWorkflowType getStrategyName();
 }

@@ -56,11 +56,14 @@ public class EncumbranceService {
 
   public CompletableFuture<Void> createOrUpdateEncumbrances(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
 
+    if (holder.getAllEncumbrancesQuantity() == 0)
+      return CompletableFuture.completedFuture(null);
     return transactionSummariesService.createOrUpdateOrderTransactionSummary(holder, requestContext)
         .thenCompose(v -> createEncumbrances(holder.getEncumbrancesForCreate(), requestContext))
         .thenCompose(v -> releaseEncumbrances(holder.getEncumbrancesForRelease(), requestContext))
         .thenCompose(v -> unreleaseEncumbrances(holder.getEncumbrancesForUnrelease(), requestContext))
-        .thenCompose(v -> updateEncumbrances(holder, requestContext));
+        .thenCompose(v -> updateEncumbrances(holder, requestContext))
+        .thenCompose(v -> deleteEncumbrances(holder.getEncumbrancesForDelete(), requestContext));
   }
 
   public CompletableFuture<Void> createEncumbrances(List<EncumbranceRelationsHolder> relationsHolders, RequestContext requestContext) {
@@ -132,6 +135,10 @@ public class EncumbranceService {
       .thenApply(TransactionCollection::getTransactions);
   }
 
+  public CompletableFuture<List<Transaction>> getEncumbrancesByIds(List<String> transactionIds, RequestContext requestContext) {
+    return transactionService.getTransactionsByIds(transactionIds, requestContext);
+  }
+
   public CompletableFuture<List<Transaction>> getCurrentPoLinesEncumbrances(List<CompositePoLine> poLines, String fiscalYearId, RequestContext requestContext) {
     String searchCriteria = "fiscalYearId==" + fiscalYearId;
     List<String> poLineIds = poLines.stream().map(CompositePoLine::getId).collect(toList());
@@ -165,16 +172,18 @@ public class EncumbranceService {
     return transactionService.updateTransactions(transactions, requestContext);
   }
 
+  public CompletableFuture<Void> deleteEncumbrances(List<Transaction> encumbrances, RequestContext requestContext) {
+    return transactionService.deleteTransactions(encumbrances, requestContext);
+  }
+
   public CompletableFuture<Void> deletePoLineEncumbrances(String lineId, RequestContext requestContext) {
     return getPoLineEncumbrances(lineId, requestContext)
-            .thenCompose(encumbrances -> releaseOrderEncumbrances(encumbrances, requestContext)
-                    .thenCompose(vVoid -> transactionService.deleteTransactions(encumbrances, requestContext)));
+      .thenCompose(encumbrances -> transactionService.deleteTransactions(encumbrances, requestContext));
   }
 
   public CompletableFuture<Void> deleteOrderEncumbrances(String orderId, RequestContext requestContext) {
     return getOrderEncumbrances(orderId, requestContext)
-            .thenCompose(encumbrances -> releaseOrderEncumbrances(encumbrances, requestContext)
-                    .thenCompose(vVoid -> transactionService.deleteTransactions(encumbrances, requestContext)));
+      .thenCompose(encumbrances -> transactionService.deleteTransactions(encumbrances, requestContext));
   }
 
   public static double calculateAmountEncumbered(FundDistribution distribution, MonetaryAmount estimatedPrice) {
@@ -203,15 +212,6 @@ public class EncumbranceService {
     return ENCUMBRANCE_CRITERIA
       + AND + "encumbrance.sourcePoLineId == " + polineId
       + AND + "encumbrance.status == " + Encumbrance.Status.RELEASED;
-  }
-
-  private CompletionStage<Void> releaseOrderEncumbrances(List<Transaction> trs, RequestContext requestContext) {
-    if (!trs.isEmpty()) {
-      String orderId = trs.get(0).getEncumbrance().getSourcePurchaseOrderId();
-      return transactionSummariesService.updateOrderTransactionSummary(orderId, trs.size(), requestContext)
-              .thenCompose(v -> releaseEncumbrances(trs, requestContext));
-    }
-    return CompletableFuture.completedFuture(null);
   }
 
   private CompletableFuture<List<Transaction>> getPoLineEncumbrancesToUnrelease(CompositePoLine poLine, RequestContext requestContext) {

@@ -103,7 +103,7 @@ public class EncumbranceServiceTest {
   }
 
   @Test
-  void shouldReleaseEncumbrancesBeforeDeletionWhenDeleteOrderEncumbrances() {
+  void shouldSimplyDeleteWhenDeleteOrderEncumbrances() {
     //Given
 
     String orderId = UUID.randomUUID().toString();
@@ -118,22 +118,18 @@ public class EncumbranceServiceTest {
     transactions.add(encumbrance2);
     TransactionCollection transactionCollection = new TransactionCollection().withTransactions(transactions).withTotalRecords(1);
     doReturn(CompletableFuture.completedFuture(transactionCollection)).when(transactionService).getTransactions(anyString(), anyInt(), anyInt(), eq(requestContextMock));
-    doReturn(CompletableFuture.completedFuture(null)).when(transactionService).updateTransactions(any(), eq(requestContextMock));
-    doReturn(CompletableFuture.completedFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(anyString(), anyInt(), any());
     doReturn(CompletableFuture.completedFuture(null)).when(transactionService).deleteTransactions(any(), eq(requestContextMock));
     //When
     encumbranceService.deleteOrderEncumbrances(orderId, requestContextMock).join();
 
     //Then
-    InOrder inOrder = inOrder(transactionSummariesService, transactionService);
-    inOrder.verify(transactionSummariesService).updateOrderTransactionSummary(eq(orderId), eq(2), eq(requestContextMock));
-    inOrder.verify(transactionService).updateTransactions(any(), eq(requestContextMock));
+    InOrder inOrder = inOrder(transactionService);
     inOrder.verify(transactionService).deleteTransactions(any(), eq(requestContextMock));
 
   }
 
   @Test
-  void shouldReleaseEncumbrancesBeforeDeletionWhenDeletePoLineEncumbrances() {
+  void shouldSimplyDeleteWhenDeletePoLineEncumbrances() {
     //Given
 
     String lineId = UUID.randomUUID().toString();
@@ -153,16 +149,12 @@ public class EncumbranceServiceTest {
     transactions.add(encumbrance2);
     TransactionCollection transactionCollection = new TransactionCollection().withTransactions(transactions).withTotalRecords(1);
     doReturn(CompletableFuture.completedFuture(transactionCollection)).when(transactionService).getTransactions(anyString(), anyInt(), anyInt(), any());
-    doReturn(CompletableFuture.completedFuture(null)).when(transactionService).updateTransactions(any(), any());
-    doReturn(CompletableFuture.completedFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(anyString(), anyInt(), any());
     doReturn(CompletableFuture.completedFuture(null)).when(transactionService).deleteTransactions(any(), any());
     //When
     encumbranceService.deletePoLineEncumbrances(lineId, requestContextMock).join();
 
     //Then
-    InOrder inOrder = inOrder(transactionSummariesService, transactionService);
-    inOrder.verify(transactionSummariesService).updateOrderTransactionSummary(eq(orderId), eq(2), eq(requestContextMock));
-    inOrder.verify(transactionService).updateTransactions(any(), eq(requestContextMock));
+    InOrder inOrder = inOrder(transactionService);
     inOrder.verify(transactionService).deleteTransactions(any(), eq(requestContextMock));
 
   }

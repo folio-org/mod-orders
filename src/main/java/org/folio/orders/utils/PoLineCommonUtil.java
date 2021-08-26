@@ -99,8 +99,12 @@ public final class PoLineCommonUtil {
   }
 
   private static int comparePoLinesByPoLineNumber(CompositePoLine poLine1, CompositePoLine poLine2) {
-    String poLineNumberSuffix1 = poLine1.getPoLineNumber().split(DASH_SEPARATOR)[1];
-    String poLineNumberSuffix2 = poLine2.getPoLineNumber().split(DASH_SEPARATOR)[1];
+    String n1 = poLine1.getPoLineNumber();
+    String n2 = poLine2.getPoLineNumber();
+    if (n1 == null || n2 == null)
+      return 0;
+    String poLineNumberSuffix1 = n1.split(DASH_SEPARATOR)[1];
+    String poLineNumberSuffix2 = n2.split(DASH_SEPARATOR)[1];
     return Integer.parseInt(poLineNumberSuffix1) - Integer.parseInt(poLineNumberSuffix2);
   }
 }

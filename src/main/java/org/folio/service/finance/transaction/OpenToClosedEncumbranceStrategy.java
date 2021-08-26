@@ -18,7 +18,9 @@ public class OpenToClosedEncumbranceStrategy implements EncumbranceWorkflowStrat
   }
 
   @Override
-  public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, RequestContext requestContext) {
+  public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
+      RequestContext requestContext) {
+
     EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
     if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
       return encumbranceService.getOrderEncumbrances(compPO.getId(), requestContext)

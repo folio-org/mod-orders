@@ -1,0 +1,83 @@
+{
+  "transactions": [
+    {
+      "id": "eb506834-6c70-4239-8d1a-6414a5b08ac3",
+      "amount": 10,
+      "source": "PoLine",
+      "currency": "USD",
+      "metadata": {
+        "createdDate": "2020-05-29T05:39:34.175",
+        "updatedDate": "2020-05-29T05:39:34.175+0000",
+        "createdByUserId": "00000001-1111-5555-9999-999999999999",
+        "updatedByUserId": "00000001-1111-5555-9999-999999999999"
+      },
+      "fromFundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
+      "encumbrance": {
+        "status": "Unreleased",
+        "orderType": "One-Time",
+        "reEncumber": false,
+        "subscription": false,
+        "amountExpended": 0,
+        "sourcePoLineId": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47",
+        "amountAwaitingPayment": 0,
+        "sourcePurchaseOrderId": "00000000-1111-2222-8888-999999999999",
+        "initialAmountEncumbered": 10
+      },
+      "fiscalYearId": "ac2164c7-ba3d-1bc2-a12c-e35ceccbfaf2",
+      "transactionType": "Encumbrance"
+    },
+    {
+      "id": "0466cb77-0344-43c6-85eb-0a64aa2934e5",
+      "amount": 10,
+      "source": "PoLine",
+      "currency": "USD",
+      "metadata": {
+        "createdDate": "2020-05-29T05:39:34.175",
+        "updatedDate": "2020-05-29T05:39:34.175+0000",
+        "createdByUserId": "00000001-1111-5555-9999-999999999999",
+        "updatedByUserId": "00000001-1111-5555-9999-999999999999"
+      },
+      "fromFundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
+      "encumbrance": {
+        "status": "Unreleased",
+        "orderType": "One-Time",
+        "reEncumber": false,
+        "subscription": false,
+        "amountExpended": 0,
+        "sourcePoLineId": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47",
+        "amountAwaitingPayment": 0,
+        "sourcePurchaseOrderId": "00000000-1111-2222-8888-999999999999",
+        "initialAmountEncumbered": 10
+      },
+      "fiscalYearId": "ac2164c7-ba3d-1bc2-a12c-e35ceccbfaf2",
+      "transactionType": "Encumbrance"
+    },
+    {
+      "id": "eb506834-6c70-4239-8d1a-6414a5b08015",
+      "amount": 10,
+      "source": "PoLine",
+      "currency": "USD",
+      "metadata": {
+        "createdDate": "2020-05-29T05:39:34.175",
+        "updatedDate": "2020-05-29T05:39:34.175+0000",
+        "createdByUserId": "00000001-1111-5555-9999-999999999999",
+        "updatedByUserId": "00000001-1111-5555-9999-999999999999"
+      },
+      "fromFundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
+      "encumbrance": {
+        "status": "Unreleased",
+        "orderType": "One-Time",
+        "reEncumber": false,
+        "subscription": false,
+        "amountExpended": 0,
+        "sourcePoLineId": "c0d08448-347b-418a-8c2f-5fb50248d67e",
+        "amountAwaitingPayment": 0,
+        "sourcePurchaseOrderId": "00000000-1111-2222-8888-999999999999",
+        "initialAmountEncumbered": 10
+      },
+      "fiscalYearId": "ac2164c7-ba3d-1bc2-a12c-e35ceccbfaf2",
+      "transactionType": "Encumbrance"
+    }
+  ],
+  "totalRecords": 3
+}

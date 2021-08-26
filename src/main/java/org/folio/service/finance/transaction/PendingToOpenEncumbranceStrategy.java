@@ -1,7 +1,6 @@
 package org.folio.service.finance.transaction;
 
 import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.FundDistributionUtils.isFundDistributionsPresent;
 import static org.folio.orders.utils.FundDistributionUtils.validateFundDistributionTotal;
 
 import java.util.List;
@@ -35,23 +34,22 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
     }
 
     @Override
-    public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, RequestContext requestContext) {
+    public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
+        RequestContext requestContext) {
 
-        if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
-            validateFundDistributionTotal(compPO.getCompositePoLines());
-            List<EncumbranceRelationsHolder> encumbranceRelationsHolders = encumbranceRelationsHoldersBuilder
-              .buildBaseHolders(compPO);
-            return encumbranceRelationsHoldersBuilder.withBudgets(encumbranceRelationsHolders, requestContext)
-              .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContext))
-              .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContext))
-              .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withConversion(holders, requestContext))
-              .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, requestContext))
-              .thenApply(fundsDistributionService::distributeFunds)
-              .thenAccept(budgetRestrictionService::checkEncumbranceRestrictions)
-              .thenApply(aVoid -> distributeHoldersByOperation(encumbranceRelationsHolders))
-              .thenCompose(holder -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext));
-        }
-        return CompletableFuture.completedFuture(null);
+      validateFundDistributionTotal(compPO.getCompositePoLines());
+      List<EncumbranceRelationsHolder> encumbranceRelationsHolders = encumbranceRelationsHoldersBuilder
+        .buildBaseHolders(compPO);
+      return encumbranceRelationsHoldersBuilder.withBudgets(encumbranceRelationsHolders, requestContext)
+        .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContext))
+        .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContext))
+        .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withConversion(holders, requestContext))
+        .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, poAndLinesFromStorage,
+          requestContext))
+        .thenApply(fundsDistributionService::distributeFunds)
+        .thenAccept(budgetRestrictionService::checkEncumbranceRestrictions)
+        .thenApply(aVoid -> distributeHoldersByOperation(encumbranceRelationsHolders))
+        .thenCompose(holder -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext));
     }
 
     private EncumbrancesProcessingHolder distributeHoldersByOperation(
@@ -59,7 +57,7 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
       EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
       holder.withEncumbrancesForCreate(getToBeCreatedHolders(encumbranceRelationsHolders));
       holder.withEncumbrancesForUpdate(getToBeUpdatedHolders(encumbranceRelationsHolders));
-      holder.withEncumbrancesForRelease(getToBeReleasedHolders(encumbranceRelationsHolders));
+      holder.withEncumbrancesForDelete(getTransactionsToDelete(encumbranceRelationsHolders));
       holder.withEncumbrancesFromStorage(encumbranceRelationsHolders.stream()
                                              .map(EncumbranceRelationsHolder::getOldEncumbrance)
                                              .filter(Objects::nonNull)
@@ -67,7 +65,7 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
       return holder;
     }
 
-    private List<Transaction> getToBeReleasedHolders(List<EncumbranceRelationsHolder> encumbranceRelationsHolders) {
+    private List<Transaction> getTransactionsToDelete(List<EncumbranceRelationsHolder> encumbranceRelationsHolders) {
       return encumbranceRelationsHolders.stream()
         .filter(holder -> Objects.isNull(holder.getNewEncumbrance()))
         .map(EncumbranceRelationsHolder::getOldEncumbrance)

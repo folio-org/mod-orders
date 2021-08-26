@@ -29,6 +29,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Ongoing;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.finance.FiscalYearService;
@@ -91,18 +92,23 @@ public class EncumbranceRelationsHoldersBuilder {
     return holder.withNewEncumbrance(transaction);
   }
 
-  public CompletableFuture<List<EncumbranceRelationsHolder>> withExistingTransactions(List<EncumbranceRelationsHolder> encumbranceHolders,
-                                                                                      RequestContext requestContext) {
-    return encumbranceHolders.stream()
-      .filter(holder -> Objects.nonNull(holder.getPurchaseOrder()))
-      .findFirst()
-      .map(holder -> encumbranceService.getCurrentPoLinesEncumbrances(holder.getPurchaseOrder().getCompositePoLines(), holder.getCurrentFiscalYearId(), requestContext)
-        .thenApply(transactions -> {
-          mapHoldersToTransactions(encumbranceHolders, transactions);
-          return withToBeReleasedHolders(encumbranceHolders, transactions);
-        }))
-      .orElseGet(() -> CompletableFuture.completedFuture(encumbranceHolders));
+  public CompletableFuture<List<EncumbranceRelationsHolder>> withExistingTransactions(
+      List<EncumbranceRelationsHolder> encumbranceHolders, CompositePurchaseOrder poAndLinesFromStorage,
+      RequestContext requestContext) {
 
+    if (poAndLinesFromStorage == null)
+      return CompletableFuture.completedFuture(encumbranceHolders);
+    List<String> transactionIds = poAndLinesFromStorage.getCompositePoLines().stream()
+      .flatMap(poLine -> poLine.getFundDistribution().stream().map(FundDistribution::getEncumbrance))
+      .filter(Objects::nonNull)
+      .collect(Collectors.toList());
+    if (transactionIds.isEmpty())
+      return CompletableFuture.completedFuture(encumbranceHolders);
+    return encumbranceService.getEncumbrancesByIds(transactionIds, requestContext)
+      .thenApply(transactions -> {
+        mapHoldersToTransactions(encumbranceHolders, transactions);
+        return withToBeReleasedHolders(encumbranceHolders, transactions);
+      });
   }
 
   public List<EncumbranceRelationsHolder> withKnownTransactions(
