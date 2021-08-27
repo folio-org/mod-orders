@@ -629,6 +629,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
           return openOrderUpdateInventory(linesIdTitles, compPO, requestContext);
         })
+      .thenCompose(ok -> openOrderUpdatePoLinesSummary(compPO.getCompositePoLines()))
       .thenApply(aVoid -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN))
       .thenCompose(strategy -> strategy.processEncumbrances(compPO, poFromStorage, requestContext))
       .thenAccept(ok -> changePoLineStatuses(compPO))

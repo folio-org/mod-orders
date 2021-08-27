@@ -309,7 +309,7 @@
     },
     {
       "id": "receiving",
-      "version": "1.1",
+      "version": "1.2",
       "handlers": [
         {
           "methods": [
@@ -384,7 +384,7 @@
     },
     {
       "id": "pieces",
-      "version": "2.0",
+      "version": "2.1",
       "handlers": [
         {
           "methods": ["GET"],
@@ -1448,6 +1448,7 @@
         "inventory.items.item.delete",
         "inventory-storage.instance-types.collection.get",
         "inventory-storage.instance-statuses.collection.get",
+        "inventory-storage.holdings.item.get",
         "inventory-storage.holdings.item.post",
         "inventory-storage.holdings.item.delete",
         "inventory-storage.holdings.collection.delete",
@@ -1514,6 +1515,7 @@
         "inventory.items.collection.get",
         "inventory-storage.instance-types.collection.get",
         "inventory-storage.instance-statuses.collection.get",
+        "inventory-storage.holdings.item.get",
         "inventory-storage.holdings.item.post",
         "inventory-storage.holdings.collection.get",
         "inventory-storage.items.collection.get",
