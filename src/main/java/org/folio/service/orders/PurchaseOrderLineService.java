@@ -2,8 +2,12 @@ package org.folio.service.orders;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
+import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -48,6 +52,15 @@ public class PurchaseOrderLineService {
   public CompletableFuture<PoLine> getOrderLineById(String orderLineId, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(orderLineId);
     return restClient.get(requestEntry, requestContext, PoLine.class);
+  }
+
+  public CompletableFuture<List<PoLine>> getOrderLinesByIds(List<String> orderLineIds, RequestContext requestContext) {
+
+    return collectResultsOnSuccess(ofSubLists(orderLineIds, MAX_IDS_FOR_GET_RQ)
+      .map(ids -> getOrderLinesChunk(ids, requestContext)).toList())
+      .thenApply(lists -> lists.stream()
+        .flatMap(Collection::stream)
+        .collect(toList()));
   }
 
   public CompletableFuture<Void> updateOrderLine(PoLine poLine, RequestContext requestContext) {
@@ -115,5 +128,15 @@ public class PurchaseOrderLineService {
     }
   }
 
+  private CompletableFuture<List<PoLine>> getOrderLinesChunk(List<String> orderLineIds, RequestContext requestContext) {
+
+    String query = convertIdsToCqlQuery(orderLineIds);
+    RequestEntry requestEntry = new RequestEntry(ENDPOINT)
+      .withQuery(query)
+      .withOffset(0)
+      .withLimit(MAX_IDS_FOR_GET_RQ);
+    return restClient.get(requestEntry, requestContext, PoLineCollection.class)
+      .thenApply(PoLineCollection::getPoLines);
+  }
 }
 

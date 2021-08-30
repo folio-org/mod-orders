@@ -6,13 +6,15 @@ import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
 import static org.folio.TestConfig.getFirstContextFromVertx;
 import static org.folio.TestConfig.getVertx;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -36,6 +38,7 @@ import java.util.concurrent.TimeoutException;
 import io.vertx.core.Context;
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.ProtectedOperationType;
@@ -132,12 +135,13 @@ public class PieceServiceTest {
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
 
-    when(inventoryManager.getOrCreateHoldingsRecord(anyString(), anyString(), eq(requestContext))).thenReturn(completedFuture(HOLDING_ID));
+    when(inventoryManager.getOrCreateHoldingsRecord(anyString(), any(Location.class), eq(requestContext))).thenReturn(completedFuture(HOLDING_ID));
     //When
-    CompletableFuture<String> result = piecesService.handleHoldingsRecord(line, piece.getLocationId(), title.getInstanceId(), requestContext);
+    Location location = new Location().withLocationId(piece.getLocationId());
+    CompletableFuture<String> result = piecesService.handleHoldingsRecord(line, location, title.getInstanceId(), requestContext);
     String actHoldingId = result.get();
     //Then
-    verify(inventoryManager).getOrCreateHoldingsRecord(eq(title.getInstanceId()), eq(piece.getLocationId()), eq(requestContext));
+    verify(inventoryManager).getOrCreateHoldingsRecord(eq(title.getInstanceId()), eq(location), eq(requestContext));
     assertEquals(HOLDING_ID, actHoldingId);
   }
 
@@ -147,7 +151,8 @@ public class PieceServiceTest {
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     //When
-    CompletableFuture<String> result = piecesService.handleHoldingsRecord(null, piece.getLocationId(), title.getInstanceId(), requestContext);
+    Location location = new Location().withLocationId(piece.getLocationId());
+    CompletableFuture<String> result = piecesService.handleHoldingsRecord(null, location, title.getInstanceId(), requestContext);
     //Then
     assertTrue(result.isCompletedExceptionally());
   }
@@ -164,14 +169,15 @@ public class PieceServiceTest {
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
 
     doReturn(completedFuture(HOLDING_ID))
-      .when(inventoryManager).getOrCreateHoldingsRecord(anyString(), anyString(), eq(requestContext));
+      .when(inventoryManager).getOrCreateHoldingsRecord(anyString(), any(Location.class), eq(requestContext));
     //When
+    Location location = new Location().withLocationId(piece.getLocationId());
     CompletableFuture<String> result =
-      piecesService.handleHoldingsRecord(line, piece.getLocationId(), title.getInstanceId(), requestContext);
+      piecesService.handleHoldingsRecord(line, location, title.getInstanceId(), requestContext);
 
     //Then
     String holdingId = result.get();
-    verify(inventoryManager,never()).getOrCreateHoldingsRecord(title.getInstanceId(), piece.getLocationId(), requestContext);
+    verify(inventoryManager,never()).getOrCreateHoldingsRecord(title.getInstanceId(), location, requestContext);
     assertNull(holdingId);
   }
 
@@ -254,7 +260,7 @@ public class PieceServiceTest {
     //given
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-    Piece piece = createPiece(line, title);
+    Piece piece = createPieceWithLocationId(line, title);
     doReturn(completedFuture(null))
       .when(inventoryManager).updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId(), requestContext);
     //When
@@ -294,9 +300,10 @@ public class PieceServiceTest {
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     line.setIsPackage(true);
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-    Piece piece = createPiece(line, title);
+    Piece piece = createPieceWithLocationId(line, title);
     String itemId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
+    Location location = new Location().withLocationId(piece.getLocationId());
 
     doReturn(completedFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
     doReturn(completedFuture(null)).when(titlesService).updateTitle(title, requestContext);
@@ -304,7 +311,7 @@ public class PieceServiceTest {
     doReturn(completedFuture(title.withInstanceId(UUID.randomUUID().toString())))
       .when(piecesService).handleInstanceRecord(any(Title.class), eq(requestContext));
     doReturn(completedFuture(holdingId))
-      .when(piecesService).handleHoldingsRecord(any(CompositePoLine.class), eq(piece.getLocationId()), eq(title.getInstanceId()), eq(requestContext));
+      .when(piecesService).handleHoldingsRecord(any(CompositePoLine.class), eq(location), eq(title.getInstanceId()), eq(requestContext));
     doReturn(completedFuture(itemId)).when(piecesService).createItemRecord(any(CompositePoLine.class), eq(holdingId), eq(requestContext));
 
     doReturn(completedFuture(itemId)).when(inventoryManager).createInstanceRecord(eq(title), eq(requestContext));
@@ -372,11 +379,43 @@ public class PieceServiceTest {
     verify(restClient, times(1)).delete(any(RequestEntry.class), eq(requestContext));
   }
 
-  private Piece createPiece(CompositePoLine line, Title title) {
+  @Test
+  void testShouldUpdateInventoryPositiveCaseIfLieIsPackageAndPieceContainsHoldingId() throws ExecutionException, InterruptedException {
+    //given
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    String holdingId = UUID.randomUUID().toString();
+    String itemId = UUID.randomUUID().toString();
+    line.getLocations().get(0).withLocationId(null).withHoldingId(holdingId);
+    line.setIsPackage(true);
+
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    Piece piece = createPieceWithHoldingId(line, title);
+
+    doReturn(completedFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
+    doReturn(completedFuture(null)).when(titlesService).updateTitle(title, requestContext);
+    doReturn(completedFuture(itemId)).when(piecesService).createItemRecord(line, holdingId, requestContext);
+
+      //When
+    Piece result = piecesService.updateInventory(line, piece, requestContext).get();
+    //Then
+    assertEquals(piece.getId(), result.getId());
+    assertEquals(piece.getHoldingId(), result.getHoldingId());
+    assertNull(result.getTitleId());
+  }
+
+  private Piece createPieceWithLocationId(CompositePoLine line, Title title) {
     return new Piece().withId(UUID.randomUUID().toString())
       .withTitleId(title.getId())
       .withPoLineId(line.getId())
       .withLocationId(line.getLocations().get(0).getLocationId())
+      .withFormat(Piece.Format.PHYSICAL);
+  }
+
+  private Piece createPieceWithHoldingId(CompositePoLine line, Title title) {
+    return new Piece().withId(UUID.randomUUID().toString())
+      .withTitleId(title.getId())
+      .withPoLineId(line.getId())
+      .withHoldingId(line.getLocations().get(0).getHoldingId())
       .withFormat(Piece.Format.PHYSICAL);
   }
 

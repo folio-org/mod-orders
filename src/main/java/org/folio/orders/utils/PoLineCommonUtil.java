@@ -1,12 +1,19 @@
 package org.folio.orders.utils;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
+
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
@@ -106,5 +113,39 @@ public final class PoLineCommonUtil {
     String poLineNumberSuffix1 = n1.split(DASH_SEPARATOR)[1];
     String poLineNumberSuffix2 = n2.split(DASH_SEPARATOR)[1];
     return Integer.parseInt(poLineNumberSuffix1) - Integer.parseInt(poLineNumberSuffix2);
+  }
+
+  /**
+   * Group all PO Line's locations for which the holding should be created by location identifier
+   * @param compPOL PO line with locations to group
+   * @return map of grouped locations where key is location id and value is list of locations with the same id
+   */
+  public static Map<String, List<Location>> groupLocationsByLocationId(CompositePoLine compPOL) {
+    if (CollectionUtils.isEmpty(compPOL.getLocations())) {
+      return Collections.emptyMap();
+    }
+
+    return compPOL.getLocations()
+                  .stream()
+                  .filter(location -> Objects.nonNull(location.getLocationId()))
+                  .filter(location -> isHoldingCreationRequiredForLocation(compPOL, location))
+                  .collect(Collectors.groupingBy(Location::getLocationId));
+  }
+
+  /**
+   * Group all PO Line's locations for which the holding should be created by location identifier
+   * @param compPOL PO line with locations to group
+   * @return map of grouped locations where key is holding id and value is list of locations with the same id
+   */
+  public static Map<String, List<Location>> groupLocationsByHoldingId(CompositePoLine compPOL) {
+    if (CollectionUtils.isEmpty(compPOL.getLocations())) {
+      return Collections.emptyMap();
+    }
+
+    return compPOL.getLocations()
+      .stream()
+      .filter(location -> Objects.nonNull(location.getHoldingId()))
+      .filter(location -> isHoldingCreationRequiredForLocation(compPOL, location))
+      .collect(Collectors.groupingBy(Location::getHoldingId));
   }
 }

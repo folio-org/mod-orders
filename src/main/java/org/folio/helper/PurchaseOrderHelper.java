@@ -30,7 +30,7 @@ import static org.folio.orders.utils.HelperUtils.getPurchaseOrderById;
 import static org.folio.orders.utils.HelperUtils.handleDeleteRequest;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
-import static org.folio.orders.utils.HelperUtils.verifyLocationsAndPiecesConsistency;
+import static org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidator.verifyLocationsAndPiecesConsistency;
 import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isOrderClosing;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isOrderReopening;
@@ -629,6 +629,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
           return openOrderUpdateInventory(linesIdTitles, compPO, requestContext);
         })
+      .thenCompose(ok -> openOrderUpdatePoLinesSummary(compPO.getCompositePoLines()))
       .thenApply(aVoid -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN))
       .thenCompose(strategy -> strategy.processEncumbrances(compPO, poFromStorage, requestContext))
       .thenAccept(ok -> changePoLineStatuses(compPO))
