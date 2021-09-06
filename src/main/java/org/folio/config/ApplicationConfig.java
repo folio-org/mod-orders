@@ -1,25 +1,24 @@
 package org.folio.config;
 
-import org.folio.service.inventory.InventoryManager;
-import org.folio.service.ProtectionService;
-import org.folio.service.AcquisitionsUnitsService;
 import org.folio.rest.core.RestClient;
+import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.PrefixService;
+import org.folio.service.ProtectionService;
 import org.folio.service.ReasonForClosureService;
 import org.folio.service.SuffixService;
 import org.folio.service.TagService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.exchange.FinanceExchangeRateService;
-import org.folio.service.finance.expenceclass.BudgetExpenseClassService;
-import org.folio.service.finance.budget.BudgetRestrictionService;
-import org.folio.service.finance.budget.BudgetService;
-import org.folio.service.finance.expenceclass.ExpenseClassService;
-import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
+import org.folio.service.finance.budget.BudgetRestrictionService;
+import org.folio.service.finance.budget.BudgetService;
+import org.folio.service.finance.expenceclass.BudgetExpenseClassService;
+import org.folio.service.finance.expenceclass.ExpenseClassService;
+import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.rollover.RolloverErrorService;
 import org.folio.service.finance.rollover.RolloverRetrieveService;
 import org.folio.service.finance.transaction.ClosedToOpenEncumbranceStrategy;
@@ -32,12 +31,13 @@ import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
 import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategy;
 import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.finance.transaction.TransactionSummariesService;
+import org.folio.service.inventory.InventoryManager;
 import org.folio.service.invoice.InvoiceService;
-import org.folio.service.orders.HoldingsSummaryService;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilder;
 import org.folio.service.orders.CompositePurchaseOrderService;
+import org.folio.service.orders.HoldingsSummaryService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderReEncumberService;
@@ -51,6 +51,7 @@ import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceRetrieveService;
 import org.folio.service.pieces.PiecesService;
 import org.folio.service.titles.TitlesService;
+import org.folio.services.invoice.InvoiceLineService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -360,5 +361,10 @@ public class ApplicationConfig {
   @Bean
   PieceRetrieveService pieceRetrieveService(RestClient restClient) {
     return new PieceRetrieveService(restClient);
+  }
+
+  @Bean
+  InvoiceLineService invoiceLineService(RestClient restClient) {
+    return new InvoiceLineService(restClient);
   }
 }

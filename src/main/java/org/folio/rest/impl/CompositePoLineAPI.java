@@ -1,15 +1,9 @@
 package org.folio.rest.impl;
 
-import static io.vertx.core.Future.succeededFuture;
-import static org.folio.orders.utils.HelperUtils.handleErrorResponse;
-import static org.folio.orders.utils.validators.CompositePoLineValidationUtil.validatePoLine;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import javax.ws.rs.core.Response;
-
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -23,10 +17,14 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.resource.OrdersOrderLines;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
+import javax.ws.rs.core.Response;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import static io.vertx.core.Future.succeededFuture;
+import static org.folio.orders.utils.HelperUtils.handleErrorResponse;
+import static org.folio.orders.utils.validators.CompositePoLineValidationUtil.validatePoLine;
 
 public class CompositePoLineAPI implements OrdersOrderLines {
 
