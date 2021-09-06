@@ -2,6 +2,7 @@ package org.folio.orders.utils;
 
 import static java.math.RoundingMode.HALF_EVEN;
 import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
+import static org.folio.orders.utils.ErrorCodes.RECEIVING_PROCESS_ENCUMBRANCES_ERROR;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -43,7 +44,6 @@ public final class FundDistributionUtils {
         }
       }
     }
-
 
   public static boolean isFundDistributionsPresent(List<CompositePoLine> compositePoLines) {
     return compositePoLines.stream().mapToLong(compositePoLine -> compositePoLine.getFundDistribution().size()).sum() >= 1;

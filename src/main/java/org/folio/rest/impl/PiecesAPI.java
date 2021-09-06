@@ -46,7 +46,7 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
   @Validate
   public void postOrdersPieces(String lang, Piece entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    piecesService.createPiece(entity, new RequestContext(vertxContext, okapiHeaders))
+    piecesService.manualCreatePiece(entity, new RequestContext(vertxContext, okapiHeaders))
       .thenAccept(piece -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully created piece: {}", JsonObject.mapFrom(piece).encodePrettily());

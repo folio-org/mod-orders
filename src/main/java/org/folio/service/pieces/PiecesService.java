@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
@@ -31,6 +32,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
@@ -43,15 +45,19 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.ProtectionService;
+import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.CompositePurchaseOrderService;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.pieces.models.PieceFlowHolder;
 import org.folio.service.titles.TitlesService;
 
 import io.vertx.core.json.JsonObject;
@@ -65,16 +71,20 @@ public class PiecesService {
 
   private final TitlesService titlesService;
   private final ProtectionService protectionService;
+  private final PurchaseOrderService purchaseOrderService;
   private final CompositePurchaseOrderService compositePurchaseOrderService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final InventoryManager inventoryManager;
   private final RestClient restClient;
   private final PieceChangeReceiptStatusPublisher receiptStatusPublisher;
+  private final ReceivingEncumbranceStrategy receivingEncumbranceStrategy;
 
   public PiecesService(RestClient restClient, TitlesService titlesService, ProtectionService protectionService,
                        CompositePurchaseOrderService compositePurchaseOrderService,
                        PurchaseOrderLineService purchaseOrderLineService,
-                       InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
+                       InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
+                       ReceivingEncumbranceStrategy receivingEncumbranceStrategy,
+                       PurchaseOrderService purchaseOrderService) {
 
     this.titlesService = titlesService;
     this.protectionService = protectionService;
@@ -83,9 +93,11 @@ public class PiecesService {
     this.inventoryManager = inventoryManager;
     this.restClient = restClient;
     this.receiptStatusPublisher = receiptStatusPublisher;
+    this.receivingEncumbranceStrategy = receivingEncumbranceStrategy;
+    this.purchaseOrderService = purchaseOrderService;
   }
 
-  public CompletableFuture<Piece> createPiece(Piece piece, RequestContext requestContext) {
+  public CompletableFuture<Piece> openOrderCreatePiece(Piece piece, RequestContext requestContext) {
      logger.info("createPiece start");
       return getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
         .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
@@ -95,6 +107,35 @@ public class PiecesService {
           RequestEntry requestEntry = new RequestEntry(ENDPOINT);
           return restClient.post(requestEntry, piece, requestContext, Piece.class);
         });
+  }
+
+  public CompletableFuture<Piece> manualCreatePiece(Piece piece, RequestContext requestContext) {
+    logger.info("manual createPiece start");
+    PieceFlowHolder holder = new PieceFlowHolder();
+    return purchaseOrderLineService.getOrderLineById(piece.getPoLineId(), requestContext)
+      .thenApply(line -> holder.withOriginLine(line).withLineToSave(line))
+      .thenCompose(holderP -> purchaseOrderService.getPurchaseOrderById(holder.getOriginLine().getPurchaseOrderId(), requestContext))
+      .thenApply(holder::withPurchaseOrder)
+      .thenCompose(order -> protectionService.isOperationRestricted(holder.getPurchaseOrder().getAcqUnitIds(),
+                                                                                ProtectedOperationType.CREATE, requestContext))
+      .thenCompose(compPoLine -> updatePoLineLocationAndCostQuantity(piece, holder, requestContext))
+      .thenCompose(compPoLine -> updateEncumbrances(holder, requestContext).thenApply(v -> compPoLine))
+      .thenAccept(compPoLine -> purchaseOrderLineService.updateOrderLine(holder.getLineToSave(), requestContext).thenApply(v -> compPoLine))
+      .thenCompose(compPoLine -> updateInventory(holder.getLineToSave(), piece, requestContext))
+      .thenCompose(v -> {
+        RequestEntry requestEntry = new RequestEntry(ENDPOINT);
+        return restClient.post(requestEntry, piece, requestContext, Piece.class);
+      });
+  }
+
+  private CompletionStage<CompositePoLine> updateEncumbrances(PieceFlowHolder pieceFlowHolder, RequestContext requestContext) {
+    CompositePurchaseOrder compPurchaseOrder = pieceFlowHolder.getPurchaseOrder()
+                                                              .withCompositePoLines(List.of(pieceFlowHolder.getLineToSave()));
+    CompositePurchaseOrder storagePurchaseOrder = pieceFlowHolder.getPurchaseOrder()
+                                                              .withCompositePoLines(List.of(pieceFlowHolder.getOriginLine()));
+    return receivingEncumbranceStrategy.processEncumbrances(compPurchaseOrder, storagePurchaseOrder, requestContext)
+                                       .thenApply(v -> purchaseOrderLineService.updateOrderLine(pieceFlowHolder.getLineToSave(), requestContext))
+                                       .thenApply(v -> pieceFlowHolder.getLineToSave());
   }
 
   // Flow to update piece
@@ -216,13 +257,11 @@ public class PiecesService {
   }
 
   private CompletableFuture<CompositePurchaseOrder> getCompositeOrderByPoLineId(String poLineId, RequestContext requestContext) {
-    logger.debug("getCompositeOrderByPoLineId start");
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
                                   .thenCompose(poLine -> getCompositePurchaseOrder(poLine.getPurchaseOrderId(), requestContext));
   }
 
   public CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId, RequestContext requestContext) {
-    logger.debug("getCompositePurchaseOrder start");
     return compositePurchaseOrderService.getCompositeOrderById(purchaseOrderId, requestContext)
       .exceptionally(t -> {
         Throwable cause = t.getCause();
@@ -340,7 +379,7 @@ public class PiecesService {
    * @param expectedPiecesWithItem expected Pieces to create with created associated Items records
    * @return void future
    */
-  public CompletableFuture<Void> createPieces(CompositePoLine compPOL, String titleId,
+  public CompletableFuture<Void> openOrderCreatePieces(CompositePoLine compPOL, String titleId,
                                                List<Piece> expectedPiecesWithItem, boolean isOpenOrderFlow, RequestContext requestContext) {
     int createdItemsQuantity = expectedPiecesWithItem.size();
     // do not create pieces in case of check-in flow
@@ -367,7 +406,7 @@ public class PiecesService {
         logger.info("Trying to create pieces");
         List<CompletableFuture<Piece>> piecesToCreateFutures = new ArrayList<>();
         piecesToCreate.forEach(piece ->
-          piecesToCreateFutures.add(createPiece(piece, requestContext))
+          piecesToCreateFutures.add(openOrderCreatePiece(piece, requestContext))
         );
         return collectResultsOnSuccess(piecesToCreateFutures)
                 .thenAccept(result -> logger.info("Number of created pieces: " + result.size()))
@@ -574,5 +613,39 @@ public class PiecesService {
       return CompletableFuture.completedFuture(null);
     }
     return protectionService.isOperationRestricted(purchaseOrder.getAcqUnitIds(), operationType, rqContext);
+  }
+
+
+//  private CompositePoLine getPoLineById(String poLineId, CompositePurchaseOrder order) {
+//    return order.getCompositePoLines().stream()
+//                  .filter(compositePoLine -> compositePoLine.getId().equals(poLineId))
+//                  .findAny()
+//                  .orElseThrow(() -> {
+//                    List<Parameter> parameters = List.of(new Parameter().withKey("poLineId").withValue(poLineId));
+//                    return new HttpException(404, PO_LINE_NOT_FOUND.toError().withParameters(parameters));
+//                  });
+//  }
+
+  private CompletableFuture<Void> updatePoLineLocationAndCostQuantity(Piece piece, PieceFlowHolder pieceFlowHolder,
+                                                                                   RequestContext requestContext) {
+    return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(pieceFlowHolder.getOriginLine()))
+                  .thenAccept(poLine -> {
+                    poLine.getLocations().stream()
+                      .filter(loc -> (Objects.nonNull(piece.getLocationId()) && piece.getLocationId().equals(loc.getLocationId()))
+                        || (Objects.nonNull(piece.getHoldingId()) && piece.getHoldingId().equals(loc.getHoldingId())))
+                      .findAny().ifPresent(loc -> {
+                        if (piece.getFormat() == Piece.Format.ELECTRONIC) {
+                          loc.setQuantityElectronic(loc.getQuantityElectronic() + 1);
+                          loc.setQuantity(loc.getQuantity() + 1);
+                          Cost cost = poLine.getCost();
+                          cost.setQuantityElectronic(cost.getQuantityElectronic() + 1);
+                        } else {
+                          loc.setQuantityPhysical(loc.getQuantityPhysical() + 1);
+                          loc.setQuantity(loc.getQuantity() + 1);
+                          Cost cost = poLine.getCost();
+                          cost.setQuantityPhysical(cost.getQuantityPhysical() + 1);
+                        }
+                      });
+                  });
   }
 }

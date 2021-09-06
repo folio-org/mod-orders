@@ -16,7 +16,7 @@ import org.folio.service.FundsDistributionService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.finance.budget.BudgetRestrictionService;
 
-public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStrategy {
+public class PendingToOpenEncumbranceStrategy extends BaseEncumbranceWorkflowStrategy {
 
     private final EncumbranceService encumbranceService;
     private final FundsDistributionService fundsDistributionService;
@@ -27,7 +27,8 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
                                             FundsDistributionService fundsDistributionService,
                                             BudgetRestrictionService budgetRestrictionService,
                                             EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
-        this.encumbranceService = encumbranceService;
+      super(encumbranceService);
+      this.encumbranceService = encumbranceService;
         this.fundsDistributionService = fundsDistributionService;
         this.budgetRestrictionService = budgetRestrictionService;
         this.encumbranceRelationsHoldersBuilder = encumbranceRelationsHoldersBuilder;
@@ -52,8 +53,7 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
         .thenCompose(holder -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext));
     }
 
-    private EncumbrancesProcessingHolder distributeHoldersByOperation(
-        List<EncumbranceRelationsHolder> encumbranceRelationsHolders) {
+    private EncumbrancesProcessingHolder distributeHoldersByOperation(List<EncumbranceRelationsHolder> encumbranceRelationsHolders) {
       EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
       holder.withEncumbrancesForCreate(getToBeCreatedHolders(encumbranceRelationsHolders));
       holder.withEncumbrancesForUpdate(getToBeUpdatedHolders(encumbranceRelationsHolders));

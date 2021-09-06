@@ -971,4 +971,16 @@ public class HelperUtils {
     logger.error(message, t);
     future.completeExceptionally(new HttpException(code, message));
   }
+
+  public static CompositePurchaseOrder convertToCompositePurchaseOrder(PurchaseOrder purchaseOrder, List<PoLine> poLineList) {
+    List<CompositePoLine> compositePoLines = new ArrayList<>();
+    if (CollectionUtils.isNotEmpty(poLineList)) {
+      poLineList.forEach(poLine -> {
+        poLine.setAlerts(null);
+        poLine.setReportingCodes(null);
+      });
+    }
+    JsonObject jsonLine = JsonObject.mapFrom(purchaseOrder);
+    return jsonLine.mapTo(CompositePurchaseOrder.class).withCompositePoLines(compositePoLines);
+  }
 }

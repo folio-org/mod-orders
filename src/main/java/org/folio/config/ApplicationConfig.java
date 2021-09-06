@@ -1,6 +1,7 @@
 package org.folio.config;
 
 import org.folio.service.finance.transaction.PendingToPendingEncumbranceStrategy;
+import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.ProtectionService;
 import org.folio.service.AcquisitionsUnitsService;
@@ -351,8 +352,12 @@ public class ApplicationConfig {
   @Bean
   PiecesService piecesService(RestClient restClient, TitlesService titlesService, ProtectionService protectionService,
                               CompositePurchaseOrderService compositePurchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
-                              InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
-    return new PiecesService(restClient, titlesService, protectionService, compositePurchaseOrderService, purchaseOrderLineService, inventoryManager, receiptStatusPublisher);
+                              InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
+                              ReceivingEncumbranceStrategy receivingEncumbranceStrategy,
+                              PurchaseOrderService purchaseOrderService) {
+    return new PiecesService(restClient, titlesService, protectionService, compositePurchaseOrderService,
+                              purchaseOrderLineService, inventoryManager, receiptStatusPublisher, receivingEncumbranceStrategy,
+                              purchaseOrderService);
   }
 
   @Bean
@@ -367,5 +372,15 @@ public class ApplicationConfig {
   @Bean
   PieceRetrieveService pieceRetrieveService(RestClient restClient) {
     return new PieceRetrieveService(restClient);
+  }
+
+  @Bean
+  EncumbranceWorkflowStrategy receivingEncumbranceStrategy(EncumbranceService encumbranceService,
+    FundsDistributionService fundsDistributionService,
+    BudgetRestrictionService budgetRestrictionService,
+    EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
+    TransactionSummariesService transactionSummariesService) {
+    return new ReceivingEncumbranceStrategy(encumbranceService, fundsDistributionService,
+      budgetRestrictionService, encumbranceRelationsHoldersBuilder, transactionSummariesService);
   }
 }

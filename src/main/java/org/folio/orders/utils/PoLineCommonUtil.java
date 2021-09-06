@@ -1,12 +1,17 @@
 package org.folio.orders.utils;
 
+import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -147,5 +152,12 @@ public final class PoLineCommonUtil {
       .filter(location -> Objects.nonNull(location.getHoldingId()))
       .filter(location -> isHoldingCreationRequiredForLocation(compPOL, location))
       .collect(Collectors.groupingBy(Location::getHoldingId));
+  }
+
+  public static CompositePoLine convertToCompositePoLine(PoLine poLine) {
+    poLine.setAlerts(null);
+    poLine.setReportingCodes(null);
+    JsonObject jsonLine = JsonObject.mapFrom(poLine);
+    return jsonLine.mapTo(CompositePoLine.class);
   }
 }

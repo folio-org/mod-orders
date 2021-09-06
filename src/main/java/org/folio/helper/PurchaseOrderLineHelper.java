@@ -74,8 +74,6 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
-import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
@@ -541,7 +539,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
         return completedFuture(null);
       }
-      return piecesService.createPieces(compPOL, titleId, Collections.emptyList(), true, requestContext).thenRun(
+      return piecesService.openOrderCreatePieces(compPOL, titleId, Collections.emptyList(), true, requestContext).thenRun(
           () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId()));
     }
 
@@ -552,7 +550,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
           return completedFuture(null);
         }
         //create pieces only if receiving is required
-        return piecesService.createPieces(compPOL, titleId, piecesWithItemId, true, requestContext);
+        return piecesService.openOrderCreatePieces(compPOL, titleId, piecesWithItemId, true, requestContext);
       });
   }
 

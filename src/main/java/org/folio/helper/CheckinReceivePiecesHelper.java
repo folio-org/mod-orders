@@ -465,7 +465,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
         return titlesService.getTitlesByPoLineIds(ids, requestContext)
           .thenApply(titles -> {
             List<CompositePoLine> compositePoLines = poLines.stream()
-              .map(this::convertToCompositePoLine).collect(Collectors.toList());
+              .map(PoLineCommonUtil::convertToCompositePoLine).collect(Collectors.toList());
             Map<String, CompositePoLine> poLineById = compositePoLines.stream()
               .collect(Collectors.toMap(CompositePoLine::getId, Function.identity()));
             HelperUtils.verifyTitles(titles, poLineById);
@@ -476,13 +476,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
             return result;
           });
       });
-  }
-
-  private CompositePoLine convertToCompositePoLine(PoLine poLine) {
-    poLine.setAlerts(null);
-    poLine.setReportingCodes(null);
-    JsonObject jsonLine = JsonObject.mapFrom(poLine);
-    return jsonLine.mapTo(CompositePoLine.class);
   }
 
   protected List<Piece> getSuccessfullyProcessedPieces(String poLineId, Map<String, List<Piece>> piecesGroupedByPoLine) {

@@ -39,6 +39,7 @@ import io.vertx.core.Context;
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.ProtectedOperationType;
@@ -53,6 +54,7 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.orders.CompositePurchaseOrderService;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.orders.PurchaseOrderService;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -461,12 +463,21 @@ public class PieceServiceTest {
       return mock(PieceChangeReceiptStatusPublisher.class);
     }
 
+    @Bean ReceivingEncumbranceStrategy receivingEncumbranceStrategy() {
+      return mock(ReceivingEncumbranceStrategy.class);
+    }
+
+    @Bean PurchaseOrderService purchaseOrderService() {
+      return mock(PurchaseOrderService.class);
+    }
+
     @Bean
     PiecesService piecesService(RestClient restClient, TitlesService titlesService, ProtectionService protectionService,
                                 CompositePurchaseOrderService compositePurchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
-                                InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
+                                InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
+                                ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PurchaseOrderService purchaseOrderService) {
       return spy(new PiecesService(restClient, titlesService, protectionService, compositePurchaseOrderService, purchaseOrderLineService,
-                                    inventoryManager, receiptStatusPublisher));
+                                    inventoryManager, receiptStatusPublisher, receivingEncumbranceStrategy, purchaseOrderService));
     }
   }
 }
