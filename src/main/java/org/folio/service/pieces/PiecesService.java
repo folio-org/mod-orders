@@ -57,7 +57,8 @@ import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.CompositePurchaseOrderService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
-import org.folio.service.pieces.models.PieceFlowHolder;
+import org.folio.service.pieces.models.CreatePieceHolder;
+import org.folio.service.pieces.models.DeletePieceHolder;
 import org.folio.service.titles.TitlesService;
 
 import io.vertx.core.json.JsonObject;
@@ -103,39 +104,24 @@ public class PiecesService {
         .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
                                                .thenApply(v -> order))
         .thenCompose(order -> updateInventory(order.getCompositePoLines().get(0), piece, requestContext))
-        .thenCompose(v -> {
-          RequestEntry requestEntry = new RequestEntry(ENDPOINT);
-          return restClient.post(requestEntry, piece, requestContext, Piece.class);
-        });
+        .thenCompose(v -> insertPiece(piece, requestContext));
   }
 
   public CompletableFuture<Piece> manualCreatePiece(Piece piece, RequestContext requestContext) {
     logger.info("manual createPiece start");
-    PieceFlowHolder holder = new PieceFlowHolder();
+    CreatePieceHolder holder = new CreatePieceHolder();
     return purchaseOrderLineService.getOrderLineById(piece.getPoLineId(), requestContext)
-      .thenApply(line -> holder.withOriginLine(line).withLineToSave(line))
-      .thenCompose(holderP -> purchaseOrderService.getPurchaseOrderById(holder.getOriginLine().getPurchaseOrderId(), requestContext))
-      .thenApply(holder::withPurchaseOrder)
-      .thenCompose(order -> protectionService.isOperationRestricted(holder.getPurchaseOrder().getAcqUnitIds(),
+      .thenCompose(poLine -> purchaseOrderService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
+                            .thenAccept(purchaseOrder -> {
+                              holder.shallowCopy(new CreatePieceHolder(purchaseOrder, poLine));
+                            }))
+      .thenCompose(order -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(),
                                                                                 ProtectedOperationType.CREATE, requestContext))
-      .thenCompose(compPoLine -> updatePoLineLocationAndCostQuantity(piece, holder, requestContext))
-      .thenCompose(compPoLine -> updateEncumbrances(holder, requestContext).thenApply(v -> compPoLine))
-      .thenAccept(compPoLine -> purchaseOrderLineService.updateOrderLine(holder.getLineToSave(), requestContext).thenApply(v -> compPoLine))
-      .thenCompose(compPoLine -> updateInventory(holder.getLineToSave(), piece, requestContext))
-      .thenCompose(v -> {
-        RequestEntry requestEntry = new RequestEntry(ENDPOINT);
-        return restClient.post(requestEntry, piece, requestContext, Piece.class);
-      });
-  }
-
-  private CompletionStage<CompositePoLine> updateEncumbrances(PieceFlowHolder pieceFlowHolder, RequestContext requestContext) {
-    CompositePurchaseOrder compPurchaseOrder = pieceFlowHolder.getPurchaseOrder()
-                                                              .withCompositePoLines(List.of(pieceFlowHolder.getLineToSave()));
-    CompositePurchaseOrder storagePurchaseOrder = pieceFlowHolder.getPurchaseOrder()
-                                                              .withCompositePoLines(List.of(pieceFlowHolder.getOriginLine()));
-    return receivingEncumbranceStrategy.processEncumbrances(compPurchaseOrder, storagePurchaseOrder, requestContext)
-                                       .thenApply(v -> purchaseOrderLineService.updateOrderLine(pieceFlowHolder.getLineToSave(), requestContext))
-                                       .thenApply(v -> pieceFlowHolder.getLineToSave());
+      .thenCompose(compPoLine -> updatePoLineLocationAndCostQuantity(piece, holder.getPoLineToSave(), requestContext))
+      .thenCompose(v -> receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(), holder.getOriginPurchaseOrder(), requestContext))
+      .thenAccept(v -> purchaseOrderLineService.updateOrderLine(holder.getPoLineToSave(), requestContext))
+      .thenCompose(v -> updateInventory(holder.getPoLineToSave(), piece, requestContext))
+      .thenCompose(v -> insertPiece(piece, requestContext));
   }
 
   // Flow to update piece
@@ -202,35 +188,26 @@ public class PiecesService {
     return restClient.put(requestEntry, piece, requestContext);
   }
 
+  public CompletionStage<Piece> insertPiece(Piece piece, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(ENDPOINT);
+    return restClient.post(requestEntry, piece, requestContext, Piece.class);
+  }
+
   public CompletableFuture<Void> deletePieceWithItem(String pieceId, boolean skipDeleteRestriction, RequestContext requestContext) {
+    DeletePieceHolder holder = new DeletePieceHolder();
     return getPieceById(pieceId, requestContext)
-      .thenCompose(piece -> getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
-        .thenCompose(purchaseOrder -> isOperationRestricted(purchaseOrder, DELETE, skipDeleteRestriction, requestContext)
-          .thenCompose(vVoid -> inventoryManager.getNumberOfRequestsByItemId(piece.getItemId(), requestContext))
-          .thenAccept(numOfRequests -> {
-            if (numOfRequests > 0) {
-              throw new HttpException(422, ErrorCodes.REQUEST_FOUND.toError());
-            }
-          })
-          .thenCompose(aVoid -> deletePiece(pieceId, requestContext))
-          .thenCompose(aVoid -> {
-            if (StringUtils.isNotEmpty(piece.getItemId())) {
-              // Attempt to delete item
-              return inventoryManager.deleteItem(piece.getItemId(), requestContext)
-                .exceptionally(t -> {
-                  // Skip error processing if item has already deleted
-                  if (t instanceof HttpException && ((HttpException) t).getCode() == 404) {
-                    return null;
-                  } else {
-                    throw new CompletionException(t);
-                  }
-                });
-            } else {
-              return CompletableFuture.completedFuture(null);
-            }
-          })
-        )
-      );
+      .thenCompose(piece -> purchaseOrderLineService.getOrderLineById(piece.getPoLineId(), requestContext)
+                                .thenCompose(poLine -> purchaseOrderService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
+                                .thenAccept(purchaseOrder -> {
+                                  holder.shallowCopy(new DeletePieceHolder(purchaseOrder, poLine).withPieceToDelete(piece));
+                                })))
+      .thenCompose(purchaseOrder -> isOperationRestricted(holder.getOriginPurchaseOrder(), DELETE, skipDeleteRestriction, requestContext))
+      .thenCompose(vVoid -> canDeletePiece(holder.getPieceToDelete(), requestContext))
+      .thenCompose(aVoid -> deletePiece(pieceId, requestContext))
+      .thenCompose(aVoid -> deletePieceConnectedItem(holder.getPieceToDelete(), requestContext))
+      .thenCompose(compPoLine -> updatePoLineLocationAndCostQuantity(holder.getPieceToDelete(), holder.getPoLineToSave(), requestContext))
+      .thenCompose(v -> receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(), holder.getOriginPurchaseOrder(), requestContext))
+      .thenAccept(v -> purchaseOrderLineService.updateOrderLine(holder.getPoLineToSave(), requestContext));
   }
 
   public CompletableFuture<Void> deletePiece(String pieceId, RequestContext requestContext) {
@@ -249,7 +226,6 @@ public class PiecesService {
                 }
               });
   }
-
 
   public CompletableFuture<CompositePurchaseOrder> getOrderByPoLineId(String poLineId, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
@@ -615,20 +591,9 @@ public class PiecesService {
     return protectionService.isOperationRestricted(purchaseOrder.getAcqUnitIds(), operationType, rqContext);
   }
 
-
-//  private CompositePoLine getPoLineById(String poLineId, CompositePurchaseOrder order) {
-//    return order.getCompositePoLines().stream()
-//                  .filter(compositePoLine -> compositePoLine.getId().equals(poLineId))
-//                  .findAny()
-//                  .orElseThrow(() -> {
-//                    List<Parameter> parameters = List.of(new Parameter().withKey("poLineId").withValue(poLineId));
-//                    return new HttpException(404, PO_LINE_NOT_FOUND.toError().withParameters(parameters));
-//                  });
-//  }
-
-  private CompletableFuture<Void> updatePoLineLocationAndCostQuantity(Piece piece, PieceFlowHolder pieceFlowHolder,
+  private CompletableFuture<Void> updatePoLineLocationAndCostQuantity(Piece piece, CompositePoLine lineToSave,
                                                                                    RequestContext requestContext) {
-    return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(pieceFlowHolder.getOriginLine()))
+    return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(lineToSave))
                   .thenAccept(poLine -> {
                     poLine.getLocations().stream()
                       .filter(loc -> (Objects.nonNull(piece.getLocationId()) && piece.getLocationId().equals(loc.getLocationId()))
@@ -647,5 +612,31 @@ public class PiecesService {
                         }
                       });
                   });
+  }
+
+  private CompletableFuture<Void> deletePieceConnectedItem(Piece piece, RequestContext requestContext) {
+    if (StringUtils.isNotEmpty(piece.getItemId())) {
+      // Attempt to delete item
+      return inventoryManager.deleteItem(piece.getItemId(), requestContext)
+        .exceptionally(t -> {
+          // Skip error processing if item has already deleted
+          if (t instanceof HttpException && ((HttpException) t).getCode() == 404) {
+            return null;
+          } else {
+            throw new CompletionException(t);
+          }
+        });
+    } else {
+      return CompletableFuture.completedFuture(null);
+    }
+  }
+
+  private CompletableFuture<Void> canDeletePiece(Piece piece, RequestContext requestContext) {
+    return inventoryManager.getNumberOfRequestsByItemId(piece.getItemId(), requestContext)
+      .thenAccept(numOfRequests -> {
+        if (numOfRequests > 0) {
+          throw new HttpException(422, ErrorCodes.REQUEST_FOUND.toError());
+        }
+      });
   }
 }
