@@ -50,8 +50,10 @@ import org.folio.service.orders.ReEncumbranceHoldersBuilder;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateService;
 import org.folio.service.orders.flows.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
-import org.folio.service.pieces.PieceRetrieveService;
-import org.folio.service.pieces.PiecesService;
+import org.folio.service.pieces.PieceCreationService;
+import org.folio.service.pieces.PieceStorageService;
+import org.folio.service.pieces.PieceService;
+import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.titles.TitlesService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -340,8 +342,8 @@ public class ApplicationConfig {
 
   @Bean
   InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
-                                    PieceRetrieveService pieceRetrieveService) {
-    return new InventoryManager(restClient, configurationEntriesService, pieceRetrieveService);
+                                    PieceStorageService pieceStorageService) {
+    return new InventoryManager(restClient, configurationEntriesService, pieceStorageService);
   }
 
   @Bean
@@ -349,29 +351,34 @@ public class ApplicationConfig {
     return new PieceChangeReceiptStatusPublisher();
   }
 
-  @Bean
-  PiecesService piecesService(RestClient restClient, TitlesService titlesService, ProtectionService protectionService,
+  @Bean PieceStorageService pieceStorageService(RestClient restClient) {
+    return new PieceStorageService(restClient);
+  }
+
+  @Bean PieceService piecesService(PieceStorageService pieceStorageService, ProtectionService protectionService,
                               CompositePurchaseOrderService compositePurchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
                               InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
-                              ReceivingEncumbranceStrategy receivingEncumbranceStrategy,
-                              PurchaseOrderService purchaseOrderService) {
-    return new PiecesService(restClient, titlesService, protectionService, compositePurchaseOrderService,
+                              ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PurchaseOrderService purchaseOrderService,
+                              PieceUpdateInventoryService pieceUpdateInventoryService) {
+    return new PieceService(pieceStorageService, protectionService, compositePurchaseOrderService,
                               purchaseOrderLineService, inventoryManager, receiptStatusPublisher, receivingEncumbranceStrategy,
-                              purchaseOrderService);
+                              purchaseOrderService, pieceUpdateInventoryService);
+  }
+
+  @Bean PieceCreationService pieceCreationService(PieceStorageService pieceStorageService, PurchaseOrderLineService purchaseOrderLineService,
+                                                  PurchaseOrderService purchaseOrderService, ProtectionService protectionService,
+                                                  ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
+    return new PieceCreationService(pieceStorageService, purchaseOrderLineService, purchaseOrderService, protectionService,
+      receivingEncumbranceStrategy);
   }
 
   @Bean
   UnOpenCompositeOrderManager unOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
                                                           EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-                                                          InventoryManager inventoryManager, PiecesService piecesService,
-                                                          PieceRetrieveService pieceRetrieveService) {
+                                                          InventoryManager inventoryManager, PieceService pieceService,
+                                                          PieceStorageService pieceStorageService) {
     return new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory,
-                                            inventoryManager, piecesService, pieceRetrieveService);
-  }
-
-  @Bean
-  PieceRetrieveService pieceRetrieveService(RestClient restClient) {
-    return new PieceRetrieveService(restClient);
+                                            inventoryManager, pieceService, pieceStorageService);
   }
 
   @Bean
@@ -382,5 +389,9 @@ public class ApplicationConfig {
     TransactionSummariesService transactionSummariesService) {
     return new ReceivingEncumbranceStrategy(encumbranceService, fundsDistributionService,
       budgetRestrictionService, encumbranceRelationsHoldersBuilder, transactionSummariesService);
+  }
+
+  @Bean PieceUpdateInventoryService pieceUpdateInventoryService(TitlesService titlesService, InventoryManager inventoryManager) {
+    return new PieceUpdateInventoryService(titlesService, inventoryManager);
   }
 }

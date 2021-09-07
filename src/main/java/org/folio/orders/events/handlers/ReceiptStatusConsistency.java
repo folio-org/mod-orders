@@ -3,7 +3,7 @@ package org.folio.orders.events.handlers;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
@@ -39,7 +39,7 @@ import one.util.streamex.StreamEx;
 public class ReceiptStatusConsistency extends AbstractHelper implements Handler<Message<JsonObject>> {
 
   private static final int LIMIT = Integer.MAX_VALUE;
-  private static final String PIECES_ENDPOINT = resourcesPath(PIECES) + "?query=poLineId==%s&limit=%s";
+  private static final String PIECES_ENDPOINT = resourcesPath(PIECES_STORAGE) + "?query=poLineId==%s&limit=%s";
 
   private PurchaseOrderLineService purchaseOrderLineService;
 

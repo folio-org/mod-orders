@@ -19,7 +19,7 @@ import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.handlePutRequest;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
@@ -76,7 +76,7 @@ import one.util.streamex.StreamEx;
 
 public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   private static final Logger logger = LogManager.getLogger(CheckinReceivePiecesHelper.class);
-  private static final String PIECES_WITH_QUERY_ENDPOINT = resourcesPath(PIECES) + "?limit=%d&lang=%s&query=%s";
+  private static final String PIECES_WITH_QUERY_ENDPOINT = resourcesPath(PIECES_STORAGE) + "?limit=%d&lang=%s&query=%s";
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
 
   protected Map<String, Map<String, T>> piecesByLineId;
@@ -416,7 +416,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    */
   private CompletableFuture<Void> storeUpdatedPieceRecord(Piece piece) {
     String pieceId = piece.getId();
-    return handlePutRequest(resourceByIdPath(PIECES, pieceId), JsonObject.mapFrom(piece), httpClient, okapiHeaders,
+    return handlePutRequest(resourceByIdPath(PIECES_STORAGE, pieceId), JsonObject.mapFrom(piece), httpClient, okapiHeaders,
         logger)
           .exceptionally(e -> {
             addError(getPoLineIdByPieceId(pieceId), pieceId, PIECE_UPDATE_FAILED.toError());

@@ -10,8 +10,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import org.folio.rest.acq.model.finance.Ledger;
-import org.folio.rest.acq.model.finance.LedgerCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;

@@ -58,7 +58,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.helper.AbstractHelper;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
-import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;

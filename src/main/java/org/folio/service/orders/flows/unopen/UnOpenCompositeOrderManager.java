@@ -38,8 +38,8 @@ import org.folio.service.inventory.InventoryManager;
 import org.folio.models.ItemStatus;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.pieces.PieceRetrieveService;
-import org.folio.service.pieces.PiecesService;
+import org.folio.service.pieces.PieceStorageService;
+import org.folio.service.pieces.PieceService;
 
 import io.vertx.core.json.JsonObject;
 
@@ -49,18 +49,18 @@ public class UnOpenCompositeOrderManager {
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
   private final InventoryManager inventoryManager;
-  private final PiecesService piecesService;
-  private final PieceRetrieveService pieceRetrieveService;
+  private final PieceService pieceService;
+  private final PieceStorageService pieceStorageService;
 
   public UnOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
                                      EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-                                     InventoryManager inventoryManager, PiecesService piecesService,
-                                     PieceRetrieveService pieceRetrieveService) {
+                                     InventoryManager inventoryManager, PieceService pieceService,
+                                     PieceStorageService pieceStorageService) {
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
     this.inventoryManager = inventoryManager;
-    this.piecesService = piecesService;
-    this.pieceRetrieveService = pieceRetrieveService;
+    this.pieceService = pieceService;
+    this.pieceStorageService = pieceStorageService;
   }
 
 
@@ -127,10 +127,10 @@ public class UnOpenCompositeOrderManager {
 
   private CompletableFuture<List<Piece>> deleteExpectedPieces(CompositePoLine compPOL, RequestContext rqContext) {
     if (!PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus()) && Boolean.FALSE.equals(compPOL.getCheckinItems())) {
-      return pieceRetrieveService.getExpectedPiecesByLineId(compPOL.getId(), rqContext)
+      return pieceStorageService.getExpectedPiecesByLineId(compPOL.getId(), rqContext)
         .thenCompose(pieceCollection -> {
           if (isNotEmpty(pieceCollection.getPieces())) {
-            return piecesService.deletePiecesByIds(pieceCollection.getPieces().stream().map(Piece::getId).collect(toList()), rqContext)
+            return pieceService.deletePiecesByIds(pieceCollection.getPieces().stream().map(Piece::getId).collect(toList()), rqContext)
                                 .thenApply(v -> pieceCollection.getPieces());
           }
           return completedFuture(Collections.emptyList());
@@ -150,7 +150,7 @@ public class UnOpenCompositeOrderManager {
                                               .thenAccept(deletedHoldingVsLocationIds -> updateLocations(compPOL, deletedHoldingVsLocationIds))
                                               .thenAccept(v -> logger.debug("Items and holdings deleted after UnOpen order"));
                               }
-                              return pieceRetrieveService.getExpectedPiecesByLineId(compPOL.getId(), rqContext)
+                              return pieceStorageService.getExpectedPiecesByLineId(compPOL.getId(), rqContext)
                                 .thenCompose(pieceCollection -> {
                                   if (isNotEmpty(pieceCollection.getPieces())) {
                                     return inventoryManager.getItemRecordsByIds(itemIds, rqContext)
@@ -248,7 +248,7 @@ public class UnOpenCompositeOrderManager {
     onOrderItems.forEach(onOrderItem -> {
       List<Piece> itemPieces = itemIdVsPiece.get(onOrderItem.getString(ID));
       if (CollectionUtils.isNotEmpty(itemPieces)) {
-        itemPieces.forEach(piece -> deletedItems.add(piecesService.deletePieceWithItem(piece.getId(), true, rqContext)
+        itemPieces.forEach(piece -> deletedItems.add(pieceService.deletePieceWithItem(piece.getId(), true, rqContext)
           .thenApply(v -> onOrderItem)));
       }
     });

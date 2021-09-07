@@ -309,11 +309,11 @@ public class MockServer {
   }
 
   public static List<JsonObject> getPieceUpdates() {
-    return serverRqRs.get(PIECES, HttpMethod.PUT);
+    return serverRqRs.get(PIECES_STORAGE, HttpMethod.PUT);
   }
 
   public static List<JsonObject> getPieceDeletions() {
-    return serverRqRs.get(PIECES, HttpMethod.DELETE);
+    return serverRqRs.get(PIECES_STORAGE, HttpMethod.DELETE);
   }
 
   public static List<JsonObject> getHoldingsSearches() {
@@ -349,11 +349,11 @@ public class MockServer {
   }
 
   public static List<JsonObject> getCreatedPieces() {
-    return serverRqRs.get(PIECES, HttpMethod.POST);
+    return serverRqRs.get(PIECES_STORAGE, HttpMethod.POST);
   }
 
   public static List<JsonObject> getPieceSearches() {
-    return serverRqRs.get(PIECES, HttpMethod.GET);
+    return serverRqRs.get(PIECES_STORAGE, HttpMethod.GET);
   }
 
   static List<JsonObject> getTitlesSearches() {
@@ -473,7 +473,7 @@ public class MockServer {
     router.post(resourcesPath(PO_LINES)).handler(this::handlePostPOLine);
     router.post(resourcesPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
     router.post(resourcesPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
-    router.post(resourcesPath(PIECES)).handler(ctx -> handlePostGenericSubObj(ctx, PIECES));
+    router.post(resourcesPath(PIECES_STORAGE)).handler(ctx -> handlePostGenericSubObj(ctx, PIECES_STORAGE));
     router.post(resourcesPath(ORDER_TEMPLATES)).handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TEMPLATES));
     router.post(resourcesPath(ENCUMBRANCES)).handler(this::handleTransactionPostEntry);
     router.post(resourcesPath(TITLES)).handler(ctx -> handlePostGenericSubObj(ctx, TITLES));
@@ -506,8 +506,8 @@ public class MockServer {
     router.get(resourcePath(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
     router.get(resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
     router.get(resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
-    router.get(resourcesPath(PIECES)).handler(this::handleGetPieces);
-    router.get(resourcePath(PIECES)).handler(this::handleGetPieceById);
+    router.get(resourcesPath(PIECES_STORAGE)).handler(this::handleGetPieces);
+    router.get(resourcePath(PIECES_STORAGE)).handler(this::handleGetPieceById);
     router.get(resourcesPath(RECEIVING_HISTORY)).handler(this::handleGetReceivingHistory);
     router.get(resourcesPath(PO_LINE_NUMBER)).handler(this::handleGetPoLineNumber);
     router.get("/contributor-name-types").handler(this::handleGetContributorNameTypes);
@@ -546,7 +546,7 @@ public class MockServer {
 
     router.put(resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
     router.put(resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
-    router.put(resourcePath(PIECES)).handler(ctx -> handlePutGenericSubObj(ctx, PIECES));
+    router.put(resourcePath(PIECES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PIECES_STORAGE));
     router.put(resourcePath(REPORTING_CODES)).handler(ctx -> handlePutGenericSubObj(ctx, REPORTING_CODES));
     router.put(resourcePath(ALERTS)).handler(ctx -> handlePutGenericSubObj(ctx, ALERTS));
     router.put("/inventory/items/:id").handler(ctx -> handlePutGenericSubObj(ctx, ITEM_RECORDS));
@@ -566,7 +566,7 @@ public class MockServer {
     router.delete(resourcePath(PO_LINES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES));
     router.delete(resourcePath(ALERTS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ALERTS));
     router.delete(resourcePath(REPORTING_CODES)).handler(ctx -> handleDeleteGenericSubObj(ctx, REPORTING_CODES));
-    router.delete(resourcePath(PIECES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PIECES));
+    router.delete(resourcePath(PIECES_STORAGE)).handler(ctx -> handleDeleteGenericSubObj(ctx, PIECES_STORAGE));
     router.delete(resourcePath(ACQUISITIONS_UNITS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_UNITS));
     router.delete(resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
     router.delete(resourcePath(ORDER_TEMPLATES)).handler(ctx -> handleDeleteGenericSubObj(ctx, ORDER_TEMPLATES));
@@ -1614,7 +1614,7 @@ public class MockServer {
 
     try {
       // Attempt to find POLine in mock server memory
-      JsonObject body = getMockEntry(PIECES, pieceId).orElse(null);
+      JsonObject body = getMockEntry(PIECES_STORAGE, pieceId).orElse(null);
       if (body == null) {
         if (PIECE_POLINE_CONSISTENCY_404_POLINE_NOT_FOUND_ID.equals(pieceId)) {
           body = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d.json"));
@@ -1637,12 +1637,12 @@ public class MockServer {
     logger.info("handleGetPieces got: " + ctx.request().path());
     String query = ctx.request().getParam("query");
     if (query.contains(ID_FOR_PIECES_INTERNAL_SERVER_ERROR)) {
-      addServerRqRsData(HttpMethod.GET, PIECES, new JsonObject());
+      addServerRqRsData(HttpMethod.GET, PIECES_STORAGE, new JsonObject());
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       PieceCollection pieces;
-      if (getMockEntries(PIECES, Piece.class).isPresent()) {
-        pieces = new PieceCollection().withPieces(getMockEntries(PIECES, Piece.class).get());
+      if (getMockEntries(PIECES_STORAGE, Piece.class).isPresent()) {
+        pieces = new PieceCollection().withPieces(getMockEntries(PIECES_STORAGE, Piece.class).get());
         pieces.setTotalRecords(pieces.getPieces().size());
       } else {
         try {
@@ -1702,7 +1702,7 @@ public class MockServer {
       }
 
       JsonObject data = JsonObject.mapFrom(pieces);
-      addServerRqRsData(HttpMethod.GET, PIECES, data);
+      addServerRqRsData(HttpMethod.GET, PIECES_STORAGE, data);
 
       ctx.response()
         .setStatusCode(200)
@@ -2083,7 +2083,7 @@ public class MockServer {
         return org.folio.rest.acq.model.Alert.class;
       case REPORTING_CODES:
         return org.folio.rest.acq.model.ReportingCode.class;
-      case PIECES:
+      case PIECES_STORAGE:
         return org.folio.rest.acq.model.Piece.class;
       case ACQUISITIONS_UNITS:
         return AcquisitionsUnit.class;

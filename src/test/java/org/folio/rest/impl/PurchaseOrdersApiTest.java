@@ -39,7 +39,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHI
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.PAYMENT_STATUS;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
@@ -4069,7 +4069,8 @@ public class PurchaseOrdersApiTest {
   private void preparePiecesForCompositePo(CompositePurchaseOrder reqData) {
     reqData.getCompositePoLines().forEach(poLine -> poLine.getLocations().forEach(location -> {
       for (int i = 0; i < location.getQuantity(); i++) {
-        addMockEntry(PIECES, new Piece().withPoLineId(poLine.getId()).withLocationId(location.getLocationId()).withFormat(OTHER).withReceivingStatus(Piece.ReceivingStatus.EXPECTED));
+        addMockEntry(
+            PIECES_STORAGE, new Piece().withPoLineId(poLine.getId()).withLocationId(location.getLocationId()).withFormat(OTHER).withReceivingStatus(Piece.ReceivingStatus.EXPECTED));
       }
     }));
   }

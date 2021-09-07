@@ -5,7 +5,7 @@ import java.util.List;
 
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.PoLine;
-import javax.money.convert.ConversionContext;
+
 import javax.money.convert.CurrencyConversion;
 
 public class PoLineEncumbrancesHolder {

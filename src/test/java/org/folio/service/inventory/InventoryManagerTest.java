@@ -79,7 +79,7 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.configuration.ConfigurationEntriesService;
-import org.folio.service.pieces.PieceRetrieveService;
+import org.folio.service.pieces.PieceStorageService;
 import org.hamcrest.core.IsInstanceOf;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -111,7 +111,7 @@ public class InventoryManagerTest {
   @Autowired
   private RestClient restClient;
   @Autowired
-  private PieceRetrieveService pieceRetrieveService;
+  private PieceStorageService pieceStorageService;
   @Autowired
   private ConfigurationEntriesService configurationEntriesService;
 
@@ -357,7 +357,7 @@ public class InventoryManagerTest {
     existedPieces.getPieces().get(0).setFormat(Piece.Format.PHYSICAL);
     existedPieces.getPieces().get(0).setPoLineId(poLineId);
     //given
-    doReturn(completedFuture(existedPieces)).when(pieceRetrieveService).getExpectedPiecesByLineId(poLineId, requestContext);
+    doReturn(completedFuture(existedPieces)).when(pieceStorageService).getExpectedPiecesByLineId(poLineId, requestContext);
     doReturn(completedFuture(needUpdateItems)).when(inventoryManager).getItemRecordsByIds(Collections.singletonList(itemId), requestContext);
     doReturn(completedFuture(null)).when(inventoryManager).updateItemRecords(any(), eq(requestContext));
     doReturn(completedFuture(null)).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
@@ -543,8 +543,8 @@ public class InventoryManagerTest {
     }
 
     @Bean
-    public PieceRetrieveService pieceRetrieveService() {
-      return mock(PieceRetrieveService.class);
+    public PieceStorageService pieceStorageService() {
+      return mock(PieceStorageService.class);
     }
 
     @Bean
@@ -554,8 +554,8 @@ public class InventoryManagerTest {
 
     @Bean
     public InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
-                                             PieceRetrieveService pieceRetrieveService) {
-      return spy(new InventoryManager(restClient, configurationEntriesService, pieceRetrieveService));
+                                              PieceStorageService pieceStorageService) {
+      return spy(new InventoryManager(restClient, configurationEntriesService, pieceStorageService));
     }
   }
 }

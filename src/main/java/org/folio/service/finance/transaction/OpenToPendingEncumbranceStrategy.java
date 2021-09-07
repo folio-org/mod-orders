@@ -25,18 +25,18 @@ public class OpenToPendingEncumbranceStrategy extends BaseEncumbranceWorkflowStr
     this.encumbranceRelationsHoldersBuilder = encumbranceRelationsHoldersBuilder;
   }
 
-    @Override
-    public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
+  @Override
+  public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
         RequestContext requestContext) {
 
-      return prepareEncumbranceRelationsHolder(compPO, poAndLinesFromStorage, requestContext)
-                .thenCompose(encumbranceRelationsHolders -> getOrderEncumbrancesForCurrentFy(encumbranceRelationsHolders, requestContext))
-                .thenApply(this::makeEncumbrancesPending)
-                .thenCompose(transactions ->
-                      transactionSummariesService.updateOrderTransactionSummary(compPO.getId(), transactions.size(), requestContext)
-                                                 .thenApply(vVoid -> transactions))
-                .thenCompose(transactions -> encumbranceService.updateEncumbrances(transactions, requestContext));
-    }
+    return prepareEncumbranceRelationsHolder(compPO, poAndLinesFromStorage, requestContext)
+              .thenCompose(encumbranceRelationsHolders -> getOrderEncumbrancesForCurrentFy(encumbranceRelationsHolders, requestContext))
+              .thenApply(this::makeEncumbrancesPending)
+              .thenCompose(transactions ->
+                    transactionSummariesService.updateOrderTransactionSummary(compPO.getId(), transactions.size(), requestContext)
+                                               .thenApply(vVoid -> transactions))
+              .thenCompose(transactions -> encumbranceService.updateEncumbrances(transactions, requestContext));
+  }
 
   @Override
   public OrderWorkflowType getStrategyName() {

@@ -25,7 +25,7 @@ import static org.folio.orders.utils.ErrorCodes.PIECE_UPDATE_FAILED;
 import static org.folio.orders.utils.ErrorCodes.TITLE_NOT_FOUND;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForEresource;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForPhysical;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.TestUtils.getInstanceId;
@@ -502,8 +502,8 @@ public class CheckinReceivingApiTest {
 
     addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
     addMockEntry(PO_LINES, poLine);
-    addMockEntry(PIECES, physicalPiece);
-    addMockEntry(PIECES, electronicPiece);
+    addMockEntry(PIECES_STORAGE, physicalPiece);
+    addMockEntry(PIECES_STORAGE, electronicPiece);
 
     List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
     toBeCheckedInList.add(new ToBeCheckedIn()
@@ -561,8 +561,8 @@ public class CheckinReceivingApiTest {
 
     addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
     addMockEntry(PO_LINES, poLine);
-    addMockEntry(PIECES, physicalPiece);
-    addMockEntry(PIECES, electronicPiece);
+    addMockEntry(PIECES_STORAGE, physicalPiece);
+    addMockEntry(PIECES_STORAGE, electronicPiece);
 
     List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
     toBeCheckedInList.add(new ToBeCheckedIn()
@@ -615,8 +615,8 @@ public class CheckinReceivingApiTest {
 
     addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
     addMockEntry(PO_LINES, poLine);
-    addMockEntry(PIECES, physicalPiece);
-    addMockEntry(PIECES, electronicPiece);
+    addMockEntry(PIECES_STORAGE, physicalPiece);
+    addMockEntry(PIECES_STORAGE, electronicPiece);
 
     List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
     toBeCheckedInList.add(new ToBeCheckedIn()
@@ -659,7 +659,7 @@ public class CheckinReceivingApiTest {
 
     addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
     addMockEntry(PO_LINES, poLine);
-    addMockEntry(PIECES, electronicPiece);
+    addMockEntry(PIECES_STORAGE, electronicPiece);
 
     List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
     toBeCheckedInList.add(new ToBeCheckedIn()

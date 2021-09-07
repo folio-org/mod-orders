@@ -24,7 +24,7 @@ import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 import static org.folio.rest.RestConstants.NOT_FOUND;
@@ -69,7 +69,6 @@ import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.configuration.ConfigurationEntriesService;
-import org.folio.service.pieces.PieceRetrieveService;
 
 import com.google.common.collect.ImmutableList;
 
@@ -78,6 +77,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
+import org.folio.service.pieces.PieceStorageService;
 
 public class InventoryManager {
   private static final Logger logger = LogManager.getLogger(InventoryManager.class);
@@ -133,26 +133,23 @@ public class InventoryManager {
   private static final String LOOKUP_ITEM_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
   private static final String ITEM_STOR_ENDPOINT = "/item-storage/items";
   public static final String  ITEM_BY_ID_ENDPOINT = "/inventory/items/{id}";
-  private static final String CREATE_ITEM_STOR_ENDPOINT = "/item-storage/items";
   private static final String HOLDINGS_LOOKUP_QUERY = "instanceId==%s and permanentLocationId==%s";
   public static final String ID = "id";
   public static final String TOTAL_RECORDS = "totalRecords";
   public static final String SEARCH_PARAMS_WITHOUT_LANG = "?limit=%s&offset=%s%s";
   private static final Map<String, String> INVENTORY_LOOKUP_ENDPOINTS;
   public static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
-  private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
-  private static final String GET_PIECES_BY_QUERY = resourcesPath(PIECES) + SEARCH_PARAMS_WITHOUT_LANG;
   public static final String EFFECTIVE_LOCATION = "effectiveLocation";
 
   private RestClient restClient;
   private ConfigurationEntriesService configurationEntriesService;
-  private PieceRetrieveService pieceRetrieveService;
+  private PieceStorageService pieceStorageService;
 
   public InventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
-                          PieceRetrieveService pieceRetrieveService) {
+                          PieceStorageService pieceStorageService) {
     this.restClient = restClient;
     this.configurationEntriesService = configurationEntriesService;
-    this.pieceRetrieveService = pieceRetrieveService;
+    this.pieceStorageService = pieceStorageService;
   }
 
   static {
@@ -346,7 +343,7 @@ public class InventoryManager {
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
                                           .withId(holdingId);
       return restClient.getAsJsonObject(requestEntry, requestContext)
-        .thenApply(holding -> extractId(holding))
+        .thenApply(HelperUtils::extractId)
         .exceptionally(throwable -> {
           if (throwable.getCause() instanceof HttpException && ((HttpException) throwable.getCause()).getCode() == 404) {
             String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
@@ -358,16 +355,7 @@ public class InventoryManager {
         });
     } else {
       String locationId = location.getLocationId();
-      String query = String.format(HOLDINGS_LOOKUP_QUERY, instanceId, locationId);
-      RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS))
-        .withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
-      return restClient.getAsJsonObject(requestEntry, requestContext)
-        .thenCompose(holdings -> {
-          if (!holdings.getJsonArray(HOLDINGS_RECORDS).isEmpty()) {
-            return completedFuture(extractId(getFirstObjectFromResponse(holdings, HOLDINGS_RECORDS)));
-          }
-          return createHoldingsRecord(instanceId, locationId, requestContext);
-        });
+      return createHoldingsRecord(instanceId, locationId, requestContext);
     }
   }
 
@@ -514,7 +502,7 @@ public class InventoryManager {
     if (piecesWithItemsQty == 0) {
       return completedFuture(Collections.emptyList());
     }
-    return pieceRetrieveService.getExpectedPiecesByLineId(compPOL.getId(), requestContext)
+    return pieceStorageService.getExpectedPiecesByLineId(compPOL.getId(), requestContext)
       .thenApply(existingPieces -> {
         List<Piece> needUpdatePieces = new ArrayList<>();
             List<Piece> pieces = existingPieces.getPieces().stream()

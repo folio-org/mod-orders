@@ -1,4 +1,4 @@
-package org.folio.service.pieces.models;
+package org.folio.models.pieces;
 
 import java.util.List;
 
@@ -9,28 +9,28 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 
-public class DeletePieceHolder {
-  private Piece pieceToDelete;
+public class PieceCreationHolder {
+  private Piece pieceToCreate;
   private CompositePurchaseOrder originPurchaseOrder;
   private CompositePurchaseOrder purchaseOrderToSave;
 
-  public DeletePieceHolder() {
-
+  public PieceCreationHolder(Piece pieceToCreate) {
+    this.pieceToCreate = pieceToCreate;
   }
 
-  public DeletePieceHolder(CompositePurchaseOrder originPurchaseOrder) {
+  public PieceCreationHolder(CompositePurchaseOrder originPurchaseOrder) {
     this.originPurchaseOrder = originPurchaseOrder;
     this.purchaseOrderToSave = HelperUtils.clone(CompositePurchaseOrder.class, originPurchaseOrder);
   }
 
-  public DeletePieceHolder(PurchaseOrder originPurchaseOrder, PoLine originPoLine) {
+  public PieceCreationHolder(PurchaseOrder originPurchaseOrder, PoLine originPoLine) {
     this.originPurchaseOrder = HelperUtils.convertToCompositePurchaseOrder(originPurchaseOrder, List.of(originPoLine));
     this.purchaseOrderToSave = HelperUtils.clone(CompositePurchaseOrder.class, this.originPurchaseOrder);
   }
 
-  public void shallowCopy(DeletePieceHolder sourceCreatePieceHolder) {
-    this.originPurchaseOrder = sourceCreatePieceHolder.getOriginPurchaseOrder();
-    this.purchaseOrderToSave = sourceCreatePieceHolder.getPurchaseOrderToSave();
+  public void shallowCopy(PieceCreationHolder sourcePieceCreationHolder) {
+    this.originPurchaseOrder = sourcePieceCreationHolder.getOriginPurchaseOrder();
+    this.purchaseOrderToSave = sourcePieceCreationHolder.getPurchaseOrderToSave();
   }
 
   public CompositePurchaseOrder getOriginPurchaseOrder() {
@@ -49,12 +49,7 @@ public class DeletePieceHolder {
     return purchaseOrderToSave.getCompositePoLines().get(0);
   }
 
-  public DeletePieceHolder withPieceToDelete(Piece pieceToDelete) {
-    this.pieceToDelete = pieceToDelete;
-    return this;
-  }
-
-  public Piece getPieceToDelete() {
-    return pieceToDelete;
+  public Piece getPieceToCreate() {
+    return pieceToCreate;
   }
 }
