@@ -3,7 +3,6 @@ package org.folio.service.orders;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.rest.acq.model.OrderInvoiceRelationship;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -11,8 +10,6 @@ import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.invoice.InvoiceLineService;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static org.folio.orders.utils.ErrorCodes.ORDER_RELATES_TO_INVOICE;
@@ -50,28 +47,6 @@ public class OrderInvoiceRelationService {
   }
 
   public CompletableFuture<Void> checkOrderPOLineLinkedToInvoiceLine(PoLine line, RequestContext requestContext) {
-    String query = "purchaseOrderId==" + line.getPurchaseOrderId();
-    return getOrderInvoiceRelationshipCollection(query, 0, Integer.MAX_VALUE, requestContext)
-      .thenApply(oirsc -> retrieveInvoiceIdList(oirsc.getOrderInvoiceRelationships()))
-      .thenCompose(invoiceIds -> invoiceLineService.getInvoiceLinesByIds(invoiceIds, requestContext))
-      .thenAccept(invoiceLineList -> {
-        boolean notAllowedDeletePOLine = invoiceLineList.stream()
-          .filter(invoiceLine -> invoiceLine.getPoLineId() != null)
-          .anyMatch(invoiceLine -> invoiceLine.getPoLineId().equals(line.getId()));
-        if (notAllowedDeletePOLine) {
-          logger.error("Order or order line {} is linked to the invoice and can not be deleted", line.getId());
-          throw new HttpException(400, ORDER_RELATES_TO_INVOICE);
-        }
-      });
-  }
-
-  private List<String> retrieveInvoiceIdList(List<OrderInvoiceRelationship> orderInvoiceRelationshipList) {
-    List<String> invoiceIdList = new ArrayList();
-    orderInvoiceRelationshipList.forEach(orderInvoiceRelationship -> invoiceIdList.add(orderInvoiceRelationship.getInvoiceId()));
-    return invoiceIdList;
-  }
-  /*
-  public CompletableFuture<Void> checkOrderPOLineLinkedToInvoiceLine(PoLine line, RequestContext requestContext) {
     return invoiceLineService.getInvoiceLinesByOrderLineId(line.getId(), requestContext)
       .thenApply(invoiceLines -> {
         boolean notAllowedDeletePOLine = invoiceLines.stream()
@@ -84,5 +59,5 @@ public class OrderInvoiceRelationService {
           return null;
         }
       );
-  } */
+  }
 }
