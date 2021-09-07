@@ -270,7 +270,6 @@
             "orders-storage.reporting-codes.item.delete",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
-            "orders-storage.order-invoice-relationships.collection.get",
             "invoice-storage.invoice-lines.collection.get"
           ]
         }

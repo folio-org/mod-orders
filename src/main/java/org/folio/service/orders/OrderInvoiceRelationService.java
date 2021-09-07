@@ -9,8 +9,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.services.invoice.InvoiceLineService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.folio.service.invoice.InvoiceLineService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,11 +24,11 @@ public class OrderInvoiceRelationService {
 
   private final RestClient restClient;
 
-  @Autowired
-  private InvoiceLineService invoiceLineService;
+  private final InvoiceLineService invoiceLineService;
 
-  public OrderInvoiceRelationService(RestClient restClient) {
+  public OrderInvoiceRelationService(RestClient restClient, InvoiceLineService invoiceLineService) {
     this.restClient = restClient;
+    this.invoiceLineService = invoiceLineService;
   }
 
   public CompletableFuture<OrderInvoiceRelationshipCollection> getOrderInvoiceRelationshipCollection(String query, int offset, int limit, RequestContext requestContext) {

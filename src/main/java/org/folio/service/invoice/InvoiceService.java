@@ -1,18 +1,17 @@
 package org.folio.service.invoice;
 
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
 import org.folio.HttpStatus;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.acq.model.invoice.InvoiceLine;
+import org.folio.rest.acq.model.invoice.InvoiceLineCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.acq.model.invoice.InvoiceLine;
-import org.folio.rest.acq.model.invoice.InvoiceLineCollection;
+
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class InvoiceService {
 

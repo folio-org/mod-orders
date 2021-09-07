@@ -32,6 +32,7 @@ import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategy;
 import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.finance.transaction.TransactionSummariesService;
 import org.folio.service.inventory.InventoryManager;
+import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.invoice.InvoiceService;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
@@ -51,7 +52,6 @@ import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceRetrieveService;
 import org.folio.service.pieces.PiecesService;
 import org.folio.service.titles.TitlesService;
-import org.folio.services.invoice.InvoiceLineService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -178,6 +178,11 @@ public class ApplicationConfig {
     return new InvoiceService(restClient);
   }
 
+  @Bean
+  InvoiceLineService invoiceLineService(RestClient restClient) {
+    return new InvoiceLineService(restClient);
+  }
+
   @Bean EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder(EncumbranceService encumbranceService,
                                                                               FundService fundService,
                                                                               FiscalYearService fiscalYearService,
@@ -279,8 +284,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  OrderInvoiceRelationService orderInvoiceRelationService(RestClient orderInvoiceRelationRestClient) {
-    return new OrderInvoiceRelationService(orderInvoiceRelationRestClient);
+  OrderInvoiceRelationService orderInvoiceRelationService(RestClient orderInvoiceRelationRestClient, InvoiceLineService invoiceLineService) {
+    return new OrderInvoiceRelationService(orderInvoiceRelationRestClient, invoiceLineService);
   }
 
   @Bean
@@ -363,8 +368,4 @@ public class ApplicationConfig {
     return new PieceRetrieveService(restClient);
   }
 
-  @Bean
-  InvoiceLineService invoiceLineService(RestClient restClient) {
-    return new InvoiceLineService(restClient);
-  }
 }
