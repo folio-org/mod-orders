@@ -7,12 +7,13 @@ import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import java.util.UUID;
+
 import javax.money.convert.ConversionQuery;
+
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.junit.jupiter.api.Test;
-import java.util.List;
-import java.util.UUID;
 
 public class HelperUtilsTest {
 
@@ -38,16 +39,5 @@ public class HelperUtilsTest {
     ConversionQuery actQuery = HelperUtils.buildConversionQuery(poLineOneTime, systemCurrency);
     assertEquals(actQuery.getCurrency().getCurrencyCode(), systemCurrency);
     assertNull(actQuery.get(RATE_KEY, Double.class));
-  }
-
-  @Test
-  public void testShouldBuildQueryWithExchangeRate(){
-    String systemCurrency = "USD";
-    Cost costOneTime = new Cost().withListUnitPrice(595d).withQuantityPhysical(1).withExchangeRate(2d).withCurrency("EUR").withPoLineEstimatedPrice(595d);
-    PoLine poLineOneTime = new PoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(UUID.randomUUID().toString()).withCost(costOneTime);
-    ConversionQuery actQuery = HelperUtils.buildConversionQuery(poLineOneTime, systemCurrency);
-
-    assertEquals(actQuery.getCurrency().getCurrencyCode(), systemCurrency);
-    assertEquals(Double.valueOf(2d), actQuery.get(RATE_KEY, Double.class));
   }
 }

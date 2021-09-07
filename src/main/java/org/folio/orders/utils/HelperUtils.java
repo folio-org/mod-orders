@@ -3,16 +3,12 @@ package org.folio.orders.utils;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Objects.nonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.summingInt;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 import static javax.ws.rs.core.HttpHeaders.LOCATION;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
-import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_DELETED;
 import static org.folio.orders.utils.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.orders.utils.ErrorCodes.TITLE_NOT_FOUND;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
@@ -45,7 +41,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import javax.money.CurrencyUnit;
 import javax.money.Monetary;
@@ -62,6 +57,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
 import org.folio.helper.AbstractHelper;
 import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.rest.exceptions.InventoryException;
+import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -72,7 +69,6 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
@@ -118,7 +114,7 @@ public class HelperUtils {
   private static final String GET_PURCHASE_ORDER_BYID = resourceByIdPath(PURCHASE_ORDER) + URL_WITH_LANG_PARAM;
   private static final String GET_PURCHASE_ORDER_BYPONUMBER_QUERY = resourcesPath(PURCHASE_ORDER) + "?query=poNumber==%s&" + LANG + "=%s";
 
-  private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling {} {} {}";
+  private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
   private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
   private static final String PROTECTED_AND_MODIFIED_FIELDS = "protectedAndModifiedFields";
   public static final String WORKFLOW_STATUS = "workflowStatus";
@@ -278,13 +274,11 @@ public class HelperUtils {
           }
         })
         .exceptionally(t -> {
-          logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, operation, url);
-          future.completeExceptionally(t);
+          handleEndpointException(operation, url, t, future, logger);
           return null;
         });
     } catch (Exception e) {
-      logger.error("Exception performing http request {} {} {}", e, operation, url);
-      future.completeExceptionally(e);
+      handleEndpointException(operation, url, e, future, logger);
     }
 
     return future;
@@ -600,22 +594,6 @@ public class HelperUtils {
   }
 
   /**
-   * Group all PO Line's locations for which the holding should be created by location identifier
-   * @param compPOL PO line with locations to group
-   * @return map of grouped locations where key is location id and value is list of locations with the same id
-   */
-  public static Map<String, List<Location>> groupLocationsById(CompositePoLine compPOL) {
-    if (CollectionUtils.isEmpty(compPOL.getLocations())) {
-      return Collections.emptyMap();
-    }
-
-    return compPOL.getLocations()
-                  .stream()
-                  .filter(location -> PoLineCommonUtil.isHoldingCreationRequiredForLocation(compPOL, location))
-                  .collect(Collectors.groupingBy(Location::getLocationId));
-  }
-
-  /**
    * Wait for all requests completion and collect all resulting objects. In case any failed, complete resulting future with the exception
    * @param futures list of futures and each produces resulting object on completion
    * @param <T> resulting type
@@ -677,13 +655,11 @@ public class HelperUtils {
           future.complete(body);
         })
         .exceptionally(t -> {
-          logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, HttpMethod.GET, endpoint);
-          future.completeExceptionally(t);
+          handleEndpointException(HttpMethod.GET, endpoint, t, future, logger);
           return null;
         });
     } catch (Exception e) {
-      logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, e, HttpMethod.GET, endpoint);
-      future.completeExceptionally(e);
+      handleEndpointException(HttpMethod.GET, endpoint, e, future, logger);
     }
     return future;
   }
@@ -742,13 +718,11 @@ public class HelperUtils {
         .thenAccept(HelperUtils::verifyResponse)
         .thenApply(future::complete)
         .exceptionally(t -> {
-          logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, t, HttpMethod.DELETE, endpoint);
-          future.completeExceptionally(t);
+          handleEndpointException(HttpMethod.DELETE, endpoint, t, future, logger);
           return null;
         });
     } catch (Exception e) {
-      logger.error(EXCEPTION_CALLING_ENDPOINT_MSG, e, HttpMethod.DELETE, endpoint);
-      future.completeExceptionally(e);
+      handleEndpointException(HttpMethod.DELETE, endpoint, e, future, logger);
     }
 
     return future;
@@ -915,38 +889,6 @@ public class HelperUtils {
       throw new HttpException(400, TITLE_NOT_FOUND);
   }
 
-  public static void verifyLocationsAndPiecesConsistency(List<CompositePoLine> poLines, PieceCollection pieces) {
-    if (CollectionUtils.isNotEmpty(poLines)) {
-      Map<String, Map<String, Integer>> numOfLocationsByPoLineIdAndLocationId = numOfLocationsByPoLineIdAndLocationId(poLines);
-      Map<String, Map<String, Integer>> numOfPiecesByPoLineIdAndLocationId = numOfPiecesByPoLineAndLocationId(pieces);
-
-      numOfPiecesByPoLineIdAndLocationId.forEach((poLineId, numOfPiecesByLocationId) -> numOfPiecesByLocationId
-        .forEach((locationId, quantity) -> {
-          Integer numOfPieces = 0;
-          if (numOfLocationsByPoLineIdAndLocationId.get(poLineId) != null && numOfLocationsByPoLineIdAndLocationId.get(poLineId).get(locationId) != null) {
-            numOfPieces = numOfLocationsByPoLineIdAndLocationId.get(poLineId).get(locationId);
-          }
-          if (quantity > numOfPieces) {
-            throw new HttpException(422, PIECES_TO_BE_DELETED.toError());
-          }
-        }));
-    }
-  }
-
-  public static Map<String, Map<String, Integer>> numOfPiecesByPoLineAndLocationId(PieceCollection pieces) {
-    return pieces.getPieces().stream()
-      .filter(piece -> Objects.nonNull(piece.getPoLineId())
-        && Objects.nonNull(piece.getLocationId()))
-      .collect(groupingBy(Piece::getPoLineId, groupingBy(Piece::getLocationId, summingInt(q -> 1))));
-  }
-
-  public static Map<String, Map<String, Integer>> numOfLocationsByPoLineIdAndLocationId(List<CompositePoLine> poLines) {
-    return poLines.stream()
-      .filter(line -> !line.getIsPackage() && line.getReceiptStatus() != CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED && !line.getCheckinItems())
-      .collect(toMap(CompositePoLine::getId, poLine -> Optional
-        .of(poLine.getLocations()).orElse(new ArrayList<>()).stream().collect(toMap(Location::getLocationId, Location::getQuantity))));
-  }
-
   public static boolean isNotFound(Throwable t) {
     return t instanceof HttpException && ((HttpException) t).getCode() == 404;
   }
@@ -1000,5 +942,33 @@ public class HelperUtils {
         .set(RATE_KEY, cost.getExchangeRate()).build();
     }
     return ConversionQueryBuilder.of().setBaseCurrency(cost.getCurrency()).setTermCurrency(systemCurrency).build();
+  }
+
+  /**
+   * Accepts response with collection of the elements and tries to extract the first one.
+   * In case the response is incorrect or empty, the {@link CompletionException} will be thrown
+   * @param response     {@link JsonObject} representing service response which should contain array of objects
+   * @param propertyName name of the property which holds array of objects
+   * @return the first element of the array
+   */
+  public static JsonObject getFirstObjectFromResponse(JsonObject response, String propertyName) {
+    return Optional.ofNullable(response.getJsonArray(propertyName))
+      .flatMap(items -> items.stream().findFirst())
+      .map(JsonObject.class::cast)
+      .orElseThrow(() -> new CompletionException(new InventoryException(String.format("No records of '%s' can be found", propertyName))));
+  }
+
+  public static String extractId(JsonObject json) {
+    return json.getString(ID);
+  }
+
+  private static void handleEndpointException(HttpMethod operation, String endpoint, Throwable t,
+      CompletableFuture<?> future, Logger logger) {
+
+    Throwable cause = t instanceof CompletionException ? t.getCause() : t;
+    int code = cause instanceof HttpException ? ((HttpException)cause).getCode() : 500;
+    String message = String.format(EXCEPTION_CALLING_ENDPOINT_MSG, operation, endpoint, cause.getMessage());
+    logger.error(message, t);
+    future.completeExceptionally(new HttpException(code, message));
   }
 }

@@ -1,6 +1,5 @@
 package org.folio.rest.impl;
 
-import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
@@ -80,6 +79,9 @@ import static org.folio.rest.impl.MockServer.getLoanTypesSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
 import static org.folio.rest.impl.MockServer.getQueryParams;
+import static org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC;
+import static org.folio.rest.jaxrs.model.Piece.Format.OTHER;
+import static org.folio.rest.jaxrs.model.Piece.Format.PHYSICAL;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
@@ -725,6 +727,10 @@ public class PurchaseOrdersApiTest {
       assertTrue(polNumber.startsWith(poNumber));
       assertNotNull(line.getInstanceId());
       line.getLocations().forEach(location -> verifyLocationQuantity(location, line.getOrderFormat()));
+      line.getLocations().forEach(location -> {
+        assertNull(location.getLocationId());
+        assertNotNull(location.getHoldingId());
+      });
     }
 
     int polCount = resp.getCompositePoLines().size();
@@ -755,7 +761,7 @@ public class PurchaseOrdersApiTest {
     verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces);
 
     verifyEncumbrancesOnPoCreation(reqData, resp);
-    assertThat(getExistingOrderSummaries(), hasSize(1));
+    assertThat(getExistingOrderSummaries(), hasSize(0));
     verifyCalculatedData(resp);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
@@ -809,6 +815,10 @@ public class PurchaseOrdersApiTest {
       assertTrue(polNumber.startsWith(poNumber));
       assertNotNull(line.getInstanceId());
       line.getLocations().forEach(location -> verifyLocationQuantity(location, line.getOrderFormat()));
+      line.getLocations().forEach(location -> {
+        assertNull(location.getLocationId());
+        assertNotNull(location.getHoldingId());
+      });
     }
 
     int polCount = resp.getCompositePoLines().size();
@@ -833,8 +843,19 @@ public class PurchaseOrdersApiTest {
     List<JsonObject> createdPieces = getCreatedPieces();
     verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces);
 
+    createdPieces.stream().map(json -> json.mapTo(Piece.class))
+      .filter(piece -> PHYSICAL.equals(piece.getFormat())).forEach(piece -> {
+      assertNull(piece.getLocationId());
+      assertNotNull(piece.getHoldingId());
+    });
+    createdPieces.stream().map(json -> json.mapTo(Piece.class))
+      .filter(piece -> ELECTRONIC.equals(piece.getFormat())).forEach(piece -> {
+        assertNull(piece.getLocationId());
+        assertNull(piece.getHoldingId());
+    });
+
     verifyEncumbrancesOnPoCreation(reqData, resp);
-    assertThat(getExistingOrderSummaries(), hasSize(1));
+    assertThat(getExistingOrderSummaries(), hasSize(0));
     verifyCalculatedData(resp);
 
     // MODORDERS-459 - check status changed to ONGOING
@@ -926,10 +947,6 @@ public class PurchaseOrdersApiTest {
     // Make sure that Order moves to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
-    // Set the same location id for all locations of the first PO Line to confirm that only one holding created
-    String locationId = reqData.getCompositePoLines().get(0).getLocations().get(0).getLocationId();
-    reqData.getCompositePoLines().get(0).getLocations().forEach(location -> location.setLocationId(locationId));
-
     // Prepare second POL
     CompositePoLine secondPol = reqData.getCompositePoLines().get(1);
     List<Location> secondPolLocations = secondPol.getLocations();
@@ -968,18 +985,27 @@ public class PurchaseOrdersApiTest {
 
     assertEquals(1, instancesSearches.size());
     //setting just one location in the above step
-    assertEquals(1, holdingsSearches.size());
+    assertEquals(3, holdingsSearches.size());
 
     CompositePoLine respLine1 = resp.getCompositePoLines().get(0);
+    respLine1.getLocations().forEach(location -> {
+      assertNull(location.getLocationId());
+      assertNotNull(location.getHoldingId());
+    });
     CompositePoLine respLine2 = resp.getCompositePoLines().get(1);
+    respLine2.getLocations().forEach(location -> {
+      assertNotNull(location.getLocationId());
+      assertNull(location.getHoldingId());
+    });
+
     List<JsonObject> createdInstances = getCreatedInstances();
     assertEquals(1, createdInstances.size(), "Quantity of created instance must be equal of line, if create inventory include instance");
     assertNotNull("Line must be connected to instance, if create inventory include instance", respLine1.getInstanceId());
     assertNotNull("Line must be connected to instance, if create inventory include instance", respLine2.getInstanceId());
 
     List<JsonObject> createdHoldings = getCreatedHoldings();
-    assertEquals(1, createdHoldings.size(), "Quantity of created instance must be depended of quantity in the locations and create inventory include holding");
-    verifyHoldingsCreated(1, createdHoldings, respLine1);
+    assertEquals(3, createdHoldings.size(), "Quantity of created instance must be depended of quantity in the locations and create inventory include holding");
+    verifyHoldingsCreated(3, createdHoldings, respLine1);
     verifyHoldingsCreated(0, createdHoldings, respLine2);
 
     // All existing and created items
@@ -988,6 +1014,16 @@ public class PurchaseOrdersApiTest {
     verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 0, items, respLine2);
 
     List<JsonObject> createdPieces = getCreatedPieces();
+    createdPieces.stream().map(json -> json.mapTo(Piece.class))
+      .filter(piece -> !OTHER.equals(piece.getFormat())).forEach(piece -> {
+        assertNull(piece.getLocationId());
+        assertNotNull(piece.getHoldingId());
+      });
+    createdPieces.stream().map(json -> json.mapTo(Piece.class))
+      .filter(piece -> OTHER.equals(piece.getFormat())).forEach(piece -> {
+        assertNull(piece.getLocationId());
+        assertNull(piece.getHoldingId());
+      });
     verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces);
 
     verifyCalculatedData(resp);
@@ -1007,10 +1043,6 @@ public class PurchaseOrdersApiTest {
 
     // Make sure that Order moves to Open
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-
-    // Set the same location id for all locations of the first PO Line to confirm that only one holding created
-    String locationId = reqData.getCompositePoLines().get(0).getLocations().get(0).getLocationId();
-    reqData.getCompositePoLines().get(0).getLocations().forEach(location -> location.setLocationId(locationId));
 
     // Prepare second POL
     CompositePoLine secondPol = reqData.getCompositePoLines().get(1);
@@ -1043,18 +1075,26 @@ public class PurchaseOrdersApiTest {
     assertNotNull(itemsSearches);
 
     assertEquals(1, instancesSearches.size());
-    assertEquals(1, holdingsSearches.size());
+    assertEquals(3, holdingsSearches.size());
 
     CompositePoLine respLine1 = resp.getCompositePoLines().get(0);
+    respLine1.getLocations().forEach(location -> {
+      assertNull(location.getLocationId());
+      assertNotNull(location.getHoldingId());
+    });
     CompositePoLine respLine2 = resp.getCompositePoLines().get(1);
+    respLine2.getLocations().forEach(location -> {
+      assertNull(location.getLocationId());
+      assertNull(location.getHoldingId());
+    });
     List<JsonObject> createdInstances = getCreatedInstances();
     assertEquals(1, createdInstances.size(), "Quantity of created instance must be equal of line, if create inventory include instance");
     assertNotNull("Line must be connected to instance, if create inventory include instance", respLine1.getInstanceId());
     assertNotNull("Line must be connected to instance, if create inventory include instance", respLine2.getInstanceId());
 
     List<JsonObject> createdHoldings = getCreatedHoldings();
-    assertEquals(1, createdHoldings.size(), "Quantity of created holding must be depended of quantity in the locations and create inventory include holding");
-    verifyHoldingsCreated(1, createdHoldings, respLine1);
+    assertEquals(3, createdHoldings.size(), "Quantity of created holding must be depended of quantity in the locations and create inventory include holding");
+    verifyHoldingsCreated(3, createdHoldings, respLine1);
     verifyHoldingsCreated(0, createdHoldings, respLine2);
 
     // All existing and created items
@@ -1063,6 +1103,16 @@ public class PurchaseOrdersApiTest {
     verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 0, items, respLine2);
 
     List<JsonObject> createdPieces = getCreatedPieces();
+    createdPieces.stream().map(json -> json.mapTo(Piece.class))
+      .filter(piece -> !OTHER.equals(piece.getFormat())).forEach(piece -> {
+      assertNull(piece.getLocationId());
+      assertNotNull(piece.getHoldingId());
+    });
+    createdPieces.stream().map(json -> json.mapTo(Piece.class))
+      .filter(piece -> OTHER.equals(piece.getFormat())).forEach(piece -> {
+        assertNull(piece.getLocationId());
+        assertNull(piece.getHoldingId());
+      });
     verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces);
 
     verifyCalculatedData(resp);
@@ -1129,7 +1179,7 @@ public class PurchaseOrdersApiTest {
 
     verifyOpenOrderPiecesCreated(createdItems, compPo.getCompositePoLines(), createdPieces);
     verifyEncumbrancesOnPoUpdate(compPo);
-    assertThat(getExistingOrderSummaries(), hasSize(2));
+    assertThat(getExistingOrderSummaries(), hasSize(1));
   }
 
   @Test
@@ -1600,7 +1650,8 @@ public class PurchaseOrdersApiTest {
     String actual = resp.getBody().as(Errors.class).getErrors().get(0).getMessage();
     logger.info(actual);
 
-    assertEquals(id, actual);
+    assertNotNull(actual);
+    assertTrue(actual.contains(id));
   }
 
   @Test
@@ -2464,7 +2515,7 @@ public class PurchaseOrdersApiTest {
       .as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
-    assertEquals(2, errors.getErrors().size());
+    assertEquals(1, errors.getErrors().size());
     assertNull(getInstancesSearches());
     assertNull(getItemsSearches());
   }
@@ -4018,7 +4069,7 @@ public class PurchaseOrdersApiTest {
   private void preparePiecesForCompositePo(CompositePurchaseOrder reqData) {
     reqData.getCompositePoLines().forEach(poLine -> poLine.getLocations().forEach(location -> {
       for (int i = 0; i < location.getQuantity(); i++) {
-        addMockEntry(PIECES, new Piece().withPoLineId(poLine.getId()).withLocationId(location.getLocationId()).withFormat(Piece.Format.OTHER).withReceivingStatus(Piece.ReceivingStatus.EXPECTED));
+        addMockEntry(PIECES, new Piece().withPoLineId(poLine.getId()).withLocationId(location.getLocationId()).withFormat(OTHER).withReceivingStatus(Piece.ReceivingStatus.EXPECTED));
       }
     }));
   }

@@ -83,7 +83,12 @@ public enum ErrorCodes {
   ROLLOVER_NOT_COMPLETED("rolloverNotCompleted", "Rollover has not been completed for some ledgers related to this order"),
   RENEWAL_INTERVAL_IS_NOT_SET("renewalIntervalIsNotSet", "Renewal interval is not set"),
   RENEWAL_DATE_IS_NOT_SET("renewalDateIsNotSet", "Renewal date is not set"),
-  PARTIALLY_RETURNED_COLLECTION("partiallyReturnedCollection", "The number of returned entities is not equal to the number of requested");
+  PARTIALLY_RETURNED_COLLECTION("partiallyReturnedCollection", "The number of returned entities is not equal to the number of requested"),
+  ERROR_RETRIEVING_PO_LINES("errorRetrievingPoLines", "Error retrieving purchase order lines from storage"),
+  ERROR_RETRIEVING_TRANSACTION("errorRetrievingTransactions", "Error retrieving the transactions"),
+  HOLDINGS_BY_ID_NOT_FOUND("holdingsByIdNotFoundError", "Holdings with id %s not found"),
+  HOLDINGS_ID_AND_LOCATION_ID_IS_NULL_ERROR("locationIdAndHoldingIdAbsentError", "Reference on holding or location must present"),
+  MAY_BE_LINK_TO_EITHER_HOLDING_OR_LOCATION_ERROR("mayBeLinkToEitherHoldingOrLocationError", "There may be a link to either the holding or the location");
 
 
   private final String code;

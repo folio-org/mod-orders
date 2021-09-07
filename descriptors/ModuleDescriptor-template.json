@@ -93,11 +93,11 @@
           ],
           "modulePermissions": [
             "finance.transactions.collection.get",
+            "finance.encumbrances.item.delete",
             "finance.encumbrances.item.post",
             "finance.encumbrances.item.put",
             "finance.release-encumbrance.item.post",
             "finance.order-transaction-summaries.item.put",
-            "finance-storage.transactions.item.delete",
             "orders-storage.purchase-orders.item.get",
             "orders-storage.purchase-orders.item.delete",
             "orders-storage.po-lines.collection.get",
@@ -214,10 +214,12 @@
             "finance.budgets.collection.get",
             "finance.funds.budget.item.get",
             "finance.ledgers.collection.get",
+            "finance.encumbrances.item.delete",
             "finance.encumbrances.item.post",
             "finance.encumbrances.item.put",
             "finance.ledgers.current-fiscal-year.item.get",
             "finance.fiscal-years.item.get",
+            "finance-storage.order-transaction-summaries.item.get",
             "finance.order-transaction-summaries.item.post",
             "finance.order-transaction-summaries.item.put",
             "finance.release-encumbrance.item.post",
@@ -262,7 +264,7 @@
             "finance.release-encumbrance.item.post",
             "finance.encumbrances.item.put",
             "finance.order-transaction-summaries.item.put",
-            "finance-storage.transactions.item.delete",
+            "finance.encumbrances.item.delete",
             "orders-storage.purchase-orders.item.get",
             "orders-storage.po-lines.item.get",
             "orders-storage.po-lines.item.delete",
@@ -307,7 +309,7 @@
     },
     {
       "id": "receiving",
-      "version": "1.1",
+      "version": "1.2",
       "handlers": [
         {
           "methods": [
@@ -382,7 +384,7 @@
     },
     {
       "id": "pieces",
-      "version": "2.0",
+      "version": "2.1",
       "handlers": [
         {
           "methods": ["GET"],
@@ -838,7 +840,7 @@
     },
     {
       "id": "holdings-storage",
-      "version": "4.2"
+      "version": "4.2 5.0"
     },
     {
       "id": "orders-storage.po-number",
@@ -846,7 +848,7 @@
     },
     {
       "id": "inventory",
-      "version": "10.5"
+      "version": "10.5 11.0"
     },
     {
       "id": "instance-types",
@@ -858,7 +860,7 @@
     },
     {
       "id": "item-storage",
-      "version": "8.5"
+      "version": "8.5 9.0"
     },
     {
       "id": "identifier-types",
@@ -1433,6 +1435,7 @@
         "finance.fiscal-years.item.get",
         "finance.order-transaction-summaries.item.post",
         "finance.order-transaction-summaries.item.put",
+        "finance-storage.order-transaction-summaries.item.get",
         "finance.exchange-rate.item.get",
         "finance.release-encumbrance.item.post",
         "finance-storage.budget-expense-classes.collection.get",
@@ -1445,6 +1448,7 @@
         "inventory.items.item.delete",
         "inventory-storage.instance-types.collection.get",
         "inventory-storage.instance-statuses.collection.get",
+        "inventory-storage.holdings.item.get",
         "inventory-storage.holdings.item.post",
         "inventory-storage.holdings.item.delete",
         "inventory-storage.holdings.collection.delete",
@@ -1501,6 +1505,7 @@
         "finance.exchange-rate.item.get",
         "finance.order-transaction-summaries.item.post",
         "finance.order-transaction-summaries.item.put",
+        "finance-storage.order-transaction-summaries.item.get",
         "finance.release-encumbrance.item.post",
         "finance.expense-classes.collection.get",
         "finance-storage.budget-expense-classes.collection.get",
@@ -1510,6 +1515,7 @@
         "inventory.items.collection.get",
         "inventory-storage.instance-types.collection.get",
         "inventory-storage.instance-statuses.collection.get",
+        "inventory-storage.holdings.item.get",
         "inventory-storage.holdings.item.post",
         "inventory-storage.holdings.collection.get",
         "inventory-storage.items.collection.get",

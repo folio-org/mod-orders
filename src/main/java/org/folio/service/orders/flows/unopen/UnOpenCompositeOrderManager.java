@@ -64,11 +64,11 @@ public class UnOpenCompositeOrderManager {
   }
 
 
-  public CompletableFuture<Void> process(CompositePurchaseOrder compPO, RequestContext requestContext) {
+  public CompletableFuture<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     updateAndGetOrderWithLines(compPO, requestContext)
       .thenApply(aVoid -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.OPEN_TO_PENDING))
-      .thenCompose(strategy -> strategy.processEncumbrances(compPO, requestContext))
+      .thenCompose(strategy -> strategy.processEncumbrances(compPO, poFromStorage, requestContext))
       .thenAccept(ok -> HelperUtils.makePoLinesPending(compPO.getCompositePoLines()))
       .thenCompose(ok -> updatePoLinesSummary(compPO.getCompositePoLines(), requestContext))
       .thenCompose(ok -> processInventory(compPO.getCompositePoLines(), requestContext))

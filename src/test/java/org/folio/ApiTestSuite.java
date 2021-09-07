@@ -14,6 +14,8 @@ import org.folio.orders.events.handlers.CheckInOrderStatusChangeChangeHandlerTes
 import org.folio.orders.events.handlers.ReceiptStatusConsistencyTest;
 import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
 import org.folio.orders.utils.HelperUtilsTest;
+import org.folio.orders.utils.validators.CompositePoLineValidationUtilTest;
+import org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidatorTest;
 import org.folio.orders.utils.validators.OngoingOrderValidatorTest;
 import org.folio.rest.core.RestClientTest;
 import org.folio.rest.impl.CheckinReceivingApiTest;
@@ -37,7 +39,7 @@ import org.folio.service.exchange.ManualExchangeRateProviderTest;
 import org.folio.service.finance.FundServiceTest;
 import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
 import org.folio.service.finance.budget.BudgetRestrictionServiceTest;
-import org.folio.service.finance.inventory.InventoryManagerTest;
+import org.folio.service.inventory.InventoryManagerTest;
 import org.folio.service.finance.transaction.EncumbranceRelationsHoldersBuilderTest;
 import org.folio.service.finance.transaction.EncumbranceServiceTest;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTest;
@@ -264,6 +266,16 @@ public class ApiTestSuite {
 
   @Nested
   class PoLineCommonUtilTestNested extends PoLineCommonUtilTest {
+
+  }
+
+  @Nested
+  class CompositePoLineValidationUtilNested extends CompositePoLineValidationUtilTest {
+
+  }
+
+  @Nested
+  class LocationsAndPiecesConsistencyValidatorTestNested extends LocationsAndPiecesConsistencyValidatorTest {
 
   }
 }

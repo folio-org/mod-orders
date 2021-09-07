@@ -34,7 +34,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersReceivi
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Receiving {} items", entity.getTotalRecords());
     ReceivingHelper helper = new ReceivingHelper(entity, okapiHeaders, vertxContext, lang);
-    helper.receiveItems(entity)
+    helper.receiveItems(entity, new RequestContext(vertxContext, okapiHeaders))
       .thenAccept(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }

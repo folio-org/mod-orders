@@ -59,13 +59,13 @@ import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHI
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
-import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_STORAGE_ENDPOINT;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ORDER_ID_WITH_PO_LINES;
 import static org.folio.rest.impl.MockServer.PO_NUMBER_ERROR_X_OKAPI_TENANT;
@@ -543,7 +543,7 @@ public class PurchaseOrderLinesApiTest {
       .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
       .withValue(100D)));
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
-    Transaction updatedEncumbrance = MockServer.getCreatedEncumbrances().get(1);
+    Transaction updatedEncumbrance = MockServer.getUpdatedTransactions().get(0);
     assertEquals(Collections.singletonList("updated"), updatedEncumbrance.getTags().getTagList());
   }
 
@@ -633,14 +633,15 @@ public class PurchaseOrderLinesApiTest {
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
 
     // 2 calls each to fetch Order Line and Purchase Order
-    // inaddition 2 calls for ISBN validation
+    // + 2 calls for ISBN validation
+    // + 1 call to get the line encumbrances
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(4, column.size());
+    assertEquals(5, column.size());
     assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
-    assertEquals(3, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(PO_LINES, ALERTS, REPORTING_CODES));
+    assertEquals(4, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(PO_LINES, ALERTS, REPORTING_CODES, ORDER_TRANSACTION_SUMMARIES));
 
     // Verify no message sent via event bus
     HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
@@ -1218,9 +1219,9 @@ public class PurchaseOrderLinesApiTest {
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
-    assertThat("No transactions have been released", MockServer.getRqRsEntries(HttpMethod.POST, TRANSACTIONS_STORAGE_ENDPOINT).size() == 0);
-    assertThat("No transactions have been updated", MockServer.getRqRsEntries(HttpMethod.PUT, TRANSACTIONS_STORAGE_ENDPOINT).size() == 0);
-    assertThat("No transactions have been created", MockServer.getRqRsEntries(HttpMethod.POST, TRANSACTIONS_STORAGE_ENDPOINT).size() == 0);
+    assertThat("No transactions have been created", MockServer.getRqRsEntries(HttpMethod.POST, ENCUMBRANCES).size() == 0);
+    assertThat("No transactions have been updated", MockServer.getRqRsEntries(HttpMethod.PUT, ENCUMBRANCES).size() == 0);
+    assertThat("No transactions have been deleted", MockServer.getRqRsEntries(HttpMethod.DELETE, ENCUMBRANCES).size() == 0);
 
     // double check with updating status only (When only status updated via request from mod-invoices)
     CompositePoLine updatedLine = getRqRsEntries(HttpMethod.PUT, PO_LINES).get(0).mapTo(CompositePoLine.class);
@@ -1228,9 +1229,9 @@ public class PurchaseOrderLinesApiTest {
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(updatedLine).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
-    assertThat("No transactions have been released", MockServer.getRqRsEntries(HttpMethod.POST, TRANSACTIONS_STORAGE_ENDPOINT).size() == 0);
-    assertThat("No transactions have been updated", MockServer.getRqRsEntries(HttpMethod.PUT, TRANSACTIONS_STORAGE_ENDPOINT).size() == 0);
-    assertThat("No transactions have been created", MockServer.getRqRsEntries(HttpMethod.POST, TRANSACTIONS_STORAGE_ENDPOINT).size() == 0);
+    assertThat("No transactions have been created", MockServer.getRqRsEntries(HttpMethod.POST, ENCUMBRANCES).size() == 0);
+    assertThat("No transactions have been updated", MockServer.getRqRsEntries(HttpMethod.PUT, ENCUMBRANCES).size() == 0);
+    assertThat("No transactions have been deleted", MockServer.getRqRsEntries(HttpMethod.DELETE, ENCUMBRANCES).size() == 0);
 
   }
 

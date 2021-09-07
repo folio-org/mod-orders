@@ -25,11 +25,6 @@ public class OngoingOrderValidatorTest {
 
   private static final String ORDERS_MOCK_DATA_PATH = COMP_ORDER_MOCK_DATA_PATH + "getOrders.json";
 
-  @BeforeEach
-  void initMocks() {
-    MockitoAnnotations.openMocks(this);
-  }
-
   @Test
   @DisplayName("should return http exception on renewal date is not set")
   void testShouldThrowHttpExceptionOnRenewalDateIsNotSet() throws IOException {
