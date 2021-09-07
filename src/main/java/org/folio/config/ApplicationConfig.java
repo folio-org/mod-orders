@@ -1,8 +1,5 @@
 package org.folio.config;
 
-import org.folio.service.finance.transaction.PendingToPendingEncumbranceStrategy;
-import org.folio.service.inventory.InventoryManager;
-import org.folio.service.ProtectionService;
 import org.folio.rest.core.RestClient;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.FundsDistributionService;
@@ -32,6 +29,7 @@ import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.transaction.OpenToClosedEncumbranceStrategy;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
 import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategy;
+import org.folio.service.finance.transaction.PendingToPendingEncumbranceStrategy;
 import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.finance.transaction.TransactionSummariesService;
 import org.folio.service.inventory.InventoryManager;
