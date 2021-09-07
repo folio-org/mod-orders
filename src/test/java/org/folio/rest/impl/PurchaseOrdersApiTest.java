@@ -177,8 +177,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class PurchaseOrdersApiTest {
-
-
   private static final Logger logger = LogManager.getLogger();
 
   private static final String PENDING_ORDER_APPROVED_FALSE = "e5ae4afd-3fa9-494e-a972-f541df9b877e";
@@ -980,12 +978,10 @@ public class PurchaseOrdersApiTest {
     List<JsonObject> holdingsSearches = getHoldingsSearches();
     List<JsonObject> itemsSearches = getItemsSearches();
     assertNotNull(instancesSearches);
-    assertNotNull(holdingsSearches);
+    assertNull(holdingsSearches);
     assertNotNull(itemsSearches);
 
     assertEquals(1, instancesSearches.size());
-    //setting just one location in the above step
-    assertEquals(3, holdingsSearches.size());
 
     CompositePoLine respLine1 = resp.getCompositePoLines().get(0);
     respLine1.getLocations().forEach(location -> {
@@ -1071,11 +1067,10 @@ public class PurchaseOrdersApiTest {
     List<JsonObject> holdingsSearches = getHoldingsSearches();
     List<JsonObject> itemsSearches = getItemsSearches();
     assertNotNull(instancesSearches);
-    assertNotNull(holdingsSearches);
+    assertNull(holdingsSearches);
     assertNotNull(itemsSearches);
 
     assertEquals(1, instancesSearches.size());
-    assertEquals(3, holdingsSearches.size());
 
     CompositePoLine respLine1 = resp.getCompositePoLines().get(0);
     respLine1.getLocations().forEach(location -> {
@@ -2145,7 +2140,8 @@ public class PurchaseOrdersApiTest {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_TOKEN, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
-    assertNotNull(getHoldingsSearches());
+    assertNull(getHoldingsSearches());
+    assertNotNull(getCreatedHoldings());
     assertNull(getItemsSearches());
     assertNull(getCreatedPieces());
   }
@@ -2245,7 +2241,8 @@ public class PurchaseOrdersApiTest {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
-    assertNotNull(getHoldingsSearches());
+    assertNull(getHoldingsSearches());
+    assertNotNull(getCreatedHoldings());
     assertNull(getItemsSearches());
     assertNotNull(getCreatedPieces());
   }
@@ -2266,7 +2263,7 @@ public class PurchaseOrdersApiTest {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
-    assertNotNull(getHoldingsSearches());
+    assertNotNull(getCreatedHoldings());
     assertNotNull(getItemsSearches());
     assertNotNull(getCreatedPieces());
   }
@@ -2288,7 +2285,8 @@ public class PurchaseOrdersApiTest {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
-    assertNotNull(getHoldingsSearches());
+    assertNull(getHoldingsSearches());
+    assertNotNull(getCreatedHoldings());
     assertNotNull(getItemsSearches());
 
     CompositePoLine respLine1 = resp.getCompositePoLines().get(0);
@@ -2327,7 +2325,8 @@ public class PurchaseOrdersApiTest {
       prepareHeaders(EMPTY_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
-    assertNotNull(getHoldingsSearches());
+    assertNull(getHoldingsSearches());
+    assertNotNull(getCreatedHoldings());
     assertNotNull(getItemsSearches());
 
     // MODORDERS-239/240/241: default values will be used when config is empty
@@ -2489,7 +2488,7 @@ public class PurchaseOrdersApiTest {
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), APPLICATION_JSON, 500);
 
     // Verify inventory GET and POST requests for instance, holding and item records
-    verifyInventoryInteraction(false);
+    verifyInventoryInteraction(false, false);
 
     // All existing and created items
     List<JsonObject> items = joinExistingAndNewItems();
