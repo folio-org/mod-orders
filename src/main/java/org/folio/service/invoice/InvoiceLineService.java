@@ -21,6 +21,7 @@ import static org.folio.orders.utils.HelperUtils.convertFieldListToCqlQuery;
 public class InvoiceLineService {
 
   private static final String INVOICE_LINES_ENDPOINT = "/invoice/invoice-lines";
+  private static final String INVOICE_LINE_BY_PO_LINE_ID_QUERY =  "poLineId==%s";
   private static final Logger logger = LogManager.getLogger();
   private final RestClient restClient;
 
@@ -50,4 +51,15 @@ public class InvoiceLineService {
     return getInvoiceLines(query, 0, Integer.MAX_VALUE, requestContext)
       .thenApply(InvoiceLineCollection::getInvoiceLines);
   }
+
+  public CompletableFuture<List<InvoiceLine>> getInvoiceLinesByOrderLineId(String orderPoLineId, RequestContext requestContext) {
+    String query = String.format(INVOICE_LINE_BY_PO_LINE_ID_QUERY, orderPoLineId);
+    RequestEntry requestEntry = new RequestEntry(INVOICE_LINES_ENDPOINT)
+      .withQuery(query)
+      .withLimit(Integer.MAX_VALUE)
+      .withOffset(0);
+    return restClient.get(requestEntry, requestContext, InvoiceLineCollection.class)
+      .thenApply(InvoiceLineCollection::getInvoiceLines);
+  }
+
 }
