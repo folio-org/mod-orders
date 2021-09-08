@@ -44,10 +44,8 @@ import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
 import org.folio.service.ProtectionService;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryManager;
-import org.folio.service.orders.CompositePurchaseOrderService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
-import org.folio.service.titles.TitlesService;
 
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
@@ -58,7 +56,6 @@ public class PieceService {
   private final PieceStorageService pieceStorageService;
   private final ProtectionService protectionService;
   private final PurchaseOrderService purchaseOrderService;
-  private final CompositePurchaseOrderService compositePurchaseOrderService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final InventoryManager inventoryManager;
   private final PieceChangeReceiptStatusPublisher receiptStatusPublisher;
@@ -66,13 +63,12 @@ public class PieceService {
   private final PieceUpdateInventoryService pieceUpdateInventoryService;
 
   public PieceService(PieceStorageService pieceStorageService, ProtectionService protectionService,
-                      CompositePurchaseOrderService compositePurchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
+                      PurchaseOrderLineService purchaseOrderLineService,
                       InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
                       ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PurchaseOrderService purchaseOrderService,
                       PieceUpdateInventoryService pieceUpdateInventoryService) {
     this.pieceStorageService = pieceStorageService;
     this.protectionService = protectionService;
-    this.compositePurchaseOrderService = compositePurchaseOrderService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.inventoryManager = inventoryManager;
     this.receiptStatusPublisher = receiptStatusPublisher;
@@ -168,7 +164,7 @@ public class PieceService {
 
   public CompletableFuture<CompositePurchaseOrder> getOrderByPoLineId(String poLineId, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
-      .thenCompose(poLine -> compositePurchaseOrderService.getCompositeOrderById(poLine.getPurchaseOrderId(), requestContext));
+      .thenCompose(poLine -> purchaseOrderService.getCompositeOrderById(poLine.getPurchaseOrderId(), requestContext));
   }
 
   private CompletableFuture<CompositePurchaseOrder> getCompositeOrderByPoLineId(String poLineId, RequestContext requestContext) {
@@ -177,7 +173,7 @@ public class PieceService {
   }
 
   public CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId, RequestContext requestContext) {
-    return compositePurchaseOrderService.getCompositeOrderById(purchaseOrderId, requestContext)
+    return purchaseOrderService.getCompositeOrderById(purchaseOrderId, requestContext)
       .exceptionally(t -> {
         Throwable cause = t.getCause();
         // The case when specified order does not exist

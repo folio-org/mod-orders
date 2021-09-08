@@ -1,5 +1,6 @@
 package org.folio.config;
 
+import org.folio.service.finance.transaction.EncumbrancesProcessingHolderBuilder;
 import org.folio.service.finance.transaction.PendingToPendingEncumbranceStrategy;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryManager;
@@ -39,7 +40,6 @@ import org.folio.service.orders.HoldingsSummaryService;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilder;
-import org.folio.service.orders.CompositePurchaseOrderService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderReEncumberService;
@@ -81,18 +81,13 @@ public class ApplicationConfig {
   }
 
   @Bean
-  PurchaseOrderService purchaseOrderService(RestClient restClient) {
-    return new PurchaseOrderService(restClient);
+  PurchaseOrderService purchaseOrderService(RestClient restClient, PurchaseOrderLineService purchaseOrderLineService) {
+    return new PurchaseOrderService(restClient, purchaseOrderLineService);
   }
 
   @Bean
   PurchaseOrderLineService purchaseOrderLineService(RestClient restClient) {
     return new PurchaseOrderLineService(restClient);
-  }
-
-  @Bean
-  CompositePurchaseOrderService compositePurchaseOrderService(PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService) {
-    return new CompositePurchaseOrderService(purchaseOrderService, purchaseOrderLineService);
   }
 
   @Bean
@@ -193,11 +188,12 @@ public class ApplicationConfig {
 
   @Bean
   EncumbranceWorkflowStrategy pendingToOpenEncumbranceStrategy(EncumbranceService encumbranceService,
-                                                               FundsDistributionService fundsDistributionService,
-                                                               BudgetRestrictionService budgetRestrictionService,
-                                                               EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
+          FundsDistributionService fundsDistributionService, BudgetRestrictionService budgetRestrictionService,
+          EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
+          EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder) {
     return new PendingToOpenEncumbranceStrategy(encumbranceService, fundsDistributionService,
-                                                budgetRestrictionService, encumbranceRelationsHoldersBuilder);
+                                                budgetRestrictionService, encumbranceRelationsHoldersBuilder,
+                                                encumbrancesProcessingHolderBuilder);
   }
 
   @Bean
@@ -239,7 +235,7 @@ public class ApplicationConfig {
   }
 
   @Bean
-  OrderReEncumberService orderReEncumberService(CompositePurchaseOrderService compositePurchaseOrderService,
+  OrderReEncumberService orderReEncumberService(PurchaseOrderService purchaseOrderService,
                                                 ReEncumbranceHoldersBuilder reEncumbranceHoldersBuilder,
                                                 RolloverErrorService rolloverErrorService,
                                                 RolloverRetrieveService rolloverRetrieveService,
@@ -247,14 +243,9 @@ public class ApplicationConfig {
                                                 TransactionService transactionService,
                                                 TransactionSummariesService transactionSummaryService,
                                                 BudgetRestrictionService budgetRestrictionService) {
-    return new OrderReEncumberService(compositePurchaseOrderService,
-            reEncumbranceHoldersBuilder,
-            rolloverErrorService,
-            rolloverRetrieveService,
-            purchaseOrderLineService,
-            transactionService,
-            transactionSummaryService,
-            budgetRestrictionService);
+    return new OrderReEncumberService(purchaseOrderService, reEncumbranceHoldersBuilder, rolloverErrorService,
+                                      rolloverRetrieveService, purchaseOrderLineService, transactionService,
+                                      transactionSummaryService, budgetRestrictionService);
   }
 
   @Bean
@@ -356,12 +347,12 @@ public class ApplicationConfig {
   }
 
   @Bean PieceService piecesService(PieceStorageService pieceStorageService, ProtectionService protectionService,
-                              CompositePurchaseOrderService compositePurchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
+                              PurchaseOrderLineService purchaseOrderLineService,
                               InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
                               ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PurchaseOrderService purchaseOrderService,
                               PieceUpdateInventoryService pieceUpdateInventoryService) {
-    return new PieceService(pieceStorageService, protectionService, compositePurchaseOrderService,
-                              purchaseOrderLineService, inventoryManager, receiptStatusPublisher, receivingEncumbranceStrategy,
+    return new PieceService(pieceStorageService, protectionService, purchaseOrderLineService, inventoryManager,
+                              receiptStatusPublisher, receivingEncumbranceStrategy,
                               purchaseOrderService, pieceUpdateInventoryService);
   }
 
@@ -382,13 +373,20 @@ public class ApplicationConfig {
   }
 
   @Bean
+  EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder() {
+    return new EncumbrancesProcessingHolderBuilder();
+  }
+
+  @Bean
   EncumbranceWorkflowStrategy receivingEncumbranceStrategy(EncumbranceService encumbranceService,
-    FundsDistributionService fundsDistributionService,
-    BudgetRestrictionService budgetRestrictionService,
-    EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
-    TransactionSummariesService transactionSummariesService) {
+                          FundsDistributionService fundsDistributionService,
+                          BudgetRestrictionService budgetRestrictionService,
+                          EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
+                          TransactionSummariesService transactionSummariesService,
+                          EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder) {
     return new ReceivingEncumbranceStrategy(encumbranceService, fundsDistributionService,
-      budgetRestrictionService, encumbranceRelationsHoldersBuilder, transactionSummariesService);
+      budgetRestrictionService, encumbranceRelationsHoldersBuilder, transactionSummariesService,
+      encumbrancesProcessingHolderBuilder);
   }
 
   @Bean PieceUpdateInventoryService pieceUpdateInventoryService(TitlesService titlesService, InventoryManager inventoryManager) {

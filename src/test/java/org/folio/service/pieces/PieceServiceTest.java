@@ -29,14 +29,12 @@ import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.ProtectionService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryManager;
-import org.folio.service.orders.CompositePurchaseOrderService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
 import org.folio.service.titles.TitlesService;
@@ -70,8 +68,6 @@ public class PieceServiceTest {
   private InventoryManager inventoryManager;
   @Autowired
   private TitlesService titlesService;
-  @Autowired
-  private CompositePurchaseOrderService compositePurchaseOrderService;
   @Autowired
   private PieceChangeReceiptStatusPublisher receiptStatusPublisher;
   @Autowired
@@ -181,11 +177,6 @@ public class PieceServiceTest {
     }
 
     @Bean
-    CompositePurchaseOrderService compositePurchaseOrderService() {
-      return mock(CompositePurchaseOrderService.class);
-    }
-
-    @Bean
     PurchaseOrderLineService purchaseOrderLineService() {
       return mock(PurchaseOrderLineService.class);
     }
@@ -222,11 +213,11 @@ public class PieceServiceTest {
     }
 
     @Bean PieceService piecesService(PieceStorageService pieceStorageService, ProtectionService protectionService,
-                                CompositePurchaseOrderService compositePurchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
+                                PurchaseOrderLineService purchaseOrderLineService,
                                 InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
                                 ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PurchaseOrderService purchaseOrderService,
                                 PieceUpdateInventoryService pieceUpdateInventoryService) {
-      return spy(new PieceService(pieceStorageService, protectionService, compositePurchaseOrderService, purchaseOrderLineService,
+      return spy(new PieceService(pieceStorageService, protectionService, purchaseOrderLineService,
                                     inventoryManager, receiptStatusPublisher, receivingEncumbranceStrategy,
                                     purchaseOrderService, pieceUpdateInventoryService));
     }

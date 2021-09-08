@@ -1,10 +1,10 @@
 package org.folio.service.finance.transaction;
 
-import org.folio.completablefuture.FolioVertxCompletableFuture;
-import org.folio.models.EncumbranceRelationsHolder;
-import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 
 import java.util.Collection;
 import java.util.List;
@@ -12,11 +12,11 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import org.folio.completablefuture.FolioVertxCompletableFuture;
+import org.folio.models.EncumbranceRelationsHolder;
+import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 
 public abstract class BaseEncumbranceWorkflowStrategy implements EncumbranceWorkflowStrategy {
   private final EncumbranceService encumbranceService;

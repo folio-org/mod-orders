@@ -79,9 +79,9 @@ public class OrderReEncumberServiceTest {
 
   @InjectMocks
   private OrderReEncumberService orderReEncumberService;
-  
+
   @Mock
-  private CompositePurchaseOrderService compositePurchaseOrderService;
+  private PurchaseOrderService purchaseOrderService;
   @Mock
   private RolloverErrorService rolloverErrorService;
   @Mock
@@ -223,7 +223,7 @@ public class OrderReEncumberServiceTest {
 
     List<ReEncumbranceHolder> holders = List.of(holder1, holder2, holder3);
 
-    when(compositePurchaseOrderService.getCompositeOrderById(anyString(), any())).thenReturn(completedFuture(new CompositePurchaseOrder()));
+    when(purchaseOrderService.getCompositeOrderById(anyString(), any())).thenReturn(completedFuture(new CompositePurchaseOrder()));
     when(spyReEncumbranceHoldersBuilder.buildReEncumbranceHoldersWithOrdersData(any())).thenReturn(holders);
     when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(completedFuture(holders));
     when(spyReEncumbranceHoldersBuilder.withLedgersData(any(), any())).thenReturn(completedFuture(holders));
@@ -279,7 +279,7 @@ public class OrderReEncumberServiceTest {
 
     List<ReEncumbranceHolder> holders = List.of(holder1, holder2, holder3);
 
-    when(compositePurchaseOrderService.getCompositeOrderById(anyString(), any())).thenReturn(completedFuture(new CompositePurchaseOrder()));
+    when(purchaseOrderService.getCompositeOrderById(anyString(), any())).thenReturn(completedFuture(new CompositePurchaseOrder()));
     when(spyReEncumbranceHoldersBuilder.buildReEncumbranceHoldersWithOrdersData(any())).thenReturn(holders);
     when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(completedFuture(holders));
     when(spyReEncumbranceHoldersBuilder.withLedgersData(any(), any())).thenReturn(completedFuture(holders));
@@ -332,7 +332,7 @@ public class OrderReEncumberServiceTest {
 
     List<ReEncumbranceHolder> holders = List.of(holder1, holder2, holder3);
 
-    when(compositePurchaseOrderService.getCompositeOrderById(anyString(), any())).thenReturn(completedFuture(new CompositePurchaseOrder()));
+    when(purchaseOrderService.getCompositeOrderById(anyString(), any())).thenReturn(completedFuture(new CompositePurchaseOrder()));
     when(spyReEncumbranceHoldersBuilder.buildReEncumbranceHoldersWithOrdersData(any())).thenReturn(holders);
     when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(completedFuture(holders));
     when(spyReEncumbranceHoldersBuilder.withLedgersData(any(), any())).thenReturn(completedFuture(holders));
@@ -368,7 +368,7 @@ public class OrderReEncumberServiceTest {
 
     List<ReEncumbranceHolder> holders = List.of(holder1, holder2);
 
-    when(compositePurchaseOrderService.getCompositeOrderById(anyString(), any())).thenReturn(completedFuture(new CompositePurchaseOrder()));
+    when(purchaseOrderService.getCompositeOrderById(anyString(), any())).thenReturn(completedFuture(new CompositePurchaseOrder()));
     when(spyReEncumbranceHoldersBuilder.buildReEncumbranceHoldersWithOrdersData(any())).thenReturn(holders);
     when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(completedFuture(holders));
 
@@ -387,7 +387,7 @@ public class OrderReEncumberServiceTest {
 
     String orderId = UUID.randomUUID().toString();
 
-    when(compositePurchaseOrderService.getCompositeOrderById(eq(orderId), eq(requestContext)))
+    when(purchaseOrderService.getCompositeOrderById(eq(orderId), eq(requestContext)))
         .thenReturn(completedFuture(new CompositePurchaseOrder().withId(orderId)));
     when(spyReEncumbranceHoldersBuilder.buildReEncumbranceHoldersWithOrdersData(any())).thenReturn(Collections.emptyList());
     when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(completedFuture(Collections.emptyList()));
@@ -426,7 +426,7 @@ public class OrderReEncumberServiceTest {
 
     List<ReEncumbranceHolder> holders = List.of(holder1, holder2);
 
-    when(compositePurchaseOrderService.getCompositeOrderById(eq(orderId), eq(requestContext)))
+    when(purchaseOrderService.getCompositeOrderById(eq(orderId), eq(requestContext)))
         .thenReturn(completedFuture(new CompositePurchaseOrder().withId(orderId)));
     when(spyReEncumbranceHoldersBuilder.buildReEncumbranceHoldersWithOrdersData(any())).thenReturn(holders);
     when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(completedFuture(holders));
@@ -592,7 +592,7 @@ public class OrderReEncumberServiceTest {
         .withFyToPoLineConversion(exchangeRateProvider.getCurrencyConversion(conversionFyToPoLineQuery));
 
     List<ReEncumbranceHolder> holders = Arrays.asList(holder1, holder2);
-    when(compositePurchaseOrderService.getCompositeOrderById(anyString(), eq(requestContext)))
+    when(purchaseOrderService.getCompositeOrderById(anyString(), eq(requestContext)))
         .thenAnswer(invocation -> completedFuture(new CompositePurchaseOrder().withId(invocation.getArgument(0))));
     doReturn(holders).when(spyReEncumbranceHoldersBuilder).buildReEncumbranceHoldersWithOrdersData(any());
     doReturn(completedFuture(holders)).when(spyReEncumbranceHoldersBuilder).withFundsData(any(), any());
