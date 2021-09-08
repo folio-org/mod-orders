@@ -1,112 +1,19 @@
 package org.folio.rest.impl;
 
-import static java.time.temporal.ChronoUnit.DAYS;
-import static java.util.stream.Collectors.toList;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
-import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.assertj.core.api.Assertions.fail;
-import static org.folio.TestConstants.ACTIVE_ACCESS_PROVIDER_A;
-import static org.folio.TestConstants.ACTIVE_ACCESS_PROVIDER_B;
-import static org.folio.TestConstants.BAD_QUERY;
-import static org.folio.TestConstants.COMP_ORDER_MOCK_DATA_PATH;
-import static org.folio.TestConstants.EMPTY_CONFIG_TENANT;
-import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1;
-import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
-import static org.folio.TestConstants.ID;
-import static org.folio.TestConstants.ID_BAD_FORMAT;
-import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
-import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
-import static org.folio.TestConstants.ID_FOR_PIECES_INTERNAL_SERVER_ERROR;
-import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_A;
-import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_B;
-import static org.folio.TestConstants.INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT;
-import static org.folio.TestConstants.MIN_PO_ID;
-import static org.folio.TestConstants.MIN_PO_LINE_ID;
-import static org.folio.TestConstants.NON_EXIST_ACCESS_PROVIDER_A;
-import static org.folio.TestConstants.NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT;
-import static org.folio.TestConstants.NON_EXIST_INSTANCE_STATUS_TENANT;
-import static org.folio.TestConstants.NON_EXIST_INSTANCE_STATUS_TENANT_HEADER;
-import static org.folio.TestConstants.NON_EXIST_INSTANCE_TYPE_TENANT;
-import static org.folio.TestConstants.NON_EXIST_INSTANCE_TYPE_TENANT_HEADER;
-import static org.folio.TestConstants.NON_EXIST_LOAN_TYPE_TENANT;
-import static org.folio.TestConstants.NON_EXIST_LOAN_TYPE_TENANT_HEADER;
-import static org.folio.TestConstants.PO_ID_GET_LINES_INTERNAL_SERVER_ERROR;
-import static org.folio.TestConstants.PO_LINE_NUMBER_VALUE;
-import static org.folio.TestConstants.PROTECTED_READ_ONLY_TENANT;
-import static org.folio.TestConstants.X_ECHO_STATUS;
-import static org.folio.TestUtils.getMockAsJson;
-import static org.folio.TestUtils.getMockData;
-import static org.folio.service.inventory.InventoryManagerTest.HOLDING_INSTANCE_ID_2_HOLDING;
-import static org.folio.service.inventory.InventoryManagerTest.NEW_LOCATION_ID;
-import static org.folio.service.inventory.InventoryManagerTest.NON_EXISTED_NEW_HOLDING_ID;
-import static org.folio.service.inventory.InventoryManagerTest.OLD_LOCATION_ID;
-import static org.folio.service.inventory.InventoryManagerTest.ONLY_NEW_HOLDING_EXIST_ID;
-import static org.folio.service.inventory.InventoryManager.ITEMS;
-import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
-import static org.folio.service.inventory.InventoryManager.REQUESTS;
-
-import static org.folio.service.ProtectionService.ACQUISITIONS_UNIT_ID;
-import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
-import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
-import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
-import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
-import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
-import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
-import static org.folio.orders.utils.HelperUtils.FUND_ID;
-import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
-import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.orders.utils.ResourcePathResolver.*;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.TestUtils.encodePrettily;
-import static org.folio.TestUtils.getMinimalContentCompositePoLine;
-import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
-import static org.folio.TestUtils.getTitle;
-import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
-import static org.folio.rest.impl.PoNumberApiTest.NONEXISTING_PO_NUMBER;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_VENDOR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.FUND_ENCUMBRANCE_ERROR;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ID_FOR_PRINT_MONOGRAPH_ORDER;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_VENDOR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ITEMS_NOT_FOUND;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.LISTED_PRINT_MONOGRAPH_PATH;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.MOD_VENDOR_INTERNAL_ERROR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_VENDOR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ORDER_DELETE_ERROR_TENANT;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ORGANIZATION_NOT_VENDOR;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.VENDOR_WITH_BAD_CONTENT;
-import static org.folio.rest.impl.ReceivingHistoryApiTest.RECEIVING_HISTORY_PURCHASE_ORDER_ID;
-import static org.folio.rest.impl.crud.CrudTestEntities.PREFIX;
-import static org.folio.rest.impl.crud.CrudTestEntities.REASON_FOR_CLOSURE;
-import static org.folio.rest.impl.crud.CrudTestEntities.SUFFIX;
-
-import java.io.IOException;
-import java.nio.file.NoSuchFileException;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Supplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
-import javax.ws.rs.core.Response;
-
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Table;
+import io.restassured.http.Header;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
+import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -120,7 +27,20 @@ import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.acq.model.Title;
 import org.folio.rest.acq.model.TitleCollection;
-import org.folio.rest.acq.model.finance.*;
+import org.folio.rest.acq.model.finance.Budget;
+import org.folio.rest.acq.model.finance.BudgetCollection;
+import org.folio.rest.acq.model.finance.BudgetExpenseClassCollection;
+import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.acq.model.finance.ExchangeRate;
+import org.folio.rest.acq.model.finance.ExpenseClassCollection;
+import org.folio.rest.acq.model.finance.FiscalYear;
+import org.folio.rest.acq.model.finance.Fund;
+import org.folio.rest.acq.model.finance.FundCollection;
+import org.folio.rest.acq.model.finance.Ledger;
+import org.folio.rest.acq.model.finance.LedgerCollection;
+import org.folio.rest.acq.model.finance.OrderTransactionSummary;
+import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.acq.model.invoice.InvoiceLineCollection;
 import org.folio.rest.acq.model.tag.Tag;
@@ -146,21 +66,82 @@ import org.folio.rest.jaxrs.model.ReasonForClosureCollection;
 import org.folio.rest.jaxrs.model.Suffix;
 import org.folio.rest.jaxrs.model.SuffixCollection;
 
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Table;
+import javax.ws.rs.core.Response;
+import java.io.IOException;
+import java.nio.file.NoSuchFileException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
-import io.restassured.http.Header;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServer;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
-import one.util.streamex.StreamEx;
+import static java.time.temporal.ChronoUnit.DAYS;
+import static java.util.stream.Collectors.toList;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
+import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.assertj.core.api.Assertions.fail;
+import static org.folio.TestConstants.*;
+import static org.folio.TestUtils.encodePrettily;
+import static org.folio.TestUtils.getMinimalContentCompositePoLine;
+import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.TestUtils.getMockData;
+import static org.folio.TestUtils.getTitle;
+import static org.folio.orders.utils.ErrorCodes.BUDGET_IS_INACTIVE;
+import static org.folio.orders.utils.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
+import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
+import static org.folio.orders.utils.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
+import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
+import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
+import static org.folio.orders.utils.HelperUtils.FUND_ID;
+import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
+import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.ResourcePathResolver.*;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
+import static org.folio.rest.impl.PoNumberApiTest.NONEXISTING_PO_NUMBER;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_VENDOR_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.FUND_ENCUMBRANCE_ERROR;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ID_FOR_PRINT_MONOGRAPH_ORDER;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_VENDOR_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ITEMS_NOT_FOUND;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.LISTED_PRINT_MONOGRAPH_PATH;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.MOD_VENDOR_INTERNAL_ERROR_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_VENDOR_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ORDER_DELETE_ERROR_TENANT;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.ORGANIZATION_NOT_VENDOR;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.VENDOR_WITH_BAD_CONTENT;
+import static org.folio.rest.impl.ReceivingHistoryApiTest.RECEIVING_HISTORY_PURCHASE_ORDER_ID;
+import static org.folio.rest.impl.crud.CrudTestEntities.PREFIX;
+import static org.folio.rest.impl.crud.CrudTestEntities.REASON_FOR_CLOSURE;
+import static org.folio.rest.impl.crud.CrudTestEntities.SUFFIX;
+import static org.folio.service.ProtectionService.ACQUISITIONS_UNIT_ID;
+import static org.folio.service.inventory.InventoryManager.ITEMS;
+import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
+import static org.folio.service.inventory.InventoryManager.REQUESTS;
+import static org.folio.service.inventory.InventoryManagerTest.HOLDING_INSTANCE_ID_2_HOLDING;
+import static org.folio.service.inventory.InventoryManagerTest.NEW_LOCATION_ID;
+import static org.folio.service.inventory.InventoryManagerTest.NON_EXISTED_NEW_HOLDING_ID;
+import static org.folio.service.inventory.InventoryManagerTest.OLD_LOCATION_ID;
+import static org.folio.service.inventory.InventoryManagerTest.ONLY_NEW_HOLDING_EXIST_ID;
 
 public class MockServer {
 
@@ -2485,14 +2466,26 @@ public class MockServer {
     InvoiceLineCollection invoiceLineCollection;
     if (query.equals("poLineId == " + poLineId1 + " and releaseEncumbrance == true")) {
       invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(Collections.emptyList()).withTotalRecords(0);
+//      InvoiceLine invoiceLine = new InvoiceLine() // || query.equals("poLineId != " + poLineId1)
+//        .withId(UUID.randomUUID().toString())
+//        .withPoLineId(poLineId1)
+//        .withReleaseEncumbrance(true);
+//      invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
     } else if (query.equals("poLineId == " + poLineId2 + " and releaseEncumbrance == true")) {
       InvoiceLine invoiceLine = new InvoiceLine()
         .withId(UUID.randomUUID().toString())
         .withPoLineId(poLineId2)
         .withReleaseEncumbrance(true);
       invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
-    } else {
-      serverResponse(ctx, HttpStatus.HTTP_NOT_FOUND.toInt(), APPLICATION_JSON, "invoice not found");
+    } else if (query.matches("poLineId(.*)")) {
+      InvoiceLine invoiceLine = new InvoiceLine()
+        .withId(UUID.randomUUID().toString())
+        .withPoLineId(poLineId2)
+        .withReleaseEncumbrance(true);
+      invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
+    }
+    else {
+      serverResponse(ctx, HttpStatus.HTTP_NOT_FOUND.toInt(), APPLICATION_JSON, "invoice line not found");
       return;
     }
     JsonObject jo = JsonObject.mapFrom(invoiceLineCollection);
