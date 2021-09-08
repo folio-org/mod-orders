@@ -11,7 +11,6 @@ import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantityWithoutL
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.PoLineCommonUtil.groupLocationsByHoldingId;
 import static org.folio.orders.utils.PoLineCommonUtil.groupLocationsByLocationId;
-import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,8 +25,6 @@ import javax.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.completablefuture.FolioVertxCompletableFuture;
-import org.folio.models.pieces.PieceDeletionHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
@@ -37,7 +34,6 @@ import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
@@ -131,35 +127,6 @@ public class PieceService {
         return null;
     });
     return future;
-  }
-
-  public CompletableFuture<Void> deletePieceWithItem(String pieceId, boolean skipDeleteRestriction, RequestContext requestContext) {
-    PieceDeletionHolder holder = new PieceDeletionHolder();
-    return pieceStorageService.getPieceById(pieceId, requestContext)
-      .thenCompose(piece -> purchaseOrderLineService.getOrderLineById(piece.getPoLineId(), requestContext)
-                                .thenCompose(poLine -> purchaseOrderService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
-                                .thenAccept(purchaseOrder -> {
-                                  holder.shallowCopy(new PieceDeletionHolder(purchaseOrder, poLine).withPieceToDelete(piece));
-                                })))
-      .thenCompose(purchaseOrder -> isOperationRestricted(holder.getOriginPurchaseOrder(), DELETE, skipDeleteRestriction, requestContext))
-      .thenCompose(vVoid -> canDeletePiece(holder.getPieceToDelete(), requestContext))
-      .thenCompose(aVoid -> pieceStorageService.deletePiece(pieceId, requestContext))
-      .thenCompose(aVoid -> deletePieceConnectedItem(holder.getPieceToDelete(), requestContext))
-      .thenCompose(compPoLine -> updatePoLineLocationAndCostQuantity(holder.getPieceToDelete(), holder.getPoLineToSave(), requestContext))
-      .thenCompose(v -> receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(), holder.getOriginPurchaseOrder(), requestContext))
-      .thenAccept(v -> purchaseOrderLineService.updateOrderLine(holder.getPoLineToSave(), requestContext));
-  }
-
-  public CompletableFuture<Void> deletePiecesByIds(List<String> pieceIds, RequestContext rqContext) {
-    List<CompletableFuture<Void>> deletedItems = new ArrayList<>(pieceIds.size());
-    pieceIds.forEach(pieceId -> deletedItems.add(pieceStorageService.deletePiece(pieceId, rqContext)));
-    return collectResultsOnSuccess(deletedItems)
-              .thenAccept(v -> {
-                if (logger.isDebugEnabled()) {
-                  String deletedIds = String.join(",", pieceIds);
-                  logger.debug("Pieces were removed : " + deletedIds);
-                }
-              });
   }
 
   public CompletableFuture<CompositePurchaseOrder> getOrderByPoLineId(String poLineId, RequestContext requestContext) {
@@ -402,62 +369,5 @@ public class PieceService {
     receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, jsonObj, requestContext);
 
     logger.debug("Event to verify receipt status - sent");
-  }
-
-  private CompletableFuture<Void> isOperationRestricted(CompositePurchaseOrder purchaseOrder, ProtectedOperationType operationType,
-                                                        boolean skipDeleteRestriction, RequestContext rqContext) {
-    if (skipDeleteRestriction) {
-      return CompletableFuture.completedFuture(null);
-    }
-    return protectionService.isOperationRestricted(purchaseOrder.getAcqUnitIds(), operationType, rqContext);
-  }
-
-  private CompletableFuture<Void> updatePoLineLocationAndCostQuantity(Piece piece, CompositePoLine lineToSave,
-                                                                                   RequestContext requestContext) {
-    return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(lineToSave))
-                  .thenAccept(poLine -> {
-                    poLine.getLocations().stream()
-                      .filter(loc -> (Objects.nonNull(piece.getLocationId()) && piece.getLocationId().equals(loc.getLocationId()))
-                        || (Objects.nonNull(piece.getHoldingId()) && piece.getHoldingId().equals(loc.getHoldingId())))
-                      .findAny().ifPresent(loc -> {
-                        if (piece.getFormat() == Piece.Format.ELECTRONIC) {
-                          loc.setQuantityElectronic(loc.getQuantityElectronic() + 1);
-                          loc.setQuantity(loc.getQuantity() + 1);
-                          Cost cost = poLine.getCost();
-                          cost.setQuantityElectronic(cost.getQuantityElectronic() + 1);
-                        } else {
-                          loc.setQuantityPhysical(loc.getQuantityPhysical() + 1);
-                          loc.setQuantity(loc.getQuantity() + 1);
-                          Cost cost = poLine.getCost();
-                          cost.setQuantityPhysical(cost.getQuantityPhysical() + 1);
-                        }
-                      });
-                  });
-  }
-
-  private CompletableFuture<Void> deletePieceConnectedItem(Piece piece, RequestContext requestContext) {
-    if (StringUtils.isNotEmpty(piece.getItemId())) {
-      // Attempt to delete item
-      return inventoryManager.deleteItem(piece.getItemId(), requestContext)
-        .exceptionally(t -> {
-          // Skip error processing if item has already deleted
-          if (t instanceof HttpException && ((HttpException) t).getCode() == 404) {
-            return null;
-          } else {
-            throw new CompletionException(t);
-          }
-        });
-    } else {
-      return CompletableFuture.completedFuture(null);
-    }
-  }
-
-  private CompletableFuture<Void> canDeletePiece(Piece piece, RequestContext requestContext) {
-    return inventoryManager.getNumberOfRequestsByItemId(piece.getItemId(), requestContext)
-      .thenAccept(numOfRequests -> {
-        if (numOfRequests > 0) {
-          throw new HttpException(422, ErrorCodes.REQUEST_FOUND.toError());
-        }
-      });
   }
 }

@@ -149,16 +149,6 @@ public class PieceServiceTest {
     verify(receiptStatusPublisher, times(1)).sendEvent(eq(MessageAddress.RECEIPT_STATUS), any(JsonObject.class), eq(requestContext));
   }
 
-  @Test
-  void testShouldDeleteItems() {
-    //given
-    doReturn(completedFuture(null)).when(pieceStorageService).deletePiece(any(String.class), eq(requestContext));
-   //When
-    pieceService.deletePiecesByIds(List.of(UUID.randomUUID().toString()), requestContext).join();
-    //Then
-    verify(pieceStorageService, times(1)).deletePiece(any(String.class), eq(requestContext));
-  }
-
   private static class ContextConfiguration {
 
     @Bean

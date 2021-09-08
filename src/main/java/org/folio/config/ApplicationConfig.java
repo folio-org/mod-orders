@@ -50,7 +50,8 @@ import org.folio.service.orders.ReEncumbranceHoldersBuilder;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateService;
 import org.folio.service.orders.flows.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
-import org.folio.service.pieces.PieceCreationService;
+import org.folio.service.pieces.PieceCreationFlowManager;
+import org.folio.service.pieces.PieceDeletionFlowManager;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
@@ -356,20 +357,21 @@ public class ApplicationConfig {
                               purchaseOrderService, pieceUpdateInventoryService);
   }
 
-  @Bean PieceCreationService pieceCreationService(PieceStorageService pieceStorageService, PurchaseOrderLineService purchaseOrderLineService,
+  @Bean PieceCreationFlowManager pieceCreationService(PieceStorageService pieceStorageService, PurchaseOrderLineService purchaseOrderLineService,
                                                   PurchaseOrderService purchaseOrderService, ProtectionService protectionService,
-                                                  ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
-    return new PieceCreationService(pieceStorageService, purchaseOrderLineService, purchaseOrderService, protectionService,
-      receivingEncumbranceStrategy);
+                                                  ReceivingEncumbranceStrategy receivingEncumbranceStrategy,
+                                                  PieceUpdateInventoryService pieceUpdateInventoryService) {
+    return new PieceCreationFlowManager(pieceStorageService, purchaseOrderLineService, purchaseOrderService, protectionService,
+      receivingEncumbranceStrategy, pieceUpdateInventoryService);
   }
 
   @Bean
   UnOpenCompositeOrderManager unOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
-                                                          EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-                                                          InventoryManager inventoryManager, PieceService pieceService,
-                                                          PieceStorageService pieceStorageService) {
+                              EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
+                              InventoryManager inventoryManager, PieceService pieceService,
+                              PieceStorageService pieceStorageService, PieceDeletionFlowManager pieceDeletionFlowManager) {
     return new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory,
-                                            inventoryManager, pieceService, pieceStorageService);
+                                            inventoryManager, pieceService, pieceStorageService, pieceDeletionFlowManager);
   }
 
   @Bean
@@ -391,5 +393,12 @@ public class ApplicationConfig {
 
   @Bean PieceUpdateInventoryService pieceUpdateInventoryService(TitlesService titlesService, InventoryManager inventoryManager) {
     return new PieceUpdateInventoryService(titlesService, inventoryManager);
+  }
+
+  @Bean PieceDeletionFlowManager pieceDeletionFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
+    PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService, InventoryManager inventoryManager,
+    ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
+    return new PieceDeletionFlowManager(pieceStorageService, protectionService, purchaseOrderService,
+                                        purchaseOrderLineService, inventoryManager, receivingEncumbranceStrategy);
   }
 }

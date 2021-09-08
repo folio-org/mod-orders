@@ -13,23 +13,28 @@ import org.folio.service.orders.PurchaseOrderService;
 
 import java.util.concurrent.CompletableFuture;
 
-public class PieceCreationService {
-  private static final Logger logger = LogManager.getLogger(PieceCreationService.class);
+import static org.folio.service.pieces.PieceFlowUpdatePoLineUtil.UpdateQuantityType.*;
+import static org.folio.service.pieces.PieceFlowUpdatePoLineUtil.updatePoLineLocationAndCostQuantity;
+
+public class PieceCreationFlowManager {
+  private static final Logger logger = LogManager.getLogger(PieceCreationFlowManager.class);
 
   private final PieceStorageService pieceStorageService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final PurchaseOrderService purchaseOrderService;
   private final ProtectionService protectionService;
   private final ReceivingEncumbranceStrategy receivingEncumbranceStrategy;
+  private final PieceUpdateInventoryService pieceUpdateInventoryService;
 
-  public PieceCreationService(PieceStorageService pieceStorageService, PurchaseOrderLineService purchaseOrderLineService,
+  public PieceCreationFlowManager(PieceStorageService pieceStorageService, PurchaseOrderLineService purchaseOrderLineService,
     PurchaseOrderService purchaseOrderService, ProtectionService protectionService,
-    ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
+    ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PieceUpdateInventoryService pieceUpdateInventoryService) {
     this.pieceStorageService = pieceStorageService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.purchaseOrderService = purchaseOrderService;
     this.protectionService = protectionService;
     this.receivingEncumbranceStrategy = receivingEncumbranceStrategy;
+    this.pieceUpdateInventoryService = pieceUpdateInventoryService;
   }
 
   public CompletableFuture<Piece> createPiece(Piece piece, RequestContext requestContext) {
@@ -37,15 +42,14 @@ public class PieceCreationService {
     PieceCreationHolder holder = new PieceCreationHolder(piece);
     return purchaseOrderLineService.getOrderLineById(piece.getPoLineId(), requestContext)
       .thenCompose(poLine -> purchaseOrderService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
-        .thenAccept(purchaseOrder -> {
-          holder.shallowCopy(new PieceCreationHolder(purchaseOrder, poLine));
-        }))
+                                .thenAccept(purchaseOrder -> holder.shallowCopy(new PieceCreationHolder(purchaseOrder, poLine)))
+      )
       .thenCompose(order -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(),
         ProtectedOperationType.CREATE, requestContext))
-   //   .thenCompose(compPoLine -> updatePoLineLocationAndCostQuantity(piece, holder.getPoLineToSave(), requestContext))
+      .thenCompose(compPoLine -> updatePoLineLocationAndCostQuantity(1, ADD, piece, holder.getPoLineToSave(), requestContext))
       .thenCompose(v -> receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(), holder.getOriginPurchaseOrder(), requestContext))
       .thenAccept(v -> purchaseOrderLineService.updateOrderLine(holder.getPoLineToSave(), requestContext))
-  //    .thenCompose(v -> updateInventory(holder.getPoLineToSave(), piece, requestContext))
+      .thenCompose(v -> pieceUpdateInventoryService.updateInventory(holder.getPoLineToSave(), piece, requestContext))
       .thenCompose(v -> pieceStorageService.insertPiece(piece, requestContext));
   }
 

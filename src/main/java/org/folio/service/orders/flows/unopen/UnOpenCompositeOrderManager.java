@@ -38,6 +38,7 @@ import org.folio.service.inventory.InventoryManager;
 import org.folio.models.ItemStatus;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.pieces.PieceDeletionFlowManager;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceService;
 
@@ -51,16 +52,17 @@ public class UnOpenCompositeOrderManager {
   private final InventoryManager inventoryManager;
   private final PieceService pieceService;
   private final PieceStorageService pieceStorageService;
+  private final PieceDeletionFlowManager pieceDeletionFlowManager;
 
-  public UnOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
-                                     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-                                     InventoryManager inventoryManager, PieceService pieceService,
-                                     PieceStorageService pieceStorageService) {
+  public UnOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService, EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
+    InventoryManager inventoryManager, PieceService pieceService, PieceStorageService pieceStorageService,
+    PieceDeletionFlowManager pieceDeletionFlowManager) {
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
     this.inventoryManager = inventoryManager;
     this.pieceService = pieceService;
     this.pieceStorageService = pieceStorageService;
+    this.pieceDeletionFlowManager = pieceDeletionFlowManager;
   }
 
 
@@ -130,7 +132,7 @@ public class UnOpenCompositeOrderManager {
       return pieceStorageService.getExpectedPiecesByLineId(compPOL.getId(), rqContext)
         .thenCompose(pieceCollection -> {
           if (isNotEmpty(pieceCollection.getPieces())) {
-            return pieceService.deletePiecesByIds(pieceCollection.getPieces().stream().map(Piece::getId).collect(toList()), rqContext)
+            return pieceStorageService.deletePiecesByIds(pieceCollection.getPieces().stream().map(Piece::getId).collect(toList()), rqContext)
                                 .thenApply(v -> pieceCollection.getPieces());
           }
           return completedFuture(Collections.emptyList());
@@ -248,7 +250,7 @@ public class UnOpenCompositeOrderManager {
     onOrderItems.forEach(onOrderItem -> {
       List<Piece> itemPieces = itemIdVsPiece.get(onOrderItem.getString(ID));
       if (CollectionUtils.isNotEmpty(itemPieces)) {
-        itemPieces.forEach(piece -> deletedItems.add(pieceService.deletePieceWithItem(piece.getId(), true, rqContext)
+        itemPieces.forEach(piece -> deletedItems.add(pieceDeletionFlowManager.deletePieceWithItem(piece.getId(), rqContext)
           .thenApply(v -> onOrderItem)));
       }
     });

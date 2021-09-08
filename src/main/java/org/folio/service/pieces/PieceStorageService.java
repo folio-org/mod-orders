@@ -1,5 +1,7 @@
 package org.folio.service.pieces;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -7,17 +9,19 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.service.inventory.InventoryManager.SEARCH_PARAMS_WITHOUT_LANG;
 
 public class PieceStorageService {
+  private static final Logger logger = LogManager.getLogger(PieceStorageService.class);
+
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
-  private static final String GET_PIECES_BY_QUERY = resourcesPath(PIECES_STORAGE) + SEARCH_PARAMS_WITHOUT_LANG;
   private static final String PIECE_STORAGE_ENDPOINT = resourcesPath(PIECES_STORAGE);
   private static final String PIECE_STORAGE_BY_ID_ENDPOINT = PIECE_STORAGE_ENDPOINT + "/{id}";
 
@@ -60,6 +64,18 @@ public class PieceStorageService {
   public CompletableFuture<Void> deletePiece(String pieceId, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(PIECE_STORAGE_BY_ID_ENDPOINT).withId(pieceId);
     return restClient.delete(requestEntry, requestContext);
+  }
+
+  public CompletableFuture<Void> deletePiecesByIds(List<String> pieceIds, RequestContext rqContext) {
+    List<CompletableFuture<Void>> deletedItems = new ArrayList<>(pieceIds.size());
+    pieceIds.forEach(pieceId -> deletedItems.add(deletePiece(pieceId, rqContext)));
+    return collectResultsOnSuccess(deletedItems)
+      .thenAccept(v -> {
+        if (logger.isDebugEnabled()) {
+          String deletedIds = String.join(",", pieceIds);
+          logger.debug("Pieces were removed : " + deletedIds);
+        }
+      });
   }
 
   public CompletableFuture<PieceCollection> getExpectedPiecesByLineId(String poLineId, RequestContext requestContext) {

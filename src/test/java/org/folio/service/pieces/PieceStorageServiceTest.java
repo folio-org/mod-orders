@@ -1,5 +1,6 @@
 package org.folio.service.pieces;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
@@ -10,7 +11,10 @@ import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -104,6 +108,16 @@ public class PieceStorageServiceTest {
     assertEquals(pieceCollection, retrievedPieces);
   }
 
+  @Test
+  void testShouldDeleteItems() {
+    //given
+    doReturn(completedFuture(null)).when(pieceStorageService).deletePiece(any(String.class), eq(requestContext));
+    //When
+    pieceStorageService.deletePiecesByIds(List.of(UUID.randomUUID().toString()), requestContext).join();
+    //Then
+    verify(pieceStorageService, times(1)).deletePiece(any(String.class), eq(requestContext));
+  }
+
   private static class ContextConfiguration {
 
     @Bean
@@ -112,7 +126,7 @@ public class PieceStorageServiceTest {
     }
 
     @Bean PieceStorageService pieceStorageService(RestClient restClient) {
-      return new PieceStorageService(restClient);
+      return spy(new PieceStorageService(restClient));
     }
   }
 }
