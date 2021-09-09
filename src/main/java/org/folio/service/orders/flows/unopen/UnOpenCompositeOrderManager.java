@@ -6,26 +6,34 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.PoLineCommonUtil.isOnlyInstanceUpdateRequired;
+import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManager.ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_EFFECTIVE_LOCATION;
 import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
+import static org.folio.service.pieces.PieceFlowUpdatePoLineUtil.updatePoLineLocationAndCostQuantity;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
+import org.folio.models.pieces.PieceDeletionHolder;
+import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.orders.utils.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
@@ -33,12 +41,15 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.service.ProtectionService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.models.ItemStatus;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.orders.PurchaseOrderService;
 import org.folio.service.pieces.PieceDeletionFlowManager;
+import org.folio.service.pieces.PieceFlowUpdatePoLineUtil;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceService;
 
@@ -47,22 +58,26 @@ import io.vertx.core.json.JsonObject;
 public class UnOpenCompositeOrderManager {
   private static final Logger logger = LogManager.getLogger(UnOpenCompositeOrderManager.class);
 
+  private final PurchaseOrderService purchaseOrderService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
   private final InventoryManager inventoryManager;
-  private final PieceService pieceService;
   private final PieceStorageService pieceStorageService;
   private final PieceDeletionFlowManager pieceDeletionFlowManager;
+  private final ProtectionService protectionService;
 
-  public UnOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService, EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-    InventoryManager inventoryManager, PieceService pieceService, PieceStorageService pieceStorageService,
-    PieceDeletionFlowManager pieceDeletionFlowManager) {
+  public UnOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
+                                      EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
+                                      InventoryManager inventoryManager, PieceStorageService pieceStorageService,
+                                      PieceDeletionFlowManager pieceDeletionFlowManager, PurchaseOrderService purchaseOrderService,
+                                      ProtectionService protectionService) {
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
     this.inventoryManager = inventoryManager;
-    this.pieceService = pieceService;
     this.pieceStorageService = pieceStorageService;
     this.pieceDeletionFlowManager = pieceDeletionFlowManager;
+    this.purchaseOrderService = purchaseOrderService;
+    this.protectionService = protectionService;
   }
 
 
@@ -189,10 +204,12 @@ public class UnOpenCompositeOrderManager {
 
   private CompletableFuture<List<Pair<String, String>>> deleteHoldingsByItems(List<JsonObject> deletedItems, RequestContext rqContext) {
     List<CompletableFuture<Pair<String, String>>> deletedHoldingIds = new ArrayList<>(deletedItems.size());
-    deletedItems.forEach(deletedItem -> {
-      String holdingId = deletedItem.getString(ITEM_HOLDINGS_RECORD_ID);
-      String effectiveLocationId = deletedItem.getJsonObject(ITEM_EFFECTIVE_LOCATION).getString(ID);
-      if (holdingId != null) {
+    var holdingIdVsItemMap = deletedItems.stream()
+                                        .collect(groupingBy(item -> Optional.ofNullable(item.getString(ITEM_HOLDINGS_RECORD_ID)) ));
+    holdingIdVsItemMap.forEach((optionalHoldingId, holdingDeletedItems) -> {
+      if (optionalHoldingId.isPresent()) {
+        String holdingId = optionalHoldingId.get();
+        String effectiveLocationId = holdingDeletedItems.get(0).getJsonObject(ITEM_EFFECTIVE_LOCATION).getString(ID);
         deletedHoldingIds.add(inventoryManager.getItemsByHoldingId(holdingId, rqContext)
           .thenCompose(items -> {
             if (items.isEmpty()) {
@@ -246,11 +263,17 @@ public class UnOpenCompositeOrderManager {
 
   private CompletableFuture<List<JsonObject>> deletePiecesAndItems(List<JsonObject> onOrderItems, List<Piece> pieces, RequestContext rqContext) {
     List<CompletableFuture<JsonObject>> deletedItems = new ArrayList<>(onOrderItems.size());
-    Map<String, List<Piece>> itemIdVsPiece = pieces.stream().collect(groupingBy(Piece::getItemId));
+    Map<Optional<String>, List<Piece>> itemIdVsPiece = pieces.stream().collect(groupingBy(piece -> Optional.ofNullable(piece.getItemId())));
     onOrderItems.forEach(onOrderItem -> {
-      List<Piece> itemPieces = itemIdVsPiece.get(onOrderItem.getString(ID));
-      if (CollectionUtils.isNotEmpty(itemPieces)) {
-        itemPieces.forEach(piece -> deletedItems.add(pieceDeletionFlowManager.deletePieceWithItem(piece.getId(), rqContext)
+      List<Piece> piecesWithItem = itemIdVsPiece.get(Optional.ofNullable(onOrderItem.getString(ID)));
+      if (CollectionUtils.isNotEmpty(piecesWithItem)) {
+        piecesWithItem.forEach(piece -> deletedItems.add(deletePieceWithItem(piece.getId(), rqContext)
+          .thenApply(v -> onOrderItem)));
+      }
+      List<Piece> piecesWithoutItem = itemIdVsPiece.get(Optional.empty());
+      if (CollectionUtils.isNotEmpty(piecesWithoutItem)) {
+        List<String> pieceIds = piecesWithoutItem.stream().map(Piece::getId).collect(toList());
+        piecesWithItem.forEach(piece -> deletedItems.add(pieceStorageService.deletePiecesByIds(pieceIds, rqContext)
           .thenApply(v -> onOrderItem)));
       }
     });
@@ -281,4 +304,44 @@ public class UnOpenCompositeOrderManager {
       return completedFuture(compPO);
     }
   }
+
+  public CompletableFuture<Void> deletePieceWithItem(String pieceId, RequestContext requestContext) {
+    PieceDeletionHolder holder = new PieceDeletionHolder();
+    return pieceStorageService.getPieceById(pieceId, requestContext)
+      .thenCompose(piece -> purchaseOrderLineService.getOrderLineById(piece.getPoLineId(), requestContext)
+        .thenCompose(poLine -> purchaseOrderService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
+          .thenAccept(purchaseOrder -> holder.shallowCopy(new PieceDeletionHolder(purchaseOrder, poLine).withPieceToDelete(piece)))
+        ))
+      .thenCompose(purchaseOrder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
+      .thenCompose(vVoid -> canDeletePiece(holder.getPieceToDelete(), requestContext))
+      .thenCompose(aVoid -> pieceStorageService.deletePiece(pieceId, requestContext))
+      .thenCompose(aVoid -> deletePieceConnectedItem(holder.getPieceToDelete(), requestContext));
+  }
+
+  private CompletableFuture<Void> deletePieceConnectedItem(Piece piece, RequestContext requestContext) {
+    if (StringUtils.isNotEmpty(piece.getItemId())) {
+      // Attempt to delete item
+      return inventoryManager.deleteItem(piece.getItemId(), requestContext)
+        .exceptionally(t -> {
+          // Skip error processing if item has already deleted
+          if (t instanceof HttpException && ((HttpException) t).getCode() == 404) {
+            return null;
+          } else {
+            throw new CompletionException(t);
+          }
+        });
+    } else {
+      return CompletableFuture.completedFuture(null);
+    }
+  }
+
+  private CompletableFuture<Void> canDeletePiece(Piece piece, RequestContext requestContext) {
+    return inventoryManager.getNumberOfRequestsByItemId(piece.getItemId(), requestContext)
+      .thenAccept(numOfRequests -> {
+        if (numOfRequests > 0) {
+          throw new HttpException(422, ErrorCodes.REQUEST_FOUND.toError());
+        }
+      });
+  }
+
 }

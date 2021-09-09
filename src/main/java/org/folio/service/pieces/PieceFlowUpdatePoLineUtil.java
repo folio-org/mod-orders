@@ -35,11 +35,11 @@ public final class PieceFlowUpdatePoLineUtil {
       @Override void updateQuantity(int qty, Piece piece, Location loc, Cost cost) {
         if (piece.getFormat() == Piece.Format.ELECTRONIC) {
           loc.setQuantityElectronic(loc.getQuantityElectronic() - qty);
-          loc.setQuantity(loc.getQuantity() + qty);
+          loc.setQuantity(loc.getQuantity() - qty);
           cost.setQuantityElectronic(cost.getQuantityElectronic() - qty);
         } else {
           loc.setQuantityPhysical(loc.getQuantityPhysical() - qty);
-          loc.setQuantity(loc.getQuantity() + qty);
+          loc.setQuantity(loc.getQuantity() - qty);
           cost.setQuantityPhysical(cost.getQuantityPhysical() - qty);
         }
       }

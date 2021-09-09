@@ -12,7 +12,7 @@ import org.folio.service.FundsDistributionService;
 import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.folio.service.orders.OrderWorkflowType;
 
-public class PendingToOpenEncumbranceStrategy extends BaseEncumbranceWorkflowStrategy {
+public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
     private final EncumbranceService encumbranceService;
     private final FundsDistributionService fundsDistributionService;
@@ -23,8 +23,7 @@ public class PendingToOpenEncumbranceStrategy extends BaseEncumbranceWorkflowStr
     public PendingToOpenEncumbranceStrategy(EncumbranceService encumbranceService, FundsDistributionService fundsDistributionService,
       BudgetRestrictionService budgetRestrictionService, EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
       EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder) {
-      super(encumbranceService);
-      this.encumbranceService = encumbranceService;
+        this.encumbranceService = encumbranceService;
         this.fundsDistributionService = fundsDistributionService;
         this.budgetRestrictionService = budgetRestrictionService;
         this.encumbranceRelationsHoldersBuilder = encumbranceRelationsHoldersBuilder;
