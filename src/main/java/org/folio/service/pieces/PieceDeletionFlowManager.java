@@ -16,8 +16,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
-import static org.folio.service.pieces.PieceFlowUpdatePoLineUtil.UpdateQuantityType.ADD;
-import static org.folio.service.pieces.PieceFlowUpdatePoLineUtil.updatePoLineLocationAndCostQuantity;
 
 public class PieceDeletionFlowManager {
   private final PieceStorageService pieceStorageService;
@@ -50,8 +48,7 @@ public class PieceDeletionFlowManager {
       .thenCompose(vVoid -> canDeletePiece(holder.getPieceToDelete(), requestContext))
       .thenCompose(aVoid -> pieceStorageService.deletePiece(pieceId, requestContext))
       .thenCompose(aVoid -> deletePieceConnectedItem(holder.getPieceToDelete(), requestContext))
-      .thenCompose(compPoLine -> updatePoLineLocationAndCostQuantity(1, PieceFlowUpdatePoLineUtil.UpdateQuantityType.DELETE,
-                                              holder.getPieceToDelete(), holder.getPoLineToSave(), requestContext))
+      .thenCompose(compPoLine -> PieceFlowUpdatePoLineStrategies.DELETE.updateQuantity(1, holder.getPieceToDelete(), holder.getPoLineToSave(), requestContext))
       .thenCompose(v -> receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(), holder.getOriginPurchaseOrder(), requestContext))
       .thenAccept(v -> purchaseOrderLineService.updateOrderLine(holder.getPoLineToSave(), requestContext));
   }

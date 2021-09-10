@@ -13,8 +13,6 @@ import org.folio.service.orders.PurchaseOrderService;
 
 import java.util.concurrent.CompletableFuture;
 
-import static org.folio.service.pieces.PieceFlowUpdatePoLineUtil.UpdateQuantityType.*;
-import static org.folio.service.pieces.PieceFlowUpdatePoLineUtil.updatePoLineLocationAndCostQuantity;
 
 public class PieceCreationFlowManager {
   private static final Logger logger = LogManager.getLogger(PieceCreationFlowManager.class);
@@ -46,7 +44,7 @@ public class PieceCreationFlowManager {
       )
       .thenCompose(order -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(),
         ProtectedOperationType.CREATE, requestContext))
-      .thenCompose(compPoLine -> updatePoLineLocationAndCostQuantity(1, ADD, piece, holder.getPoLineToSave(), requestContext))
+      .thenCompose(compPoLine -> PieceFlowUpdatePoLineStrategies.ADD.updateQuantity(1, piece, holder.getPoLineToSave(), requestContext))
       .thenCompose(v -> receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(), holder.getOriginPurchaseOrder(), requestContext))
       .thenAccept(v -> purchaseOrderLineService.updateOrderLine(holder.getPoLineToSave(), requestContext))
       .thenCompose(v -> pieceUpdateInventoryService.updateInventory(holder.getPoLineToSave(), piece, requestContext))

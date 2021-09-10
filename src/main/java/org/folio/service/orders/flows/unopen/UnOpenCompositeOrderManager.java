@@ -13,7 +13,6 @@ import static org.folio.service.inventory.InventoryManager.ITEM_EFFECTIVE_LOCATI
 import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
-import static org.folio.service.pieces.PieceFlowUpdatePoLineUtil.updatePoLineLocationAndCostQuantity;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -49,9 +48,7 @@ import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
 import org.folio.service.pieces.PieceDeletionFlowManager;
-import org.folio.service.pieces.PieceFlowUpdatePoLineUtil;
 import org.folio.service.pieces.PieceStorageService;
-import org.folio.service.pieces.PieceService;
 
 import io.vertx.core.json.JsonObject;
 
