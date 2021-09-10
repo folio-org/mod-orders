@@ -1,23 +1,10 @@
 package org.folio.rest.impl.protection;
 
-import io.restassured.http.Header;
-import io.vertx.core.json.JsonObject;
-import org.folio.rest.impl.MockServer;
-import org.folio.rest.jaxrs.model.AcquisitionsUnit;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Piece;
-import org.hamcrest.Matcher;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
 import static org.folio.TestUtils.getMinimalContentPiece;
 import static org.folio.TestUtils.getRandomId;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
@@ -25,6 +12,20 @@ import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.folio.rest.impl.MockServer;
+import org.folio.rest.jaxrs.model.AcquisitionsUnit;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Piece;
+import org.hamcrest.Matcher;
+
+import io.restassured.http.Header;
+import io.vertx.core.json.JsonObject;
 
 public abstract class ProtectedEntityTestBase {
 
@@ -71,7 +72,8 @@ public abstract class ProtectedEntityTestBase {
   public Piece preparePiece(List<String> acqUnitsIds) {
     CompositePoLine poLine = preparePoLine(acqUnitsIds);
     Piece piece = getMinimalContentPiece(poLine.getId());
-    addMockEntry(PIECES, JsonObject.mapFrom(piece));
+    addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
+
     return piece;
   }
 

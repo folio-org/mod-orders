@@ -1,7 +1,5 @@
 package org.folio.service.finance.expenceclass;
 
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-
 import java.util.concurrent.CompletableFuture;
 
 import org.folio.rest.acq.model.finance.ExpenseClassCollection;

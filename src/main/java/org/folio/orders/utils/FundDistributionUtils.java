@@ -44,7 +44,6 @@ public final class FundDistributionUtils {
       }
     }
 
-
   public static boolean isFundDistributionsPresent(List<CompositePoLine> compositePoLines) {
     return compositePoLines.stream().mapToLong(compositePoLine -> compositePoLine.getFundDistribution().size()).sum() >= 1;
   }

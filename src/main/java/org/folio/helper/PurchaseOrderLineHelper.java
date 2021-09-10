@@ -44,8 +44,8 @@ import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.pieces.PieceRetrieveService;
-import org.folio.service.pieces.PiecesService;
+import org.folio.service.pieces.PieceService;
+import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.titles.TitlesService;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -115,7 +115,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   @Autowired
   private InventoryManager inventoryManager;
   @Autowired
-  private PiecesService piecesService;
+  private PieceService pieceService;
   @Autowired
   private EncumbranceService encumbranceService;
   @Autowired
@@ -135,7 +135,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   @Autowired
   private PurchaseOrderLineService purchaseOrderLineService;
   @Autowired
-  private PieceRetrieveService pieceRetrieveService;
+  private PieceStorageService pieceStorageService;
 
   public PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -537,7 +537,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
       if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
         return completedFuture(null);
       }
-      return piecesService.createPieces(compPOL, titleId, Collections.emptyList(), true, requestContext).thenRun(
+      return pieceService.openOrderCreatePieces(compPOL, titleId, Collections.emptyList(), true, requestContext).thenRun(
           () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId()));
     }
 
@@ -548,7 +548,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
           return completedFuture(null);
         }
         //create pieces only if receiving is required
-        return piecesService.createPieces(compPOL, titleId, piecesWithItemId, true, requestContext);
+        return pieceService.openOrderCreatePieces(compPOL, titleId, piecesWithItemId, true, requestContext);
       });
   }
 

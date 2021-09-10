@@ -60,7 +60,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
@@ -482,7 +482,7 @@ public class PurchaseOrderLinesApiTest {
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
     assertEquals(3, column.size());
     assertThat(column, hasKey(PO_LINES));
-    assertThat(column, not(hasKey(PIECES)));
+    assertThat(column, not(hasKey(PIECES_STORAGE)));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertEquals(1, column.size());
@@ -616,10 +616,10 @@ public class PurchaseOrderLinesApiTest {
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
 
     Map<String, List<JsonObject>> mockServerData = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertThat(mockServerData.get(PIECES), nullValue());
+    assertThat(mockServerData.get(PIECES_STORAGE), nullValue());
 
     mockServerData = MockServer.serverRqRs.column(HttpMethod.POST);
-    assertThat(mockServerData.get(PIECES), nullValue());
+    assertThat(mockServerData.get(PIECES_STORAGE), nullValue());
   }
 
   @Test
@@ -1119,7 +1119,7 @@ public class PurchaseOrderLinesApiTest {
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
 
-    addMockEntry(PIECES, new Piece()
+    addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
@@ -1139,7 +1139,7 @@ public class PurchaseOrderLinesApiTest {
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
 
-    addMockEntry(PIECES, new Piece()
+    addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
@@ -1164,7 +1164,7 @@ public class PurchaseOrderLinesApiTest {
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
 
-    addMockEntry(PIECES, new Piece()
+    addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
@@ -1188,7 +1188,7 @@ public class PurchaseOrderLinesApiTest {
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
 
-    addMockEntry(PIECES, new Piece()
+    addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
@@ -1211,7 +1211,7 @@ public class PurchaseOrderLinesApiTest {
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
 
-    addMockEntry(PIECES, new Piece()
+    addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
@@ -1247,7 +1247,7 @@ public class PurchaseOrderLinesApiTest {
     reqData.getEresource().setCreateInventory(INSTANCE_HOLDING_ITEM);
     reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
 
-    addMockEntry(PIECES, new Piece()
+    addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
@@ -1280,7 +1280,7 @@ public class PurchaseOrderLinesApiTest {
     reqData.getEresource().setCreateInventory(INSTANCE_HOLDING_ITEM);
     reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
 
-    addMockEntry(PIECES, new Piece()
+    addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
@@ -1314,7 +1314,7 @@ public class PurchaseOrderLinesApiTest {
     reqData.getEresource().setCreateInventory(INSTANCE_HOLDING_ITEM);
     reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
 
-    addMockEntry(PIECES, new Piece()
+    addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
@@ -1336,7 +1336,7 @@ public class PurchaseOrderLinesApiTest {
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
     reqData.getEresource().setCreateInventory(INSTANCE_HOLDING);
 
-    addMockEntry(PIECES, new Piece()
+    addMockEntry(PIECES_STORAGE, new Piece()
       .withFormat(Piece.Format.ELECTRONIC)
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
@@ -1372,7 +1372,7 @@ public class PurchaseOrderLinesApiTest {
     reqData.getEresource().setCreateInventory(INSTANCE_HOLDING);
     reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
 
-    addMockEntry(PIECES, new Piece()
+    addMockEntry(PIECES_STORAGE, new Piece()
       .withFormat(Piece.Format.ELECTRONIC)
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));

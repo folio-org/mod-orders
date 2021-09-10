@@ -45,7 +45,7 @@ import static org.folio.orders.utils.ProtectedOperationType.CREATE;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
@@ -118,7 +118,7 @@ import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.flows.unopen.UnOpenCompositeOrderManager;
-import org.folio.service.pieces.PiecesService;
+import org.folio.service.pieces.PieceService;
 import org.folio.service.titles.TitlesService;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -170,7 +170,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   @Autowired
   private InventoryManager inventoryManager;
   @Autowired
-  private PiecesService piecesService;
+  private PieceService pieceService;
   @Autowired
   private UnOpenCompositeOrderManager unOpenCompositeOrderManager;
 
@@ -391,7 +391,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
 
   private CompletableFuture<List<Piece>> getPieceChunkByLineIds(Collection<String> poLineIds, RequestContext requestContext) {
     String query = convertIdsToCqlQuery(poLineIds, "poLineId");
-    RequestEntry requestEntry = new RequestEntry(resourcesPath(PIECES)).withQuery(query)
+    RequestEntry requestEntry = new RequestEntry(resourcesPath(PIECES_STORAGE)).withQuery(query)
       .withOffset(0)
       .withLimit(Integer.MAX_VALUE);
     return restClient.get(requestEntry, requestContext, PieceCollection.class)

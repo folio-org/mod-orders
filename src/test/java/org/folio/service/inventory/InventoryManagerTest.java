@@ -37,7 +37,6 @@ import static org.folio.service.pieces.PieceServiceTest.LINE_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -60,7 +59,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import io.vertx.core.json.JsonArray;
 import org.folio.ApiTestSuite;
 import org.folio.TestConstants;
 import org.folio.models.PoLineUpdateHolder;
@@ -79,7 +77,7 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.configuration.ConfigurationEntriesService;
-import org.folio.service.pieces.PieceRetrieveService;
+import org.folio.service.pieces.PieceStorageService;
 import org.hamcrest.core.IsInstanceOf;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -91,6 +89,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
 import io.vertx.core.Context;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class InventoryManagerTest {
@@ -99,7 +98,6 @@ public class InventoryManagerTest {
   public static final String HOLDING_INSTANCE_ID = "5294d737-a04b-4158-857a-3f3c555bcc60";
   public static final String OLD_LOCATION_ID = "758258bc-ecc1-41b8-abca-f7b610822fff";
   public static final String NEW_LOCATION_ID = "fcd64ce1-6995-48f0-840e-89ffa2288371";
-  public static final String OLD_HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d63";
   public static final String NON_EXISTED_NEW_HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d23";
   public static final String ONLY_NEW_HOLDING_EXIST_ID = "65cb2bf0-d4c2-4822-8ad0-b76f1ba75d22";
   public static final String HOLDING_INSTANCE_ID_2_HOLDING = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d48";
@@ -111,7 +109,7 @@ public class InventoryManagerTest {
   @Autowired
   private RestClient restClient;
   @Autowired
-  private PieceRetrieveService pieceRetrieveService;
+  private PieceStorageService pieceStorageService;
   @Autowired
   private ConfigurationEntriesService configurationEntriesService;
 
@@ -357,7 +355,7 @@ public class InventoryManagerTest {
     existedPieces.getPieces().get(0).setFormat(Piece.Format.PHYSICAL);
     existedPieces.getPieces().get(0).setPoLineId(poLineId);
     //given
-    doReturn(completedFuture(existedPieces)).when(pieceRetrieveService).getExpectedPiecesByLineId(poLineId, requestContext);
+    doReturn(completedFuture(existedPieces)).when(pieceStorageService).getExpectedPiecesByLineId(poLineId, requestContext);
     doReturn(completedFuture(needUpdateItems)).when(inventoryManager).getItemRecordsByIds(Collections.singletonList(itemId), requestContext);
     doReturn(completedFuture(null)).when(inventoryManager).updateItemRecords(any(), eq(requestContext));
     doReturn(completedFuture(null)).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
@@ -468,7 +466,7 @@ public class InventoryManagerTest {
   }
 
   @Test
-  void shouldCheckIfTheHoldingExistsWhenLocationIdSpecifiedAndIfExistThenReturnHoldingId() throws IOException {
+  void shouldCheckIfTheHoldingExistsWhenLocationIdAlwaysNewHoldingShouldBeCreated() throws IOException {
     String instanceId = UUID.randomUUID().toString();
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
     String holdingIdExp = extractId(getFirstObjectFromResponse(holdingsCollection, HOLDINGS_RECORDS));
@@ -479,11 +477,13 @@ public class InventoryManagerTest {
     List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
     Location location = new Location().withLocationId(locationIds.get(0)).withQuantity(1).withQuantityPhysical(1);
 
-    doReturn(completedFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+    doReturn(completedFuture(holdingIdExp)).when(restClient).post(any(RequestEntry.class), any(JsonObject.class), eq(PostResponseType.UUID), eq(String.class), eq(requestContext));
+
     String holdingIdAct = inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).join();
 
     assertThat(holdingIdAct, equalTo(holdingIdExp));
-    verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+    verify(restClient, times(1)).post(any(RequestEntry.class), any(JsonObject.class), eq(PostResponseType.UUID), eq(String.class), eq(requestContext));
+
   }
 
   @Test
@@ -509,7 +509,6 @@ public class InventoryManagerTest {
     String holdingIdAct = inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).join();
 
     assertThat(holdingIdAct, equalTo(holdingIdExp));
-    verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
     verify(restClient, times(1)).post(any(RequestEntry.class), any(JsonObject.class), eq(PostResponseType.UUID), eq(String.class), eq(requestContext));;
   }
 
@@ -543,8 +542,8 @@ public class InventoryManagerTest {
     }
 
     @Bean
-    public PieceRetrieveService pieceRetrieveService() {
-      return mock(PieceRetrieveService.class);
+    public PieceStorageService pieceStorageService() {
+      return mock(PieceStorageService.class);
     }
 
     @Bean
@@ -554,8 +553,8 @@ public class InventoryManagerTest {
 
     @Bean
     public InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
-                                             PieceRetrieveService pieceRetrieveService) {
-      return spy(new InventoryManager(restClient, configurationEntriesService, pieceRetrieveService));
+                                              PieceStorageService pieceStorageService) {
+      return spy(new InventoryManager(restClient, configurationEntriesService, pieceStorageService));
     }
   }
 }
