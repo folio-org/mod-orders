@@ -879,6 +879,10 @@
       "version": "3.1"
     },
     {
+      "id": "finance.expense-classes",
+      "version": "2.0"
+    },
+    {
       "id": "finance.funds",
       "version": "1.3"
     },
