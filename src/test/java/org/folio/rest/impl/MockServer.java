@@ -2466,11 +2466,6 @@ public class MockServer {
     InvoiceLineCollection invoiceLineCollection;
     if (query.equals("poLineId == " + poLineId1 + " and releaseEncumbrance == true")) {
       invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(Collections.emptyList()).withTotalRecords(0);
-//      InvoiceLine invoiceLine = new InvoiceLine() // || query.equals("poLineId != " + poLineId1)
-//        .withId(UUID.randomUUID().toString())
-//        .withPoLineId(poLineId1)
-//        .withReleaseEncumbrance(true);
-//      invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
     } else if (query.equals("poLineId == " + poLineId2 + " and releaseEncumbrance == true")) {
       InvoiceLine invoiceLine = new InvoiceLine()
         .withId(UUID.randomUUID().toString())
