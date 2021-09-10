@@ -49,6 +49,7 @@ import org.folio.service.inventory.HoldingsSummaryServiceTest;
 import org.folio.service.orders.CombinedOrderDataPopulateServiceTest;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilderTest;
 import org.folio.service.orders.FundsDistributionServiceTest;
+import org.folio.service.orders.OrderInvoiceRelationServiceTest;
 import org.folio.service.orders.OrderReEncumberServiceTest;
 import org.folio.service.orders.OrderRolloverServiceTest;
 import org.folio.service.orders.PurchaseOrderLineServiceTest;
@@ -276,6 +277,11 @@ public class ApiTestSuite {
 
   @Nested
   class LocationsAndPiecesConsistencyValidatorTestNested extends LocationsAndPiecesConsistencyValidatorTest {
+
+  }
+
+  @Nested
+  class OrderInvoiceRelationServiceTestNested extends OrderInvoiceRelationServiceTest {
 
   }
 }
