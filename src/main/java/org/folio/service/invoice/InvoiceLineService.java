@@ -22,17 +22,17 @@ public class InvoiceLineService {
     this.restClient = restClient;
   }
 
-  public CompletableFuture<InvoiceLineCollection> getInvoiceLines(String query, int offset, int limit, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(INVOICE_LINES_ENDPOINT)
-      .withQuery(query)
-      .withLimit(Integer.MAX_VALUE)
-      .withOffset(0);
+  public CompletableFuture<InvoiceLineCollection> getInvoiceLines(RequestEntry requestEntry, RequestContext requestContext) {
     return restClient.get(requestEntry, requestContext, InvoiceLineCollection.class);
   }
 
   public CompletableFuture<List<InvoiceLine>> getInvoiceLinesByOrderLineId(String orderPoLineId, RequestContext requestContext) {
      String query = String.format(GET_INVOICE_LINE_BY_PO_LINE_ID_QUERY, orderPoLineId);
-     return getInvoiceLines(query, 0, 0, requestContext)
+    RequestEntry requestEntry = new RequestEntry(INVOICE_LINES_ENDPOINT)
+      .withQuery(query)
+      .withLimit(Integer.MAX_VALUE)
+      .withOffset(0);
+     return getInvoiceLines(requestEntry, requestContext)
        .thenApply(InvoiceLineCollection::getInvoiceLines);
   }
 
