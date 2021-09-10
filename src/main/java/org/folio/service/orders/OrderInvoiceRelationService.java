@@ -1,9 +1,5 @@
 package org.folio.service.orders;
 
-import static org.folio.orders.utils.ErrorCodes.ORDER_RELATES_TO_INVOICE;
-
-import java.util.concurrent.CompletableFuture;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.rest.exceptions.HttpException;
@@ -11,6 +7,12 @@ import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.service.invoice.InvoiceLineService;
+
+import java.util.concurrent.CompletableFuture;
+
+import static org.folio.orders.utils.ErrorCodes.ORDER_RELATES_TO_INVOICE;
 
 public class OrderInvoiceRelationService {
 
@@ -19,8 +21,11 @@ public class OrderInvoiceRelationService {
 
   private final RestClient restClient;
 
-  public OrderInvoiceRelationService(RestClient restClient) {
+  private final InvoiceLineService invoiceLineService;
+
+  public OrderInvoiceRelationService(RestClient restClient, InvoiceLineService invoiceLineService) {
     this.restClient = restClient;
+    this.invoiceLineService = invoiceLineService;
   }
 
   public CompletableFuture<OrderInvoiceRelationshipCollection> getOrderInvoiceRelationshipCollection(String query, int offset, int limit, RequestContext requestContext) {
@@ -31,7 +36,7 @@ public class OrderInvoiceRelationService {
   public CompletableFuture<Void> checkOrderInvoiceRelationship(String id, RequestContext requestContext) {
     String query = "purchaseOrderId==" + id;
 
-    return getOrderInvoiceRelationshipCollection(query, 0,0, requestContext)
+    return getOrderInvoiceRelationshipCollection(query, 0, 0, requestContext)
       .thenApply(oirs -> {
         if (oirs.getTotalRecords() > 0) {
           logger.error("Order or order line {} is linked to the invoice and can not be deleted", id);
@@ -39,5 +44,20 @@ public class OrderInvoiceRelationService {
         }
         return null;
       });
+  }
+
+  public CompletableFuture<Void> checkOrderPOLineLinkedToInvoiceLine(PoLine line, RequestContext requestContext) {
+    return invoiceLineService.getInvoiceLinesByOrderLineId(line.getId(), requestContext)
+      .thenApply(invoiceLines -> {
+        boolean notAllowedDeletePOLine = invoiceLines.stream()
+        .filter(invoiceLine -> invoiceLine.getPoLineId() != null)
+        .anyMatch(invoiceLine -> invoiceLine.getPoLineId().equals(line.getId()));
+        if (notAllowedDeletePOLine) {
+          logger.error("Order or order line {} is linked to the invoice and can not be deleted", line.getId());
+          throw new HttpException(400, ORDER_RELATES_TO_INVOICE);
+        }
+          return null;
+        }
+      );
   }
 }
