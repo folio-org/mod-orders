@@ -1,22 +1,5 @@
 package org.folio.service.finance.transaction;
 
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
-import static org.folio.orders.utils.HelperUtils.getConversionQuery;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import javax.money.convert.ConversionQuery;
-import javax.money.convert.CurrencyConversion;
-import javax.money.convert.ExchangeRateProvider;
-
 import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.acq.model.finance.Budget;
@@ -36,6 +19,24 @@ import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
 import org.folio.service.finance.budget.BudgetService;
+
+import javax.money.convert.ConversionQuery;
+import javax.money.convert.CurrencyConversion;
+import javax.money.convert.ExchangeRateProvider;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static org.folio.orders.utils.HelperUtils.getConversionQuery;
 
 public class EncumbranceRelationsHoldersBuilder {
 
@@ -264,4 +265,26 @@ public class EncumbranceRelationsHoldersBuilder {
           }));
   }
 
+  private CompletableFuture<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(CompositePurchaseOrder compPO,
+                                                                                                CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+    List<EncumbranceRelationsHolder> encumbranceRelationsHolders = buildBaseHolders(compPO);
+    return withBudgets(encumbranceRelationsHolders, requestContext)
+      .thenCompose(holders -> withLedgersData(holders, requestContext))
+      .thenCompose(holders -> withFiscalYearData(holders, requestContext))
+      .thenCompose(holders -> withConversion(holders, requestContext))
+      .thenCompose(holders -> withExistingTransactions(holders, poFromStorage, requestContext));
+  }
+
+  public CompletableFuture<Map<String, List<CompositePoLine>>> retrieveMapFiscalYearsWithCompPOLines(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
+                                                                               RequestContext requestContext) {
+    return prepareEncumbranceRelationsHolder(compPO, poAndLinesFromStorage, requestContext)
+      .thenApply(erhList -> erhList.stream().collect(groupingBy(EncumbranceRelationsHolder::getCurrentFiscalYearId,
+        mapping(EncumbranceRelationsHolder::getPoLine, toList()))));
+  }
+
+  public List<Transaction> retrieveTransactionCollection(List<List<Transaction>> transactionCollections) {
+    List<Transaction> allTransactions = new ArrayList<>();
+    transactionCollections.forEach(transCollection -> allTransactions.addAll(transCollection));
+    return allTransactions;
+  }
 }

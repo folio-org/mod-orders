@@ -1,21 +1,5 @@
 package org.folio.service.finance.transaction;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.TestConfig.initSpringContext;
-import static org.folio.TestUtils.getMockAsJson;
-import static org.folio.helper.PurchaseOrderHelperTest.ORDER_PATH;
-import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
-
 import io.vertx.core.json.JsonObject;
 import org.folio.config.ApplicationConfig;
 import org.folio.models.EncumbranceRelationsHolder;
@@ -28,6 +12,22 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.TestConfig.initSpringContext;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.helper.PurchaseOrderHelperTest.ORDER_PATH;
+import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 
 public class OpenToPendingEncumbranceStrategyTest {
 
@@ -58,7 +58,7 @@ public class OpenToPendingEncumbranceStrategyTest {
         CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
         Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
 
-        doReturn(completedFuture(Collections.singletonList(encumbrance))).when(encumbranceService).getOrderEncumbrances(any(), any());
+        doReturn(completedFuture(Collections.singletonList(encumbrance))).when(encumbranceService).getOrderUnreleasedEncumbrances(any(), any());
         doReturn(completedFuture(null)).when(encumbranceService).updateEncumbrances(any(), any());
         doReturn(completedFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(anyString(), anyInt(), any());
 

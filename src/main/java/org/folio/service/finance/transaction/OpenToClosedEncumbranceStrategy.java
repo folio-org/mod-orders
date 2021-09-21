@@ -12,9 +12,11 @@ import static org.folio.orders.utils.FundDistributionUtils.isFundDistributionsPr
 public class OpenToClosedEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
   private final EncumbranceService encumbranceService;
+  private final EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
 
-  public OpenToClosedEncumbranceStrategy(EncumbranceService encumbranceService) {
+  public OpenToClosedEncumbranceStrategy(EncumbranceService encumbranceService, EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
     this.encumbranceService = encumbranceService;
+    this.encumbranceRelationsHoldersBuilder = encumbranceRelationsHoldersBuilder;
   }
 
   @Override
@@ -23,7 +25,9 @@ public class OpenToClosedEncumbranceStrategy implements EncumbranceWorkflowStrat
 
     EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
     if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
-      return encumbranceService.getOrderEncumbrances(compPO.getId(), requestContext)
+      return encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithCompPOLines(compPO, poAndLinesFromStorage, requestContext)
+        .thenCompose(mapCompPoLine -> encumbranceService.getEncumbrancesByPoLinesFromCurrentFy(mapCompPoLine, requestContext))
+        .thenApply(transactions -> encumbranceRelationsHoldersBuilder.retrieveTransactionCollection(transactions))
         .thenCompose(transactions -> {
           if (transactions.isEmpty()) {
             return CompletableFuture.completedFuture(null);
@@ -35,7 +39,6 @@ public class OpenToClosedEncumbranceStrategy implements EncumbranceWorkflowStrat
         });
     }
     return CompletableFuture.completedFuture(null);
-
   }
 
   @Override
