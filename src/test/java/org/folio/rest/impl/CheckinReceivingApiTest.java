@@ -25,7 +25,7 @@ import static org.folio.orders.utils.ErrorCodes.PIECE_UPDATE_FAILED;
 import static org.folio.orders.utils.ErrorCodes.TITLE_NOT_FOUND;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForEresource;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForPhysical;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.TestUtils.getInstanceId;
@@ -107,7 +107,6 @@ import org.junit.jupiter.api.Test;
 import io.vertx.core.json.JsonObject;
 
 public class CheckinReceivingApiTest {
-
   private static final Logger logger = LogManager.getLogger();
 
   private static final String RECEIVING_RQ_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receiving/";
@@ -471,7 +470,7 @@ public class CheckinReceivingApiTest {
   }
 
   @Test
-  void testPostCheckinElectronicPhysicalChangeLocationIdHoldingIsCreatedForPhysicalPiece() {
+  void testPostCheckinElectronicPhysicalChangeLocationIdNewHoldingIsCreatedForPhysicalPiece() {
 
     logger.info("=== Test POST check-in - Check-in physical and electronic resource with new locationId ===");
 
@@ -502,8 +501,8 @@ public class CheckinReceivingApiTest {
 
     addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
     addMockEntry(PO_LINES, poLine);
-    addMockEntry(PIECES, physicalPiece);
-    addMockEntry(PIECES, electronicPiece);
+    addMockEntry(PIECES_STORAGE, physicalPiece);
+    addMockEntry(PIECES_STORAGE, electronicPiece);
 
     List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
     toBeCheckedInList.add(new ToBeCheckedIn()
@@ -521,7 +520,6 @@ public class CheckinReceivingApiTest {
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(locationForElectronic);
 
     checkResultWithErrors(request, 0);
-    assertThat(getHoldingsSearches(), hasSize(1));
     assertThat(getCreatedHoldings(), hasSize(1));
 
     assertThat(getCreatedHoldings().get(0).getString(HOLDING_PERMANENT_LOCATION_ID), is(locationForPhysical));
@@ -561,8 +559,8 @@ public class CheckinReceivingApiTest {
 
     addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
     addMockEntry(PO_LINES, poLine);
-    addMockEntry(PIECES, physicalPiece);
-    addMockEntry(PIECES, electronicPiece);
+    addMockEntry(PIECES_STORAGE, physicalPiece);
+    addMockEntry(PIECES_STORAGE, electronicPiece);
 
     List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
     toBeCheckedInList.add(new ToBeCheckedIn()
@@ -615,8 +613,8 @@ public class CheckinReceivingApiTest {
 
     addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
     addMockEntry(PO_LINES, poLine);
-    addMockEntry(PIECES, physicalPiece);
-    addMockEntry(PIECES, electronicPiece);
+    addMockEntry(PIECES_STORAGE, physicalPiece);
+    addMockEntry(PIECES_STORAGE, electronicPiece);
 
     List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
     toBeCheckedInList.add(new ToBeCheckedIn()
@@ -659,7 +657,7 @@ public class CheckinReceivingApiTest {
 
     addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
     addMockEntry(PO_LINES, poLine);
-    addMockEntry(PIECES, electronicPiece);
+    addMockEntry(PIECES_STORAGE, electronicPiece);
 
     List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
     toBeCheckedInList.add(new ToBeCheckedIn()

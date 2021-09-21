@@ -58,7 +58,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.helper.AbstractHelper;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.rest.exceptions.InventoryException;
-import org.folio.orders.rest.exceptions.InventoryException;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -970,5 +969,23 @@ public class HelperUtils {
     String message = String.format(EXCEPTION_CALLING_ENDPOINT_MSG, operation, endpoint, cause.getMessage());
     logger.error(message, t);
     future.completeExceptionally(new HttpException(code, message));
+  }
+
+  public static CompositePurchaseOrder convertToCompositePurchaseOrder(PurchaseOrder purchaseOrder, List<PoLine> poLineList) {
+    List<CompositePoLine> compositePoLines = new ArrayList<>(poLineList.size());
+    if (CollectionUtils.isNotEmpty(poLineList)) {
+      poLineList.forEach(poLine -> {
+        poLine.setAlerts(null);
+        poLine.setReportingCodes(null);
+        CompositePoLine compositePoLine = PoLineCommonUtil.convertToCompositePoLine(poLine);
+        compositePoLines.add(compositePoLine);
+      });
+    }
+    JsonObject jsonLine = JsonObject.mapFrom(purchaseOrder);
+    return jsonLine.mapTo(CompositePurchaseOrder.class).withCompositePoLines(compositePoLines);
+  }
+
+  public static <T> T clone(Class<T> clazz, T object) {
+    return JsonObject.mapFrom(object).mapTo(clazz);
   }
 }

@@ -89,7 +89,10 @@ public enum ErrorCodes {
   ERROR_RETRIEVING_TRANSACTION("errorRetrievingTransactions", "Error retrieving the transactions"),
   HOLDINGS_BY_ID_NOT_FOUND("holdingsByIdNotFoundError", "Holdings with id %s not found"),
   HOLDINGS_ID_AND_LOCATION_ID_IS_NULL_ERROR("locationIdAndHoldingIdAbsentError", "Reference on holding or location must present"),
-  MAY_BE_LINK_TO_EITHER_HOLDING_OR_LOCATION_ERROR("mayBeLinkToEitherHoldingOrLocationError", "There may be a link to either the holding or the location");
+  MAY_BE_LINK_TO_EITHER_HOLDING_OR_LOCATION_ERROR("mayBeLinkToEitherHoldingOrLocationError", "There may be a link to either the holding or the location"),
+  PO_LINE_NOT_FOUND("poLineNotFound", "The purchase order line record is not found"),
+  RECEIVING_PROCESS_ENCUMBRANCES_ERROR("receivingProcessEncumbrancesError",
+    "Pieces can not be added to or deleted from this Title until all the Fund distributions on the related purchase order line are converted from amounts to percentages.");
 
 
   private final String code;
