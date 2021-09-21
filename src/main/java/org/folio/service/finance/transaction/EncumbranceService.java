@@ -7,7 +7,6 @@ import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.orders.rest.exceptions.HttpException;
 import org.folio.orders.utils.ErrorCodes;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Tags;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -131,7 +130,7 @@ public class EncumbranceService {
         .stream()
         .map(poLine -> getPoLineEncumbrancesToUnrelease(poLine, mapFiscalYearWithCompPOLines, requestContext))
         .collect(toList());
-    return HelperUtils.collectResultsOnSuccess(futures)
+    return collectResultsOnSuccess(futures)
       .thenApply(listOfLists -> listOfLists.stream().flatMap(List::stream).collect(toList()));
   }
 
