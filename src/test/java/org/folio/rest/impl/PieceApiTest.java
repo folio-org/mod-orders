@@ -18,7 +18,7 @@ import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.orders.utils.ErrorCodes.REQUEST_FOUND;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
@@ -192,7 +192,7 @@ public class PieceApiTest {
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.NONE));
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withItemId(ID_DOES_NOT_EXIST).withPoLineId(poLine.getId());
     order.setCompositePoLines(Collections.singletonList(poLine));
-    MockServer.addMockEntry(PIECES, JsonObject.mapFrom(piece));
+    MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
     MockServer.addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
     MockServer.addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
 
@@ -210,7 +210,7 @@ public class PieceApiTest {
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.NONE));
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withItemId(ID_FOR_INTERNAL_SERVER_ERROR).withPoLineId(poLine.getId());
     order.setCompositePoLines(Collections.singletonList(poLine));
-    MockServer.addMockEntry(PIECES, JsonObject.mapFrom(piece));
+    MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
     MockServer.addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
     MockServer.addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
 
@@ -228,7 +228,7 @@ public class PieceApiTest {
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.NONE));
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withPoLineId(poLine.getId());
     order.setCompositePoLines(Collections.singletonList(poLine));
-    MockServer.addMockEntry(PIECES, JsonObject.mapFrom(piece));
+    MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
     MockServer.addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
     MockServer.addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
 
@@ -246,7 +246,7 @@ public class PieceApiTest {
       .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM));
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withItemId(UUID.randomUUID().toString()).withPoLineId(poLine.getId());
     order.setCompositePoLines(Collections.singletonList(poLine));
-    MockServer.addMockEntry(PIECES, JsonObject.mapFrom(piece));
+    MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
     MockServer.addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
     MockServer.addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
 
@@ -263,7 +263,7 @@ public class PieceApiTest {
     CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId());
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withItemId("522a501a-56b5-48d9-b28a-3a8f02482d98").withPoLineId(poLine.getId());
 
-    MockServer.addMockEntry(PIECES, JsonObject.mapFrom(piece));
+    MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
     MockServer.addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
     MockServer.addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
 

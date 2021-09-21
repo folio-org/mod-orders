@@ -1,8 +1,6 @@
 package org.folio.service.orders;
 
 import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.HoldingSummary;
 import org.folio.rest.jaxrs.model.HoldingSummaryCollection;

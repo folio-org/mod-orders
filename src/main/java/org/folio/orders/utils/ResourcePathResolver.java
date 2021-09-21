@@ -20,7 +20,7 @@ public class ResourcePathResolver {
   public static final String ACQUISITIONS_MEMBERSHIPS = "acquisitionsMemberships";
   public static final String REPORTING_CODES = "reportingCodes";
   public static final String PURCHASE_ORDER = "purchaseOrder";
-  public static final String PIECES = "pieces";
+  public static final String PIECES_STORAGE = "pieces";
   public static final String RECEIVING_HISTORY = "receiving-history";
   public static final String RECEIPT_STATUS = "receiptStatus";
   public static final String PAYMENT_STATUS = "paymentStatus";
@@ -59,7 +59,7 @@ public class ResourcePathResolver {
     apis.put(PO_LINES, "/orders-storage/po-lines");
     apis.put(PO_NUMBER, "/orders-storage/po-number");
     apis.put(PURCHASE_ORDER, "/orders-storage/purchase-orders");
-    apis.put(PIECES, "/orders-storage/pieces");
+    apis.put(PIECES_STORAGE, "/orders-storage/pieces");
     apis.put(RECEIVING_HISTORY, "/orders-storage/receiving-history");
     apis.put(PO_LINE_NUMBER, "/orders-storage/po-line-number");
     apis.put(ORDER_TEMPLATES, "/orders-storage/order-templates");

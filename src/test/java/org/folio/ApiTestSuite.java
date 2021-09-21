@@ -49,6 +49,7 @@ import org.folio.service.inventory.HoldingsSummaryServiceTest;
 import org.folio.service.orders.CombinedOrderDataPopulateServiceTest;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilderTest;
 import org.folio.service.orders.FundsDistributionServiceTest;
+import org.folio.service.orders.OrderInvoiceRelationServiceTest;
 import org.folio.service.orders.OrderReEncumberServiceTest;
 import org.folio.service.orders.OrderRolloverServiceTest;
 import org.folio.service.orders.PurchaseOrderLineServiceTest;
@@ -56,6 +57,8 @@ import org.folio.service.orders.PurchaseOrderServiceTest;
 import org.folio.service.orders.ReEncumbranceHoldersBuilderTest;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateServiceTest;
 import org.folio.service.pieces.PieceServiceTest;
+import org.folio.service.pieces.PieceStorageServiceTest;
+import org.folio.service.pieces.PieceUpdateInventoryServiceTest;
 import org.folio.utils.PoLineCommonUtilTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -276,6 +279,21 @@ public class ApiTestSuite {
 
   @Nested
   class LocationsAndPiecesConsistencyValidatorTestNested extends LocationsAndPiecesConsistencyValidatorTest {
+
+  }
+
+  @Nested
+  class PieceStorageServiceTestNested extends PieceStorageServiceTest {
+
+  }
+
+  @Nested
+  class PieceUpdateInventoryServiceTestNested extends PieceUpdateInventoryServiceTest {
+
+  }
+
+  @Nested
+  class OrderInvoiceRelationServiceTestNested extends OrderInvoiceRelationServiceTest {
 
   }
 }

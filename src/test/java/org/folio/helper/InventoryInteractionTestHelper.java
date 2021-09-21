@@ -74,7 +74,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class InventoryInteractionTestHelper {
-
   private static final Logger logger = LogManager.getLogger();
 
   public static void verifyInstanceLinksForUpdatedOrder(CompositePurchaseOrder reqData) {
@@ -105,7 +104,7 @@ public class InventoryInteractionTestHelper {
 
   public static void verifyInventoryInteraction(Header tenant, CompositePurchaseOrder reqData, int createdInstancesCount) {
     // Verify inventory GET and POST requests for instance, holding and item records
-    verifyInventoryInteraction(true);
+    verifyInventoryInteraction(true, true);
 
     List<JsonObject> createdInstances = getCreatedInstances();
     List<JsonObject> createdHoldings = getCreatedHoldings();
@@ -126,7 +125,7 @@ public class InventoryInteractionTestHelper {
     }
   }
 
-  public static void verifyInventoryInteraction(boolean checkItemsCreated) {
+  public static void verifyInventoryInteraction(boolean checkItemsCreated, boolean checkHoldingSearches) {
     // Check that search of the existing instances and items was done for each PO line
     List<JsonObject> instancesSearches = getInstancesSearches();
     List<JsonObject> holdingsSearches = getHoldingsSearches();
@@ -134,8 +133,10 @@ public class InventoryInteractionTestHelper {
     List<JsonObject> piecesSearches = getPieceSearches();
     assertNotNull(instancesSearches);
     logger.debug("--------------------------- Instances found -------------------------------\n" + new JsonArray(instancesSearches).encodePrettily());
-    assertNotNull(holdingsSearches);
-    logger.debug("--------------------------- Holdings found -------------------------------\n" + new JsonArray(holdingsSearches).encodePrettily());
+    if (checkHoldingSearches) {
+      assertNotNull(holdingsSearches);
+      logger.debug("--------------------------- Holdings found -------------------------------\n" + new JsonArray(holdingsSearches).encodePrettily());
+    }
     assertNotNull(itemsSearches);
     logger.debug("--------------------------- Items found -------------------------------\n" + new JsonArray(itemsSearches).encodePrettily());
     assertNotNull(piecesSearches);

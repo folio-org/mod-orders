@@ -1,13 +1,13 @@
 package org.folio.rest.impl.protection;
 
-import static org.folio.orders.utils.ResourcePathResolver.PIECES;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
-import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
 import static org.folio.TestUtils.getMinimalContentPiece;
 import static org.folio.TestUtils.getRandomId;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
@@ -72,7 +72,8 @@ public abstract class ProtectedEntityTestBase {
   public Piece preparePiece(List<String> acqUnitsIds) {
     CompositePoLine poLine = preparePoLine(acqUnitsIds);
     Piece piece = getMinimalContentPiece(poLine.getId());
-    addMockEntry(PIECES, JsonObject.mapFrom(piece));
+    addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
+
     return piece;
   }
 

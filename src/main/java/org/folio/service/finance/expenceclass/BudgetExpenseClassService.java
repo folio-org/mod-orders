@@ -7,8 +7,6 @@ import org.folio.rest.core.models.RequestEntry;
 
 import java.util.concurrent.CompletableFuture;
 
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-
 public class BudgetExpenseClassService {
 
     private static final String ENDPOINT = "/finance-storage/budget-expense-classes";
