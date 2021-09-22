@@ -51,10 +51,8 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
       .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
-  @Override
-  @Validate
-  public void postOrdersPieces(String lang, Piece entity, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  @Override public void postOrdersPieces(boolean createItem, String lang, Piece entity, Map<String, String> okapiHeaders,
+    Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     pieceCreationFlowManager.createPiece(entity, new RequestContext(vertxContext, okapiHeaders))
       .thenAccept(piece -> {
         if (logger.isInfoEnabled()) {
@@ -73,10 +71,8 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
       .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
-  @Override
-  @Validate
-  public void putOrdersPiecesById(String pieceId, String lang, Piece piece, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  @Override public void putOrdersPiecesById(String pieceId, boolean createItem, String lang, Piece piece,
+    Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     if (StringUtils.isEmpty(piece.getId())) {
       piece.setId(pieceId);
     }

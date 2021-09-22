@@ -40,6 +40,14 @@ resourceTypes:
     is: [pageable, searchable: {description: "using CQL (indexes for piece records)", example: "format==\"Physical\""} ]
   post:
     description: Create piece record
+    queryParameters:
+      createItem:
+        displayName: Should item will be created for piece
+        type: boolean
+        description: Should item will be created for piece
+        example: true
+        required: false
+        default: false
   /{id}:
     uriParameters:
       id:
@@ -54,6 +62,14 @@ resourceTypes:
       description: Return a piece record with given {id}
     put:
       description: Update a piece record with given {id}
+      queryParameters:
+        createItem:
+          displayName: Should item will be created for piece
+          type: boolean
+          description: Should item will be created for piece
+          example: true
+          required: false
+          default: false
       body:
         application/json:
           type: piece
