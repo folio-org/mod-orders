@@ -265,7 +265,7 @@ public class EncumbranceRelationsHoldersBuilder {
           }));
   }
 
-  private CompletableFuture<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(CompositePurchaseOrder compPO,
+  public CompletableFuture<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(CompositePurchaseOrder compPO,
                                                                                                 CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
     List<EncumbranceRelationsHolder> encumbranceRelationsHolders = buildBaseHolders(compPO);
     return withBudgets(encumbranceRelationsHolders, requestContext)

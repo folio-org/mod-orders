@@ -1,14 +1,15 @@
 package org.folio.service.finance.transaction;
 
-import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.orders.OrderWorkflowType;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
@@ -50,21 +51,11 @@ public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStra
     return OrderWorkflowType.OPEN_TO_PENDING;
   }
 
-  public CompletableFuture<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(CompositePurchaseOrder compPO,
-      CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
-    List<EncumbranceRelationsHolder> encumbranceRelationsHolders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
-    return encumbranceRelationsHoldersBuilder.withBudgets(encumbranceRelationsHolders, requestContext)
-      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContext))
-      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContext))
-      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withConversion(holders, requestContext))
-      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, poFromStorage, requestContext));
-  }
-
   public CompletableFuture<List<Transaction>> getOrderEncumbrances(CompositePurchaseOrder compPo,
                                                                    CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
 
     return encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithCompPOLines(compPo, poFromStorage, requestContext)
       .thenCompose(poLinesByCurrentFy -> encumbranceService.getEncumbrancesByPoLinesFromCurrentFy(poLinesByCurrentFy, requestContext))
-      .thenApply(transactions -> encumbranceRelationsHoldersBuilder.retrieveTransactionCollection(transactions));
+      .thenApply(trs -> trs.stream().flatMap(Collection::stream).collect(Collectors.toList()));
   }
 }
