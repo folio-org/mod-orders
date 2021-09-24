@@ -1,9 +1,6 @@
 package org.folio.service.pieces;
 
-import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_HOLDING_REFERENCE_IS_NOT_ALLOWED_ERROR;
-
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -16,7 +13,6 @@ import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.RestConstants;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Piece;
@@ -66,14 +62,8 @@ public class PieceCreateFlowManager {
   }
 
   private void isIncomingPieceValid(PieceCreationHolder holder) {
-    CompositePurchaseOrder originCompPO = holder.getOriginPurchaseOrder();
     Piece pieceToCreate = holder.getPieceToCreate();
     List<Error> errors = Optional.ofNullable(PieceValidatorUtil.validatePieceLocation(pieceToCreate)).orElse(new ArrayList<>());
-    if (originCompPO.getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.PENDING) {
-      if (pieceToCreate.getHoldingId() != null) {
-        errors.add(PIECE_HOLDING_REFERENCE_IS_NOT_ALLOWED_ERROR.toError());
-      }
-    }
     if (CollectionUtils.isNotEmpty(errors)) {
       throw new HttpException(RestConstants.BAD_REQUEST, new Errors().withErrors(errors).withTotalRecords(errors.size()));
     }

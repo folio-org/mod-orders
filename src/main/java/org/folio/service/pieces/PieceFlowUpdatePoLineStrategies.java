@@ -1,15 +1,10 @@
 package org.folio.service.pieces;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
-import org.folio.completablefuture.FolioVertxCompletableFuture;
-import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Location;

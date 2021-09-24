@@ -1,6 +1,5 @@
 package org.folio.rest.core.exceptions;
 
-import java.util.ArrayList;
 import java.util.Collections;
 
 import org.apache.commons.collections4.CollectionUtils;
