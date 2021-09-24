@@ -53,8 +53,9 @@ import org.folio.service.orders.ReEncumbranceHoldersBuilder;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateService;
 import org.folio.service.orders.flows.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
-import org.folio.service.pieces.PieceCreationFlowManager;
-import org.folio.service.pieces.PieceDeletionFlowManager;
+import org.folio.service.pieces.PieceCreateFlowInventoryManager;
+import org.folio.service.pieces.PieceCreateFlowManager;
+import org.folio.service.pieces.PieceDeleteFlowManager;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
@@ -363,22 +364,22 @@ public class ApplicationConfig {
                               purchaseOrderService, pieceUpdateInventoryService);
   }
 
-  @Bean PieceCreationFlowManager pieceCreationService(PieceStorageService pieceStorageService, PurchaseOrderLineService purchaseOrderLineService,
+  @Bean PieceCreateFlowManager pieceCreationService(PieceStorageService pieceStorageService, PurchaseOrderLineService purchaseOrderLineService,
                                                   PurchaseOrderService purchaseOrderService, ProtectionService protectionService,
                                                   ReceivingEncumbranceStrategy receivingEncumbranceStrategy,
-                                                  PieceUpdateInventoryService pieceUpdateInventoryService) {
-    return new PieceCreationFlowManager(pieceStorageService, purchaseOrderLineService, purchaseOrderService, protectionService,
-      receivingEncumbranceStrategy, pieceUpdateInventoryService);
+                                                  PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager) {
+    return new PieceCreateFlowManager(pieceStorageService, purchaseOrderLineService, purchaseOrderService, protectionService,
+      receivingEncumbranceStrategy, pieceCreateFlowInventoryManager);
   }
 
   @Bean
   UnOpenCompositeOrderManager unOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
                                       EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
                                       InventoryManager inventoryManager, PieceStorageService pieceStorageService,
-                                      PieceDeletionFlowManager pieceDeletionFlowManager, PurchaseOrderService purchaseOrderService,
+                                      PieceDeleteFlowManager pieceDeleteFlowManager, PurchaseOrderService purchaseOrderService,
                                       ProtectionService protectionService) {
     return new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryManager,
-                                          pieceStorageService, pieceDeletionFlowManager, purchaseOrderService, protectionService);
+                                          pieceStorageService, pieceDeleteFlowManager, purchaseOrderService, protectionService);
   }
 
   @Bean
@@ -402,10 +403,15 @@ public class ApplicationConfig {
     return new PieceUpdateInventoryService(titlesService, inventoryManager);
   }
 
-  @Bean PieceDeletionFlowManager pieceDeletionFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
+  @Bean PieceDeleteFlowManager pieceDeletionFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
     PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService, InventoryManager inventoryManager,
     ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
-    return new PieceDeletionFlowManager(pieceStorageService, protectionService, purchaseOrderService,
+    return new PieceDeleteFlowManager(pieceStorageService, protectionService, purchaseOrderService,
                                         purchaseOrderLineService, inventoryManager, receivingEncumbranceStrategy);
+  }
+
+  @Bean PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager(TitlesService titlesService, InventoryManager inventoryManager,
+                                                                        PieceUpdateInventoryService pieceUpdateInventoryService) {
+    return new PieceCreateFlowInventoryManager(titlesService, inventoryManager, pieceUpdateInventoryService);
   }
 }

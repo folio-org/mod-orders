@@ -36,7 +36,7 @@ public final class PoLineCommonUtil {
     return receiptStatus == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
   }
 
-  public static boolean inventoryUpdateNotRequired(CompositePoLine compPOL) {
+  public static boolean isInventoryUpdateNotRequired(CompositePoLine compPOL) {
     // in case of "Other" order format check Physical createInventory value only
     if (compPOL.getOrderFormat() == OTHER || compPOL.getOrderFormat() == PHYSICAL_RESOURCE) {
       return isUpdateNotRequiredForPhysical(compPOL);

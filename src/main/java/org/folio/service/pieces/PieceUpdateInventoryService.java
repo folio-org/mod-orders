@@ -49,8 +49,12 @@ public class PieceUpdateInventoryService {
           if (piece.getHoldingId() != null) {
             return completedFuture(piece.getHoldingId());
           }
-          return handleHoldingsRecord(compPOL, new Location().withLocationId(piece.getLocationId())
-            , title.getInstanceId(), requestContext);
+          return handleHoldingsRecord(compPOL, new Location().withLocationId(piece.getLocationId()), title.getInstanceId(), requestContext)
+            .thenApply(holdingId -> {
+              piece.setLocationId(null);
+              piece.setHoldingId(holdingId);
+              return holdingId;
+            });
         })
         .thenCompose(holdingId -> createItemRecord(compPOL, holdingId, requestContext))
         .thenAccept(itemId -> Optional.ofNullable(itemId).ifPresent(piece::withItemId));

@@ -2,7 +2,7 @@ package org.folio.service.orders;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -12,7 +12,7 @@ import org.folio.service.invoice.InvoiceLineService;
 
 import java.util.concurrent.CompletableFuture;
 
-import static org.folio.orders.utils.ErrorCodes.ORDER_RELATES_TO_INVOICE;
+import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_RELATES_TO_INVOICE;
 
 public class OrderInvoiceRelationService {
 

@@ -119,7 +119,8 @@ public final class TestUtils {
       .withItemId(ITEM_ID)
       .withTitleId(SAMPLE_TITLE_ID)
       .withReceiptDate(new Date())
-      .withPoLineId(poLineId);
+      .withPoLineId(poLineId)
+      .withLocationId(UUID.randomUUID().toString());
   }
 
   public static String getInstanceId(PoLine poline) {
@@ -174,6 +175,16 @@ public final class TestUtils {
       .withPhysical(new Physical().withMaterialType("2d1398ae-e1aa-4c7c-b9c9-15adf8cf6425"))
       .withCost(new Cost().withCurrency("EUR").withQuantityPhysical(1).withListUnitPrice(10.0))
       .withLocations(Collections.singletonList(new Location().withLocationId("2a00b0be-1447-42a1-a112-124450991899").withQuantityPhysical(1).withQuantity(1)))
+      .withTitleOrPackage("Title")
+      .withPurchaseOrderId(orderId);
+  }
+
+  public static CompositePoLine getMinimalPackageCompositePoLine(String orderId) {
+    return new CompositePoLine().withSource(CompositePoLine.Source.EDI)
+      .withId(MIN_PO_LINE_ID)
+      .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withAcquisitionMethod(CompositePoLine.AcquisitionMethod.PURCHASE)
+      .withIsPackage(true)
       .withTitleOrPackage("Title")
       .withPurchaseOrderId(orderId);
   }

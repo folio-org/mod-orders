@@ -9,7 +9,7 @@ import static org.folio.TestConstants.ORDERS_CHECKIN_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_RECEIVING_ENDPOINT;
 import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestUtils.getModifiedProtectedFields;
-import static org.folio.orders.utils.ErrorCodes.PROHIBITED_FIELD_CHANGING;
+import static org.folio.rest.core.exceptions.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;

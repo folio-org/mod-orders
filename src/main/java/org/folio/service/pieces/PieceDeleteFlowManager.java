@@ -2,8 +2,8 @@ package org.folio.service.pieces;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.models.pieces.PieceDeletionHolder;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.ProtectionService;
@@ -17,7 +17,7 @@ import java.util.concurrent.CompletionException;
 
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 
-public class PieceDeletionFlowManager {
+public class PieceDeleteFlowManager {
   private final PieceStorageService pieceStorageService;
   private final ProtectionService protectionService;
   private final PurchaseOrderService purchaseOrderService;
@@ -26,7 +26,7 @@ public class PieceDeletionFlowManager {
   private final ReceivingEncumbranceStrategy receivingEncumbranceStrategy;
 
 
-  public PieceDeletionFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
+  public PieceDeleteFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
     PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService, InventoryManager inventoryManager,
     ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
     this.pieceStorageService = pieceStorageService;
@@ -48,7 +48,7 @@ public class PieceDeletionFlowManager {
       .thenCompose(vVoid -> canDeletePiece(holder.getPieceToDelete(), requestContext))
       .thenCompose(aVoid -> pieceStorageService.deletePiece(pieceId, requestContext))
       .thenCompose(aVoid -> deletePieceConnectedItem(holder.getPieceToDelete(), requestContext))
-      .thenCompose(compPoLine -> PieceFlowUpdatePoLineStrategies.DELETE.updateQuantity(1, holder.getPieceToDelete(), holder.getPoLineToSave(), requestContext))
+      .thenAccept(compPoLine -> PieceFlowUpdatePoLineStrategies.DELETE.updateQuantity(1, holder.getPieceToDelete(), holder.getPoLineToSave()))
       .thenCompose(v -> receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(), holder.getOriginPurchaseOrder(), requestContext))
       .thenAccept(v -> purchaseOrderLineService.updateOrderLine(holder.getPoLineToSave(), requestContext));
   }

@@ -1,8 +1,8 @@
 package org.folio.service.orders;
 
 import org.folio.models.CompositeOrderRetrieveHolder;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;

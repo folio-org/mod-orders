@@ -1,4 +1,4 @@
-package org.folio.orders.rest.exceptions;
+package org.folio.rest.core.exceptions;
 
 public class InventoryException extends RuntimeException {
 

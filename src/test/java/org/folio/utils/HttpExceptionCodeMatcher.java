@@ -1,6 +1,6 @@
 package org.folio.utils;
 
-import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.core.exceptions.HttpException;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 
