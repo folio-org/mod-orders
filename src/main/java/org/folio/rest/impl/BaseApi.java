@@ -77,16 +77,22 @@ public class BaseApi {
   protected int handleProcessingError(Throwable throwable) {
     final Throwable cause = throwable.getCause();
     logger.error("Exception encountered", cause);
-    Error error = GENERIC_ERROR_CODE.toError().withAdditionalProperty(ERROR_CAUSE, cause.getMessage());
-    int code = INTERNAL_SERVER_ERROR.getStatusCode();
+    final Error error;
+    final int code;
 
     if (cause instanceof HttpException) {
       code = ((HttpException) cause).getCode();
       error = ((HttpException) cause).getError();
+    } else {
+      code = INTERNAL_SERVER_ERROR.getStatusCode();
+      error = GENERIC_ERROR_CODE.toError()
+        .withAdditionalProperty(ERROR_CAUSE, cause.getMessage());
     }
+
     if (getErrors().isEmpty()) {
       addProcessingError(error);
     }
+
     return code;
   }
 

@@ -3,6 +3,7 @@ package org.folio.rest.core.exceptions;
 import java.util.ArrayList;
 import java.util.Collections;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -48,6 +49,9 @@ public class HttpException extends RuntimeException {
   }
 
   public Error getError() {
+    if (CollectionUtils.isEmpty(errors.getErrors())) {
+      return ErrorCodes.GENERIC_ERROR_CODE.toError();
+    }
     return errors.getErrors().get(0);
   }
 }

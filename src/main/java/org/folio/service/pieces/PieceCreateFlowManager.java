@@ -3,10 +3,12 @@ package org.folio.service.pieces;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_HOLDING_REFERENCE_IS_NOT_ALLOWED_ERROR;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceCreationHolder;
@@ -72,6 +74,8 @@ public class PieceCreateFlowManager {
         errors.add(PIECE_HOLDING_REFERENCE_IS_NOT_ALLOWED_ERROR.toError());
       }
     }
-    throw new HttpException(RestConstants.BAD_REQUEST, new Errors().withErrors(errors));
+    if (CollectionUtils.isNotEmpty(errors)) {
+      throw new HttpException(RestConstants.BAD_REQUEST, new Errors().withErrors(errors).withTotalRecords(errors.size()));
+    }
   }
 }

@@ -119,7 +119,8 @@ public final class TestUtils {
       .withItemId(ITEM_ID)
       .withTitleId(SAMPLE_TITLE_ID)
       .withReceiptDate(new Date())
-      .withPoLineId(poLineId);
+      .withPoLineId(poLineId)
+      .withLocationId(UUID.randomUUID().toString());
   }
 
   public static String getInstanceId(PoLine poline) {
