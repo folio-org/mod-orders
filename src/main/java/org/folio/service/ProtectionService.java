@@ -1,7 +1,7 @@
 package org.folio.service;
 
-import static org.folio.orders.utils.ErrorCodes.ORDER_UNITS_NOT_FOUND;
-import static org.folio.orders.utils.ErrorCodes.USER_HAS_NO_PERMISSIONS;
+import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_UNITS_NOT_FOUND;
+import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.folio.HttpStatus;
-import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.models.RequestContext;

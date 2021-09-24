@@ -15,8 +15,8 @@ import java.util.function.Function;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;

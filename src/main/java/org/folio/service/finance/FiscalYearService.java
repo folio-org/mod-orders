@@ -1,6 +1,6 @@
 package org.folio.service.finance;
 
-import static org.folio.orders.utils.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
+import static org.folio.rest.core.exceptions.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
 
 import java.util.Collections;
 import java.util.List;
@@ -8,7 +8,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -19,7 +19,7 @@ public class FiscalYearService {
 
   private static final String FISCAL_YEAR = "/finance/fiscal-years/{id}";
   private static final String CURRENT_FISCAL_YEAR = "/finance/ledgers/{id}/current-fiscal-year";
-  
+
   private final RestClient restClient;
   private final FundService fundService;
 

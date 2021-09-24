@@ -9,8 +9,8 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.ws.rs.core.Response;
 
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.jaxrs.model.PoNumber;

@@ -1,12 +1,12 @@
 package org.folio.orders.utils;
 
 import static java.math.RoundingMode.HALF_EVEN;
-import static org.folio.orders.utils.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
+import static org.folio.rest.core.exceptions.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
 
 import java.math.BigDecimal;
 import java.util.List;
 
-import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.FundDistribution;
 

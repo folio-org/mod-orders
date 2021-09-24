@@ -17,7 +17,9 @@ import org.folio.orders.utils.HelperUtilsTest;
 import org.folio.orders.utils.validators.CompositePoLineValidationUtilTest;
 import org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidatorTest;
 import org.folio.orders.utils.validators.OngoingOrderValidatorTest;
+import org.folio.rest.core.ResponseUtilTest;
 import org.folio.rest.core.RestClientTest;
+import org.folio.rest.core.exceptions.ExceptionUtilTest;
 import org.folio.rest.impl.CheckinReceivingApiTest;
 import org.folio.rest.impl.HoldingsSummaryAPITest;
 import org.folio.rest.impl.OrderTemplateTest;
@@ -56,6 +58,7 @@ import org.folio.service.orders.PurchaseOrderLineServiceTest;
 import org.folio.service.orders.PurchaseOrderServiceTest;
 import org.folio.service.orders.ReEncumbranceHoldersBuilderTest;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateServiceTest;
+import org.folio.service.pieces.PieceFlowUpdatePoLineStrategiesTest;
 import org.folio.service.pieces.PieceServiceTest;
 import org.folio.service.pieces.PieceStorageServiceTest;
 import org.folio.service.pieces.PieceUpdateInventoryServiceTest;
@@ -294,6 +297,21 @@ public class ApiTestSuite {
 
   @Nested
   class OrderInvoiceRelationServiceTestNested extends OrderInvoiceRelationServiceTest {
+
+  }
+
+  @Nested
+  class PieceFlowUpdatePoLineStrategiesTestNested extends PieceFlowUpdatePoLineStrategiesTest {
+
+  }
+
+  @Nested
+  class ExceptionUtilTestNested extends ExceptionUtilTest {
+
+  }
+
+  @Nested
+  class ResponseUtilTestNested extends ResponseUtilTest {
 
   }
 }

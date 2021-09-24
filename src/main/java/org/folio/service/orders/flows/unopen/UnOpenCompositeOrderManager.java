@@ -31,8 +31,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.pieces.PieceDeletionHolder;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
@@ -47,7 +47,7 @@ import org.folio.models.ItemStatus;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
-import org.folio.service.pieces.PieceDeletionFlowManager;
+import org.folio.service.pieces.PieceDeleteFlowManager;
 import org.folio.service.pieces.PieceStorageService;
 
 import io.vertx.core.json.JsonObject;
@@ -60,19 +60,19 @@ public class UnOpenCompositeOrderManager {
   private final EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
   private final InventoryManager inventoryManager;
   private final PieceStorageService pieceStorageService;
-  private final PieceDeletionFlowManager pieceDeletionFlowManager;
+  private final PieceDeleteFlowManager pieceDeleteFlowManager;
   private final ProtectionService protectionService;
 
   public UnOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
                                       EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
                                       InventoryManager inventoryManager, PieceStorageService pieceStorageService,
-                                      PieceDeletionFlowManager pieceDeletionFlowManager, PurchaseOrderService purchaseOrderService,
+                                      PieceDeleteFlowManager pieceDeleteFlowManager, PurchaseOrderService purchaseOrderService,
                                       ProtectionService protectionService) {
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
     this.inventoryManager = inventoryManager;
     this.pieceStorageService = pieceStorageService;
-    this.pieceDeletionFlowManager = pieceDeletionFlowManager;
+    this.pieceDeleteFlowManager = pieceDeleteFlowManager;
     this.purchaseOrderService = purchaseOrderService;
     this.protectionService = protectionService;
   }
@@ -111,7 +111,7 @@ public class UnOpenCompositeOrderManager {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return completedFuture(null);
     }
-    if (PoLineCommonUtil.inventoryUpdateNotRequired(compPOL) || isOnlyInstanceUpdateRequired(compPOL)) {
+    if (PoLineCommonUtil.isInventoryUpdateNotRequired(compPOL) || isOnlyInstanceUpdateRequired(compPOL)) {
       return deleteExpectedPieces(compPOL, rqContext).thenAccept(pieces -> {
         if (logger.isDebugEnabled()) {
           String deletedIds = pieces.stream().map(Piece::getId).collect(Collectors.joining(","));

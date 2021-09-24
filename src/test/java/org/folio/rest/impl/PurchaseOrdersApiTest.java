@@ -31,7 +31,7 @@ import static org.folio.helper.InventoryInteractionTestHelper.verifyOpenOrderPie
 import static org.folio.helper.InventoryInteractionTestHelper.verifyPiecesCreated;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyPiecesQuantityForSuccessCase;
 import static org.folio.helper.PurchaseOrderHelper.OKAPI_HEADER_PERMISSIONS;
-import static org.folio.orders.utils.ErrorCodes.*;
+import static org.folio.rest.core.exceptions.ErrorCodes.*;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
@@ -131,7 +131,7 @@ import org.folio.config.ApplicationConfig;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.VendorHelper;
 import org.folio.orders.utils.AcqDesiredPermissions;
-import org.folio.orders.utils.ErrorCodes;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.POProtectedFields;

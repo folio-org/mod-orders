@@ -1,11 +1,11 @@
 package org.folio.orders.utils.validators;
 
 import org.folio.HttpStatus;
-import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 
-import static org.folio.orders.utils.ErrorCodes.RENEWAL_DATE_IS_NOT_SET;
-import static org.folio.orders.utils.ErrorCodes.RENEWAL_INTERVAL_IS_NOT_SET;
+import static org.folio.rest.core.exceptions.ErrorCodes.RENEWAL_DATE_IS_NOT_SET;
+import static org.folio.rest.core.exceptions.ErrorCodes.RENEWAL_INTERVAL_IS_NOT_SET;
 
 /**
  * Class for composite orders validation routines

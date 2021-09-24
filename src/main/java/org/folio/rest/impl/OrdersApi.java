@@ -1,7 +1,7 @@
 package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
-import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
+import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
 
 import java.util.Map;
 
@@ -13,7 +13,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.helper.PurchaseOrderHelper;
-import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;

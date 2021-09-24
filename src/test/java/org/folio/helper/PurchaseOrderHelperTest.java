@@ -2,8 +2,8 @@ package org.folio.helper;
 
 import io.vertx.core.Context;
 import org.folio.ApiTestSuite;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.acq.model.OrderInvoiceRelationship;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.core.RestClient;

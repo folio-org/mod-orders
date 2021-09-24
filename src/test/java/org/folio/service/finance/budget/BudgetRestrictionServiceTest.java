@@ -1,6 +1,6 @@
 package org.folio.service.finance.budget;
 
-import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
+import static org.folio.rest.core.exceptions.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.folio.models.EncumbranceRelationsHolder;
-import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Ledger;

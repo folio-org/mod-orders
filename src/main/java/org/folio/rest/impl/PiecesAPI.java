@@ -13,8 +13,8 @@ import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.resource.OrdersPieces;
-import org.folio.service.pieces.PieceCreationFlowManager;
-import org.folio.service.pieces.PieceDeletionFlowManager;
+import org.folio.service.pieces.PieceCreateFlowManager;
+import org.folio.service.pieces.PieceDeleteFlowManager;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceService;
 import org.folio.spring.SpringContextUtil;
@@ -35,9 +35,9 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
   @Autowired
   private PieceStorageService pieceStorageService;
   @Autowired
-  private PieceCreationFlowManager pieceCreationFlowManager;
+  private PieceCreateFlowManager pieceCreateFlowManager;
   @Autowired
-  private PieceDeletionFlowManager pieceDeletionFlowManager;
+  private PieceDeleteFlowManager pieceDeleteFlowManager;
 
   public PiecesAPI() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -53,7 +53,7 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
 
   @Override public void postOrdersPieces(boolean createItem, String lang, Piece entity, Map<String, String> okapiHeaders,
     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    pieceCreationFlowManager.createPiece(entity, new RequestContext(vertxContext, okapiHeaders))
+    pieceCreateFlowManager.createPiece(entity, createItem, new RequestContext(vertxContext, okapiHeaders))
       .thenAccept(piece -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully created piece: {}", JsonObject.mapFrom(piece).encodePrettily());
@@ -86,7 +86,7 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
   @Validate
   public void deleteOrdersPiecesById(String pieceId, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    pieceDeletionFlowManager.deletePieceWithItem(pieceId, new RequestContext(vertxContext, okapiHeaders))
+    pieceDeleteFlowManager.deletePieceWithItem(pieceId, new RequestContext(vertxContext, okapiHeaders))
       .thenAccept(ok -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
