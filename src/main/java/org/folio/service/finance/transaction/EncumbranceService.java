@@ -230,18 +230,14 @@ public class EncumbranceService {
                                                                                 Map<String, List<CompositePoLine>> mapFiscalYearWithCompPOLines,
                                                                                 RequestContext requestContext) {
     final String[] currentFiscalYearId = new String[1];
-    mapFiscalYearWithCompPOLines.entrySet()
-      .stream()
-      .map(entry ->
-      {
-        for (CompositePoLine pLine : entry.getValue()) {
-          if (poLine.equals(pLine)) {
-            currentFiscalYearId[0] = entry.getKey();
-            break;
-          }
+    for (Map.Entry<String, List<CompositePoLine>> entry : mapFiscalYearWithCompPOLines.entrySet()) {
+      for (CompositePoLine pLine : entry.getValue()) {
+        if (poLine.getId().equals(pLine.getId())) {
+          currentFiscalYearId[0] = entry.getKey();
+          break;
         }
-        return null;
-      });
+      }
+    }
     if (currentFiscalYearId[0] == null) {
         Error error = ErrorCodes.CURRENT_FISCAL_YEAR_ID_NOT_FOUND.toError();
         List<Parameter> parameters = Collections.singletonList(new Parameter().withKey("poLineNumber")

@@ -278,7 +278,7 @@ public class EncumbranceRelationsHoldersBuilder {
   public CompletableFuture<Map<String, List<CompositePoLine>>> retrieveMapFiscalYearsWithCompPOLines(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
                                                                                RequestContext requestContext) {
     return prepareEncumbranceRelationsHolder(compPO, poAndLinesFromStorage, requestContext)
-      .thenApply(erhList -> erhList.stream().collect(groupingBy(EncumbranceRelationsHolder::getCurrentFiscalYearId,
+      .thenApply(erhList -> erhList.stream().filter(erh-> Objects.nonNull(erh.getCurrentFiscalYearId())).collect(groupingBy(EncumbranceRelationsHolder::getCurrentFiscalYearId,
         mapping(EncumbranceRelationsHolder::getPoLine, toList()))));
   }
 
