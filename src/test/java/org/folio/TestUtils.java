@@ -179,6 +179,16 @@ public final class TestUtils {
       .withPurchaseOrderId(orderId);
   }
 
+  public static CompositePoLine getMinimalPackageCompositePoLine(String orderId) {
+    return new CompositePoLine().withSource(CompositePoLine.Source.EDI)
+      .withId(MIN_PO_LINE_ID)
+      .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withAcquisitionMethod(CompositePoLine.AcquisitionMethod.PURCHASE)
+      .withIsPackage(true)
+      .withTitleOrPackage("Title")
+      .withPurchaseOrderId(orderId);
+  }
+
   public static CompositePurchaseOrder getMinimalContentCompositePurchaseOrder() {
     return new CompositePurchaseOrder()
       .withId(MIN_PO_ID)

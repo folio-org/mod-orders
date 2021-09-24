@@ -39,7 +39,8 @@ public class PieceCreateFlowInventoryManager {
           if (piece.getHoldingId() != null) {
             return completedFuture(piece.getHoldingId());
           }
-          return pieceUpdateInventoryService.handleHoldingsRecord(compPOL, new Location().withLocationId(piece.getLocationId()), title.getInstanceId(), requestContext)
+          Location location = new Location().withLocationId(piece.getLocationId());
+          return pieceUpdateInventoryService.handleHoldingsRecord(compPOL, location, title.getInstanceId(), requestContext)
             .thenApply(holdingId -> {
               piece.setLocationId(null);
               piece.setHoldingId(holdingId);

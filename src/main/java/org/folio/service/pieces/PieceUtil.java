@@ -8,7 +8,7 @@ public class PieceUtil {
 
   }
 
-  public boolean isUpdateInventoryNeeded(Piece.Format pieceFormat, CompositePoLine compositePoLine) {
+  public boolean isUpdateInventoryNeeded(Piece.Format pieceFormat) {
     if (pieceFormat == Piece.Format.ELECTRONIC) {
 
     } else if (pieceFormat == Piece.Format.PHYSICAL) {
@@ -16,12 +16,4 @@ public class PieceUtil {
     }
     return false;
   }
-//
-//  public static boolean isUpdateNotRequiredForEresource(CompositePoLine compPOL) {
-//    return compPOL.getEresource() == null || compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.NONE;
-//  }
-//
-//  public static boolean isUpdateNotRequiredForPhysical(CompositePoLine compPOL) {
-//    return compPOL.getPhysical() == null || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE;
-//  }
 }
