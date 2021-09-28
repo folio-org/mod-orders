@@ -1,4 +1,4 @@
-package org.folio.service.pieces;
+package org.folio.service.pieces.flows;
 
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;

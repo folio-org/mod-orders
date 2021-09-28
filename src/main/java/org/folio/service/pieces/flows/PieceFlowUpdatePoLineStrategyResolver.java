@@ -11,6 +11,6 @@ public class PieceFlowUpdatePoLineStrategyResolver {
   }
 
   public Optional<PieceFlowUpdatePoLineStrategy> resolve(PieceFlowUpdatePoLineKey key) {
-    return Optional.ofNullable(strategies.get(key));
+    return Optional.ofNullable(key).map(strategies::get);
   }
 }

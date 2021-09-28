@@ -1,4 +1,4 @@
-package org.folio.service.pieces;
+package org.folio.service.pieces.flows.create;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.TestConfig.autowireDependencies;
@@ -27,7 +27,7 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.inventory.InventoryManager;
-import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
+import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -50,8 +50,7 @@ public class PieceCreateFlowInventoryManageTest {
   @Autowired PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
   @Autowired
   TitlesService titlesService;
-  @Autowired
-  PieceUpdateInventoryService pieceUpdateInventoryService;
+  @Autowired PieceUpdateInventoryService pieceUpdateInventoryService;
   @Autowired
   InventoryManager inventoryManager;
 

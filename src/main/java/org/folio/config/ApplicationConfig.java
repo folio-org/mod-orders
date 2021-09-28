@@ -440,11 +440,11 @@ public class ApplicationConfig {
 
     PieceFlowUpdatePoLineKey pendingNonPackageDeletePieceKey = new PieceFlowUpdatePoLineKey().withPieceFlowType(PIECE_DELETE_FLOW)
                                                                               .withOrderWorkFlowStatus(PENDING).withIsPackage(false);
-    strategies.put(pendingNonPackageDeletePieceKey, PieceFlowUpdatePoLineStrategies.ADD);
+    strategies.put(pendingNonPackageDeletePieceKey, PieceFlowUpdatePoLineStrategies.DELETE);
 
     PieceFlowUpdatePoLineKey openNonPackageDeletePieceKey = new PieceFlowUpdatePoLineKey().withPieceFlowType(PIECE_DELETE_FLOW)
                                                                               .withOrderWorkFlowStatus(OPEN).withIsPackage(false);
-    strategies.put(openNonPackageDeletePieceKey, PieceFlowUpdatePoLineStrategies.ADD);
+    strategies.put(openNonPackageDeletePieceKey, PieceFlowUpdatePoLineStrategies.DELETE);
     return new PieceFlowUpdatePoLineStrategyResolver(strategies);
   }
 }
