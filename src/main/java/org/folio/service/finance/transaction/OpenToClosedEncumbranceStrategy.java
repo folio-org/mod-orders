@@ -1,13 +1,13 @@
 package org.folio.service.finance.transaction;
 
+import static org.folio.orders.utils.FundDistributionUtils.isFundDistributionsPresent;
+
+import java.util.concurrent.CompletableFuture;
+
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.orders.OrderWorkflowType;
-
-import java.util.concurrent.CompletableFuture;
-
-import static org.folio.orders.utils.FundDistributionUtils.isFundDistributionsPresent;
 
 public class OpenToClosedEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
