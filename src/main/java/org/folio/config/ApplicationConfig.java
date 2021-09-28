@@ -1,5 +1,12 @@
 package org.folio.config;
 
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
+import static org.folio.service.pieces.flows.PieceFlowUpdatePoLineKey.PieceFlowType.PIECE_CREATE_FLOW;
+import static org.folio.service.pieces.flows.PieceFlowUpdatePoLineKey.PieceFlowType.PIECE_DELETE_FLOW;
+
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.folio.rest.core.RestClient;
@@ -53,12 +60,16 @@ import org.folio.service.orders.ReEncumbranceHoldersBuilder;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateService;
 import org.folio.service.orders.flows.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
-import org.folio.service.pieces.PieceCreateFlowInventoryManager;
-import org.folio.service.pieces.PieceCreateFlowManager;
-import org.folio.service.pieces.PieceDeleteFlowManager;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
+import org.folio.service.pieces.flows.PieceFlowUpdatePoLineKey;
+import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategy;
+import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategyResolver;
+import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
+import org.folio.service.pieces.flows.create.PieceCreateFlowManager;
+import org.folio.service.pieces.flows.create.PieceFlowUpdatePoLineStrategies;
+import org.folio.service.pieces.flows.delete.PieceDeleteFlowManager;
 import org.folio.service.titles.TitlesService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -367,9 +378,10 @@ public class ApplicationConfig {
   @Bean PieceCreateFlowManager pieceCreationService(PieceStorageService pieceStorageService, PurchaseOrderLineService purchaseOrderLineService,
                                                   PurchaseOrderService purchaseOrderService, ProtectionService protectionService,
                                                   ReceivingEncumbranceStrategy receivingEncumbranceStrategy,
-                                                  PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager) {
+                                                  PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager,
+                                                  PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver) {
     return new PieceCreateFlowManager(pieceStorageService, purchaseOrderLineService, purchaseOrderService, protectionService,
-      receivingEncumbranceStrategy, pieceCreateFlowInventoryManager);
+      receivingEncumbranceStrategy, pieceCreateFlowInventoryManager, pieceFlowUpdatePoLineStrategyResolver);
   }
 
   @Bean
@@ -405,13 +417,34 @@ public class ApplicationConfig {
 
   @Bean PieceDeleteFlowManager pieceDeletionFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
     PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService, InventoryManager inventoryManager,
-    ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
-    return new PieceDeleteFlowManager(pieceStorageService, protectionService, purchaseOrderService,
-                                        purchaseOrderLineService, inventoryManager, receivingEncumbranceStrategy);
+    ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver) {
+    return new PieceDeleteFlowManager(pieceStorageService, protectionService, purchaseOrderService, purchaseOrderLineService,
+                                        inventoryManager, receivingEncumbranceStrategy, pieceFlowUpdatePoLineStrategyResolver);
   }
 
   @Bean PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager(TitlesService titlesService, InventoryManager inventoryManager,
                                                                         PieceUpdateInventoryService pieceUpdateInventoryService) {
     return new PieceCreateFlowInventoryManager(titlesService, inventoryManager, pieceUpdateInventoryService);
+  }
+
+  @Bean PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver() {
+    Map<PieceFlowUpdatePoLineKey, PieceFlowUpdatePoLineStrategy> strategies = new HashMap<>();
+    PieceFlowUpdatePoLineKey pendingNonPackageCreatePieceKey = new PieceFlowUpdatePoLineKey().withPieceFlowType(PIECE_CREATE_FLOW)
+                                                                             .withOrderWorkFlowStatus(PENDING).withIsPackage(false);
+    strategies.put(pendingNonPackageCreatePieceKey, PieceFlowUpdatePoLineStrategies.ADD);
+
+    PieceFlowUpdatePoLineKey openNonPackageCreatePieceKey = new PieceFlowUpdatePoLineKey().withPieceFlowType(PIECE_CREATE_FLOW)
+                                                                              .withOrderWorkFlowStatus(OPEN).withIsPackage(false);
+    strategies.put(openNonPackageCreatePieceKey, PieceFlowUpdatePoLineStrategies.ADD);
+
+
+    PieceFlowUpdatePoLineKey pendingNonPackageDeletePieceKey = new PieceFlowUpdatePoLineKey().withPieceFlowType(PIECE_DELETE_FLOW)
+                                                                              .withOrderWorkFlowStatus(PENDING).withIsPackage(false);
+    strategies.put(pendingNonPackageDeletePieceKey, PieceFlowUpdatePoLineStrategies.ADD);
+
+    PieceFlowUpdatePoLineKey openNonPackageDeletePieceKey = new PieceFlowUpdatePoLineKey().withPieceFlowType(PIECE_DELETE_FLOW)
+                                                                              .withOrderWorkFlowStatus(OPEN).withIsPackage(false);
+    strategies.put(openNonPackageDeletePieceKey, PieceFlowUpdatePoLineStrategies.ADD);
+    return new PieceFlowUpdatePoLineStrategyResolver(strategies);
   }
 }

@@ -1,4 +1,4 @@
-package org.folio.service.pieces;
+package org.folio.service.pieces.flows.create;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,11 +9,12 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategy;
 
-public enum PieceFlowUpdatePoLineStrategies {
+public enum PieceFlowUpdatePoLineStrategies implements PieceFlowUpdatePoLineStrategy {
     DELETE() {
       @Override
-      void updateQuantity(int qty, Piece piece, CompositePoLine lineToSave) {
+      public void updateQuantity(int qty, Piece piece, CompositePoLine lineToSave) {
         Optional<Location> locationToUpdate = lineToSave.getLocations().stream()
           .filter(loc -> (Objects.nonNull(piece.getLocationId()) && piece.getLocationId().equals(loc.getLocationId()))
             || (Objects.nonNull(piece.getHoldingId()) && piece.getHoldingId().equals(loc.getHoldingId())))
@@ -40,7 +41,7 @@ public enum PieceFlowUpdatePoLineStrategies {
     },
     ADD() {
       @Override
-      void updateQuantity(int qty, Piece piece, CompositePoLine lineToSave) {
+      public void updateQuantity(int qty, Piece piece, CompositePoLine lineToSave) {
         Optional<Location> locationToUpdate = lineToSave.getLocations().stream()
           .filter(loc -> (Objects.nonNull(piece.getLocationId()) && piece.getLocationId().equals(loc.getLocationId()))
             || (Objects.nonNull(piece.getHoldingId()) && piece.getHoldingId().equals(loc.getHoldingId())))
@@ -73,6 +74,4 @@ public enum PieceFlowUpdatePoLineStrategies {
         }
       }
     };
-
-    abstract void updateQuantity(int qty, Piece piece, CompositePoLine poLine);
 }

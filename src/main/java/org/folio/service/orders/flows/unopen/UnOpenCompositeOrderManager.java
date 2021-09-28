@@ -47,7 +47,7 @@ import org.folio.models.ItemStatus;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
-import org.folio.service.pieces.PieceDeleteFlowManager;
+import org.folio.service.pieces.flows.delete.PieceDeleteFlowManager;
 import org.folio.service.pieces.PieceStorageService;
 
 import io.vertx.core.json.JsonObject;

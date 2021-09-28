@@ -1,9 +1,15 @@
-package org.folio.service.pieces;
+package org.folio.service.pieces.flows.delete;
+
+import static org.folio.orders.utils.ProtectedOperationType.DELETE;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.models.pieces.PieceDeletionHolder;
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.ProtectionService;
@@ -11,11 +17,10 @@ import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
-
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-
-import static org.folio.orders.utils.ProtectedOperationType.DELETE;
+import org.folio.service.pieces.PieceStorageService;
+import org.folio.service.pieces.flows.PieceFlowUpdatePoLineKey;
+import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategyResolver;
+import org.folio.service.pieces.flows.create.PieceFlowUpdatePoLineStrategies;
 
 public class PieceDeleteFlowManager {
   private final PieceStorageService pieceStorageService;
@@ -24,17 +29,18 @@ public class PieceDeleteFlowManager {
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final InventoryManager inventoryManager;
   private final ReceivingEncumbranceStrategy receivingEncumbranceStrategy;
-
+  private final PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver;
 
   public PieceDeleteFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
     PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService, InventoryManager inventoryManager,
-    ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
+    ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver) {
     this.pieceStorageService = pieceStorageService;
     this.protectionService = protectionService;
     this.purchaseOrderService = purchaseOrderService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.inventoryManager = inventoryManager;
     this.receivingEncumbranceStrategy = receivingEncumbranceStrategy;
+    this.pieceFlowUpdatePoLineStrategyResolver = pieceFlowUpdatePoLineStrategyResolver;
   }
 
   public CompletableFuture<Void> deletePieceWithItem(String pieceId, RequestContext requestContext) {
@@ -51,6 +57,14 @@ public class PieceDeleteFlowManager {
       .thenAccept(compPoLine -> PieceFlowUpdatePoLineStrategies.DELETE.updateQuantity(1, holder.getPieceToDelete(), holder.getPoLineToSave()))
       .thenCompose(v -> receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(), holder.getOriginPurchaseOrder(), requestContext))
       .thenAccept(v -> purchaseOrderLineService.updateOrderLine(holder.getPoLineToSave(), requestContext));
+  }
+
+  private void poLineUpdateQuantity(PieceCreationHolder holder) {
+    PieceFlowUpdatePoLineKey key = new PieceFlowUpdatePoLineKey().withIsPackage(holder.getPoLineToSave().getIsPackage())
+      .withOrderWorkFlowStatus(holder.getPurchaseOrderToSave().getWorkflowStatus())
+      .withPieceFlowType(PieceFlowUpdatePoLineKey.PieceFlowType.PIECE_DELETE_FLOW);
+    pieceFlowUpdatePoLineStrategyResolver.resolve(key)
+      .ifPresent(strategy -> strategy.updateQuantity(1, holder.getPieceToCreate(), holder.getPoLineToSave()));
   }
 
   private CompletableFuture<Void> canDeletePiece(Piece piece, RequestContext requestContext) {
