@@ -1,4 +1,4 @@
-package org.folio.service.pieces.flows.create;
+package org.folio.service.pieces.flows;
 
 import java.util.ArrayList;
 import java.util.List;

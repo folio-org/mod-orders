@@ -68,7 +68,7 @@ import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategy;
 import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategyResolver;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
 import org.folio.service.pieces.flows.create.PieceCreateFlowManager;
-import org.folio.service.pieces.flows.create.PieceFlowUpdatePoLineStrategies;
+import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategies;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowManager;
 import org.folio.service.titles.TitlesService;
 import org.springframework.context.annotation.Bean;

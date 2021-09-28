@@ -20,7 +20,7 @@ import org.folio.service.orders.PurchaseOrderService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.PieceFlowUpdatePoLineKey;
 import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategyResolver;
-import org.folio.service.pieces.flows.create.PieceFlowUpdatePoLineStrategies;
+import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategies;
 
 public class PieceDeleteFlowManager {
   private final PieceStorageService pieceStorageService;

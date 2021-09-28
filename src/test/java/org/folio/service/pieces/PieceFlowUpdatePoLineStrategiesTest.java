@@ -14,7 +14,7 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.service.pieces.flows.create.PieceFlowUpdatePoLineStrategies;
+import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategies;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 
