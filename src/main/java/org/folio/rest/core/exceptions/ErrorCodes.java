@@ -92,7 +92,8 @@ public enum ErrorCodes {
   RECEIVING_PROCESS_ENCUMBRANCES_ERROR("receivingProcessEncumbrancesError",
     "Pieces can not be added to or deleted from this Title until all the Fund distributions on the related purchase order line are converted from amounts to percentages."),
   PIECE_HOLDING_REFERENCE_IS_NOT_ALLOWED_ERROR("holdingReferenceIsNotAllowed", "Holding reference is not allowed in the Piece for Pending order. Please set location reference"),
-  POSTGRE_SQL_ERROR("pgException", "PostgreSQL exception");;
+  POSTGRE_SQL_ERROR("pgException", "PostgreSQL exception"),
+  PIECE_FORMAT_IS_NOT_VALID_ERROR("pieceFormatIsNotValid", "Piece format %s is not compatible with purchase line %s");
 
 
   private final String code;

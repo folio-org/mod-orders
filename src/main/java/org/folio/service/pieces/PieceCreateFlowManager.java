@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.ListUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceCreationHolder;
@@ -13,6 +14,7 @@ import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.RestConstants;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Piece;
@@ -63,9 +65,13 @@ public class PieceCreateFlowManager {
 
   private void isIncomingPieceValid(PieceCreationHolder holder) {
     Piece pieceToCreate = holder.getPieceToCreate();
-    List<Error> errors = Optional.ofNullable(PieceValidatorUtil.validatePieceLocation(pieceToCreate)).orElse(new ArrayList<>());
-    if (CollectionUtils.isNotEmpty(errors)) {
-      throw new HttpException(RestConstants.BAD_REQUEST, new Errors().withErrors(errors).withTotalRecords(errors.size()));
+    CompositePoLine originPoLine = holder.getOriginPoLine();
+    List<Error> pieceLocationErrors = Optional.ofNullable(PieceValidatorUtil.validatePieceLocation(pieceToCreate)).orElse(new ArrayList<>());
+    List<Error> pieceFormatErrors = Optional.ofNullable(PieceValidatorUtil.validatePieceFormat(pieceToCreate, originPoLine)).orElse(new ArrayList<>());
+    List<Error> combinedErrors = ListUtils.union(pieceFormatErrors, pieceLocationErrors);
+    if (CollectionUtils.isNotEmpty(combinedErrors)) {
+      throw new HttpException(RestConstants.BAD_REQUEST, new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size()));
     }
   }
+
 }
