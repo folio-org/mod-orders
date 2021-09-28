@@ -16,7 +16,7 @@ import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
 import static org.folio.TestConstants.X_ECHO_STATUS;
 import static org.folio.TestUtils.getMockData;
-import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
 import static org.folio.rest.impl.MockServer.ORDER_TEMPLATES_COLLECTION;
 import static org.folio.rest.impl.MockServer.getQueryParams;

@@ -8,8 +8,8 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.orders.rest.exceptions.HttpException;
-import org.folio.orders.utils.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -72,7 +72,7 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEqualCollection;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.orders.utils.ErrorCodes.LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN;
+import static org.folio.rest.core.exceptions.ErrorCodes.LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalLocationQuantity;
@@ -532,7 +532,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return completedFuture(null);
     }
-    if (PoLineCommonUtil.inventoryUpdateNotRequired(compPOL)) {
+    if (PoLineCommonUtil.isInventoryUpdateNotRequired(compPOL)) {
       // don't create pieces, if no inventory updates and receiving not required
       if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
         return completedFuture(null);

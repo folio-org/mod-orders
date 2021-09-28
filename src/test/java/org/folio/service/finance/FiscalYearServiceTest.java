@@ -16,7 +16,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.tools.client.HttpClientFactory;

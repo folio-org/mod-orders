@@ -1,7 +1,7 @@
 package org.folio.service.finance;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.orders.utils.ErrorCodes.FUNDS_NOT_FOUND;
+import static org.folio.rest.core.exceptions.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
 
-import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.CompositeFund;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.FundCollection;

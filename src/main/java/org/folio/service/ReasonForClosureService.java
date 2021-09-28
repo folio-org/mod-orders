@@ -1,11 +1,11 @@
 package org.folio.service;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.orders.utils.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 
 import java.util.concurrent.CompletableFuture;
 
-import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;

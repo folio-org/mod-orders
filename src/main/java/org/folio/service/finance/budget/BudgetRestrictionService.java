@@ -2,7 +2,7 @@ package org.folio.service.finance.budget;
 
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.ErrorCodes.FUND_CANNOT_BE_PAID;
+import static org.folio.rest.core.exceptions.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
 
 import java.math.BigDecimal;
@@ -17,7 +17,7 @@ import javax.money.Monetary;
 import javax.money.MonetaryAmount;
 
 import org.folio.models.EncumbranceRelationsHolder;
-import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.javamoney.moneta.Money;

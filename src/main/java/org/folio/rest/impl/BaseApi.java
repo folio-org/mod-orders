@@ -6,7 +6,7 @@ import static javax.ws.rs.core.HttpHeaders.LOCATION;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.Response.Status.CREATED;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
-import static org.folio.orders.utils.ErrorCodes.GENERIC_ERROR_CODE;
+import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -16,7 +16,7 @@ import javax.ws.rs.core.Response;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 

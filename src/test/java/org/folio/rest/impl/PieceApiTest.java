@@ -17,7 +17,7 @@ import static org.folio.TestConstants.X_ECHO_STATUS;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
-import static org.folio.orders.utils.ErrorCodes.REQUEST_FOUND;
+import static org.folio.rest.core.exceptions.ErrorCodes.REQUEST_FOUND;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;

@@ -66,7 +66,7 @@ public class EncumbranceService {
         .thenCompose(v -> releaseEncumbrances(holder.getEncumbrancesForRelease(), requestContext))
         .thenCompose(v -> unreleaseEncumbrances(holder.getEncumbrancesForUnrelease(), requestContext))
         .thenCompose(v -> updateEncumbrances(holder, requestContext))
-        .thenCompose(v -> deleteEncumbrances(holder.getEncumbrancesForDelete(), requestContext)); // thenAccept
+        .thenCompose(v -> deleteEncumbrances(holder.getEncumbrancesForDelete(), requestContext));
   }
 
   public CompletableFuture<Void> createEncumbrances(List<EncumbranceRelationsHolder> relationsHolders, RequestContext requestContext) {

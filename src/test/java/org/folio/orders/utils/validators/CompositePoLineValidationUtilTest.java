@@ -1,6 +1,6 @@
 package org.folio.orders.utils.validators;
 
-import org.folio.orders.utils.ErrorCodes;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Error;

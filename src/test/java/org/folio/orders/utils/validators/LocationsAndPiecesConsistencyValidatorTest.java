@@ -1,6 +1,6 @@
 package org.folio.orders.utils.validators;
 
-import org.folio.orders.rest.exceptions.HttpException;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.UUID;
 
-import static org.folio.orders.utils.ErrorCodes.PIECES_TO_BE_DELETED;
+import static org.folio.rest.core.exceptions.ErrorCodes.PIECES_TO_BE_DELETED;
 import static org.folio.rest.RestConstants.VALIDATION_ERROR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
