@@ -41,13 +41,14 @@ import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
 import org.folio.config.ApplicationConfig;
 import org.folio.orders.events.handlers.HandlersTestHelper;
-import org.folio.rest.acq.model.Piece;
+
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;

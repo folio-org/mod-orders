@@ -77,8 +77,10 @@ public class PieceCreateFlowInventoryManager {
     Location location = new Location().withLocationId(piece.getLocationId());
     return pieceUpdateInventoryService.handleHoldingsRecord(compPOL, location, instanceId, requestContext)
       .thenApply(holdingId -> {
-        piece.setLocationId(null);
-        piece.setHoldingId(holdingId);
+        Optional.ofNullable(holdingId).ifPresent(holdingIdP -> {
+          piece.setLocationId(null);
+          piece.setHoldingId(holdingId);
+        });
         return holdingId;
       });
   }
@@ -91,7 +93,7 @@ public class PieceCreateFlowInventoryManager {
         }
         return pieceUpdateInventoryService.createItemRecord(compPOL, holdingId, requestContext);
       }
-      return null;
+      return CompletableFuture.completedFuture(null);
   }
 
   private CompletableFuture<Title> packageUpdateTitleWithInstance(Title title, RequestContext requestContext) {
