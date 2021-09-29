@@ -84,7 +84,7 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
       return;
     }
 
-    titlesService.updateTitle(entity, new RequestContext(vertxContext, okapiHeaders))
+    titlesService.saveTitle(entity, new RequestContext(vertxContext, okapiHeaders))
       .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
   }

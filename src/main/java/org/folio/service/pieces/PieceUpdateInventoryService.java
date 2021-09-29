@@ -5,6 +5,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
+import org.folio.rest.RestConstants;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
@@ -43,7 +45,7 @@ public class PieceUpdateInventoryService {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return titlesService.getTitleById(piece.getTitleId(), requestContext)
         .thenCompose(title -> handleInstanceRecord(title, requestContext))
-        .thenCompose(title -> titlesService.updateTitle(title, requestContext).thenApply(json -> title))
+        .thenCompose(title -> titlesService.saveTitle(title, requestContext).thenApply(json -> title))
         .thenCompose(title ->
         {
           if (piece.getHoldingId() != null) {

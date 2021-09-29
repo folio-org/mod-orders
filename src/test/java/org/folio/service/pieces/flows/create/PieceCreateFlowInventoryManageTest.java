@@ -109,7 +109,7 @@ public class PieceCreateFlowInventoryManageTest {
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
 
     doReturn(completedFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(completedFuture(null)).when(titlesService).updateTitle(title, requestContext);
+    doReturn(completedFuture(null)).when(titlesService).saveTitle(title, requestContext);
     doReturn(completedFuture(title)).when(pieceUpdateInventoryService).handleInstanceRecord(title, requestContext);
     doReturn(completedFuture(holdingId)).when(pieceUpdateInventoryService).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
     doReturn(completedFuture(itemId)).when(pieceUpdateInventoryService).createItemRecord(compPOL, holdingId, requestContext);

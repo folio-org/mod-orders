@@ -7,6 +7,7 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
+import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_HOLDING_WITHOUT_INSTANCE_ERROR;
 import static org.folio.rest.core.exceptions.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_CREATION_FAILED;
@@ -46,6 +47,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.PieceItemPair;
 import org.folio.models.PoLineUpdateHolder;
+import org.folio.rest.RestConstants;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.InventoryException;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -134,7 +136,6 @@ public class InventoryManager {
   private static final String HOLDINGS_LOOKUP_QUERY = "instanceId==%s and permanentLocationId==%s";
   public static final String ID = "id";
   public static final String TOTAL_RECORDS = "totalRecords";
-  public static final String SEARCH_PARAMS_WITHOUT_LANG = "?limit=%s&offset=%s%s";
   private static final Map<String, String> INVENTORY_LOOKUP_ENDPOINTS;
   public static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
   public static final String EFFECTIVE_LOCATION = "effectiveLocation";
@@ -352,8 +353,7 @@ public class InventoryManager {
           }
         });
     } else {
-      String locationId = location.getLocationId();
-      return createHoldingsRecord(instanceId, locationId, requestContext);
+      return createHoldingsRecord(instanceId, location.getLocationId(), requestContext);
     }
   }
 
