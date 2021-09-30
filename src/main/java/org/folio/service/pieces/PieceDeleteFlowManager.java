@@ -37,7 +37,7 @@ public class PieceDeleteFlowManager {
     this.receivingEncumbranceStrategy = receivingEncumbranceStrategy;
   }
 
-  public CompletableFuture<Void> deletePieceWithItem(String pieceId, RequestContext requestContext) {
+  public CompletableFuture<Void> deletePieceWithItem(String pieceId, boolean deleteHolding, RequestContext requestContext) {
     PieceDeletionHolder holder = new PieceDeletionHolder();
     return pieceStorageService.getPieceById(pieceId, requestContext)
       .thenCompose(piece -> purchaseOrderLineService.getOrderLineById(piece.getPoLineId(), requestContext)

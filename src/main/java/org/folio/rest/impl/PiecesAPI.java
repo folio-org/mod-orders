@@ -84,9 +84,9 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
 
   @Override
   @Validate
-  public void deleteOrdersPiecesById(String pieceId, String lang, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    pieceDeleteFlowManager.deletePieceWithItem(pieceId, new RequestContext(vertxContext, okapiHeaders))
+  public void deleteOrdersPiecesById(String pieceId, boolean deleteHolding, String lang, Map<String, String> okapiHeaders,
+    Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    pieceDeleteFlowManager.deletePieceWithItem(pieceId, deleteHolding, new RequestContext(vertxContext, okapiHeaders))
       .thenAccept(ok -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
