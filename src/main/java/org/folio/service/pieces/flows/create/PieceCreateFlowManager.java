@@ -63,8 +63,8 @@ public class PieceCreateFlowManager {
                                                                       ProtectedOperationType.CREATE, requestContext))
       .thenCompose(v -> pieceCreateFlowInventoryManager.updateInventory(holder, requestContext))
       .thenAccept(compPoLine -> poLineUpdateQuantity(holder))
-      .thenAccept(v -> purchaseOrderLineService.updateOrderLine(holder.getPoLineToSave(), requestContext))
       .thenCompose(v -> receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(), holder.getOriginPurchaseOrder(), requestContext))
+      .thenAccept(v -> purchaseOrderLineService.updateOrderLine(holder.getPoLineToSave(), requestContext))
       .thenCompose(v -> pieceStorageService.insertPiece(piece, requestContext));
   }
 

@@ -25,13 +25,10 @@ public class PieceCreateFlowInventoryManager {
   private static final Logger logger = LogManager.getLogger(PieceCreateFlowInventoryManager.class);
 
   private final TitlesService titlesService;
-  private final InventoryManager inventoryManager;
   private final PieceUpdateInventoryService pieceUpdateInventoryService;
 
-  public PieceCreateFlowInventoryManager(TitlesService titlesService, InventoryManager inventoryManager,
-    PieceUpdateInventoryService pieceUpdateInventoryService) {
+  public PieceCreateFlowInventoryManager(TitlesService titlesService,  PieceUpdateInventoryService pieceUpdateInventoryService) {
     this.titlesService = titlesService;
-    this.inventoryManager = inventoryManager;
     this.pieceUpdateInventoryService = pieceUpdateInventoryService;
   }
 

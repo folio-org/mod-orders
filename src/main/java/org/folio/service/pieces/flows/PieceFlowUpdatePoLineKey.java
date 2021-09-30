@@ -10,10 +10,6 @@ public class PieceFlowUpdatePoLineKey {
   private PieceFlowType pieceFlowType;
   private boolean isPackage;
 
-  public PieceFlowUpdatePoLineKey() {
-
-  }
-
   public PieceFlowUpdatePoLineKey withIsPackage(boolean isPackage) {
     this.isPackage = isPackage;
     return this;

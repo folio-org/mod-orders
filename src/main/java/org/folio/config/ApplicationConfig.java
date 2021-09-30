@@ -388,10 +388,10 @@ public class ApplicationConfig {
   UnOpenCompositeOrderManager unOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
                                       EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
                                       InventoryManager inventoryManager, PieceStorageService pieceStorageService,
-                                      PieceDeleteFlowManager pieceDeleteFlowManager, PurchaseOrderService purchaseOrderService,
+                                      PurchaseOrderService purchaseOrderService,
                                       ProtectionService protectionService) {
     return new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryManager,
-                                          pieceStorageService, pieceDeleteFlowManager, purchaseOrderService, protectionService);
+                                          pieceStorageService, purchaseOrderService, protectionService);
   }
 
   @Bean
@@ -422,9 +422,9 @@ public class ApplicationConfig {
                                         inventoryManager, receivingEncumbranceStrategy, pieceFlowUpdatePoLineStrategyResolver);
   }
 
-  @Bean PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager(TitlesService titlesService, InventoryManager inventoryManager,
-                                                                        PieceUpdateInventoryService pieceUpdateInventoryService) {
-    return new PieceCreateFlowInventoryManager(titlesService, inventoryManager, pieceUpdateInventoryService);
+  @Bean PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager(TitlesService titlesService,
+                            PieceUpdateInventoryService pieceUpdateInventoryService) {
+    return new PieceCreateFlowInventoryManager(titlesService, pieceUpdateInventoryService);
   }
 
   @Bean PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver() {

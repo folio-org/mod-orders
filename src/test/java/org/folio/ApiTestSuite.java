@@ -63,6 +63,7 @@ import org.folio.service.pieces.PieceServiceTest;
 import org.folio.service.pieces.PieceStorageServiceTest;
 import org.folio.service.pieces.PieceUpdateInventoryServiceTest;
 import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategyResolverTest;
+import org.folio.service.pieces.validators.PieceValidatorUtilTest;
 import org.folio.utils.PoLineCommonUtilTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -318,6 +319,11 @@ public class ApiTestSuite {
 
   @Nested
   class PieceFlowUpdatePoLineStrategyResolverTestNested extends PieceFlowUpdatePoLineStrategyResolverTest {
+
+  }
+
+  @Nested
+  class PieceValidatorUtilTestNested extends PieceValidatorUtilTest {
 
   }
 }

@@ -27,5 +27,4 @@ public class PieceValidatorUtilTest {
     List<Error> errorList = PieceValidatorUtil.validatePieceLocation(piece);
     assertEquals(MAY_BE_LINK_TO_EITHER_HOLDING_OR_LOCATION_ERROR.toError(), errorList.get(0));
   }
-
 }

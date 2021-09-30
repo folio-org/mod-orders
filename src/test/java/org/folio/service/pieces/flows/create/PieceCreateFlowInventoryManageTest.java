@@ -141,9 +141,9 @@ public class PieceCreateFlowInventoryManageTest {
       return mock(PieceUpdateInventoryService.class);
     }
 
-    @Bean PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager(TitlesService titlesService, InventoryManager inventoryManager,
+    @Bean PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager(TitlesService titlesService,
                   PieceUpdateInventoryService pieceUpdateInventoryService) {
-      return new PieceCreateFlowInventoryManager(titlesService, inventoryManager, pieceUpdateInventoryService);
+      return new PieceCreateFlowInventoryManager(titlesService, pieceUpdateInventoryService);
     }
   }
 }
