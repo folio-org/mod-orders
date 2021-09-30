@@ -64,7 +64,7 @@ import org.folio.service.pieces.PieceStorageServiceTest;
 import org.folio.service.pieces.PieceUpdateInventoryServiceTest;
 import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategyResolverTest;
 import org.folio.service.pieces.validators.PieceValidatorUtilTest;
-import org.folio.utils.PoLineCommonUtilTest;
+import org.folio.orders.utils.PoLineCommonUtilTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;

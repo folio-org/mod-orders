@@ -7,13 +7,17 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.TestUtils.encodePrettily;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
-import static org.folio.TestUtils.encodePrettily;
 import static org.folio.rest.impl.PurchaseOrderLinesApiTest.LINES_PATH;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.hamcrest.core.IsEqual.equalTo;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -28,9 +32,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import io.restassured.http.Headers;
-
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
 public class LinesProtectionTest extends ProtectedEntityTestBase {
 
@@ -65,7 +66,7 @@ public class LinesProtectionTest extends ProtectedEntityTestBase {
     logger.info("=== Test corresponding order contains non-existent units - expecting of call only to Units API ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID);
-    Errors errors = operation.process(LINES_PATH, encodePrettily(preparePoLine(NON_EXISTENT_UNITS)),
+    Errors errors = operation.process(LINES_PATH, encodePrettily(preparePoLine(NON_EXISTENT_UNITS, PENDING)),
       headers, APPLICATION_JSON, HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt()).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(1));
@@ -85,7 +86,7 @@ public class LinesProtectionTest extends ProtectedEntityTestBase {
     logger.info("=== Test corresponding order has units allowed operation - expecting of call only to Units API ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID);
-    operation.process(LINES_PATH, encodePrettily(preparePoLine(NOT_PROTECTED_UNITS)), headers, operation.getContentType(), operation.getCode());
+    operation.process(LINES_PATH, encodePrettily(preparePoLine(NOT_PROTECTED_UNITS, PENDING)), headers, operation.getContentType(), operation.getCode());
 
     validateNumberOfRequests(1, 0);
   }
@@ -100,7 +101,7 @@ public class LinesProtectionTest extends ProtectedEntityTestBase {
   void testWithRestrictedUnitsAndAllowedUser(ProtectedOperations operation) {
     logger.info("=== Test corresponding order has units, units protect operation, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
 
-    operation.process(LINES_PATH, encodePrettily(preparePoLine(PROTECTED_UNITS)),
+    operation.process(LINES_PATH, encodePrettily(preparePoLine(PROTECTED_UNITS, PENDING)),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER), operation.getContentType(), operation.getCode());
 
     validateNumberOfRequests(1, 1);
@@ -117,7 +118,7 @@ public class LinesProtectionTest extends ProtectedEntityTestBase {
     logger.info("=== Test corresponding order has units, units protect operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER);
-    Errors errors = operation.process(LINES_PATH, encodePrettily(preparePoLine(PROTECTED_UNITS)),
+    Errors errors = operation.process(LINES_PATH, encodePrettily(preparePoLine(PROTECTED_UNITS, PENDING)),
       headers, APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt()).as(Errors.class);
     assertThat(errors.getErrors(), hasSize(1));
     assertThat(errors.getErrors().get(0).getCode(), equalTo(USER_HAS_NO_PERMISSIONS.getCode()));

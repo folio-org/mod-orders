@@ -4,12 +4,16 @@ import static java.util.Objects.nonNull;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
+import static org.folio.orders.utils.HelperUtils.verifyResponse;
+import static org.folio.rest.RestConstants.ERROR_MESSAGE;
+import static org.folio.rest.RestConstants.NOT_FOUND;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
@@ -23,7 +27,7 @@ import org.folio.rest.tools.utils.TenantTool;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 
-public class RestClient {
+public class RestClientV2 {
 
     private static final Logger logger = LogManager.getLogger();
     private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
@@ -193,10 +197,17 @@ public class RestClient {
 
         try {
           client.request(HttpMethod.DELETE, endpoint, requestContext.getHeaders())
-            .thenAccept(HelperUtils::verifyResponse)
-            .thenAccept(aVoid -> {
+            .thenAccept(response -> {
               client.closeClient();
-              future.complete(null);
+              int code = response.getCode();
+              if (code == NOT_FOUND) {
+                String errorMessage = (response.getError() != null) ? response.getError().getString(ERROR_MESSAGE) : StringUtils.EMPTY;
+                logger.error("The GET {} operation completed with {} error: {}", endpoint, code, errorMessage);
+                future.complete(null);
+              } else {
+                verifyResponse(response);
+                future.complete(null);
+              }
             })
             .exceptionally(t -> {
               client.closeClient();
@@ -217,29 +228,30 @@ public class RestClient {
         CompletableFuture<S> future = new CompletableFuture<>();
         String endpoint = requestEntry.buildEndpoint();
         HttpClientInterface client = getHttpClient(requestContext.getHeaders());
-        if (logger.isDebugEnabled()) {
-            logger.debug("Calling GET {}", endpoint);
-        }
+        logger.debug("Calling GET {}", endpoint);
 
         try {
             client
                     .request(HttpMethod.GET, endpoint, requestContext.getHeaders())
                     .thenApply(response -> {
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("Validating response for GET {}", endpoint);
-                        }
-                        return verifyAndExtractBody(response);
+                      int code = response.getCode();
+                      if (code == NOT_FOUND) {
+                        String errorMessage = (response.getError() != null) ? response.getError().getString(ERROR_MESSAGE) : StringUtils.EMPTY;
+                        logger.error("The GET {} operation completed with {} error: {}", endpoint, code, errorMessage);
+                        return new JsonObject();
+                      }
+                      return verifyAndExtractBody(response);
                     })
                     .thenAccept(body -> {
                         client.closeClient();
                         if (logger.isDebugEnabled()) {
                             logger.debug("The response body for GET {}: {}", endpoint, nonNull(body) ? body.encodePrettily() : null);
                         }
-                        if (body != null) {
+                        if (body != null && !body.isEmpty()) {
                           S responseEntity = body.mapTo(responseType);
                           future.complete(responseEntity);
                         }
-                        future.complete(null);
+                      future.complete(null);
                     })
                     .exceptionally(t -> {
                         client.closeClient();
@@ -259,25 +271,30 @@ public class RestClient {
     CompletableFuture<JsonObject> future = new CompletableFuture<>();
     String endpoint = requestEntry.buildEndpoint();
     HttpClientInterface client = getHttpClient(requestContext.getHeaders());
-    if (logger.isDebugEnabled()) {
-      logger.debug("Calling GET {}", endpoint);
-    }
-
+    logger.debug("Calling GET {}", endpoint);
     try {
       client
         .request(HttpMethod.GET, endpoint, requestContext.getHeaders())
         .thenApply(response -> {
-          if (logger.isDebugEnabled()) {
-            logger.debug("Validating response for GET {}", endpoint);
+          int code = response.getCode();
+          if (code == NOT_FOUND) {
+            String errorMessage = (response.getError() != null) ? response.getError().getString(ERROR_MESSAGE) : StringUtils.EMPTY;
+            logger.error("The GET {} operation completed with {} error: {}", endpoint, code, errorMessage);
+            return new JsonObject();
           }
           return verifyAndExtractBody(response);
         })
-        .thenAccept(body -> {
+        .thenAccept(json -> {
           client.closeClient();
-          if (logger.isDebugEnabled()) {
-            logger.debug("The response body for GET {}: {}", endpoint, nonNull(body) ? body.encodePrettily() : null);
+          if (json != null) {
+            if (!json.isEmpty() && logger.isDebugEnabled()) {
+              logger.debug("The GET {} operation completed with following response body: {}", endpoint, json.encodePrettily());
+            }
+            future.complete(json);
+          } else {
+            logger.debug("The GET {} operation completed with no response body", endpoint);
+            future.complete(new JsonObject());
           }
-          future.complete(body);
         })
         .exceptionally(t -> {
           client.closeClient();
@@ -286,8 +303,8 @@ public class RestClient {
           return null;
         });
     } catch (Exception e) {
-      logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.GET, requestEntry.getBaseEndpoint(), requestContext), e);
       client.closeClient();
+      logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.GET, requestEntry.getBaseEndpoint(), requestContext), e);
       future.completeExceptionally(e);
     }
     return future;

@@ -158,4 +158,8 @@ public final class PoLineCommonUtil {
     JsonObject jsonLine = JsonObject.mapFrom(poLine);
     return jsonLine.mapTo(CompositePoLine.class);
   }
+
+  public static void makePoLinesPending(List<CompositePoLine> compositePoLines) {
+    compositePoLines.forEach(HelperUtils::makePoLinePending);
+  }
 }

@@ -62,6 +62,7 @@ import java.util.concurrent.TimeoutException;
 import org.folio.ApiTestSuite;
 import org.folio.TestConstants;
 import org.folio.models.PoLineUpdateHolder;
+import org.folio.rest.core.RestClientV2;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.PostResponseType;
 import org.folio.rest.core.RestClient;
@@ -108,6 +109,8 @@ public class InventoryManagerTest {
   InventoryManager inventoryManager;
   @Autowired
   private RestClient restClient;
+  @Autowired
+  private RestClientV2 restClientV2;
   @Autowired
   private PieceStorageService pieceStorageService;
   @Autowired
@@ -258,7 +261,7 @@ public class InventoryManagerTest {
 
     doReturn(completedFuture(null)).when(restClient).delete(any(RequestEntry.class), eq(requestContext));
     //When
-    inventoryManager.deleteItems(items, requestContext).join();
+    inventoryManager.deleteItems(items, false, requestContext).join();
     //Then
     verify(restClient, times(2)).delete(any(RequestEntry.class), eq(requestContext));
   }
@@ -268,7 +271,7 @@ public class InventoryManagerTest {
     //given
     doReturn(completedFuture(null)).when(restClient).delete(any(RequestEntry.class), eq(requestContext));
     //When
-    inventoryManager.deleteItems(Collections.emptyList(), requestContext).join();
+    inventoryManager.deleteItems(Collections.emptyList(), false, requestContext).join();
     //Then
     verify(restClient, times(0)).delete(any(RequestEntry.class), eq(requestContext));
   }
@@ -552,9 +555,15 @@ public class InventoryManagerTest {
     }
 
     @Bean
-    public InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
+    public RestClientV2 restClientV2() {
+      return mock(RestClientV2.class);
+    }
+
+    @Bean
+    public InventoryManager inventoryManager(RestClient restClient, RestClientV2 restClientV2,
+                                              ConfigurationEntriesService configurationEntriesService,
                                               PieceStorageService pieceStorageService) {
-      return spy(new InventoryManager(restClient, configurationEntriesService, pieceStorageService));
+      return spy(new InventoryManager(restClient, restClientV2, configurationEntriesService, pieceStorageService));
     }
   }
 }

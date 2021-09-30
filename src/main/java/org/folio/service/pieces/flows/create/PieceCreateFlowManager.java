@@ -1,10 +1,13 @@
 package org.folio.service.pieces.flows.create;
 
+import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_PIECE_FOR_PENDING_ORDER_ERROR;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.logging.log4j.LogManager;
@@ -15,6 +18,7 @@ import org.folio.rest.RestConstants;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Piece;
@@ -58,7 +62,7 @@ public class PieceCreateFlowManager {
       .thenCompose(poLine -> purchaseOrderService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
                                 .thenAccept(purchaseOrder -> holder.shallowCopy(new PieceCreationHolder(purchaseOrder, poLine)))
       )
-      .thenAccept(v -> isIncomingPieceValid(holder))
+      .thenAccept(v -> isCreatePieceRequestValid(holder))
       .thenCompose(order -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(),
                                                                       ProtectedOperationType.CREATE, requestContext))
       .thenCompose(v -> pieceCreateFlowInventoryManager.updateInventory(holder, requestContext))
@@ -77,14 +81,19 @@ public class PieceCreateFlowManager {
                         .ifPresent(strategy -> strategy.updateQuantity(1, holder.getPieceToCreate(), holder.getPoLineToSave()));
   }
 
-  private void isIncomingPieceValid(PieceCreationHolder holder) {
+  private void isCreatePieceRequestValid(PieceCreationHolder holder) {
     Piece pieceToCreate = holder.getPieceToCreate();
     CompositePoLine originPoLine = holder.getOriginPoLine();
     List<Error> pieceLocationErrors = Optional.ofNullable(PieceValidatorUtil.validatePieceLocation(pieceToCreate)).orElse(new ArrayList<>());
     List<Error> pieceFormatErrors = Optional.ofNullable(PieceValidatorUtil.validatePieceFormat(pieceToCreate, originPoLine)).orElse(new ArrayList<>());
     List<Error> combinedErrors = ListUtils.union(pieceFormatErrors, pieceLocationErrors);
+    if (CompositePurchaseOrder.WorkflowStatus.PENDING == holder.getOriginPurchaseOrder().getWorkflowStatus()) {
+      combinedErrors.add(CREATE_PIECE_FOR_PENDING_ORDER_ERROR.toError());
+    }
     if (CollectionUtils.isNotEmpty(combinedErrors)) {
-      throw new HttpException(RestConstants.BAD_REQUEST, new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size()));
+      Errors errors = new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size());
+      logger.error("Validation error : " + JsonObject.mapFrom(errors).encodePrettily());
+      throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
     }
   }
 

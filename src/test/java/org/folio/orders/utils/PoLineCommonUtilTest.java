@@ -1,4 +1,4 @@
-package org.folio.utils;
+package org.folio.orders.utils;
 
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 
 import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,7 @@ public class PoLineCommonUtilTest {
       line.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
     });
     //When
-    HelperUtils.makePoLinesPending(order.getCompositePoLines());
+    PoLineCommonUtil.makePoLinesPending(order.getCompositePoLines());
     //Then
     order.getCompositePoLines().forEach(line -> {
       assertEquals(CompositePoLine.PaymentStatus.PENDING, line.getPaymentStatus());
@@ -42,7 +43,7 @@ public class PoLineCommonUtilTest {
       line.setReceiptStatus(CompositePoLine.ReceiptStatus.FULLY_RECEIVED);
     });
     //When
-    HelperUtils.makePoLinesPending(order.getCompositePoLines());
+    PoLineCommonUtil.makePoLinesPending(order.getCompositePoLines());
     //Then
     order.getCompositePoLines().forEach(line -> {
       assertEquals(CompositePoLine.PaymentStatus.FULLY_PAID, line.getPaymentStatus());

@@ -55,22 +55,24 @@ public abstract class ProtectedEntityTestBase {
     return value > 0 ? hasSize(value) : empty();
   }
 
-  public CompositePurchaseOrder prepareOrder(List<String> acqUnitsIds) {
+  public CompositePurchaseOrder prepareOrder(List<String> acqUnitsIds, CompositePurchaseOrder.WorkflowStatus workflowStatus) {
     CompositePurchaseOrder po = getMinimalContentCompositePurchaseOrder();
+    po.setWorkflowStatus(workflowStatus);
     po.setAcqUnitIds(new ArrayList<>(acqUnitsIds));
     addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(po));
     return po;
   }
 
-  public CompositePoLine preparePoLine(List<String> acqUnitsIds) {
-    CompositePurchaseOrder order = prepareOrder(acqUnitsIds);
+  public CompositePoLine preparePoLine(List<String> acqUnitsIds,
+                          CompositePurchaseOrder.WorkflowStatus workflowStatus) {
+    CompositePurchaseOrder order = prepareOrder(acqUnitsIds, workflowStatus);
     CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId());
     addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
     return poLine;
   }
 
   public Piece preparePiece(List<String> acqUnitsIds) {
-    CompositePoLine poLine = preparePoLine(acqUnitsIds);
+    CompositePoLine poLine = preparePoLine(acqUnitsIds, CompositePurchaseOrder.WorkflowStatus.OPEN);
     Piece piece = getMinimalContentPiece(poLine.getId());
     addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
 

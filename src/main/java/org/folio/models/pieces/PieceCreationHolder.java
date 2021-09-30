@@ -55,7 +55,8 @@ public class PieceCreationHolder {
     return pieceToCreate;
   }
 
-  public boolean getCreateItem() {
+  public boolean isCreateItem() {
     return createItem;
   }
+
 }

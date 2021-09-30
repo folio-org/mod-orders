@@ -14,8 +14,10 @@ public class PieceDeletionHolder {
   private CompositePurchaseOrder originPurchaseOrder;
   private CompositePurchaseOrder purchaseOrderToSave;
 
-  public PieceDeletionHolder() {
+  private boolean deleteHolding;
 
+  public PieceDeletionHolder(boolean deleteHolding) {
+    this.deleteHolding = deleteHolding;
   }
 
   public PieceDeletionHolder(CompositePurchaseOrder originPurchaseOrder) {
@@ -57,5 +59,9 @@ public class PieceDeletionHolder {
 
   public Piece getPieceToDelete() {
     return pieceToDelete;
+  }
+
+  public boolean isDeleteHolding() {
+    return deleteHolding;
   }
 }

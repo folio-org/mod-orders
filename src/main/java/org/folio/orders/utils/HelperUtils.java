@@ -8,6 +8,7 @@ import static javax.ws.rs.core.HttpHeaders.LOCATION;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.rest.RestConstants.ERROR_MESSAGE;
 import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
 import static org.folio.rest.core.exceptions.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.rest.core.exceptions.ErrorCodes.TITLE_NOT_FOUND;
@@ -97,7 +98,6 @@ public class HelperUtils {
   public static final String CONFIGS = "configs";
   public static final String CONFIG_NAME = "configName";
   public static final String CONFIG_VALUE = "value";
-  private static final String ERROR_MESSAGE = "errorMessage";
 
   public static final String SYSTEM_CONFIG_MODULE_NAME = "ORG";
   public static final String ORDER_CONFIG_MODULE_NAME = "ORDERS";
@@ -918,10 +918,6 @@ public class HelperUtils {
       id = location.substring(location.lastIndexOf('/') + 1);
     }
     return id;
-  }
-
-  public static void makePoLinesPending(List<CompositePoLine> compositePoLines) {
-    compositePoLines.forEach(HelperUtils::makePoLinePending);
   }
 
   public static void makePoLinePending(CompositePoLine poLine) {

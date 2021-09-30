@@ -9,7 +9,6 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategy;
 
 public enum PieceFlowUpdatePoLineStrategies implements PieceFlowUpdatePoLineStrategy {
     DELETE() {
@@ -27,10 +26,22 @@ public enum PieceFlowUpdatePoLineStrategies implements PieceFlowUpdatePoLineStra
               loc.setQuantityElectronic(loc.getQuantityElectronic() - qty);
               loc.setQuantity(loc.getQuantity() - qty);
               cost.setQuantityElectronic(cost.getQuantityElectronic() - qty);
+              if (loc.getQuantityElectronic() == 0) {
+                loc.setQuantityElectronic(null);
+              }
+              if (cost.getQuantityElectronic() == 0) {
+                cost.setQuantityElectronic(null);
+              }
             } else {
               loc.setQuantityPhysical(loc.getQuantityPhysical() - qty);
               loc.setQuantity(loc.getQuantity() - qty);
               cost.setQuantityPhysical(cost.getQuantityPhysical() - qty);
+              if (loc.getQuantityPhysical() == 0) {
+                loc.setQuantityPhysical(null);
+              }
+              if (cost.getQuantityPhysical() == 0) {
+                cost.setQuantityPhysical(null);
+              }
             }
             if (loc.getQuantity() != null && loc.getQuantity() == 0) {
               locationToDelete.add(loc);

@@ -17,7 +17,6 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.service.inventory.InventoryManager;
 import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.titles.TitlesService;
 
@@ -35,7 +34,7 @@ public class PieceCreateFlowInventoryManager {
   public CompletableFuture<Void> updateInventory(PieceCreationHolder holder, RequestContext requestContext) {
     CompositePoLine compPOL = holder.getOriginPoLine();
     Piece piece = holder.getPieceToCreate();
-    boolean createItem = holder.getCreateItem();
+    boolean createItem = holder.isCreateItem();
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return packagePoLineUpdateInventory(compPOL, piece, createItem, requestContext);
     }

@@ -80,7 +80,7 @@ public class UnOpenCompositeOrderManager {
     updateAndGetOrderWithLines(compPO, requestContext)
       .thenApply(aVoid -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.OPEN_TO_PENDING))
       .thenCompose(strategy -> strategy.processEncumbrances(compPO, poFromStorage, requestContext))
-      .thenAccept(ok -> HelperUtils.makePoLinesPending(compPO.getCompositePoLines()))
+      .thenAccept(ok -> PoLineCommonUtil.makePoLinesPending(compPO.getCompositePoLines()))
       .thenCompose(ok -> updatePoLinesSummary(compPO.getCompositePoLines(), requestContext))
       .thenCompose(ok -> processInventory(compPO.getCompositePoLines(), requestContext))
       .thenAccept(v-> future.complete(null))
@@ -151,12 +151,12 @@ public class UnOpenCompositeOrderManager {
   }
 
   private CompletableFuture<Void> processInventoryWithItems(CompositePoLine compPOL, RequestContext rqContext) {
-    return inventoryManager.getItemsByStatus(List.of(compPOL.getId()), ItemStatus.ON_ORDER.value(), rqContext)
+    return inventoryManager.getItemsByPoLineIdsAndStatus(List.of(compPOL.getId()), ItemStatus.ON_ORDER.value(), rqContext)
                           .thenCompose(onOrderItems -> {
                             if (isNotEmpty(onOrderItems)) {
                               List<String> itemIds = onOrderItems.stream().map(item -> item.getString(ID)).collect(toList());
                               if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
-                                return inventoryManager.deleteItems(itemIds,  rqContext)
+                                return inventoryManager.deleteItems(itemIds,  false, rqContext)
                                               .thenCompose(deletedItemIds -> deleteHoldingsByItems(onOrderItems, rqContext))
                                               .thenAccept(deletedHoldingVsLocationIds -> updateLocations(compPOL, deletedHoldingVsLocationIds))
                                               .thenAccept(v -> logger.debug("Items and holdings deleted after UnOpen order"));
@@ -207,7 +207,8 @@ public class UnOpenCompositeOrderManager {
         deletedHoldingIds.add(inventoryManager.getItemsByHoldingId(holdingId, rqContext)
           .thenCompose(items -> {
             if (items.isEmpty()) {
-              return inventoryManager.deleteHolding(holdingId, rqContext).thenApply(v -> Pair.of(holdingId, effectiveLocationId));
+              return inventoryManager.deleteHolding(holdingId, true, rqContext)
+                                     .thenApply(v -> Pair.of(holdingId, effectiveLocationId));
             }
             return CompletableFuture.completedFuture(null);
           }));
@@ -235,7 +236,7 @@ public class UnOpenCompositeOrderManager {
           deletedHoldingIds.add(inventoryManager.getItemsByHoldingId(holdingId, rqContext)
             .thenCompose(items -> {
               if (items.isEmpty()) {
-                return inventoryManager.deleteHolding(holdingId, rqContext).thenApply(v -> Pair.of(holdingId, permanentLocationId));
+                return inventoryManager.deleteHolding(holdingId, true, rqContext).thenApply(v -> Pair.of(holdingId, permanentLocationId));
               }
               return CompletableFuture.completedFuture(null);
             }));
@@ -300,7 +301,7 @@ public class UnOpenCompositeOrderManager {
   }
 
   public CompletableFuture<Void> deletePieceWithItem(String pieceId, RequestContext requestContext) {
-    PieceDeletionHolder holder = new PieceDeletionHolder();
+    PieceDeletionHolder holder = new PieceDeletionHolder(true);
     return pieceStorageService.getPieceById(pieceId, requestContext)
       .thenCompose(piece -> purchaseOrderLineService.getOrderLineById(piece.getPoLineId(), requestContext)
         .thenCompose(poLine -> purchaseOrderService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
@@ -315,7 +316,7 @@ public class UnOpenCompositeOrderManager {
   private CompletableFuture<Void> deletePieceConnectedItem(Piece piece, RequestContext requestContext) {
     if (StringUtils.isNotEmpty(piece.getItemId())) {
       // Attempt to delete item
-      return inventoryManager.deleteItem(piece.getItemId(), requestContext)
+      return inventoryManager.deleteItem(piece.getItemId(), true, requestContext)
         .exceptionally(t -> {
           // Skip error processing if item has already deleted
           if (t instanceof HttpException && ((HttpException) t).getCode() == 404) {
@@ -332,7 +333,7 @@ public class UnOpenCompositeOrderManager {
   private CompletableFuture<Void> canDeletePieceWithItem(Piece piece, RequestContext requestContext) {
     return inventoryManager.getNumberOfRequestsByItemId(piece.getItemId(), requestContext)
       .thenAccept(numOfRequests -> {
-        if (numOfRequests > 0) {
+        if (numOfRequests != null && numOfRequests > 0) {
           throw new HttpException(422, ErrorCodes.REQUEST_FOUND.toError());
         }
       });
