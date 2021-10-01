@@ -259,13 +259,13 @@ public class PieceFlowUpdatePoLineStrategiesTest {
     //When
     PieceFlowUpdatePoLineStrategies.DELETE.updateQuantity(1, piece, poLine);
     assertNull(poLine.getCost().getQuantityElectronic());
-    assertEquals(0, poLine.getCost().getQuantityPhysical());
+    assertNull(poLine.getCost().getQuantityPhysical());
     assertEquals(Collections.emptyList(), poLine.getLocations());
   }
 
   @Test
   @DisplayName("Should delete POL location if 1 electronic piece with location to electronic pol with 1 location and same location id as in piece")
-  void elecDeleteLocationStrategyShouldIncreaseQuantityTo2ForCostAndLocationIfInitiallyWas1AndLocationIdInPOLAndPieceTheSame() {
+  void elecDeleteLocationStrategyShouldDecreaseIncreaseQuantityForCostAndLocationIfInitiallyWas1AndLocationIdInPOLAndPieceTheSame() {
     String locationId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
     Piece piece = new Piece().withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
@@ -278,7 +278,7 @@ public class PieceFlowUpdatePoLineStrategiesTest {
     //When
     PieceFlowUpdatePoLineStrategies.DELETE.updateQuantity(1, piece, poLine);
     assertNull(poLine.getCost().getQuantityPhysical());
-    assertEquals(0, poLine.getCost().getQuantityElectronic());
+    assertNull(poLine.getCost().getQuantityElectronic());
     assertEquals(Collections.emptyList(), poLine.getLocations());
   }
 }
