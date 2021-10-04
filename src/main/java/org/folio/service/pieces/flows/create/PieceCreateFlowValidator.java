@@ -1,6 +1,14 @@
 package org.folio.service.pieces.flows.create;
 
-import io.vertx.core.json.JsonObject;
+import static org.folio.orders.utils.PoLineCommonUtil.isItemsUpdateRequiredForEresource;
+import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR;
+import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_PIECE_FOR_PENDING_ORDER_ERROR;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,14 +23,7 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.pieces.validators.PieceValidatorUtil;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
-import static org.folio.orders.utils.PoLineCommonUtil.isItemsUpdateRequiredForEresource;
-import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR;
-import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_PIECE_FOR_PENDING_ORDER_ERROR;
+import io.vertx.core.json.JsonObject;
 
 public class PieceCreateFlowValidator {
   private static final Logger logger = LogManager.getLogger(PieceCreateFlowValidator.class);
@@ -48,7 +49,7 @@ public class PieceCreateFlowValidator {
   }
 
   private List<Error> validateItemCreateFlag(Piece pieceToCreate, CompositePoLine originPoLine, boolean createItem) {
-    if (createItem && isCreateItemForPiecePossible(pieceToCreate, originPoLine)) {
+    if (createItem && !isCreateItemForPiecePossible(pieceToCreate, originPoLine)) {
       String msg = String.format(CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR.getDescription(), pieceToCreate.getFormat(), originPoLine.getId());
       return List.of(new Error().withCode(CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR.getCode()).withMessage(msg));
     }
@@ -57,8 +58,8 @@ public class PieceCreateFlowValidator {
 
   private boolean isCreateItemForPiecePossible(Piece pieceToCreate, CompositePoLine originPoLine) {
     Piece.Format pieceFormat = pieceToCreate.getFormat();
-    return (pieceFormat == Piece.Format.ELECTRONIC && !isItemsUpdateRequiredForEresource(originPoLine)) ||
-                  (pieceFormat == Piece.Format.PHYSICAL || pieceFormat == Piece.Format.OTHER
-                                && !PoLineCommonUtil.isItemsUpdateRequiredForPhysical(originPoLine));
+    return (pieceFormat == Piece.Format.ELECTRONIC && isItemsUpdateRequiredForEresource(originPoLine)) ||
+                  ((pieceFormat == Piece.Format.PHYSICAL || pieceFormat == Piece.Format.OTHER)
+                                && PoLineCommonUtil.isItemsUpdateRequiredForPhysical(originPoLine));
   }
 }

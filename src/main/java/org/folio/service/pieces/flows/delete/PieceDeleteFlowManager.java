@@ -1,8 +1,6 @@
 package org.folio.service.pieces.flows.delete;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.stream.Collectors.groupingBy;
-import static org.folio.orders.utils.PoLineCommonUtil.isOnlyInstanceUpdateRequired;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManager.ID;
@@ -13,7 +11,6 @@ import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -34,7 +31,6 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.ProtectionService;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
@@ -80,7 +76,7 @@ public class PieceDeleteFlowManager {
         ))
       .thenCompose(purchaseOrder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
       .thenCompose(vVoid -> isDeletePieceRequestValid(holder, requestContext))
-      .thenCompose(aVoid -> processInventory(holder, requestContext))
+      .thenCompose(aVoid -> processInventory(holder, deleteHolding, requestContext))
       .thenAccept(aVoid -> updatePoLine(holder, requestContext));
   }
 
@@ -88,7 +84,7 @@ public class PieceDeleteFlowManager {
     if (!Boolean.TRUE.equals(holder.getOriginPoLine().getIsPackage()) && !Boolean.TRUE.equals(holder.getOriginPoLine().getCheckinItems()) ) {
       return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(poLineUpdateQuantity(holder))
                         .thenCompose(aHolder -> receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(),
-                                                                              holder.getOriginPurchaseOrder(), requestContext))
+                                                                              holder.getPurchaseOrderToSave(), requestContext))
                         .thenAccept(v -> purchaseOrderLineService.updateOrderLine(holder.getPoLineToSave(), requestContext)));
     }
     return CompletableFuture.completedFuture(null);
@@ -123,45 +119,40 @@ public class PieceDeleteFlowManager {
     return completedFuture(null);
   }
 
-  private CompletableFuture<Void> processInventory(PieceDeletionHolder holder, RequestContext rqContext) {
+  private CompletableFuture<Void> processInventory(PieceDeletionHolder holder, boolean deleteHolding, RequestContext rqContext) {
     CompositePoLine compPOL = holder.getPoLineToSave();
     Piece piece = holder.getPieceToDelete();
-
     if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
-      return processInventoryWithHoldingAndItems(holder, rqContext);
+      return processInventoryWithHoldingAndItems(holder, deleteHolding, rqContext);
     } else if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL.getEresource(), compPOL.getPhysical())) {
-      return processInventoryOnlyWithHolding(holder, rqContext);
+      return processInventoryOnlyWithHolding(holder, deleteHolding, rqContext);
     }
     return pieceStorageService.deletePiece(piece.getId(), rqContext);
   }
 
-  private CompletableFuture<Void> processInventoryOnlyWithHolding(PieceDeletionHolder holder, RequestContext rqContext) {
-    CompositePoLine compPOL = holder.getPoLineToSave();
+  private CompletableFuture<Void> processInventoryOnlyWithHolding(PieceDeletionHolder holder, boolean deleteHolding, RequestContext rqContext) {
     Piece piece = holder.getPieceToDelete();
     return pieceStorageService.deletePiece(piece.getId(), rqContext)
-                              .thenCompose(deletedPiece -> deleteHolding(holder, rqContext))
-                              .thenAccept(deletedHoldingVsLocationIds -> updateLocations(compPOL, deletedHoldingVsLocationIds))
+                              .thenCompose(deletedPiece -> deleteHolding(holder, deleteHolding, rqContext))
                               .thenAccept(v -> logger.debug("Pieces, Holdings deleted after UnOpen order"));
   }
 
-  private CompletableFuture<Void> processInventoryWithHoldingAndItems(PieceDeletionHolder holder, RequestContext rqContext) {
-    CompositePoLine compPOL = holder.getPoLineToSave();
+  private CompletableFuture<Void> processInventoryWithHoldingAndItems(PieceDeletionHolder holder, boolean deleteHolding, RequestContext rqContext) {
     Piece piece = holder.getPieceToDelete();
     return getOnOrderItemForPiece(piece, rqContext)
                   .thenCompose(item -> {
                     if (item != null) {
                       return deletePieceWithItem(holder, rqContext)
-                              .thenCompose(deletedItemIds -> deleteHoldingsByItems(item, rqContext));
+                              .thenCompose(deletedItemIds -> deleteHoldingsByItems(item, deleteHolding, rqContext));
                       }
                       return pieceStorageService.deletePiece(piece.getId(), rqContext)
-                               .thenCompose(deletedItems -> deleteHoldingByPiece(piece, rqContext));
+                               .thenCompose(deletedItems -> deleteHoldingByPiece(piece, deleteHolding, rqContext));
                   })
-                  .thenAccept(holdingIdVsLocationId -> updateLocations(compPOL, holdingIdVsLocationId))
                   .thenAccept(v -> logger.debug("Pieces deleted together with Holding"));
   }
 
-  private CompletableFuture<Pair<String, String>> deleteHoldingByPiece(Piece piece, RequestContext rqContext) {
-    if (piece.getHoldingId() != null) {
+  private CompletableFuture<Pair<String, String>> deleteHoldingByPiece(Piece piece, boolean deleteHolding, RequestContext rqContext) {
+    if (piece.getHoldingId() != null && deleteHolding) {
       String holdingId = piece.getHoldingId();
       return getHoldingById(holdingId, rqContext).thenCompose(holding -> {
         if (holding != null && !holding.isEmpty()) {
@@ -180,33 +171,19 @@ public class PieceDeleteFlowManager {
     return completedFuture(null);
   }
 
-  private void updateLocations(CompositePoLine compPOL, Pair<String, String> holdingIdVsLocationId) {
-    if (holdingIdVsLocationId != null) {
-      Map<String, List<Location>> holdingIdVsLocations = compPOL.getLocations().stream().collect(groupingBy(Location::getHoldingId));
-      String holdingId = holdingIdVsLocationId.getKey();
-      String locationId = holdingIdVsLocationId.getValue();
-      List<Location> locations = holdingIdVsLocations.get(holdingId);
-      if (CollectionUtils.isNotEmpty(locations)) {
-        locations.forEach(location -> {
-          location.setHoldingId(null);
-          location.setLocationId(locationId);
-        });
-      }
-    }
-  }
-
-  private CompletableFuture<Pair<String, String>> deleteHoldingsByItems(JsonObject deletedItem, RequestContext rqContext) {
-    if (deletedItem != null && deletedItem.getString(ITEM_HOLDINGS_RECORD_ID) != null) {
+  private CompletableFuture<Pair<String, String>> deleteHoldingsByItems(JsonObject deletedItem, boolean deleteHolding, RequestContext rqContext) {
+    if (deletedItem != null && deletedItem.getString(ITEM_HOLDINGS_RECORD_ID) != null && deleteHolding) {
         String holdingId = deletedItem.getString(ITEM_HOLDINGS_RECORD_ID);
         String effectiveLocationId = deletedItem.getJsonObject(ITEM_EFFECTIVE_LOCATION).getString(ID);
         return inventoryManager.getItemsByHoldingId(holdingId, rqContext)
           .thenCompose(items -> {
-            if (CollectionUtils.isEmpty(items)) {
-              return deleteHoldingById(holdingId, rqContext).thenApply(v -> Pair.of(holdingId, effectiveLocationId));
+            if (CollectionUtils.isEmpty(items) && deleteHolding) {
+              return deleteHoldingById(holdingId, rqContext);
             }
             return completedFuture(null);
-          });
-      }
+          })
+          .thenApply(v -> Pair.of(holdingId, effectiveLocationId));
+    }
     return completedFuture(null);
   }
 
@@ -285,8 +262,8 @@ public class PieceDeleteFlowManager {
     }
   }
 
-  private CompletableFuture<Pair<String, String>> deleteHolding(PieceDeletionHolder holder, RequestContext rqContext) {
-    if (holder.isDeleteHolding() && holder.getPieceToDelete().getHoldingId() != null) {
+  private CompletableFuture<Pair<String, String>> deleteHolding(PieceDeletionHolder holder, boolean deleteHolding, RequestContext rqContext) {
+    if (holder.isDeleteHolding() && holder.getPieceToDelete().getHoldingId() != null && deleteHolding) {
       return getHoldingById(holder.getPieceToDelete().getHoldingId(), rqContext)
                           .thenCompose(holding -> deleteHolding(holding, rqContext));
     }

@@ -61,13 +61,17 @@ public enum PieceFlowUpdatePoLineStrategies implements PieceFlowUpdatePoLineStra
           Location loc = locationToUpdate.get();
           Cost cost = lineToSave.getCost();
           if (piece.getFormat() == Piece.Format.ELECTRONIC) {
-            loc.setQuantityElectronic(loc.getQuantityElectronic() + qty);
+            Integer prevLocQty = Optional.ofNullable(loc.getQuantityElectronic()).orElse(0);
+            loc.setQuantityElectronic(prevLocQty + qty);
             loc.setQuantity(loc.getQuantity() + qty);
-            cost.setQuantityElectronic(cost.getQuantityElectronic() + qty);
+            Integer prevCostQty = Optional.ofNullable(cost.getQuantityElectronic()).orElse(0);
+            cost.setQuantityElectronic(prevCostQty + qty);
           } else {
-            loc.setQuantityPhysical(loc.getQuantityPhysical() + qty);
+            Integer prevLocQty = Optional.ofNullable(loc.getQuantityPhysical()).orElse(0);
+            loc.setQuantityPhysical(prevLocQty + qty);
             loc.setQuantity(loc.getQuantity() + qty);
-            cost.setQuantityPhysical(cost.getQuantityPhysical() + qty);
+            Integer prevCostQty = Optional.ofNullable(cost.getQuantityPhysical()).orElse(0);
+            cost.setQuantityPhysical(prevCostQty + qty);
           }
         } else {
           Location locationToAdd = new Location().withLocationId(piece.getLocationId()).withHoldingId(piece.getHoldingId())
@@ -75,10 +79,12 @@ public enum PieceFlowUpdatePoLineStrategies implements PieceFlowUpdatePoLineStra
           Cost cost = lineToSave.getCost();
           if (piece.getFormat() == Piece.Format.ELECTRONIC) {
             locationToAdd.withQuantityElectronic(qty);
-            cost.setQuantityElectronic(cost.getQuantityElectronic() + qty);
+            Integer prevQty = Optional.ofNullable(cost.getQuantityElectronic()).orElse(0);
+            cost.setQuantityElectronic(prevQty + qty);
           } else {
             locationToAdd.withQuantityPhysical(qty);
-            cost.setQuantityPhysical(cost.getQuantityPhysical() + qty);
+            Integer prevQty = Optional.ofNullable(cost.getQuantityPhysical()).orElse(0);
+            cost.setQuantityPhysical(prevQty + qty);
           }
           List<Location> locations = lineToSave.getLocations();
           locations.add(locationToAdd);

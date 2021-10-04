@@ -11,6 +11,8 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.Physical;
 import org.junit.jupiter.api.Test;
 
 public class PoLineCommonUtilTest {
@@ -49,5 +51,51 @@ public class PoLineCommonUtilTest {
       assertEquals(CompositePoLine.PaymentStatus.FULLY_PAID, line.getPaymentStatus());
       assertEquals(CompositePoLine.ReceiptStatus.FULLY_RECEIVED, line.getReceiptStatus());
     });
+  }
+
+  @Test
+  void testOnlyInstanceUpdateNeededForPhysicalIfCreateInventoryInstance() {
+    //given
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    order.getCompositePoLines().forEach(line -> {
+      line.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
+      line.setReceiptStatus(CompositePoLine.ReceiptStatus.FULLY_RECEIVED);
+      line.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE);
+    });
+    //When
+    boolean actCheck = PoLineCommonUtil.isOnlyInstanceUpdateRequired(order.getCompositePoLines().get(0));
+    //Then
+    assertEquals(true, actCheck);
+  }
+
+  @Test
+  void testOnlyInstanceUpdateNeededForElectronicalIfCreateInventoryInstance() {
+    //given
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    order.getCompositePoLines().forEach(line -> {
+      line.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
+      line.setReceiptStatus(CompositePoLine.ReceiptStatus.FULLY_RECEIVED);
+      line.setPhysical(null);
+      line.setEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE));
+    });
+    //When
+    boolean actCheck = PoLineCommonUtil.isOnlyInstanceUpdateRequired(order.getCompositePoLines().get(0));
+    //Then
+    assertEquals(true, actCheck);
+  }
+
+  @Test
+  void testOnlyInstanceUpdateNeededIfCreateInventoryIsNotInstance() {
+    //given
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    order.getCompositePoLines().forEach(line -> {
+      line.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
+      line.setReceiptStatus(CompositePoLine.ReceiptStatus.FULLY_RECEIVED);
+      line.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
+    });
+    //When
+    boolean actCheck = PoLineCommonUtil.isOnlyInstanceUpdateRequired(order.getCompositePoLines().get(0));
+    //Then
+    assertEquals(false, actCheck);
   }
 }
