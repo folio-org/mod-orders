@@ -696,8 +696,7 @@ public class InventoryManager {
   }
 
   public String buildProductIdQuery(ProductId productId) {
-    return String.format(
-      "(identifiers adj \"\\\"identifierTypeId\\\": \\\"%s\\\"\" " + "and identifiers adj \"\\\"value\\\": \\\"%s\\\"\")",
+    return String.format("(identifiers =/@identifierTypeId=\"%s\"/@value \"%s\")",
       productId.getProductIdType(), productId.getProductId());
   }
 
