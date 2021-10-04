@@ -122,11 +122,11 @@ public class PieceCreateFlowInventoryManageTest {
     holder.shallowCopy(new PieceCreationHolder(compositePurchaseOrder));
 
     pieceCreateFlowInventoryManager.processInventory(holder, requestContext).join();
+
     assertEquals(itemId, piece.getItemId());
-    verify(titlesService).getTitleById(piece.getTitleId(), requestContext);
+    assertEquals(holdingId, piece.getHoldingId());
     verify(titlesService).getTitleById(piece.getTitleId(), requestContext);
 
-    verify(pieceUpdateInventoryService).handleInstanceRecord(title, requestContext);
     verify(pieceUpdateInventoryService).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
     verify(pieceUpdateInventoryService).createItemRecord(compPOL, holdingId, requestContext);
   }
