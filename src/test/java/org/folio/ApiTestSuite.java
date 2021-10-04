@@ -63,6 +63,7 @@ import org.folio.service.pieces.PieceServiceTest;
 import org.folio.service.pieces.PieceStorageServiceTest;
 import org.folio.service.pieces.PieceUpdateInventoryServiceTest;
 import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategyResolverTest;
+import org.folio.service.pieces.flows.delete.PieceDeleteFlowManagerTest;
 import org.folio.service.pieces.validators.PieceValidatorUtilTest;
 import org.folio.orders.utils.PoLineCommonUtilTest;
 import org.junit.jupiter.api.AfterAll;
@@ -324,6 +325,10 @@ public class ApiTestSuite {
 
   @Nested
   class PieceValidatorUtilTestNested extends PieceValidatorUtilTest {
+
+  }
+  @Nested
+  class PieceDeleteFlowManagerTestNested extends PieceDeleteFlowManagerTest {
 
   }
 }

@@ -713,6 +713,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> validateIsbnValues(CompositePurchaseOrder compPO, RequestContext requestContext) {
+
     CompletableFuture<?>[] futures = compPO.getCompositePoLines()
       .stream()
       .map(line -> orderLineHelper.validateAndNormalizeISBN(line, requestContext))

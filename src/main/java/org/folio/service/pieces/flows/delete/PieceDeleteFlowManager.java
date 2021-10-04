@@ -23,6 +23,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.ItemStatus;
 import org.folio.models.pieces.PieceDeletionHolder;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -68,7 +69,6 @@ public class PieceDeleteFlowManager {
     this.inventoryManager = inventoryManager;
     this.receivingEncumbranceStrategy = receivingEncumbranceStrategy;
     this.pieceFlowUpdatePoLineStrategyResolver = pieceFlowUpdatePoLineStrategyResolver;
-
   }
 
   public CompletableFuture<Void> deletePieceWithItem(String pieceId, boolean deleteHolding, RequestContext requestContext) {
@@ -81,29 +81,37 @@ public class PieceDeleteFlowManager {
       .thenCompose(purchaseOrder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
       .thenCompose(vVoid -> isDeletePieceRequestValid(holder, requestContext))
       .thenCompose(aVoid -> processInventory(holder, requestContext))
-      .thenCompose(aVoid -> deleteItemConnectedToPiece(holder.getPieceToDelete(), requestContext))
-      .thenAccept(compPoLine -> poLineUpdateQuantity(holder))
-      .thenCompose(v -> receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(), holder.getOriginPurchaseOrder(), requestContext))
-      .thenAccept(v -> purchaseOrderLineService.updateOrderLine(holder.getPoLineToSave(), requestContext));
+      .thenAccept(aVoid -> updatePoLine(holder, requestContext));
   }
 
-  private void poLineUpdateQuantity(PieceDeletionHolder holder) {
+  private CompletableFuture<Void> updatePoLine(PieceDeletionHolder holder, RequestContext requestContext) {
+    if (!Boolean.TRUE.equals(holder.getOriginPoLine().getIsPackage()) && !Boolean.TRUE.equals(holder.getOriginPoLine().getCheckinItems()) ) {
+      return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(poLineUpdateQuantity(holder))
+                        .thenCompose(aHolder -> receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(),
+                                                                              holder.getOriginPurchaseOrder(), requestContext))
+                        .thenAccept(v -> purchaseOrderLineService.updateOrderLine(holder.getPoLineToSave(), requestContext)));
+    }
+    return CompletableFuture.completedFuture(null);
+  }
+
+  private PieceDeletionHolder poLineUpdateQuantity(PieceDeletionHolder holder) {
     PieceFlowUpdatePoLineKey key = new PieceFlowUpdatePoLineKey().withIsPackage(holder.getPoLineToSave().getIsPackage())
-      .withOrderWorkFlowStatus(holder.getPurchaseOrderToSave().getWorkflowStatus())
-      .withPieceFlowType(PieceFlowUpdatePoLineKey.PieceFlowType.PIECE_DELETE_FLOW);
-    pieceFlowUpdatePoLineStrategyResolver.resolve(key)
-      .ifPresent(strategy -> strategy.updateQuantity(1, holder.getPieceToDelete(), holder.getPoLineToSave()));
+        .withOrderWorkFlowStatus(holder.getPurchaseOrderToSave().getWorkflowStatus())
+        .withPieceFlowType(PieceFlowUpdatePoLineKey.PieceFlowType.PIECE_DELETE_FLOW);
+    pieceFlowUpdatePoLineStrategyResolver.resolve(key).ifPresent(strategy -> {
+              strategy.updateQuantity(1, holder.getPieceToDelete(), holder.getPoLineToSave());
+    });
+    return holder;
   }
 
   private CompletableFuture<Void> isDeletePieceRequestValid(PieceDeletionHolder holder, RequestContext requestContext) {
     List<Error> combinedErrors = new ArrayList<>();
-    return inventoryManager.getNumberOfRequestsByItemId(holder.getPieceToDelete().getItemId(), requestContext)
-      .thenAccept(numOfRequests -> {
+    if (holder.getPieceToDelete().getItemId() != null) {
+      return inventoryManager.getNumberOfRequestsByItemId(holder.getPieceToDelete().getItemId(), requestContext).thenAccept(numOfRequests -> {
         if (numOfRequests != null && numOfRequests > 0) {
           combinedErrors.add(ErrorCodes.REQUEST_FOUND.toError());
         }
-      })
-      .thenApply(numOfRequests -> {
+      }).thenApply(numOfRequests -> {
         if (CollectionUtils.isNotEmpty(combinedErrors)) {
           Errors errors = new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size());
           logger.error("Validation error : " + JsonObject.mapFrom(errors).encodePrettily());
@@ -111,14 +119,13 @@ public class PieceDeleteFlowManager {
         }
         return null;
       });
+    }
+    return completedFuture(null);
   }
 
   private CompletableFuture<Void> processInventory(PieceDeletionHolder holder, RequestContext rqContext) {
     CompositePoLine compPOL = holder.getOriginPoLine();
     Piece piece = holder.getPieceToDelete();
-    if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
-      return completedFuture(null);
-    }
     if (PoLineCommonUtil.isInventoryUpdateNotRequired(compPOL) || isOnlyInstanceUpdateRequired(compPOL)) {
       return pieceStorageService.deletePiece(piece.getId(), rqContext);
     } else if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
@@ -246,7 +253,7 @@ public class PieceDeleteFlowManager {
 
   private CompletableFuture<JsonObject> getOnOrderItemForPiece(Piece piece, RequestContext requestContext) {
     if (StringUtils.isNotEmpty(piece.getItemId())) {
-      return inventoryManager.getItemRecordById(piece.getItemId(), requestContext)
+      return inventoryManager.getItemRecordById(piece.getItemId(), true, requestContext)
         .thenApply(item -> {
           boolean isOnOrderItem = isItemWithStatus(item, ItemStatus.ON_ORDER.value());
           if (isOnOrderItem) {

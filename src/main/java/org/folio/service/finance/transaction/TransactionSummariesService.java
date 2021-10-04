@@ -6,7 +6,6 @@ import java.util.stream.Stream;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
-import org.folio.rest.core.RestClientV2;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -21,11 +20,9 @@ public class TransactionSummariesService {
     private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
 
     private final RestClient restClient;
-    private final RestClientV2 restClientV2;
 
-    public TransactionSummariesService(RestClient restClient, RestClientV2 restClientV2) {
+    public TransactionSummariesService(RestClient restClient) {
         this.restClient = restClient;
-        this.restClientV2 = restClientV2;
     }
 
     public CompletableFuture<OrderTransactionSummary> createOrderTransactionSummary(String id, int number, RequestContext requestContext) {
@@ -38,7 +35,7 @@ public class TransactionSummariesService {
 
     public CompletableFuture<OrderTransactionSummary> getOrderTransactionSummary(String orderId, RequestContext requestContext) {
         RequestEntry requestEntry = new RequestEntry(GET_BY_ID_STORAGE_ENDPOINT).withId(orderId);
-        return restClientV2.get(requestEntry, requestContext, OrderTransactionSummary.class);
+        return restClient.get(requestEntry, true, requestContext, OrderTransactionSummary.class);
     }
 
     public CompletableFuture<Void> updateOrderTransactionSummary(String orderId, int number, RequestContext requestContext) {

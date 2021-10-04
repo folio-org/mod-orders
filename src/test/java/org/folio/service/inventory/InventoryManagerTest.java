@@ -62,7 +62,6 @@ import java.util.concurrent.TimeoutException;
 import org.folio.ApiTestSuite;
 import org.folio.TestConstants;
 import org.folio.models.PoLineUpdateHolder;
-import org.folio.rest.core.RestClientV2;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.PostResponseType;
 import org.folio.rest.core.RestClient;
@@ -109,8 +108,6 @@ public class InventoryManagerTest {
   InventoryManager inventoryManager;
   @Autowired
   private RestClient restClient;
-  @Autowired
-  private RestClientV2 restClientV2;
   @Autowired
   private PieceStorageService pieceStorageService;
   @Autowired
@@ -259,11 +256,11 @@ public class InventoryManagerTest {
     String itemId2 = UUID.randomUUID().toString();
     List<String> items = Arrays.asList(itemId1, itemId2);
 
-    doReturn(completedFuture(null)).when(restClient).delete(any(RequestEntry.class), eq(requestContext));
+    doReturn(completedFuture(null)).when(restClient).delete(any(RequestEntry.class), eq(false), eq(requestContext));
     //When
     inventoryManager.deleteItems(items, false, requestContext).join();
     //Then
-    verify(restClient, times(2)).delete(any(RequestEntry.class), eq(requestContext));
+    verify(restClient, times(2)).delete(any(RequestEntry.class), eq(false), eq(requestContext));
   }
 
   @Test
@@ -555,15 +552,9 @@ public class InventoryManagerTest {
     }
 
     @Bean
-    public RestClientV2 restClientV2() {
-      return mock(RestClientV2.class);
-    }
-
-    @Bean
-    public InventoryManager inventoryManager(RestClient restClient, RestClientV2 restClientV2,
-                                              ConfigurationEntriesService configurationEntriesService,
+    public InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
                                               PieceStorageService pieceStorageService) {
-      return spy(new InventoryManager(restClient, restClientV2, configurationEntriesService, pieceStorageService));
+      return spy(new InventoryManager(restClient, configurationEntriesService, pieceStorageService));
     }
   }
 }

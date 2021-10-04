@@ -1033,31 +1033,10 @@ public class MockServer {
     String id = ctx.request().getParam(ID);
     logger.info("id: " + id);
 
-    JsonObject holding = new JsonObject();
-    holding.put("id", id);
-    holding.put("hrid", "ho00000001");
-    holding.put("holdingsItems", new JsonArray());
-
-    addServerRqRsData(HttpMethod.GET, HOLDINGS_RECORD, holding);
-    serverResponse(ctx, 200, APPLICATION_JSON, holding.encodePrettily());
-
-    String query = ctx.request().getParam("query");
-
-    addServerRqQuery(ITEM_RECORDS, query);
-
     if (id.equals(ID_FOR_INTERNAL_SERVER_ERROR)) {
-      addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, new JsonObject());
-      serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
+      ctx.response().setStatusCode(500).end();
     } else if (id.equals(ITEMS_NOT_FOUND)) {
-      JsonObject items = new JsonObject();
-      items.put(ITEMS, new JsonArray());
-      items.put(TOTAL_RECORDS, 0);
-      addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
-
-      ctx.response()
-        .setStatusCode(200)
-        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .end(items.encodePrettily());
+      ctx.response().setStatusCode(404).end();
     } else {
       try {
         JsonObject items = new JsonObject(getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
@@ -1071,13 +1050,15 @@ public class MockServer {
             }
           }
 
-        items.put(TOTAL_RECORDS, jsonArray.size());
-        addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
+        if  (jsonArray.size() > 0) {
+          items.put(TOTAL_RECORDS, jsonArray.size());
+          addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, jsonArray.getJsonObject(0));
 
-        ctx.response()
-          .setStatusCode(200)
-          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-          .end(items.encodePrettily());
+          ctx.response().setStatusCode(200).putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+                                           .end(jsonArray.getJsonObject(0).encodePrettily());
+        } else {
+          ctx.response().setStatusCode(404).end();
+        }
       } catch (Exception e) {
         serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
       }

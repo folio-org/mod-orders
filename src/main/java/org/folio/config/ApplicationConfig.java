@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.folio.rest.core.RestClient;
-import org.folio.rest.core.RestClientV2;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.PrefixService;
@@ -85,9 +84,6 @@ public class ApplicationConfig {
     return new RestClient();
   }
 
-  @Bean RestClientV2 restClientV2() {
-    return new RestClientV2();
-  }
   @Bean
   ExchangeRateProviderResolver exchangeRateProviderResolver() {
     return new ExchangeRateProviderResolver();
@@ -172,8 +168,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  TransactionSummariesService transactionSummariesService(RestClient restClient, RestClientV2 restClientV2) {
-    return new TransactionSummariesService(restClient, restClientV2);
+  TransactionSummariesService transactionSummariesService(RestClient restClient) {
+    return new TransactionSummariesService(restClient);
   }
 
   @Bean
@@ -355,9 +351,9 @@ public class ApplicationConfig {
   }
 
   @Bean
-  InventoryManager inventoryManager(RestClient restClient, RestClientV2 restClientV2, ConfigurationEntriesService configurationEntriesService,
+  InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
                                     PieceStorageService pieceStorageService) {
-    return new InventoryManager(restClient, restClientV2, configurationEntriesService, pieceStorageService);
+    return new InventoryManager(restClient, configurationEntriesService, pieceStorageService);
   }
 
   @Bean

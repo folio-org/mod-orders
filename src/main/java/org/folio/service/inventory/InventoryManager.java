@@ -49,7 +49,6 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.PostResponseType;
 import org.folio.rest.core.RestClient;
-import org.folio.rest.core.RestClientV2;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.InventoryException;
@@ -139,14 +138,12 @@ public class InventoryManager {
   public static final String EFFECTIVE_LOCATION = "effectiveLocation";
 
   private RestClient restClient;
-  private final RestClientV2 restClientV2;
   private ConfigurationEntriesService configurationEntriesService;
   private PieceStorageService pieceStorageService;
 
-  public InventoryManager(RestClient restClient, RestClientV2 restClientV2,ConfigurationEntriesService configurationEntriesService,
+  public InventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
                           PieceStorageService pieceStorageService) {
     this.restClient = restClient;
-    this.restClientV2 = restClientV2;
     this.configurationEntriesService = configurationEntriesService;
     this.pieceStorageService = pieceStorageService;
   }
@@ -229,10 +226,10 @@ public class InventoryManager {
                      .thenApply(response -> extractEntities(response, ITEMS));
   }
 
-  public CompletableFuture<JsonObject> getItemRecordById(String itemId, RequestContext requestContext) {
+  public CompletableFuture<JsonObject> getItemRecordById(String itemId, boolean skipThrowNorFoundException, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(itemId)
                                                   .withQueryParameter(LANG, "en");
-    return restClient.getAsJsonObject(requestEntry, requestContext);
+    return restClient.getAsJsonObject(requestEntry, skipThrowNorFoundException, requestContext);
   }
 
   /**
@@ -284,10 +281,7 @@ public class InventoryManager {
 
   public CompletableFuture<Void> deleteItem(String id, boolean skipNotFoundException, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(id);
-    if (skipNotFoundException) {
-      return restClientV2.delete(requestEntry, requestContext);
-    }
-    return restClient.delete(requestEntry, requestContext);
+    return restClient.delete(requestEntry, skipNotFoundException, requestContext);
   }
 
   public CompletableFuture<List<Void>> deleteItems(List<String> itemIds, boolean skipNotFoundException, RequestContext requestContext) {

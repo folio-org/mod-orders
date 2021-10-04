@@ -31,7 +31,7 @@ public class PieceCreateFlowInventoryManager {
     this.pieceUpdateInventoryService = pieceUpdateInventoryService;
   }
 
-  public CompletableFuture<Void> updateInventory(PieceCreationHolder holder, RequestContext requestContext) {
+  public CompletableFuture<Void> processInventory(PieceCreationHolder holder, RequestContext requestContext) {
     CompositePoLine compPOL = holder.getOriginPoLine();
     Piece piece = holder.getPieceToCreate();
     boolean createItem = holder.isCreateItem();

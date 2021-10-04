@@ -30,6 +30,11 @@ public class PieceDeletionHolder {
     this.purchaseOrderToSave = HelperUtils.clone(CompositePurchaseOrder.class, this.originPurchaseOrder);
   }
 
+  public PieceDeletionHolder(PurchaseOrder originPurchaseOrder, PoLine originPoLine, boolean deleteHolding) {
+    this(originPurchaseOrder, originPoLine);
+    this.deleteHolding = deleteHolding;
+  }
+
   public void shallowCopy(PieceDeletionHolder sourceCreatePieceHolder) {
     this.originPurchaseOrder = sourceCreatePieceHolder.getOriginPurchaseOrder();
     this.purchaseOrderToSave = sourceCreatePieceHolder.getPurchaseOrderToSave();

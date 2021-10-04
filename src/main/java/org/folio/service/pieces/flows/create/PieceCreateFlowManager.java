@@ -1,5 +1,6 @@
 package org.folio.service.pieces.flows.create;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_PIECE_FOR_PENDING_ORDER_ERROR;
 
 import java.util.ArrayList;
@@ -7,11 +8,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.RestConstants;
@@ -30,6 +31,8 @@ import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.PieceFlowUpdatePoLineKey;
 import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategyResolver;
 import org.folio.service.pieces.validators.PieceValidatorUtil;
+
+import io.vertx.core.json.JsonObject;
 
 public class PieceCreateFlowManager {
   private static final Logger logger = LogManager.getLogger(PieceCreateFlowManager.class);
@@ -65,20 +68,28 @@ public class PieceCreateFlowManager {
       .thenAccept(v -> isCreatePieceRequestValid(holder))
       .thenCompose(order -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(),
                                                                       ProtectedOperationType.CREATE, requestContext))
-      .thenCompose(v -> pieceCreateFlowInventoryManager.updateInventory(holder, requestContext))
-      .thenAccept(compPoLine -> poLineUpdateQuantity(holder))
-      .thenCompose(v -> receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(), holder.getOriginPurchaseOrder(), requestContext))
-      .thenAccept(v -> purchaseOrderLineService.updateOrderLine(holder.getPoLineToSave(), requestContext))
+      .thenCompose(v -> pieceCreateFlowInventoryManager.processInventory(holder, requestContext))
+      .thenAccept(compPoLine -> updatePoLine(holder, requestContext))
       .thenCompose(v -> pieceStorageService.insertPiece(piece, requestContext));
   }
 
-  private void poLineUpdateQuantity(PieceCreationHolder holder) {
+  private CompletableFuture<Void> updatePoLine(PieceCreationHolder holder, RequestContext requestContext) {
+    if (!Boolean.TRUE.equals(holder.getOriginPoLine().getIsPackage()) && !Boolean.TRUE.equals(holder.getOriginPoLine().getCheckinItems()) ) {
+      return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(poLineUpdateQuantity(holder))
+                          .thenCompose(aHolder -> receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(),
+                            holder.getOriginPurchaseOrder(), requestContext))
+                          .thenAccept(v -> purchaseOrderLineService.updateOrderLine(holder.getPoLineToSave(), requestContext)));
+    }
+    return CompletableFuture.completedFuture(null);
+  }
 
+  private PieceCreationHolder poLineUpdateQuantity(PieceCreationHolder holder) {
     PieceFlowUpdatePoLineKey key = new PieceFlowUpdatePoLineKey().withIsPackage(holder.getPoLineToSave().getIsPackage())
-                                                      .withOrderWorkFlowStatus(holder.getPurchaseOrderToSave().getWorkflowStatus())
-                                                      .withPieceFlowType(PieceFlowUpdatePoLineKey.PieceFlowType.PIECE_CREATE_FLOW);
-    pieceFlowUpdatePoLineStrategyResolver.resolve(key)
-                        .ifPresent(strategy -> strategy.updateQuantity(1, holder.getPieceToCreate(), holder.getPoLineToSave()));
+        .withOrderWorkFlowStatus(holder.getPurchaseOrderToSave().getWorkflowStatus())
+        .withPieceFlowType(PieceFlowUpdatePoLineKey.PieceFlowType.PIECE_CREATE_FLOW);
+    pieceFlowUpdatePoLineStrategyResolver.resolve(key).ifPresent(strategy ->
+                    strategy.updateQuantity(1, holder.getPieceToCreate(), holder.getPoLineToSave()));
+    return holder;
   }
 
   private void isCreatePieceRequestValid(PieceCreationHolder holder) {

@@ -35,6 +35,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,10 +48,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 public class PieceCreateFlowInventoryManageTest {
-  @Autowired PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
+  @Autowired
+  PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
   @Autowired
   TitlesService titlesService;
-  @Autowired PieceUpdateInventoryService pieceUpdateInventoryService;
+  @Autowired
+  PieceUpdateInventoryService pieceUpdateInventoryService;
   @Autowired
   InventoryManager inventoryManager;
 
@@ -89,6 +92,7 @@ public class PieceCreateFlowInventoryManageTest {
   @AfterEach
   void resetMocks() {
     clearServiceInteractions();
+    Mockito.reset(titlesService, inventoryManager, pieceUpdateInventoryService);
   }
 
   @Test
@@ -117,7 +121,7 @@ public class PieceCreateFlowInventoryManageTest {
     PieceCreationHolder holder = new PieceCreationHolder(piece, true);
     holder.shallowCopy(new PieceCreationHolder(compositePurchaseOrder));
 
-    pieceCreateFlowInventoryManager.updateInventory(holder, requestContext);
+    pieceCreateFlowInventoryManager.processInventory(holder, requestContext).join();
     assertEquals(itemId, piece.getItemId());
     verify(titlesService).getTitleById(piece.getTitleId(), requestContext);
     verify(titlesService).getTitleById(piece.getTitleId(), requestContext);
