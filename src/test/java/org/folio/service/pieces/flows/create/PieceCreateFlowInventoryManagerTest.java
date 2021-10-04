@@ -47,7 +47,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-public class PieceCreateFlowInventoryManageTest {
+public class PieceCreateFlowInventoryManagerTest {
   @Autowired
   PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
   @Autowired
@@ -78,7 +78,7 @@ public class PieceCreateFlowInventoryManageTest {
       ApiTestSuite.before();
       runningOnOwn = true;
     }
-    initSpringContext(PieceCreateFlowInventoryManageTest.ContextConfiguration.class);
+    initSpringContext(PieceCreateFlowInventoryManagerTest.ContextConfiguration.class);
   }
 
   @AfterAll

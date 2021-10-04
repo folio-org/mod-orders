@@ -8,6 +8,9 @@ import static org.folio.TestConfig.getFirstContextFromVertx;
 import static org.folio.TestConfig.getVertx;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConstants.ID;
+import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -24,6 +27,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import io.vertx.core.json.JsonObject;
 import org.folio.ApiTestSuite;
 import org.folio.models.pieces.PieceDeletionHolder;
 import org.folio.orders.utils.ProtectedOperationType;
@@ -47,6 +51,7 @@ import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategies;
 import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategyResolver;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -184,7 +189,6 @@ public class PieceDeleteFlowManagerTest {
   @Test
   void shouldUpdateLineQuantityIfPoLineIsNotPackageAndManualPieceCreateFalse() throws ExecutionException, InterruptedException {
     String orderId = UUID.randomUUID().toString();
-    String holdingId = UUID.randomUUID().toString();
     String locationId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
     String titleId = UUID.randomUUID().toString();
@@ -220,6 +224,52 @@ public class PieceDeleteFlowManagerTest {
     verify(pieceStorageService, times(1)).deletePiece(eq(piece.getId()), eq(requestContext));
   }
 
+  @Test
+  void shouldUpdateLineQuantityIfPoLineIsNotPackageAndManualPieceCreateFalseAndInventoryInstanceVsHolding() throws ExecutionException, InterruptedException {
+    String orderId = UUID.randomUUID().toString();
+    String holdingId = UUID.randomUUID().toString();
+    String lineId = UUID.randomUUID().toString();
+    String titleId = UUID.randomUUID().toString();
+    String itemId = UUID.randomUUID().toString();
+    String locationId = UUID.randomUUID().toString();
+    JsonObject holding = new JsonObject();
+    holding.put(ID, holdingId);
+    holding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
+      .withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC);
+    Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
+    Cost cost = new Cost().withQuantityElectronic(1);
+    PoLine poLine = new PoLine().withIsPackage(false).withCheckinItems(false).withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
+      .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING))
+      .withPurchaseOrderId(orderId).withId(lineId).withLocations(List.of(loc)).withCost(cost);
+    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+    PieceDeletionHolder holder = spy(new PieceDeletionHolder(purchaseOrder, poLine,true));
+
+    doReturn(completedFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
+    doReturn(completedFuture(purchaseOrder)).when(purchaseOrderService).getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext);
+    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(completedFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(requestContext));
+    doReturn(completedFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
+    doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).deleteHolding(piece.getHoldingId(), true, requestContext);
+    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(completedFuture(poLine)).when(purchaseOrderLineService).getOrderLineById(eq(piece.getPoLineId()), eq(requestContext));
+    doReturn(completedFuture(null)).when(purchaseOrderLineService).updateOrderLine(any(CompositePoLine.class), eq(requestContext));
+    doReturn(Optional.of(PieceFlowUpdatePoLineStrategies.DELETE)).when(pieceFlowUpdatePoLineStrategyResolver)
+      .resolve(any(PieceFlowUpdatePoLineKey.class));
+    doNothing().when(holder).shallowCopy(holder);
+    //When
+    pieceDeleteFlowManager.deletePieceWithItem(piece.getId(), true, requestContext).get();
+    //Then
+    Assertions.assertEquals(holdingId, holder.getPoLineToSave().getLocations().get(0).getHoldingId());
+    verify(receivingEncumbranceStrategy, times(1)).processEncumbrances(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class), eq(requestContext));
+    verify(purchaseOrderLineService, times(1)).getOrderLineById(eq(piece.getPoLineId()), eq(requestContext));
+    verify(purchaseOrderLineService, times(1)).updateOrderLine(any(CompositePoLine.class), eq(requestContext));
+    verify(pieceFlowUpdatePoLineStrategyResolver, times(1)).resolve(any());
+    verify(pieceStorageService, times(1)).deletePiece(eq(piece.getId()), eq(requestContext));
+    verify(inventoryManager, times(1)).deleteHolding(piece.getHoldingId(), true, requestContext);
+  }
 
   private static class ContextConfiguration {
     @Bean PieceStorageService pieceStorageService() {

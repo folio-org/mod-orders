@@ -957,7 +957,7 @@ public class InventoryManager {
 
   public CompletableFuture<Void> deleteHolding(String holdingId, boolean skipNotFoundException, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT)).withId(holdingId).withQueryParameter(LANG, "en");
-    return restClient.delete(requestEntry, requestContext);
+    return restClient.delete(requestEntry, skipNotFoundException, requestContext);
   }
 
   public CompletableFuture<List<JsonObject>> getItemsByPoLineIdsAndStatus(List<String> poLineIds, String itemStatus, RequestContext requestContext) {

@@ -63,7 +63,8 @@ import org.folio.service.pieces.PieceServiceTest;
 import org.folio.service.pieces.PieceStorageServiceTest;
 import org.folio.service.pieces.PieceUpdateInventoryServiceTest;
 import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategyResolverTest;
-import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManageTest;
+import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManagerTest;
+import org.folio.service.pieces.flows.create.PieceCreateFlowValidatorTest;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowManagerTest;
 import org.folio.service.pieces.validators.PieceValidatorUtilTest;
 import org.folio.orders.utils.PoLineCommonUtilTest;
@@ -334,7 +335,12 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class   PieceCreateFlowInventoryManageTestNested extends PieceCreateFlowInventoryManageTest {
+  class PieceCreateFlowInventoryManagerTestNested extends PieceCreateFlowInventoryManagerTest {
+
+  }
+
+  @Nested
+  class PieceCreateFlowValidatorTestNested extends PieceCreateFlowValidatorTest {
 
   }
 }

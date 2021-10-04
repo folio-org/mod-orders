@@ -69,6 +69,7 @@ import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategyResolver;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
 import org.folio.service.pieces.flows.create.PieceCreateFlowManager;
 import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategies;
+import org.folio.service.pieces.flows.create.PieceCreateFlowValidator;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowManager;
 import org.folio.service.titles.TitlesService;
 import org.springframework.context.annotation.Bean;
@@ -375,13 +376,19 @@ public class ApplicationConfig {
                               purchaseOrderService, pieceUpdateInventoryService);
   }
 
+  @Bean PieceCreateFlowValidator pieceCreateFlowValidator() {
+    return new PieceCreateFlowValidator();
+  }
+
   @Bean PieceCreateFlowManager pieceCreationService(PieceStorageService pieceStorageService, PurchaseOrderLineService purchaseOrderLineService,
                                                   PurchaseOrderService purchaseOrderService, ProtectionService protectionService,
                                                   ReceivingEncumbranceStrategy receivingEncumbranceStrategy,
                                                   PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager,
-                                                  PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver) {
+                                                  PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver,
+                                                  PieceCreateFlowValidator pieceCreateFlowValidator) {
     return new PieceCreateFlowManager(pieceStorageService, purchaseOrderLineService, purchaseOrderService, protectionService,
-      receivingEncumbranceStrategy, pieceCreateFlowInventoryManager, pieceFlowUpdatePoLineStrategyResolver);
+                  receivingEncumbranceStrategy, pieceCreateFlowInventoryManager,
+                  pieceFlowUpdatePoLineStrategyResolver, pieceCreateFlowValidator);
   }
 
   @Bean
