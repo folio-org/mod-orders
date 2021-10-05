@@ -2,6 +2,7 @@ package org.folio.service.pieces.flows.create;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_HOLDING_WITHOUT_INSTANCE_ERROR;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -17,6 +18,7 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.service.inventory.InventoryManager;
 import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.titles.TitlesService;
 
@@ -25,10 +27,13 @@ public class PieceCreateFlowInventoryManager {
 
   private final TitlesService titlesService;
   private final PieceUpdateInventoryService pieceUpdateInventoryService;
+  private final InventoryManager inventoryManager;
 
-  public PieceCreateFlowInventoryManager(TitlesService titlesService,  PieceUpdateInventoryService pieceUpdateInventoryService) {
+  public PieceCreateFlowInventoryManager(TitlesService titlesService,  PieceUpdateInventoryService pieceUpdateInventoryService,
+                                         InventoryManager inventoryManager) {
     this.titlesService = titlesService;
     this.pieceUpdateInventoryService = pieceUpdateInventoryService;
+    this.inventoryManager = inventoryManager;
   }
 
   public CompletableFuture<Void> processInventory(PieceCreationHolder holder, RequestContext requestContext) {
@@ -87,9 +92,32 @@ public class PieceCreateFlowInventoryManager {
           logger.error(CREATE_HOLDING_WITHOUT_INSTANCE_ERROR.getDescription());
           return CompletableFuture.failedFuture(new HttpException(RestConstants.VALIDATION_ERROR, CREATE_HOLDING_WITHOUT_INSTANCE_ERROR));
         }
-        return pieceUpdateInventoryService.createItemRecord(compPOL, holdingId, requestContext);
+        return createItemRecord(compPOL, holdingId, requestContext);
       }
       return CompletableFuture.completedFuture(null);
+  }
+
+  /**
+   * Return id of created  Item
+   */
+  public CompletableFuture<String> createItemRecord(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
+    final int ITEM_QUANTITY = 1;
+    logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, holdingId);
+    CompletableFuture<String> itemFuture = new CompletableFuture<>();
+    try {
+        if (compPOL.getOrderFormat() == ELECTRONIC_RESOURCE) {
+          inventoryManager.createMissingElectronicItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
+            .thenApply(idS -> itemFuture.complete(idS.get(0)))
+            .exceptionally(itemFuture::completeExceptionally);
+        } else {
+          inventoryManager.createMissingPhysicalItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
+            .thenApply(idS -> itemFuture.complete(idS.get(0)))
+            .exceptionally(itemFuture::completeExceptionally);
+        }
+    } catch (Exception e) {
+      itemFuture.completeExceptionally(e);
+    }
+    return itemFuture;
   }
 
   private CompletableFuture<Title> packageUpdateTitleWithInstance(Title title, RequestContext requestContext) {

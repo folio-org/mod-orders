@@ -1,6 +1,5 @@
 package org.folio.service.pieces.flows.create;
 
-import static org.folio.orders.utils.PoLineCommonUtil.isItemsUpdateRequiredForEresource;
 import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR;
 import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_PIECE_FOR_PENDING_ORDER_ERROR;
 
@@ -13,13 +12,14 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceCreationHolder;
-import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.RestConstants;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.pieces.validators.PieceValidatorUtil;
 
@@ -56,10 +56,22 @@ public class PieceCreateFlowValidator {
     return Collections.emptyList();
   }
 
-  private boolean isCreateItemForPiecePossible(Piece pieceToCreate, CompositePoLine originPoLine) {
+  public static boolean isCreateItemForPiecePossible(Piece pieceToCreate, CompositePoLine originPoLine) {
     Piece.Format pieceFormat = pieceToCreate.getFormat();
     return (pieceFormat == Piece.Format.ELECTRONIC && isItemsUpdateRequiredForEresource(originPoLine)) ||
                   ((pieceFormat == Piece.Format.PHYSICAL || pieceFormat == Piece.Format.OTHER)
-                                && PoLineCommonUtil.isItemsUpdateRequiredForPhysical(originPoLine));
+                                && isItemsUpdateRequiredForPhysical(originPoLine));
+  }
+
+  public static boolean isItemsUpdateRequiredForEresource(CompositePoLine compPOL) {
+    return Optional.ofNullable(compPOL.getEresource())
+      .map(eresource -> eresource.getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM)
+      .orElse(false);
+  }
+
+  public static boolean isItemsUpdateRequiredForPhysical(CompositePoLine compPOL) {
+    return Optional.ofNullable(compPOL.getPhysical())
+      .map(physical -> physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM)
+      .orElse(false);
   }
 }

@@ -42,6 +42,7 @@ import org.folio.service.pieces.flows.PieceFlowUpdatePoLineKey;
 import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategyResolver;
 
 import io.vertx.core.json.JsonObject;
+import org.folio.service.pieces.flows.create.PieceCreateFlowValidator;
 
 public class PieceDeleteFlowManager {
   private static final Logger logger = LogManager.getLogger(PieceDeleteFlowManager.class);
@@ -122,7 +123,7 @@ public class PieceDeleteFlowManager {
   private CompletableFuture<Void> processInventory(PieceDeletionHolder holder, boolean deleteHolding, RequestContext rqContext) {
     CompositePoLine compPOL = holder.getPoLineToSave();
     Piece piece = holder.getPieceToDelete();
-    if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
+    if (PieceCreateFlowValidator.isCreateItemForPiecePossible(piece, compPOL)) {
       return processInventoryWithHoldingAndItems(holder, deleteHolding, rqContext);
     } else if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL.getEresource(), compPOL.getPhysical())) {
       return processInventoryOnlyWithHolding(holder, deleteHolding, rqContext);
