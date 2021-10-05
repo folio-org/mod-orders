@@ -14,6 +14,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import io.vertx.core.Context;
@@ -132,7 +133,7 @@ public class PieceCreateFlowInventoryManagerTest {
     assertEquals(holdingId, piece.getHoldingId());
     verify(titlesService).getTitleById(piece.getTitleId(), requestContext);
 
-    verify(pieceUpdateInventoryService).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
+    verify(pieceUpdateInventoryService, times(0)).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
     verify(inventoryManager).createMissingElectronicItems(compPOL, holdingId, 1, requestContext);
   }
 
