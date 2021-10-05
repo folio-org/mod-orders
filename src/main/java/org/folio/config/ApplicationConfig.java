@@ -430,8 +430,8 @@ public class ApplicationConfig {
   }
 
   @Bean PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager(TitlesService titlesService,
-                            PieceUpdateInventoryService pieceUpdateInventoryService) {
-    return new PieceCreateFlowInventoryManager(titlesService, pieceUpdateInventoryService);
+                            PieceUpdateInventoryService pieceUpdateInventoryService, InventoryManager inventoryManager) {
+    return new PieceCreateFlowInventoryManager(titlesService, pieceUpdateInventoryService, inventoryManager);
   }
 
   @Bean PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver() {
