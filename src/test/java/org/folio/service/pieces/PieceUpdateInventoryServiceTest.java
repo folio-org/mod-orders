@@ -279,7 +279,7 @@ public class PieceUpdateInventoryServiceTest {
     Location location = new Location().withLocationId(piece.getLocationId());
 
     doReturn(completedFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(completedFuture(null)).when(titlesService).updateTitle(title, requestContext);
+    doReturn(completedFuture(null)).when(titlesService).saveTitle(title, requestContext);
 
     doReturn(completedFuture(title.withInstanceId(UUID.randomUUID().toString())))
       .when(pieceUpdateInventoryService).handleInstanceRecord(any(Title.class), eq(requestContext));
@@ -317,7 +317,7 @@ public class PieceUpdateInventoryServiceTest {
     Piece piece = createPieceWithHoldingId(line, title);
 
     doReturn(completedFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(completedFuture(null)).when(titlesService).updateTitle(title, requestContext);
+    doReturn(completedFuture(null)).when(titlesService).saveTitle(title, requestContext);
     doReturn(completedFuture(itemId)).when(pieceUpdateInventoryService).createItemRecord(line, holdingId, requestContext);
 
     //When

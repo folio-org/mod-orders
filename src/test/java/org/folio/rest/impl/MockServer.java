@@ -475,6 +475,7 @@ public class MockServer {
     router.get("/inventory/instances").handler(this::handleGetInstanceRecord);
     router.get("/item-storage/items").handler(this::handleGetItemRecordsFromStorage);
     router.get("/inventory/items").handler(this::handleGetInventoryItemRecords);
+    router.get("/inventory/items/:id").handler(this::handleGetInventoryItemRecordById);
     router.get("/holdings-storage/holdings").handler(this::handleGetHoldingsRecords);
     router.get("/holdings-storage/holdings/:id").handler(this::handleGetHolding);
     router.get("/loan-types").handler(this::handleGetLoanType);
@@ -1020,6 +1021,44 @@ public class MockServer {
           .setStatusCode(200)
           .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
           .end(items.encodePrettily());
+      } catch (Exception e) {
+        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
+      }
+    }
+  }
+
+  private void handleGetInventoryItemRecordById(RoutingContext ctx) {
+    logger.info("handleGetInventoryItemRecordById got: " + ctx.request().path());
+
+    String id = ctx.request().getParam(ID);
+    logger.info("id: " + id);
+
+    if (id.equals(ID_FOR_INTERNAL_SERVER_ERROR)) {
+      ctx.response().setStatusCode(500).end();
+    } else if (id.equals(ITEMS_NOT_FOUND)) {
+      ctx.response().setStatusCode(404).end();
+    } else {
+      try {
+        JsonObject items = new JsonObject(getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
+        JsonArray jsonArray = items.getJsonArray(ITEMS);
+
+        final Iterator<Object> iterator = jsonArray.iterator();
+          while (iterator.hasNext()) {
+            JsonObject item = (JsonObject) iterator.next();
+            if (!id.equals(item.getString(ID))) {
+              iterator.remove();
+            }
+          }
+
+        if  (jsonArray.size() > 0) {
+          items.put(TOTAL_RECORDS, jsonArray.size());
+          addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, jsonArray.getJsonObject(0));
+
+          ctx.response().setStatusCode(200).putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+                                           .end(jsonArray.getJsonObject(0).encodePrettily());
+        } else {
+          ctx.response().setStatusCode(404).end();
+        }
       } catch (Exception e) {
         serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
       }
@@ -1587,28 +1626,29 @@ public class MockServer {
   }
 
   private void handleGetPieceById(RoutingContext ctx) {
-
-    logger.info("handleGetPiecesById got: " + ctx.request()
-      .path());
-    String pieceId = ctx.request()
-      .getParam(ID);
-
+    logger.info("handleGetPiecesById got: " + ctx.request().path());
+    String pieceId = ctx.request().getParam(ID);
     try {
-      // Attempt to find POLine in mock server memory
-      JsonObject body = getMockEntry(PIECES_STORAGE, pieceId).orElse(null);
-      if (body == null) {
-        if (PIECE_POLINE_CONSISTENCY_404_POLINE_NOT_FOUND_ID.equals(pieceId)) {
-          body = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d.json"));
+      if (ID_DOES_NOT_EXIST.equals(pieceId)) {
+        serverResponse(ctx, 404, APPLICATION_JSON, pieceId);
+      } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(pieceId)) {
+        serverResponse(ctx, 500, APPLICATION_JSON, pieceId);
+      } else {
+        // Attempt to find POLine in mock server memory
+        JsonObject body = getMockEntry(PIECES_STORAGE, pieceId).orElse(null);
+        if (body == null) {
+          if (PIECE_POLINE_CONSISTENCY_404_POLINE_NOT_FOUND_ID.equals(pieceId)) {
+            body = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d.json"));
 
-        } else if (PIECE_POLINE_CONSISTENT_RECEIPT_STATUS_ID.equals(pieceId)) {
-          body = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH
-            + "pieceRecord-received-consistent-receipt-status-5b454292-6aaa-474f-9510-b59a564e0c8d2.json"));
-        } else {
-          body = new JsonObject(
-            getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json"));
+          } else if (PIECE_POLINE_CONSISTENT_RECEIPT_STATUS_ID.equals(pieceId)) {
+            body = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-received-consistent-receipt-status-5b454292-6aaa-474f-9510-b59a564e0c8d2.json"));
+          } else {
+            body = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-af372ac8-5ffb-4560-8b96-3945a12e121b.json"));
+          }
         }
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
+
       }
-      serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
     } catch (IOException e) {
       serverResponse(ctx, 404, APPLICATION_JSON, pieceId);
     }

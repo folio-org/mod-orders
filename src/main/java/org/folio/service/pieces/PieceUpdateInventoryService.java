@@ -43,7 +43,7 @@ public class PieceUpdateInventoryService {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return titlesService.getTitleById(piece.getTitleId(), requestContext)
         .thenCompose(title -> handleInstanceRecord(title, requestContext))
-        .thenCompose(title -> titlesService.updateTitle(title, requestContext).thenApply(json -> title))
+        .thenCompose(title -> titlesService.saveTitle(title, requestContext).thenApply(json -> title))
         .thenCompose(title ->
         {
           if (piece.getHoldingId() != null) {

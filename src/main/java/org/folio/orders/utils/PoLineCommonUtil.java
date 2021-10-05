@@ -96,8 +96,8 @@ public final class PoLineCommonUtil {
       .map(physical -> physical.getCreateInventory() == Physical.CreateInventory.INSTANCE)
       .orElse(false);
 
-    boolean isElectronicInstance = Optional.ofNullable(compPOL.getPhysical())
-      .map(physical -> physical.getCreateInventory() == Physical.CreateInventory.INSTANCE)
+    boolean isElectronicInstance = Optional.ofNullable(compPOL.getEresource())
+      .map(elec -> elec.getCreateInventory() == Eresource.CreateInventory.INSTANCE)
       .orElse(false);
 
     return isPhysicalInstance || isElectronicInstance;
@@ -157,5 +157,9 @@ public final class PoLineCommonUtil {
     poLine.setReportingCodes(null);
     JsonObject jsonLine = JsonObject.mapFrom(poLine);
     return jsonLine.mapTo(CompositePoLine.class);
+  }
+
+  public static void makePoLinesPending(List<CompositePoLine> compositePoLines) {
+    compositePoLines.forEach(HelperUtils::makePoLinePending);
   }
 }

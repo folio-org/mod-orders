@@ -9,6 +9,7 @@ import static org.folio.RestTestUtils.verifyPut;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConstants.EXISTED_ITEM_ID;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.ID_BAD_FORMAT;
 import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
@@ -41,13 +42,14 @@ import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
 import org.folio.config.ApplicationConfig;
 import org.folio.orders.events.handlers.HandlersTestHelper;
-import org.folio.rest.acq.model.Piece;
+
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -184,12 +186,12 @@ public class PieceApiTest {
   }
 
   @Test
-  void deletePieceByIdItemAlreadyDeletedTest() {
+  void shouldNotInvokeItemDeletionButInvokeDeletePieceByIdWhenItemAlreadyDeletedTest() {
     logger.info("=== Test delete piece by id - item has already deleted ===");
 
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
     CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId())
-      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.NONE));
+      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM));
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withItemId(ID_DOES_NOT_EXIST).withPoLineId(poLine.getId());
     order.setCompositePoLines(Collections.singletonList(poLine));
     MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
@@ -197,17 +199,17 @@ public class PieceApiTest {
     MockServer.addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
 
     verifyDeleteResponse(String.format(PIECES_ID_PATH, piece.getId()), "", 204);
-    assertThat(MockServer.getItemDeletions(), hasSize(1));
+    assertNull(MockServer.getItemDeletions());
     assertThat(MockServer.getPieceDeletions(), hasSize(1));
   }
 
   @Test
-  void deletePieceByIdItemDeletionInternalServerErrorTest() {
+  void shouldNotDeletePieceAndItemIfGetItemByIdTrowInternalServerErrorTest() {
     logger.info("=== Test delete piece by id - item deletion Internal Server Error ===");
 
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
     CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId())
-      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.NONE));
+      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM));
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withItemId(ID_FOR_INTERNAL_SERVER_ERROR).withPoLineId(poLine.getId());
     order.setCompositePoLines(Collections.singletonList(poLine));
     MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
@@ -215,8 +217,8 @@ public class PieceApiTest {
     MockServer.addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
 
     verifyDeleteResponse(String.format(PIECES_ID_PATH, piece.getId()), "", 500);
-    assertThat(MockServer.getItemDeletions(), hasSize(1));
-    assertThat(MockServer.getPieceDeletions(), hasSize(1));
+    assertNull(MockServer.getItemDeletions());
+    assertNull(MockServer.getPieceDeletions());
   }
 
   @Test
@@ -244,7 +246,7 @@ public class PieceApiTest {
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
     CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId())
       .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM));
-    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withItemId(UUID.randomUUID().toString()).withPoLineId(poLine.getId());
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withItemId(EXISTED_ITEM_ID).withPoLineId(poLine.getId());
     order.setCompositePoLines(Collections.singletonList(poLine));
     MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
     MockServer.addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));

@@ -1,4 +1,4 @@
-package org.folio.service.pieces;
+package org.folio.service.pieces.flows.create;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.TestConfig.autowireDependencies;
@@ -18,16 +18,16 @@ import static org.mockito.Mockito.verify;
 
 import io.vertx.core.Context;
 import org.folio.ApiTestSuite;
-import org.folio.TestUtils;
-import org.folio.rest.core.RestClient;
+import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.inventory.InventoryManager;
+import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -35,6 +35,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,7 +47,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-public class PieceCreateFlowInventoryManageTest {
+public class PieceCreateFlowInventoryManagerTest {
   @Autowired
   PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
   @Autowired
@@ -55,7 +56,6 @@ public class PieceCreateFlowInventoryManageTest {
   PieceUpdateInventoryService pieceUpdateInventoryService;
   @Autowired
   InventoryManager inventoryManager;
-
 
   @Spy
   private Context ctxMock = getFirstContextFromVertx(getVertx());
@@ -78,7 +78,7 @@ public class PieceCreateFlowInventoryManageTest {
       ApiTestSuite.before();
       runningOnOwn = true;
     }
-    initSpringContext(PieceCreateFlowInventoryManageTest.ContextConfiguration.class);
+    initSpringContext(PieceCreateFlowInventoryManagerTest.ContextConfiguration.class);
   }
 
   @AfterAll
@@ -92,6 +92,7 @@ public class PieceCreateFlowInventoryManageTest {
   @AfterEach
   void resetMocks() {
     clearServiceInteractions();
+    Mockito.reset(titlesService, inventoryManager, pieceUpdateInventoryService);
   }
 
   @Test
@@ -109,19 +110,23 @@ public class PieceCreateFlowInventoryManageTest {
     CompositePoLine compPOL = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(orderId)
                                     .withOrderFormat(ELECTRONIC_RESOURCE).withId(lineId)
                                     .withLocations(List.of(loc)).withCost(cost);
+    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
 
     doReturn(completedFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(completedFuture(null)).when(titlesService).updateTitle(title, requestContext);
+    doReturn(completedFuture(null)).when(titlesService).saveTitle(title, requestContext);
     doReturn(completedFuture(title)).when(pieceUpdateInventoryService).handleInstanceRecord(title, requestContext);
     doReturn(completedFuture(holdingId)).when(pieceUpdateInventoryService).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
     doReturn(completedFuture(itemId)).when(pieceUpdateInventoryService).createItemRecord(compPOL, holdingId, requestContext);
 
-    pieceCreateFlowInventoryManager.updateInventory(compPOL, piece, true, requestContext);
+    PieceCreationHolder holder = new PieceCreationHolder(piece, true);
+    holder.shallowCopy(new PieceCreationHolder(compositePurchaseOrder));
+
+    pieceCreateFlowInventoryManager.processInventory(holder, requestContext).join();
+
     assertEquals(itemId, piece.getItemId());
-    verify(titlesService).getTitleById(piece.getTitleId(), requestContext);
+    assertEquals(holdingId, piece.getHoldingId());
     verify(titlesService).getTitleById(piece.getTitleId(), requestContext);
 
-    verify(pieceUpdateInventoryService).handleInstanceRecord(title, requestContext);
     verify(pieceUpdateInventoryService).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
     verify(pieceUpdateInventoryService).createItemRecord(compPOL, holdingId, requestContext);
   }
@@ -140,9 +145,9 @@ public class PieceCreateFlowInventoryManageTest {
       return mock(PieceUpdateInventoryService.class);
     }
 
-    @Bean PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager(TitlesService titlesService, InventoryManager inventoryManager,
+    @Bean PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager(TitlesService titlesService,
                   PieceUpdateInventoryService pieceUpdateInventoryService) {
-      return new PieceCreateFlowInventoryManager(titlesService, inventoryManager, pieceUpdateInventoryService);
+      return new PieceCreateFlowInventoryManager(titlesService, pieceUpdateInventoryService);
     }
   }
 }

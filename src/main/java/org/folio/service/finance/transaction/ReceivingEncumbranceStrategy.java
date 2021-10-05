@@ -36,7 +36,7 @@ public class ReceivingEncumbranceStrategy implements EncumbranceWorkflowStrategy
 
   @Override
   public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
-    RequestContext requestContext) {
+                                                        RequestContext requestContext) {
     List<EncumbranceRelationsHolder> encumbranceRelationsHolders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
     return prepareEncumbranceRelationsHolder(encumbranceRelationsHolders, poAndLinesFromStorage, requestContext)
       .thenApply(fundsDistributionService::distributeFunds)

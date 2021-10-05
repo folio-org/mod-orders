@@ -7,14 +7,6 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.folio.rest.core.exceptions.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
-import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
-import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_CREATION_FAILED;
-import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
-import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_INSTANCE_STATUS;
-import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_INSTANCE_TYPE;
-import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_LOAN_TYPE;
-import static org.folio.rest.core.exceptions.ErrorCodes.PARTIALLY_RETURNED_COLLECTION;
 import static org.folio.orders.utils.HelperUtils.LANG;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
@@ -26,6 +18,14 @@ import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 import static org.folio.rest.RestConstants.NOT_FOUND;
+import static org.folio.rest.core.exceptions.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
+import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
+import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_CREATION_FAILED;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_INSTANCE_STATUS;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_INSTANCE_TYPE;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_LOAN_TYPE;
+import static org.folio.rest.core.exceptions.ErrorCodes.PARTIALLY_RETURNED_COLLECTION;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -36,7 +36,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -46,13 +45,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.PieceItemPair;
 import org.folio.models.PoLineUpdateHolder;
-import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.core.exceptions.InventoryException;
-import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.PostResponseType;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.exceptions.InventoryException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CheckInPiece;
@@ -130,11 +129,10 @@ public class InventoryManager {
   private static final String TENANT_SPECIFIC_KEY_FORMAT = "%s.%s.%s";
   private static final String LOOKUP_ITEM_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
   private static final String ITEM_STOR_ENDPOINT = "/item-storage/items";
-  public static final String  ITEM_BY_ID_ENDPOINT = "/inventory/items/{id}";
+  public static final String  ITEM_BY_ID_ENDPOINT = "itemRecordById";
   private static final String HOLDINGS_LOOKUP_QUERY = "instanceId==%s and permanentLocationId==%s";
   public static final String ID = "id";
   public static final String TOTAL_RECORDS = "totalRecords";
-  public static final String SEARCH_PARAMS_WITHOUT_LANG = "?limit=%s&offset=%s%s";
   private static final Map<String, String> INVENTORY_LOOKUP_ENDPOINTS;
   public static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
   public static final String EFFECTIVE_LOCATION = "effectiveLocation";
@@ -160,6 +158,7 @@ public class InventoryManager {
       INSTANCE_TYPES,"/instance-types?query=code==%s",
       INSTANCES, "/inventory/instances",
       ITEMS,"/inventory/items",
+      ITEM_BY_ID_ENDPOINT,"/inventory/items/{id}",
       REQUESTS, "/circulation/requests");
   }
 
@@ -227,6 +226,12 @@ public class InventoryManager {
                      .thenApply(response -> extractEntities(response, ITEMS));
   }
 
+  public CompletableFuture<JsonObject> getItemRecordById(String itemId, boolean skipThrowNorFoundException, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(itemId)
+                                                  .withQueryParameter(LANG, "en");
+    return restClient.getAsJsonObject(requestEntry, skipThrowNorFoundException, requestContext);
+  }
+
   /**
    * Returns list of requests for specified item.
    *
@@ -255,7 +260,7 @@ public class InventoryManager {
   }
 
   public CompletableFuture<Void> updateItem(JsonObject item, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(ITEM_BY_ID_ENDPOINT).withId(item.getString(ID));
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(item.getString(ID));
     return restClient.put(requestEntry, item, requestContext);
   }
 
@@ -274,14 +279,14 @@ public class InventoryManager {
     return collectResultsOnSuccess(futures);
   }
 
-  public CompletableFuture<Void> deleteItem(String id, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(ITEM_BY_ID_ENDPOINT).withId(id);
-    return restClient.delete(requestEntry, requestContext);
+  public CompletableFuture<Void> deleteItem(String id, boolean skipNotFoundException, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(id);
+    return restClient.delete(requestEntry, skipNotFoundException, requestContext);
   }
 
-  public CompletableFuture<List<Void>> deleteItems(List<String> itemIds, RequestContext requestContext) {
+  public CompletableFuture<List<Void>> deleteItems(List<String> itemIds, boolean skipNotFoundException, RequestContext requestContext) {
     List<CompletableFuture<Void>> futures = new ArrayList<>(itemIds.size());
-    itemIds.forEach(itemId -> futures.add(deleteItem(itemId, requestContext)));
+    itemIds.forEach(itemId -> futures.add(deleteItem(itemId, skipNotFoundException, requestContext)));
     return collectResultsOnSuccess(futures);
   }
 
@@ -352,8 +357,7 @@ public class InventoryManager {
           }
         });
     } else {
-      String locationId = location.getLocationId();
-      return createHoldingsRecord(instanceId, locationId, requestContext);
+      return createHoldingsRecord(instanceId, location.getLocationId(), requestContext);
     }
   }
 
@@ -365,9 +369,10 @@ public class InventoryManager {
                                  .collect(Collectors.toList()));
   }
 
-  public CompletableFuture<JsonObject> getHolding(String holdingId, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT)).withId(holdingId).withQueryParameter(LANG, "en");
-    return restClient.get(requestEntry, requestContext, JsonObject.class);
+  public CompletableFuture<JsonObject> getHoldingById(String holdingId, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT)).withId(holdingId)
+                                                      .withQueryParameter(LANG, "en");
+    return restClient.getAsJsonObject(requestEntry, requestContext);
   }
 
   public CompletableFuture<List<JsonObject>> getHoldingRecords(String instanceId, List<String> locationIds, RequestContext requestContext) {
@@ -949,12 +954,12 @@ public class InventoryManager {
     return restClient.post(requestEntry, instanceRecJson, PostResponseType.UUID,  String.class, requestContext);
   }
 
-  public CompletionStage<Void> deleteHolding(String holdingId, RequestContext requestContext) {
+  public CompletableFuture<Void> deleteHolding(String holdingId, boolean skipNotFoundException, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT)).withId(holdingId).withQueryParameter(LANG, "en");
-    return restClient.delete(requestEntry, requestContext);
+    return restClient.delete(requestEntry, skipNotFoundException, requestContext);
   }
 
-  public CompletableFuture<List<JsonObject>> getItemsByStatus(List<String> poLineIds, String itemStatus, RequestContext requestContext) {
+  public CompletableFuture<List<JsonObject>> getItemsByPoLineIdsAndStatus(List<String> poLineIds, String itemStatus, RequestContext requestContext) {
     logger.debug("getItemsByStatus start");
     List<CompletableFuture<List<JsonObject>>> futures = StreamEx
       .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ)
@@ -1100,16 +1105,6 @@ public class InventoryManager {
   private CompletableFuture<JsonObject> buildPhysicalItemRecordJsonObject(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
     return buildBaseItemRecordJsonObject(compPOL, holdingId, requestContext)
       .thenApply(itemRecord -> itemRecord.put(ITEM_MATERIAL_TYPE_ID, compPOL.getPhysical().getMaterialType()));
-  }
-
-  private JsonObject getHoldingByLocationId(JsonObject holdings, String locationId) {
-    JsonObject prevHolding;
-    prevHolding = holdings.getJsonArray(HOLDINGS_RECORDS).stream()
-      .filter(item -> ((JsonObject) item).getString(HOLDING_PERMANENT_LOCATION_ID).equals(locationId))
-      .map(JsonObject.class::cast)
-      .findAny()
-      .orElseThrow(() -> new CompletionException(new InventoryException(String.format("No records for location '%s' can be found", locationId))));
-    return prevHolding;
   }
 
   /**
