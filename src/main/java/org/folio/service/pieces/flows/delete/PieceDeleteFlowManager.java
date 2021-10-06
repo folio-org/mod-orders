@@ -61,7 +61,7 @@ public class PieceDeleteFlowManager {
     this.pieceFlowUpdatePoLineStrategyResolver = pieceFlowUpdatePoLineStrategyResolver;
   }
 
-  public CompletableFuture<Void> deletePieceWithItem(String pieceId, boolean deleteHolding, RequestContext requestContext) {
+  public CompletableFuture<Void> deleteItem(String pieceId, boolean deleteHolding, RequestContext requestContext) {
     PieceDeletionHolder holder = new PieceDeletionHolder(deleteHolding);
     return pieceStorageService.getPieceById(pieceId, requestContext)
       .thenCompose(piece -> purchaseOrderLineService.getOrderLineById(piece.getPoLineId(), requestContext)
@@ -134,7 +134,7 @@ public class PieceDeleteFlowManager {
 
   private boolean isItemWithStatus(JsonObject item, String status) {
     return Optional.ofNullable(item).map(itemP -> item.getJsonObject(ITEM_STATUS))
-      .filter(itemStatus ->  status.equalsIgnoreCase(itemStatus.getString(ITEM_STATUS_NAME)))
+      .filter(itemStatus -> status.equalsIgnoreCase(itemStatus.getString(ITEM_STATUS_NAME)))
       .isPresent();
   }
 
