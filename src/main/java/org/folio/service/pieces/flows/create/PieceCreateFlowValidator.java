@@ -11,6 +11,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceCreationHolder;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.RestConstants;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -49,6 +50,13 @@ public class PieceCreateFlowValidator {
       return List.of(new Error().withCode(CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR.getCode()).withMessage(msg));
     }
     return Collections.emptyList();
+  }
+
+  public static boolean isCreateHoldingForPiecePossible(Piece pieceToCreate, CompositePoLine originPoLine) {
+    Piece.Format pieceFormat = pieceToCreate.getFormat();
+    return (pieceFormat == Piece.Format.ELECTRONIC && PoLineCommonUtil.isHoldingUpdateRequiredForEresource(originPoLine.getEresource())) ||
+              ((pieceFormat == Piece.Format.PHYSICAL || pieceFormat == Piece.Format.OTHER)
+                        && PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(originPoLine.getPhysical()));
   }
 
   public static boolean isCreateItemForPiecePossible(Piece pieceToCreate, CompositePoLine originPoLine) {
