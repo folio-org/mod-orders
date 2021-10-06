@@ -1,7 +1,6 @@
 package org.folio.service.pieces.flows.create;
 
 import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR;
-import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_PIECE_FOR_PENDING_ORDER_ERROR;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -15,7 +14,6 @@ import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.rest.RestConstants;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -32,9 +30,6 @@ public class PieceCreateFlowValidator {
     Piece pieceToCreate = holder.getPieceToCreate();
     CompositePoLine originPoLine = holder.getOriginPoLine();
     List<Error> combinedErrors = new ArrayList<>();
-    if (CompositePurchaseOrder.WorkflowStatus.PENDING == holder.getOriginPurchaseOrder().getWorkflowStatus()) {
-      combinedErrors.add(CREATE_PIECE_FOR_PENDING_ORDER_ERROR.toError());
-    }
     List<Error> isItemCreateValidError = validateItemCreateFlag(pieceToCreate, originPoLine, holder.isCreateItem());
     combinedErrors.addAll(isItemCreateValidError);
     List<Error> pieceLocationErrors = Optional.ofNullable(PieceValidatorUtil.validatePieceLocation(pieceToCreate)).orElse(new ArrayList<>());
