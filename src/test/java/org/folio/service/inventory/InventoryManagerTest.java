@@ -256,11 +256,11 @@ public class InventoryManagerTest {
     String itemId2 = UUID.randomUUID().toString();
     List<String> items = Arrays.asList(itemId1, itemId2);
 
-    doReturn(completedFuture(null)).when(restClient).delete(any(RequestEntry.class), eq(requestContext));
+    doReturn(completedFuture(null)).when(restClient).delete(any(RequestEntry.class), eq(false), eq(requestContext));
     //When
-    inventoryManager.deleteItems(items, requestContext).join();
+    inventoryManager.deleteItems(items, false, requestContext).join();
     //Then
-    verify(restClient, times(2)).delete(any(RequestEntry.class), eq(requestContext));
+    verify(restClient, times(2)).delete(any(RequestEntry.class), eq(false), eq(requestContext));
   }
 
   @Test
@@ -268,7 +268,7 @@ public class InventoryManagerTest {
     //given
     doReturn(completedFuture(null)).when(restClient).delete(any(RequestEntry.class), eq(requestContext));
     //When
-    inventoryManager.deleteItems(Collections.emptyList(), requestContext).join();
+    inventoryManager.deleteItems(Collections.emptyList(), false, requestContext).join();
     //Then
     verify(restClient, times(0)).delete(any(RequestEntry.class), eq(requestContext));
   }

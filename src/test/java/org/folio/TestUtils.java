@@ -2,7 +2,7 @@ package org.folio;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.TestConstants.ID;
-import static org.folio.TestConstants.ITEM_ID;
+import static org.folio.TestConstants.EXISTED_ITEM_ID;
 import static org.folio.TestConstants.LOCATION_ID;
 import static org.folio.TestConstants.MIN_PO_ID;
 import static org.folio.TestConstants.MIN_PO_LINE_ID;
@@ -116,7 +116,7 @@ public final class TestUtils {
       .withId(PIECE_ID)
       .withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
       .withFormat(Piece.Format.PHYSICAL)
-      .withItemId(ITEM_ID)
+      .withItemId(EXISTED_ITEM_ID)
       .withTitleId(SAMPLE_TITLE_ID)
       .withReceiptDate(new Date())
       .withPoLineId(poLineId)

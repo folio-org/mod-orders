@@ -467,7 +467,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private CompletableFuture<Void> updateItemsStatus(List<String> poLineIds,
       String currentStatus, String newStatus, RequestContext requestContext) {
 
-    return inventoryManager.getItemsByStatus(poLineIds, currentStatus, requestContext)
+    return inventoryManager.getItemsByPoLineIdsAndStatus(poLineIds, currentStatus, requestContext)
         .thenApply(items -> updateStatusName(items, newStatus))
         .thenCompose(this::updateItemsInInventory);
   }
@@ -731,6 +731,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> validateIsbnValues(CompositePurchaseOrder compPO, RequestContext requestContext) {
+
     CompletableFuture<?>[] futures = compPO.getCompositePoLines()
       .stream()
       .map(line -> orderLineHelper.validateAndNormalizeISBN(line, requestContext))
@@ -1104,7 +1105,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private boolean hasNewPoLines(CompositePurchaseOrder compPO, List<PoLine> poLinesFromStorage) {
-    return getNewPoLines(compPO, poLinesFromStorage).count() > 0;
+    return getNewPoLines(compPO, poLinesFromStorage).findAny().isPresent();
   }
 
   private Stream<CompositePoLine> getNewPoLines(CompositePurchaseOrder compPO, List<PoLine> poLinesFromStorage) {

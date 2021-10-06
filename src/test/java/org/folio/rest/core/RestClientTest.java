@@ -21,10 +21,13 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 
+import org.folio.rest.acq.model.finance.ExpenseClass;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.junit.jupiter.api.BeforeEach;
@@ -79,6 +82,45 @@ public class RestClientTest {
   }
 
   @Test
+  void testSearchShouldThrowExceptionIfItemNotFind() throws Exception {
+    RestClient restClient = Mockito.spy(new RestClient());
+
+    String uuid = UUID.randomUUID().toString();
+    Response response = new Response();
+    response.setCode(404);
+    response.setError(new JsonObject("{\"endpoint\":\"/composite-orders\",\"statusCode\": 404 , \"errorMessage\":\"Not found\"}"));
+
+    doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
+    String endpoint = resourcesPath(PURCHASE_ORDER) + "/{id}";
+    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.DELETE), anyString(), eq(okapiHeaders));
+
+    RequestEntry requestEntry = new RequestEntry(endpoint).withId(uuid);
+    CompletableFuture<PurchaseOrder> resultFuture = restClient.get(requestEntry, false,  requestContext, PurchaseOrder.class);
+
+    ExecutionException executionException = assertThrows(ExecutionException.class, resultFuture::get);
+    verify(httpClient).request(eq(HttpMethod.GET), eq(requestEntry.buildEndpoint()), eq(okapiHeaders));
+  }
+
+  @Test
+  void testSearchShouldNotThrowExceptionIfItemNotFind() throws Exception {
+    RestClient restClient = Mockito.spy(new RestClient());
+
+    String uuid = UUID.randomUUID().toString();
+    Response response = new Response();
+    response.setCode(404);
+    response.setError(new JsonObject("{\"endpoint\":\"/composite-orders\",\"statusCode\": 404 , \"errorMessage\":\"Not found\"}"));
+
+    doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
+    String endpoint = resourcesPath(PURCHASE_ORDER) + "/{id}";
+    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.GET), anyString(), eq(okapiHeaders));
+
+    RequestEntry requestEntry = new RequestEntry(endpoint).withId(uuid);
+    restClient.get(requestEntry, true,  requestContext, PurchaseOrder.class).get();
+
+    verify(httpClient).request(eq(HttpMethod.GET), eq(requestEntry.buildEndpoint()), eq(okapiHeaders));
+  }
+
+  @Test
   void testGetShouldThrowExceptionWhenSearchById() {
     RestClient restClient = Mockito.spy(new RestClient());
     String uuid = UUID.randomUUID().toString();
@@ -125,7 +167,7 @@ public class RestClientTest {
   }
 
   @Test
-  void testDeleteShouldCreateEntity() throws Exception {
+  void testDeleteShouldDeleteEntity() throws Exception {
     RestClient restClient = Mockito.spy(new RestClient());
 
     String uuid = UUID.randomUUID().toString();
@@ -139,6 +181,47 @@ public class RestClientTest {
     RequestEntry requestEntry = new RequestEntry(endpoint).withId(uuid);
     restClient.delete(requestEntry, requestContext).get();
 
+    verify(httpClient).request(eq(HttpMethod.DELETE), eq(requestEntry.buildEndpoint()), eq(okapiHeaders));
+  }
+
+  @Test
+  void testDeleteShouldNotThrowExceptionIfItemNotFind() throws Exception {
+    RestClient restClient = Mockito.spy(new RestClient());
+
+    String uuid = UUID.randomUUID().toString();
+    Response response = new Response();
+    response.setCode(404);
+
+    doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
+    String endpoint = resourcesPath(PURCHASE_ORDER) + "/{id}";
+    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.DELETE), anyString(), eq(okapiHeaders));
+
+    RequestEntry requestEntry = new RequestEntry(endpoint).withId(uuid);
+    restClient.delete(requestEntry, true, requestContext).get();
+
+    verify(httpClient).request(eq(HttpMethod.DELETE), eq(requestEntry.buildEndpoint()), eq(okapiHeaders));
+  }
+
+  @Test
+  void testDeleteShouldThrowExceptionIfItemNotFind() throws Exception {
+    RestClient restClient = Mockito.spy(new RestClient());
+
+    String uuid = UUID.randomUUID()
+      .toString();
+    Response response = new Response();
+    response.setCode(404);
+    response.setError(new JsonObject("{\"endpoint\":\"/composite-orders\",\"statusCode\": 404 , \"errorMessage\":\"Not found\"}"));
+
+    doReturn(httpClient).when(restClient)
+      .getHttpClient(okapiHeaders);
+    String endpoint = resourcesPath(PURCHASE_ORDER) + "/{id}";
+    doReturn(completedFuture(response)).when(httpClient)
+      .request(eq(HttpMethod.DELETE), anyString(), eq(okapiHeaders));
+
+    RequestEntry requestEntry = new RequestEntry(endpoint).withId(uuid);
+    CompletableFuture<Void> resultFuture = restClient.delete(requestEntry, false, requestContext);
+
+    ExecutionException executionException = assertThrows(ExecutionException.class, resultFuture::get);
     verify(httpClient).request(eq(HttpMethod.DELETE), eq(requestEntry.buildEndpoint()), eq(okapiHeaders));
   }
 
