@@ -3,7 +3,6 @@ package org.folio.helper;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
-import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
@@ -11,6 +10,7 @@ import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,6 +25,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CheckInPiece;
+import org.folio.rest.jaxrs.model.CheckinCollection;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -34,6 +36,7 @@ import org.folio.rest.jaxrs.model.ReceivingCollection;
 import org.folio.rest.jaxrs.model.ReceivingHistoryCollection;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
+import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.rest.jaxrs.model.ToBeReceived;
 import org.folio.service.AcquisitionsUnitsService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -96,6 +99,18 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       .thenCompose(piecesByPoLineIds -> updatePoLinesStatus(piecesByPoLineIds, requestContext))
       // 7. Return results to the client
       .thenApply(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
+  }
+
+  private Map<String, List<CheckInPiece>> getItemCreateNeededCheckinPieces(CheckinCollection checkinCollection) {
+    return StreamEx
+      .of(checkinCollection.getToBeCheckedIn())
+      .distinct()
+      .groupingBy(ToBeCheckedIn::getPoLineId,
+        mapping(ToBeCheckedIn::getCheckInPieces,
+          collectingAndThen(toList(),
+            lists -> StreamEx.of(lists)
+              .flatMap(List::stream)
+              .collect(toList()))));
   }
 
   /**
@@ -163,6 +178,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   private Map<String, Map<String, Location>> groupLocationsByPoLineIdOnReceiving(ReceivingCollection receivingCollection) {
     return StreamEx
       .of(receivingCollection.getToBeReceived())
+      .distinct()
       .groupingBy(ToBeReceived::getPoLineId,
         mapping(ToBeReceived::getReceivedItems,
           collectingAndThen(toList(),
@@ -235,6 +251,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   private Map<String, Map<String, ReceivedItem>> groupReceivedItemsByPoLineId(ReceivingCollection receivingCollection) {
     return StreamEx
       .of(receivingCollection.getToBeReceived())
+      .distinct()
       .groupingBy(ToBeReceived::getPoLineId,
         mapping(ToBeReceived::getReceivedItems,
           collectingAndThen(toList(),
