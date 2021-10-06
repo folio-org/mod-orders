@@ -118,8 +118,8 @@ public class OpenToPendingEncumbranceStrategyTest {
       doReturn(completedFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithCompPOLines(eq(order), eq(orderFromStorage), eq(requestContext));
       String compositePoLineId = UUID.randomUUID().toString();
       List<CompositePoLine> compositePoLines = Arrays.asList(new CompositePoLine().withId(compositePoLineId));
-      List<String> poLineIds = Arrays.asList(new String(compositePoLineId));
-      List<List<Transaction>> allTransactions = Arrays.asList(Arrays.asList(encumbrance));
+      List<String> poLineIds = Arrays.asList(compositePoLineId);
+      List<Transaction> allTransactions = Arrays.asList(encumbrance);
       doReturn(completedFuture(Arrays.asList(encumbrance))).when(transactionService).getTransactionsByPoLinesIds(eq(poLineIds), eq(fiscalYearId), eq(requestContext));
       doReturn(completedFuture(Arrays.asList(encumbrance))).when(encumbranceService).getCurrentPoLinesEncumbrances(eq(compositePoLines), eq(fiscalYearId), eq(requestContext));
       doReturn(completedFuture(allTransactions)).when(encumbranceService).getEncumbrancesByPoLinesFromCurrentFy(eq(mapFiscalYearsWithCompPOLines), eq(requestContext));

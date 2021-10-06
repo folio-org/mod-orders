@@ -27,7 +27,6 @@ public class OpenToClosedEncumbranceStrategy implements EncumbranceWorkflowStrat
     if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
       return encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithCompPOLines(compPO, poAndLinesFromStorage, requestContext)
         .thenCompose(mapCompPoLine -> encumbranceService.getEncumbrancesByPoLinesFromCurrentFy(mapCompPoLine, requestContext))
-        .thenApply(transactions -> encumbranceRelationsHoldersBuilder.retrieveTransactionCollection(transactions))
         .thenCompose(transactions -> {
           if (transactions.isEmpty()) {
             return CompletableFuture.completedFuture(null);

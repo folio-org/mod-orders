@@ -21,6 +21,7 @@ import org.folio.service.invoice.InvoiceService;
 import org.javamoney.moneta.function.MonetaryOperators;
 
 import javax.money.MonetaryAmount;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -149,12 +150,12 @@ public class EncumbranceService {
     return transactionService.getTransactionsByPoLinesIds(poLineIds, searchCriteria, requestContext);
   }
 
-  public CompletableFuture<List<List<Transaction>>> getEncumbrancesByPoLinesFromCurrentFy(
-                             Map<String, List<CompositePoLine>> poLinesByFy, RequestContext requestContext) {
-    return collectResultsOnSuccess(poLinesByFy.entrySet()
-      .stream()
-      .map(entry -> getCurrentPoLinesEncumbrances(entry.getValue(), entry.getKey(), requestContext))
-      .collect(toList()));
+  public CompletableFuture<List<Transaction>> getEncumbrancesByPoLinesFromCurrentFy(
+      Map<String, List<CompositePoLine>> poLinesByFy, RequestContext requestContext) {
+    return collectResultsOnSuccess(poLinesByFy.entrySet().stream()
+        .map(entry -> getCurrentPoLinesEncumbrances(entry.getValue(), entry.getKey(), requestContext))
+        .collect(toList()))
+      .thenApply(encumbrances -> encumbrances.stream().flatMap(Collection::stream).collect(toList()));
   }
 
   public void updateEncumbrance(FundDistribution fundDistribution, CompositePoLine poLine, Transaction trEncumbrance) {

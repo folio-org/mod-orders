@@ -6,7 +6,6 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.folio.orders.utils.HelperUtils.getConversionQuery;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -283,9 +282,4 @@ public class EncumbranceRelationsHoldersBuilder {
         mapping(EncumbranceRelationsHolder::getPoLine, toList()))));
   }
 
-  public List<Transaction> retrieveTransactionCollection(List<List<Transaction>> transactionCollections) {
-    List<Transaction> allTransactions = new ArrayList<>();
-    transactionCollections.forEach(transCollection -> allTransactions.addAll(transCollection));
-    return allTransactions;
-  }
 }

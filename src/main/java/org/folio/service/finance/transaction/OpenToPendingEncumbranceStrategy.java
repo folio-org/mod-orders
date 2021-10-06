@@ -1,9 +1,7 @@
 package org.folio.service.finance.transaction;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -52,10 +50,9 @@ public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStra
   }
 
   public CompletableFuture<List<Transaction>> getOrderEncumbrances(CompositePurchaseOrder compPo,
-                                                                   CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+      CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
 
     return encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithCompPOLines(compPo, poFromStorage, requestContext)
-      .thenCompose(poLinesByCurrentFy -> encumbranceService.getEncumbrancesByPoLinesFromCurrentFy(poLinesByCurrentFy, requestContext))
-      .thenApply(trs -> trs.stream().flatMap(Collection::stream).collect(Collectors.toList()));
+      .thenCompose(poLinesByCurrentFy -> encumbranceService.getEncumbrancesByPoLinesFromCurrentFy(poLinesByCurrentFy, requestContext));
   }
 }
