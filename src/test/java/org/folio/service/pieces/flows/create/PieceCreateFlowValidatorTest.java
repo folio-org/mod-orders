@@ -23,24 +23,6 @@ public class PieceCreateFlowValidatorTest {
   private PieceCreateFlowValidator pieceCreateFlowValidator = new PieceCreateFlowValidator();
 
   @Test
-  void createPieceForPendingOrderIsNotValid() {
-    String holdingId = UUID.randomUUID().toString();
-    String orderId = UUID.randomUUID().toString();
-    Piece piece = new Piece().withFormat(Piece.Format.PHYSICAL).withHoldingId(holdingId);
-    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PENDING);
-    PoLine originPoLine = new PoLine().withPurchaseOrderId(orderId);
-    PieceCreationHolder holder = new PieceCreationHolder(piece, true);
-    holder.shallowCopy(new PieceCreationHolder(purchaseOrder, originPoLine));
-    HttpException exception = Assertions.assertThrows(HttpException.class, () -> {
-      pieceCreateFlowValidator.isCreatePieceRequestValid(holder);
-    });
-
-    boolean isErrorPresent = exception.getErrors().getErrors().stream()
-      .anyMatch(error -> error.getCode().equals(ErrorCodes.CREATE_PIECE_FOR_PENDING_ORDER_ERROR.getCode()));
-    assertEquals(true, isErrorPresent);
-  }
-
-  @Test
   void createPieceIsForbiddenIfPieceAndLIneFormatIsNotCompatible() {
     String orderId = UUID.randomUUID().toString();
     String locationId = UUID.randomUUID().toString();
