@@ -66,7 +66,7 @@ public class TitlesService {
     return restClient.get(requestEntry, requestContext, Title.class);
   }
 
-  public CompletableFuture<Void> updateTitle(Title title, RequestContext requestContext) {
+  public CompletableFuture<Void> saveTitle(Title title, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(title.getId());
     return restClient.put(requestEntry, title, requestContext);
   }

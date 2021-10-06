@@ -103,6 +103,14 @@ resourceTypes:
               example: "unable to create Piece -- Internal server error, e.g. due to misconfiguration"
     delete:
       description: Delete a piece with given {id}
+      queryParameters:
+        deleteHolding:
+          displayName: The associated holding should be removed
+          type: boolean
+          description: The associated holding should be removed
+          example: true
+          required: false
+          default: false
       responses:
         204:
           description: "Piece record successfully deleted"

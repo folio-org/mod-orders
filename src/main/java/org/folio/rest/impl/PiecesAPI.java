@@ -13,8 +13,8 @@ import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.resource.OrdersPieces;
-import org.folio.service.pieces.PieceCreateFlowManager;
-import org.folio.service.pieces.PieceDeleteFlowManager;
+import org.folio.service.pieces.flows.create.PieceCreateFlowManager;
+import org.folio.service.pieces.flows.delete.PieceDeleteFlowManager;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceService;
 import org.folio.spring.SpringContextUtil;
@@ -84,9 +84,9 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
 
   @Override
   @Validate
-  public void deleteOrdersPiecesById(String pieceId, String lang, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    pieceDeleteFlowManager.deletePieceWithItem(pieceId, new RequestContext(vertxContext, okapiHeaders))
+   public void deleteOrdersPiecesById(String pieceId, boolean deleteHolding, String lang, Map<String, String> okapiHeaders,
+    Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    pieceDeleteFlowManager.deletePieceWithItem(pieceId, deleteHolding, new RequestContext(vertxContext, okapiHeaders))
       .thenAccept(ok -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
   }

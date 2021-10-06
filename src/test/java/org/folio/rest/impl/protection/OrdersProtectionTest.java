@@ -7,6 +7,7 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 import static org.folio.service.AcquisitionsUnitsService.ACQUISITIONS_UNIT_IDS;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
@@ -101,7 +102,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     logger.info("=== Test order contains non-existent unit ids - expecting of call only to Units API ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_ID);
-    Errors errors = operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(prepareOrder(NON_EXISTENT_UNITS)),
+    Errors errors = operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(prepareOrder(NON_EXISTENT_UNITS, PENDING)),
       headers, APPLICATION_JSON, HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt()).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(1));
@@ -118,7 +119,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     logger.info("=== Test corresponding order has units allowed operation - expecting of call only to Units API ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_ID);
-    CompositePurchaseOrder order = operation == CREATE ? getMinimalContentCompositePurchaseOrder().withAcqUnitIds(new ArrayList<>(NOT_PROTECTED_UNITS)) : prepareOrder(NOT_PROTECTED_UNITS);
+    CompositePurchaseOrder order = operation == CREATE ? getMinimalContentCompositePurchaseOrder().withAcqUnitIds(new ArrayList<>(NOT_PROTECTED_UNITS)) : prepareOrder(NOT_PROTECTED_UNITS, PENDING);
     operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(order), headers, operation.getContentType(), operation.getCode());
 
     validateNumberOfRequests(2, 0);
@@ -134,7 +135,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     logger.info("=== Test corresponding order has units allowed operation - expecting of call only to Units API ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_ID);
-    CompositePurchaseOrder order = operation == CREATE ? getMinimalContentCompositePurchaseOrder().withAcqUnitIds(new ArrayList<>(NOT_PROTECTED_UNITS)) : prepareOrder(NOT_PROTECTED_UNITS);
+    CompositePurchaseOrder order = operation == CREATE ? getMinimalContentCompositePurchaseOrder().withAcqUnitIds(new ArrayList<>(NOT_PROTECTED_UNITS)) : prepareOrder(NOT_PROTECTED_UNITS, PENDING);
     operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(order), headers, operation.getContentType(), operation.getCode());
 
     validateNumberOfRequests(1, 0);
@@ -149,7 +150,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     logger.info("=== Test corresponding order has units, units protect operation, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
 
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER);
-    CompositePurchaseOrder order = operation == CREATE ? getMinimalContentCompositePurchaseOrder().withAcqUnitIds(new ArrayList<>(PROTECTED_UNITS)) : prepareOrder(PROTECTED_UNITS);
+    CompositePurchaseOrder order = operation == CREATE ? getMinimalContentCompositePurchaseOrder().withAcqUnitIds(new ArrayList<>(PROTECTED_UNITS)) : prepareOrder(PROTECTED_UNITS, PENDING);
     operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(order), headers, operation.getContentType(), operation.getCode());
 
     validateNumberOfRequests(2, 1);
@@ -165,7 +166,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     logger.info("=== Test corresponding order has units, units protect operation, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
 
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER);
-    CompositePurchaseOrder order = operation == CREATE ? getMinimalContentCompositePurchaseOrder().withAcqUnitIds(new ArrayList<>(PROTECTED_UNITS)) : prepareOrder(PROTECTED_UNITS);
+    CompositePurchaseOrder order = operation == CREATE ? getMinimalContentCompositePurchaseOrder().withAcqUnitIds(new ArrayList<>(PROTECTED_UNITS)) : prepareOrder(PROTECTED_UNITS, PENDING);
     operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(order), headers, operation.getContentType(), operation.getCode());
 
     validateNumberOfRequests(1, 1);
@@ -179,7 +180,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     logger.info("=== Test corresponding order has units, units protect operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");
 
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER);
-    Errors errors = operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(prepareOrder(PROTECTED_UNITS)),
+    Errors errors = operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(prepareOrder(PROTECTED_UNITS, PENDING)),
       headers, APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt()).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(1));
@@ -198,7 +199,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     logger.info("=== Test corresponding order has units, units protect operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");
 
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER);
-    Errors errors = operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(prepareOrder(PROTECTED_UNITS)),
+    Errors errors = operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(prepareOrder(PROTECTED_UNITS, PENDING)),
       headers, APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt()).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(1));
@@ -216,7 +217,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     logger.info("=== Test user without desired permissions modifying acqUnitsIds ===");
 
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER);
-    CompositePurchaseOrder order = prepareOrder(Collections.emptyList());
+    CompositePurchaseOrder order = prepareOrder(Collections.emptyList(), PENDING);
     order.setAcqUnitIds(PROTECTED_UNITS);
     Errors errors = operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(order),
       headers, APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt()).as(Errors.class);
@@ -246,7 +247,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     addMockEntry(ACQUISITIONS_UNITS, unit3);
 
     // Prepare order with 2 acq units (one is "soft deleted") and add it as mock data for update case
-    CompositePurchaseOrder order = prepareOrder(Arrays.asList(unit1.getId(), unit2.getId()));
+    CompositePurchaseOrder order = prepareOrder(Arrays.asList(unit1.getId(), unit2.getId()), PENDING);
 
     // Add the third unit to request
     order.getAcqUnitIds().add(unit3.getId());
@@ -284,7 +285,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     addMockEntry(ACQUISITIONS_UNITS, unit1);
 
     // Prepare order with one acq unit ("soft deleted")
-    CompositePurchaseOrder order = prepareOrder(Collections.singletonList(unit1.getId()));
+    CompositePurchaseOrder order = prepareOrder(Collections.singletonList(unit1.getId()), PENDING);
 
     ProtectedOperations.READ.process(COMPOSITE_ORDERS_PATH, encodePrettily(order), headers, APPLICATION_JSON,
         HttpStatus.HTTP_OK.toInt());
@@ -305,7 +306,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
   void testUpdateOrderAssignedToCreateProtectedUnitAddingPoLineUserNotAssigned() {
     logger.info("=== Test corresponding order has units, poLine is going to be added to order, units protect only create operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");
 
-    CompositePurchaseOrder order = prepareOrder(CREATE_PROTECTED_UNITS);
+    CompositePurchaseOrder order = prepareOrder(CREATE_PROTECTED_UNITS, PENDING);
     CompositePoLine line = getMinimalContentCompositePoLine(order.getId());
     line.setId(UUID.randomUUID().toString());
     order.getCompositePoLines().add(line);
@@ -350,7 +351,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     logger.info("=== Test corresponding order has units, poLine is going to be deleted, new line will be added ===");
     logger.info("=== Units protect all operations, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
 
-    CompositePurchaseOrder order = prepareOrder(PROTECTED_UNITS);
+    CompositePurchaseOrder order = prepareOrder(PROTECTED_UNITS, PENDING);
     CompositePoLine line = getMinimalContentCompositePoLine(order.getId());
     line.setId(UUID.randomUUID().toString());
     order.getCompositePoLines().add(line);
