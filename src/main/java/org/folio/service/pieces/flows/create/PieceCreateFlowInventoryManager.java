@@ -54,7 +54,7 @@ public class PieceCreateFlowInventoryManager {
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
       .thenCompose(title -> nonPackageUpdateTitleWithInstance(compPOL, title, requestContext))
       .thenCompose(title -> handleHolding(compPOL, piece, title.getInstanceId(), requestContext))
-      .thenCompose(holdingId -> handleItem(compPOL, createItem, holdingId, requestContext))
+      .thenCompose(holdingId -> handleItem(compPOL, createItem, piece, requestContext))
       .thenAccept(itemId -> Optional.ofNullable(itemId).ifPresent(piece::withItemId));
   }
 
@@ -63,17 +63,19 @@ public class PieceCreateFlowInventoryManager {
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
       .thenCompose(title -> packageUpdateTitleWithInstance(title, requestContext))
       .thenCompose(title -> handleHolding(compPOL, piece, title.getInstanceId(), requestContext))
-      .thenCompose(holdingId -> handleItem(compPOL, createItem, holdingId, requestContext))
+      .thenCompose(holdingId -> handleItem(compPOL, createItem, piece, requestContext))
       .thenAccept(itemId -> Optional.ofNullable(itemId).ifPresent(piece::withItemId));
   }
 
   private CompletableFuture<String> handleHolding(CompositePoLine compPOL, Piece piece, String instanceId, RequestContext requestContext) {
-    if (piece.getHoldingId() != null) {
+    if (piece.getHoldingId() != null || !PoLineCommonUtil.isHoldingsUpdateRequired(compPOL.getEresource(), compPOL.getPhysical())) {
       return completedFuture(piece.getHoldingId());
     }
+
     if (instanceId == null) {
       logger.error(CREATE_HOLDING_WITHOUT_INSTANCE_ERROR.getDescription());
-      return CompletableFuture.failedFuture(new HttpException(RestConstants.VALIDATION_ERROR, CREATE_HOLDING_WITHOUT_INSTANCE_ERROR));
+      return CompletableFuture.failedFuture(
+        new HttpException(RestConstants.VALIDATION_ERROR, CREATE_HOLDING_WITHOUT_INSTANCE_ERROR));
     }
     Location location = new Location().withLocationId(piece.getLocationId());
     return pieceUpdateInventoryService.handleHoldingsRecord(compPOL, location, instanceId, requestContext)
@@ -83,16 +85,12 @@ public class PieceCreateFlowInventoryManager {
           piece.setHoldingId(holdingId);
         });
         return holdingId;
-      });
+    });
   }
 
-  private CompletableFuture<String> handleItem(CompositePoLine compPOL, boolean createItem, String holdingId, RequestContext requestContext) {
-      if (createItem) {
-        if (holdingId == null) {
-          logger.error(CREATE_HOLDING_WITHOUT_INSTANCE_ERROR.getDescription());
-          return CompletableFuture.failedFuture(new HttpException(RestConstants.VALIDATION_ERROR, CREATE_HOLDING_WITHOUT_INSTANCE_ERROR));
-        }
-        return createItemRecord(compPOL, holdingId, requestContext);
+  private CompletableFuture<String> handleItem(CompositePoLine compPOL, boolean createItem, Piece piece, RequestContext requestContext) {
+      if (createItem && PieceCreateFlowValidator.isCreateItemForPiecePossible(piece, compPOL)) {
+        return createItemRecord(compPOL, piece.getHoldingId(), requestContext);
       }
       return CompletableFuture.completedFuture(null);
   }

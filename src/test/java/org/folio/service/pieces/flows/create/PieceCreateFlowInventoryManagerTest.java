@@ -10,6 +10,7 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -25,6 +26,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
@@ -115,6 +117,7 @@ public class PieceCreateFlowInventoryManagerTest {
 
     CompositePoLine compPOL = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(orderId)
                                     .withOrderFormat(ELECTRONIC_RESOURCE).withId(lineId)
+                                    .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM))
                                     .withLocations(List.of(loc)).withCost(cost);
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
     doReturn(completedFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
@@ -137,6 +140,79 @@ public class PieceCreateFlowInventoryManagerTest {
     verify(inventoryManager).createMissingElectronicItems(compPOL, holdingId, 1, requestContext);
   }
 
+  @Test
+  void testShouldNotCreateHoldingPieceCreateForPackagePoLineWithCreateInventoryInstance() {
+    String orderId = UUID.randomUUID().toString();
+    String locationId = UUID.randomUUID().toString();
+    String lineId = UUID.randomUUID().toString();
+    String titleId = UUID.randomUUID().toString();
+    String pieceId = UUID.randomUUID().toString();
+    Title title = new Title().withId(titleId).withPoLineId(lineId).withInstanceId(UUID.randomUUID().toString());
+    Piece piece = new Piece().withId(pieceId).withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
+    Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
+    Cost cost = new Cost().withQuantityElectronic(1);
+
+    CompositePoLine compPOL = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(orderId)
+      .withOrderFormat(ELECTRONIC_RESOURCE).withId(lineId)
+      .withCheckinItems(false)
+      .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE))
+      .withLocations(List.of(loc)).withCost(cost);
+    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
+    doReturn(completedFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
+    doReturn(completedFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
+    doReturn(completedFuture(null)).when(titlesService).saveTitle(title, requestContext);
+    doReturn(completedFuture(title)).when(pieceUpdateInventoryService).handleInstanceRecord(title, requestContext);
+
+    PieceCreationHolder holder = new PieceCreationHolder(piece, true);
+    holder.shallowCopy(new PieceCreationHolder(compositePurchaseOrder));
+
+    pieceCreateFlowInventoryManager.processInventory(holder, requestContext).join();
+
+    assertNull(piece.getItemId());
+    assertNull(piece.getHoldingId());
+    assertEquals(locationId, piece.getLocationId());
+    verify(titlesService).getTitleById(piece.getTitleId(), requestContext);
+
+    verify(pieceUpdateInventoryService, times(0)).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
+    verify(inventoryManager, times(0)).createMissingElectronicItems(compPOL, locationId, 1, requestContext);
+  }
+
+
+  @Test
+  void testShouldNotCreateHoldingPieceCreateForNonPackagePoLineWithCreateInventoryInstance() {
+    String orderId = UUID.randomUUID().toString();
+    String locationId = UUID.randomUUID().toString();
+    String lineId = UUID.randomUUID().toString();
+    String titleId = UUID.randomUUID().toString();
+    String pieceId = UUID.randomUUID().toString();
+    Title title = new Title().withId(titleId).withPoLineId(lineId).withInstanceId(UUID.randomUUID().toString());
+    Piece piece = new Piece().withId(pieceId).withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
+    Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
+    Cost cost = new Cost().withQuantityElectronic(1);
+
+    CompositePoLine compPOL = new CompositePoLine().withIsPackage(false).withPurchaseOrderId(orderId)
+      .withOrderFormat(ELECTRONIC_RESOURCE).withId(lineId)
+      .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE))
+      .withLocations(List.of(loc)).withCost(cost);
+    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
+    doReturn(completedFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
+    doReturn(completedFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
+    doReturn(completedFuture(null)).when(titlesService).saveTitle(title, requestContext);
+    doReturn(completedFuture(title)).when(pieceUpdateInventoryService).handleInstanceRecord(title, requestContext);
+
+    PieceCreationHolder holder = new PieceCreationHolder(piece, true);
+    holder.shallowCopy(new PieceCreationHolder(compositePurchaseOrder));
+
+    pieceCreateFlowInventoryManager.processInventory(holder, requestContext).join();
+
+    assertNull(piece.getItemId());
+    assertNull(piece.getHoldingId());
+    assertEquals(locationId, piece.getLocationId());
+    verify(titlesService).getTitleById(piece.getTitleId(), requestContext);
+
+    verify(pieceUpdateInventoryService, times(0)).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
+    verify(inventoryManager, times(0)).createMissingElectronicItems(compPOL, locationId, 1, requestContext);
+  }
 
   private static class ContextConfiguration {
     @Bean TitlesService titlesService() {
