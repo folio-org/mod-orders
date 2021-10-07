@@ -33,10 +33,8 @@ public class PieceCreateFlowInventoryManager {
     this.inventoryManager = inventoryManager;
   }
 
-  public CompletableFuture<Void> processInventory(PieceCreationHolder holder, RequestContext requestContext) {
-    CompositePoLine compPOL = holder.getOriginPoLine();
-    Piece piece = holder.getPieceToCreate();
-    boolean createItem = holder.isCreateItem();
+  public CompletableFuture<Void> processInventory(CompositePoLine compPOL,  Piece piece,  boolean createItem,
+                                                  RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return packagePoLineUpdateInventory(compPOL, piece, createItem, requestContext);
     }
@@ -83,10 +81,13 @@ public class PieceCreateFlowInventoryManager {
   }
 
   private CompletableFuture<String> handleItem(CompositePoLine compPOL, boolean createItem, Piece piece, RequestContext requestContext) {
-      if (createItem && PieceCreateFlowValidator.isCreateItemForPiecePossible(piece, compPOL) && piece.getHoldingId() != null) {
+    if (piece.getItemId() != null) {
+      return completedFuture(piece.getItemId());
+    }
+    if (createItem && PieceCreateFlowValidator.isCreateItemForPiecePossible(piece, compPOL) && piece.getHoldingId() != null) {
         return createItemRecord(compPOL, piece.getHoldingId(), requestContext);
-      }
-      return CompletableFuture.completedFuture(null);
+    }
+    return CompletableFuture.completedFuture(null);
   }
 
   /**
@@ -112,16 +113,6 @@ public class PieceCreateFlowInventoryManager {
     return itemFuture;
   }
 
-  private CompletableFuture<Title> packageUpdateTitleWithInstance(Title title, RequestContext requestContext) {
-    if (title.getInstanceId() != null) {
-      return CompletableFuture.completedFuture(title);
-    } else {
-      return pieceUpdateInventoryService.getOrCreateInstanceRecord(title, requestContext)
-                  .thenApply(title::withInstanceId)
-                  .thenCompose(titleWithInstanceId -> titlesService.saveTitle(titleWithInstanceId, requestContext).thenApply(json -> title));
-    }
-  }
-
   private CompletableFuture<String> nonPackageUpdateTitleWithInstance(CompositePoLine poLine, String titleId, RequestContext requestContext) {
     if (poLine.getInstanceId() == null && !PoLineCommonUtil.isInventoryUpdateNotRequired(poLine)) {
       return titlesService.getTitleById(titleId, requestContext)
@@ -134,6 +125,16 @@ public class PieceCreateFlowInventoryManager {
         .thenApply(instanceId -> poLine.withInstanceId(instanceId).getInstanceId());
     }
     return completedFuture(poLine.getInstanceId());
+  }
+
+  private CompletableFuture<Title> packageUpdateTitleWithInstance(Title title, RequestContext requestContext) {
+    if (title.getInstanceId() != null) {
+      return CompletableFuture.completedFuture(title);
+    } else {
+      return pieceUpdateInventoryService.getOrCreateInstanceRecord(title, requestContext)
+        .thenApply(title::withInstanceId)
+        .thenCompose(titleWithInstanceId -> titlesService.saveTitle(titleWithInstanceId, requestContext).thenApply(json -> title));
+    }
   }
 
   private CompletableFuture<String> createTitleInstance(Title title, RequestContext requestContext) {

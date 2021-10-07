@@ -10,7 +10,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.folio.helper.PurchaseOrderHelperTest;
 import org.folio.helper.PurchaseOrderLineHelperTest;
-import org.folio.helper.ReceivingHelperTest;
+import org.folio.helper.CheckinHelperTest;
 import org.folio.orders.events.handlers.CheckInOrderStatusChangeChangeHandlerTest;
 import org.folio.orders.events.handlers.ReceiptStatusConsistencyTest;
 import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
@@ -346,7 +346,7 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class ReceivingHelperTestNested extends ReceivingHelperTest {
+  class CheckinHelperTestNested extends CheckinHelperTest {
 
   }
 }

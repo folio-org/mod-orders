@@ -130,7 +130,8 @@ public class PieceCreateFlowInventoryManagerTest {
     PieceCreationHolder holder = new PieceCreationHolder(piece, true);
     holder.shallowCopy(new PieceCreationHolder(compositePurchaseOrder));
 
-    pieceCreateFlowInventoryManager.processInventory(holder, requestContext).join();
+    pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(),
+      holder.isCreateItem(), requestContext).join();
 
     assertEquals(itemId, piece.getItemId());
     assertEquals(holdingId, piece.getHoldingId());
@@ -166,7 +167,8 @@ public class PieceCreateFlowInventoryManagerTest {
     PieceCreationHolder holder = new PieceCreationHolder(piece, true);
     holder.shallowCopy(new PieceCreationHolder(compositePurchaseOrder));
 
-    pieceCreateFlowInventoryManager.processInventory(holder, requestContext).join();
+    pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(),
+      holder.isCreateItem(), requestContext).join();
 
     assertNull(piece.getItemId());
     assertNull(piece.getHoldingId());
@@ -203,7 +205,8 @@ public class PieceCreateFlowInventoryManagerTest {
     PieceCreationHolder holder = new PieceCreationHolder(piece, true);
     holder.shallowCopy(new PieceCreationHolder(compositePurchaseOrder));
 
-    pieceCreateFlowInventoryManager.processInventory(holder, requestContext).join();
+    pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(),
+      holder.isCreateItem(), requestContext).join();
 
     assertNull(piece.getItemId());
     assertNull(piece.getHoldingId());

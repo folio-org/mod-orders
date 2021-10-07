@@ -15,7 +15,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -28,7 +27,6 @@ import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -36,7 +34,6 @@ import org.folio.rest.jaxrs.model.ProcessingStatus;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
-import org.folio.service.pieces.flows.create.PieceCreateFlowValidator;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
@@ -107,8 +104,8 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
                 if (checkInPiece.getId().equals(piece.getId()) && Boolean.TRUE.equals(checkInPiece.getCreateItem())) {
                   futures.add(purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
                                   .thenApply(PoLineCommonUtil::convertToCompositePoLine)
-                                  .thenCompose(compPOL -> handleItem(compPOL, piece, requestContext))
-                                  .thenAccept(itemId -> Optional.ofNullable(itemId).ifPresent(piece::withItemId))
+                                  .thenCompose(compPOL -> pieceCreateFlowInventoryManager.processInventory(compPOL, piece,
+                                                                                      checkInPiece.getCreateItem(), requestContext))
                                   .thenApply(aVoid -> Pair.of(poLineId, piece)));
                 } else {
                   futures.add(CompletableFuture.completedFuture(Pair.of(poLineId, piece)));
@@ -117,19 +114,11 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
         }));
     })
     .thenCompose(v -> collectResultsOnSuccess(futures).thenApply(poLineIdVsPieceList -> {
-  //    logger.debug("{} pieces updated with item", poLineIdVsPieceList.size());
       return StreamEx.of(poLineIdVsPieceList)
         .distinct()
         .groupingBy(Pair::getKey, mapping(Pair::getValue, collectingAndThen(toList(),
           lists -> StreamEx.of(lists).collect(toList()))));
     }));
-  }
-
-  private CompletableFuture<String> handleItem(CompositePoLine compPOL, Piece piece, RequestContext requestContext) {
-    if (piece.getItemId() == null && PieceCreateFlowValidator.isCreateItemForPiecePossible(piece, compPOL)) {
-       return pieceCreateFlowInventoryManager.createItemRecord(compPOL, piece.getHoldingId(), requestContext);
-    }
-    return CompletableFuture.completedFuture(piece.getItemId());
   }
 
   private Map<String, Map<String, Location>> groupLocationsByPoLineIdOnCheckin(CheckinCollection checkinCollection) {

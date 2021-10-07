@@ -1,30 +1,5 @@
 package org.folio.helper;
 
-import com.sun.security.auth.UnixNumericUserPrincipal;
-import io.vertx.core.Context;
-import org.folio.ApiTestSuite;
-import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CheckInPiece;
-import org.folio.rest.jaxrs.model.CheckinCollection;
-import org.folio.rest.jaxrs.model.ToBeCheckedIn;
-import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.service.inventory.InventoryManagerTest;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.MockitoAnnotations;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
@@ -38,9 +13,44 @@ import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
-public class ReceivingHelperTest {
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+
+import org.folio.ApiTestSuite;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CheckInPiece;
+import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.ToBeCheckedIn;
+import org.folio.rest.tools.client.HttpClientFactory;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.ProtectionService;
+import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.inventory.InventoryManager;
+import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
+import org.folio.service.titles.TitlesService;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+
+import io.vertx.core.Context;
+
+public class CheckinHelperTest {
+
+  @Autowired
+  PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
 
   private Map<String, String> okapiHeadersMock;
   private Context ctxMock;
@@ -55,6 +65,7 @@ public class ReceivingHelperTest {
       ApiTestSuite.before();
       runningOnOwn = true;
     }
+    initSpringContext(CheckinHelperTest.ContextConfiguration.class);
   }
 
   @AfterAll
@@ -114,5 +125,33 @@ public class ReceivingHelperTest {
     assertEquals(3, map.get(poLine1).size());
     assertEquals(1, map.get(poLine2).size());
     assertEquals("4", map.get(poLine2).get(0).getCaption());
+  }
+
+  private static class ContextConfiguration {
+    @Bean PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager() {
+      return mock(PieceCreateFlowInventoryManager.class);
+    }
+
+    @Bean ConfigurationEntriesService configurationEntriesService() {
+      return mock(ConfigurationEntriesService.class);
+    }
+
+    @Bean
+    ProtectionService protectionService() {
+      return mock(ProtectionService.class);
+    }
+    @Bean
+    TitlesService titlesService() {
+      return mock(TitlesService.class);
+    }
+    @Bean
+    InventoryManager inventoryManager() {
+      return mock(InventoryManager.class);
+    }
+    @Bean
+    PurchaseOrderLineService purchaseOrderLineService() {
+      return mock(PurchaseOrderLineService.class);
+    }
+
   }
 }
