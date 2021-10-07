@@ -891,9 +891,9 @@ public class InventoryManager {
       });
   }
 
-  public CompletableFuture<String> getProductTypeUuidByIsbn(String identifierType, RequestContext requestContext) {
+  public CompletableFuture<String> getProductTypeUuidByIsbn(RequestContext requestContext) {
     // return id of already retrieved identifier type
-      String endpoint = String.format("/identifier-types?limit=1&query=name==%s", identifierType);
+      String endpoint = "/identifier-types?limit=1&query=name==ISBN";
       Map<String, String> okapiHeaders = requestContext.getHeaders();
       return handleGetRequest(endpoint, restClient.getHttpClient(okapiHeaders), okapiHeaders, logger)
         .thenCompose(identifierTypes -> {

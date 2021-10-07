@@ -65,6 +65,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -620,20 +621,37 @@ public class PurchaseOrderHelper extends AbstractHelper {
   public CompletableFuture<Void> openOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
+    EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN);
     return expenseClassValidationService.validateExpenseClasses(compPO.getCompositePoLines(), requestContext)
       .thenAccept(v -> FundDistributionUtils.validateFundDistributionTotal(compPO.getCompositePoLines()))
       .thenAccept(v -> OngoingOrderValidator.validate(compPO))
+      .thenCompose(v -> strategy.prepareProcessEncumbrancesAndValidate(compPO, poFromStorage, requestContext))
       .thenApply(v -> this.validateMaterialTypes(compPO))
       .thenCompose(this::fetchNonPackageTitles)
       .thenCompose(linesIdTitles -> {
           populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
           return openOrderUpdateInventory(linesIdTitles, compPO, requestContext);
         })
-      .thenCompose(ok -> openOrderUpdatePoLinesSummary(compPO.getCompositePoLines()))
-      .thenApply(aVoid -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN))
-      .thenCompose(strategy -> strategy.processEncumbrances(compPO, poFromStorage, requestContext))
+      .thenCompose(v -> finishProcessingEncumbrancesForOpenOrder(strategy, compPO, poFromStorage, requestContext))
       .thenAccept(ok -> changePoLineStatuses(compPO))
       .thenCompose(ok -> openOrderUpdatePoLinesSummary(compPO.getCompositePoLines()));
+  }
+
+  private CompletableFuture<Void> finishProcessingEncumbrancesForOpenOrder(EncumbranceWorkflowStrategy strategy,
+      CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+    return strategy.processEncumbrances(compPO, poFromStorage, requestContext)
+      .handle((v, t) -> {
+        if (t == null)
+          return CompletableFuture.completedFuture(v);
+        // There was an error when processing the encumbrances despite the previous validations.
+        // Order lines should be saved to avoid leaving an open order with locationId instead of holdingId.
+        return openOrderUpdatePoLinesSummary(compPO.getCompositePoLines())
+          .handle((vv, tt) -> {
+            throw new CompletionException(t.getCause());
+          });
+      })
+      .thenCompose(v -> v) // wait for future returned by handle
+      .thenApply(v -> null);
   }
 
   public CompletableFuture<Void> openOrderUpdatePoLinesSummary(List<CompositePoLine> compositePoLines) {
@@ -713,13 +731,14 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> validateIsbnValues(CompositePurchaseOrder compPO, RequestContext requestContext) {
-
-    CompletableFuture<?>[] futures = compPO.getCompositePoLines()
-      .stream()
-      .map(line -> orderLineHelper.validateAndNormalizeISBN(line, requestContext))
-      .toArray(CompletableFuture[]::new);
-
-    return CompletableFuture.allOf(futures);
+    if (compPO.getCompositePoLines().isEmpty()){
+      return completedFuture(null);
+    }
+    return inventoryManager.getProductTypeUuidByIsbn(requestContext)
+      .thenCompose(isbnId -> CompletableFuture.allOf(compPO.getCompositePoLines().stream()
+        .filter(HelperUtils::isProductIdsExist)
+        .map(line -> orderLineHelper.validateAndNormalizeISBN(line, isbnId, requestContext))
+        .toArray(CompletableFuture[]::new)));
   }
 
   private CompletableFuture<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO) {
