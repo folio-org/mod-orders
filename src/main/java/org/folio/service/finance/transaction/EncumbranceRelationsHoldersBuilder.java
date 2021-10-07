@@ -1,6 +1,7 @@
 package org.folio.service.finance.transaction;
 
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.folio.orders.utils.HelperUtils.getConversionQuery;
@@ -262,6 +263,23 @@ public class EncumbranceRelationsHoldersBuilder {
                 .withAmountExpended(existingTransaction.getEncumbrance().getAmountExpended())
                 .withAmountAwaitingPayment(existingTransaction.getEncumbrance().getAmountAwaitingPayment());
           }));
+  }
+
+  public CompletableFuture<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(CompositePurchaseOrder compPO,
+                                                                                                CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+    List<EncumbranceRelationsHolder> encumbranceRelationsHolders = buildBaseHolders(compPO);
+    return withBudgets(encumbranceRelationsHolders, requestContext)
+      .thenCompose(holders -> withLedgersData(holders, requestContext))
+      .thenCompose(holders -> withFiscalYearData(holders, requestContext))
+      .thenCompose(holders -> withConversion(holders, requestContext))
+      .thenCompose(holders -> withExistingTransactions(holders, poFromStorage, requestContext));
+  }
+
+  public CompletableFuture<Map<String, List<CompositePoLine>>> retrieveMapFiscalYearsWithCompPOLines(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
+                                                                               RequestContext requestContext) {
+    return prepareEncumbranceRelationsHolder(compPO, poAndLinesFromStorage, requestContext)
+      .thenApply(erhList -> erhList.stream().filter(erh-> Objects.nonNull(erh.getCurrentFiscalYearId())).collect(groupingBy(EncumbranceRelationsHolder::getCurrentFiscalYearId,
+        mapping(EncumbranceRelationsHolder::getPoLine, toList()))));
   }
 
 }

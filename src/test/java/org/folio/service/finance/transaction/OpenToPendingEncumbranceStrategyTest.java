@@ -1,5 +1,32 @@
 package org.folio.service.finance.transaction;
 
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonObject;
+import org.folio.ApiTestSuite;
+import org.folio.config.ApplicationConfig;
+import org.folio.models.EncumbranceRelationsHolder;
+import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.TestConfig.getFirstContextFromVertx;
 import static org.folio.TestConfig.getVertx;
@@ -16,33 +43,8 @@ import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonObject;
-import org.folio.ApiTestSuite;
-import org.folio.config.ApplicationConfig;
-import org.folio.models.EncumbranceRelationsHolder;
-import org.folio.rest.acq.model.finance.Encumbrance;
-import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
 public class OpenToPendingEncumbranceStrategyTest {
 
@@ -52,6 +54,8 @@ public class OpenToPendingEncumbranceStrategyTest {
     private EncumbranceService encumbranceService;
     @Mock
     private TransactionSummariesService transactionSummariesService;
+    @Mock
+    private TransactionService transactionService;
     @Mock
     EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
     @Mock
@@ -82,19 +86,20 @@ public class OpenToPendingEncumbranceStrategyTest {
     }
 
     @Test
-    void testShouldSetEncumbrancesToPending() {
-      //given
+    void  testShouldSetEncumbrancesToPending() {
+      // Given
       CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
       Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
 
-      doReturn(completedFuture(Collections.singletonList(encumbrance))).when(encumbranceService).getOrderEncumbrances(any(), any());
+      doReturn(completedFuture(Collections.singletonList(encumbrance))).when(encumbranceService).getOrderUnreleasedEncumbrances(any(), any());
+
+      doReturn(completedFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(eq(order.getId()), anyInt(), any());
       doReturn(completedFuture(null)).when(encumbranceService).updateEncumbrances(any(), any());
-      doReturn(completedFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(anyString(), anyInt(), any());
 
       List<EncumbranceRelationsHolder> encumbranceRelationsHolders = new ArrayList<>();
-        encumbranceRelationsHolders.add(new EncumbranceRelationsHolder()
-          .withOldEncumbrance(encumbrance)
-          .withCurrentFiscalYearId(UUID.randomUUID().toString()));
+      encumbranceRelationsHolders.add(new EncumbranceRelationsHolder()
+        .withOldEncumbrance(encumbrance)
+        .withCurrentFiscalYearId(UUID.randomUUID().toString()));
 
       doReturn(new ArrayList<EncumbranceRelationsHolder>()).when(encumbranceRelationsHoldersBuilder).buildBaseHolders(any());
       doReturn(completedFuture(new ArrayList<EncumbranceRelationsHolder>())).when(encumbranceRelationsHoldersBuilder).withBudgets(any(), any());
@@ -102,13 +107,27 @@ public class OpenToPendingEncumbranceStrategyTest {
       doReturn(completedFuture(new ArrayList<EncumbranceRelationsHolder>())).when(encumbranceRelationsHoldersBuilder).withFiscalYearData(any(), any());
       doReturn(completedFuture(new ArrayList<EncumbranceRelationsHolder>())).when(encumbranceRelationsHoldersBuilder).withConversion(any(), any());
       doReturn(completedFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withExistingTransactions(any(), any(), any());
-      doReturn(completedFuture(Collections.singletonList(encumbrance))).when(encumbranceService).getCurrentPoLinesEncumbrances(any(), anyString(), any());
+      doReturn(completedFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).prepareEncumbranceRelationsHolder(any(), any(), any());
 
+      Map<String, List<CompositePoLine>> mapFiscalYearsWithCompPOLines = new HashMap<>();
+      String fiscalYearId = UUID.randomUUID().toString();
+      mapFiscalYearsWithCompPOLines.put(fiscalYearId, Arrays.asList(new CompositePoLine().withId(UUID.randomUUID().toString())));
       CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
       orderFromStorage.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-      //When
+
+      doReturn(completedFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithCompPOLines(eq(order), eq(orderFromStorage), eq(requestContext));
+      String compositePoLineId = UUID.randomUUID().toString();
+      List<CompositePoLine> compositePoLines = Arrays.asList(new CompositePoLine().withId(compositePoLineId));
+      List<String> poLineIds = Arrays.asList(compositePoLineId);
+      List<Transaction> allTransactions = Arrays.asList(encumbrance);
+      doReturn(completedFuture(Arrays.asList(encumbrance))).when(transactionService).getTransactionsByPoLinesIds(eq(poLineIds), eq(fiscalYearId), eq(requestContext));
+      doReturn(completedFuture(Arrays.asList(encumbrance))).when(encumbranceService).getCurrentPoLinesEncumbrances(eq(compositePoLines), eq(fiscalYearId), eq(requestContext));
+      doReturn(completedFuture(allTransactions)).when(encumbranceService).getEncumbrancesByPoLinesFromCurrentFy(eq(mapFiscalYearsWithCompPOLines), eq(requestContext));
+
+      // When
       openToPendingEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext).join();
-      //Then
+
+      // Then
       assertEquals(0d, encumbrance.getAmount(), 0.0);
       assertEquals(0d, encumbrance.getEncumbrance().getInitialAmountEncumbered(), 0.0);
       assertEquals(Encumbrance.Status.PENDING, encumbrance.getEncumbrance().getStatus());

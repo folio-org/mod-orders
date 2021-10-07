@@ -1,20 +1,22 @@
 package org.folio.service.finance.transaction;
 
+import static org.folio.orders.utils.FundDistributionUtils.isFundDistributionsPresent;
+
+import java.util.concurrent.CompletableFuture;
+
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.orders.OrderWorkflowType;
 
-import java.util.concurrent.CompletableFuture;
-
-import static org.folio.orders.utils.FundDistributionUtils.isFundDistributionsPresent;
-
 public class OpenToClosedEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
   private final EncumbranceService encumbranceService;
+  private final EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
 
-  public OpenToClosedEncumbranceStrategy(EncumbranceService encumbranceService) {
+  public OpenToClosedEncumbranceStrategy(EncumbranceService encumbranceService, EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
     this.encumbranceService = encumbranceService;
+    this.encumbranceRelationsHoldersBuilder = encumbranceRelationsHoldersBuilder;
   }
 
   @Override
@@ -23,7 +25,8 @@ public class OpenToClosedEncumbranceStrategy implements EncumbranceWorkflowStrat
 
     EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
     if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
-      return encumbranceService.getOrderEncumbrances(compPO.getId(), requestContext)
+      return encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithCompPOLines(compPO, poAndLinesFromStorage, requestContext)
+        .thenCompose(mapCompPoLine -> encumbranceService.getEncumbrancesByPoLinesFromCurrentFy(mapCompPoLine, requestContext))
         .thenCompose(transactions -> {
           if (transactions.isEmpty()) {
             return CompletableFuture.completedFuture(null);
@@ -35,7 +38,6 @@ public class OpenToClosedEncumbranceStrategy implements EncumbranceWorkflowStrat
         });
     }
     return CompletableFuture.completedFuture(null);
-
   }
 
   @Override
