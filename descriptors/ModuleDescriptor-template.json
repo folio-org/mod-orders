@@ -349,6 +349,7 @@
           "modulePermissions": [
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
+            "configuration.entries.collection.get",
             "inventory.instances.item.post",
             "inventory.instances.collection.get",
             "inventory.items.collection.get",
@@ -356,6 +357,7 @@
             "inventory.items.item.post",
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.post",
+            "inventory-storage.items.item.post",
             "finance.encumbrances.item.put",
             "finance.transactions.collection.get",
             "orders-storage.pieces.collection.get",
